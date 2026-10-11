@@ -58,7 +58,8 @@ What you do: write the idea. A thread does the rest.
 5. `add_repo` the new repo, then build on branches: every branch gets a Preview, every merge to
    `main` goes live. Post the live link.
 
-Detail and failures: `publish` skill (A new project).
+Detail and failures: `publish` skill (A new project). What the workflows cannot do (KV, wrangler,
+dashboard-only settings) goes to a laptop session, never to you: `publish` skill (Two routes).
 
 ## Delete a page
 
