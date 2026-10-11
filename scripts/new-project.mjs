@@ -10,7 +10,7 @@
 // and takes only that json from the branch), else NAME, ORG, D1 from a workflow_dispatch. The json: `{ "name", "d1", "org" }` and, for
 // an existing repo, `"repo"` (its GitHub name; production builds its default branch), `"build"`,
 // `"deploy"`, `"preview"` (Workers Builds commands) and `"secret": false` (no BETTER_AUTH_SECRET,
-// e.g. a static site).
+// e.g. a static site), `"kv": ["CACHE"]` (a KV namespace `<name>-CACHE` and `<name>-CACHE-preview` per binding, ids in the log).
 import { cpSync, mkdtempSync, readFileSync, writeFileSync, rmSync, appendFileSync, existsSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
@@ -58,6 +58,7 @@ export function projectConfig(name, cfg = {}) {
     repo: cfg.repo || cfg.name || name,
     existing: Boolean(cfg.repo),
     secret: cfg.secret !== false,
+    kv: (Array.isArray(cfg.kv) ? cfg.kv : []).filter((b) => /^[A-Z][A-Z0-9_]{0,40}$/.test(b)),
     commands: {
       production: { build_command: cfg.build || defaults.production.build_command, deploy_command: cfg.deploy || defaults.production.deploy_command },
       previews: { build_command: cfg.build || defaults.previews.build_command, deploy_command: cfg.preview || defaults.previews.deploy_command },
@@ -204,6 +205,17 @@ async function ensureD1(cf, name) {
   const created = await cf('/d1/database', { method: 'POST', body: { name, jurisdiction: 'eu' } })
   log('d1', `created ${name} ${created.json.result.uuid} (eu)`)
   return created.json.result.uuid
+}
+
+// One KV namespace per binding, titled `<name>-<BINDING>`; the ids go in the log for the app's wrangler.jsonc.
+async function ensureKv(cf, name, binding) {
+  const title = `${name}-${binding}`
+  const list = await cf('/storage/kv/namespaces?per_page=100')
+  const found = (list.json?.result || []).find((n) => n.title === title)
+  if (found) { log('kv', `exists ${title} ${found.id}`); return found.id }
+  const created = await cf('/storage/kv/namespaces', { method: 'POST', body: { title } })
+  log('kv', `created ${title} ${created.json.result.id}`)
+  return created.json.result.id
 }
 
 async function ensureWorker(cf, name, previewSecret, { adopt }) {
@@ -445,7 +457,7 @@ export async function main() {
     ? projectConfig(process.env.NAME, readJson(`projects/${process.env.NAME}.json`) || { d1: env('D1', false) !== 'false', org: env('ORG', false) })
     : projectFromBranch(process.env.PROJECT_BRANCH, readJson)
   if (!project) throw new Error('NAME is not set and the branch is not new/<name>')
-  const { name, d1, org, repo: repoName, existing, commands, secret } = project
+  const { name, d1, org, repo: repoName, existing, commands, secret, kv } = project
   if (!validName(name)) throw new Error(`name "${name}" must be lowercase letters, digits and dashes`)
   if (!validRepo(repoName)) throw new Error(`repo "${repoName}" is not a GitHub repo name`)
   if (org !== ORG) throw new Error(`org "${org}": projects live in ${ORG} only`)
@@ -465,6 +477,10 @@ export async function main() {
   const adopt = found.ok && !existing
   const liveId = d1 ? await ensureD1(cf, name) : undefined
   const previewId = d1 ? await ensureD1(cf, `${name}-preview`) : undefined
+  const kvIds = {}
+  for (const binding of kv) {
+    kvIds[binding] = { live: await ensureKv(cf, name, binding), preview: await ensureKv(cf, name, `${binding}-preview`) }
+  }
 
   if (existing && await repoIsEmpty(gh, org, repoName)) throw new Error(`${org}/${repoName} is empty; an existing-repo project needs its code on ${branch}`)
   if (await repoIsEmpty(gh, org, repoName)) {
@@ -485,7 +501,7 @@ export async function main() {
 
   const sub = await cf('/workers/subdomain')
   const url = `https://${name}.${sub.json?.result?.subdomain}.workers.dev`
-  const result = { repo: repo.html_url, url, worker: worker.id, d1: d1 ? { live: liveId, preview: previewId } : null, build }
+  const result = { repo: repo.html_url, url, worker: worker.id, d1: d1 ? { live: liveId, preview: previewId } : null, kv: kvIds, build }
   console.log(JSON.stringify(result, null, 2))
   if (process.env.GITHUB_STEP_SUMMARY) {
     appendFileSync(process.env.GITHUB_STEP_SUMMARY, `## ${name}\n\n- Repo: ${repo.html_url}\n- Live: ${url}\n- First build: ${build.status} (${build.uuid})\n- D1: ${d1 ? `${liveId} / preview ${previewId}` : 'none'}\n`)

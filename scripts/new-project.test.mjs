@@ -128,6 +128,8 @@ test('an existing repo keeps its own name, branch and commands', async () => {
   assert.equal(page.commands.production.build_command, 'npm run check && npm run generate')
   assert.equal(page.commands.production.deploy_command, 'npx wrangler deploy')
   assert.equal(page.commands.previews.deploy_command, 'npx wrangler preview')
+  assert.deepEqual(projectConfig('t', { kv: ['CACHE', 'bad name', 'IDEAS'] }).kv, ['CACHE', 'IDEAS'])
+  assert.deepEqual(fresh.kv, [])
   assert.ok(validRepo('MyPage') && !validRepo('../x') && !validRepo('a/b'))
   const { validBranch } = await import('./new-project.mjs')
   assert.ok(validBranch('origin') && validBranch('main') && !validBranch('-x') && !validBranch('a..b'))

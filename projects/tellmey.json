@@ -1,0 +1,11 @@
+{
+  "name": "tellmey",
+  "d1": true,
+  "org": "yverse-studio",
+  "repo": "y-games",
+  "build": "npm run build",
+  "deploy": "npx wrangler d1 migrations apply DB --remote && npx wrangler deploy",
+  "preview": "npx wrangler d1 migrations apply DB --remote --preview && npx wrangler preview",
+  "kv": ["CACHE"],
+  "secret": false
+}
