@@ -6,6 +6,5 @@
   "build": "npm run build",
   "deploy": "npx wrangler deploy",
   "preview": "npx wrangler preview",
-  "kv": ["IDEAS"],
   "secret": false
 }
