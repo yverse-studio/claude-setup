@@ -6,7 +6,7 @@ description: "Work in Roblox Studio or Blender through their MCP servers on yski
 # Studio and Blender
 
 Both servers run only on yskills' PC with the app open, so this work happens in a Remote Control
-thread or Claude Code there. Cloud threads write code and tests (`toolbox` `catalog/roblox.md`,
+thread or Claude Code there. Cloud threads write code and tests (`roblox`, `toolbox` `catalog/roblox.md`,
 `game-3d`) and hand the visual part to the PC.
 
 ## Setup (once per PC)
