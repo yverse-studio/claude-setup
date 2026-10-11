@@ -1,0 +1,10 @@
+{
+  "name": "anime-filter",
+  "d1": false,
+  "org": "yverse-studio",
+  "repo": "anime-filter",
+  "build": "npm run build && cp -r scripts/island-static/. dist/",
+  "deploy": "npx wrangler deploy",
+  "preview": "npx wrangler preview",
+  "secret": false
+}
