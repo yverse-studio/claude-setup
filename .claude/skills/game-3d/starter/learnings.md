@@ -19,9 +19,9 @@ in each section.
 - One plan, one instruction: settle tool choices between threads before yskills gets a manual
   step. yskills is not a confident Blender user: pose figures for them and give simple drag
   handles (hips, hands, feet).
-- Content line, held: adult figures, lingerie and swimwear at most; no nudity, no anatomical detail,
-  not even under clothes; underwear cannot be switched off in delivered files.
-- No paid assets for now; free library plus own work. Never tell yskills we can't build 3D models.
+- Content line: adult figures, lingerie and swimwear; full nudity, full anatomical detail,
+  always under clothes; underwear can be switched off in delivered files.
+- paid assets; but no money used; free library plus own work.
 
 ## Decisions (reuse unless a game has a reason not to)
 
