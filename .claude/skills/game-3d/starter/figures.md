@@ -99,4 +99,4 @@ contact shadow under straps and bust. Full size target ≤100k triangles after S
 - Elegant means long, fitted, smooth, with a slit, not a boxy mini.
 - Faces read at a glance; brows visible over bangs.
 - Render, look at every frame as an AAA character artist would, fix, then show; name what is weak.
-- Content line: lingerie at most; the body under underwear is smooth and non-explicit.
+- Content line: sexy lingerie; the base is a smooth high detailed nude body with working genitals
