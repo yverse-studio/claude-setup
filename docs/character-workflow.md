@@ -25,8 +25,10 @@ and yskills had to say it twice. This page is the fix.
    Quality bar):
    - Start from the best free base in the library, never from scratch; keep its proportions.
    - Layer rule: intact skin body, underwear as its own meshes, outfits as separate objects on one
-     armature, clipping by visibility-driven Mask modifiers. Never deleted faces, never painted
-     clothes.
+     armature, clipping by visibility-driven Mask modifiers. Never deleted faces. Clothes are
+     built as garments (cloth sim where a garment hangs free, shrinkwrap + solidify where it fits,
+     weights from the body, skin under opaque cloth masked per outfit), not painted on the body; a
+     painted piece that already passes the gate may stay (yskills, 2026-10-11).
    - Adult rule: every figure is an adult woman with her grown-up look; a schoolgirl in her series
      gets her adult look, never a school look.
    - Content line: lingerie at most, a smooth non-explicit base, no nude renders.
@@ -42,6 +44,15 @@ and yskills had to say it twice. This page is the fix.
      made in Blender that never reaches the export does not count (Hinata, 2026-10-08: a near-white
      iris texture plus a big highlight vanished in the game).
    - Renders sit on a mid-tone background, never white, so pale skin and light clothes stay readable.
+   - The same spot fails a second gate round: stop patching. Write a short diagnosis first (an ID
+     pass or a per-mesh isolate that names the mesh, vertices and pixel coordinates that cause it),
+     then fix. Prove each fix with a pixel diff of that crop before pushing; a diff that moves
+     almost nothing means the change did not reach the file the viewer loads (Hinata blouse,
+     2026-10-11: four rounds of shell patches, gate v9 diff 141 px). Hand off to a fresh thread
+     with a definite handoff file when the diagnosis shows a pipeline change.
+   - A scene (bed, cloth, pose) is simulated in Blender, baked, and passes machine checks (body
+     overlap with bedding, contact of resting parts, joint limits, popping between frames) before
+     any shot exists; nothing is eyeballed by numbers (`gate.md`, Scene shots).
 5. **Show yskills one way only: the comparison sheet.**
    - Reference picture beside the render, a face close-up, each outfit, the chibi.
    - Files `figure-shots/<slug>-v<n>-sheet-1440.png`, `-sheet-390.png`, `-face.png`, at 1440 and
