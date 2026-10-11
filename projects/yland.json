@@ -1,0 +1,8 @@
+{
+  "name": "yland",
+  "d1": true,
+  "org": "yverse-studio",
+  "repo": "yland",
+  "build": "npm run check && npm run build",
+  "secret": false
+}
