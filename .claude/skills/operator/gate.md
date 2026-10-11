@@ -25,6 +25,16 @@ Security never drops: any PR touching user input, auth, money or secrets runs ch
 | M | code without UI | 1, 2, 3; 4 when user input, auth, money or secrets are touched |
 | L | UI, auth, payments, data, migrations, launch | the full table |
 
+## Scene shots and figure shots
+
+No picture of a posed scene or a figure reaches yskills without a gate row in `gate/` that names
+its head SHA (yskills, 2026-10-11, 18:56: bed shots with the duvet cutting through the body, hands
+floating, and no check had run). The Tester's criteria for a scene come from the plan that
+introduced it, are machine checks first (`character-workflow.md` step 4), and a human-eye pass
+second; a posed shot from the Programmer alone is a draft. The 4-angle contact sheet at 390 px and
+1440 px is the evidence, not a single render. A figure or scene PR that fails the same item in two
+rounds is not re-gated until the Programmer attaches the diagnosis (`character-workflow.md`, step 4).
+
 ## Mode: probe or product
 
 `PLAN.md` says `Mode: probe` until the first paying user; the operator (or the weekly routine,

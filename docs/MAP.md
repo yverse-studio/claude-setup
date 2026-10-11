@@ -40,6 +40,7 @@ lives outside this repo.
 | Setup loop | operator `SKILL.md` (Setup loop) | Friction with this repo becomes a `loop:setup` issue, then a fix thread through the gate |
 | Test runs | `docs/TEST-PROJECTS.md` | How the setup is tested end to end, and what each run taught |
 | Why it is built this way | `docs/RESEARCH.md`, `docs/research/` | Dated research notes; history, not rules |
+| Lessons per project | `docs/LESSONS-2026-10-11.md` | Company XY: liked, not liked, quality problems with the fix in force, the next game |
 | Checks | `scripts/check.mjs`, `.github/workflows/ci.yml` | Frontmatter, names, models, ECC subset, plugin lists, relative links |
 
 ## Expertise by domain
