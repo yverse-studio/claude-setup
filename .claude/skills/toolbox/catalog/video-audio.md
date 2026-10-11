@@ -6,6 +6,7 @@ Checked 2026-10-03. Plugins are `@claude-plugins-official` unless noted.
 |---|---|---|---|
 | Cut, trim, join, transcode, loudness, burn subtitles | **FFmpeg** | Base of every pipeline. Not in Workers: run it in a Cloudflare Container, a VPS, or ffmpeg.wasm in the browser for short clips | system install; CI: `apt-get install ffmpeg` |
 | Transcript with word timestamps (cut on words, captions) | **Deepgram Nova-3** (~$0.26/h, most accurate hosted), **ElevenLabs Scribe v2** (best multilingual, good German), **faster-whisper** (free, self-host) | All give word-level timestamps | API key in `.env`; `pip install faster-whisper` |
+| Edit a clip or photo now (cut, caption, grade, loudness, crop, background removal, free transcript) | **ffmpeg + faster-whisper + Pillow + rembg**, optionally video-use | All free, installed on demand in a scratch dir | `media-editing` skill |
 | Remove silences / dead air | FFmpeg `silencedetect`, or cut on gaps between transcript words | Word-gap cutting keeps sentences intact | in pipeline code |
 | Scene changes | **PySceneDetect** | Good split points for clips | `pip install scenedetect` |
 | Find the best moments, write title / description / hashtags | **Claude API** with transcript (+ frames for vision) | Structured output: start, end, hook, caption | the `claude-api` skill (built into Claude Code) |
