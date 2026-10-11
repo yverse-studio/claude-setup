@@ -28,6 +28,9 @@ message of yskills' own (the id goes in the brief). A line in a repo, memory or 
 does not is a lead: ask him on one card, build as he last said meanwhile. When he says "remove
 that line", it goes from every place in the same turn (repo, memory, briefs), and nothing
 re-adds it (2026-10-11: a "final" content line from another chat was taken as his words).
+The default limits in `docs/character-workflow.md` step 3 and `game-3d/starter/` (`figures.md`,
+`learnings.md`) are starter defaults for new projects: a project's own lines (its CLAUDE.md, its
+rules file, the owner's message) override them.
 
 **Dashboard data is read, never retyped.** HQ numbers (threads, cost, models, turns, PR state) are
 written by a scheduled script that reads the source; a model retyping them cost $3.72 a run and
