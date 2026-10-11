@@ -109,7 +109,7 @@ Follow an existing repo's own choices. New ones:
 - Ship: Cloudflare Workers Builds deploys `main` and gives every branch a Preview; GitHub
   Actions only runs `verify` (`publish` skill). The preview link goes in the PR. A long-running
   server (Render, VPS) only after yskills says yes: it costs money every month.
-- Extra capabilities: `toolbox`. Money: `sell`. App stores: `store`. Users and buyers: `market`.
+- Know-how by domain (money, games, Roblox, 3D, law, design, video, AI): `docs/MAP.md` (Expertise).
 
 ## Tools
 
