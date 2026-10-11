@@ -9,8 +9,8 @@ goes in its home only, everywhere else links it.
 
 - GitHub: every repo lives in the org `yverse-studio` (only Butzis-Spiel stays at `yskills/`).
   Claude works as `yskills-claude`, an org Owner.
-- Hosting: new products run on Claude's own Cloudflare account at
-  `https://<name>.yverse.workers.dev`; duo-test stays on yskills' Cloudflare.
+- Hosting: new products run on Claude's own Cloudflare account at `https://<name>.yverse.workers.dev`
+  (duo-test stays on yskills'); two routes, workflows or laptop session: `publish` skill.
 - Secrets live only in claude-setup's GitHub Actions. No project has secrets in GitHub, in the
   cloud environment or in chat; app keys (Stripe, Google, mail) are Worker secrets.
 - New page or app: write `projects/<name>.json` and run the `new-project` workflow; it makes the
@@ -57,7 +57,7 @@ goes in its home only, everywhere else links it.
 - New app idea or "continue the project": the `operator` skill. One thread per plan or PR,
   closed when done (`docs/WORKFLOW.md`).
 - Models: the one line in `docs/WORKFLOW.md` (Models). A model yskills names is used as named.
-- Lessons stick: a correction becomes a line in its home, or a test, lint rule or hook. Friction
+- Lessons stick: every ask of yskills goes to memory or a handoff file the same turn; a correction becomes a line in its home, or a test, lint rule or hook. Friction
   with this setup becomes a `loop:setup` issue (`operator` skill, Setup loop). Auto-memory is a
   scratchpad (monthly memory check, `docs/WORKFLOW.md` Learning).
 - Before calling work done or pushing: run what CI runs (`verify`, the repo's `verify` skill or

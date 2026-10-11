@@ -158,6 +158,40 @@ Claude:
   `check_run.head_sha` (`github.sha` on the weekly run). A green Workers Builds check and a 200 prove neither: on 2026-10-05
   duo-test's main builds passed for hours while a day-old version stayed live.
 
+## Two routes to Cloudflare, and what the deploy tests taught
+
+Decided 2026-10-11. Read this before touching anything Cloudflare; a thread that is unsure
+starts here, not with yskills.
+
+**Route 1, cloud threads: the claude-setup workflows.** `new-project` (also the existing-repo
+path), `delete-project`, `build-logs`, run with the Actions token. That token has Workers
+Scripts, D1, Builds Configuration and Account Settings, and nothing else: no KV, no token
+management. Cloud threads never run wrangler (the proxy breaks asset uploads and there is no
+safe login) and never ask yskills for `wrangler login`, a token edit or a dashboard click.
+
+**Route 2, everything that token cannot do:** KV namespaces, a dashboard-only setting, token or
+secret changes in Cloudflare, any wrangler command. Start a Remote Control session on the
+laptop (`docs/pc-claude-user.md`) as the Windows user `Claude`, who is signed in to Claude's own
+Cloudflare account (OAuth in Claude's Chrome, Cloudflare plugin or wrangler). Only a step that
+needs yskills' own hands (money, domain, an owner setting) goes to yskills, as a hands step.
+
+Lessons from the deploy tests (10-08, runs 1 to 9) and the move to Claude's account (10-11):
+
+- A static Nuxt site needs `nitro.preset: 'static'`: Workers Builds sets `WORKERS_CI` (above).
+- "This project is disconnected from your Git account" (8000008) means Cloudflare has not seen the
+  new repo yet. Fix: GitHub org > Settings > Installations > Cloudflare Workers and Pages >
+  Configure > Repository access: switch to "Only select repositories", back to "All repositories",
+  Save; then push `new/<name>` again.
+- Judge a build by `build_outcome`, not `status` ("stopped" is not a failure).
+- Read the real API answer, never the schema. Check a PR is still open before pushing to it.
+  Never merge on red.
+- Moving an app to the new account: the first build fails on the old resource ids on purpose.
+  Then a small PR puts the new D1 and KV ids and a `previews` block in `wrangler.jsonc`.
+- A committed lockfile with merge-conflict markers breaks `npm ci` on Workers Builds:
+  regenerate it, never hand-edit.
+- `projects/<name>.json` goes in first, through a size-S gate; delete and later runs need it.
+- Old copies in yskills' own Cloudflare stay until yskills says "delete <name>".
+
 ## Delete a project
 
 `delete-project` (Actions → Run workflow, or a thread's `actions_run_trigger` `run_workflow` on

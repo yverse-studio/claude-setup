@@ -85,7 +85,7 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 | Remote Control on the PC | `docs/WORKFLOW.md` (PC work) | operator `SKILL.md`, project instructions template |
 | UI rules | `CLAUDE.md` (UI) | `roles/designer.md`, `ui-review` (screenshots, the load-once check, run videos via `desktop.sh`) |
 | Character workflow (reference, sheet, likeness gate) | `docs/character-workflow.md` | `roles/programmer.md`, `roles/tester.md`, `roles/designer.md`, `briefs.md` |
-| Deploys, the workflows' detail | `publish` skill | `CLAUDE.md`, `docs/USING.md` |
+| Deploys, the workflows' detail, the two Cloudflare routes, deploy lessons | `publish` skill | `CLAUDE.md`, `docs/USING.md` |
 | Money and shop law | `sell` skill | `docs/WORKFLOW.md` (Selling) |
 | Project instructions text | `operator/templates/project-instructions.md` | the live text in each project's settings |
 | Reply style, say done, notify, talk first, honesty, hand-off at 200k | `operator/templates/project-instructions.md` | the live text in each project's settings |
