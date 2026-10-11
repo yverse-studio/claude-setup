@@ -14,9 +14,9 @@ and trial: `research/video-tools/2026-10-11.md` (project files). Checked 2026-10
 |---|---|---|
 | Cut, join, crop, grade, captions, loudness | plain **ffmpeg** (already in cloud threads) | proven, 5-line recipe below |
 | Cut list + grade + burned captions in one render | **video-use** (browser-use, MIT) | proven; read its SKILL.md and helpers first |
-| Free transcript + SRT (no key) | **faster-whisper** (MIT) | proven 2026-10-11, tiny model loads in cloud |
+| Free transcript + SRT (no key) | **faster-whisper** (MIT) | proven 2026-10-11, `small` model loads and runs in cloud (output not checked on real speech) |
 | Photo crop, resize, colour | **Pillow** | proven |
-| Background removal | **rembg** (`u2net`; `birefnet-general` is sharper but 1 GB and slow on CPU) | u2net proven, birefnet untested |
+| Background removal | **rembg** (`-m u2net`; `birefnet-general` is sharper but 1 GB and slow on CPU) | u2net proven, birefnet untested |
 | Upscale (Real-ESRGAN), auto-editor silence cuts | - | installable, not tried: say so, test on one file first |
 
 Not tools for threads: Artcraft (desktop GUI apps, rough alpha), Bria RMBG-2.0 (non-commercial licence).
@@ -43,9 +43,9 @@ PY
 ## Photo (Pillow, rembg)
 
 ```bash
-python3 -m venv /tmp/p && /tmp/p/bin/pip -q install pillow "rembg[cpu]" onnxruntime   # first run downloads a ~170 MB model, ~2 min
+python3 -m venv /tmp/p && /tmp/p/bin/pip -q install pillow "rembg[cpu,cli]"   # first run downloads the ~176 MB u2net model
 /tmp/p/bin/python -I -c "from PIL import Image,ImageOps,ImageEnhance as E;i=ImageOps.fit(Image.open('in.jpg').convert('RGB'),(1080,1080));E.Contrast(i).enhance(1.1).save('out.webp',quality=85)"   # crop+resize+colour
-/tmp/p/bin/rembg i in.jpg cut.png   # background removal, transparent PNG
+/tmp/p/bin/rembg i -m u2net in.jpg cut.png   # background removal, transparent PNG; always pass -m: the default model is non-commercial
 # check: open the result, check size and edges (hair, glass); keep originals untouched
 # licence: only the user's own or licence-clean images; no paid character models in git
 ```
