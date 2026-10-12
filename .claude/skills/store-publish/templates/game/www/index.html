@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Store Test</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #fdf3e7; color: #4a3b32; font: 18px system-ui, sans-serif; touch-action: manipulation; }
+  body { display: grid; place-items: center; }
+  main { text-align: center; }
+  #dot { width: 72px; height: 72px; border-radius: 50%; border: 0; background: #f2a48a; position: absolute; }
+  #score { font-size: 2rem; margin: 0; }
+</style>
+</head>
+<body>
+<main><p id="score">0</p><p>Tap the dot.</p></main>
+<button id="dot" aria-label="Dot"></button>
+<script>
+  const dot = document.getElementById('dot'), score = document.getElementById('score')
+  let n = 0
+  const move = () => {
+    dot.style.left = Math.random() * (innerWidth - 72) + 'px'
+    dot.style.top = Math.random() * (innerHeight - 72) + 'px'
+  }
+  dot.addEventListener('click', () => { score.textContent = ++n; move() })
+  move()
+</script>
+</body>
+</html>
