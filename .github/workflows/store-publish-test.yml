@@ -25,11 +25,12 @@ jobs:
       - name: Build like an app repo would
         run: |
           T=.claude/skills/store-publish/templates
-          cp -r $T/game "$RUNNER_TEMP/app" && mkdir "$RUNNER_TEMP/app/scripts" && cp $T/build-android.sh "$RUNNER_TEMP/app/scripts/"
+          cp -r $T/game "$RUNNER_TEMP/app" && mkdir "$RUNNER_TEMP/app/scripts" && cp $T/build-android.sh $T/sign-android.sh "$RUNNER_TEMP/app/scripts/"
           keytool -genkeypair -keystore "$RUNNER_TEMP/test.jks" -alias test -keyalg RSA -keysize 2048 -validity 2 \
             -storepass testpass -keypass testpass -dname "CN=ci" >/dev/null
           cd "$RUNNER_TEMP/app"
-          VERSION=1.2.3 KEYSTORE="$RUNNER_TEMP/test.jks" KS_PASS=testpass KEY_ALIAS=test KEY_PASS=testpass bash scripts/build-android.sh
+          VERSION=1.2.3 bash scripts/build-android.sh
+          KEYSTORE="$RUNNER_TEMP/test.jks" KS_PASS=testpass KEY_ALIAS=test KEY_PASS=testpass bash scripts/sign-android.sh
       - name: Check the result
         run: |
           cd "$RUNNER_TEMP/app/dist-android"

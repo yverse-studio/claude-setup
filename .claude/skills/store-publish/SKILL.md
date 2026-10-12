@@ -27,7 +27,8 @@ Marker **[U]** = not tested yet; the first real run confirms or fixes it, then L
 | Wrapper | Capacitor, game files bundled in the app | one build gives APK and AAB, works offline; a TWA is only a browser tab on your website and needs `assetlinks.json` |
 | Play upload | `r0adkll/upload-google-play` pinned by SHA | one step, no Gradle or Ruby changes; Gradle Play Publisher and fastlane `supply` need more setup |
 | Signing | one upload keystore for all games, kept on the laptop, base64 in each app repo's Actions secrets | Play App Signing re-signs for Play, so a lost upload key can be reset; the website APK key cannot |
-| Signing step | `apksigner` and `jarsigner` after Gradle, not in `build.gradle` | the keystore never touches project files |
+| Signing step | `sign-android.sh` (`apksigner`, `jarsigner`) as its own workflow step after an unsigned build | npm, the web build and Gradle run with no secrets; the keystore never touches project files |
+| Who may sign | only a commit that is on `main` (the workflow checks it) | a tag or manual run from a branch cannot get keys |
 | Version | tag `vX.Y.Z`; `versionCode = X*10000 + Y*100 + Z` | Play needs a code that only grows; no counter to keep |
 | Application id | `studio.yverse.<name without dashes>` | permanent once on Play: choose it once, in `capacitor.config.json` |
 | APK hosting | GitHub Release of the app repo, no new service | needs a **public** repo (below) |
@@ -36,6 +37,8 @@ Marker **[U]** = not tested yet; the first real run confirms or fixes it, then L
 **Secrets exception:** `CLAUDE.md` says projects keep no secrets in GitHub. The signing key and the
 Play service account cannot live anywhere else, because the APK is built in Actions. They live only
 in the app repo's Actions secrets (names below), are set from the laptop, and are never printed.
+One keystore is shared by all games, so one leak exposes all of them: keep the laptop file private and
+rotate only on yskills' word (rotating a secret is an ask-first item).
 
 ## Can do / only yskills / cannot
 
@@ -61,12 +64,14 @@ in the app repo's Actions secrets (names below), are set from the laptop, and ar
    add `capacitor.config.json` (see `templates/game/`: `appId`, `appName`, `webDir`), run
    `npx cap add android` and commit the `android/` folder (not its `build` folders; `.gitignore` in
    the template). Icons: `@capacitor/assets`.
-4. **Copy the templates.** `templates/build-android.sh` to `scripts/build-android.sh`,
+4. **Copy the templates.** `templates/build-android.sh` and `templates/sign-android.sh` to `scripts/`,
    `templates/android-release.yml` to `.github/workflows/android-release.yml`; replace `CHANGE_ME` in
    the workflow with the app id. `WEB_BUILD_CMD` (env of the build step) overrides `npm run build`.
 5. **Keystore and secrets (laptop route).** One RC session on the laptop (`start_rc_session`, folder
    `C:\Users\Claude\Documents\GitHub`). Needs a JDK (`winget install EclipseAdoptium.Temurin.21.JDK`)
-   and `gh` as `yskills-claude`. First game only; later games reuse the file:
+   and `gh` as `yskills-claude`. This step is the CLAUDE.md exception: keys live in this game repo's
+   Actions secrets, nowhere else, never printed, and the one shared keystore means one leak exposes all games.
+   First game only; later games reuse the file:
    ```powershell
    mkdir C:\Users\Claude\keystores
    $pw = -join ((48..57)+(65..90)+(97..122) | Get-Random -Count 24 | % {[char]$_})
@@ -91,7 +96,8 @@ in the app repo's Actions secrets (names below), are set from the laptop, and ar
    registered by a verified developer (research file, Google Play "Gotcha 2026") [U].
 8. **Google Play, once per game (hands steps 1 and 2 first).** Upload the AAB from the first run
    (run artifact `android-0.1.0`; yskills downloads it from the run page) by hand to Testing > Internal testing > Create new release [U]. After that every tag uploads automatically.
-9. **Service account (hands step 3, once), then secret per game:** `PLAY_SERVICE_ACCOUNT_JSON` from the
+9. **Service account (hands step 3, once), then secret per game** (same CLAUDE.md exception as step 5:
+   the Play key lives only in this game repo's Actions secrets, never printed): `PLAY_SERVICE_ACCOUNT_JSON` from the
    JSON file on the laptop: `Get-Content -Raw <file> | gh secret set PLAY_SERVICE_ACCOUNT_JSON -R $r`.
 10. **Release again.** New tag `v0.2.0` builds, releases and uploads to `internal`; yskills installs
     from the Play link on the phone. For a closed test or production dispatch the workflow with `play` true
