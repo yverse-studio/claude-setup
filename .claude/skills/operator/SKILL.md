@@ -52,8 +52,9 @@ Manager runs the same roles as for a new app, never one catch-all thread. In tha
 2. **Split by role:** threads titled `<Role> · <what>`: Designer when the look changes (drafts and
    the vote, `roles/designer.md`), one Programmer per PR, then a fresh Tester per PR running
    `gate.md` with Reviewer and Security inside. Each brief names its playbook and the research.
-3. **Parallel:** several ideas in one message become one chain each; independent chains run at
-   once, never more than three threads running; the rest queue in `PROGRESS.md`.
+3. **Parallel:** several ideas in one message become one chain each; chains that share no file
+   run at once (the slice rule below), never more than three Programmer threads; the rest queue
+   in `PROGRESS.md`.
 4. **Deliver:** the `Done:` line in the project chat ends with one short line per role saying what
    it found or checked.
 

@@ -113,8 +113,8 @@ for (const f of [...own, ...walk('.claude/rules'), ...walk('.claude/skills').fil
   }
 }
 
-// One model line (docs/WORKFLOW.md, Models). No other file names a model id: a second table or wording drifts (yskills, 2026-10-07:
-// threads kept following an outdated copy).
+// One model line (docs/WORKFLOW.md, Models); no other file names a model id. A second table or
+// wording drifts (yskills, 2026-10-07: threads kept following an outdated copy).
 const modelLine = readFileSync(join(root, 'docs/WORKFLOW.md'), 'utf8').match(/^Models: .*$/m)?.[0]
 if (!modelLine) errors.push('docs/WORKFLOW.md: the Models line is missing')
 const lineIds = new Set(modelLine?.match(/claude-[a-z]+-[\d-]+/g) ?? [])
