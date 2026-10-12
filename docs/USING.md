@@ -59,6 +59,13 @@ What you do: write the idea. A thread does the rest.
 Detail and failures: `publish` skill (A new project). What the workflows cannot do (KV, wrangler,
 dashboard-only settings) goes to a laptop session, never to you: `publish` skill (Two routes).
 
+## Ship a game to Android and Google Play
+
+What you do: say "ship <name> as APK" or "to the Play Store". Claude follows the `store-publish` skill:
+the website gets a download button, a tag builds and signs the APK, and later releases go to Google Play
+by workflow. You do the account steps it sends you, one at a time (Play account, service account,
+testers). Every project adds its lessons to that skill.
+
 ## Delete a page
 
 What you do: say "delete <name>". Deleting is the one step Claude asks for first.

@@ -1,0 +1,46 @@
+# Proves the store-publish templates: builds the tiny template game into a signed APK and AAB with a
+# throwaway keystore, then checks signature, package name and version code. Needs no secrets.
+name: store-publish-test
+
+on:
+  pull_request:
+    paths:
+      - '.claude/skills/store-publish/**'
+      - '.github/workflows/store-publish-test.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 24 }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 21 }
+      - name: Build like an app repo would
+        run: |
+          T=.claude/skills/store-publish/templates
+          cp -r $T/game "$RUNNER_TEMP/app" && mkdir "$RUNNER_TEMP/app/scripts" && cp $T/build-android.sh "$RUNNER_TEMP/app/scripts/"
+          keytool -genkeypair -keystore "$RUNNER_TEMP/test.jks" -alias test -keyalg RSA -keysize 2048 -validity 2 \
+            -storepass testpass -keypass testpass -dname "CN=ci" >/dev/null
+          cd "$RUNNER_TEMP/app"
+          VERSION=1.2.3 KEYSTORE="$RUNNER_TEMP/test.jks" KS_PASS=testpass KEY_ALIAS=test KEY_PASS=testpass bash scripts/build-android.sh
+      - name: Check the result
+        run: |
+          cd "$RUNNER_TEMP/app/dist-android"
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          "$BT/aapt2" dump badging storetest.apk | tee badging.txt | head -1
+          grep -q "name='studio.yverse.storetest' versionCode='10203' versionName='1.2.3'" badging.txt
+          jarsigner -verify storetest.aab | grep -q "jar verified"
+          unzip -l storetest.aab | grep -q base/manifest/AndroidManifest.xml
+          sha256sum -c storetest.apk.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: storetest-apk
+          path: ${{ runner.temp }}/app/dist-android/storetest.apk
+          retention-days: 7

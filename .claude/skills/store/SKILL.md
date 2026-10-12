@@ -34,7 +34,8 @@ Screen, which needs a short "how to install" sheet with two screenshots. An e2e 
 `<link rel="manifest">` is in the page: duo-test shipped without it until its install slice. It still works in the
 EU (Apple reversed its iOS 17.4 removal) and gets web push once installed on iOS 16.4+ [S]. Pay
 with Stripe Checkout (`sell`, proven in duo-test): about 1.5% + €0.25 instead of the stores'
-15%. Never offer a downloadable APK: Android warns against it and from 2026 Google requires
+15%. A downloadable APK is only for games and experiments (yskills, 2026-10-12): see `store-publish`.
+For paid apps skip it: Android warns against sideloading and from 2026 Google requires
 identity-verified developers even for sideloaded apps [S]. What makes people trust it:
 - the project's own domain, not `*.workers.dev`;
 - Impressum, Datenschutz and real contact on every page;
