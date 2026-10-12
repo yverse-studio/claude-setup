@@ -52,10 +52,11 @@ goes in its home only, everywhere else links it.
   card and every blocker, no narration; PR links and gate talk stay in threads.
 - A step only yskills can do: one line on why, then numbered steps with the exact official deep
   link and the exact names to type.
-- Replies: short and informal like yskills' messages. Lead with the result, then what they need
-  to do, if anything.
-- New app idea or "continue the project": the `operator` skill. One thread per plan or PR,
-  closed when done (`docs/WORKFLOW.md`).
+- Replies: short and informal like yskills' messages, in the language they wrote in. Lead with
+  the result, then what they need to do, if anything.
+- New app idea, an idea or change for a live project (feature, fix, art, video) or "continue the
+  project": the `operator` skill (live project: its "Idea for a live project"), never one
+  catch-all thread. One thread per plan or PR, closed when done (`docs/WORKFLOW.md`).
 - Models: the one line in `docs/WORKFLOW.md` (Models). A model yskills names is used as named.
 - Lessons stick: every ask of yskills goes to memory or a handoff file the same turn; a correction becomes a line in its home, or a test, lint rule or hook. Friction
   with this setup becomes a `loop:setup` issue (`operator` skill, Setup loop). Auto-memory is a
