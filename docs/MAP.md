@@ -34,6 +34,7 @@ lives outside this repo.
 | Cloud threads | `cloud/setup.sh` | Plugins and the context guard in a cloud environment (paste into Project settings) |
 | HQ rows | `docs/hq-rows.md` | What each Project Manager writes into HQ (the page itself lives in yverse-studio/company-xy) |
 | Characters | `docs/character-workflow.md` | The one way to make a 3D character and show it to yskills: reference, build, self-check, comparison sheet, gate, library |
+| Work expectations | `docs/WORK-EXPECTATIONS.md` | Standing rules for adult-game work in every repo and chat (cast, references as target, reusable library, done at 5/5) plus the Company XY facts |
 | Using it (for yskills) | `docs/USING.md` | One phone page: how to start an app, deploy or delete a page in one shot, what you see, what it costs |
 | Project registry | `projects/` | One `<name>.json` per project the `new-project` workflow made; `delete-project` needs it |
 | After launch | `docs/LOOP.md` | Errors and feedback become issues and fix threads |
