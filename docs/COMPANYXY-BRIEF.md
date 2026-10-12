@@ -30,6 +30,9 @@ compare-first loop: yskills' reference on the left, our model on the right, judg
 rig, IK and gravity jiggle, then poses against references. Outfits are garment parts built in a
 separate cloth thread. Every thread reviews its own work and reports only at 5/5.
 
+The technical how-to (build commands, mistakes and fixes, placement rules, size sliders, library
+and creator goal) is not repeated here: `/mnt/project-files/companyxy/patches/base-body/GUIDE.md`.
+
 ## Library goal
 
 A reusable library of characters, clothes and poses, plus a repeatable character-creator
