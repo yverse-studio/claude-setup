@@ -34,3 +34,4 @@ Added at the end of each project (operator step 9): date, project and its type, 
 - 2026-10-06 (duo-test): a guest who logged into an existing account lost the guest lesson; test guest-to-login journeys.
 - Remote Control (2026-10-07): a test that needs the PC (Studio play, local screenshots) is run by a Remote Control session via the coordinator, not by yskills; it never reads or prints keys.
 - 2026-10-12 (Yland, first-visit quest): the "find a shop" step ticked itself when you searched your own name. Test every completion trigger with the wrong action too, not only the right one.
+- 2026-10-12 (Yland, first-visit quest): each tutorial step passed alone, but searching yourself zoomed in so close that the next drag ticked "peek into a shop" by itself, and the lighthouse counted as a shop. Play a tutorial as one journey from the most common first action, on a throttled phone with real touch, and check no step ticks off without its own gesture.
