@@ -46,6 +46,12 @@ Playwright (gate check 5) and `design-critic` judges the look.
 - **Accessibility (WCAG 2.2 AA):** text contrast 4.5:1, a visible focus ring, targets at least
   24 px (44 px for the main action), every control by keyboard, a label on every input,
   `lang="de"`.
+- **First visit** (yskills, 2026-10-12, proven on Yland's island quest): when the main features
+  aren't obvious at first sight (a map, a game, a tool), plan a short tutorial for them, or write
+  why none is needed. Three to five steps, taught by doing (each ticks off when the visitor really
+  does it), first visit only, skippable at any point, replayable from settings or the menu. A
+  ghost hand or arrow shows the gesture once or twice; dim only around a control to find, never
+  the content being taught.
 - **Speed budget** (Lighthouse mobile on the preview): LCP ≤ 2.5 s, INP ≤ 200 ms, CLS ≤ 0.1,
   first-load JS ≤ 170 KB gzip, fonts self-hosted (DSGVO).
 
