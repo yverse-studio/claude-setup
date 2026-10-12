@@ -19,6 +19,8 @@ goes in its home only, everywhere else links it.
 - Dashboard: the Claude Setup HQ Artifact (Company view) is the only one; each Project Manager
   writes its rows there (`docs/hq-rows.md`). New apps are threads in the claude.ai project
   "Company XY", never a new project.
+- Adult-game work (characters, 3D models, scenes, stories; Company XY facts included): `docs/WORK-EXPECTATIONS.md`
+  applies to every repo and chat; read it and the project memory first, do not re-ask what it settles.
 
 ## How to work
 
