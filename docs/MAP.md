@@ -83,13 +83,13 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 | Merge policy, 5/5 gate | `gate.md` (Merge policy) | `CLAUDE.md`, `docs/WORKFLOW.md`, `roles/tester.md` |
 | Models | the one line in `docs/WORKFLOW.md` (Models); project instructions carry it word for word | everything else links it; CI fails on a second wording or on the old model name |
 | Context guard numbers (warn 150k, hand off 200k) | `global/context-guard.mjs` | `CLAUDE.md`, `README.md` |
-| Remote Control on the PC | `docs/WORKFLOW.md` (PC work) | operator `SKILL.md`, project instructions template |
+| Remote Control on the PC | `docs/WORKFLOW.md` (PC work) | operator `SKILL.md` |
 | UI rules | `CLAUDE.md` (UI) | `roles/designer.md`, `ui-review` (screenshots, the load-once check, run videos via `desktop.sh`) |
 | Character workflow (reference, sheet, likeness gate) | `docs/character-workflow.md` | `roles/programmer.md`, `roles/tester.md`, `roles/designer.md`, `briefs.md` |
 | Deploys, the workflows' detail, the two Cloudflare routes, deploy lessons | `publish` skill | `CLAUDE.md`, `docs/USING.md` |
 | Money and shop law | `sell` skill | `docs/WORKFLOW.md` (Selling) |
-| Project instructions text | `operator/templates/project-instructions.md` | the live text in each project's settings |
-| Reply style, say done, notify, talk first, honesty, hand-off at 200k | `operator/templates/project-instructions.md` | the live text in each project's settings |
+| Project instructions text (a pointer to this repo) | `operator/templates/project-instructions.md` | the live text in each project's settings |
+| An idea or change for a live project | operator `SKILL.md` (Idea for a live project) | `CLAUDE.md`, `roles/project-manager.md` |
 
 ## Keeping it clean
 

@@ -33,3 +33,4 @@ Added at the end of each project (operator step 9): date, project and its type, 
 - 2026-10-06 (duo-test): no slice was tested on a real preview; bugs reached yskills. Always grade the live preview.
 - 2026-10-06 (duo-test): a guest who logged into an existing account lost the guest lesson; test guest-to-login journeys.
 - Remote Control (2026-10-07): a test that needs the PC (Studio play, local screenshots) is run by a Remote Control session via the coordinator, not by yskills; it never reads or prints keys.
+- 2026-10-12 (Yland, first-visit quest): the "find a shop" step ticked itself when you searched your own name. Test every completion trigger with the wrong action too, not only the right one.

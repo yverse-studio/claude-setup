@@ -43,6 +43,20 @@ starts from that plan right away; yskills' "no" or a change sends the operator b
 brainstorm. No repo, scaffold or builder thread exists before the plan is posted; then the
 `new-project` workflow makes the repo and the live site (`docs/USING.md`, Deploy a page in one shot).
 
+**Idea for a live project** (yskills, 2026-10-12: "where are my teams?"). When yskills posts an
+idea or change for a project that already runs (feature, fix, art, video, a tutorial), the Project
+Manager runs the same roles as for a new app, never one catch-all thread. In that turn:
+
+1. **Research first:** a `Researcher` subagent (a thread when big) on best practice and the state
+   of the art for this idea, one WebSearch per open fact, one page back. A plain bug fix skips it.
+2. **Split by role:** threads titled `<Role> · <what>`: Designer when the look changes (drafts and
+   the vote, `roles/designer.md`), one Programmer per PR, then a fresh Tester per PR running
+   `gate.md` with Reviewer and Security inside. Each brief names its playbook and the research.
+3. **Parallel:** several ideas in one message become one chain each; independent chains run at
+   once, never more than three threads running; the rest queue in `PROGRESS.md`.
+4. **Deliver:** the `Done:` line in the project chat ends with one short line per role saying what
+   it found or checked.
+
 **One role per thread, named by it.** Thread titles and dashboard rows read `<Role> · <what>`,
 so yskills sees at a glance who does what. Roles (the shape Anthropic recommends for long-running
 agents: one planner, workers with a fresh context per job, an evaluator that never built what it

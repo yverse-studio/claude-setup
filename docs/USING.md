@@ -4,11 +4,9 @@ One page, made for a phone. Every number has its source; "not measured yet" mean
 
 ## Start a project
 
-Once per new claude.ai project, before the first message. The project chat loads no repo, so
-the rules reach it only through this text. A global `~/.claude/CLAUDE.md` from `cloud/setup.sh`
-does not help: the project chat runs in a fixed environment without your setup script (checked
-2026-10-08: no setup plugins, its own environment id), and threads already get the rules from
-this text and the repo.
+Once per new claude.ai project, before the first message. The text is a short pointer: every
+session, the project chat included, loads this repo with `add_repo` and follows its `CLAUDE.md`,
+so the rules live here only.
 
 1. Open [`operator/templates/project-instructions.md`](../.claude/skills/operator/templates/project-instructions.md)
    and copy everything below the `---` line.
@@ -17,7 +15,7 @@ this text and the repo.
 3. **Project settings > Repositories**: add `yverse-studio/claude-setup` (threads load the
    details from it).
 
-When a rule changes, the template changes in the same PR; paste it again into running projects.
+A rule change needs no new paste: sessions read the rules from this repo.
 
 ## Start an app
 
