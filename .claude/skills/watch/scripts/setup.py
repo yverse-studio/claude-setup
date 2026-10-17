@@ -14,6 +14,7 @@ from pathlib import Path
 
 from config import (CONFIG_DIR, CONFIG_FILE, ConfigError, DETAILS, ENGINES, get_config,
                     load_api_key, load_gemini_key, read_env_file, resolve_engine, write_settings)
+from local_faster_whisper import available as faster_whisper_available
 from runtime import configure_stdio, diagnostic, run_text
 
 REQUIRED_BINARIES = ['ffmpeg', 'ffprobe', 'yt-dlp']
@@ -155,7 +156,10 @@ def _status(detailed=False):
     chosen = cfg['whisper_backend']
     backend = detected if chosen == 'auto' else chosen
     local_ready = _whisperx_status(cfg, detailed)
-    backend_ready = local_ready if chosen == 'whisperx' else (bool(load_api_key(backend)[1]) if backend in ('groq', 'openai') else chosen == 'none')
+    if chosen == 'auto' and not has_key and faster_whisper_available():
+        backend = 'faster-whisper'
+    backend_ready = (local_ready if chosen == 'whisperx' else faster_whisper_available() if backend == 'faster-whisper'
+                     else bool(load_api_key(backend)[1]) if backend in ('groq', 'openai') else chosen == 'none')
     blocked = bool(missing) and binaries_required
     result = {'status': 'needs_install' if blocked else 'ready', 'can_proceed': not blocked,
               'engine': engine, 'configured_engine': cfg['engine'], 'gemini_key_present': gemini_key,
@@ -226,6 +230,11 @@ def cmd_install(backend=None, detail=None, engine=None):
         write_settings({'WATCH_DETAIL': detail}, CONFIG_FILE)
     if backend == 'whisperx':
         return install_whisperx()
+    if backend == 'faster-whisper' and not faster_whisper_available():
+        print('[setup] Installing faster-whisper (free CPU transcription)…', file=sys.stderr)
+        if subprocess.run([sys.executable, '-m', 'pip', 'install', '-q', 'faster-whisper']).returncode != 0:
+            print('[setup] pip install faster-whisper failed; install it by hand and rerun.', file=sys.stderr)
+            return 2
     if backend:
         write_settings({'WATCH_WHISPER_BACKEND': backend}, CONFIG_FILE)
         if backend in ('groq', 'openai') and not load_api_key(backend)[1]:
@@ -318,7 +327,7 @@ def main():
     mode.add_argument('--check', action='store_true')
     mode.add_argument('--json', action='store_true')
     mode.add_argument('--install-whisperx', action='store_true')
-    parser.add_argument('--backend', choices=['auto', 'whisperx', 'groq', 'openai', 'none'])
+    parser.add_argument('--backend', choices=['auto', 'whisperx', 'faster-whisper', 'groq', 'openai', 'none'])
     parser.add_argument('--detail', choices=sorted(DETAILS))
     parser.add_argument('--engine', choices=sorted(ENGINES))
     args = parser.parse_args()

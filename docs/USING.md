@@ -66,6 +66,13 @@ the website gets a download button, a tag builds and signs the APK, and later re
 by workflow. You do the account steps it sends you, one at a time (Play account, service account,
 testers). Every project adds its lessons to that skill.
 
+## Share a video
+
+What you do: in Instagram, TikTok or YouTube tap Share, then Copy link, and paste it into the project
+chat with one line ("fact check", "should we use this?"). Send the link, not the file. A thread watches it
+for free (frames plus transcript, `watch` skill) and answers with what it saw, what it heard, a fact check
+and whether claude-setup should adopt it. Private or login-only posts don't work; send a screen recording.
+
 ## Delete a page
 
 What you do: say "delete <name>". Deleting is the one step Claude asks for first.
