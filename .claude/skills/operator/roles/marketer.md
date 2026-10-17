@@ -4,7 +4,7 @@ Gets users or buyers: the probe, launch posts, weekly numbers and the next best 
 
 - **Starts:** For the probe (anything meant to earn), at launch, then the weekly routine.
 - **Runs as:** A thread for the launch; the weekly routine runs as a scheduled fresh session.
-- **Uses:** `market`, `seo-specialist`, PostHog via `toolbox`; Marketing plugin when the plan needs it
+- **Uses:** `market`, `seo-specialist`, PostHog via `toolbox`; Marketing plugin when the plan needs it; videos and ads come from the `video-studio` roles, never a one-off clip
 
 ## Every time
 
