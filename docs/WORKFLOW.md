@@ -36,7 +36,30 @@ Remote Control (2026-10-07): yskills allows Claude Code on their PC. Anything th
 The one model line (also in every project's instructions, word for word; `scripts/check.mjs`
 keeps the copies equal):
 
-Models: Fable (claude-fable-5-1) for the hardest problems and architecture, and for the project chat (coordinator); if Fable is out of credits or unavailable, Opus takes it without asking. Opus (claude-opus-5-5) for plans, design, judgement and full audits. Sonnet (claude-sonnet-5-5) for gates, fixes, research and builds. A simple reading job goes to a Haiku subagent. Effort medium unless yskills asks for more. When a newer model ships, use the newest of each tier. A model yskills names is used as named.
+Models: best fitting model per task, cheapest that fits. Fable (claude-fable-5-1) is rare, drawn from yskills' Max plan: only the architecture or plan of a new product, a problem still stuck after a Sonnet round and an Opus checkpoint, or what yskills names; plus the project chat (coordinator), which yskills sets by hand; if Fable is out of credits or unavailable, Opus takes it without asking. Opus (claude-opus-5-5) for plans, design, judgement and full audits. Sonnet (claude-sonnet-5-5) for gates, fixes, research and builds. A simple reading job goes to a Haiku subagent. Cheap first: Sonnet does the work and calls an Opus subagent before committing to an approach, when stuck twice on the same spot and before saying done; the gate's verdict is Opus on round 2 and on size L. A thread never picks Fable for routing, reviews, research, builds or fixes. Effort medium unless yskills asks for more. When a newer model ships, use the newest of each tier. A model yskills names is used as named.
+
+Role table (tiers only; the ids live in the line above):
+
+| Role | Model | Effort | Escalate to | When |
+|---|---|---|---|---|
+| Coordinator (project chat) | as yskills sets it in project settings | medium | | never changed by a thread |
+| Architect, plan of a new product | Fable | medium (high when yskills asks) | | only the three Fable cases above |
+| Planner (feature plan, PLAN.md) | Opus | medium | Fable | plan rejected twice |
+| Designer, design-critic, vote verdict | Opus | medium | | taste is judgement |
+| Programmer / builder | Sonnet | medium | Opus subagent | before committing to an approach; stuck twice on the same spot; before "done" |
+| Researcher | Sonnet | medium | Opus | only to weigh conflicting findings |
+| Reviewer subagents (code, ts, vue, db, silent-failure) | Sonnet | medium | | |
+| Tester / gate thread | Sonnet | medium | Opus verdict | round 2+, size L |
+| Evaluator, variant comparison | Sonnet | medium | Opus | size L gates, any pick between variants |
+| Security, red team | Sonnet | high on money, auth, secrets | Opus | a finding the builder disputes |
+| Legal, Marketer | Sonnet | medium | | |
+| Reading jobs (files, PRs, logs, one web page) | Haiku | low | | prompt under 100k |
+| Doc updates, status rows, lint fixes | Haiku | low | | |
+| Handoff writing | Haiku or the thread itself | low | | never a new Opus call |
+| Figure and scene pipeline | Sonnet renders and crops | medium | Opus diagnoses once | Fable never |
+| Video and media edits, store and deploy workflows | Sonnet | medium | | |
+
+Fixed rules: effort medium is the default; high only where listed; max never unless yskills asks. Never switch a running thread's model (the cache is rewritten once, about $1 at 110k). Haiku reading jobs stay under 100k of prompt, because its price doubles above that.
 
 Thread starts pass the full ids; agent files use the aliases `fable`, `opus`, `sonnet`, `haiku` (a `fable` agent falls back to Opus by the line above); built-in
 subagents get Sonnet through `CLAUDE_CODE_SUBAGENT_MODEL`. Every other file points here.

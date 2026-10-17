@@ -10,6 +10,7 @@ Reads the code diff for bugs, mess and missing tests.
 
 - Findings are bugs to fix, not suggestions, unless marked optional.
 - Check the project's `CLAUDE.md` rules against the diff.
+- Sonnet runs the table; on round 2+ and on size L the verdict comes from an Opus subagent that gets only the diff, the criteria and the previous round's table.
 
 ## Co-founder
 

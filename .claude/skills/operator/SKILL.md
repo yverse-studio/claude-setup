@@ -159,7 +159,7 @@ Claude Code's safety checks are not friction to fix: only yskills' allow rules o
 ## 5. Spend little
 
 - **Models:** the one line in claude-setup `docs/WORKFLOW.md` (Models). Thread effort medium.
-- Start the hand-off at the context guard's warning (150k) and finish it before its hand-off line (200k) (two long threads were 77% of usage on 2026-10-04); one brief = one slice that ends under it. A template over 2000 lines is split before the next change.
+- Hand off at a milestone, never mid-step: at the guard's 150k warning finish the current step, write the handoff, stop; never start a new unit past 150k; 200k is the hard cap (two long threads were 77% of usage on 2026-10-04). The planner sizes every unit to one thread (about 90k working room); a unit that cannot fit is split in the plan. Haiku readers stay under 100k of prompt. A template over 2000 lines is split before the next change.
 - Where 2026-10-07 burned tokens, and the rule that stops each: hand-offs at 270k (write the
   hand-off at the guard's first warning); `dashboard.html` read whole again and again (grep the
   part, read it once); the same answer in two threads (a thread checks the timeline before
