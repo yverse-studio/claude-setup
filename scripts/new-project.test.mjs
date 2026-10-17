@@ -175,5 +175,8 @@ test('a game project is a static Vite + three.js Worker without a database or lo
   assert.ok(readFileSync(join(dir, 'index.html'), 'utf8').includes('<title>blob</title>'))
   assert.ok(readFileSync(join(dir, 'src/index.js'), 'utf8').includes('env.ASSETS'))
   assert.ok(existsSync(join(dir, 'src/rules.ts')) && existsSync(join(dir, 'scripts/build.mjs')))
+  for (const file of ['src/hooks.ts', 'scripts/play.mjs', 'test/bot.mjs']) assert.ok(existsSync(join(dir, file)), `${file} lets a thread play the game`)
+  assert.equal(pkg.scripts.play, 'node scripts/play.mjs')
+  assert.ok(pkg.devDependencies['playwright-core'])
   rmSync(dir, { recursive: true, force: true })
 })

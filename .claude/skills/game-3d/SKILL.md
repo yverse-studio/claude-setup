@@ -113,6 +113,14 @@ covers them. Stories are data: threads turn yskills' messages into `story/` file
   (`/opt/pw-browsers/chromium`) with `--use-angle=swiftshader --enable-unsafe-swiftshader
   --ignore-gpu-blocklist`, a fixed clock and seed (`?t=<unix>&seed=1`), and the scene's camera
   spots at 390 and 1440 px. New shots go through `design-critic`; the PR shows them.
+- **Play it, not just look at it**: a game exposes three hooks (`src/hooks.ts` in the starter):
+  `window.render_game_to_text()` (the visible state as JSON: mode, score, time, positions),
+  `window.advanceTime(ms)` (play that much game time at once; open the page with `?paused=1` so it
+  is the only clock) and `window.__playInput(x, z)` (hold a direction). `test/bot.mjs` decides from the
+  text, `npm run play -- [url]` (`scripts/play.mjs`, copy both into an older game) plays a whole round,
+  keeps three screenshots and fails on a page error, a round that never ends or a score under the bot's
+  `min`. Run it on the Worker Preview before every gate; add each new state a bot needs to the text.
+  QA after every slice, not at the end (idea from OpusGameLabs/game-creator, written in our words).
 - **Perf budget per scene** (`tests/perf`, reads `renderer.info` after one frame): under 300
   draw calls, under 500 000 triangles, textures at most 2048 px, assets under 150 MB in total.
   SwiftShader cannot measure frame rate: yskills' PC runs the perf scene once per milestone and
