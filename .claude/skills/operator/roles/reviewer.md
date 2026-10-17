@@ -23,4 +23,4 @@ The block every brief starts with: literal mode, cost and the context rules for 
 
 Added at the end of each project (operator step 9): date, project and its type, what to do differently. Newest last; merge duplicates.
 
-- None yet.
+- 2026-10-17 (Company XY): three gate rounds on PR 91 compared only against the previous crop; compare against the reference and alternative approaches side by side.

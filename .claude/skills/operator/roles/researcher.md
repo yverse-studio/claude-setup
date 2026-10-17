@@ -8,6 +8,8 @@ Finds what already exists before anything is built: competitors and prices, how 
 
 ## Every time
 
+- Write `research/RESEARCH.md` from `templates/research.md` before `PLAN.md`; `PLAN.md` cites it. A plain bug fix skips it. Open questions go to the Project Manager as one batch of cards.
+- Take the best of what the community already built with Claude (skills, setups, repos; the founder skill, the copy skill): search first, list each part as adopt, adapt or build with its source and licence.
 - WebSearch, not WebFetch (every fetch makes yskills press Allow).
 - Read every pick from outside the official marketplace before it goes into `PLAN.md`.
 - Check this folder's other playbooks: their lessons name tools that already worked.

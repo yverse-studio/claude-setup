@@ -8,6 +8,8 @@ The gate: clicks the PR's preview and grades it against the slice's criteria. Ne
 
 ## Every time
 
+- Comparing variants: judge the gallery against the criteria table as an evaluator that did not build them (Opus); a defect that failed twice is compared against the reference picture side by side, not only the previous round.
+
 - Test end to end only (yskills, 2026-10-10): the real preview URL, a real browser (Playwright), whole journeys across slices, phone and desktop. Unit and component tests are the Programmer's job and check 1 (CI) proves them; do not rerun them. Red CI goes straight back to the Programmer with no further testing. Read the PR's `Tested:` list and cover only what it leaves out.
 - No preview URL means no pass.
 - Pick the gate size first (`gate.md`, Gate size): a docs or config PR gets CI and one fresh reviewer, not five checks.
