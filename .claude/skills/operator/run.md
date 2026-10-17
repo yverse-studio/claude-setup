@@ -8,7 +8,7 @@ before each step; builder, gate and fix threads read their `roles/<role>.md` ins
    and a **design card**: "Send pictures, screenshots or links of apps and sites you like (or
    hate) for this, one line each on why." Linked sites are shot with `ui-review` and saved with
    the pictures in `design/refs/`; the lines go into `design/DESIGN.md`.
-2. **Research**, parallel subagents, one page each. The Researcher writes `research/RESEARCH.md` in the project from [`templates/research.md`](templates/research.md) before `PLAN.md` (who does it, what their users want better, copy/adapt/build table with source and licence, what others built with Claude, open questions with recommended answers); `PLAN.md` cites it. A plain bug fix skips it. Always check what the community already built with Claude (skills, setups, repos) first and list what to adopt, adapt or build, with the source; read it before installing:
+2. **Research**, parallel subagents, one page each. The Researcher writes `research/RESEARCH.md` from [`templates/research.md`](templates/research.md) before `PLAN.md`; a bug fix skips it:
    - **Inside:** our skills and catalog, the lessons in claude-setup's `docs/TEST-PROJECTS.md`,
      yskills' repos with code to reuse.
    - **Outside:** competitors and prices, how the best similar products and open-source projects
@@ -55,7 +55,7 @@ before each step; builder, gate and fix threads read their `roles/<role>.md` ins
    card as soon as PLAN.md knows it is needed, so the clock runs during the build. The card's
    steps come from the skill that owns the key (`sell` `keys.md`, `store` §1, `publish`,
    `toolbox` picks). Keys go into the service's own settings page, never into chat or git.
-5. **Build.** Any pick between variants is a gallery plus a criteria table judged by an evaluator that did not build them (Opus); one variant per unit, a rebuild replaces its branch, never a "-2" branch. A spec or rule change is its own tiny PR and running slices finish on the old text. At most three slice threads, each listing the files it owns in `PROGRESS.md`; the Project Manager refuses a fourth. One builder thread per slice: one at a time, the next in a fresh
+5. **Build.** A pick between variants follows [`roles/designer.md`](roles/designer.md) (variants). One builder thread per slice: one at a time, the next in a fresh
    thread once the previous one is merged; a second only when the slices share no file; never more than three: "Build
    slice <id> of PLAN.md;
    its criteria are in features.json (read only). Read PLAN.md, PROGRESS.md and CLAUDE.md first. Do not read: node_modules, build output, lockfiles, generated files, screenshots, other slices' code, HANDOFF files of old threads; `grep` first, read only the part you need.

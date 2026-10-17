@@ -27,5 +27,4 @@ Repos, skills, setups and posts where someone made this kind of product with Cla
 (prompts, skills, workflows) and which mistakes they report.
 
 ## 5. Open questions
-Each with a recommended answer. The Project Manager posts them as one batch of cards, together
-with the Designer's gallery of 2-3 example looks copied from the category leaders.
+Each with a recommended answer; they reach yskills as one batch of cards (`run.md` step 3).

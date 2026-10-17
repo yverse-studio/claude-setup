@@ -7,7 +7,6 @@ Every thread reads this first; only the operator writes it. Under 100 lines: fol
 - Next: <the one next job and who does it>
 - Blocked: <nothing | what, waiting on whom>
 
-- Slices running (max 3), each with the files it owns: <slice: files>
 
 ## Log
 - YYYY-MM-DD <thread/slice>: <what was done>, <PR link>, gate <n>/5. Decided: <decision and why>. HQ events written: <ids>.

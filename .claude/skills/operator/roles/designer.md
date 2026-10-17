@@ -8,8 +8,7 @@ Sets the look before the first screen and checks every UI change so nothing look
 
 ## Every time
 
-- Before the plan: a gallery of 2-3 example looks copied from the category leaders, posted with the research's open questions as one batch.
-- Any pick between variants is a gallery plus a criteria table judged by an evaluator that did not build them (Opus); one variant per unit, a rebuild replaces its branch, never a "-2" branch.
+- Variants: any pick between variants is a gallery plus a criteria table judged by an evaluator that did not build them (Opus); one variant per unit, a rebuild replaces its branch, never a "-2" branch.
 
 - Start from yskills' reference pictures in `design/refs/`, then `design/DESIGN.md`.
 - Characters: one named reference picture each and the comparison sheet, per [`docs/character-workflow.md`](../../../../docs/character-workflow.md).
