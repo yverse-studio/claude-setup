@@ -1,13 +1,17 @@
 import * as THREE from 'three'
 import { loadPlatform, web, type Platform } from './platform'
 import { ARENA, COIN_COUNT, createState, isOver, step, type Input, type State } from './rules'
+import { installHooks } from './hooks'
 
 const text = navigator.language.startsWith('en')
   ? { coins: 'Coins', time: 'Time', again: 'Tap to play again' }
   : { coins: 'Münzen', time: 'Zeit', again: 'Tippen zum Neustart' }
 
-// ?seed=<n> makes a round repeatable for tests and screenshots (game-3d skill, section 4).
-const seed = Number(new URLSearchParams(location.search).get('seed')) || 1
+// ?seed=<n> makes a round repeatable; ?paused=1 stops the clock so advanceTime() is the only time
+// (tests, bots and screenshots; game-3d skill, section 4).
+const params = new URLSearchParams(location.search)
+const seed = Number(params.get('seed')) || 1
+const paused = params.has('paused')
 
 const canvas = document.querySelector<HTMLCanvasElement>('#game')!
 const hud = document.querySelector<HTMLDivElement>('#hud')!
@@ -51,7 +55,10 @@ canvas.addEventListener('pointermove', (e) => { if (pointer) pointer = ndc(e) })
 addEventListener('pointerup', () => { pointer = null })
 const ndc = (e: PointerEvent) => new THREE.Vector2((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1)
 
+let held: Input | null = null // set by the __playInput hook
+
 function readInput(): Input {
+  if (held) return held
   let x = (keys.has('arrowright') || keys.has('d') ? 1 : 0) - (keys.has('arrowleft') || keys.has('a') ? 1 : 0)
   let z = (keys.has('arrowdown') || keys.has('s') ? 1 : 0) - (keys.has('arrowup') || keys.has('w') ? 1 : 0)
   if (pointer && !x && !z) {
@@ -114,10 +121,20 @@ function draw() {
   renderer.render(scene, camera)
 }
 
+const TICK = 1 / 60
+installHooks({
+  state: () => state,
+  hold: (input) => { held = input },
+  advance: (ms) => {
+    for (let t = 0; t < ms / 1000; t += TICK) state = step(state, readInput(), TICK)
+    draw()
+  },
+})
+
 renderer.setAnimationLoop((now) => {
   const dt = Math.min((now - last) / 1000, 0.1)
   last = now
-  if (!busy) state = step(state, readInput(), dt)
+  if (!busy && !paused) state = step(state, readInput(), dt)
   if (isOver(state) && !wasOver) { wasOver = true; platform.gameplayStop() }
   coins.forEach((mesh) => { mesh.rotation.z += dt * 2 })
   draw()
