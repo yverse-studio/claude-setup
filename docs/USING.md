@@ -73,6 +73,17 @@ chat with one line ("fact check", "should we use this?"). Send the link, not the
 for free (frames plus transcript, `watch` skill) and answers with what it saw, what it heard, a fact check
 and whether claude-setup should adopt it. Private or login-only posts don't work; send a screen recording.
 
+## Social media
+
+What you do: drop ideas, say two words, set one switch. The `social-team` skill runs the rest.
+
+1. Any idea, any time, one line in the project chat: Claude files it and reacts 👍.
+2. "work them out": the studio makes the videos; you get them in HQ's Content view.
+3. "upload": they go to your drafts or the schedule. Leaving for a while: switch auto-post on in
+   HQ (build and learning videos only, never ads or crypto, at most 2 a day, a daily summary).
+4. A new account (one per brand): you sign up and connect it once, about 5 minutes
+   (`social-team` `templates/account-setup.md`); Claude runs it from then on.
+
 ## Delete a page
 
 What you do: say "delete <name>". Deleting is the one step Claude asks for first.

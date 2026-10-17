@@ -14,7 +14,7 @@ skills and tools that are added to each project with `toolbox`:
 | Platform-native posts | ECC `content-engine` |
 | Consistent voice | ECC `brand-voice` |
 | Short videos and ads | `video-studio` (the studio roles; HyperFrames for motion) |
-| Scheduled posting | Postiz |
+| Scheduled posting, comments, DMs | `social-team` (posting service, Instagram Messaging API) |
 | Audience and competitors | `market-research`, `product-lens` (both global) |
 | SEO | `seo` and `seo-specialist` (both global) |
 
@@ -147,7 +147,8 @@ These are the rules small sellers get warning letters for. The legal-text servic
   - landing pages and email sequences;
   - ad drafts;
   - the weekly report;
-  - scheduling the approved batch through Postiz once it is connected.
+  - scheduling the approved batch once the account is connected (`social-team`, Posting; its
+    auto-post mode runs only while yskills has switched it on).
 - **yskills:**
   - approves each week's batch once; posting and emailing go to the public and cannot be
     taken back, so nothing goes out unapproved;

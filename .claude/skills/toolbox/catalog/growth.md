@@ -10,7 +10,8 @@ launch sequence and German advertising law are in the `market` skill; this table
 | A/B tests | **GrowthBook** or PostHog experiments | | `growthbook` plugin |
 | Error tracking | **PostHog** error tracking (one tool, one AVV with analytics); **Sentry** only for deep performance tracing | | `posthog` / `sentry` plugin |
 | SEO (technical, content, structured data) | | | agent `seo-specialist` and ECC skill `seo` (both global) |
-| Social posting and scheduling | **Postiz** | 13+ platforms, analytics | `postiz` plugin; ECC skills `social-publisher`, `crosspost`, `x-api` |
+| Social posting and scheduling | **Postiz**, Metricool (connector), upload-post (free tier), Ayrshare (plugin) [S, 2026-10-17] | Pick one per `social-team` (TikTok drafts + scheduled post); 13+ platforms, analytics | `postiz` plugin; ECC skills `social-publisher`, `crosspost`, `x-api` |
+| Instagram comment-to-DM, follower-only replies | **Instagram Messaging API** from a Worker; ManyChat if Meta's app review blocks [S, 2026-10-17] | One private reply per comment within 7 days, 24-hour window, `is_user_follow_business` for the follower check; Business/Creator account | `social-team` Community role |
 | Content plan, scripts, threads | | | ECC skills `content-engine`, `brand-voice` |
 | Marketing campaigns, landing copy, ad copy | | | ECC skill `marketing-campaign` |
 | Transactional email (login links, receipts) | **Resend** | Simple API, React/HTML templates | `resend` plugin |
