@@ -175,5 +175,7 @@ test('a game project is a static Vite + three.js Worker without a database or lo
   assert.ok(readFileSync(join(dir, 'index.html'), 'utf8').includes('<title>blob</title>'))
   assert.ok(readFileSync(join(dir, 'src/index.js'), 'utf8').includes('env.ASSETS'))
   assert.ok(existsSync(join(dir, 'src/rules.ts')) && existsSync(join(dir, 'scripts/build.mjs')))
+  assert.ok(existsSync(join(dir, 'src/platform.ts')) && existsSync(join(dir, 'src/platform.test.ts')))
+  assert.ok(readFileSync(join(dir, 'vite.config.ts'), 'utf8').includes("base: './'"))
   rmSync(dir, { recursive: true, force: true })
 })
