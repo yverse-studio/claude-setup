@@ -68,7 +68,8 @@ function readInput(): Input {
 function resize() {
   renderer.setSize(innerWidth, innerHeight, false)
   camera.aspect = innerWidth / innerHeight
-  camera.position.set(0, innerWidth < innerHeight ? 24 : 20, 14) // phone: more height to keep the floor in view
+  const back = Math.max(1, 1.15 * innerHeight / innerWidth) // portrait: move the camera away so the whole floor fits the width
+  camera.position.set(0, 20 * back, 14 * back)
   camera.lookAt(0, 0, 0)
   camera.updateProjectionMatrix()
 }
