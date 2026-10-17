@@ -37,7 +37,7 @@ written by a scheduled script that reads the source; a model retyping them cost 
 the board was hours stale (2026-10-11 audit). A row without a source is marked unknown.
 
 **Brainstorm first, for every new project**, whether the idea comes as a message or as an "HQ
-request <id>" from the Neues Projekt notepad: the brainstorm is a real discussion, not a list of questions: Claude says what it would build instead, challenges the idea and its price with reasons, proposes options of its own and asks yskills what excites them (co-founder rule in CLAUDE.md). It and the research turn into `PLAN.md`
+request <id>" from the Neues Projekt notepad: the brainstorm is a real discussion, not a list of questions: Claude says what it would build instead, challenges the idea and its price with reasons, proposes options of its own and asks yskills what excites them (co-founder rule in CLAUDE.md); the open questions still reach yskills as cards. It and the research (`research/RESEARCH.md`) turn into `PLAN.md`
 with a recommended pick on every open question, posted as brief (a). Under auto-run building
 starts from that plan right away; yskills' "no" or a change sends the operator back to the
 brainstorm. No repo, scaffold or builder thread exists before the plan is posted; then the

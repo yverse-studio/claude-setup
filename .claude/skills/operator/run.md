@@ -8,7 +8,7 @@ before each step; builder, gate and fix threads read their `roles/<role>.md` ins
    and a **design card**: "Send pictures, screenshots or links of apps and sites you like (or
    hate) for this, one line each on why." Linked sites are shot with `ui-review` and saved with
    the pictures in `design/refs/`; the lines go into `design/DESIGN.md`.
-2. **Research**, parallel subagents, one page each:
+2. **Research**, parallel subagents, one page each. The Researcher writes `research/RESEARCH.md` from [`templates/research.md`](templates/research.md) before `PLAN.md`; a bug fix skips it:
    - **Inside:** our skills and catalog, the lessons in claude-setup's `docs/TEST-PROJECTS.md`,
      yskills' repos with code to reuse.
    - **Outside:** competitors and prices, how the best similar products and open-source projects
@@ -25,7 +25,7 @@ before each step; builder, gate and fix threads read their `roles/<role>.md` ins
      no-go. No-go → brief (a) recommends no or a smaller first version. This shows that others
      earn, not that yskills can find buyers; the probe slice (step 5) tests that.
    - **Legal:** the `legal` skill's table for this idea.
-3. **Plan.** `planner` proposes; the operator writes `PLAN.md` and `features.json`. **Brief (a).**
+3. **Plan.** The research's open questions go to yskills as ONE batch of cards, posted by the Project Manager together with the Designer's gallery of 2-3 example looks copied from the category leaders, before the plan. `planner` proposes; the operator writes `PLAN.md` and `features.json`. **Brief (a).**
    No task for yskills: the operator deploys the day-zero site in one shot
    ([`docs/USING.md`](../../../docs/USING.md), Deploy a page in one shot) before the scaffold.
    **Day one in HQ** (the same hour as brief (a), one `ArtifactData` batch, every row with `at`, as
@@ -55,7 +55,7 @@ before each step; builder, gate and fix threads read their `roles/<role>.md` ins
    card as soon as PLAN.md knows it is needed, so the clock runs during the build. The card's
    steps come from the skill that owns the key (`sell` `keys.md`, `store` §1, `publish`,
    `toolbox` picks). Keys go into the service's own settings page, never into chat or git.
-5. **Build.** One builder thread per slice: one at a time, the next in a fresh
+5. **Build.** A pick between variants follows [`roles/designer.md`](roles/designer.md) (variants). One builder thread per slice: one at a time, the next in a fresh
    thread once the previous one is merged; a second only when the slices share no file; never more than three: "Build
    slice <id> of PLAN.md;
    its criteria are in features.json (read only). Read PLAN.md, PROGRESS.md and CLAUDE.md first. Do not read: node_modules, build output, lockfiles, generated files, screenshots, other slices' code, HANDOFF files of old threads; `grep` first, read only the part you need.
