@@ -1,6 +1,6 @@
 ---
 name: watch
-description: "Watch a video (URL or file): frames plus transcript so you can answer questions about it."
+description: "Watch a video (URL or file): frames plus transcript so you can answer questions about it. Use whenever yskills posts an Instagram, TikTok or YouTube link or a video, or asks to explain or fact-check one."
 license: MIT
 allowed-tools: Bash, Read, AskUserQuestion
 metadata:
@@ -8,6 +8,16 @@ metadata:
 ---
 
 # /watch
+
+## Shared links (claude-setup, 2026-10-17)
+
+A message with an Instagram, TikTok or YouTube link is a request to watch it, whatever else it says. yskills shares links, not files (files are too big for chat).
+
+1. Run `setup.py --backend faster-whisper` once per container (installs it with pip if missing; free, no key, CPU), then `watch.py "<link>" --engine local --question "<his words>"`. Public posts download without a login; never use his cookies or password. A login-only or private post: say so in one line and ask for a screen recording.
+2. Read every frame, then reply in four short parts: **Seen** (frames, with times), **Heard** (transcript), **Fact check** (each claim: checked with a source, or unverified), **For claude-setup** (adopt, skip or try, with a reason; a tool or plugin tip goes through `search-first` and the CLAUDE.md install rule before anything is installed).
+3. Say what came from frames and what you inferred. Gemini is not used (yskills picked free local, 2026-10-17).
+
+Tested 2026-10-17 in a cloud thread: a 61 s reel, 8 frames plus a full transcript in about 70 s. Details: `research/video-watching-2026-10-17.md` (project files).
 
 Run the bundled Python script. With the **gemini** engine (a `GEMINI_API_KEY` is configured) Google's video model watches the video and the report carries its timestamped answer for you to relay. With the **local** engine the script produces timestamped frames and a transcript; view the frames and answer from that evidence. Native captions come first; the chosen local or cloud backend is only a fallback. Transcript-only evidence cannot establish visual facts.
 
@@ -64,10 +74,11 @@ If the detail question is skipped, retain `balanced`.
 
 Then ask: **For videos without captions, how should watch transcribe?** Present:
 
-1. `whisperx` (recommended): local transcription, no API key; audio stays on the machine. One-time download of about 1.5 GB. Requires 3 GB free disk, 8 GB RAM, and a compatible 64-bit CPU. Apple Silicon macOS is verified; Linux/Windows recipes and Intel macOS are untested.
-2. `groq`: fast cloud transcription, needs a Groq key.
-3. `openai`: cloud transcription, needs an OpenAI key.
-4. `none`: captions only; no speech fallback.
+1. `faster-whisper` (claude-setup default): local CPU transcription, `pip install faster-whisper`, about 500 MB model download on first use, no key. In `auto` mode it is used whenever no Groq/OpenAI key is set.
+2. `whisperx`: local transcription, no API key; audio stays on the machine. One-time download of about 1.5 GB. Requires 3 GB free disk, 8 GB RAM, and a compatible 64-bit CPU. Apple Silicon macOS is verified; Linux/Windows recipes and Intel macOS are untested.
+3. `groq`: fast cloud transcription, needs a Groq key.
+4. `openai`: cloud transcription, needs an OpenAI key.
+5. `none`: captions only; no speech fallback.
 
 Use an existing explicit backend choice without asking again. Do not treat silence as permission to install local models or upload audio; the no-key/no-install path remains available.
 
@@ -75,7 +86,7 @@ Complete the selected setup using the user's detail value:
 
 ```bash
 python3 "${SKILL_DIR}/scripts/setup.py" --backend whisperx --detail balanced
-# Or: --backend groq / openai / none
+# Or: --backend faster-whisper / groq / openai / none
 ```
 
 For WhisperX, relay progress while the installer provisions uv, Python 3.12, pinned dependencies, and both model caches. `setup.py --install-whisperx` reruns this managed installer if needed. It writes the backend, executable, model, and completion marker only after warm-up succeeds. A failed local installation never selects a cloud backend automatically.
@@ -114,7 +125,7 @@ python3 "${SKILL_DIR}/scripts/watch.py" "<URL-or-local-path>" --question "<the u
 | `--resolution W` | Frame width, default 512; raise to 1024 for text when needed |
 | `--fps F` | Positive uniform rate override, at most 2 fps and reduced to fit the remaining cap |
 | `--no-dedup` | Preserve near-identical selected frames |
-| `--whisper groq|openai|whisperx` | Select this run's fallback; captions still come first |
+| `--whisper groq|openai|whisperx|faster-whisper` | Select this run's fallback; captions still come first |
 | `--no-whisper` | Disable every speech fallback, including local; conflicts with `--whisper` |
 | `--sub-lang CODE` | Select one exact caption language; default `auto` prefers original-language evidence |
 | `--cookies FILE` | Explicit cookie jar; yt-dlp may update it |

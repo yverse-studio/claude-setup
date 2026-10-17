@@ -23,7 +23,7 @@ import uuid
 from pathlib import Path
 from urllib.request import Request, urlopen
 
-from config import load_api_key, ConfigError
+from config import load_api_key, ConfigError, get_config
 from runtime import configure_stdio, run_text
 from transcribe import Segments, normalize_segments
 
@@ -362,6 +362,11 @@ def transcribe_video(
         from local_whisperx import transcribe_audio
         segments = transcribe_audio(extract_audio(video_path, audio_out))
         return segments, "whisperx"
+    if backend == "faster-whisper":
+        if api_key is not None:
+            raise SystemExit("faster-whisper does not accept an API key.")
+        from local_faster_whisper import transcribe_audio as fw_transcribe
+        return fw_transcribe(video_path, get_config()["faster_whisper_model"]), "faster-whisper"
     if backend not in (None, "groq", "openai"):
         raise SystemExit("Unknown transcription backend.")
     if backend is None or api_key is None:
@@ -416,7 +421,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Transcribe local media with the selected Whisper backend.")
     parser.add_argument("video")
     parser.add_argument("audio_out", nargs="?", default="audio.mp3", type=Path)
-    parser.add_argument("--backend", choices=["groq", "openai", "whisperx"])
+    parser.add_argument("--backend", choices=["groq", "openai", "whisperx", "faster-whisper"])
     args = parser.parse_args()
     try:
         segments, backend = transcribe_video(args.video, Path(args.audio_out), backend=args.backend)

@@ -23,6 +23,7 @@ from download import download, fetch_captions, is_url, auth_args  # noqa: E402
 from frames import MAX_FPS, auto_fps, auto_fps_focus, extract_at_timestamps, extract_keyframes, extract_scene_or_uniform, format_time, get_metadata, merge_frames, parse_time, parse_timestamps, validate_controls  # noqa: E402
 from transcribe import filter_range, format_transcript, parse_vtt  # noqa: E402
 from whisper import load_api_key, transcribe_video  # noqa: E402
+from local_faster_whisper import available as faster_whisper_available  # noqa: E402
 from runtime import configure_stdio  # noqa: E402
 
 
@@ -125,7 +126,7 @@ def main() -> int:
     )
     ap.add_argument(
         "--whisper",
-        choices=["groq", "openai", "whisperx"],
+        choices=["groq", "openai", "whisperx", "faster-whisper"],
         default=None,
         help="Select the fallback backend for this run; native captions still come first.",
     )
@@ -265,7 +266,12 @@ def main() -> int:
 
     transcript_state = "missing"
     if not track_available and backend_choice != "none" and video_path and meta.get("has_audio"):
-        backend, api_key = ("whisperx", None) if backend_choice == "whisperx" else load_api_key(None if backend_choice == "auto" else backend_choice)
+        if backend_choice in ("whisperx", "faster-whisper"):
+            backend, api_key = backend_choice, None
+        else:
+            backend, api_key = load_api_key(None if backend_choice == "auto" else backend_choice)
+            if not backend and backend_choice == "auto" and faster_whisper_available():
+                backend = "faster-whisper"  # claude-setup: free CPU transcript when no key is set
         if backend:
             try:
                 all_segments, used_backend = transcribe_video(video_path, work / "audio.mp3", backend=backend, api_key=api_key)
@@ -275,6 +281,8 @@ def main() -> int:
                 if used_backend == "whisperx":
                     language = config["whisperx_language"] or "auto (unverified)"
                     transcript_source = f"whisper (whisperx {config['whisperx_model']}, language {language})"
+                elif used_backend == "faster-whisper":
+                    transcript_source = f"whisper (faster-whisper {config['faster_whisper_model']}, local CPU)"
                 else:
                     transcript_source = f"whisper ({used_backend})"
             except SystemExit as exc:
