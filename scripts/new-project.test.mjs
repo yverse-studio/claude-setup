@@ -159,3 +159,21 @@ test('pickBuildToken takes the only token, and honours BUILD_TOKEN_NAME', async 
 test('pickBuildToken still stops on two unknown tokens and no secret', async () => {
   await assert.rejects(pickBuildToken(tokenList('a', 'b'), undefined, undefined), /none is named "claude-setup-builds"/)
 })
+
+test('a game project is a static Vite + three.js Worker without a database or login', () => {
+  const game = projectFromBranch('new/blob', (file) => (file.startsWith('incoming/') ? { kind: 'game', d1: true } : null))
+  assert.deepEqual([game.kind, game.d1, game.secret], ['game', false, false])
+  assert.equal(projectFromBranch('new/shop', () => null).kind, 'site')
+  const c = wranglerConfig({ name: 'blob', d1: false, kind: 'game' })
+  assert.deepEqual(c.assets, { directory: './dist', binding: 'ASSETS', run_worker_first: ['/api/*'] })
+  const pkg = packageJson({ name: 'blob', d1: false, kind: 'game' })
+  assert.equal(pkg.scripts.build, 'node scripts/build.mjs && vite build')
+  assert.equal(pkg.scripts.deploy, 'wrangler deploy')
+  assert.ok(pkg.dependencies.three && pkg.devDependencies.vite && pkg.devDependencies.wrangler)
+  const dir = mkdtempSync(join(tmpdir(), 'np-game-'))
+  writeScaffold(dir, { name: 'blob', d1: false, kind: 'game' })
+  assert.ok(readFileSync(join(dir, 'index.html'), 'utf8').includes('<title>blob</title>'))
+  assert.ok(readFileSync(join(dir, 'src/index.js'), 'utf8').includes('env.ASSETS'))
+  assert.ok(existsSync(join(dir, 'src/rules.ts')) && existsSync(join(dir, 'scripts/build.mjs')))
+  rmSync(dir, { recursive: true, force: true })
+})

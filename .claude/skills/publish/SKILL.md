@@ -76,7 +76,8 @@ from a pushed branch; private repo, no outside collaborators, `yskills-claude` i
    19:50), or push a branch: in claude-setup, branch `new/<name>` off `main` with one file
    `projects/<name>.json`, `{ "name": "<name>", "d1": true, "org": "yverse-studio" }` (`name`:
    lowercase, digits, dashes; it is the repo and the Worker name; `d1` false when PLAN.md says no
-   data). The push runs `new-project-request.yml` (no keys), and on its completion GitHub runs
+   data; `"kind": "game"` makes a static three.js game instead of the day-zero site: `templates/new-game/`
+   laid over `templates/new-project/`, no D1, no login; see the `game-3d` skill). The push runs `new-project-request.yml` (no keys), and on its completion GitHub runs
    `new-project.yml` with the keys, from `main`'s workflow file and code (`workflow_run`), so a
    pushed branch supplies only the json, never code that runs with the keys. The branch is deleted
    when the run succeeds. From the PC or the Actions page the same workflow runs with Run workflow
