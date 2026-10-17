@@ -10,7 +10,7 @@
 // and takes only that json from the branch), else NAME, ORG, D1 from a workflow_dispatch. The json: `{ "name", "d1", "org" }` and, for
 // an existing repo, `"repo"` (its GitHub name; production builds its default branch), `"build"`,
 // `"deploy"`, `"preview"` (Workers Builds commands) and `"secret": false` (no BETTER_AUTH_SECRET,
-// e.g. a static site), `"kv": ["CACHE"]` (a KV namespace `<name>-CACHE` and `<name>-CACHE-preview` per binding, ids in the log).
+// e.g. a static site), `"kind": "game"` (a static Vite + three.js game, no D1), `"kv": ["CACHE"]` (a KV namespace `<name>-CACHE` and `<name>-CACHE-preview` per binding, ids in the log).
 import { cpSync, mkdtempSync, readFileSync, writeFileSync, rmSync, appendFileSync, existsSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
@@ -21,6 +21,7 @@ import { fileURLToPath } from 'node:url'
 export const BUILD_TOKEN_NAME = 'claude-setup-builds'
 export const MARKER = 'made by claude-setup new-project'
 const TEMPLATE = new URL('../.claude/skills/publish/templates/new-project/', import.meta.url)
+const GAME_TEMPLATE = new URL('../.claude/skills/publish/templates/new-game/', import.meta.url) // laid over TEMPLATE for kind "game"
 const BUILD = 'npm run check && npm run build'
 const BUILD_WAIT_MS = 10 * 60 * 1000
 const POLL_MS = 15 * 1000
@@ -33,8 +34,8 @@ export function projectFromBranch(branch, readJson) {
   const name = branch.slice('new/'.length)
   const registered = readJson(`projects/${name}.json`)
   if (registered) return projectConfig(name, registered)
-  const { d1, org } = readJson(`incoming/projects/${name}.json`) || {}
-  return projectConfig(name, { d1, org })
+  const { d1, org, kind } = readJson(`incoming/projects/${name}.json`) || {}
+  return projectConfig(name, { d1, org, kind })
 }
 
 // A branch name from GitHub, checked before it reaches Cloudflare.
@@ -49,15 +50,17 @@ export const ORG = 'yverse-studio'
 // default branch, and a Worker of the same name is never adopted. Without it the repo is new and
 // shares the Worker's name. Build commands are the day-zero site's unless the json names its own.
 export function projectConfig(name, cfg = {}) {
-  const d1 = cfg.d1 !== false
+  const kind = cfg.kind === 'game' ? 'game' : 'site'
+  const d1 = kind === 'site' && cfg.d1 !== false // a game is static: no database
   const defaults = buildCommands(d1)
   return {
     name: cfg.name || name,
     d1,
+    kind,
     org: cfg.org || ORG,
     repo: cfg.repo || cfg.name || name,
     existing: Boolean(cfg.repo),
-    secret: cfg.secret !== false,
+    secret: kind === 'site' && cfg.secret !== false, // a game has no login
     kv: (Array.isArray(cfg.kv) ? cfg.kv : []).filter((b) => /^[A-Z][A-Z0-9_]{0,40}$/.test(b)),
     commands: {
       production: { build_command: cfg.build || defaults.production.build_command, deploy_command: cfg.deploy || defaults.production.deploy_command },
@@ -74,7 +77,7 @@ export function validName(name) {
   return /^[a-z0-9][a-z0-9-]{1,62}$/.test(name)
 }
 
-export function wranglerConfig({ name, d1, liveId, previewId }) {
+export function wranglerConfig({ name, d1, liveId, previewId, kind }) {
   const base = {
     $schema: 'node_modules/wrangler/config-schema.json',
     name,
@@ -85,6 +88,7 @@ export function wranglerConfig({ name, d1, liveId, previewId }) {
     observability: { enabled: true },
     previews: {},
   }
+  if (kind === 'game') return { ...base, assets: { directory: './dist', binding: 'ASSETS', run_worker_first: ['/api/*'] } }
   if (!d1) return base
   return {
     ...base,
@@ -93,11 +97,18 @@ export function wranglerConfig({ name, d1, liveId, previewId }) {
   }
 }
 
-export function packageJson({ name, d1 }) {
+const GAME_PACKAGE = {
+  scripts: { dev: 'vite', test: 'vitest run', check: 'tsc && node --test test/*.test.mjs && vitest run', build: 'node scripts/build.mjs && vite build' },
+  dependencies: { three: '^0.186.1' },
+  devDependencies: { '@types/three': '^0.186.0', typescript: '^5.9.3', vite: '^8.3.4', vitest: '^5.0.5' },
+}
+
+export function packageJson({ name, d1, kind }) {
   const deploy = d1
     ? 'wrangler d1 migrations apply DB --remote && wrangler deploy && (wrangler d1 migrations apply DB --remote --preview || echo "Live is deployed, but the preview database was not migrated")'
     : 'wrangler deploy'
   const deployPreview = d1 ? 'wrangler d1 migrations apply DB --remote --preview && wrangler preview' : 'wrangler preview'
+  const game = kind === 'game' ? GAME_PACKAGE : {}
   return {
     name,
     private: true,
@@ -111,8 +122,10 @@ export function packageJson({ name, d1 }) {
       verify: 'npm run check && npm run build',
       deploy,
       'deploy:preview': deployPreview,
+      ...game.scripts,
     },
-    devDependencies: { wrangler: '^4.147.0' },
+    ...(game.dependencies && { dependencies: game.dependencies }),
+    devDependencies: { wrangler: '^4.147.0', ...game.devDependencies },
   }
 }
 
@@ -123,15 +136,16 @@ export function buildCommands(d1) {
   }
 }
 
-export function writeScaffold(dir, { name, d1, liveId, previewId }) {
+export function writeScaffold(dir, { name, d1, liveId, previewId, kind }) {
   cpSync(TEMPLATE, dir, { recursive: true })
+  if (kind === 'game') cpSync(GAME_TEMPLATE, dir, { recursive: true, force: true })
   if (!d1) rmSync(join(dir, 'migrations'), { recursive: true, force: true })
-  for (const file of ['README.md', 'CLAUDE.md', 'src/index.js']) {
+  for (const file of ['README.md', 'CLAUDE.md', 'src/index.js', ...(kind === 'game' ? ['index.html'] : [])]) {
     const path = join(dir, file)
     writeFileSync(path, readFileSync(path, 'utf8').replaceAll('__NAME__', name))
   }
-  writeFileSync(join(dir, 'wrangler.jsonc'), JSON.stringify(wranglerConfig({ name, d1, liveId, previewId }), null, 2) + '\n')
-  writeFileSync(join(dir, 'package.json'), JSON.stringify(packageJson({ name, d1 }), null, 2) + '\n')
+  writeFileSync(join(dir, 'wrangler.jsonc'), JSON.stringify(wranglerConfig({ name, d1, liveId, previewId, kind }), null, 2) + '\n')
+  writeFileSync(join(dir, 'package.json'), JSON.stringify(packageJson({ name, d1, kind }), null, 2) + '\n')
 }
 
 function env(key, required = true) {
@@ -457,7 +471,7 @@ export async function main() {
     ? projectConfig(process.env.NAME, readJson(`projects/${process.env.NAME}.json`) || { d1: env('D1', false) !== 'false', org: env('ORG', false) })
     : projectFromBranch(process.env.PROJECT_BRANCH, readJson)
   if (!project) throw new Error('NAME is not set and the branch is not new/<name>')
-  const { name, d1, org, repo: repoName, existing, commands, secret, kv } = project
+  const { name, d1, kind, org, repo: repoName, existing, commands, secret, kv } = project
   if (!validName(name)) throw new Error(`name "${name}" must be lowercase letters, digits and dashes`)
   if (!validRepo(repoName)) throw new Error(`repo "${repoName}" is not a GitHub repo name`)
   if (org !== ORG) throw new Error(`org "${org}": projects live in ${ORG} only`)
@@ -485,7 +499,7 @@ export async function main() {
   if (existing && await repoIsEmpty(gh, org, repoName)) throw new Error(`${org}/${repoName} is empty; an existing-repo project needs its code on ${branch}`)
   if (await repoIsEmpty(gh, org, repoName)) {
     const dir = mkdtempSync(join(tmpdir(), 'new-project-'))
-    writeScaffold(dir, { name, d1, liveId, previewId })
+    writeScaffold(dir, { name, d1, liveId, previewId, kind })
     pushScaffold(dir, org, repoName, branch, ghToken)
     log('repo', `pushed the day-zero site to ${branch}`)
   } else {

@@ -54,7 +54,11 @@ Pictures and stories are inputs, never the art: photos become references and spl
 
 ## 2. Folder layout
 
-One repo per game, scaffolded with the `scaffold` skill (Vue is optional: a game is a Vite app
+**New game: `projects/<name>.json` with `"kind": "game"`, then the `new-project` workflow** (`publish`
+skill): a static Vite + three.js repo (a 30-second coin dash to replace, rules in `src/rules.ts` with
+Vitest, `window.__gameReady` for `templates/shots.mjs`), live at `https://<name>.yverse.workers.dev`,
+no D1, no login. Its layout below is what you grow it into. Without the workflow, one repo per game,
+scaffolded with the `scaffold` skill (Vue is optional: a game is a Vite app
 whose `index.html` holds one canvas; i18n, legal pages, CI and the Worker Preview stay).
 
 ```
