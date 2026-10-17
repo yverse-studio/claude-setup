@@ -13,7 +13,7 @@ skills and tools that are added to each project with `toolbox`:
 | Campaign copy, landing page, emails, ad variants | ECC `marketing-campaign` |
 | Platform-native posts | ECC `content-engine` |
 | Consistent voice | ECC `brand-voice` |
-| Short videos and ads | HyperFrames |
+| Short videos and ads | `video-studio` (the studio roles; HyperFrames for motion) |
 | Scheduled posting | Postiz |
 | Audience and competitors | `market-research`, `product-lens` (both global) |
 | SEO | `seo` and `seo-specialist` (both global) |

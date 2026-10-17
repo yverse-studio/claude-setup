@@ -74,6 +74,7 @@ grades):
 | Security | `security-reviewer` on the diff, `red-team` on the preview | subagents the Tester starts | Security · PR 23 |
 | Legal | the law must-haves, then pass/fail on the preview | subagent; a thread to write legal texts | Legal · launch |
 | Marketer | probe, launch posts, weekly growth | a thread for the launch, then the weekly routine | Marketer · launch |
+| Video studio | a video or ad: Producer, Writer, Director, Editor, Motion, Critic (`video-studio` skill) | a `Producer` thread per video; the rest per that skill | Producer · walking video |
 
 Any role becomes its own thread when its job is big; short checks stay subagents because every
 thread re-reads its context. **Each role has a playbook in `roles/`** (what it does, what it

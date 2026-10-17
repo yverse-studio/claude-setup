@@ -29,6 +29,8 @@ Checked 2026-10-03. Plugins are `@claude-plugins-official` unless noted.
 
 General ECC skill for the whole flow: `video-editing` (FFmpeg, Remotion, ElevenLabs, fal.ai).
 
+A whole video or ad, from concept to final cut, with roles and the lessons of earlier videos: the `video-studio` skill.
+
 ## Reference pipeline: "paste a video, get social-ready clips"
 
 1. Upload straight to R2 (presigned URL); a Queue message starts the job.
