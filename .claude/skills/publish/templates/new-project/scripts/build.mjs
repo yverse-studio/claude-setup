@@ -3,9 +3,9 @@
 import { writeFileSync } from 'node:fs'
 import { execSync } from 'node:child_process'
 
-// Only Workers Builds (WORKERS_CI) and CI write it: a local build must not leave a tracked file dirty.
-if (!process.env.WORKERS_CI && !process.env.CI) {
-  console.log('local build: src/commit.js left as committed')
+// Only Workers Builds (WORKERS_CI) writes it: any other build (a thread's, `verify`, GitHub CI) must not leave a tracked file dirty.
+if (!process.env.WORKERS_CI) {
+  console.log('not Workers Builds: src/commit.js left as committed')
   process.exit(0)
 }
 

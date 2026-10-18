@@ -108,19 +108,23 @@ covers them. Stories are data: threads turn yskills' messages into `story/` file
 ## 4. Testing in cloud threads
 
 - **Unit**: Vitest on the rules, no renderer.
-- **Screenshots**: `templates/shots.mjs` runs the installed Chromium
-  (`/opt/pw-browsers/chromium`) with `--use-angle=swiftshader --enable-unsafe-swiftshader
-  --ignore-gpu-blocklist`, a fixed clock and seed (`?t=<unix>&seed=1`), and the scene's camera
-  spots at 390 and 1440 px. New shots go through `design-critic`; the PR shows them.
+- **Screenshots**: in a new game `npm run shots -- [url] [--out dir]` (`scripts/shots.mjs`) builds, then
+  runs the installed Chromium (`/opt/pw-browsers/chromium`) with `--use-angle=swiftshader
+  --enable-unsafe-swiftshader --ignore-gpu-blocklist` and a fixed seed, and captures every spot of
+  `test/game.mjs` (`spots`: the bot plays `steps` decisions first) at 390 and 1440 px. An older game
+  copies `templates/shots.mjs` (camera spots by `?spot=`). New shots go through `design-critic`; the PR shows them.
+  A page opened with `?paused=1` paints only inside `advanceTime()` and CSS fades run on the real
+  clock: paint once with `advanceTime(16)` and wait about 700 ms before every screenshot (`settle()` in `scripts/lib.mjs`).
 - **Play it, not just look at it**: a game exposes three hooks (`src/hooks.ts` in the starter):
   `window.render_game_to_text()` (the visible state as JSON: mode, score, time, positions),
   `window.advanceTime(ms)` (play that much game time at once; open the page with `?paused=1` so it
-  is the only clock) and `window.__playInput(x, z)` (hold a direction). `test/bot.mjs` decides from the
-  text, `npm run play -- [url] [--out dir]` (`scripts/play.mjs`, copy both into an older game; the url comes first; a Worker Preview or the live url plays as is, no url builds and serves `dist/`) plays a whole round,
-  keeps three screenshots and fails on a page error, a round that never ends or a score under the bot's
-  `min`. Rewrite `bot.mjs` together with `rules.ts`: `min` is about 60 % of what the bot scores; a bot that dies is fine, one that cannot move is not. Run it on the Worker Preview before every gate; add each new state a bot needs to the text.
+  is the only clock) and `window.__playInput(x, z)` (hold a direction). `test/game.mjs` is the one file
+  a new game fills in (`decide` from the text, `min`, `stepMs`, `spots`); `npm run play -- [url] [--out dir]`
+  (`scripts/play.mjs` + `scripts/lib.mjs`, copy all three into an older game; the url comes first; a Worker Preview or the live url plays as is, no url builds and serves `dist/`) plays a whole round,
+  keeps three screenshots and fails on a page error, a round that never ends or a score under
+  `min`. Rewrite `game.mjs` together with `rules.ts`: `min` is about 60 % of what the bot scores; a bot that dies is fine, one that cannot move is not. Run it on the Worker Preview before every gate; add each new state a bot needs to the text.
   QA after every slice, not at the end (idea from OpusGameLabs/game-creator, written in our words).
-  `shots` serves whatever `dist/` holds: run `npm run build` after every code change (`play` builds itself when it has no url), or you review stale pictures.
+  `play` and `shots` build first when they have no url; a Preview or live url is shown as deployed.
 - **Perf budget per scene** (`tests/perf`, reads `renderer.info` after one frame): under 300
   draw calls, under 500 000 triangles, textures at most 2048 px, assets under 150 MB in total.
   SwiftShader cannot measure frame rate: yskills' PC runs the perf scene once per milestone and

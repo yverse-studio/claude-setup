@@ -96,7 +96,8 @@ from a pushed branch; private repo, no outside collaborators, `yskills-claude` i
    registered project); it prints the latest build's redacted log tail.
 3. `add_repo` the new repo with `access: push` and `save_to_project: true`, then the scaffold
    thread replaces the day-zero site (`scaffold` skill) on branch `scaffold`; its Preview URL
-   proves the wiring.
+   proves the wiring. To bring a local branch up to date use `git merge --ff-only origin/<branch>`;
+   the safety check refuses `git reset --hard`.
 4. Keys a slice needs (Stripe, Google, Resend) come by key card as before (`sell`, `keys.md`);
    they are Worker secrets in the dashboard, never in git or GitHub.
 5. An existing org repo (one that already has code) goes the same way: `projects/<name>.json`
