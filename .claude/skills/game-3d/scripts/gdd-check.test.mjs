@@ -2,6 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { checkGdd, REQUIRED_HEADINGS } from './gdd-check.mjs'
 
 const GOOD = `# Game design: Bug Garden
@@ -52,7 +53,7 @@ test('a reference without a link, Copy or Skip fails', () => {
 test('a left placeholder fails', () => assert.match(checkGdd(GOOD.replace('Bug Garden', '<name>')).join(), /placeholder/))
 test('a doc without Not checked fails', () => assert.match(checkGdd(without(/Not checked:\n.*\n/)).join(), /Not checked/))
 test('the CLI exits 1 on a missing file', () => {
-  const r = spawnSync('node', [new URL('./gdd-check.mjs', import.meta.url).pathname, '/nonexistent/GDD.md'], { encoding: 'utf8' })
+  const r = spawnSync('node', [fileURLToPath(new URL('./gdd-check.mjs', import.meta.url)), '/nonexistent/GDD.md'], { encoding: 'utf8' })
   assert.equal(r.status, 1)
   assert.match(r.stderr, /does not exist/)
 })
