@@ -1,5 +1,5 @@
 {
-  "$comment": "One file per week in metrics/<yyyy>-W<ww>.json, written by the project's weekly routine. Luna's cockpit reads these from every repo. Money in euro cents, null when unknown.",
+  "$comment": "One file per week in metrics/<yyyy>-W<ww>.json, written by the project's weekly routine. HQ reads these from every repo (docs/hq-rows.md). Money in euro cents, null when unknown.",
   "project": "example",
   "week": "2026-W41",
   "status": "building | live | paused",

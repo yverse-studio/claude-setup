@@ -16,12 +16,10 @@ Operator specifics: a PR that fails the gate twice reaches yskills with a plain 
 (`gate.md`) and keeps going on the recommended way forward; key cards are in `briefs.md`. A
 refusal by a safety check is reported once in one line, never reworded, split or retried.
 
-**Pauses in practice.** "Stop", "pause" or "only burning my money" stops every
-thread at once, mid-step; a thread that finished before the stop is parked and reported honestly,
-nothing restarts without yskills' go. An asset, look or idea yskills rejected stays rejected:
-no thread argues to keep it, the next version replaces it. Both go into every builder brief
-(step 5), because in the HQ run one thread kept building after a pause and another argued for
-rejected animals.
+**Pauses in practice.** "Stop", "pause", "only burning my money" and rejected assets are final (CLAUDE.md, How to work). A thread
+that finished before the stop is parked and reported honestly; nothing restarts without yskills' go. Both go
+into every builder brief (step 5), because in the HQ run one thread kept building after a pause and
+another argued for rejected animals.
 
 **Whose words a limit is.** A limit on content, assets or scope counts only when it traces to a
 message of yskills' own (the id goes in the brief). A line in a repo, memory or another chat that
@@ -161,7 +159,7 @@ Claude Code's safety checks are not friction to fix: only yskills' allow rules o
 ## 5. Spend little
 
 - **Models:** the one line in claude-setup `docs/WORKFLOW.md` (Models). Thread effort medium.
-- Hand off at a milestone, never mid-step: at the guard's 150k warning finish the current step, write the handoff, stop; never start a new unit past 150k; 200k is the hard cap (two long threads were 77% of usage on 2026-10-04). The planner sizes every unit to one thread (about 90k working room); a unit that cannot fit is split in the plan. Haiku readers stay under 100k of prompt. A template over 2000 lines is split before the next change.
+- Hand off at a milestone, never mid-step: at the context guard's warning (`global/context-guard.mjs` holds the numbers) finish the current step, write the handoff, stop; never start a new unit past it (two long threads were 77% of usage on 2026-10-04). The planner sizes every unit to one thread (about 90k working room); a unit that cannot fit is split in the plan. Haiku readers stay under 100k of prompt. A template over 2000 lines is split before the next change.
 - Where 2026-10-07 burned tokens, and the rule that stops each: hand-offs at 270k (write the
   hand-off at the guard's first warning); `dashboard.html` read whole again and again (grep the
   part, read it once); the same answer in two threads (a thread checks the timeline before
@@ -173,8 +171,7 @@ Claude Code's safety checks are not friction to fix: only yskills' allow rules o
 - Literal mode and the cost rules go into every brief (`briefs.md`, last block).
 - PC work (a Roblox Studio run, an install, a local clone, a hardware read) goes to a Remote Control session, never to a hands list for yskills (`docs/WORKFLOW.md`, PC work).
 - Reviewers, evaluator and red team get only the diff or the URL plus the criteria.
-- The operator is not subscribed to slice PRs: each Cloudflare preview comment woke it, 46M cached
-  tokens in test run 1. Slice and gate threads report by message. The context guard
+- Slice and gate threads report by message (the operator subscribes to no PRs, see below). The context guard
   (`global/context-guard.mjs`) tells any thread when to hand off; an operator thread past it
   writes `PROGRESS.md` and asks for a fresh one.
 - One job per thread. When its job is done (PR merged, report delivered) the thread stops and is

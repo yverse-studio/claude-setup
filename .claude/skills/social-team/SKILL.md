@@ -39,7 +39,7 @@ Paid ads stay with the Marketer (`operator/roles/marketer.md`); the studio makes
 No own law or security team: Partnerships hands contracts to the operator's Legal role and
 suspicious brand mail to its Security role (`operator/roles/legal.md`, `security.md`).
 Thread titles follow the operator rule; models per the Models line in
-[`docs/WORKFLOW.md`](../../../docs/WORKFLOW.md) (planning and judgement Opus, the rest Sonnet).
+[`docs/WORKFLOW.md`](../../../docs/WORKFLOW.md).
 
 ## Where things live
 

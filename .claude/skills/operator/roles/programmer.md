@@ -34,4 +34,4 @@ Added at the end of each project (operator step 9): date, project and its type, 
 - 2026-10-06 (duo-test): Workers Builds' Production Deploy command was `deploy:preview`, so main never went live. Check live by commit (`/api/config`), not by a 200.
 - 2026-10-06 (Claude Setup HQ, game page): six slices edited one `dashboard.html`; pull main before merging. The stats route summed rows the webhook had never written, so HQ showed 0 €: check the source against known payments before wiring a UI to it.
 - 2026-10-07 (Kleingarten, Roblox): Robux receipts, Creator Hub hands steps, the HUD twin, `Strings` and baking the world now live in the `roblox` skill. Keep a check-in after dispatching a reviewer: a missed hand-back stalled the thread six hours.
-- Remote Control (2026-10-07): work that needs the PC (installs, Studio and its MCP, local runs, hardware reads) goes to a Remote Control session via the coordinator, never to a steps list for yskills; the PC session never reads or prints keys.
+- PC work goes to a Remote Control session via the coordinator (`docs/WORKFLOW.md`, PC work).

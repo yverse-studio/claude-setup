@@ -81,8 +81,7 @@ before each step; builder, gate and fix threads read their `roles/<role>.md` ins
    probe; one not meant to earn skips it.
 6. **Gate.** A fresh gate thread per PR runs `gate.md` and either posts the 5/5 table and merges
    the PR (after pulling main into the branch when another PR merged since) or one review with
-   the blocking findings, which the builder fixes. Two failed rounds: one message to yskills
-   with tap options; under auto-run the recommended option is taken at once.
+   the blocking findings, which the builder fixes. Two failed rounds: `gate.md` (Rounds).
    **The whole journey, once.** After the last slice merges, one `evaluator` run walks the full
    first visit on live (or main's preview) along the journey criteria in `features.json` (one
    criterion per user journey that crosses slices) before yskills hears "ready to test". Test run
