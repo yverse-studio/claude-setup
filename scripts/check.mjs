@@ -219,7 +219,7 @@ for (const f of readdirSync(roleDir).filter((n) => n.endsWith('.md') && n !== 'p
 }
 if (!readFileSync(join(roleDir, 'project-manager.md'), 'utf8').includes('## Model and handoff in every brief')) errors.push('roles/project-manager.md: lacks "Model and handoff in every brief"')
 const briefsText = readFileSync(join(root, '.claude/skills/operator/briefs.md'), 'utf8')
-for (const part of ['Model: <id', 'Handoff: at 150k write', '/handoff/<date>-<topic>.md']) {
+for (const part of ['Model: <id', 'Handoff: at ', '/handoff/<date>-<topic>.md']) {
   if (!briefsText.includes(part)) errors.push(`briefs.md: thread brief block lacks "${part}"`)
 }
 

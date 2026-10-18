@@ -107,9 +107,9 @@ test('check.mjs fails when a role file drops the model-and-handoff link or the b
     const role = join(copy, '.claude/skills/operator/roles/programmer.md')
     writeFileSync(role, readFileSync(role, 'utf8').replace(/^- \*\*Model and handoff:\*\*[^\n]*\n/m, ''))
     const briefs = join(copy, '.claude/skills/operator/briefs.md')
-    writeFileSync(briefs, readFileSync(briefs, 'utf8').replace('Handoff: at 150k write', 'Handoff: later'))
+    writeFileSync(briefs, readFileSync(briefs, 'utf8').replace('Handoff: at <N>k', 'Handoff: later'))
     const r = run()
     assert.equal(r.status, 1)
-    for (const want of ['roles/programmer.md: lacks the link', 'thread brief block lacks "Handoff: at 150k write"']) assert.ok(r.stderr.includes(want), `missing: ${want}\n${r.stderr}`)
+    for (const want of ['roles/programmer.md: lacks the link', 'thread brief block lacks "Handoff: at "']) assert.ok(r.stderr.includes(want), `missing: ${want}\n${r.stderr}`)
   } finally { rmSync(copy, { recursive: true, force: true }) }
 })
