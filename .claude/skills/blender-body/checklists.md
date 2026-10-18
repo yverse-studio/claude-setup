@@ -22,6 +22,8 @@ Gates, run by you before anyone sees the round (a failed gate is said, not hande
 - [ ] Neck: crop old | new vs ref (front and side, 2x) reads long, slim, no ring or shelf.
 - [ ] Bust: front raw at full resolution, ref | best | new on one scale, at least as full as best,
       round from front, 3/4 and side.
+- [ ] Same-size sheet: ref | body on one canvas, same height, crown in frame, hair on, hands whole.
+- [ ] Figure frame: hinata-v1 scene, hair and shader, like the dance video.
 - [ ] Zoom: `zoom5.py <round> <best>` ran; bust-front and back-upper looked at yourself.
 - [ ] Poses: from-below frame (her above the camera), sway mid-frame, arm up plus head tilt;
       no tube neck, no groin fold, no knee pinch, bust root attached.

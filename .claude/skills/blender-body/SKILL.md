@@ -66,7 +66,16 @@ hand-in sheet contract.
    first in the plan, research second. Cloud Blender setup is about two minutes:
    `apt-get update && apt-get install -y libegl1 libgl1-mesa-dri libegl-mesa0 libgles2 libtbb12`,
    `python3.13 -m pip install bpy scipy pillow numpy matplotlib`.
-9. **Content line.** Adult characters only, adult face and proportions, no minors ever. Nude
+9. **Same size, every sheet.** The reference is the only shape target (other models are bases to
+   shape toward it, never goals). Every sheet shows the body next to the reference on one canvas at the
+   same height, registered by chin and sole (side view: chin and knee), crown inside the frame. A sheet
+   with a clipped head, stray objects, cut hands, hidden hair or no figure frame (the body in the
+   hinata-v1 scene with hair and shader, like the dance video) fails before scoring.
+10. **Render truth.** Before trusting a picture, check the renderer shows the edit: Face keys at
+   0.4/0.3/0.45 invert every tool that skips them (run `luna_facekeysync zero` last); `drender4`
+   zeroes non-Face keys, so bake keys; sync `me.vertices` to Basis before building masks; a wrongly
+   registered base (Hinata 1.743 m vs 1.598 m) breaks `slicefit`, fit by chin and sole.
+11. **Content line.** Adult characters only, adult face and proportions, no minors ever. Nude
    bodies and explicit poses live on the private side behind the 18+ gate; public files and the
    hand-in sheets that go to public places stay clean; his references never go into git.
 
@@ -105,6 +114,7 @@ and measure, never copy a mesh; his private reference pictures are never uploade
 | lc1 to lc13 | no posed frame until the animator's clip showed 11 errors | 3 |
 | 2026-10-18 14:29 | user's decision: Hinata rigged base; its neck, bust shape and rig stay, shape keys on top (waist, hips, butt; bust scaled from Hinata's own breast mesh, no stuck-on spheres) | 1, 2 |
 
+The full story, root causes, tool gotchas and his taste: `patches/base-body/LESSONS.md`.
 Files: `characters/luna/REVIEWER-TO-BUILDER.md` (contract and verdicts), `BUILDER-HANDOFF.md` (LIVE
 STATE blocks), `REVIEWER-HANDOFF.md`, `proof/rika-test/ERRORS.md` (the 11 posed errors), tools
 `characters/luna/tools/handin-cloud.sh`, `quickcheck.sh`, `luna_facekeysync.py`, and `tools/ref-tracker/trk2/t3/zoom5.py`, all under
