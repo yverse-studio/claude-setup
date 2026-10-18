@@ -95,6 +95,13 @@ Source: https://kenney.nl/assets/furniture-kit (CC0 1.0, no attribution required
 The pieces HQ's desk room uses are packed into `office-kit.js` in yverse-studio/company-xy by its
 `scripts/office-kit.mjs`. Do not edit the packed file; change the script's list and re-run it.
 
+## Floor guard
+
+Source: https://github.com/addyosmani/agent-skills (MIT, see licenses/AGENT-SKILLS-LICENSE),
+`skills/constraint-driven-development/references/floor-guard.md`. Adapted (diff plumbing and exit
+codes kept; the CONSTRAINTS.md checks dropped; test, threshold and `floor-ok` rules added) as
+`.claude/skills/publish/templates/new-project/scripts/floor-guard.mjs`. Read, not run, before copying.
+
 ## Game-dev skill references (game-3d)
 
 Read in full before copying (2026-10-07, thread "Researcher: 3D game path"): plain SKILL.md and
