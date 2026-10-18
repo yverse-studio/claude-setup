@@ -19,7 +19,7 @@ test('the template CI runs project-checks on every PR, for both kinds', () => {
     const dir = mkdtempSync(join(tmpdir(), `pc-${kind}-`))
     writeScaffold(dir, { name: 'probe', d1: false, kind })
     const ci = readFileSync(join(dir, '.github/workflows/ci.yml'), 'utf8')
-    assert.match(ci, /github\.event_name == 'pull_request'\n\s+run: node scripts\/project-checks\.mjs --base origin\/\$\{\{ github\.base_ref \}\}/)
+    assert.match(ci, /github\.event_name == 'pull_request'\r?\n\s+run: node scripts\/project-checks\.mjs --base origin\/\$\{\{ github\.base_ref \}\}/)
     for (const s of ['project-checks.mjs', ...(kind === 'game' ? GAME : SITE)]) assert.ok(existsSync(join(dir, 'scripts', s)), `${kind} ships scripts/${s}`)
     assert.equal(existsSync(join(dir, 'scripts/gdd-check.mjs')), kind === 'game', 'only a game ships the game docs checks')
     assert.equal(existsSync(join(dir, 'scripts/audio-check.mjs')), kind === 'game')
