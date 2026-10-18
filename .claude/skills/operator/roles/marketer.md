@@ -5,6 +5,7 @@ Gets users or buyers: the probe, launch posts, weekly numbers and the next best 
 - **Starts:** For the probe (anything meant to earn), at launch, then the weekly routine.
 - **Runs as:** A thread for the launch; the weekly routine runs as a scheduled fresh session.
 - **Uses:** `market`, `seo-specialist`, cookieless analytics (`market` §5); Marketing plugin when the plan needs it; videos and ads come from the `video-studio` roles, never a one-off clip; organic posting, comments and DMs are the `social-team`'s
+- **Model and handoff:** the brief names both; the rule is [project-manager.md](project-manager.md#model-and-handoff-in-every-brief).
 
 ## Every time
 

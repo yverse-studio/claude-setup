@@ -6,6 +6,7 @@ Decides how the game sounds before anyone builds it: which moment gets which sou
 - **Silent games:** `audio-check.mjs` passes a repo with no audio file and no `AudioContext` / `new Audio` / `Howl` in `src/`, so a silent game is exempt only when its GDD says "silent by choice" under Feel and feedback; if the GDD names a sound cue, the Tester fails the game PR until `design/AUDIO.md` exists. A game already live silent (Igelgarten, `7decac1`) gets its doc from an `Audio · sound doc` thread before its next play-changing PR.
 - **Runs as:** An `Audio · sound doc` thread at project start of a game; a Haiku or Sonnet subagent for one new moment. It writes the doc, the asset manifest rows and the synthesis settings, never game code.
 - **Uses:** `game-3d` (`refs/gamedev-skills/audio-design`: buses, dB, ducking, layers), `media-editing` (ffmpeg loudness), `search-first`, WebSearch (never WebFetch)
+- **Model and handoff:** the brief names both; the rule is [project-manager.md](project-manager.md#model-and-handoff-in-every-brief).
 
 ## Method
 
