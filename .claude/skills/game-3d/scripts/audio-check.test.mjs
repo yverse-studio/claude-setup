@@ -148,6 +148,31 @@ test('the audio file and code patterns match ordinary names and miss look-alikes
   for (const c of ['new AudioContext()', 'const a = new Audio("x")', 'new Howl({})']) assert.ok(AUDIO_CODE.test(c), c)
   for (const c of ['audioContextName', 'AudioBuffer', 'const radio = 1']) assert.ok(!AUDIO_CODE.test(c), c)
 })
+test('sound from a synth library or the webkit prefix counts as sound in code (#184)', () => {
+  for (const c of ['new webkitAudioContext()', 'new (window.AudioContext || window.webkitAudioContext)()', "import { zzfx } from 'zzfx'", "import zzfx from \"zzfx\"", "import * as Tone from 'tone'", "import { Synth } from 'tone/build/esm'", "const Tone = require('tone')", "const jsfxr = await import('jsfxr')", "import { zzfxM } from 'zzfxm'", 'zzfx(...[1, , 220])', "import Pizzicato from 'pizzicato'"]) assert.ok(AUDIO_CODE.test(c), c)
+  for (const c of ["import { tone } from './tone'", "import x from 'tone-utils'", "import { toneMap } from 'tonemap'", 'const tone = 1', 'const zzfxLike = 2', "// tone: grey", "import 'howler-ui-kit'", 'const webkitAudio = 1']) assert.ok(!AUDIO_CODE.test(c), c)
+})
+test('the CLI counts a synth-library game as making sound and wants the doc (#184)', () => {
+  for (const src of ["import { zzfx } from 'zzfx'\nzzfx(1)", "new webkitAudioContext()", "import * as Tone from 'tone'"]) {
+    const r = spawnSync('node', [CLI, repo({ 'src/audio.ts': src })], { encoding: 'utf8' })
+    assert.equal(r.status, 1, src)
+    assert.match(r.stderr, /AUDIO\.md does not exist/)
+  }
+  assert.equal(spawnSync('node', [CLI, repo({ 'src/tone.ts': "import { toneMap } from './tonemap'\nexport const tone = 1" })], { encoding: 'utf8' }).status, 0)
+})
+test('source and author must be real text, not blank or not a string (#185)', () => {
+  for (const k of ['source', 'author']) {
+    for (const v of [' ', '\t', 7, null, ['x'], {}]) assert.match(checkAudio({ ...REPO, manifest: { assets: [{ ...MANIFEST.assets[0], [k]: v }] } }).join(), /needs source, author/, `${k}=${JSON.stringify(v)}`)
+  }
+})
+test('a manifest path with ./ or a leading / names the same file (#185)', () => {
+  for (const path of ['./assets/audio/chime.ogg', '/assets/audio/chime.ogg', './assets/audio/', './/assets/audio']) assert.deepEqual(checkAudio({ ...REPO, manifest: { assets: [{ ...MANIFEST.assets[0], path }] } }), [], path)
+})
+test('the CLI looks for src/ inside the repo, not in the parent path (#185)', () => {
+  const parent = repo({ 'src/game/main.ts': 'const x = 1', 'src/game/tools/audio.ts': 'new AudioContext()' })
+  assert.equal(spawnSync('node', [CLI, join(parent, 'src/game')], { encoding: 'utf8' }).status, 0, 'no src/ folder in the repo itself: tools/audio.ts is not game source')
+  assert.equal(spawnSync('node', [CLI, repo({ 'packages/a/src/audio.ts': 'new AudioContext()' })], { encoding: 'utf8' }).status, 1, 'a nested src/ still counts')
+})
 
 const CLI = fileURLToPath(new URL('./audio-check.mjs', import.meta.url))
 function repo(files) {

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// A game repo that makes sound (audio files, or AudioContext / new Audio / Howl in src/) must carry
+// A game repo that makes sound (audio files, or AudioContext / new Audio / Howl / a synth library in src/) must carry
 // design/AUDIO.md as roles/audio.md asks, and every audio file needs a manifest row with a licence
 // that allows a paid game. Usage: node audio-check.mjs [repo root]  (exit 1 on errors)
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
@@ -12,7 +12,9 @@ const MIN_REFERENCES = 3
 const MIN_NOT_LINES = 2
 export const PLACEHOLDER = /<(?:name|game|store link|date|moments with sound, music layers, mute behaviour as heard|what|what and why)>/g // the template's own; game text such as <kbd> is not one
 export const AUDIO_FILE = /\.(?:ogg|mp3|wav|m4a|flac|opus|aac|weba|aiff?|midi?)$/i
-export const AUDIO_CODE = /\bAudioContext\b|\bnew Audio\(|\bHowl\(/
+// Web Audio (also the webkit prefix), Audio and Howl, an import of a known synth library, or zzfx pasted in
+const SYNTH_LIBS = 'zzfx|zzfxm|tone|jsfxr|sfxr|pizzicato|howler|webaudio-tinysynth|standardized-audio-context'
+export const AUDIO_CODE = new RegExp(`\\b(?:webkit)?AudioContext\\b|\\bnew Audio\\(|\\bHowl\\(|\\bzzfx\\(|\\b(?:from|import|require\\()\\s*\\(?\\s*['"](?:${SYNTH_LIBS})(?:/[^'"]*)?['"]`)
 // the whole value, not a mention: "not CC0", "CC0-NC" and "CC0 (trust me)" must fail
 const ALLOWED_LICENCE = /^(?:(?:Creative Commons )?CC0(?:[ -]1\.0)?(?: Universal)?(?: \(CC0 1\.0\))?(?: Public Domain Dedication)?|public domain|own (?:synthesis|work))$/i
 const DAY_READ = /\b\d{4}-\d{2}-\d{2}\b/
@@ -20,6 +22,7 @@ const DIVIDER = /^\s*\|?[\s:|-]+\|[\s:|-]*$/
 // one `Budget: <n> KB` line (bold, bullet and case allowed) inside ## File budget; 0 KB would switch the size check off
 const BUDGET_LINE = /^\s*(?:[-*]\s+)?\**Budget:\**\s*([1-9]\d*)\s*KB\b/gim
 const budgets = (section) => [...(section ?? '').matchAll(BUDGET_LINE)].map((m) => Number(m[1]))
+const filled = (v) => typeof v === 'string' && v.trim() !== ''
 const bullets = (text) => text.split('\n').filter((l) => /^\s*[-*]\s+\S/.test(l))
 
 function sections(md) {
@@ -66,13 +69,13 @@ export function checkAudio({ doc, files, manifest, usesAudioCode }) {
   if (doc === null) errors.push('this game makes sound but design/AUDIO.md does not exist; the Audio role writes it (roles/audio.md)')
   else errors.push(...checkDoc(doc))
   if (manifest && !Array.isArray(manifest.assets)) errors.push('assets/manifest.json: "assets" must be a list')
-  const rows = (Array.isArray(manifest?.assets) ? manifest.assets : []).filter((a) => a && typeof a.path === 'string' && a.path).map((a) => ({ ...a, path: a.path.replace(/\/$/, '') }))
+  const rows = (Array.isArray(manifest?.assets) ? manifest.assets : []).filter((a) => a && typeof a.path === 'string' && a.path).map((a) => ({ ...a, path: a.path.replace(/^(?:\.?\/)+/, '').replace(/\/$/, '') })) // ./assets/a.ogg and /assets/a.ogg name the same file as assets/a.ogg
   for (const f of files) {
     const covering = rows.filter((r) => f.path === r.path || f.path.startsWith(r.path + '/'))
     if (!covering.length) errors.push(`${f.path}: no assets/manifest.json row`)
     for (const row of covering) { // every row that covers the file must pass, so a folder row cannot hide a stricter file row
       if (typeof row.licence !== 'string' || !ALLOWED_LICENCE.test(row.licence.trim())) errors.push(`${f.path}: licence "${row.licence ?? ''}" (row ${row.path}) is not exactly CC0, public domain or own synthesis`)
-      else if (!row.source || !row.author || row.commercial !== true) errors.push(`${f.path}: manifest row ${row.path} needs source, author and commercial: true`)
+      else if (!filled(row.source) || !filled(row.author) || row.commercial !== true) errors.push(`${f.path}: manifest row ${row.path} needs source, author and commercial: true`)
     }
   }
   const [budget] = doc === null ? [] : budgets(sections(doc)['File budget'])
@@ -94,7 +97,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const root = resolve(process.argv[2] ?? '.')
   const all = walk(root)
   const files = all.filter((p) => AUDIO_FILE.test(p)).map((p) => ({ path: relative(root, p).split('\\').join('/'), bytes: statSync(p).size }))
-  const code = all.filter((p) => /[\\/]src[\\/].+\.(?:ts|js|mjs|vue)$/.test(p) && AUDIO_CODE.test(readFileSync(p, 'utf8')))
+  const code = all.filter((p) => /(?:^|[\\/])src[\\/].+\.(?:ts|js|mjs|vue)$/.test(relative(root, p)) && AUDIO_CODE.test(readFileSync(p, 'utf8')))
   const read = (rel) => (existsSync(join(root, rel)) ? readFileSync(join(root, rel), 'utf8') : null)
   const manifestText = read('assets/manifest.json')
   let manifest = null
