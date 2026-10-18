@@ -51,7 +51,8 @@ goes in its home only, everywhere else links it.
   wrong: the coordinator posts one line per finished part (result, `Done:`, live link), every
   card and every blocker, no narration; PR links and gate talk stay in threads.
 - A step only yskills can do: one line on why, then numbered steps with the exact official deep
-  link and the exact names to type.
+  link and the exact names to type. He reads on his phone: post the link as text, never open the
+  page in Claude's Chrome and call that showing him (`docs/pc-claude-user.md`, Showing yskills something).
 - Replies: short and informal like yskills' messages, in the language they wrote in. Lead with
   the result, then what they need to do, if anything.
 - New app idea, an idea or change for a live project (feature, fix, art, video) or "continue the
