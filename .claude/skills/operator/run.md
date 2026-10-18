@@ -25,7 +25,7 @@ before each step; builder, gate and fix threads read their `roles/<role>.md` ins
      no-go. No-go → brief (a) recommends no or a smaller first version. This shows that others
      earn, not that yskills can find buyers; the probe slice (step 5) tests that.
    - **Legal:** the `legal` skill's table for this idea.
-3. **Plan.** The research's open questions go to yskills as ONE batch of cards, posted by the Project Manager together with the Designer's gallery of 2-3 example looks copied from the category leaders, before the plan. `planner` proposes; the operator writes `PLAN.md` and `features.json`. **Brief (a).**
+3. **Plan.** The research's open questions go to yskills as ONE batch of cards, posted by the Project Manager together with the Designer's vote card of 2-3 example looks (screenshots) copied from the category leaders, before the plan. `planner` proposes; the operator writes `PLAN.md` and `features.json`. **Brief (a).**
    No task for yskills: the operator deploys the day-zero site in one shot
    ([`docs/USING.md`](../../../docs/USING.md), Deploy a page in one shot) before the scaffold.
    **Day one in HQ** (the same hour as brief (a), one `ArtifactData` batch, every row with `at`, as

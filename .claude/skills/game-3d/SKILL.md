@@ -51,7 +51,7 @@ concrete brief before any build. Order, every time:
 Literal mode and the cost rules: the last block of `operator/briefs.md`.
 
 3. **Build to that bar**: the gate's `design-critic` gets the references next to the
-   screenshots (a reference *picture* is the pick from a Designer vote gallery, saved under
+   screenshots (a reference *picture* is the pick from a Designer vote card, saved under
    `design/reference/`; the links in `REFERENCES.md` alone give the critic nothing to compare); a slice that falls short of them is not 5/5.
 
 Pictures and stories are inputs, never the art: photos become references and splat postcards
@@ -168,7 +168,7 @@ resolve on finish, error or no fill, and the game is frozen and muted while one 
 | Developer account at developer.crazygames.com | yskills (free, once) | the only hands step |
 | Build: `npm run verify`, zip the contents of `dist/` (index.html at the zip root) | thread | relative paths only; initial download at most 50 MB (20 MB for the mobile homepage), total 250 MB, 1500 files |
 | Basic Launch: upload, fill English title, description, controls, orientation | thread drafts, yskills submits | no SDK needed, ads off, live 7 to 21 days (500 plays), then they pick winners by playtime (10+ min good), day-1 retention (10 to 15 %), 1-minute conversion (80 %+) |
-| Covers: landscape 1920x1080, portrait 800x1200, square 800x800, plus a landscape preview video and a portrait gameplay video (720x1280, about 13 s, real gameplay; the portal requires both) | Designer thread, vote gallery | the game's title only, no border, no store logos, no plain screenshot, originals only |
+| Covers: landscape 1920x1080, portrait 800x1200, square 800x800, plus a landscape preview video and a portrait gameplay video (720x1280, about 13 s, real gameplay; the portal requires both) | Designer thread, vote card | the game's title only, no border, no store logos, no plain screenshot, originals only |
 | Check in their QA tool in the developer portal | thread | English text and English fallback for any unknown locale, never German or another language (QA box; test `fr-FR` to `en`), readable at 907x510 and 800x450, physics the same at 144 Hz, PEGI 12, no own fullscreen button, no cross-promotion, no ads from anywhere else |
 | Accept the Terms and the PEGI attestation, "Submit for approval" | yskills (his one tap, last step) | a thread stops with everything filled and says so in one line |
 | Full Launch (only if selected) | thread | SDK on (already), land in gameplay with at most one click, works with AdBlock, ads only at natural breaks, never chained, rewarded optional and never required |
