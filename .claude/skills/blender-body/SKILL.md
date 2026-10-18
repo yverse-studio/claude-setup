@@ -59,15 +59,16 @@ hand-in sheet contract.
      and at least 3 cm (rx 1.6 to 1.8 cm read as dark trenches, 3 cm with 3.5 to 6 mm is soft); no
      region key above 3x, 15 mm.
    - Never name a script `bisect.py` or `inspect.py` in the work folder (shadows the stdlib).
-8. **Thread hygiene.** One builder and one reviewer until the score is 5/5; a builder thread lasts
-   one round or less, then hands off. A brief names **only** the LIVE STATE block, the contract
+8. **Thread hygiene.** One builder and one reviewer until the score is 5/5; a thread stays on its job
+   until done, lets its context compact and keeps its LIVE STATE block on disk (yskills: no handoff
+   threads, no new thread per round). A brief names **only** the LIVE STATE block, the contract
    blocks and the top 3 items of the current plan; a builder that reads whole study libraries fills
    its context on one item (a Luna builder stopped at its 210k context budget with nothing handed in). Hand-in comes
    first in the plan, research second. Cloud Blender setup is about two minutes:
    `apt-get update && apt-get install -y libegl1 libgl1-mesa-dri libegl-mesa0 libgles2 libtbb12`,
    `python3.13 -m pip install bpy scipy pillow numpy matplotlib`.
-9. **Same size, every sheet.** The reference is the only shape target (other models are bases to
-   shape toward it, never goals). Every sheet shows the body next to the reference on one canvas at the
+9. **Same size, every sheet.** The blobcg reference is the only shape target (other models, and
+   other characters liked for one feature, are bases to shape toward it, never goals). Every sheet shows the body next to the reference on one canvas at the
    same height, registered by chin and sole (side view: chin and knee), crown inside the frame. A sheet
    with a clipped head, stray objects, cut hands, hidden hair or no figure frame (the body in the
    hinata-v1 scene with hair and shader, like the dance video) fails before scoring.

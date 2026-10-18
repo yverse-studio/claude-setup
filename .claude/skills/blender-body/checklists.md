@@ -34,8 +34,8 @@ Hand in
 - [ ] The sheet below, in `proof/<round>/`; `tools/handin-cloud.sh <round>` renders raw, clay and masks only, you add detail, posed, zoom and numbers.
 - [ ] Blend saved as `build-<round>.blend`; LIVE STATE block updated (keys and their values,
       band map, what is open); one cross-session line to the reviewer and coordinator.
-- [ ] Context nearly full: stop, post one line plus one crop, start the next builder with the
-      LIVE STATE block only.
+- [ ] Context nearly full: update the LIVE STATE block on disk and carry on after the compaction;
+      no new builder thread.
 
 ## Reviewer, every round
 
