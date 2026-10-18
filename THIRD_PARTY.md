@@ -160,3 +160,14 @@ Ideas, reworded, none copied verbatim, into `.claude/skills/operator/roles/resea
 - describe what exists before judging it, file paths and line numbers on every finding, fresh
   reading instead of old notes: HumanLayer (https://github.com/humanlayer/humanlayer, Apache-2.0,
   commit 99abe67, `.claude/commands/research_codebase.md`)
+
+## Playtest method
+
+Ideas, reworded, only short quotes attributed in place, into `.claude/skills/operator/roles/playtester.md` (Method). Read 2026-10-18, each from the owner's file:
+
+- Valve, "Sound Practices of Games Business and Design", Brian Jacobson, slides (© 2007 Valve Corporation, read only, no licence to copy): https://cdn.steamstatic.com/apps/valve/2005/AGDC2005_SoundPractices.pdf. Slides "Running a Good Playtest" and "Questioning Playtesters": check whether testers have the experience designed, use external testers, say nothing to them, have them think aloud, do not rely on questions, learn from what they do not experience. Used for: the blind first pass and the evidence-over-opinion rule.
+- Jesse Schell, "Playtesting Games 101", lecture slides from *The Art of Game Design* (read only): https://stewart.sdsu.edu/cs583_spr2013/LearningXNA4_lects/JesseSchell_playtesting101.pdf. Slides "Playtesting - why / what": go in with written questions, "I won't provide help", take copious notes (about one new problem a minute in the Half-Life sessions), watch for boredom and confusion, do not defend the game. Used for: questions before play, the think-aloud log, the findings list.
+- Nielsen Norman Group, "How Many Test Users in a Usability Study?": https://www.nngroup.com/articles/how-many-test-users/. Its answer is five users for a qualitative study. Used for: the rule that one agent tester is one tester and a pass is not a forecast.
+- Playwright docs, https://playwright.dev/docs/videos (`recordVideo`), https://playwright.dev/docs/emulation (`hasTouch`, devices) and https://playwright.dev/docs/api/class-browsertype (`executablePath`). Used for: how the Playtester records and emulates touch.
+
+Not read: Graham McAllister, "Implementing an In-House Playtesting Process" (GDC 2010, https://gdcvault.com/play/1016497/contactUs), only its abstract is public.
