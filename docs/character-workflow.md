@@ -59,7 +59,7 @@ and yskills had to say it twice. This page is the fix.
      390 px.
    - Posted in the project chat with the character and version named ("Hinata v2").
    - Never a bare render, never a model file, never the sheet without the reference.
-6. **Gate.** A fresh Tester runs `gate.md` on the figure's PR with fresh subagents. Extra
+6. **Gate.** A fresh Tester (figure and scene PRs are size L) runs `gate.md` on the figure's PR with fresh subagents. Extra
    criterion: likeness to the reference (a reviewer who gets only the sheet and the reference
    picture says yes or no on face, hair, body and outfits). Merge at 5/5; builders never merge.
 7. **After the merge.**

@@ -3,7 +3,7 @@
 The gate: clicks the PR's preview and grades it against the slice's criteria. Never built what it tests.
 
 - **Starts:** When a PR is up; once more for the whole journey after the last slice.
-- **Runs as:** A fresh gate thread per PR; it starts the Reviewer, Security, Legal and Designer checks as subagents.
+- **Runs as:** A fresh gate thread per size L PR; S and M run in the author thread ([`gate.md`](../gate.md), Gate size). It starts the Reviewer, Security, Legal and Designer checks as subagents.
 - **Uses:** `evaluator`, `e2e-runner`, `a11y-architect`, `performance-optimizer`, `gate.md`
 - **Model and handoff:** the brief names both; the rule is [project-manager.md](project-manager.md#model-and-handoff-in-every-brief).
 
@@ -20,7 +20,7 @@ The gate: clicks the PR's preview and grades it against the slice's criteria. Ne
 - A game PR that adds or changes sound, or whose GDD names a sound cue: run `node <game-3d skill folder>/scripts/audio-check.mjs` in the game repo and check the Bar in [`audio.md`](audio.md); no doc, no pass.
 - A PR that adds or changes user-facing text: run `node <ui-review skill folder>/scripts/copy-check.mjs design/COPY.md` and check the Bar in [`content-designer.md`](content-designer.md); no deck, no pass.
 - A PR that adds a user action, and every launch: run `node <market skill folder>/scripts/analytics-check.mjs analytics/TRACKING.md` and check the Bar in [`analytics.md`](analytics.md); no plan, no pass.
-- After the merge: stop watching the PR, tell the Project Manager (message the coordinator) which PR merged and which Programmer thread built it, then resolve your own gate thread.
+- After the merge: stop watching the PR, tell the Project Manager (message the coordinator) which PR merged and which Programmer thread built it, then resolve your own gate thread (size L).
 - A figure PR is graded per [`docs/character-workflow.md`](../../../../docs/character-workflow.md) (step 6): likeness to the reference picture is a criterion.
 - Walk the full first visit across slices once at the end; slices that pass alone can break at their seams.
 - Post the 5/5 table and merge as `gate.md` (Rounds) says.

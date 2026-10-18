@@ -30,7 +30,7 @@ went live summing rows that were never stored and showed 0 € for 28 € of pay
 that returns nothing yet is wired only together with its backfill.
 **Game events:** HQ's level, XP and coins come only from `events/<id>` rows in HQ's db
 (`{kind, project, at, amount?}`), nothing else counts. At each milestone, in the same batch as the
-`PROGRESS.md` rows, the operator or gate thread writes one with a fixed id so a retry does not
+`PROGRESS.md` rows, the operator or the thread that gates writes one with a fixed id so a retry does not
 count twice: `pr_merged` (id `pr-<repo>-<number>`, 50 XP), `gate_passed` (`gate-<repo>-<number>`,
 20 XP, only at 5/5), `launched` (`launch-<project>`, 100 XP), `euro` (`euro-<project>-<yyyy-mm-dd>`,
 `amount` = euros newly earned since the last event, from Stripe or `/api/stats`, 10 XP and 1 coin
@@ -77,7 +77,7 @@ with the operator workflow (slug = project, repo and Worker name) and sets `repo
 **Roadmap:** HQ's Roadmap tab is one quest map per project, rendered only from these `phases` rows and the
 `work` rows they name (`HQ.questMap` in company-xy's `hq-rules.js`). A step shows as current only when its row is `active`
 and carries `project` and `at`; a row without `project` lands under "Ohne Projekt" and never counts as current. **At every
-merge** the Project Manager (or the gate thread, in the same batch as its events) brings the project's rows true: the merged
+merge** the Project Manager (or the thread that merged, in the same batch as its events) brings the project's rows true: the merged
 step `done` with its PR in `link` and `testableAt` = when it went live, the next step `active` with its builder's session in
 `sessions` and its `testableAt`, every touched row with a fresh `at`. A wrong roadmap is fixed in the rows, never in the page.
 

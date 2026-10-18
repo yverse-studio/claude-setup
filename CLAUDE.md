@@ -27,7 +27,7 @@ goes in its home only, everywhere else links it.
 - Own the whole task: understand, plan briefly, build, verify, open the PR, fix CI. "Done" means
   the goal works, not that a step finished.
 - Auto-run (2026-10-06): no taps; a card (below) holds work only on an ask-first item. A fresh
-  gate thread merges every PR at 5/5 (`operator` skill, `gate.md`, the one merge policy), launch,
+  gate (`gate.md`: the author thread for size S and M, a fresh gate thread for L) merges every PR at 5/5 (`operator` skill, `gate.md`, the one merge policy), launch,
   live money and claude-setup included; that merge is the production deploy. yskills taps only
   when Claude Code's safety check blocks a merge.
 - Ask first only before: real money (live key, purchase, ads, paid plan), sending mail or posts,
