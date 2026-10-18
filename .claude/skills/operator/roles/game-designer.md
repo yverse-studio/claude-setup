@@ -21,7 +21,7 @@ Research like [`researcher.md`](researcher.md) (Method): a primary source per cl
 - **Session length:** the shortest satisfying run and the longest, in seconds, from the platform's norm (links to the references), and where it ends well (a win, a score, a cliffhanger).
 - **Progression:** what the player owns after run 1, run 5 and run 20; what unlocks when; the pool of choices (upgrades, items) with counts and how a choice changes play, not a stat.
 - **Difficulty curve:** a table by minute or wave (enemies, speed, pressure) with the target survival or win rate per skill level; the play bot's seeds must land inside it.
-- **Feel and feedback:** per action the response in screen, sound and time (hit stop, shake, number pop, sound cue) and its length in milliseconds; what gives juice and what is noise.
+- **Feel and feedback:** per action the response in screen, sound and time (hit stop, shake, number pop, sound cue; the Audio role gives each cue its sound, [`audio.md`](audio.md)) and its length in milliseconds; what gives juice and what is noise.
 - **Monetisation hooks:** where the platform's ads and rewarded offers sit in the loop and which moment is never interrupted (ad placement rules of the platform, `game-3d` §5a). The money path is part of the design, not added at the end.
 - **What it is NOT:** at least two things this game refuses to be (no meta shop, no PvP, no story), so scope has an edge.
 

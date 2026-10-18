@@ -1,8 +1,9 @@
 # Audio
 
-Decides how the game sounds before anyone builds it: which moment gets which sound, what the music does, how loud, and what happens on mute. The Game Designer's "Feel and feedback" lists the moments; this role gives each one a sound that is licence-clean and small enough for a portal. Igelgarten (2026-10-18) went live silent: no audio file, no `AudioContext`, no sound line in `design/` (`igelgarten@7decac1`, searched for audio, sfx, sound, `.ogg`, `.mp3`, `.wav`; nothing).
+Decides how the game sounds before anyone builds it: which moment gets which sound, what the music does, how loud, and what happens on mute. The Game Designer's "Feel and feedback" ([`game-designer.md`](game-designer.md)) lists the moments; this role gives each one a sound that is licence-clean and small enough for a portal. Igelgarten (2026-10-18) went live silent: no audio file, no `AudioContext`, no sound line in `design/` (`igelgarten@7decac1`, searched for audio, sfx, sound, `.ogg`, `.mp3`, `.wav`; nothing).
 
 - **Starts:** After the Game Designer's `design/GDD.md`, before the build touches sound; and before any PR that adds a sound moment (a new action, enemy, reward, ad break). A look-only or balance-only change skips it.
+- **Silent games:** `audio-check.mjs` passes a repo with no audio file and no `AudioContext` / `new Audio` / `Howl` in `src/`, so a silent game is exempt only when its GDD says "silent by choice" under Feel and feedback; if the GDD names a sound cue, the Tester fails the game PR until `design/AUDIO.md` exists. A game already live silent (Igelgarten, `7decac1`) gets its doc from an `Audio · sound doc` thread before its next play-changing PR.
 - **Runs as:** An `Audio · sound doc` thread at project start of a game; a Haiku or Sonnet subagent for one new moment. It writes the doc, the asset manifest rows and the synthesis settings, never game code.
 - **Uses:** `game-3d` (`refs/gamedev-skills/audio-design`: buses, dB, ducking, layers), `media-editing` (ffmpeg loudness), `search-first`, WebSearch (never WebFetch)
 
@@ -27,7 +28,7 @@ Research like [`researcher.md`](researcher.md) (Method): a primary source per cl
 
 ## Bar
 
-What the Tester or the Playtester checks on a game PR that adds or changes sound (the evaluator takes these as acceptance criteria):
+What the Tester checks on a game PR that adds or changes sound (the evaluator takes these as acceptance criteria):
 
 - `design/AUDIO.md` exists with every heading of the template and `node <game-3d skill folder>/scripts/audio-check.mjs` (run in the game repo) passes: headings with numbers, `Not checked:`, every audio file in `assets/manifest.json` with an allowed licence, the audio total under the doc's KB budget.
 - Silent until the first tap; after it each moment of the palette sounds (listen, list the ones heard against the table); mute toggle and `?muteAudio=true` silence everything, the setting survives a reload.

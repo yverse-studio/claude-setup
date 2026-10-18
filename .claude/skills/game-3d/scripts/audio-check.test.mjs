@@ -77,11 +77,25 @@ test('a licence that is not CC0, public domain or own synthesis fails', () => {
     assert.match(checkAudio({ ...REPO, manifest }).join(), /licence/, licence)
   }
 })
+test('a licence that only mentions an allowed one fails', () => {
+  for (const licence of ['not CC0', 'CC0-NC', 'CC BY-NC 4.0 (not public domain)', 'CC0 (trust me)', 'ripped, own work']) {
+    assert.match(checkAudio({ ...REPO, manifest: { assets: [{ ...MANIFEST.assets[0], licence }] } }).join(), /licence/, licence)
+  }
+})
+test('a manifest row without source, author or commercial: true fails', () => {
+  for (const k of ['source', 'author']) assert.match(checkAudio({ ...REPO, manifest: { assets: [{ ...MANIFEST.assets[0], [k]: '' }] } }).join(), /needs source, author/, k)
+  assert.match(checkAudio({ ...REPO, manifest: { assets: [{ ...MANIFEST.assets[0], commercial: false }] } }).join(), /commercial: true/)
+})
+test('a budget of 0 KB does not switch the size check off', () => assert.match(checkDoc(GOOD.replace('Budget: 600 KB', 'Budget: 0 KB')).join(), /File budget: write "Budget/))
+test('a palette number outside the Length column does not count', () => {
+  const doc = GOOD.replace(/\| hit .*\n/, '| hit | thud | short | own synthesis | 3 takes |\n').replace(/\| pickup .*\n/, '')
+  assert.match(checkDoc(doc).join(), /Length/)
+})
 test('audio over the doc budget fails', () => assert.match(checkAudio({ ...REPO, files: [{ path: 'assets/audio/chime.ogg', bytes: 601 * 1024 }] }).join(), /over the doc's budget of 600 KB/))
 
 // pass-table (roles/reviewer.md): ordinary values must not fail
 test('ordinary values pass: licences, paths, game text, CRLF, star bullets, bold labels', () => {
-  for (const licence of ['CC0', 'CC0 1.0 Universal', 'cc0', 'Public Domain', 'own synthesis (jsfxr settings in design/sfx/)', 'Own work']) {
+  for (const licence of ['CC0', 'CC0 1.0 Universal', 'cc0', 'Public Domain', 'own synthesis (jsfxr settings in design/sfx/)', 'Own work', ' CC0 ']) {
     assert.deepEqual(checkAudio({ ...REPO, manifest: { assets: [{ ...MANIFEST.assets[0], licence }] } }), [], licence)
   }
   const docs = [
@@ -98,7 +112,7 @@ test('ordinary values pass: licences, paths, game text, CRLF, star bullets, bold
 })
 test('a repo with no sound at all passes', () => assert.deepEqual(checkAudio({ doc: null, files: [], manifest: null, usesAudioCode: false }), []))
 test('the audio file and code patterns match ordinary names and miss look-alikes', () => {
-  for (const f of ['a.ogg', 'sfx/Hit.MP3', 'x.wav', 'm.opus']) assert.ok(AUDIO_FILE.test(f), f)
+  for (const f of ['a.ogg', 'sfx/Hit.MP3', 'x.wav', 'm.opus', 'a.weba', 'b.aiff', 'c.mid']) assert.ok(AUDIO_FILE.test(f), f)
   for (const f of ['audio.json', 'oggy.ts', 'a.ogg.map', 'notes.md']) assert.ok(!AUDIO_FILE.test(f), f)
   for (const c of ['new AudioContext()', 'const a = new Audio("x")', 'new Howl({})']) assert.ok(AUDIO_CODE.test(c), c)
   for (const c of ['audioContextName', 'AudioBuffer', 'const radio = 1']) assert.ok(!AUDIO_CODE.test(c), c)

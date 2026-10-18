@@ -11,12 +11,13 @@ const NUMBERED = ['Music plan', 'Mix bar', 'File budget']
 const MIN_REFERENCES = 3
 const MIN_NOT_LINES = 2
 export const PLACEHOLDER = /<(?:name|game|store link|date|moments with sound, music layers, mute behaviour as heard|what|what and why)>/g // the template's own; game text such as <kbd> is not one
-export const AUDIO_FILE = /\.(?:ogg|mp3|wav|m4a|flac|opus|aac)$/i
+export const AUDIO_FILE = /\.(?:ogg|mp3|wav|m4a|flac|opus|aac|weba|aiff?|midi?)$/i
 export const AUDIO_CODE = /\bAudioContext\b|\bnew Audio\(|\bHowl\(/
-const ALLOWED_LICENCE = /\bCC0\b|public domain|own (?:synthesis|work)/i
+// the whole value, not a mention: "not CC0", "CC0-NC" and "CC0 (trust me)" must fail
+const ALLOWED_LICENCE = /^(?:CC0(?:[ -]1\.0)?(?: Universal)?|public domain|own (?:synthesis|work)(?: \([^()]*\))?)$/i
 const DAY_READ = /\b\d{4}-\d{2}-\d{2}\b/
 const DIVIDER = /^\s*\|?[\s:|-]+\|[\s:|-]*$/
-const BUDGET = /\bBudget:\s*(\d+)\s*KB\b/i
+const BUDGET = /\bBudget:\s*([1-9]\d*)\s*KB\b/i // 0 KB would switch the size check off
 const bullets = (text) => text.split('\n').filter((l) => /^\s*[-*]\s+\S/.test(l))
 
 function sections(md) {
@@ -40,8 +41,9 @@ export function checkDoc(md) {
   for (const m of md.matchAll(PLACEHOLDER)) errors.push(`template placeholder left: ${m[0].slice(0, 40)}`)
   for (const h of NUMBERED) if (s[h]?.trim() && !/\d/.test(s[h])) errors.push(`## ${h} has no number`)
   if (s['File budget']?.trim() && !BUDGET.test(s['File budget'])) errors.push('## File budget: write "Budget: <n> KB"')
-  const rows = (s['Sound palette'] ?? '').split('\n').filter((l) => /^\s*\|/.test(l) && !DIVIDER.test(l)).slice(1)
-  if (s['Sound palette']?.trim() && !rows.some((r) => /\d/.test(r))) errors.push('## Sound palette: a table with at least one row that carries a length in ms')
+  const [head, ...rows] = (s['Sound palette'] ?? '').split('\n').filter((l) => /^\s*\|/.test(l) && !DIVIDER.test(l)).map((l) => l.trim().replace(/^\||\|$/g, '').split('|'))
+  const col = head?.findIndex((c) => /length/i.test(c)) ?? -1
+  if (s['Sound palette']?.trim() && !(col >= 0 && rows.some((r) => /^\s*\d+\s*(?:ms)?\s*$/i.test(r[col] ?? '')))) errors.push('## Sound palette: a table with a "Length" column and at least one row that carries a number in ms')
   if (s['Not this'] !== undefined && bullets(s['Not this']).length < MIN_NOT_LINES) errors.push(`## Not this: at least ${MIN_NOT_LINES} bullets`)
   const refs = bullets(s.References ?? '')
   if (s.References !== undefined && refs.length < MIN_REFERENCES) errors.push(`## References: ${refs.length} of ${MIN_REFERENCES} games`)
@@ -64,7 +66,8 @@ export function checkAudio({ doc, files, manifest, usesAudioCode }) {
   for (const f of files) {
     const row = [...rows.entries()].find(([p]) => f.path === p || f.path.startsWith(p + '/'))?.[1]
     if (!row) errors.push(`${f.path}: no assets/manifest.json row`)
-    else if (!ALLOWED_LICENCE.test(row.licence ?? '')) errors.push(`${f.path}: licence "${row.licence ?? ''}" is not CC0, public domain or own synthesis`)
+    else if (!ALLOWED_LICENCE.test((row.licence ?? '').trim())) errors.push(`${f.path}: licence "${row.licence ?? ''}" is not exactly CC0, public domain or own synthesis`)
+    else if (!row.source || !row.author || row.commercial !== true) errors.push(`${f.path}: manifest row needs source, author and commercial: true`)
   }
   const budget = Number(doc?.match(BUDGET)?.[1])
   const total = files.reduce((n, f) => n + f.bytes, 0)
