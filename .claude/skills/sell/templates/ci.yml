@@ -30,7 +30,6 @@ jobs:
         with:
           fetch-depth: 0 # floor-guard needs the merge base
           persist-credentials: false
-          persist-credentials: false
       - uses: actions/setup-node@v5
         with:
           node-version-file: .node-version
