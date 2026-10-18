@@ -72,9 +72,11 @@ from a pushed branch; private repo, no outside collaborators, `yskills-claude` i
 ### Per project, Claude
 
 1. Start the workflow from the thread: dispatch `new-project.yml` on `main` with inputs `name`,
-   `d1`, `org` (GitHub MCP `actions_run_trigger` `run_workflow`; threads can, checked 2026-10-08
-   19:50), or push a branch: in claude-setup, branch `new/<name>` off `main` with one file
-   `projects/<name>.json`, `{ "name": "<name>", "d1": true, "org": "yverse-studio" }` (`name`:
+   `d1`, `kind` (`site` or `game`), `org` (GitHub MCP `actions_run_trigger` `run_workflow`;
+   threads can, checked 2026-10-08 19:50), or push a branch: in claude-setup, branch
+   `new/<name>` off `main` with one file `projects/<name>.json`, **in one push** (git, or
+   `push_files`; `create_branch` then `create_or_update_file` is two pushes, and the first, empty
+   one builds a plain site that a later `kind: game` run never converts, 2026-10-18), `{ "name": "<name>", "d1": true, "org": "yverse-studio" }` (`name`:
    lowercase, digits, dashes; it is the repo and the Worker name; `d1` false when PLAN.md says no
    data; `"kind": "game"` makes a static three.js game instead of the day-zero site: `templates/new-game/`
    laid over `templates/new-project/`, no D1, no login; see the `game-3d` skill). The push runs `new-project-request.yml` (no keys), and on its completion GitHub runs
@@ -88,8 +90,8 @@ from a pushed branch; private repo, no outside collaborators, `yskills-claude` i
    check && npm run build`; Deploy `npm run deploy` or `npx wrangler deploy`; Previews `npm run
    deploy:preview` or `npx wrangler preview`), runs the first build and sets a random production
    `BETTER_AUTH_SECRET`. A re-run skips what exists.
-2. Wait for the run (`actions_list` `list_workflow_runs` with `new-project.yml`, then
-   `actions_get` `get_workflow_run`); its summary has the repo, the live URL
+2. Wait for the run (`actions_list` `list_workflow_runs` ignores `per_page` and costs about 20k
+   tokens: call it once, then `actions_get` `get_workflow_run` by id); its summary has the repo, the live URL
    and the first build's status. Build logs: dispatch `build-logs.yml` with the Worker name (a
    registered project); it prints the latest build's redacted log tail.
 3. `add_repo` the new repo with `access: push` and `save_to_project: true`, then the scaffold

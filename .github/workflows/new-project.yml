@@ -23,6 +23,12 @@ on:
         required: false
         type: boolean
         default: true
+      kind:
+        description: 'site (day-zero site) or game (static three.js game, no D1)'
+        required: false
+        type: choice
+        options: [site, game]
+        default: site
       org:
         description: 'GitHub org that owns the repo'
         required: false
@@ -61,6 +67,7 @@ jobs:
           PROJECT_BRANCH: ${{ github.event.workflow_run.head_branch }}
           NAME: ${{ inputs.name }}
           D1: ${{ inputs.d1 }}
+          KIND: ${{ inputs.kind }}
           ORG: ${{ inputs.org }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
@@ -77,7 +84,8 @@ jobs:
     permissions:
       contents: write
     steps:
-      - run: gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/$BRANCH"
+      # 422 = the branch is already gone (a second run for the same push deleted it): not an error.
+      - run: gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/$BRANCH" || echo "branch $BRANCH already gone"
         env:
           GH_TOKEN: ${{ github.token }}
           BRANCH: ${{ github.event.workflow_run.head_branch }}

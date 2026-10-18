@@ -468,7 +468,7 @@ function pushScaffold(dir, org, name, branch, token) {
 export async function main() {
   const readJson = (file) => (existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : null)
   const project = process.env.NAME
-    ? projectConfig(process.env.NAME, readJson(`projects/${process.env.NAME}.json`) || { d1: env('D1', false) !== 'false', org: env('ORG', false) })
+    ? projectConfig(process.env.NAME, readJson(`projects/${process.env.NAME}.json`) || { d1: env('D1', false) !== 'false', org: env('ORG', false), kind: env('KIND', false) })
     : projectFromBranch(process.env.PROJECT_BRANCH, readJson)
   if (!project) throw new Error('NAME is not set and the branch is not new/<name>')
   const { name, d1, kind, org, repo: repoName, existing, commands, secret, kv } = project
