@@ -5,13 +5,21 @@ read it.
 
 ## Direction
 
-(Written from `design/reference/` and `REFERENCES.md`, naming the files it cites; rule: claude-setup `operator/roles/designer.md`, Reference first. One clear direction: palette tokens, type, shapes. Real life first, then better. Cute cartoon or
-pixel taste, licence-clean art.)
+(Three visual pillars in plain words, the real-life object the world copies, and at least three
+captures from `design/reference/` cited by file name. Rule: claude-setup
+`operator/roles/designer.md`, Art direction first; nothing from `ui-review/SLOP.md`.)
 
-## Reference
+## Palette
 
-(Where the look is compared to: `design/reference/*.png`, the Designer vote-gallery pick, plus
-links. `design-critic` compares the 390px and 1440px screenshots against it.)
+| role | hex | taken from |
+|---|---|---|
+| (ground, surface, text, accent, danger, pickup; at most eight) | | (capture file) |
+
+Text pairs: (`#fg on #bg`, each at least 4.5:1; large text and UI 3:1)
+
+## Type
+
+(At most two licence-clean, self-hosted families, and a scale in px, for example 13 / 16 / 22 / 32 / 48px.)
 
 ## Bar
 

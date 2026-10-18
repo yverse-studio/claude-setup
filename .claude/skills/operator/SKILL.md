@@ -65,7 +65,7 @@ grades):
 |---|---|---|---|
 | Project Manager | the operator: plans with yskills, starts the others, keeps PROGRESS.md and its HQ rows | the project chat | Project Manager · duo-test |
 | Researcher | competitors, prices, tools and skills, proof people pay (step 2) | subagents; a thread when big | Researcher · competitors |
-| Designer | the look, then every UI screenshot | subagent; a thread for a redesign | Designer · directions |
+| Designer | art direction (references, palette, type) before any screen, then every UI screenshot (`roles/designer.md`) | a thread at project start and for a redesign; `design-critic` subagent per UI PR | Designer · art direction |
 | Programmer | one slice or fix, the PR, green CI | a thread each: one at a time, a second only when the slices share no file, never more than three | Programmer · subscription |
 | Tester | the gate: grades the preview against the criteria | a fresh thread per PR | Tester · PR 23 |
 | Reviewer | reads the diff | subagent the Tester starts | Reviewer · PR 23 |
@@ -105,7 +105,7 @@ Every extra thread re-reads its context, so take the simplest shape that works.
 |---|---|
 | Site | live, plus legal pages (`legal` skill) and the money path it needs (`sell`) |
 | App | live, plus the paywall working in test mode and the legal pages; live keys wait for yskills' tap |
-| Game | live, built to captured portal references (`roles/designer.md`, Reference first), plus the money path wired (portal ads via the starter's `platform.ts`, `game-3d` §5a "what earns") and the portal or store package ready (`store-publish`, CrazyGames checklist); only yskills' hands steps remain |
+| Game | live, built to captured portal references (`roles/designer.md`, Art direction first), plus the money path wired (portal ads via the starter's `platform.ts`, `game-3d` §5a "what earns") and the portal or store package ready (`store-publish`, CrazyGames checklist); only yskills' hands steps remain |
 
 Name and concept first: settle them with one card, push `new/<name>` after the tap; a changed
 concept later means a second repo, Worker and D1 that only "delete <name>" removes. A thread
@@ -121,7 +121,7 @@ enterprise-flavoured: German law and this stack's rules win.
 |---|---|---|---|
 | Research | `market-research`, `product-lens`, `search-first`, `toolbox` | `Marketing` plugin's `competitive-brief` | competitors, prices, who pays, tool picks |
 | Legal | `legal` skill, `legal-reviewer`; shops `sell`'s `legal-de.md`; ads `market` §4 | `privacy-legal`, `ip-legal`, `ai-governance-legal` | must-haves for the plan, then pass/fail on the preview |
-| Design | `frontend-design`, `impeccable`, `ui-review`, `design-critic` | `Figma` plugin, Canva connector | 2-3 directions as screenshots, then reviews |
+| Design | `roles/designer.md` (art direction first), `frontend-design`, `impeccable`, `ui-review` (`SLOP.md`, `design-check.mjs`), `design-critic` | `Figma` plugin, Canva connector | references, palette, type, 2-3 directions as drafts, then reviews |
 | Build | builder threads; `architect`, `database-reviewer`, `build-error-resolver` | stack plugins via `toolbox`; 3D, game or figures: `game-3d` and its `starter/` kit, read once at the start | a PR with green CI |
 | QA | `evaluator`, `code-reviewer`, `a11y-architect`, `performance-optimizer` | | gate checks 2-3 |
 | Security | `security-reviewer` (the diff), `red-team` (attacks the preview) | | gate check 4 |

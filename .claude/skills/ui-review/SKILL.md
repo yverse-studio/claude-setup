@@ -5,8 +5,8 @@ description: "Screenshot a web app at phone and desktop size, then design-critic
 
 # UI review
 
-yskills' lasting likes and dislikes are in `TASTE.md` next to this file; the critic gets it with
-the screenshots.
+yskills' lasting likes and dislikes are in `TASTE.md` next to this file, the slop patterns that
+fail any screen in `SLOP.md`; the critic gets both with the screenshots and the references.
 
 ## 1. Run the app
 
@@ -50,7 +50,8 @@ the `toolbox` skill's PWA row (`registerType: 'prompt'`).
 
 ## 3. Review
 
-1. Open every PNG yourself first.
+1. Open every PNG yourself first, next to `design/reference/`. Run
+   `node <ui-review skill folder>/scripts/design-check.mjs` in the project; fix what it lists.
 2. Run `.claude/skills/impeccable/scripts/impeccable detect` on the changed source files (a local
    linter for AI-look anti-patterns, no LLM; scan files, not a URL, because URL scans can't start
    Chromium as root in cloud threads) and check the diff against the

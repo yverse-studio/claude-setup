@@ -2,22 +2,34 @@
 
 Sets the look before the first screen and checks every UI change so nothing looks AI-made.
 
-- **Starts:** After brief (a): 2-3 directions as live drafts in the vote gallery (below); then on every PR that changes UI.
-- **Runs as:** Quick subagent (`design-critic`); a thread only for a redesign.
+- **Starts:** After brief (a), before any screen is built, for every project kind (site, app, game): art direction (below), then 2-3 directions as live drafts in the vote gallery; then on every PR that changes UI.
+- **Runs as:** A `Designer · art direction` thread at project start and for a redesign; `design-critic` as a quick subagent on every UI PR.
 - **Uses:** `frontend-design`, `impeccable`, `ui-review`, `design-critic`; Figma plugin or Canva only when the plan uses them
 
-## Reference first (the look bar, 2026-10-18)
+## Art direction first (2026-10-18)
 
-Before the first build of a game, and of any new product UI, the look comes from real captures, never from scratch
-(Igelgarten was built to a bar its builder wrote itself and yskills rejected it):
+The look is decided like a studio's art director decides it, before any screen, from real
+captures, never from scratch. Igelgarten passed four gates and yskills called it "holy ai slop":
+its builder wrote its own bar, picked neon on near-black with no source, and the critic graded
+against that text. So:
 
-1. Collect 3 to 6 captures of the top games of that genre on the target portal (CrazyGames, Poki; the apps of the
-   category for a product) at 390px and 1440px into `design/reference/`, one line each in `design/REFERENCES.md`:
-   link, and what to take from it (palette, shape language, HUD, end card, juice).
-2. `design/DESIGN.md` `## Direction` is written from those lines and names the files it cites; a Direction with no
-   citation is not finished.
-3. `design-critic` gets the references next to the screenshots and lists where the build falls short of them.
-4. Gate check 5 fails when `design/reference/` is empty or `DESIGN.md` does not cite it.
+1. **References:** 3 to 6 captures of the top products of the genre (CrazyGames and Poki top
+   pages for a game; the category's leading apps for a product) at 390px and 1440px, shot with
+   `ui-review`'s `shoot.mjs` (absolute URLs), into `design/reference/`, one line each in
+   `design/REFERENCES.md`: link and what to take (palette, shapes, HUD, menus, juice). Plus one
+   real-life object the world copies (a storybook, a seed packet, a till receipt).
+2. **`design/DESIGN.md`**, four sections, each traceable to a capture by file name:
+   - `## Direction`: three visual pillars in plain words, the real-life model, the captures cited.
+   - `## Palette`: a table of at most eight hex colours by role (ground, surface, text, accent,
+     danger, pickup...), sampled from the captures or the real object; text pairs written
+     `#fg on #bg` (4.5:1, 3:1 for large text and UI); check it in grayscale: player, danger and
+     pickups must still read.
+   - `## Type`: at most two families (licence-clean, self-hosted), a scale in px.
+   - `## Bar`: below.
+3. **Check:** `node <ui-review skill folder>/scripts/design-check.mjs` passes, and `design-critic`
+   finds no pattern from [`SLOP.md`](../../ui-review/SLOP.md) in the drafts. Only then the vote
+   gallery, then the build.
+4. **Gate:** check 5 runs both on every UI PR (`gate.md`).
 
 ## Every time
 
@@ -26,7 +38,7 @@ Before the first build of a game, and of any new product UI, the look comes from
 - Start from yskills' reference pictures in `design/refs/`, then `design/DESIGN.md`.
 - Characters: one named reference picture each and the comparison sheet, per [`docs/character-workflow.md`](../../../../docs/character-workflow.md).
 - Compare against the category leader at 1440px and 390px.
-- The "looks very AI" list and motion rules: CLAUDE.md (UI).
+- The "looks very AI" list: [`SLOP.md`](../../ui-review/SLOP.md); motion rules: CLAUDE.md (UI).
 - Copy real life first (CLAUDE.md, UI), result Blender-level or current state of the art: before picking art, do one quick search
   for the best licence-clean option today (CC0/CC-BY packs, AI 3D generation with commercial rights,
   Mixamo-style animation) and say in the PR what was picked and why.
@@ -111,3 +123,4 @@ Added at the end of each project (operator step 9): date, project and its type, 
 - 2026-10-07 (Claude Setup HQ, walking): yskills saw the team "walk through each other, no walking animation, too fast" and asked for common game rules. Characters that move need what any game gives them from day one: routes over a floor grid built from the scene's own furniture boxes (A*), queueing and giving way instead of overlap, a stand-up walk cycle whose stride follows distance walked, ease in and out at about 1 m/s, and spots on open floor chosen where the camera shows them on a phone. Prove it headless with a run that tracks the closest two walkers, not only stills. Menus follow game rules too: one panel open at a time, a tap outside closes it.
 - 2026-10-07 (Claude Setup HQ, second character skin): models loaded from files must be tested in a browser with a real sample file before review: the untested build had every VRM 0 model's arms flipped (VRM 0 is turned round to face +z, so its bones' x and z rotations mirror), flat T-pose fingers and a wave that pointed. A dialogue scene frames the speaker as the subject: the card stands beside her on wide screens, never over her, the room's labels hide while she is there, replies are full-width rows of 44 px in a fresh order with no answer pre-focused. A file stored as base64 text grows by a third, so its upload cap sits a third under the store's limit.
 - 2026-10-07 (Claude Setup HQ, Kassenbuch round 2): yskills found the money view unclear and missed the cents. Every amount anywhere on a page shows two decimals (one formatter, `de-DE`, 28,80 €), and every place that shows the same money (wall chart, laptop, Company, cash book) reads it from the same source, or one of them says a rounded 30 € next to a 28,80 €. Say the result in plain words ("Bleibt dir", "Kunden haben bezahlt", "Stripe-Gebühr"), not Netto/Brutto, and fold parts with no data yet into one quiet line instead of a heading each.
+- 2026-10-18 (Igelgarten, game): yskills called the live game "holy ai slop" after four 5/5 gates: neon glow on every sprite, a SaaS-dark menu with stripe rows in a garden game, no palette or type decision. Fix: art direction first, `design-check.mjs` and `SLOP.md` in check 5.
