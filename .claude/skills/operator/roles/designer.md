@@ -99,6 +99,8 @@ with every option as a live, clickable draft, never loose screenshots.
 4. Send the link to the Project Manager, who posts the vote. The pick is read with `ArtifactData`
    (`list` on collection `wahl`). A new round republishes to the same URL, so the link stays.
 
+5. The Project Manager attaches the gallery as a frame in the project chat, not only as a link. Once the decision is taken, delete the gallery (Artifact `delete`); if that is refused, republish it as one line "Removed <date>".
+
 Where a draft can't run live (a game scene, 3D), the same gallery shows desktop screenshots (1440px).
 
 ## Co-founder
