@@ -173,6 +173,12 @@ test('the CLI looks for src/ inside the repo, not in the parent path (#185)', ()
   assert.equal(spawnSync('node', [CLI, join(parent, 'src/game')], { encoding: 'utf8' }).status, 0, 'no src/ folder in the repo itself: tools/audio.ts is not game source')
   assert.equal(spawnSync('node', [CLI, repo({ 'packages/a/src/audio.ts': 'new AudioContext()' })], { encoding: 'utf8' }).status, 1, 'a nested src/ still counts')
 })
+test('a commented-out import or an import in a test file is not sound (#184)', () => {
+  const quiet = { 'src/a.ts': "// import * as Tone from 'tone'\n/* new AudioContext() */\nconst x = 1 // zzfx(1)", 'src/a.test.ts': "import * as Tone from 'tone'", 'src/__tests__/b.ts': 'new AudioContext()', 'src/c.spec.js': "import { zzfx } from 'zzfx'" }
+  assert.equal(spawnSync('node', [CLI, repo(quiet)], { encoding: 'utf8' }).status, 0)
+  assert.equal(spawnSync('node', [CLI, repo({ ...quiet, 'src/d.ts': "import * as Tone from 'tone' // synth" })], { encoding: 'utf8' }).status, 1, 'a real import next to a comment still counts')
+  assert.equal(spawnSync('node', [CLI, repo({ 'src/e.ts': "const u = 'http://x.test'; new AudioContext()" })], { encoding: 'utf8' }).status, 1, 'a URL is not a comment')
+})
 
 const CLI = fileURLToPath(new URL('./audio-check.mjs', import.meta.url))
 function repo(files) {

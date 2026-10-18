@@ -22,6 +22,9 @@ const DIVIDER = /^\s*\|?[\s:|-]+\|[\s:|-]*$/
 // one `Budget: <n> KB` line (bold, bullet and case allowed) inside ## File budget; 0 KB would switch the size check off
 const BUDGET_LINE = /^\s*(?:[-*]\s+)?\**Budget:\**\s*([1-9]\d*)\s*KB\b/gim
 const budgets = (section) => [...(section ?? '').matchAll(BUDGET_LINE)].map((m) => Number(m[1]))
+// code with comments cut out, so a commented-out import or a note about Tone.js is not sound
+export const stripComments = (src) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|\s)\/\/.*$/gm, '$1')
+const TEST_FILE = /(?:\.(?:test|spec)\.[^/\\]+$|[\\/]__tests__[\\/])/
 const filled = (v) => typeof v === 'string' && v.trim() !== ''
 const bullets = (text) => text.split('\n').filter((l) => /^\s*[-*]\s+\S/.test(l))
 
@@ -97,7 +100,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const root = resolve(process.argv[2] ?? '.')
   const all = walk(root)
   const files = all.filter((p) => AUDIO_FILE.test(p)).map((p) => ({ path: relative(root, p).split('\\').join('/'), bytes: statSync(p).size }))
-  const code = all.filter((p) => /(?:^|[\\/])src[\\/].+\.(?:ts|js|mjs|vue)$/.test(relative(root, p)) && AUDIO_CODE.test(readFileSync(p, 'utf8')))
+  const code = all.filter((p) => /(?:^|[\\/])src[\\/].+\.(?:ts|js|mjs|vue)$/.test(relative(root, p)) && !TEST_FILE.test(p) && AUDIO_CODE.test(stripComments(readFileSync(p, 'utf8'))))
   const read = (rel) => (existsSync(join(root, rel)) ? readFileSync(join(root, rel), 'utf8') : null)
   const manifestText = read('assets/manifest.json')
   let manifest = null
