@@ -164,15 +164,16 @@ resolve on finish, error or no fill, and the game is frozen and muted while one 
 | Developer account at developer.crazygames.com | yskills (free, once) | the only hands step |
 | Build: `npm run verify`, zip the contents of `dist/` (index.html at the zip root) | thread | relative paths only; initial download at most 50 MB (20 MB for the mobile homepage), total 250 MB, 1500 files |
 | Basic Launch: upload, fill English title, description, controls, orientation | thread drafts, yskills submits | no SDK needed, ads off, live 7 to 21 days (500 plays), then they pick winners by playtime (10+ min good), day-1 retention (10 to 15 %), 1-minute conversion (80 %+) |
-| Covers: landscape 1920x1080, portrait 800x1200, square 800x800, plus a preview video | Designer thread, vote gallery | the game's title only, no border, no store logos, no plain screenshot, originals only |
-| Check in their QA tool in the developer portal | thread | English text, readable at 907x510 and 800x450, physics the same at 144 Hz, PEGI 12, no own fullscreen button, no cross-promotion, no ads from anywhere else |
+| Covers: landscape 1920x1080, portrait 800x1200, square 800x800, plus a landscape preview video and a portrait gameplay video (720x1280, about 13 s, real gameplay; the portal requires both) | Designer thread, vote gallery | the game's title only, no border, no store logos, no plain screenshot, originals only |
+| Check in their QA tool in the developer portal | thread | English text and English fallback for any unknown locale, never German or another language (QA box; test `fr-FR` to `en`), readable at 907x510 and 800x450, physics the same at 144 Hz, PEGI 12, no own fullscreen button, no cross-promotion, no ads from anywhere else |
+| Accept the Terms and the PEGI attestation, "Submit for approval" | yskills (his one tap, last step) | a thread stops with everything filled and says so in one line |
 | Full Launch (only if selected) | thread | SDK on (already), land in gameplay with at most one click, works with AdBlock, ads only at natural breaks, never chained, rewarded optional and never required |
 
 What earns (money route: `research/2026-10-18-game-money.md`; the own-site line is a plain reading, not measured): only the portal's ads inside CrazyGames
 (or Poki); the own site earns nothing without ads of its own, which need yskills' Impressum and
 Datenschutz. A game's own-site legal page and the portal package are part of "done" (`operator` §1).
 
-Not verified: no game has gone through a real submission yet; cover specs and limits were read from
+Checked by a real upload (2026-10-18, Hedgehog Garden): the English fallback and the portrait video were the two rules this table lacked. Not verified: review outcome; cover specs and limits were read from
 the official docs on the date above, so re-read them before submitting. Payout terms (Tipalti,
 minimum, split) are not published as a rule: confirm in the dashboard before counting on money.
 
