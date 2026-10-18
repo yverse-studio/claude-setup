@@ -25,7 +25,7 @@ Security never drops: any PR touching user input, auth, money or secrets runs ch
 | M | code without UI | 1, 2, 3; 4 when user input, auth, money or secrets are touched |
 | L | UI, auth, payments, data, migrations, launch | the full table |
 
-Who runs it (yskills, 2026-10-18: a gate thread starts at ~114k tokens and every call re-reads it, `docs/WORKFLOW.md` Token budget): S and M run in the author thread: CI, one fresh `code-reviewer` subagent (never the author's own pass) and the merge, with the table headline in the PR. L keeps a fresh gate thread, because it runs the preview, security and design checks. A reviewer subagent still sees only the diff, the criteria and the previous round's table.
+Who runs it (yskills, 2026-10-18: a gate thread starts at ~114k tokens and every call re-reads it, `docs/WORKFLOW.md` Token budget): S and M run in the author thread: CI, one fresh `code-reviewer` subagent (never the author's own pass) and the merge, with the table headline in the PR. The author does not pick the size: the table does, and anything touching user input, auth, money, data or UI is L. The reviewer gets the diff itself (`git diff <base>...<head>`), never the author's summary of it, and the author posts its report unedited; a finding the author disputes goes to the coordinator, not to a second reviewer. L keeps a fresh gate thread, because it runs the preview, security and design checks. A reviewer subagent still sees only the diff, the criteria and the previous round's table.
 
 ## Scene shots and figure shots
 
@@ -73,7 +73,7 @@ gate runs the PR's build locally (`wrangler dev`) for checks 2, 4 and 5.
 
 ## Merge policy (the one source)
 
-Under auto-run the gate thread merges (squash) every PR at 5/5: launch, live money and
+Under auto-run the gate merges (squash) every PR at 5/5: launch, live money and
 claude-setup PRs included (yskills, "merge everything", 2026-10-06). That merge is the approved
 production deploy. If Claude Code's safety check or auto mode refuses a merge, the gate asks
 yskills for the tap on the card and tries no other way. Other files say this in one line and
@@ -104,9 +104,9 @@ How to undo a merge, by kind of change (write the line into the PR's "undo" line
     wait for CI again before merging: in the HQ run six slices edited one `dashboard.html`, and a
     merge without the pull would have dropped the previous slice's work.
   - **One batch at the merge:** write the events (`pr-<repo>-<number>` `pr_merged`, `gate-<repo>-<number>` `gate_passed`) together with `projects/<id>`, the `team/*` rows and `phases`, every doc stamped `at`, so XP and rows never disagree.
-  - **Every PR**, launch and live money included: the gate thread merges it (squash). If
+  - **Every PR**, launch and live money included: the gate merges it (squash). If
     Claude's auto mode refuses, it doesn't try another way: it asks yskills for the tap.
-  - **claude-setup PRs:** the gate thread merges them too; only when Claude Code's safety check
+  - **claude-setup PRs:** the gate merges them too; only when Claude Code's safety check
     blocks the merge does yskills tap **Merge it** on the card or GitHub's Merge button.
   - **After the merge:** one lessons step (`docs/WORKFLOW.md`, Learning): save a lesson only if
     the next thread would repeat the mistake, mechanical ones as a check, prune what a check covers.

@@ -81,7 +81,7 @@ before each step; builder, gate and fix threads read their `roles/<role>.md` ins
    claude-setup), **change** (one new offer or channel, one more probe) or **build anyway**.
    Never move the go number after the probe started. A small site meant to earn is its own
    probe; one not meant to earn skips it.
-6. **Gate.** A fresh gate thread per PR runs `gate.md` and either posts the 5/5 table and merges
+6. **Gate.** A gate per PR (size S and M in the author thread, L a fresh gate thread) runs `gate.md` and either posts the 5/5 table and merges
    the PR (after pulling main into the branch when another PR merged since) or one review with
    the blocking findings, which the builder fixes. Two failed rounds: `gate.md` (Rounds).
    **The whole journey, once.** After the last slice merges, one `evaluator` run walks the full

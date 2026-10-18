@@ -30,7 +30,7 @@ files, tools or models.
 2. **Research, plan.** Market, prices, law, tools. Result: `PLAN.md` and the acceptance criteria.
 3. **Brief (a): ok or no.** The first thing you get. Nothing to set up: Claude makes the repo,
    the Worker and the first deploy itself (below).
-4. **Build.** One thread per slice. Every change is a PR that a separate gate thread checks
+4. **Build.** One thread per slice. Every change is a PR that a gate checks (size S and M in the author thread, L in a separate gate thread)
    (CI, a live test of the preview, a fresh review, security, design and law). At 5/5 it **merges
    itself**, and the thread says `Done: <what changed>`.
 5. **Launch and after.** The loop reads errors and feedback every day (`docs/LOOP.md`).
