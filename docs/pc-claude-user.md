@@ -26,6 +26,12 @@ PATH of the process that hosts them. After installs, restart that host (not just
 
 ## What still needs yskills' hands
 
+**Showing yskills something** (2026-10-18, he reads on his phone): a page opened in Claude's Chrome
+on this laptop is invisible to him. A session that needs him to see or click something posts the
+plain official URL as text he opens on his own device, numbered steps with the exact button names
+and minutes, and a screenshot in the thread when the state matters. It never opens the page here
+and calls that showing him.
+
 - **Remote Control host restart:** the running `claude remote-control` still has the PATH from
   before the installs. In a fresh terminal on this user: `cd C:\Users\Claude\Documents\GitHub`,
   then `C:\Users\Claude\.local\bin\claude.exe remote-control`.
