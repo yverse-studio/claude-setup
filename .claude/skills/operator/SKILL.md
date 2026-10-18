@@ -70,6 +70,7 @@ grades):
 | Game Designer | how a game plays before the first build: core loop, run length, difficulty, feedback, ad hooks, three researched references (`roles/game-designer.md`) | a thread at project start of a game and before a PR that changes play | Game Designer · design doc |
 | Audio | how a game sounds before the build touches sound: sound palette per feedback moment, music plan, mix bar, mute, autoplay, KB budget, licence-clean sources (`roles/audio.md`) | a thread after the Game Designer's doc, and before a PR that adds a sound moment | Audio · sound doc |
 | Content Designer | the words before the first screen: voice, terms, German and English strings, errors and empty states (`roles/content-designer.md`) | a thread at project start of a site or app and before a PR that adds a flow or an error state | Content Designer · copy deck |
+| Analytics owner | what is measured before launch: events with the question each answers, the money metric, the legal basis, and the weekly numbers line for HQ (`roles/analytics.md`) | a thread at project start of a site, app or game and before a PR that adds a user action | Analytics · tracking plan |
 | Programmer | one slice or fix, the PR, green CI | a thread each: one at a time, a second only when the slices share no file, never more than three | Programmer · subscription |
 | Tester | the gate: grades the preview against the criteria | a fresh thread per PR | Tester · PR 23 |
 | Reviewer | reads the diff | subagent the Tester starts | Reviewer · PR 23 |
@@ -107,9 +108,9 @@ Every extra thread re-reads its context, so take the simplest shape that works.
 
 | Kind | Done when |
 |---|---|
-| Site | live, copy deck passing `copy-check.mjs` (`roles/content-designer.md`), plus legal pages (`legal` skill) and the money path it needs (`sell`) |
-| App | live, plus the paywall working in test mode and the legal pages; live keys wait for yskills' tap |
-| Game | live, built to a written design doc (`roles/game-designer.md`: core loop, run length, difficulty table), a written sound doc (`roles/audio.md`) and to captured portal references (`roles/designer.md`, Art direction first), plus the money path wired (portal ads via the starter's `platform.ts`, `game-3d` §5a "what earns") and the portal or store package ready (`store-publish`, CrazyGames checklist); only yskills' hands steps remain |
+| Site | live, copy deck passing `copy-check.mjs` (`roles/content-designer.md`), tracking plan passing `analytics-check.mjs` (`roles/analytics.md`), plus legal pages (`legal` skill) and the money path it needs (`sell`) |
+| App | live, tracking plan passing `analytics-check.mjs` (`roles/analytics.md`), plus the paywall working in test mode and the legal pages; live keys wait for yskills' tap |
+| Game | live, built to a written design doc (`roles/game-designer.md`: core loop, run length, difficulty table), a written sound doc (`roles/audio.md`) and to captured portal references (`roles/designer.md`, Art direction first), tracking plan passing `analytics-check.mjs` (`roles/analytics.md`), plus the money path wired (portal ads via the starter's `platform.ts`, `game-3d` §5a "what earns") and the portal or store package ready (`store-publish`, CrazyGames checklist); only yskills' hands steps remain |
 
 Name and concept first: settle them with one card, push `new/<name>` after the tap; a changed
 concept later means a second repo, Worker and D1 that only "delete <name>" removes. A thread

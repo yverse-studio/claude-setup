@@ -180,3 +180,14 @@ Ideas, reworded, only short quotes attributed in place, into `.claude/skills/ope
 - EveryInc/compound-engineering-plugin, `skills/ce-noslop/SKILL.md` and `references/patterns.md` (MIT, copyright Every, commit 2e41b44, https://github.com/EveryInc/compound-engineering-plugin). Seven sentence tests and a catalog of 41 tells. Used for: Method step 5 and the promo-word and "not just X" rules of `copy-check.mjs`; no text copied. German tells are our own starting list.
 
 Not read: ce-noslop `references/terminology.md`, GOV.UK's content designer job description (.odt).
+
+## Analytics method
+
+Ideas, reworded, only short quotes attributed in place, into `.claude/skills/operator/roles/analytics.md` (Method, Tools) and `.claude/skills/market/scripts/analytics-check.mjs`. Read 2026-10-18, each from the owner's file or page:
+
+- Twilio Segment, "Data Collection Best Practices", https://www.twilio.com/docs/segment/protocols/tracking-plan/best-practices. Says to define business objectives, keep one Tracking Plan as the single source of truth, limit it to "a minimal number of core events with rich properties", pick one casing (Title Case events, snake_case properties) and never build event or property names from dynamic values. Used for: Method steps 1 to 3 and the name rules of `analytics-check.mjs`; no text copied.
+- GOV.UK Service Manual, "What each role does in a service team", https://www.gov.uk/service-manual/the-team/content-designer (Open Government Licence v3.0). Lists the performance analyst under roles a team may need. Used for: why the role exists.
+- Vendor pages for prices and privacy claims, read 2026-10-18: https://umami.is/pricing, https://plausible.io (pricing section), https://posthog.com/docs/product-analytics/pricing.md, https://www.cloudflare.com/web-analytics/. Licences from the repos' own files: umami-software/umami `LICENSE` (MIT), plausible/analytics `LICENSE.md` (AGPL-3.0). Used for: the Tools table; figures are copied as read, no code taken.
+
+Not read: PostHog's cookieless or persistence settings; whether Cloudflare Web Analytics has custom events; Plausible's and Umami's own data-processing terms; any German authority's view (DSK, BfDI) on cookieless tools, so "cookieless" here is the vendors' claim and `legal` decides before launch.
+

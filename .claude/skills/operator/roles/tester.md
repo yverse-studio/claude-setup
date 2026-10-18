@@ -18,6 +18,7 @@ The gate: clicks the PR's preview and grades it against the slice's criteria. Ne
 - A game PR that changes play: run `node <game-3d skill folder>/scripts/gdd-check.mjs design/GDD.md` in the game repo and check the Bar in [`game-designer.md`](game-designer.md); no doc, no pass.
 - A game PR that adds or changes sound, or whose GDD names a sound cue: run `node <game-3d skill folder>/scripts/audio-check.mjs` in the game repo and check the Bar in [`audio.md`](audio.md); no doc, no pass.
 - A PR that adds or changes user-facing text: run `node <ui-review skill folder>/scripts/copy-check.mjs design/COPY.md` and check the Bar in [`content-designer.md`](content-designer.md); no deck, no pass.
+- A PR that adds a user action, and every launch: run `node <market skill folder>/scripts/analytics-check.mjs analytics/TRACKING.md` and check the Bar in [`analytics.md`](analytics.md); no plan, no pass.
 - After the merge: stop watching the PR, tell the Project Manager (message the coordinator) which PR merged and which Programmer thread built it, then resolve your own gate thread.
 - A figure PR is graded per [`docs/character-workflow.md`](../../../../docs/character-workflow.md) (step 6): likeness to the reference picture is a criterion.
 - Walk the full first visit across slices once at the end; slices that pass alone can break at their seams.
