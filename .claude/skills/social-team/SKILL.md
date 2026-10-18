@@ -60,7 +60,7 @@ our projects you get full decision power, it's just my personal now, i want to b
   trending sound and taps post (organic posts ship with a silent track).
   - **Auto-post** there only while yskills has switched it on in HQ. The switch is his standing ok for
     posts under CLAUDE.md's ask rule; note the date in project memory. Only videos the Critic passed,
-    only the devlog and learning pillars.
+    only the devlog and learning pillars, and a daily one-line summary to the coordinator.
 - **Project accounts** (one he hands over, or one made for a project): the social team has full
   decision power over content, schedule, profile and strategy. That message is yskills' standing ok
   for posts on them; no switch needed. The Lead posts what the Critic passed and sends a daily
