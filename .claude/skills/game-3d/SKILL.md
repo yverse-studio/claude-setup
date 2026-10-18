@@ -32,7 +32,7 @@ WebGPU renderer only when its scenes need it (Electron and every browser run Web
 
 The look: captures of the top portal games in `design/reference/` before the first build, rule in [`operator/roles/designer.md`](../operator/roles/designer.md) (Art direction first: palette, type and pillars decided before the first build, nothing from `ui-review/SLOP.md`).
 
-How the game plays comes first: the Game Designer writes `design/GDD.md` (core loop, run length, difficulty table, feedback, ad hooks, three researched references) from [`operator/templates/game-design.md`](../operator/templates/game-design.md) before the first build; `node scripts/gdd-check.mjs design/GDD.md` (from this skill folder) must pass (rule: [`operator/roles/game-designer.md`](../operator/roles/game-designer.md)).
+How the game plays comes first: the Game Designer writes `design/GDD.md` (core loop, run length, difficulty table, feedback, ad hooks, three researched references) from [`operator/templates/game-design.md`](../operator/templates/game-design.md) before the first build; `node <game-3d skill folder>/scripts/gdd-check.mjs design/GDD.md` (run in the game repo) must pass (rule: [`operator/roles/game-designer.md`](../operator/roles/game-designer.md)).
 
 yskills says what they want in one sentence, pictures or a story; the team turns it into a
 concrete brief before any build. Order, every time:
