@@ -135,6 +135,8 @@ function sourceFiles(dir) {
   });
 }
 
+const rel = (root, file) => file.slice(root.length + 1).replaceAll('\\', '/'); // forward slashes on every OS
+
 function topLevelFiles(root) {
   return readdirSync(root, { withFileTypes: true })
     .filter((e) => e.isFile() && SOURCE_FILE.test(e.name) && !NOT_UI_FILE.test(e.name))
@@ -166,7 +168,7 @@ function loadLabels(root) {
     } catch {
       continue; // not a locale file we can read; the project's own tests cover broken JSON
     }
-    for (const [key, text] of flatten(json)) labels.set(key, [...(labels.get(key) ?? []), { file: file.slice(root.length + 1), text }]);
+    for (const [key, text] of flatten(json)) labels.set(key, [...(labels.get(key) ?? []), { file: rel(root, file), text }]);
   }
   return labels;
 }
@@ -188,7 +190,7 @@ function checkSourceLabels(root, fails) {
   const files = [...SOURCE_DIRS.flatMap((d) => sourceFiles(join(root, d))), ...topLevelFiles(root)];
   for (const file of files) {
     for (const { where: at, text } of labelsIn(readFileSync(file, 'utf8'), /\.tsx?$/i.test(file), labels)) {
-      const where = `${file.slice(root.length + 1)}: ${at} "${text}"`;
+      const where = `${rel(root, file)}: ${at} "${text}"`;
       if (VAGUE_LABELS.includes(text.toLowerCase().replace(/[.!]+$/, ''))) fails.push(`${where} is a vague label (SLOP.md 23)`);
       else if (/[→➜➔]$/.test(text)) fails.push(`${where} ends in an arrow (SLOP.md 22)`);
     }
