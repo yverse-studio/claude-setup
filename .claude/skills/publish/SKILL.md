@@ -20,7 +20,7 @@ No deploy keys in GitHub, in the cloud environment or in chat.
 - GitHub Actions runs `verify` and holds no keys. Threads hold no deploy key; a merge to the default branch is the
   deploy (the gate merges at 5/5, `gate.md`); threads read the result from the
   `Workers Builds: <worker>` check on the commit.
-  Build logs are only in the dashboard; Cloudflare's dashboard AI can read them for yskills.
+  Build logs: the `build-logs` workflow (below).
 
 ## A new project
 

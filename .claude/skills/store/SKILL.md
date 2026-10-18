@@ -153,5 +153,4 @@ screenshots like any UI.
 | Submitting the web app in a shell | Three native features from §2 before the first submission |
 | Starting Google's 14-day test at launch | Start it during the build with 12+ testers from the waitlist |
 | Stripe checkout or a "buy on our site" link in the app | IAP through RevenueCat; Stripe only on the web |
-| Upload or signing keys as GitHub secrets | Xcode Cloud, Play App Signing, Codemagic |
 | Trader status skipped | Set it before the first EU release |

@@ -115,7 +115,7 @@ enterprise-flavoured: German law and this stack's rules win.
 | Build | builder threads; `architect`, `database-reviewer`, `build-error-resolver` | stack plugins via `toolbox`; 3D, game or figures: `game-3d` and its `starter/` kit, read once at the start | a PR with green CI |
 | QA | `evaluator`, `code-reviewer`, `a11y-architect`, `performance-optimizer` | | gate checks 2-3 |
 | Security | `security-reviewer` (the diff), `red-team` (attacks the preview) | | gate check 4 |
-| Launch | `publish`, `sell`; PostHog (EU cloud: analytics and errors) via `toolbox` | `store` when PLAN.md ships to the App Store or Google Play | live site, errors and analytics on |
+| Launch | `publish`, `sell`; errors and feedback through the loop (`docs/LOOP.md`), PostHog only once replay or funnels are needed | `store` when PLAN.md ships to the App Store or Google Play | live site, errors and analytics on |
 | Marketing | `market`, `seo-specialist` | `Marketing` plugin | the plan, launch posts, weekly numbers |
 
 Research subagents use WebSearch, not WebFetch, and return at most one page each.
@@ -131,7 +131,7 @@ Templates in `templates/`.
   Builders never touch it; the gate thread records the evaluator's verdict (`passes`).
 - `PROGRESS.md`: the handoff. Done, next, broken, decisions and why, each thread's cost. Every
   thread reads it first; only the operator writes it. Under 100 lines.
-- `metrics/<yyyy>-W<ww>.json`: from launch on, the week's numbers. Luna's cockpit reads these.
+- `metrics/<yyyy>-W<ww>.json`: from launch on, the week's numbers. HQ reads these (`docs/hq-rows.md`).
 - **Dashboard: HQ is the only one.** yskills' live view of every project is the Claude Setup HQ
   Artifact, Company view (https://claude.ai/artifact/TmQ7UpL6EPjXKkpR9S4kJT; code in yverse-studio/company-xy). **A project never
   publishes its own office page.** The Project Manager writes the project's rows into HQ's db with

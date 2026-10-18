@@ -27,7 +27,7 @@ that read), `working` (count), `at` (ISO time, **every row any thread writes car
 Artifact of its own, is its project chat thread), and keeps it current with every `pm/now` write. **A revenue source is verified against real data before any UI reads it:** call
 the route or query the table and check that the known payments show up (duo-test's `/api/stats`
 went live summing rows that were never stored and showed 0 € for 28 € of payments); a source
-that returns nothing yet is wired only together with its backfill. Luna's cockpit links to HQ.
+that returns nothing yet is wired only together with its backfill.
 **Game events:** HQ's level, XP and coins come only from `events/<id>` rows in HQ's db
 (`{kind, project, at, amount?}`), nothing else counts. At each milestone, in the same batch as the
 `PROGRESS.md` rows, the operator or gate thread writes one with a fixed id so a retry does not

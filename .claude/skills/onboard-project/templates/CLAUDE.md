@@ -15,7 +15,7 @@
 ## Rules
 
 - <Security model, e.g. auth approach, CSP, what data is sensitive.>
-- Secrets live in `.env` (git-ignored); keep `.env.example` current.
+- App keys are Worker secrets; `.env` (git-ignored) is for local dev only; keep `.env.example` current.
 - Docs for the owner are in <German/English>; UI text is <German first, English second>.
 
 ## UI work

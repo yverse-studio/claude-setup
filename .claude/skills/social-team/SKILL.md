@@ -47,7 +47,7 @@ product project's `video/<slug>/` (`video-studio`).
 
 ## Posting
 
-- **Default:** a ready video goes to the account's drafts or queue; yskills posts on "upload", or
+- **Default:** a ready video goes to the account's drafts or queue on "upload" (the Lead sends it); yskills
   adds a trending sound and taps post in the app (organic posts ship with a silent track).
 - **Auto-post:** only while yskills has switched it on in HQ. The switch is yskills' standing ok
   for posts under CLAUDE.md's ask rule ("sending mail or posts"); note the date in project memory. Then only videos the Critic passed, only the
@@ -66,7 +66,7 @@ product project's `video/<slug>/` (`video-studio`).
 
 | Job | Pick | Notes |
 |---|---|---|
-| Schedule and post | the posting service the first Researcher picks from Metricool (connector), upload-post (free tier), Ayrshare (plugin) or Postiz | must support TikTok "upload to drafts" and scheduled direct post; a paid plan is a card |
+| Schedule and post | the posting service the first Scout picks from Metricool (connector), upload-post (free tier), Ayrshare (plugin) or Postiz | must support TikTok "upload to drafts" and scheduled direct post; a paid plan is a card |
 | Instagram comments and DMs | Instagram Messaging API from the `social` Worker | private reply to a comment (one per comment, within 7 days), sent on its own only for keywords and gift texts yskills approved per brand in `social/brands.md`; replies only inside the 24-hour window; `is_user_follow_business` in the user profile gates follower-only gifts; needs a Business or Creator account and Meta app review, else ManyChat (Meta partner) by card |
 | TikTok comments and DMs | no general DM API: Community drafts replies for yskills | partner tools that automate TikTok DMs only where TikTok allows it, by card |
 | Hooks, captions, humanizer | `sergebulaev/tiktok-skills` references (MIT) | read first (CLAUDE.md install rule) |

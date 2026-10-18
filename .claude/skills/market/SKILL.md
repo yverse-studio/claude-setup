@@ -128,7 +128,7 @@ These are the rules small sellers get warning letters for. The legal-text servic
 - **Ad tracking.** The Meta Pixel, TikTok Pixel and Google tag load only after consent
   (§ 25 TDDDG) [K]. A consent banner then becomes necessary, so plan it in the PRD.
 
-## 5. Measure, then report into Luna
+## 5. Measure, then report into HQ
 
 - **Events:** visit (with UTM source), waitlist signup, checkout started, paid. Use cookieless
   analytics (Plausible, Umami or PostHog cookieless).
@@ -137,7 +137,7 @@ These are the rules small sellers get warning letters for. The legal-text servic
   - collects the week's numbers;
   - lists which channel and which post brought paying users, and cost per sale for ads;
   - proposes the next week's 3 actions and the content batch for yskills to approve.
-- **Luna.** Numbers go into Luna's cockpit once its ingest API exists. Projects get no
+- **HQ.** Numbers go into the project's HQ rows (`docs/hq-rows.md`). Projects get no
   dashboard of their own.
 
 ## 6. Who does what

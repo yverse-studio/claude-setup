@@ -6,7 +6,7 @@
 // D1 Edit, Account Settings Read), CLOUDFLARE_ACCOUNT_ID, PROJECTS_GITHUB_TOKEN (fine-grained, the
 // org only: Administration, Contents, Workflows), BUILD_TOKEN_NAME (optional: which Workers Builds
 // token deploys; default: the first one), and the project: `projects/<name>.json` (on main, or on
-// the pushed branch `new/<name>`, where only d1 and org count; the workflow runs main's code
+// the pushed branch `new/<name>`, where only d1, org and kind count; the workflow runs main's code
 // and takes only that json from the branch), else NAME, ORG, D1 from a workflow_dispatch. The json: `{ "name", "d1", "org" }` and, for
 // an existing repo, `"repo"` (its GitHub name; production builds its default branch), `"build"`,
 // `"deploy"`, `"preview"` (Workers Builds commands) and `"secret": false` (no BETTER_AUTH_SECRET,

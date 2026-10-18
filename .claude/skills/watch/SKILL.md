@@ -47,8 +47,8 @@ python3 "${SKILL_DIR}/scripts/setup.py" --json
 
 **Question 1 — "How should watch view videos?"**
 
-- `gemini` (recommended) — Google's Gemini model watches the whole video, including audio, and answers directly. Needs a free key from https://aistudio.google.com/apikey. YouTube URLs are sent to Google; local or downloaded videos are uploaded to Google, then deleted after the answer.
-- `local` — frames + transcript extracted on this machine and read by you. No key needed.
+- `gemini` — Google's Gemini model watches the whole video, including audio, and answers directly. Needs a free key from https://aistudio.google.com/apikey. YouTube URLs are sent to Google; local or downloaded videos are uploaded to Google, then deleted after the answer.
+- `local` (recommended; yskills picked it 2026-10-17) — frames + transcript extracted on this machine and read by you. No key needed.
 
 If `gemini`, run:
 

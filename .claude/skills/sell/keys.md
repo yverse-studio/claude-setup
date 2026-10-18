@@ -33,8 +33,8 @@ Use these secret names exactly; the Worker expects them (`server/utils/env.ts`).
 | `RESEND_API_KEY` | Order confirmation emails | [Resend: API keys](https://resend.com/api-keys). Also verify the sending domain: yskills adds the records Resend shows under the domain → DNS → Records in Cloudflare | One key, "sending access" only |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Google login, if the shop has accounts | [Google Auth Platform → Clients](https://console.cloud.google.com/auth/clients), after the first deploy (Google needs the live URL) | One client |
 
-`BETTER_AUTH_SECRET` (apps with logins): yskills sets 32+ random characters
-(`openssl rand -hex 32`) in Production, and a different one in Previews Base (`publish` skill).
+`BETTER_AUTH_SECRET` (apps with logins): the `new-project` workflow sets a random one in
+Production and a different one in Previews Base (`publish` skill); nobody types it.
 
 ## No Stripe account yet
 
