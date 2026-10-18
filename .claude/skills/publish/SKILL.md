@@ -152,6 +152,7 @@ Claude:
 - A unit test that checks the `previews` block: same binding names, no live resource ids
   (duo-test `tests/unit/wrangler-config.test.ts`).
 - `.github/workflows/ci.yml` with the verify job only (`sell` skill's `templates/ci.yml`).
+  Also `scripts/floor-guard.mjs` (copy of `templates/new-project/scripts/floor-guard.mjs`): the CI file runs it on every PR.
 - A live smoke test on `check_run` `completed`, filtered to the exact name
   `Workers Builds: <worker>`, `conclusion == 'success'`,
   `check_suite.head_branch == '<production branch>'` and `head_sha == github.sha`

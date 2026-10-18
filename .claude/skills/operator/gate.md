@@ -6,7 +6,7 @@ check is a hard yes or no from someone who didn't write the code.
 
 | # | Check | Who | Gets only | Applies |
 |---|---|---|---|---|
-| 1 | CI and `Workers Builds: <worker>` green on the head SHA | check runs | | always |
+| 1 | CI (its `floor-guard` step fails a skipped or deleted test, fewer assertions, a new suppression; a `floor-ok:` commit waives it, so judge the reason) and `Workers Builds: <worker>` green on the head SHA | check runs | | always |
 | 2 | Every acceptance criterion passes on the preview | `evaluator` | the head SHA's preview URL (from the Workers Builds check or Cloudflare's PR comment), the slice's criteria | always |
 | 3 | Nothing blocking | a **fresh** `code-reviewer` (the builder's last ship-check pass counts if its report names this head SHA) | the diff, the slice goal in 2 sentences | always |
 | 4 | Nothing blocking, no CRITICAL/HIGH | `security-reviewer` on the diff; `red-team` on the preview | the diff; the preview URL and routes | auth, payments, user input or secrets touched; red team always on the last PR before launch |
