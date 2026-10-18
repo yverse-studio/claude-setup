@@ -25,7 +25,7 @@ Checked 2026-10-03. Plugins are `@claude-plugins-official` unless noted.
 | Index and search inside videos | **VideoDB** (Python SDK) | Spoken + scene indexes, clip search | ECC skill `videodb` |
 | Explainer animations | **Manim** | | ECC skill `manim-video` |
 | Demo video of your own app | Playwright recording | | ECC skill `ui-demo` |
-| Post the result to TikTok, Reels, Shorts, X | **Postiz** CLI / plugin | Scheduling + analytics | `postiz` plugin; ECC skills `social-publisher`, `content-engine` |
+| Post the result to TikTok, Reels, Shorts, X | **Postiz** CLI / plugin, or the posting service the `social-team` picks | Scheduling + analytics; one pick per project (`social-team`, Tools) | `postiz` plugin; ECC skills `social-publisher`, `content-engine` |
 
 General ECC skill for the whole flow: `video-editing` (FFmpeg, Remotion, ElevenLabs, fal.ai).
 
@@ -39,4 +39,4 @@ A whole video or ad, from concept to final cut, with roles and the lessons of ea
 4. FFmpeg cuts on word boundaries, drops silences, normalizes loudness (`loudnorm`).
 5. Reframe to 9:16 with subject tracking; also 1:1 and 16:9 if wanted.
 6. Burn animated captions (ASS); intro/outro/overlays from HyperFrames templates.
-7. Export presets per platform; preview in the app; optional auto-post via Postiz.
+7. Export presets per platform; preview in the app; posting per `social-team` (drafts by default, auto-post only while yskills switched it on).

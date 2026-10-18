@@ -24,7 +24,7 @@ wrong and how they were fixed.
 | 5 | Film and cut | Editor | raw capture, cut, captions, sound, `draft.mp4` | |
 | 6 | Motion | Motion | titles, end card, transitions, overlays on top of the cut | |
 | 7 | Gate | Critic (fresh) | the checklist with frame times, pass or fail | pass before yskills sees it |
-| 8 | Deliver | Producer | `final.mp4` (+ ad variants), the one line to the coordinator | yskills posts |
+| 8 | Deliver | Producer | `final.mp4` (+ ad variants), the one line to the coordinator | to the `social-team` queue |
 
 Fixing the animatic costs minutes; fixing a filmed cut costs a render. So the Critic sees step 4
 before anything is filmed, then the cut at step 7. A failed gate goes back to the step that owns
@@ -73,6 +73,6 @@ Skim a free one only if it names something this table lacks.
   memo when the concept needs a voice (exact lines from the Writer).
 - **Ads.** Label and claims per `market` §4 (German advertising law); three hooks on one body so the
   ad can be tested; paying for ads is yskills' card.
-- **Never posted by Claude.** yskills posts (`market` §6).
+- **Never posted by the studio.** `final.mp4` goes to the `social-team` queue; it posts per its Posting rules (yskills' "upload", or auto-post while yskills switched it on).
 - **Lessons stick.** After delivery the Producer appends what went wrong and the fix to
   `learnings.md` (one line each, dated, project named) in the same PR flow as any setup change.
