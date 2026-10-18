@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // Gate check 5, the part a script can prove: design/DESIGN.md has a Direction citing at least
 // three reference captures, a palette of at most eight hex colours with text pairs at 4.5:1,
-// a type scale, no default-look colour (SLOP.md 18, 19, 22) and no vague button label or arrow
-// (SLOP.md 22, 23) in the source. Usage: node design-check.mjs [project root]. Exit 1 lists what fails.
+// a type scale, no default-look colour (SLOP.md 2, 18, 19, 22) and no vague button label or arrow
+// (SLOP.md 22, 23) in the source: markup, .ts UI code and the i18n labels they point at. Usage: node design-check.mjs [project root]. Exit 1 lists what fails.
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -23,13 +23,20 @@ const DEFAULT_COLOURS = [
   { hex: '#0b0b0b', look: 22, name: 'tinted near-black', max: MAX_NEAR_BLACK_DISTANCE },
   { hex: '#111111', look: 22, name: 'tinted near-black', max: MAX_NEAR_BLACK_DISTANCE },
 ];
+const LIME_ACCENT = '#a3e635'; // SLOP.md 2: neon lime on a dark ground; its saturation (78 percent) is under the shout test
 const NEAR_BLACK_LUMINANCE = 0.02;
 const MIN_SHOUT_SATURATION = 0.85;
 const SOURCE_DIRS = ['src', 'app', 'pages', 'components', 'layouts', 'public'];
-const SKIPPED_DIRS = new Set(['node_modules', 'fixtures', '__tests__', 'test', 'tests']);
-const SOURCE_FILE = /\.(vue|html|jsx|tsx|svelte)$/i;
+const SKIPPED_DIRS = new Set(['node_modules', 'fixtures', '__tests__', 'test', 'tests', '.shots', 'test-results']);
+const SOURCE_FILE = /\.(vue|html|jsx|tsx|svelte|ts)$/i;
+const NOT_UI_FILE = /\.(test|spec|d)\.ts$/i;
+const LOCALE_DIR = /^(locales?|i18n|lang|langs|messages|translations)$/i;
 export const VAGUE_LABELS = ['submit', 'ok', 'click here', 'go', 'absenden', 'hier klicken'];
-const BUTTON_TEXT = /<(button|a)\b[^>]*>\s*([^<>{}]{1,40}?)\s*<\/\1>/gi;
+const I18N_CALL = String.raw`\$?t\(\s*['"]([\w.-]+)['"]\s*\)`;
+// <button>Text</button> or <button>{{ t('key') }}</button>; groups: tag, plain text, key
+const BUTTON_TEXT = new RegExp(String.raw`<(button|a)\b[^>]*>\s*(?:\{\{\s*${I18N_CALL}\s*\}\}|([^<>{}]{1,40}?))\s*<\/\1>`, 'gi');
+// .ts UI code: label: 'Text', btn.textContent = "Text", text: t('key'); groups: property, plain text, key
+const TS_LABEL = new RegExp(String.raw`\b(label|text|caption|textContent|innerText)\s*[:=]\s*(?:['"\x60]([^'"\x60\n$]{1,40})['"\x60]|${I18N_CALL})`, 'g');
 
 function luminance(hex) {
   const [r, g, b] = [1, 3, 5].map((i) => {
@@ -114,6 +121,8 @@ function checkDefaultLooks(text, captures, fails) {
   const dark = rowColours.some((h) => luminance(h) < NEAR_BLACK_LUMINANCE);
   const saturated = rowColours.filter(isSaturated);
   const shout = saturated.length === 1 && isShout(saturated[0]) ? saturated[0] : null; // single: a second saturated colour is a palette
+  const lime = rowColours.find((h) => distance(h, LIME_ACCENT) <= MAX_DEFAULT_DISTANCE);
+  if (dark && lime) fails.push(`## Palette: near-black ground with the lime accent ${lime} is SLOP.md 2; cite a reference capture on its row or pick another`);
   if (dark && shout) fails.push(`## Palette: near-black ground with the single shout ${shout} is SLOP.md 19; cite a reference capture on its row or pick another`);
 }
 
@@ -122,19 +131,68 @@ function sourceFiles(dir) {
   return readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
     const p = join(dir, e.name);
     if (e.isDirectory()) return SKIPPED_DIRS.has(e.name) ? [] : sourceFiles(p);
-    return SOURCE_FILE.test(e.name) ? [p] : [];
+    return SOURCE_FILE.test(e.name) && !NOT_UI_FILE.test(e.name) ? [p] : [];
   });
+}
+
+const rel = (root, file) => file.slice(root.length + 1).replaceAll('\\', '/'); // forward slashes on every OS
+
+function topLevelFiles(root) {
+  return readdirSync(root, { withFileTypes: true })
+    .filter((e) => e.isFile() && SOURCE_FILE.test(e.name) && !NOT_UI_FILE.test(e.name))
+    .map((e) => join(root, e.name));
+}
+
+function flatten(obj, prefix = '') {
+  return Object.entries(obj ?? {}).flatMap(([k, v]) =>
+    v && typeof v === 'object' ? flatten(v, `${prefix}${k}.`) : typeof v === 'string' ? [[`${prefix}${k}`, v]] : [],
+  );
+}
+
+function localeFiles(dir, inLocaleDir = false) {
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+    const p = join(dir, e.name);
+    if (e.isDirectory()) return SKIPPED_DIRS.has(e.name) ? [] : localeFiles(p, inLocaleDir || LOCALE_DIR.test(e.name));
+    return inLocaleDir && /\.json$/i.test(e.name) ? [p] : [];
+  });
+}
+
+// key -> [{ file, text }] over every JSON locale file (de and en) found under the source folders.
+function loadLabels(root) {
+  const labels = new Map();
+  for (const file of [...SOURCE_DIRS, 'i18n', 'locales', 'lang'].flatMap((d) => localeFiles(join(root, d), LOCALE_DIR.test(d)))) {
+    let json;
+    try {
+      json = JSON.parse(readFileSync(file, 'utf8'));
+    } catch {
+      continue; // not a locale file we can read; the project's own tests cover broken JSON
+    }
+    for (const [key, text] of flatten(json)) labels.set(key, [...(labels.get(key) ?? []), { file: rel(root, file), text }]);
+  }
+  return labels;
+}
+
+function labelsIn(source, isTs, labels) {
+  const found = [];
+  const add = (where, plain, key) => {
+    if (plain !== undefined) found.push({ where, text: plain.trim() });
+    else for (const l of labels.get(key) ?? []) found.push({ where: `${where} t('${key}') in ${l.file}`, text: l.text.trim() });
+  };
+  for (const [, tag, key, plain] of source.matchAll(BUTTON_TEXT)) add(`<${tag}>`, plain, key);
+  if (isTs) for (const [, prop, plain, key] of source.matchAll(TS_LABEL)) add(prop, plain, key);
+  return found;
 }
 
 // SLOP.md 22, 23: button and link text that says nothing, or ends in an arrow.
 function checkSourceLabels(root, fails) {
-  const files = [...SOURCE_DIRS.flatMap((d) => sourceFiles(join(root, d))), ...sourceFiles(root).filter((f) => dirname(f) === root)];
+  const labels = loadLabels(root);
+  const files = [...SOURCE_DIRS.flatMap((d) => sourceFiles(join(root, d))), ...topLevelFiles(root)];
   for (const file of files) {
-    for (const [, tag, text] of readFileSync(file, 'utf8').matchAll(BUTTON_TEXT)) {
-      const label = text.trim();
-      const where = `${file.slice(root.length + 1)}: <${tag}> "${label}"`;
-      if (VAGUE_LABELS.includes(label.toLowerCase().replace(/[.!]+$/, ''))) fails.push(`${where} is a vague label (SLOP.md 23)`);
-      else if (/[→➜➔]$/.test(label)) fails.push(`${where} ends in an arrow (SLOP.md 22)`);
+    for (const { where: at, text } of labelsIn(readFileSync(file, 'utf8'), /\.tsx?$/i.test(file), labels)) {
+      const where = `${rel(root, file)}: ${at} "${text}"`;
+      if (VAGUE_LABELS.includes(text.toLowerCase().replace(/[.!]+$/, ''))) fails.push(`${where} is a vague label (SLOP.md 23)`);
+      else if (/[→➜➔]$/.test(text)) fails.push(`${where} ends in an arrow (SLOP.md 22)`);
     }
   }
 }
