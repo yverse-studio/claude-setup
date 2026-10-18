@@ -98,7 +98,7 @@ export function wranglerConfig({ name, d1, liveId, previewId, kind }) {
 }
 
 const GAME_PACKAGE = {
-  scripts: { dev: 'vite', test: 'vitest run', check: 'tsc && node --test test/*.test.mjs && vitest run', build: 'node scripts/build.mjs && vite build', play: 'node scripts/play.mjs' },
+  scripts: { dev: 'vite', test: 'vitest run', check: 'tsc && node --test test/*.test.mjs && vitest run', build: 'node scripts/build.mjs && vite build', play: 'node scripts/play.mjs', shots: 'node scripts/shots.mjs' },
   dependencies: { three: '^0.186.1' },
   devDependencies: { '@types/three': '^0.186.0', 'playwright-core': '^1.64.1', typescript: '^5.9.3', vite: '^8.3.4', vitest: '^5.0.5' },
 }
