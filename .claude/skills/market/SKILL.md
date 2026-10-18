@@ -130,11 +130,10 @@ These are the rules small sellers get warning letters for. The legal-text servic
 
 ## 5. Measure, then report into HQ
 
-- **Events:** visit (with UTM source), waitlist signup, checkout started, paid. Use cookieless
-  analytics (Plausible, Umami or PostHog cookieless).
+- **Events and tools:** the Analytics owner writes `analytics/TRACKING.md` before launch (`operator/roles/analytics.md`: events, tools, basis, weekly line). Cookieless first; a pixel needs the banner (§ 4).
 - **Every link Claude writes for a post carries UTM tags,** so a sale can be traced to the post.
 - **Weekly routine.** A scheduled trigger in the project, set up at launch:
-  - collects the week's numbers;
+  - collects the week's numbers as the Analytics owner's weekly line (`operator/roles/analytics.md`);
   - lists which channel and which post brought paying users, and cost per sale for ads;
   - proposes the next week's 3 actions and the content batch for yskills to approve.
 - **HQ.** Numbers go into the project's HQ rows (`docs/hq-rows.md`). Projects get no

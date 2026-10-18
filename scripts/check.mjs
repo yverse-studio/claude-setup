@@ -244,5 +244,16 @@ for (const h of COPY_HEADINGS) {
   if (!new RegExp(`^## ${h}\\s*$`, 'm').test(copyTemplate)) errors.push(`templates/copy-deck.md: lacks "## ${h}"`)
 }
 
+// Tracking plan: one home (roles/analytics.md); the template must carry every heading analytics-check.mjs requires.
+const { REQUIRED_HEADINGS: TRACKING_HEADINGS } = await import('../.claude/skills/market/scripts/analytics-check.mjs')
+const analyticsRole = readFileSync(join(root, '.claude/skills/operator/roles/analytics.md'), 'utf8')
+for (const part of ['## Method', '## Bar', '## Tools', 'analytics-check.mjs', 'Weekly numbers line']) {
+  if (!analyticsRole.includes(part)) errors.push(`roles/analytics.md: lacks "${part}"`)
+}
+const trackingTemplate = readFileSync(join(root, '.claude/skills/operator/templates/tracking-plan.md'), 'utf8')
+for (const h of TRACKING_HEADINGS) {
+  if (!new RegExp(`^## ${h}\\s*$`, 'm').test(trackingTemplate)) errors.push(`templates/tracking-plan.md: lacks "## ${h}"`)
+}
+
 if (errors.length) { console.error(errors.map((e) => `x ${e}`).join('\n')); process.exit(1) }
 console.log(`ok: ${seen.skill.size} skills, ${seen.agent.size} agents, ${plugins?.global.length ?? 0}+${plugins?.project.length ?? 0} plugins`)
