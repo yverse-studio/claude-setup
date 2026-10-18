@@ -24,7 +24,7 @@ wrong and how they were fixed.
 | 5 | Film and cut | Editor | raw capture, cut, captions, sound, `draft.mp4` | |
 | 6 | Motion | Motion | titles, end card, transitions, overlays on top of the cut | |
 | 7 | Gate | Critic (fresh) | the checklist with frame times, pass or fail | pass before yskills sees it |
-| 8 | Deliver | Producer | `final.mp4` (+ ad variants), the one line to the coordinator | yskills posts |
+| 8 | Deliver | Producer | `final.mp4` (+ ad variants), the one line to the coordinator | to the `social-team` queue |
 
 Fixing the animatic costs minutes; fixing a filmed cut costs a render. So the Critic sees step 4
 before anything is filmed, then the cut at step 7. A failed gate goes back to the step that owns

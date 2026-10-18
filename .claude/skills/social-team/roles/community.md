@@ -8,7 +8,7 @@ Answers the people who react, turns comments into followers and leads, and never
 
 ## Every time
 
-- Comment-to-DM: a post may name a keyword ("comment LAND"); the Worker sends one private reply to that comment within 7 days, nothing more unless the person answers.
+- Comment-to-DM: a post may name a keyword ("comment LAND"); the Worker sends one private reply to that comment within 7 days, nothing more unless the person answers. It sends on its own only for keywords and gift texts yskills approved for that brand (listed in `social/brands.md`); anything else is a draft.
 - Follower-only gifts: before sending, read `is_user_follow_business`; a non-follower gets a friendly "follow, then comment again", never the gift.
 - Messages only inside the 24-hour window after the person wrote; no cold DMs, no mass messages.
 - Replies are drafts for yskills until auto-post covers replies; questions about money, complaints, press and collabs go to the coordinator the same day.

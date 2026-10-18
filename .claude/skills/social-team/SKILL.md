@@ -39,7 +39,7 @@ Thread titles follow the operator rule; models per the Models line in
 
 ## Where things live
 
-One project `social` (made by the `new-project` workflow, `docs/USING.md`) holds every brand: the
+To build (not made yet): one project `social` (made by the `new-project` workflow, `docs/USING.md`) holds every brand: the
 `social/` folder (`ideas.md`, `calendar.md`, `posts.md` with each post's numbers, `brands.md`),
 the webhook Worker for comments and DMs, D1 for the queue, and the API behind HQ's Content view
 (player, caption, Post / Change / Drop, the auto-post switch, the schedule). Videos stay in the
@@ -49,8 +49,8 @@ product project's `video/<slug>/` (`video-studio`).
 
 - **Default:** a ready video goes to the account's drafts or queue; yskills posts on "upload", or
   adds a trending sound and taps post in the app (organic posts ship with a silent track).
-- **Auto-post:** only while yskills has switched it on in HQ (their standing ok under CLAUDE.md's
-  ask rule; note the date in project memory). Then only videos the Critic passed, only the
+- **Auto-post:** only while yskills has switched it on in HQ. The switch is yskills' standing ok
+  for posts under CLAUDE.md's ask rule ("sending mail or posts"); note the date in project memory. Then only videos the Critic passed, only the
   devlog and learning pillars, never ads, prices or crypto, at most 2 posts a day per account, and
   a daily one-line summary to the coordinator.
 - **AI label:** yskills' call, off by default (2026-10-12); twin videos show "twin" in the preview;
@@ -66,8 +66,8 @@ product project's `video/<slug>/` (`video-studio`).
 
 | Job | Pick | Notes |
 |---|---|---|
-| Schedule and post | the posting service the first Researcher picks from Metricool (connector), upload-post (free tier), Ayrshare (plugin) or Postiz (`market`) | must support TikTok "upload to drafts" and scheduled direct post; a paid plan is a card |
-| Instagram comments and DMs | Instagram Messaging API from the `social` Worker | private reply to a comment (one per comment, within 7 days); replies only inside the 24-hour window; `is_user_follow_business` in the user profile gates follower-only gifts; needs a Business or Creator account and Meta app review, else ManyChat (Meta partner) by card |
+| Schedule and post | the posting service the first Researcher picks from Metricool (connector), upload-post (free tier), Ayrshare (plugin) or Postiz | must support TikTok "upload to drafts" and scheduled direct post; a paid plan is a card |
+| Instagram comments and DMs | Instagram Messaging API from the `social` Worker | private reply to a comment (one per comment, within 7 days), sent on its own only for keywords and gift texts yskills approved per brand in `social/brands.md`; replies only inside the 24-hour window; `is_user_follow_business` in the user profile gates follower-only gifts; needs a Business or Creator account and Meta app review, else ManyChat (Meta partner) by card |
 | TikTok comments and DMs | no general DM API: Community drafts replies for yskills | partner tools that automate TikTok DMs only where TikTok allows it, by card |
 | Hooks, captions, humanizer | `sergebulaev/tiktok-skills` references (MIT) | read first (CLAUDE.md install rule) |
 | Launch and devlog videos | `latent-spaces/brag` (MIT plugin, HyperFrames) through the studio's Motion role | read its scripts before install |
