@@ -39,4 +39,4 @@ A whole video or ad, from concept to final cut, with roles and the lessons of ea
 4. FFmpeg cuts on word boundaries, drops silences, normalizes loudness (`loudnorm`).
 5. Reframe to 9:16 with subject tracking; also 1:1 and 16:9 if wanted.
 6. Burn animated captions (ASS); intro/outro/overlays from HyperFrames templates.
-7. Export presets per platform; preview in the app; posting per `social-team` (drafts by default, auto-post only while yskills switched it on).
+7. Export presets per platform; preview in the app; posting per `social-team`, Posting.

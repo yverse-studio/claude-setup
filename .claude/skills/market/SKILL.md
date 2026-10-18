@@ -77,7 +77,7 @@ One standing audience channel serves every project, so no launch starts from zer
 
 | Channel | Fits | Claude does | yskills does |
 |---|---|---|---|
-| Short video (TikTok, Reels, Shorts) | Consumer apps, physical products, anything you can show in 15 seconds | Hooks, scripts, HyperFrames clips (demos, captions, before/after), a posting calendar | Films face or hands clips if wanted; approves the weekly batch, or switches on auto-post (`social-team`, Posting) |
+| Short video (TikTok, Reels, Shorts) | Consumer apps, physical products, anything you can show in 15 seconds | Hooks, scripts, HyperFrames clips (demos, captions, before/after), a posting calendar | Films face or hands clips if wanted; on his personal account approves the batch or switches on auto-post; project accounts are the team's (`social-team`, Posting) |
 | SEO and content | Things people search for: tools, how-tos, comparisons | Keyword map, one page per search intent, structured data, page speed | Nothing |
 | Communities (subreddits, forums, Discord, Product Hunt and Hacker News for English) | Dev tools, niches, honest maker stories | Drafts in an honest "I built this" tone, following each community's rules | Posts from their own account |
 | Email list | Everything | Waitlist, launch sequence, monthly update (Resend audiences) | Nothing |
@@ -147,12 +147,11 @@ These are the rules small sellers get warning letters for. The legal-text servic
   - landing pages and email sequences;
   - ad drafts;
   - the weekly report;
-  - scheduling the approved batch once the account is connected (`social-team`, Posting; its
-    auto-post mode runs only while yskills has switched it on).
+  - scheduling posts once the account is connected, by the rules in `social-team`, Posting
+    (personal account vs project accounts).
 - **yskills:**
-  - approves each week's batch once; posting and emailing go to the public and cannot be
-    taken back, so nothing goes out unapproved, except under yskills' standing auto-post switch
-    (`social-team`, Posting);
+  - approves what goes out where `social-team`, Posting says so (his personal account; ads,
+    money and deals everywhere); posting and emailing go to the public and cannot be taken back;
   - connects the accounts;
   - pays for ads;
   - films their own content if they want to.

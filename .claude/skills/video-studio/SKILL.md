@@ -72,6 +72,6 @@ Skim a free one only if it names something this table lacks.
   memo when the concept needs a voice (exact lines from the Writer).
 - **Ads.** Label and claims per `market` §4 (German advertising law); three hooks on one body so the
   ad can be tested; paying for ads is yskills' card.
-- **Never posted by the studio.** `final.mp4` goes to the `social-team` queue; it posts per its Posting rules (yskills' "upload", or auto-post while yskills switched it on).
+- **Never posted by the studio.** `final.mp4` goes to the `social-team` queue; it posts per its Posting rules (`social-team`, Posting: personal account vs project accounts).
 - **Lessons stick.** After delivery the Producer appends what went wrong and the fix to
   `learnings.md` (one line each, dated, project named) in the same PR flow as any setup change.
