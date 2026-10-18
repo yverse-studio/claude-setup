@@ -106,6 +106,8 @@ How to undo a merge, by kind of change (write the line into the PR's "undo" line
     Claude's auto mode refuses, it doesn't try another way: it asks yskills for the tap.
   - **claude-setup PRs:** the gate thread merges them too; only when Claude Code's safety check
     blocks the merge does yskills tap **Merge it** on the card or GitHub's Merge button.
+  - **After the merge:** one lessons step (`docs/WORKFLOW.md`, Learning): save a lesson only if
+    the next thread would repeat the mistake, mechanical ones as a check, prune what a check covers.
 - **Last PR before launch:** the operator posts brief (c) with the table; the gate merges at 5/5
   (auto-run, launch included). Live keys yskills has not set yet stay a key card; the site goes
   live without them.

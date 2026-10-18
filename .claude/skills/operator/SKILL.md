@@ -13,7 +13,8 @@ files; a fresh context per job) and the ECC hackathon winner's flow (`docs/RESEA
 
 **Auto-run, the ask rule, pauses and taste calls** have their home in CLAUDE.md (How to work).
 Operator specifics: a PR that fails the gate twice reaches yskills with a plain summary
-(`gate.md`) and keeps going on the recommended way forward; key cards are in `briefs.md`. A
+(`gate.md`) and keeps going on the recommended way forward; after every merge the gate runs the
+lessons step (`gate.md`, Rounds); key cards are in `briefs.md`. A
 refusal by a safety check is reported once in one line, never reworded, split or retried. [advisory]
 
 **Pauses in practice.** "Stop", "pause", "only burning my money" and rejected assets are final (CLAUDE.md, How to work). A thread
