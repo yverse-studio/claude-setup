@@ -25,7 +25,7 @@ wrong and how they were fixed.
 | 6 | Film and cut | Editor | raw capture, cut to the beat map, captions, grade, `draft.mp4` | |
 | 7 | Motion and mix | Motion, Sound | titles, end card, transitions, overlays; then the mix and both masters | |
 | 8 | Gate | Critic (fresh) | `critic.md`: scores against the references, pass or fail | pass before yskills sees it |
-| 9 | Deliver | Producer | runs `python ~/.claude/skills/video-studio/scripts/ready.py video/<slug>` (non-zero means stop); `final.mp4`, `final-nomusic.mp4` (+ ad variants), the one line to the coordinator | to the `social-team` queue |
+| 9 | Deliver | Producer | runs `python3 "${SKILL_DIR}/scripts/ready.py" video/<slug>` (non-zero means stop); `final.mp4`, `final-nomusic.mp4` (+ ad variants), the one line to the coordinator | to the `social-team` queue |
 
 Fixing the animatic costs minutes; fixing a filmed cut costs a render. So the Critic sees step 4
 before anything is filmed, then the cut at step 8. A failed gate goes back to the step that owns
