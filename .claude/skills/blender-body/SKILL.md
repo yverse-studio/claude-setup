@@ -59,14 +59,28 @@ hand-in sheet contract.
      and at least 3 cm (rx 1.6 to 1.8 cm read as dark trenches, 3 cm with 3.5 to 6 mm is soft); no
      region key above 3x, 15 mm.
    - Never name a script `bisect.py` or `inspect.py` in the work folder (shadows the stdlib).
-8. **Thread hygiene.** One builder and one reviewer until the score is 5/5; a builder thread lasts
-   one round or less, then hands off. A brief names **only** the LIVE STATE block, the contract
+8. **Thread hygiene.** One builder and one reviewer until the score is 5/5; a thread stays on its job
+   until done, lets its context compact and keeps its LIVE STATE block on disk (yskills: no handoff
+   threads, no new thread per round). A brief names **only** the LIVE STATE block, the contract
    blocks and the top 3 items of the current plan; a builder that reads whole study libraries fills
    its context on one item (a Luna builder stopped at its 210k context budget with nothing handed in). Hand-in comes
    first in the plan, research second. Cloud Blender setup is about two minutes:
    `apt-get update && apt-get install -y libegl1 libgl1-mesa-dri libegl-mesa0 libgles2 libtbb12`,
    `python3.13 -m pip install bpy scipy pillow numpy matplotlib`.
-9. **Content line.** Adult characters only, adult face and proportions, no minors ever. Nude
+9. **Same size, every sheet.** The blobcg reference is the only shape target (other models, and
+   other characters liked for one feature, are bases to shape toward it, never goals; the base keeps its
+   neck, bust and rig, the reference decides everything else). Every sheet shows the body next to the reference on one canvas at the
+   same height, registered by chin and sole (side view: chin and knee), crown inside the frame. A sheet
+   with a clipped head, stray objects, cut hands, hidden hair or no figure frame (the body in the
+   hinata-v1 scene with hair and shader, like the dance video) fails before scoring.
+10. **Render truth.** Before trusting a picture, check the renderer shows the edit: Face keys at
+   0.4/0.3/0.45 invert every tool that skips them (run `luna_facekeysync zero` last); `drender4`
+   zeroes non-Face keys, so bake keys; sync `me.vertices` to Basis before building masks; a wrongly
+   registered base (Hinata 1.743 m vs 1.598 m) breaks `slicefit`, fit by chin and sole.
+11. **Content line.** Adult characters only, adult face and proportions, no minors ever. Check every reference set for
+    the source character's canonical age before use and write the checked age and version in LIVE STATE; frames of a canonically underage character never
+    enter it, whatever the art style. A thread that declines part of a job says so in one line and hands
+    the rest back. Nude
    bodies and explicit poses live on the private side behind the 18+ gate; public files and the
    hand-in sheets that go to public places stay clean; his references never go into git.
 
@@ -105,6 +119,7 @@ and measure, never copy a mesh; his private reference pictures are never uploade
 | lc1 to lc13 | no posed frame until the animator's clip showed 11 errors | 3 |
 | 2026-10-18 14:29 | user's decision: Hinata rigged base; its neck, bust shape and rig stay, shape keys on top (waist, hips, butt; bust scaled from Hinata's own breast mesh, no stuck-on spheres) | 1, 2 |
 
+The full story, root causes, tool gotchas and his taste: `patches/base-body/LESSONS.md`.
 Files: `characters/luna/REVIEWER-TO-BUILDER.md` (contract and verdicts), `BUILDER-HANDOFF.md` (LIVE
 STATE blocks), `REVIEWER-HANDOFF.md`, `proof/rika-test/ERRORS.md` (the 11 posed errors), tools
 `characters/luna/tools/handin-cloud.sh`, `quickcheck.sh`, `luna_facekeysync.py`, and `tools/ref-tracker/trk2/t3/zoom5.py`, all under
