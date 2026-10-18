@@ -13,6 +13,14 @@ captures, never from scratch. Igelgarten passed four gates and yskills called it
 its builder wrote its own bar, picked neon on near-black with no source, and the critic graded
 against that text. So:
 
+0. **Breadth first (2026-10-18):** before narrowing, map the style landscape: at least 10
+   distinct families (gouache storybook, paper cut-out, claymation, hand-inked line, risograph,
+   chalk, woodblock, felt, low-poly, pixel, watercolour, flat poster, folk art...), each with 2+
+   real captures from shipped, well-rated games or public-domain art (store API with curl, never
+   AI images), a fit verdict against the idea and Steam review counts. Igelgarten's directions A,
+   B and C were three variants of one mood and yskills rejected all of them.
+   **Not like our other projects:** screenshot our live projects into `design/reference/ours/`
+   with one line each, and flag every family or direction that resembles one of them.
 1. **References:** 3 to 6 captures of the top products of the genre (CrazyGames and Poki top
    pages for a game; the category's leading apps for a product) at 390px and 1440px, shot with
    `ui-review`'s `shoot.mjs` (absolute URLs), into `design/reference/`, one line each in
@@ -123,4 +131,5 @@ Added at the end of each project (operator step 9): date, project and its type, 
 - 2026-10-07 (Claude Setup HQ, walking): yskills saw the team "walk through each other, no walking animation, too fast" and asked for common game rules. Characters that move need what any game gives them from day one: routes over a floor grid built from the scene's own furniture boxes (A*), queueing and giving way instead of overlap, a stand-up walk cycle whose stride follows distance walked, ease in and out at about 1 m/s, and spots on open floor chosen where the camera shows them on a phone. Prove it headless with a run that tracks the closest two walkers, not only stills. Menus follow game rules too: one panel open at a time, a tap outside closes it.
 - 2026-10-07 (Claude Setup HQ, second character skin): models loaded from files must be tested in a browser with a real sample file before review: the untested build had every VRM 0 model's arms flipped (VRM 0 is turned round to face +z, so its bones' x and z rotations mirror), flat T-pose fingers and a wave that pointed. A dialogue scene frames the speaker as the subject: the card stands beside her on wide screens, never over her, the room's labels hide while she is there, replies are full-width rows of 44 px in a fresh order with no answer pre-focused. A file stored as base64 text grows by a third, so its upload cap sits a third under the store's limit.
 - 2026-10-07 (Claude Setup HQ, Kassenbuch round 2): yskills found the money view unclear and missed the cents. Every amount anywhere on a page shows two decimals (one formatter, `de-DE`, 28,80 €), and every place that shows the same money (wall chart, laptop, Company, cash book) reads it from the same source, or one of them says a rounded 30 € next to a 28,80 €. Say the result in plain words ("Bleibt dir", "Kunden haben bezahlt", "Stripe-Gebühr"), not Netto/Brutto, and fold parts with no data yet into one quiet line instead of a heading each.
+- 2026-10-18 (Igelgarten, directions): three directions from one mood were rejected as "styles we already used"; map 10+ style families and check `design/reference/ours/` first.
 - 2026-10-18 (Igelgarten, game): yskills called the live game "holy ai slop" after four 5/5 gates: neon glow on every sprite, a SaaS-dark menu with stripe rows in a garden game, no palette or type decision. Fix: art direction first, `design-check.mjs` and `SLOP.md` in check 5.
