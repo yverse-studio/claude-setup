@@ -1,6 +1,6 @@
 ---
 name: impeccable
-description: "Design, critique, audit or polish frontend UI: hierarchy, type, colour, spacing, motion, accessibility, UX copy. Not for backend work."
+description: "Use for any frontend UI design, critique, audit or polish: hierarchy, type, colour, spacing, motion, accessibility, UX copy. Not for backend work."
 version: 4.5.0
 user-invocable: true
 argument-hint: "[shape · audit|critique · animate|bolder|colorize|delight|layout|overdrive|quieter|typeset · adapt|clarify|distill · harden|onboard|optimize|polish · init|document|extract|live|generate] [target]"

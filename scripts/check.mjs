@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 // Validates the repo: JSON parses, every skill and agent has name/description frontmatter,
-// every name is unique, and the vendored ECC subset matches config/ecc.json.
+// every name is unique, the vendored ECC subset matches config/ecc.json, own skill descriptions
+// are short and say when to use them, own agents cap their turns, and every never/always rule
+// names its guard or is tagged advisory.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -65,6 +67,35 @@ if (plugins) {
   for (const m of plugins.marketplaces) if (!sh.includes(`marketplace add ${m.source}`)) errors.push(`cloud/setup.sh does not add marketplace ${m.source}`)
   const inlined = sh.match(/<<'GUARD'\r?\n([\s\S]*?)\r?\nGUARD\r?\n/)?.[1]
   if (inlined?.replace(/\r/g, '').trim() !== readFileSync(join(root, 'global/context-guard.mjs'), 'utf8').replace(/\r/g, '').trim()) errors.push('cloud/setup.sh context guard differs from global/context-guard.mjs')
+}
+
+// Own skills and agents (the ECC subset is vendored and never hand-edited). A long description gets
+// cut by the skill-listing budget and the trigger words at its end are lost; an agent without
+// maxTurns can loop until the context is gone (benchmark 2026-10-18, complaints 3 and 7).
+const DESC_MAX = 200 // short enough that nothing is cut, whatever the listing budget is
+const TURNS_MAX = 100
+const descriptionOf = (file) => {
+  const raw = frontmatter(join(root, file))?.description ?? ''
+  try { return JSON.parse(raw) } catch { return raw.replace(/^['"]|['"]$/g, '') }
+}
+for (const n of dirs('.claude/skills')) {
+  if ((ecc?.skills ?? []).includes(n)) continue
+  const file = `.claude/skills/${n}/SKILL.md`
+  const d = descriptionOf(file)
+  if (d.length > DESC_MAX) errors.push(`${file}: description is ${d.length} characters, the cap is ${DESC_MAX}; put the "Use when ..." trigger words first and cut the rest`)
+  if (d && !/\bUse\b/.test(d)) errors.push(`${file}: description has no "Use when/for ..." sentence naming what makes it fire`)
+}
+for (const f of mds('.claude/agents')) {
+  const n = f.replace(/\.md$/, '')
+  if ((ecc?.agents ?? []).includes(n)) continue
+  const turns = frontmatter(join(root, '.claude/agents', f))?.maxTurns
+  if (!/^\d+$/.test(turns ?? '') || Number(turns) < 1 || Number(turns) > TURNS_MAX) errors.push(`.claude/agents/${f}: own agents need maxTurns between 1 and ${TURNS_MAX} in the frontmatter`)
+}
+
+// Hooks come from install.mjs only. A hooks block in a settings file the install copies, or in the
+// repo's own, fires a second time next to the installed one (claude-code #3465, #9602).
+for (const p of ['global/settings.json', '.claude/settings.json']) {
+  if (Object.keys(json(p)?.hooks ?? {}).length) errors.push(`${p}: no hooks here; install.mjs registers them (scripts/guards.test.mjs checks them)`)
 }
 
 // Every ECC skill a toolbox catalog names must exist in the ECC index.
@@ -132,6 +163,43 @@ for (const f of anyText('.')) {
     // CLAUDE.md is a policy file only yskills changes; warn until the paste lands instead of blocking every PR.
     if (f === 'CLAUDE.md') console.warn(`! ${f}: ${why} (${id}); paste the Models line from docs/WORKFLOW.md`)
     else errors.push(`${f}: ${why} (${id}); link the Models line in docs/WORKFLOW.md instead`)
+  }
+}
+
+// Rule enforcement: a "never" or "always" rule that only lives in prose is advisory. Each such
+// bullet in these files says so with [advisory], or names the guard that enforces it:
+// [guard: deny <rule>], [guard: ask <rule>] (a rule in global/settings.json), [guard: test <file>]
+// or [guard: hook <file>] (the file exists). Tables and code blocks are skipped. Other own skills are
+// not linted yet; add them here when their lines are tagged.
+const RULE_FILES = ['CLAUDE.md', '.claude/skills/operator/SKILL.md', '.claude/skills/publish/SKILL.md']
+const ruleItems = (text) => {
+  const out = []
+  let cur = null
+  let fence = false
+  text.split('\n').forEach((l, i) => {
+    if (/^```/.test(l)) { fence = !fence; cur = null; return }
+    if (fence) return
+    if (/^\s{0,1}(?:[-*]|\d+\.)\s/.test(l)) { cur = { line: i + 1, text: l }; out.push(cur) }
+    else if (/^\s+\S/.test(l) && cur) cur.text += ` ${l.trim()}`
+    else if (/^\s*$|^#|^\|/.test(l)) cur = null
+    else { cur = { line: i + 1, text: l }; out.push(cur) }
+  })
+  return out
+}
+const gSettings = json('global/settings.json')?.permissions ?? {}
+for (const f of RULE_FILES) {
+  const text = readFileSync(join(root, f), 'utf8').replace(/^---\r?\n[\s\S]*?\r?\n---/, (m) => m.replace(/[^\n]/g, ''))
+  for (const it of ruleItems(text)) {
+    if (!/\b(never|always)\b/i.test(it.text)) continue
+    const tag = it.text.match(/\[(advisory|guard: ([a-z]+) ([^\]]+))\]/)
+    if (!tag) { errors.push(`${f}:${it.line}: a never/always rule without [advisory] or [guard: ...]: ${it.text.slice(0, 70)}`); continue }
+    if (tag[1] === 'advisory') continue
+    const [, , kind, target] = tag
+    const ok = kind === 'deny' ? (gSettings.deny ?? []).includes(target)
+      : kind === 'ask' ? (gSettings.ask ?? []).includes(target)
+        : kind === 'test' || kind === 'hook' ? existsSync(join(root, target))
+          : false
+    if (!ok) errors.push(`${f}:${it.line}: guard "${kind} ${target}" does not exist (deny/ask: a rule in global/settings.json; test/hook: a file)`)
   }
 }
 

@@ -1,12 +1,12 @@
 ---
 name: operator
-description: "Run a project from idea to live app: sizes the job, staffs the roles, keeps PLAN/PROGRESS, runs the 5/5 gate. Use for a new app idea, \"build\", \"go\", \"continue the project\", or when a project thread starts."
+description: "Use for a new app idea, \"build\", \"go\", \"continue the project\", or when a project thread starts. Sizes the job, staffs the roles, keeps PLAN/PROGRESS, runs the 5/5 gate."
 ---
 
 # Operator
 
 The operator is the **project conversation** of a Claude Project, or in a plain chat the chat
-itself. It never builds. It hands each job to a fresh worker with only the files that job needs,
+itself. It never builds. It hands each job to a fresh worker with only the files that job needs, [advisory]
 checks the result against fixed criteria and keeps pushing until the goal in `PLAN.md` is live.
 Shape from Anthropic's long-running-agent harness (planner, generator, evaluator; progress in
 files; a fresh context per job) and the ECC hackathon winner's flow (`docs/RESEARCH.md`).
@@ -14,7 +14,7 @@ files; a fresh context per job) and the ECC hackathon winner's flow (`docs/RESEA
 **Auto-run, the ask rule, pauses and taste calls** have their home in CLAUDE.md (How to work).
 Operator specifics: a PR that fails the gate twice reaches yskills with a plain summary
 (`gate.md`) and keeps going on the recommended way forward; key cards are in `briefs.md`. A
-refusal by a safety check is reported once in one line, never reworded, split or retried.
+refusal by a safety check is reported once in one line, never reworded, split or retried. [advisory]
 
 **Pauses in practice.** "Stop", "pause", "only burning my money" and rejected assets are final (CLAUDE.md, How to work). A thread
 that finished before the stop is parked and reported honestly; nothing restarts without yskills' go. Both go
@@ -30,7 +30,7 @@ The default limits in `docs/character-workflow.md` step 3 and `game-3d/starter/`
 `learnings.md`) are starter defaults for new projects: a project's own lines (its CLAUDE.md, its
 rules file, the owner's message) override them.
 
-**Dashboard data is read, never retyped.** HQ numbers (threads, cost, models, turns, PR state) are
+**Dashboard data is read, never retyped.** HQ numbers (threads, cost, models, turns, PR state) are [advisory]
 written by a scheduled script that reads the source; a model retyping them cost $3.72 a run and
 the board was hours stale (2026-10-11 audit). A row without a source is marked unknown.
 
@@ -43,7 +43,7 @@ brainstorm. No repo, scaffold or builder thread exists before the plan is posted
 
 **Idea for a live project** (yskills, 2026-10-12: "where are my teams?"). When yskills posts an
 idea or change for a project that already runs (feature, fix, art, video, a tutorial), the Project
-Manager runs the same roles as for a new app, never one catch-all thread. In that turn:
+Manager runs the same roles as for a new app, never one catch-all thread. In that turn: [advisory]
 
 1. **Research first:** a `Researcher` subagent (a thread when big) on best practice and the state
    of the art for this idea, one WebSearch per open fact, one page back. A plain bug fix skips it.
@@ -52,13 +52,13 @@ Manager runs the same roles as for a new app, never one catch-all thread. In tha
    `gate.md` with Reviewer and Security inside. Each brief names its playbook and the research.
 3. **Parallel:** several ideas in one message become one chain each; chains that share no file
    run at once (the slice rule below), never more than three Programmer threads; the rest queue
-   in `PROGRESS.md`.
+   in `PROGRESS.md`. [advisory]
 4. **Deliver:** the `Done:` line in the project chat ends with one short line per role saying what
    it found or checked.
 
 **One role per thread, named by it.** Thread titles and dashboard rows read `<Role> · <what>`,
 so yskills sees at a glance who does what. Roles (the shape Anthropic recommends for long-running
-agents: one planner, workers with a fresh context per job, an evaluator that never built what it
+agents: one planner, workers with a fresh context per job, an evaluator that never built what it [advisory]
 grades):
 
 | Role | Does | Runs as | Example title |
@@ -138,7 +138,7 @@ Templates in `templates/`.
   and, at the top, `Mode: probe` (meant to earn) or `Mode: product` (not meant to earn), the
   probe (offer, price, channel, period, go number) and the 30/60/90-day targets.
 - `features.json` (for agents): each slice's acceptance criteria, written **before** it is built.
-  Builders never touch it; the gate thread records the evaluator's verdict (`passes`).
+  Builders never touch it; the gate thread records the evaluator's verdict (`passes`). [advisory]
 - `PROGRESS.md`: the handoff. Done, next, broken, decisions and why, each thread's cost. Every
   thread reads it first; only the operator writes it. Under 100 lines.
 - `metrics/<yyyy>-W<ww>.json`: from launch on, the week's numbers. HQ reads these (`docs/hq-rows.md`).
@@ -149,7 +149,7 @@ Templates in `templates/`.
   (phases, team, projects, events, today, requests, config/coordinator, work board; every row carries `at`).
   **At every merge** it brings the project's `phases` rows true in that batch (merged step `done` with `link` and
   `testableAt`, next step `active` with `sessions` and `testableAt`, `project` and `at` on each): HQ's Roadmap tab
-  shows only those rows (`docs/hq-rows.md`, Roadmap).
+  shows only those rows (`docs/hq-rows.md`, Roadmap). [advisory]
 
 ## 4. The run
 
@@ -165,23 +165,23 @@ comment on a match instead of filing twice. The daily loop reader lists them wit
 items; the coordinator starts one `Programmer · setup #<n>` thread per issue, which fixes
 it, passes `gate.md` and merges. A fix to a policy file (CLAUDE.md, `gate.md`, `global/`, `cloud/`,
 `install.mjs`) that the safety check refuses waits for yskills' Allow in that thread (`gate.md`,
-Merge policy), never reworded to pass a check.
+Merge policy), never reworded to pass a check. [advisory]
 Claude Code's safety checks are not friction to fix: only yskills' allow rules or taps pass them.
 
 ## 5. Spend little
 
 - **Models:** the one line in claude-setup `docs/WORKFLOW.md` (Models). Thread effort medium.
-- Hand off at a milestone, never mid-step: at the context guard's warning (`global/context-guard.mjs` holds the numbers) finish the current step, write the handoff, stop; never start a new unit past it (two long threads were 77% of usage on 2026-10-04). The planner sizes every unit to one thread (about 90k working room); a unit that cannot fit is split in the plan. Haiku readers stay under 100k of prompt. A template over 2000 lines is split before the next change.
+- Hand off at a milestone, never mid-step: at the context guard's warning (`global/context-guard.mjs` holds the numbers) finish the current step, write the handoff, stop; never start a new unit past it (two long threads were 77% of usage on 2026-10-04). The planner sizes every unit to one thread (about 90k working room); a unit that cannot fit is split in the plan. Haiku readers stay under 100k of prompt. A template over 2000 lines is split before the next change. [advisory]
 - Where 2026-10-07 burned tokens, and the rule that stops each: hand-offs at 270k (write the
   hand-off at the guard's first warning); `dashboard.html` read whole again and again (grep the
   part, read it once); the same answer in two threads (a thread checks the timeline before
   answering and a hand-off thread never repeats); research with many searches (one WebSearch per
-  open fact); extra screenshots and subagents (only what the ask needs; simple reading jobs go to Haiku subagents).
+  open fact); extra screenshots and subagents (only what the ask needs; simple reading jobs go to Haiku subagents). [advisory]
 - A unit of work (one chapter, one figure pass, one scene) gets a fresh thread from a handoff file, not a
   longer thread: at 300k context a call re-reads everything, about $6 per 20 minutes
   (`docs/LESSONS-2026-10-11.md`).
 - Literal mode and the cost rules go into every brief (`briefs.md`, last block).
-- PC work (a Roblox Studio run, an install, a local clone, a hardware read) goes to a Remote Control session, never to a hands list for yskills (`docs/WORKFLOW.md`, PC work).
+- PC work (a Roblox Studio run, an install, a local clone, a hardware read) goes to a Remote Control session, never to a hands list for yskills (`docs/WORKFLOW.md`, PC work). [advisory]
 - Reviewers, evaluator and red team get only the diff or the URL plus the criteria.
 - Slice and gate threads report by message (the operator subscribes to no PRs, see below). The context guard
   (`global/context-guard.mjs`) tells any thread when to hand off; an operator thread past it
@@ -189,7 +189,7 @@ Claude Code's safety checks are not friction to fix: only yskills' allow rules o
 - One job per thread. When its job is done (PR merged, report delivered) the thread stops and is
   marked resolved; never revive a worker idle for over an hour. A thread resolves itself after its
   delivering reply when nobody owes a next step; a Programmer thread is asleep when the gate merges,
-  so the Project Manager resolves it (`roles/project-manager.md`, Close threads).
+  so the Project Manager resolves it (`roles/project-manager.md`, Close threads). [advisory]
 - A thread that needs another org repo calls `add_repo` (one Allow per thread; the project's repo
   list must say `yverse-studio/<repo>`, not `yskills/<repo>`).
 - After a usage-limit stop a running thread waits and resumes by itself when the window resets;
@@ -199,7 +199,7 @@ Claude Code's safety checks are not friction to fix: only yskills' allow rules o
   continue only what `PROGRESS.md` lists as open, one thread at a time.
 - A thread stops watching its PR as soon as it is merged, and the coordinator never subscribes
   to PRs (46M cached tokens in test run 1). Fanning out several threads before anything is visible
-  cost about 10 EUR and yskills' trust in test run 1; show something early, then spend.
+  cost about 10 EUR and yskills' trust in test run 1; show something early, then spend. [advisory]
 - No `/ultrareview`, no unrequested WebFetch, no research the plan already answers.
 - The evaluator runs once per gate round. Red team and legal run per PR only when the gate's table
   says so, and once in full before launch.

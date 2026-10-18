@@ -2,6 +2,7 @@
 name: design-critic
 description: "Reviews UI screenshots against the design doc and lists what looks generic or AI-made. Use after every UI change."
 model: opus
+maxTurns: 20
 tools: Read, Glob, Grep
 ---
 
