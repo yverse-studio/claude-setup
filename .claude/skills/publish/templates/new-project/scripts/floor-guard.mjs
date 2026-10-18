@@ -2,13 +2,14 @@
 // Floor guard: fails a PR that lowers the bar instead of fixing the code. It reads the diff from
 // the merge base to the working tree (untracked files included) and reports a skipped test, a
 // deleted test file, fewer assertions in a test file that stayed, a new suppression or stub, and
-// a lowered coverage threshold, an edited or deleted role check script (scripts/*-check.mjs) or a removed role-check CI step. Tightening is silent, loosening is loud.
+// a lowered coverage threshold, an edited or deleted role check script (scripts/*-check.mjs) a changed claudeSetup.kind, or an edited or removed role-check CI step. Tightening is silent, loosening is loud.
 // Exit 0 clean, 1 violation, 2 could not run (never read 2 as 0).
 // Escape hatch: a commit message in the PR with `floor-ok: <reason>` waives the findings; they
 // are still printed with the reason.
 // Usage: node scripts/floor-guard.mjs [--base <ref>]   (default origin/main)
 // Adapted from addyosmani/agent-skills, floor-guard.md (MIT, see THIRD_PARTY.md in claude-setup).
 import { execFileSync } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 
 const i = process.argv.indexOf('--base')
 const base = i > -1 ? process.argv[i + 1] : 'origin/main'
@@ -85,7 +86,23 @@ for (const f of deleted) if (isTest(f)) flag('test-deleted', f, 'file deleted')
 // The role checks guard themselves: editing or deleting one, or dropping the CI step that runs them, lowers the bar.
 const ROLE_CHECK = /^scripts\/(project-checks|design-check|copy-check|analytics-check|gdd-check|audio-check|playtest-check)\.mjs$/
 for (const f of new Set([...deleted, ...removed.map((l) => l.file)])) if (ROLE_CHECK.test(f)) flag('checker-changed', f, deleted.includes(f) ? 'file deleted' : 'lines removed from a role check script')
-if (removed.some((l) => /\.github\/workflows\//.test(l.file) && /scripts\/project-checks\.mjs/.test(l.text)) && !added.some((l) => /scripts\/project-checks\.mjs/.test(l.text))) flag('checker-changed', '.github/workflows', 'the CI step that runs scripts/project-checks.mjs was removed')
+// The kind switch and the CI step that runs the checks are guarded the same way: any change to either flags.
+for (const r of removed) if (/(^|\/)package\.json$/.test(r.file) && /"kind"\s*:/.test(r.text)) flag('checker-changed', r.file, `claudeSetup.kind changed: ${r.text}`)
+const stepBlock = (text) => {
+  const lines = text.split('\n'), start = lines.findIndex((l) => /^\s*- name:.*role checks/.test(l))
+  if (start < 0) return null
+  const indent = lines[start].match(/^\s*/)[0].length
+  const end = lines.findIndex((l, i) => i > start && l.trim() && (l.match(/^\s*/)[0].length <= indent))
+  return lines.slice(start, end < 0 ? undefined : end).map((l) => l.trimEnd()).join('\n')
+}
+for (const f of new Set([...added, ...removed].map((l) => l.file).concat(deleted))) {
+  if (!/^\.github\/workflows\/.+\.ya?ml$/.test(f)) continue
+  const before = git(['show', `${mergeBase}:${f}`]), oldStep = before === null ? null : stepBlock(before)
+  if (oldStep === null) continue
+  let now = null
+  try { now = readFileSync(f, 'utf8') } catch { /* deleted */ }
+  if (now === null || stepBlock(now) !== oldStep) flag('checker-changed', f, 'the "role checks" CI step was changed or removed')
+}
 
 const count = (lines, f) => lines.filter((l) => l.file === f && ASSERT.test(l.text)).length
 for (const f of new Set(removed.map((l) => l.file))) {

@@ -52,7 +52,27 @@ test('a "not implemented" stub fails', () => fails('unfinished-work', (d) => put
 test('an empty catch fails', () => fails('unfinished-work', (d) => put(d, 'src/new.mjs', 'try { go() } catch {}\n')))
 test('editing a role check script fails', () => fails('checker-changed', (d) => put(d, 'scripts/design-check.mjs', 'export {}\n'), { 'scripts/design-check.mjs': 'export const a = 1\nexport const b = 2\n' }))
 test('deleting a role check script fails', () => fails('checker-changed', (d) => rmSync(join(d, 'scripts/gdd-check.mjs')), { 'scripts/gdd-check.mjs': 'export const a = 1\n' }))
-test('removing the role-check CI step fails', () => fails('checker-changed', (d) => put(d, '.github/workflows/ci.yml', 'steps:\n  - run: npm test\n'), { '.github/workflows/ci.yml': 'steps:\n  - run: npm test\n  - run: node scripts/project-checks.mjs --base origin/main\n' }))
+const CI = 'steps:\n  - run: npm test\n  - name: role checks # x\n    if: github.event_name == \'pull_request\'\n    run: node scripts/project-checks.mjs --base origin/main\n  - name: later\n    run: echo hi\n'
+const ciFails = (edit) => fails('checker-changed', (d) => put(d, '.github/workflows/ci.yml', edit(CI)), { '.github/workflows/ci.yml': CI })
+test('removing the role-check CI step fails', () => ciFails((c) => c.replace(/  - name: role checks[\s\S]*?(?=  - name: later)/, '')))
+test('appending || true to the role-check run line fails', () => ciFails((c) => c.replace('origin/main\n  - name: later', 'origin/main || true\n  - name: later')))
+test('switching the role-check step if: to false fails', () => ciFails((c) => c.replace("if: github.event_name == 'pull_request'", 'if: false')))
+test('continue-on-error on the role-check step fails', () => ciFails((c) => c.replace('    run: node scripts/project-checks', '    continue-on-error: true\n    run: node scripts/project-checks')))
+test('a change in another CI step passes', () => {
+  const r = run((d) => put(d, '.github/workflows/ci.yml', CI.replace('echo hi', 'echo bye')), { files: { ...BASE, '.github/workflows/ci.yml': CI } })
+  assert.equal(r.code, 0, r.out)
+})
+test('changing claudeSetup.kind from game to site fails, and a waiver passes', () => {
+  const pkg = (k) => JSON.stringify({ name: 'x', claudeSetup: { kind: k } }, null, 2) + '\n'
+  fails('checker-changed', (d) => put(d, 'package.json', pkg('site')), { 'package.json': pkg('game') })
+  const r = run((d) => put(d, 'package.json', pkg('site')), { commitMessage: 'chore: x\n\nfloor-ok: really a site', files: { ...BASE, 'package.json': pkg('game') } })
+  assert.equal(r.code, 0, r.out)
+})
+test('an unrelated package.json change passes', () => {
+  const pkg = (v) => JSON.stringify({ name: 'x', version: v, claudeSetup: { kind: 'game' } }, null, 2) + '\n'
+  const r = run((d) => put(d, 'package.json', pkg('2')), { files: { ...BASE, 'package.json': pkg('1') } })
+  assert.equal(r.code, 0, r.out)
+})
 test('a floor-ok commit waives an edited role check script (the refresh path)', () => {
   const r = run((d) => put(d, 'scripts/design-check.mjs', 'export {}\n'), { commitMessage: 'chore: refresh checks\n\nfloor-ok: refreshed from claude-setup main', files: { ...BASE, 'scripts/design-check.mjs': 'export const a = 1\n' } })
   assert.equal(r.code, 0, r.out)
