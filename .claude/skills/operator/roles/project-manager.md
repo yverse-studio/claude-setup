@@ -35,5 +35,4 @@ The block every brief starts with: literal mode, cost and the context rules for 
 Added at the end of each project (operator step 9): date, project and its type, what to do differently. Newest last; merge duplicates.
 
 - 2026-10-06 (duo-test): fanning out three threads at once without a visible result cost ~10 EUR and yskills' trust. Show something early, then spend.
-- 2026-10-06 (duo-test): don't subscribe the coordinator to slice PRs; it re-read 46M tokens.
 - 2026-10-06 (Claude Setup HQ, game page, 6 slices, PRs 29 to 36): a thread kept building after yskills' pause and another argued to keep the Kenney animals yskills had rejected; the brief now says both are final. The money feed went live reading rows nobody had stored (0 € for 28 €); verify the data first. Six slices in one file: pull main before every merge. One slice at a time kept cost inside the 30 to 50 USD estimate.

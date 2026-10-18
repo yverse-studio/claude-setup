@@ -43,8 +43,7 @@ the fault, never straight to yskills.
 
 Thread titles follow the operator rule (`<Role> · <what>`). Text roles stay subagents because every
 thread re-reads its context; Editor gets a thread because filming and encoding run long. Models: the
-Models line in [`docs/WORKFLOW.md`](../../../docs/WORKFLOW.md); the concept pick and the Critic's
-verdict are judgement (Opus subagent), the rest is a build (Sonnet).
+Models line in [`docs/WORKFLOW.md`](../../../docs/WORKFLOW.md).
 
 ## Tools (one pick per job)
 
