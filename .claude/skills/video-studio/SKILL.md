@@ -54,7 +54,7 @@ Models line in [`docs/WORKFLOW.md`](../../../docs/WORKFLOW.md).
 | Transcript of a voice memo | faster-whisper | `media-editing` |
 | Motion graphics, titles, kinetic captions | **HyperFrames** (HeyGen, Apache-2.0, HTML + GSAP to MP4) | the cloud's After Effects; `toolbox` `catalog/video-audio.md` |
 | Same in a React project | **Remotion** with its official skills (`npx skills add remotion-dev/skills`) | licence: free for teams of up to 3 people |
-| Watch a reference video yskills shares | `watch` skill | frames + transcript, free |
+| Watch a reference video yskills shares | `watch` skill | frames, transcript and edit timeline (cuts, beats, silences), free; Take, Keep and Skip go to `taste.md` |
 | After Effects itself | only on yskills' PC, only if they already own it | community MCP servers exist (e.g. `Dakkshin/after-effects-mcp`), not tried: read it first (CLAUDE.md install rule) and ask by card |
 | AI clips, AI voice, stock music | fal.ai, ElevenLabs | money and a new service: card first; AI people or voices need the AI label (`market` §4) |
 
