@@ -46,7 +46,7 @@ against that text. So:
 - Start from yskills' reference pictures in `design/refs/`, then `design/DESIGN.md`.
 - Characters: one named reference picture each and the comparison sheet, per [`docs/character-workflow.md`](../../../../docs/character-workflow.md).
 - Compare against the category leader at 1440px and 390px.
-- The "looks very AI" list: [`SLOP.md`](../../ui-review/SLOP.md); motion rules: CLAUDE.md (UI).
+- The "looks very AI" list: [`SLOP.md`](../../ui-review/SLOP.md), including the default looks by hex; motion rules: CLAUDE.md (UI).
 - Copy real life first (CLAUDE.md, UI), result Blender-level or current state of the art: before picking art, do one quick search
   for the best licence-clean option today (CC0/CC-BY packs, AI 3D generation with commercial rights,
   Mixamo-style animation) and say in the PR what was picked and why.
