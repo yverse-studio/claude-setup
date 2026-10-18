@@ -32,6 +32,13 @@ export function plan(changed, available, playFile = () => false) {
   return CHECKS.filter((c) => available.includes(c.script) && changed.some((f) => c.when(f, playFile)))
 }
 
+// Every project has the three text checks; a game (any game script or the playtest check present) also has the two game ones.
+// A deleted script must fail the run, not switch its check off.
+export function expectedScripts(has) {
+  const game = ['gdd-check.mjs', 'audio-check.mjs']
+  return ['design-check.mjs', 'copy-check.mjs', 'analytics-check.mjs', ...(['playtest-check.mjs', ...game].some(has) ? game : [])]
+}
+
 const lines = (s) => s.split('\n').filter(Boolean)
 const git = (args) => {
   try { return execFileSync('git', ['-c', 'core.quotepath=off', ...args], { encoding: 'utf8', maxBuffer: 1 << 26, stdio: ['ignore', 'pipe', 'pipe'] }) } catch { return null }
@@ -52,7 +59,9 @@ async function main() {
   const changed = [...new Set([...lines(tracked), ...lines(untracked)])]
 
   const playFile = existsSync(join(here, 'playtest-check.mjs')) ? (await import('./playtest-check.mjs')).isPlayFile : undefined
-  const due = plan(changed, ['design-check.mjs', 'copy-check.mjs', 'analytics-check.mjs', 'gdd-check.mjs', 'audio-check.mjs'].filter((s) => existsSync(join(here, s))), playFile)
+  const missing = expectedScripts((s) => existsSync(join(here, s))).filter((s) => !existsSync(join(here, s)))
+  if (missing.length) bail(`${missing.join(', ')} missing from scripts/; new-project ships them, restore them from claude-setup (publish skill)`)
+  const due = plan(changed, expectedScripts((s) => existsSync(join(here, s))), playFile)
   if (!due.length) return console.log('project-checks: no UI, text or play file changed, nothing to check')
 
   let failed = 0

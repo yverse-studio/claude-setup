@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { test } from 'node:test'
 import { writeScaffold } from './new-project.mjs'
-import { CHECKS, plan } from '../.claude/skills/publish/templates/new-project/scripts/project-checks.mjs'
+import { CHECKS, expectedScripts, plan } from '../.claude/skills/publish/templates/new-project/scripts/project-checks.mjs'
 import { isPlayFile } from '../.claude/skills/publish/templates/new-game/scripts/playtest-check.mjs'
 
 const SITE = ['design-check.mjs', 'copy-check.mjs', 'analytics-check.mjs']
@@ -123,4 +123,16 @@ test('a silent game passes the sound check when only assets changed', () => {
   assert.equal(r.status, 0, r.stderr)
   assert.match(r.stdout, /audio: ok/)
   rmSync(dir, { recursive: true, force: true })
+})
+
+test('a deleted check script fails the run instead of switching its check off', () => {
+  assert.deepEqual(expectedScripts(() => false), SITE)
+  assert.deepEqual(expectedScripts((s) => s === 'playtest-check.mjs'), GAME)
+  for (const [kind, gone] of [['site', 'design-check.mjs'], ['game', 'audio-check.mjs']]) {
+    const dir = project(kind, (d) => { rmSync(join(d, 'scripts', gone)); put(d, 'README.md', 'x\n') })
+    const r = run(dir)
+    assert.equal(r.status, 2, kind)
+    assert.match(r.stderr, new RegExp(`${gone} missing from scripts/`))
+    rmSync(dir, { recursive: true, force: true })
+  }
 })
