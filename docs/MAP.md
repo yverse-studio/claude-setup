@@ -58,7 +58,7 @@ added as a second repo, or a plain chat), read that file by path, then the files
 | Game as APK and on Google Play (workflow, Learnings) | `store-publish` | `publish` (the website), `game-3d` (Steam later) |
 | German law, DSGVO | `legal` | `legal-reviewer` agent; `sell/legal-de.md` for shops |
 | Security | `security-review` | `security-reviewer`, `red-team` agents |
-| Design, UI/UX | `CLAUDE.md` (UI), the project's `DESIGN.md` | `impeccable`, `make-interfaces-feel-better`, `web-interface-guidelines`, `design-system`, `ui-review`, `design-critic` agent |
+| Design, UI/UX | `operator/roles/designer.md` (Art direction first), `ui-review/SLOP.md`, the project's `DESIGN.md` | `impeccable`, `make-interfaces-feel-better`, `web-interface-guidelines`, `design-system`, `ui-review`, `design-critic` agent |
 | 3D games, Steam | `game-3d` (three.js + Electron, decided 2026-10-07) | `game-3d/refs/` (camera, game feel, levels, glTF, lighting, perf, Steam) |
 | 2D and web games | `toolbox/catalog/data-web.md` (Phaser, PixiJS, Poki, CrazyGames) | `toolbox/catalog/money.md` (H5 game ads) |
 | Roblox | `roblox` | `toolbox/catalog/roblox.md` (run and see), `studio` (PC) |
@@ -88,6 +88,8 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 | Context guard numbers (warn 150k, hand off 200k) | `global/context-guard.mjs` | `CLAUDE.md`, `README.md` |
 | Remote Control on the PC | `docs/WORKFLOW.md` (PC work) | operator `SKILL.md` |
 | UI rules | `CLAUDE.md` (UI) | `roles/designer.md`, `ui-review` (screenshots, the load-once check, run videos via `desktop.sh`) |
+| What looks AI-made (the slop list) | `.claude/skills/ui-review/SLOP.md` | `CLAUDE.md` (UI), `design-critic`, `roles/designer.md`, `gate.md` check 5 |
+| Art direction before any screen (references, palette, type) | `operator/roles/designer.md` (Art direction first), checked by `ui-review/scripts/design-check.mjs` | `gate.md` check 5, `game-3d`, the game template |
 | Character workflow (reference, sheet, likeness gate) | `docs/character-workflow.md` | `roles/programmer.md`, `roles/tester.md`, `roles/designer.md`, `briefs.md` |
 | Deploys, the workflows' detail, the two Cloudflare routes, deploy lessons | `publish` skill | `CLAUDE.md`, `docs/USING.md` |
 | Money and shop law | `sell` skill | `docs/WORKFLOW.md` (Selling) |

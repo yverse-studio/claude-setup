@@ -89,8 +89,8 @@ yskills' verdict on early work: "looks very AI". For every UI change:
 1. Read the project's `design/DESIGN.md` or `DESIGN.md`; without one, use `frontend-design` and
    `impeccable` and commit to a clear direction. Copy real life first, then make it better;
    state-of-the-art quality, cute cartoon or pixel taste, licence-clean art. Vue motion:
-   `motion-v`. No default gradients, emoji icons, generic card grids, stock heroes or shortcut
-   chips. Motion answers an action or plays once; keyframes describe only the start state, so
+   `motion-v`. Art direction (references, palette, type) comes before any screen
+   (`operator/roles/designer.md`); nothing from `ui-review/SLOP.md`, no shortcut chips. Motion answers an action or plays once; keyframes describe only the start state, so
    `prefers-reduced-motion` lands on the finished screen. Its `## Bar` section (motion, loading,
    empty and error states, WCAG 2.2 AA, speed budget) is the UI/UX bar the Tester checks
    (`operator/roles/designer.md`).

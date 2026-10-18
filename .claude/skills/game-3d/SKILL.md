@@ -30,7 +30,7 @@ WebGPU renderer only when its scenes need it (Electron and every browser run Web
 
 ## 1b. From a wish to a build brief (reference first)
 
-The look: captures of the top portal games in `design/reference/` before the first build, rule in [`operator/roles/designer.md`](../operator/roles/designer.md) (Reference first).
+The look: captures of the top portal games in `design/reference/` before the first build, rule in [`operator/roles/designer.md`](../operator/roles/designer.md) (Art direction first: palette, type and pillars decided before the first build, nothing from `ui-review/SLOP.md`).
 
 yskills says what they want in one sentence, pictures or a story; the team turns it into a
 concrete brief before any build. Order, every time:
