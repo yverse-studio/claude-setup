@@ -153,6 +153,10 @@ Claude:
   (duo-test `tests/unit/wrangler-config.test.ts`).
 - `.github/workflows/ci.yml` with the verify job only (`sell` skill's `templates/ci.yml`).
   Also `scripts/floor-guard.mjs` (copy of `templates/new-project/scripts/floor-guard.mjs`): the CI file runs it on every PR.
+  Also the role checks, so a PR fails in the project's own CI before the gate looks: copy `templates/new-project/scripts/project-checks.mjs` plus `design-check.mjs`, `copy-check.mjs` (ui-review),
+  `analytics-check.mjs` (market) and, for a game, `gdd-check.mjs`, `audio-check.mjs` (game-3d) into `scripts/`; `new-project` does this for both kinds. The CI step runs them on a PR by changed
+  file (UI or text: design, copy, tracking plan; play or assets: game design and sound; a silent game passes sound; the playtest report keeps its own step). A doc that does not exist yet fails with
+  the one-line fix. The rules stay in the scripts, their roles in `docs/MAP.md`. An older project (igelgarten) gets the same by copying those files and the CI step.
 - A live smoke test on `check_run` `completed`, filtered to the exact name
   `Workers Builds: <worker>`, `conclusion == 'success'`,
   `check_suite.head_branch == '<production branch>'` and `head_sha == github.sha`
