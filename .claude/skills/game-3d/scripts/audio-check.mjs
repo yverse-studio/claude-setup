@@ -11,10 +11,10 @@ const NUMBERED = ['Music plan', 'Mix bar', 'File budget']
 const MIN_REFERENCES = 3
 const MIN_NOT_LINES = 2
 export const PLACEHOLDER = /<(?:name|game|store link|date|moments with sound, music layers, mute behaviour as heard|what|what and why)>/g // the template's own; game text such as <kbd> is not one
-export const AUDIO_FILE = /\.(?:ogg|mp3|wav|m4a|flac|opus|aac|weba|webm|aiff?|midi?)$/i
+export const AUDIO_FILE = /\.(?:ogg|mp3|wav|m4a|flac|opus|aac|weba|aiff?|midi?)$/i
 export const AUDIO_CODE = /\bAudioContext\b|\bnew Audio\(|\bHowl\(/
 // the whole value, not a mention: "not CC0", "CC0-NC" and "CC0 (trust me)" must fail
-const ALLOWED_LICENCE = /^(?:(?:Creative Commons )?CC0(?:[ -]1\.0)?(?: Universal)?(?: \(CC0 1\.0\))?(?: Public Domain Dedication)?|public domain|own (?:synthesis|work)(?: \([^()]*\))?)$/i
+const ALLOWED_LICENCE = /^(?:(?:Creative Commons )?CC0(?:[ -]1\.0)?(?: Universal)?(?: \(CC0 1\.0\))?(?: Public Domain Dedication)?|public domain|own (?:synthesis|work))$/i
 const DAY_READ = /\b\d{4}-\d{2}-\d{2}\b/
 const DIVIDER = /^\s*\|?[\s:|-]+\|[\s:|-]*$/
 // one `Budget: <n> KB` line (bold, bullet and case allowed) inside ## File budget; 0 KB would switch the size check off
@@ -37,6 +37,7 @@ export function checkDoc(md) {
   const errors = []
   const s = sections(md)
   for (const h of REQUIRED_HEADINGS) {
+    if ([...md.matchAll(new RegExp(`^##\\s+${h}\\s*$`, 'gm'))].length > 1) errors.push(`## ${h} appears twice`)
     if (!(h in s)) errors.push(`no "## ${h}" section`)
     else if (!s[h].trim()) errors.push(`## ${h} is empty`)
   }
@@ -80,7 +81,7 @@ export function checkAudio({ doc, files, manifest, usesAudioCode }) {
   return errors
 }
 
-const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', '.output', '.nuxt', 'coverage'])
+const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', '.output', '.nuxt', 'coverage', '.shots', 'test-results', 'playwright-report'])
 function walk(dir) {
   return readdirSync(dir).flatMap((n) => {
     const p = join(dir, n)

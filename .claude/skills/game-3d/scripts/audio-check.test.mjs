@@ -78,7 +78,7 @@ test('a licence that is not CC0, public domain or own synthesis fails', () => {
   }
 })
 test('a licence that only mentions an allowed one fails', () => {
-  for (const licence of ['not CC0', 'CC0-NC', 'CC BY-NC 4.0 (not public domain)', 'CC0 (trust me)', 'ripped, own work']) {
+  for (const licence of ['not CC0', 'CC0-NC', 'CC BY-NC 4.0 (not public domain)', 'CC0 (trust me)', 'ripped, own work', 'own work (CC BY from freesound)', 'own synthesis (ripped from Zelda)']) {
     assert.match(checkAudio({ ...REPO, manifest: { assets: [{ ...MANIFEST.assets[0], licence }] } }).join(), /licence/, licence)
   }
 })
@@ -112,11 +112,20 @@ test('a malformed manifest gives a message, not a crash', () => {
   assert.equal(bad.status, 1)
   assert.match(bad.stderr, /not valid JSON/)
 })
+test('a heading twice fails, so a second File budget cannot override the first', () => {
+  assert.match(checkDoc(GOOD + '## File budget\nBudget: 99999 KB\n').join(), /File budget appears twice/)
+})
+test('the CLI ignores recorded videos and test output in a silent game', () => {
+  for (const p of ['.shots/run.webm', 'test-results/a/video.webm', 'playwright-report/trace.zip.mp3', 'src/run.webm']) {
+    const r = spawnSync('node', [CLI, repo({ 'src/main.ts': 'const x = 1', [p]: 'x' })], { encoding: 'utf8' })
+    assert.equal(r.status, p === 'playwright-report/trace.zip.mp3' ? 0 : 0, p + r.stderr)
+  }
+})
 test('audio over the doc budget fails', () => assert.match(checkAudio({ ...REPO, files: [{ path: 'assets/audio/chime.ogg', bytes: 601 * 1024 }] }).join(), /over the doc's budget of 600 KB/))
 
 // pass-table (roles/reviewer.md): ordinary values must not fail
 test('ordinary values pass: licences, paths, game text, CRLF, star bullets, bold labels', () => {
-  for (const licence of ['CC0', 'CC0 1.0 Universal', 'cc0', 'Public Domain', 'own synthesis (jsfxr settings in design/sfx/)', 'Own work', ' CC0 ', 'CC0 1.0 Universal (CC0 1.0) Public Domain Dedication', 'Creative Commons CC0']) {
+  for (const licence of ['CC0', 'CC0 1.0 Universal', 'cc0', 'Public Domain', 'own synthesis', 'Own work', ' CC0 ', 'CC0 1.0 Universal (CC0 1.0) Public Domain Dedication', 'Creative Commons CC0']) {
     assert.deepEqual(checkAudio({ ...REPO, manifest: { assets: [{ ...MANIFEST.assets[0], licence }] } }), [], licence)
   }
   const docs = [
@@ -134,8 +143,8 @@ test('ordinary values pass: licences, paths, game text, CRLF, star bullets, bold
 })
 test('a repo with no sound at all passes', () => assert.deepEqual(checkAudio({ doc: null, files: [], manifest: null, usesAudioCode: false }), []))
 test('the audio file and code patterns match ordinary names and miss look-alikes', () => {
-  for (const f of ['a.ogg', 'sfx/Hit.MP3', 'x.wav', 'm.opus', 'a.webm', 'a.weba', 'b.aiff', 'c.mid']) assert.ok(AUDIO_FILE.test(f), f)
-  for (const f of ['audio.json', 'oggy.ts', 'a.ogg.map', 'notes.md']) assert.ok(!AUDIO_FILE.test(f), f)
+  for (const f of ['a.ogg', 'sfx/Hit.MP3', 'x.wav', 'm.opus', 'a.weba', 'b.aiff', 'c.mid']) assert.ok(AUDIO_FILE.test(f), f)
+  for (const f of ['audio.json', 'oggy.ts', 'a.ogg.map', 'notes.md', 'run.webm']) assert.ok(!AUDIO_FILE.test(f), f)
   for (const c of ['new AudioContext()', 'const a = new Audio("x")', 'new Howl({})']) assert.ok(AUDIO_CODE.test(c), c)
   for (const c of ['audioContextName', 'AudioBuffer', 'const radio = 1']) assert.ok(!AUDIO_CODE.test(c), c)
 })
