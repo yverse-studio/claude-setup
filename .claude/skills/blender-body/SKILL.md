@@ -6,7 +6,7 @@ description: "Use for any 3D character body, rig or review work in Blender: pick
 # Blender body: build and review a rigged character body
 
 Why this exists: Luna's body took 13 rounds (lc1 to lc13, 2026-10-18) and ended with yskills
-asking "what did you learn from 13 rounds of nonsense?". The rounds stacked edits on a mesh nobody
+asking what had been learned. The rounds stacked edits on a mesh nobody
 owned, graded outlines instead of looking, and never posed the body. This skill is the answer.
 Every 3D builder and reviewer thread loads it. Blender setup and views: [`studio`](../studio/SKILL.md);
 the character order (reference, brief, sheet, gate): [`docs/character-workflow.md`](../../../docs/character-workflow.md).
@@ -30,14 +30,14 @@ hand-in sheet contract.
 3. **Body and rig together.** Every body change is a shape key on the rigged mesh; the rig and its
    weights stay fixed; after each key the weights around it (neck, armpit, bust root, groin, knee)
    are re-checked. Shape on an unrigged mesh shows its deformation errors only when the animator
-   plays a clip (Luna: tube neck, groin flap, knee pinch, found at lc12). The **pose test runs every
+   plays a clip (Luna: tube neck, groin flap, knee pinch, found in the Rika test clip, the lock-in rule came at lc12). The **pose test runs every
    round**: from-below frame (camera low, her above it), sway mid-frame, arm up plus head tilt.
    Fail = no tube neck, no groin fold, no knee pinch, bust root stays on the chest.
-4. **Grade by eye first, numbers last.** Order: neck crop old|new vs ref, bust front crop at full
-   resolution vs best round and ref, zoom triples REF|best|new at 2x, raking raw renders in five
+4. **Grade by eye first, numbers last.** Order: bust front crop at full
+   resolution vs best round and ref (the standing gate), neck crop old|new vs ref, zoom triples REF|best|new at 2x, raking raw renders in five
    views (front, side, back, back 3/4, posed). Overlay and tracker numbers are builder hints. A
    reviewer who graded on numbers let two bust regressions through (lc10, lc11) and the user caught
-   them. The user's pins outrank any reviewer number.
+   them. The user's pins outrank any reviewer number. Bust and upper chest: fill, never cut.
 5. **Never hand in a regression.** The builder runs every gate (neck, bust, zoom, poses) before
    anyone else sees the round. A failed gate is said in one line and the round is not handed in.
    The best round so far is always the baseline to beat, shown beside the new one.
@@ -51,17 +51,17 @@ hand-in sheet contract.
      (`luna_facekeysync.py`: stored Face key values 0.3 to 0.45 inverted every edit in renders for
      five rounds). When an edit does not show in a render, evaluate the depsgraph mesh with and
      without the keys before blaming the tool.
-   - Smoothing is local Taubin in 10 to 20 cm bands, never global; a 400-iteration pass made the
+   - Smoothing is local Taubin in narrow bands (6 cm round a 1 to 2 mm step, fillets 25 to 40 mm wide), never global; a 400-iteration pass made the
      neck ring. Contact tools never push vertices through the body (lc11 pulled 96 deep chest
-     verts 20 cm forward and drew hand shapes on the back). Grooves need radius at least 2x depth.
+     verts up to 20 cm and the stretched sheets drew a hand shape on the back). Groove radius at least 3 cm, amplitudes 5 to 6 mm, never above 15 mm.
    - Never name a script `bisect.py` or `inspect.py` in the work folder (shadows the stdlib).
 8. **Thread hygiene.** One builder and one reviewer until the score is 5/5; a builder thread lasts
    one round or less, then hands off. A brief names **only** the LIVE STATE block, the contract
    blocks and the top 3 items of the current plan; a builder that reads whole study libraries fills
    its context on one item (a Luna builder stopped at its 210k context budget with nothing handed in). Hand-in comes
-   first in the plan, research second. Cloud Blender setup is one minute:
+   first in the plan, research second. Cloud Blender setup is about two minutes:
    `apt-get update && apt-get install -y libegl1 libgl1-mesa-dri libegl-mesa0 libgles2 libtbb12`,
-   `python3.13 -m pip install bpy scipy pillow numpy`.
+   `python3.13 -m pip install bpy scipy pillow numpy matplotlib`.
 9. **Content line.** Adult characters only, adult face and proportions, no minors ever. Nude
    bodies and explicit poses live on the private side behind the 18+ gate; public files and the
    hand-in sheets that go to public places stay clean; his references never go into git.
@@ -79,15 +79,15 @@ normal maps for fine anatomy.
 |---|---|---|
 | Bust | `breast_flat` key (Laplacian fill of the chest wall) + ONE generator: an ellipsoid dome per breast, ray-height smooth union, k per direction (under 10, inner 14, upper 22, outer 30 mm), nipple and areola primitive on the apex; all from a json | ellipsoid RMS under 1.5 mm; mirror error under 0.5 mm; no concave window collarbone to apex; gap between domes 0 to 6 mm; pole ratio 48:52 to 52:48; apex and internipple per the ref |
 | Joints | half-angle helper bones (`knee_help`, `groin_help`, `neck_help`, Copy Rotation 0.5), twist on the 02 bones, JCM-style corrective keys per joint, direction and angle (neck back 30 / fwd 35 / twist 45; hip flex 57, 115, abduct 85, back 35; knee 90, 155), driver SWING_TWIST local space | ring cross-section 0.92 to 1.05x rest at neck, thigh root, knee; no self-overlap in the 6 cm band; no fold deeper than 3 mm on raking light |
-| Openings | a welded graft: hole, ring patch, inner tube, cap, bridge, weight transfer, open and spread keys | aperture and tube depth per spec; no back faces visible in the key 0 and key 1 renders; no shading seam at the bridge on raking light; round lips with 3 to 4 mm radius |
+| Openings | a welded graft: hole, ring patch, inner tube, cap, bridge, weight transfer, open and spread keys | vulva open 6 +-1 mm, spread 20 to 25 mm across the crest, anus open 10 to 14 mm, tube depth 6 / 3 cm; no back faces in the key 0 and key 1 renders (backface-red debug material, SAMPLES 3); no shading seam at the bridge on raking light; round lips with 3 to 4 mm radius |
 | Bust and butt motion | 1 to 3 bones per side, weight from the dome height (root 0, apex 1), spring bones | sway clip: apex travel 8 to 15 mm, root under 2 mm, no arm interpenetration |
 | Back detail | calm geometry plus a baked normal map for blades, groove, dimples, lat edge | silhouette bands unchanged within 0.5 mm |
-| Neck | clean tapered cylinder on the neck bones, 20 mm fillets into trapezius and jaw, nothing else touches it | crop vs ref: long and slim, no ring, no shelf, plus a bent head frame |
+| Neck | clean tapered cylinder on the neck bones, 20 mm fillets into trapezius and jaw, nothing else touches it | crop vs ref: long and slim, no ring, no shelf, plus a bent head frame (new base only; a locked neck is not touched) |
 
 **Licence.** Ship only our CC0 MakeHuman-derived body and the output of our own scripts (plus
 Blender/GPL tool output; MB-Lab only via the official build with CC BY 4.0 and credit). Daz, VaM,
 Illusion/Koikatsu, CBBE/BodySlide, MetaHuman, Wild Life and Subverse assets are **study only**: look
-and measure, never copy a mesh.
+and measure, never copy a mesh; his private reference pictures are never uploaded anywhere.
 
 ## Worked example: where Luna went wrong and what fixed it
 
@@ -99,9 +99,9 @@ and measure, never copy a mesh.
 | lc11 | chest trim at the neck base, 400-iteration smooth | 1, 7 |
 | lc12 | side fit on a wrong trace plus lumbar fill forms | 6 |
 | lc1 to lc13 | no posed frame until the animator's clip showed 11 errors | 3 |
-| 2026-10-18 14:29 | user's decision: use the old rigged Hinata model, shape keys on top (bust bigger, waist smaller, butt bigger) | 1, 2 |
+| 2026-10-18 14:35 | user's decision: Hinata rigged base; its neck, bust shape and rig stay, shape keys on top (waist, hips, butt; bust scaled from Hinata's own breast mesh, no stuck-on spheres) | 1, 2 |
 
 Files: `characters/luna/REVIEWER-TO-BUILDER.md` (contract and verdicts), `BUILDER-HANDOFF.md` (LIVE
 STATE blocks), `REVIEWER-HANDOFF.md`, `proof/rika-test/ERRORS.md` (the 11 posed errors), tools
-`handin-cloud.sh`, `quickcheck.sh`, `tools/ref-tracker/trk2/t3/zoom5.py`, all under
+`characters/luna/tools/handin-cloud.sh`, `quickcheck.sh`, `luna_facekeysync.py`, and `tools/ref-tracker/trk2/t3/zoom5.py`, all under
 `/mnt/project-files/companyxy/patches/base-body/`.

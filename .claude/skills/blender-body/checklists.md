@@ -8,7 +8,7 @@ Rules and reasons: [`SKILL.md`](SKILL.md). Paths are under
 Before you touch anything
 - [ ] Read only the LIVE STATE block, the contract blocks and the top 3 plan items; nothing else.
 - [ ] Start FROM the named base or best round; say which build, and which bands each key owns.
-- [ ] Cloud Blender up (one minute, see SKILL.md rule 8); the best round rendered once as baseline.
+- [ ] Cloud Blender up (about two minutes, see SKILL.md rule 8); the best round rendered once as baseline.
 
 While building
 - [ ] One region, one named shape key, from a parameter json beside the blend. Mirrored.
@@ -39,7 +39,7 @@ Hand in
 
 Order is fixed. The first line of the verdict is the bust read vs the best round.
 1. Bust front raw, ref | best | new, full resolution, by eye (cap 4/5 if worse than best).
-2. Neck crops vs ref (a neck that is not the ref neck caps the round at 3/5).
+2. Neck crops vs ref (a neck that is not the ref neck caps the round at 3/5 on a rebuilt neck; the 14:18 rule).
 3. Posed frames: tube neck, groin fold, knee pinch, bust root, shoulders, hands.
 4. The zoom triples, one line per crop "what is off, direction, mm" in `zoom/WHAT-IS-OFF.md`.
 5. Likeness to the ref in the five views.
@@ -60,4 +60,5 @@ Order is fixed. The first line of the verdict is the bust read vs the best round
 | `posed/` | from-below, sway, arm up plus head tilt |
 | `zoom/` | `zoom5.py` triples REF, best, new, plus hands and openings strips |
 | `detail/hands-strip.jpg` | every hand-in |
-| `keys.txt` | shape key list with values, band map, max move per tool, number gates |
+| `numbers.txt` | shape key list with values, band map, max move per tool, number gates |
+| `zoom/WHAT-IS-OFF.md` | reviewer's one line per crop: what is off, direction, mm |
