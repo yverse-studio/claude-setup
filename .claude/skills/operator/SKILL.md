@@ -16,7 +16,7 @@ Operator specifics: a PR that fails the gate twice reaches yskills with a plain 
 (`gate.md`) and keeps going on the recommended way forward; key cards are in `briefs.md`. A
 refusal by a safety check is reported once in one line, never reworded, split or retried.
 
-**Pauses in practice.** "Stop", "pause" and rejected assets are final (CLAUDE.md, How to work). A thread
+**Pauses in practice.** "Stop", "pause", "only burning my money" and rejected assets are final (CLAUDE.md, How to work). A thread
 that finished before the stop is parked and reported honestly; nothing restarts without yskills' go. Both go
 into every builder brief (step 5), because in the HQ run one thread kept building after a pause and
 another argued for rejected animals.
