@@ -154,3 +154,83 @@ test('node_modules and test fixtures are not scanned', () => {
     assert.deepEqual(checkDesign(dir), [], skipped);
   }
 });
+
+test('a lime accent on a near-black ground fails (SLOP.md 2), a near hex too', () => {
+  for (const lime of ['#a3e635', '#a5e83a']) assert.match(checkDesign(project(withPalette(`| accent | ${lime} |`))).join(), /lime accent .* SLOP\.md 2/, lime);
+});
+
+test('table: greens and yellows (a danger yellow among them) that are not the lime accent pass on a dark ground, lime on a light ground and a cited lime pass', () => {
+  for (const hex of ['#84cc16', '#65a30d', '#4ade80', '#5f7f3a', '#22c55e', '#bef264', '#facc15', '#eab308', '#fde047', '#fbbf24', '#ffd60a', '#ffcc00']) {
+    assert.deepEqual(checkDesign(project(withPalette(`| accent | ${hex} |`))), [], hex);
+  }
+  const light = withPalette('| accent | #a3e635 |').replace('| ground | #2b2118 |', '| ground | #e8e2d4 |').replace('#f7ecd8 on #2b2118', '#2b2118 on #e8e2d4');
+  assert.deepEqual(checkDesign(project(light)), []);
+  assert.deepEqual(checkDesign(project(withPalette('| accent | #a3e635 | from a.png |'))), []);
+});
+
+const VAGUE_TS = ['Submit', 'OK', 'Click here', 'Go', 'Absenden', 'Hier klicken'];
+
+test('a vague label built in .ts fails: property, assignment and template markup', () => {
+  for (const label of VAGUE_TS) {
+    for (const body of [`const b = { label: '${label}' };`, `btn.textContent = "${label}";`, 'el.innerHTML = `<button class="x">' + label + '</button>`;']) {
+      assert.match(checkDesign(withSource('view.ts', body)).join(), /vague label \(SLOP\.md 23\)/, body);
+    }
+  }
+});
+
+test('an arrow label built in .ts fails', () => {
+  assert.match(checkDesign(withSource('view.ts', "const b = { text: 'Play now →' };")).join(), /ends in an arrow/);
+});
+
+test('table: ordinary .ts strings pass', () => {
+  const body = `const a = { label: 'Pick a seed', text: 'Neustart', caption: 'Level 3' };
+btn.textContent = "Save changes"; const go = 'go'; const ok = true; console.log('Submit', label); const t = 'x';`;
+  assert.deepEqual(checkDesign(withSource('view.ts', body)), []);
+});
+
+test('.ts test, spec and declaration files are not scanned', () => {
+  for (const name of ['view.test.ts', 'view.spec.ts', 'view.d.ts']) assert.deepEqual(checkDesign(withSource(name, "const b = { label: 'Submit' };")), [], name);
+});
+
+function withLocales(source, locales, dir = 'src/locales', file = 'App.vue') {
+  const root = withSource(file, source);
+  mkdirSync(join(root, dir), { recursive: true });
+  for (const [lang, json] of Object.entries(locales)) writeFileSync(join(root, dir, `${lang}.json`), JSON.stringify(json));
+  return root;
+}
+
+test('an i18n key that resolves to a vague label fails in either locale (SLOP.md 23)', () => {
+  const locales = { de: { form: { send: 'Absenden' } }, en: { form: { send: 'Save changes' } } };
+  const fails = checkDesign(withLocales("<button>{{ t('form.send') }}</button>", locales)).join();
+  assert.match(fails, /t\('form\.send'\) in src\/locales\/de\.json "Absenden" is a vague label/);
+  assert.doesNotMatch(fails, /en\.json/);
+  const en = checkDesign(withLocales('<button>{{ $t("form.send") }}</button>', { en: { form: { send: 'Submit' } } })).join();
+  assert.match(en, /en\.json "Submit"/);
+});
+
+test('an i18n key used in .ts resolves too, from i18n/locales', () => {
+  const root = withLocales("const b = { label: t('cta') };", { en: { cta: 'OK' } }, 'i18n/locales', 'view.ts');
+  assert.match(checkDesign(root).join(), /view\.ts: label t\('cta'\) in i18n\/locales\/en\.json "OK"/);
+});
+
+test('table: i18n keys with real labels, unknown keys and unused vague labels pass', () => {
+  const locales = { de: { save: 'Speichern', go: 'Go', pick: 'Samen wählen' }, en: { save: 'Save changes', pick: 'Pick a seed' } };
+  const src = "<button>{{ t('save') }}</button><a>{{ t('pick') }}</a><button>{{ t('missing') }}</button><p>{{ t('go') }}</p>";
+  assert.deepEqual(checkDesign(withLocales(src, locales)), []);
+});
+
+test('only top-level root files are scanned, test and tests folders are skipped', () => {
+  const dir = project(GOOD);
+  mkdirSync(join(dir, 'tools', 'deep'), { recursive: true });
+  writeFileSync(join(dir, 'tools', 'deep', 'x.html'), '<button>Submit</button>');
+  writeFileSync(join(dir, 'index.html'), '<button>Save changes</button>');
+  assert.deepEqual(checkDesign(dir), []);
+  writeFileSync(join(dir, 'landing.html'), '<button>Submit</button>');
+  assert.match(checkDesign(dir).join(), /landing\.html/);
+  for (const skipped of ['test', 'tests', '.shots', 'test-results']) {
+    const d = project(GOOD);
+    mkdirSync(join(d, 'src', skipped), { recursive: true });
+    writeFileSync(join(d, 'src', skipped, 'x.ts'), "const b = { label: 'Submit' };");
+    assert.deepEqual(checkDesign(d), [], skipped);
+  }
+});
