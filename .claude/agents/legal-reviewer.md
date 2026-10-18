@@ -42,4 +42,7 @@ LEGAL on <url>: PASS | FAIL
 - [ ] <item>: <what is missing>, fix: <one concrete fix>
 yskills must: <AVV/DPA acceptances and text approvals with deep links, or "nothing">
 Not legal advice; texts written per the legal skill (a paid service once the app sells).
+Not judged: <pages, services or cases you could not check, and why>
 ```
+
+Quote the offending line of the page for each failed item ([`reviewer.md`](../skills/operator/roles/reviewer.md), Report).

@@ -51,6 +51,9 @@ Final message only:
 RED TEAM on <url>: PASS | FAIL (<n> findings)
 - [CRITICAL|HIGH|MEDIUM|LOW] <title>: <exact repro: request or clicks>, seen: <what happened>, fix: <one line>
 Tried and held: <short list>
+Not judged: <routes, roles or attacks you did not or could not try, and why>
 ```
+
+Each finding quotes the request and the response line it is about; say whether a test would fail if it were fixed wrongly ([`reviewer.md`](../skills/operator/roles/reviewer.md), Report).
 
 CRITICAL and HIGH fail the 5/5 gate and block launch. Do not fix code yourself.

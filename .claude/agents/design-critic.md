@@ -40,4 +40,4 @@ Judge, in this order:
 
 Answer with a list of findings, each marked **blocking** or **polish**, naming the screenshot and
 the specific fix (token, value, element). End with `Slop: <n> patterns` and one sentence: would a
-designer believe this is a real product screenshot? Do not praise; only list what to change.
+designer believe this is a real product screenshot? Do not praise; only list what to change. Quote the line or screenshot region for each finding and end with `Not judged:` (what you could not see) and, for code-level findings, whether a test would fail if it broke ([`reviewer.md`](../skills/operator/roles/reviewer.md), Report).

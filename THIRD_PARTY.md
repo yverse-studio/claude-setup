@@ -125,3 +125,18 @@ reference text, no hooks or MCP config, nothing that phones home.
   `.claude/skills/game-3d/refs/threejs-game-skills/`. Left out on purpose: the `-generator`
   skills (Tripo, Gemini, ElevenLabs paid APIs), the `game-director` skill and its credential
   probe script (it sources shell rc files), and `AGENTS.md`.
+
+## Reviewer upgrades
+
+Ideas, reworded, none copied verbatim, into `.claude/skills/operator/roles/reviewer.md` (Report):
+
+- quote the motivating line of every finding: Every compound-engineering-plugin
+  (https://github.com/EveryInc/compound-engineering-plugin, MIT, commit 2e41b44,
+  `skills/ce-code-review/references/depth-paths.md`)
+- list what was set aside ("Declined to judge"): superpowers (https://github.com/obra/superpowers, MIT,
+  commit bb92a77, `skills/requesting-code-review/code-reviewer.md`)
+- "would verification fail if it broke?": BMAD-METHOD (https://github.com/bmad-code-org/BMAD-METHOD, MIT,
+  commit 85186ed, `skills/bmad-review/references/lens-verification-gap.md`)
+
+Copyright (c) 2025 Every; (c) 2025 Jesse Vincent; (c) 2025 BMad Code, LLC. MIT licence text:
+https://opensource.org/license/mit
