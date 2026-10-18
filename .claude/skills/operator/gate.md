@@ -12,7 +12,7 @@ check is a hard yes or no from someone who didn't write the code.
 | 4 | Nothing blocking, no CRITICAL/HIGH | `security-reviewer` on the diff; `red-team` on the preview | the diff; the preview URL and routes | auth, payments, user input or secrets touched; red team always on the last PR before launch |
 | 5 | Nothing blocking | `design-critic`; `legal-reviewer` when pages, forms, tracking, embeds or AI output change | phone and desktop screenshots, the preview URL | UI changed (fails when `ui-review/scripts/design-check.mjs` fails: no Direction citing three captures in `design/reference/`, no palette with passing text pairs, no type scale or no `## Bar` ([`roles/designer.md`](roles/designer.md), Art direction first); when `design-critic` names any [`SLOP.md`](../ui-review/SLOP.md) pattern; or the PR body has no design-vote line; the evaluator checks each `## Bar` item on the preview); `legal-reviewer` always on the last PR before launch |
 
-A check that doesn't apply passes; say "n/a" in the table.
+A check that doesn't apply passes; say "n/a" in the table. A reviewer verdict in checks 3 to 5 without quoted lines, the test-gap answer and a `Not judged:` list is not a pass ([`roles/reviewer.md`](roles/reviewer.md), Report).
 
 ## Gate size
 

@@ -203,5 +203,14 @@ for (const f of RULE_FILES) {
   }
 }
 
+// The review format has one home (reviewer.md, Report); the own reviewer agents must carry its "Not judged" part.
+const reviewerRole = readFileSync(join(root, '.claude/skills/operator/roles/reviewer.md'), 'utf8')
+for (const part of ['Quote the line', 'Would a test fail', 'Not judged:']) {
+  if (!reviewerRole.includes(part)) errors.push(`roles/reviewer.md: Report lacks "${part}"`)
+}
+for (const a of ['design-critic', 'legal-reviewer', 'red-team']) {
+  if (!/Not judged:/.test(readFileSync(join(root, `.claude/agents/${a}.md`), 'utf8'))) errors.push(`agents/${a}.md: report format lacks "Not judged:"`)
+}
+
 if (errors.length) { console.error(errors.map((e) => `x ${e}`).join('\n')); process.exit(1) }
 console.log(`ok: ${seen.skill.size} skills, ${seen.agent.size} agents, ${plugins?.global.length ?? 0}+${plugins?.project.length ?? 0} plugins`)
