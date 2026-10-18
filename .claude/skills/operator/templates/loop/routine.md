@@ -24,8 +24,8 @@ Loop reader for <project> (<owner/repo>). Read-only, one turn, no code changes.
 
 ## claude-setup's own reader
 
-The routine "Loop reader claude-setup" fires into the coordinator and adds two steps to the prompt
-above, after the `loop:setup` steps (asks ledger and blocked threads, `roles/project-manager.md`):
-3. Re-read the last day of the project chat (`fetch_project_timeline`); post ONE chat line for every ask of yskills with no thread, PR or `Done:` line yet.
-4. With `list_thread_sessions`, post ONE chat line for every thread waiting on yskills over 12 hours, naming the one tap on its card.
-Nothing new: post nothing.
+The routine "Loop reader claude-setup" fires into the coordinator and adds two steps after step 4
+(asks ledger and blocked threads, `roles/project-manager.md`). Only for this reader, step 4's
+"end with no message" waits until steps 5 and 6 found nothing too:
+5. Re-read the last day of the project chat (`fetch_project_timeline`); post ONE chat line for every ask of yskills with no thread, PR or `Done:` line yet.
+6. With `list_thread_sessions`, post ONE chat line for every thread waiting on yskills over 12 hours, naming the one tap on its card.
