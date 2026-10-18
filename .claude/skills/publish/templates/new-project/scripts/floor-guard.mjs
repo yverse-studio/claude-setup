@@ -85,9 +85,15 @@ for (const f of deleted) if (isTest(f)) flag('test-deleted', f, 'file deleted')
 
 // The role checks guard themselves: editing or deleting one, or dropping the CI step that runs them, lowers the bar.
 const ROLE_CHECK = /^scripts\/(project-checks|design-check|copy-check|analytics-check|gdd-check|audio-check|playtest-check)\.mjs$/
-for (const f of new Set([...deleted, ...removed.map((l) => l.file)])) if (ROLE_CHECK.test(f)) flag('checker-changed', f, deleted.includes(f) ? 'file deleted' : 'lines removed from a role check script')
+for (const f of new Set([...deleted, ...added.map((l) => l.file), ...removed.map((l) => l.file)])) if (ROLE_CHECK.test(f) && git(['cat-file', '-e', `${mergeBase}:${f}`]) !== null) flag('checker-changed', f, deleted.includes(f) ? 'file deleted' : 'a role check script was changed')
 // The kind switch and the CI step that runs the checks are guarded the same way: any change to either flags.
-for (const r of removed) if (/(^|\/)package\.json$/.test(r.file) && /"kind"\s*:/.test(r.text)) flag('checker-changed', r.file, `claudeSetup.kind changed: ${r.text}`)
+const kindOf = (text) => { try { return JSON.parse(text).claudeSetup?.kind } catch { return 'unreadable' } }
+const kindBefore = git(['show', `${mergeBase}:package.json`])
+if (kindBefore !== null) {
+  let kindNow
+  try { kindNow = kindOf(readFileSync('package.json', 'utf8')) } catch { kindNow = 'missing' }
+  if (kindOf(kindBefore) !== kindNow) flag('checker-changed', 'package.json', `claudeSetup.kind changed: ${kindOf(kindBefore)} -> ${kindNow}`)
+}
 const stepBlock = (text) => {
   const lines = text.split('\n'), start = lines.findIndex((l) => /^\s*- name:.*role checks/.test(l))
   if (start < 0) return null

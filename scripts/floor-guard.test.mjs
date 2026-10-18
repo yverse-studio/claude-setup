@@ -54,6 +54,8 @@ test('editing a role check script fails', () => fails('checker-changed', (d) => 
 test('deleting a role check script fails', () => fails('checker-changed', (d) => rmSync(join(d, 'scripts/gdd-check.mjs')), { 'scripts/gdd-check.mjs': 'export const a = 1\n' }))
 const CI = 'steps:\n  - run: npm test\n  - name: role checks # x\n    if: github.event_name == \'pull_request\'\n    run: node scripts/project-checks.mjs --base origin/main\n  - name: later\n    run: echo hi\n'
 const ciFails = (edit) => fails('checker-changed', (d) => put(d, '.github/workflows/ci.yml', edit(CI)), { '.github/workflows/ci.yml': CI })
+test('an add-only edit to a role check script fails', () => fails('checker-changed', (d) => put(d, 'scripts/design-check.mjs', 'process.exit(0)\nexport const a = 1\n'), { 'scripts/design-check.mjs': 'export const a = 1\n' }))
+test('a duplicate claudeSetup key that flips the kind fails', () => fails('checker-changed', (d) => put(d, 'package.json', '{"name":"x","claudeSetup":{"kind":"game"},"claudeSetup":{"kind":"site"}}\n'), { 'package.json': '{"name":"x","claudeSetup":{"kind":"game"}}\n' }))
 test('removing the role-check CI step fails', () => ciFails((c) => c.replace(/  - name: role checks[\s\S]*?(?=  - name: later)/, '')))
 test('appending || true to the role-check run line fails', () => ciFails((c) => c.replace('origin/main\n  - name: later', 'origin/main || true\n  - name: later')))
 test('switching the role-check step if: to false fails', () => ciFails((c) => c.replace("if: github.event_name == 'pull_request'", 'if: false')))
