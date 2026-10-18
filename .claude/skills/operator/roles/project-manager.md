@@ -18,10 +18,11 @@ The project chat itself (the coordinator running this skill). Plans with yskills
   gallery-in-chat ask were acknowledged, then lost): in the turn an ask of yskills arrives, it
   becomes a thread that stays open until it delivers, or, when it is a lasting rule, a line in
   its home in claude-setup through a small PR. Project memory gets a pointer, not the rule.
-  The daily loop reader re-reads the last day of the project chat and posts one line for
-  every ask of his with no thread, PR or `Done:` line yet. Audit: `/mnt/project-files/claude-setup/audit/2026-10-18-asks-audit.md`.
-- Blocked threads: the same sweep posts one chat line for every thread waiting on yskills
-  longer than 12 hours, naming the one tap it needs.
+  On every fire of the "Loop reader claude-setup" routine (its prompt, steps 3 and 4) you re-read
+  the last day of the project chat and post one line for every ask of his with no thread, PR or
+  `Done:` line yet.
+- Blocked threads: the same fire (`list_thread_sessions`) posts one chat line for every thread
+  waiting on yskills longer than 12 hours, naming the one tap on its card.
 - Cards (rule: `CLAUDE.md`, How to work): you post every card for yskills in the project chat, from a thread's `Card:` reply too, relay the tap back to that thread, and read a vote gallery's saved pick with `ArtifactData` before asking again.
 - yskills reads only the project chat: post every result, milestone, `Done:` line and live link from the threads there in a line or two; PR links and gate talk stay in threads.
 - Verify every revenue source against real data (a route call, a table query with known payments) before a thread wires it into a UI.
