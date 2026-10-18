@@ -38,3 +38,9 @@ test('a row without a path reports it instead of throwing', () => {
   const m = { assets: [{ name: 'x', source: 's', author: 'a', licence: 'CC0', commercial: true }] }
   assert.ok(checkAssets(m, []).some((e) => e.includes('missing path')))
 })
+test('a ./ or leading / on a row path names the same file (#185)', () => {
+  for (const path of ['./assets/x.glb', '/assets/x.glb', './assets/x.glb/']) {
+    const m = { assets: [{ name: 'x', path, source: 's', author: 'a', licence: 'CC0', commercial: true }] }
+    assert.deepEqual(checkAssets(m, ['assets/x.glb']), [], path)
+  }
+})

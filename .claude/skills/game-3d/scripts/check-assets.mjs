@@ -14,7 +14,7 @@ export function checkAssets(manifest, files) {
     for (const k of ['name', 'path', 'source', 'author', 'licence']) if (!a[k]) errors.push(`${a.name ?? a.path}: missing ${k}`)
     if (a.commercial !== true) errors.push(`${a.name}: commercial is not true`)
     if (FORBIDDEN.some((re) => re.test(a.licence ?? ''))) errors.push(`${a.name}: licence "${a.licence}" forbids a paid game`)
-    if (a.path) rows.set(a.path.replace(/\/$/, ''), a)
+    if (a.path) rows.set(a.path.replace(/^(?:\.?\/)+/, '').replace(/\/$/, ''), a)
   }
   const covered = (f) => [...rows.keys()].some((p) => f === p || f.startsWith(p + '/'))
   for (const f of files) if (!covered(f)) errors.push(`${f}: no manifest row`)
