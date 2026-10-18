@@ -51,7 +51,8 @@ the `toolbox` skill's PWA row (`registerType: 'prompt'`).
 ## 3. Review
 
 1. Open every PNG yourself first, next to `design/reference/`. Run
-   `node <ui-review skill folder>/scripts/design-check.mjs` in the project; fix what it lists.
+   `node <ui-review skill folder>/scripts/design-check.mjs` in the project; fix what it lists. If the PR changes user-facing text, also run
+   `node <ui-review skill folder>/scripts/copy-check.mjs design/COPY.md` (`operator/roles/content-designer.md`).
 2. Run `.claude/skills/impeccable/scripts/impeccable detect` on the changed source files (a local
    linter for AI-look anti-patterns, no LLM; scan files, not a URL, because URL scans can't start
    Chromium as root in cloud threads) and check the diff against the

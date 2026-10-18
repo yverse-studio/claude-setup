@@ -233,5 +233,16 @@ for (const h of REQUIRED_HEADINGS) {
   if (!new RegExp(`^## ${h}\\s*$`, 'm').test(gddTemplate)) errors.push(`templates/game-design.md: lacks "## ${h}"`)
 }
 
+// Copy deck: one home (roles/content-designer.md); the template must carry every heading copy-check.mjs requires.
+const { REQUIRED_HEADINGS: COPY_HEADINGS } = await import('../.claude/skills/ui-review/scripts/copy-check.mjs')
+const contentRole = readFileSync(join(root, '.claude/skills/operator/roles/content-designer.md'), 'utf8')
+for (const part of ['## Method', '## Bar', 'copy-check.mjs', 'Terms table']) {
+  if (!contentRole.includes(part)) errors.push(`roles/content-designer.md: lacks "${part}"`)
+}
+const copyTemplate = readFileSync(join(root, '.claude/skills/operator/templates/copy-deck.md'), 'utf8')
+for (const h of COPY_HEADINGS) {
+  if (!new RegExp(`^## ${h}\\s*$`, 'm').test(copyTemplate)) errors.push(`templates/copy-deck.md: lacks "## ${h}"`)
+}
+
 if (errors.length) { console.error(errors.map((e) => `x ${e}`).join('\n')); process.exit(1) }
 console.log(`ok: ${seen.skill.size} skills, ${seen.agent.size} agents, ${plugins?.global.length ?? 0}+${plugins?.project.length ?? 0} plugins`)

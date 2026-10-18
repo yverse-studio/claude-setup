@@ -171,3 +171,12 @@ Ideas, reworded, only short quotes attributed in place, into `.claude/skills/ope
 - Playwright docs, https://playwright.dev/docs/videos (`recordVideo`), https://playwright.dev/docs/emulation (`hasTouch`, devices) and https://playwright.dev/docs/api/class-browsertype (`executablePath`). Used for: how the Playtester records and emulates touch.
 
 Not read: Graham McAllister, "Implementing an In-House Playtesting Process" (GDC 2010, https://gdcvault.com/play/1016497/contactUs), only its abstract is public.
+
+## Content design method
+
+Ideas, reworded, only short quotes attributed in place, into `.claude/skills/operator/roles/content-designer.md` (Method) and `.claude/skills/ui-review/scripts/copy-check.mjs`. Read 2026-10-18, each from the owner's file:
+
+- GOV.UK Service Manual, "What each role does in a service team", https://www.gov.uk/service-manual/the-team/content-designer (page on gov.uk, Open Government Licence v3.0 unless marked otherwise). Says the content designer plans content from user needs, writes clear usable accessible content, reviews it, and challenges requests that do not serve users. Used for: why the role exists, steps 1 and 8.
+- EveryInc/compound-engineering-plugin, `skills/ce-noslop/SKILL.md` and `references/patterns.md` (MIT, copyright Every, commit 2e41b44, https://github.com/EveryInc/compound-engineering-plugin). Seven sentence tests and a catalog of 41 tells. Used for: Method step 5 and the promo-word and "not just X" rules of `copy-check.mjs`; no text copied. German tells are our own starting list.
+
+Not read: ce-noslop `references/terminology.md`, GOV.UK's content designer job description (.odt).
