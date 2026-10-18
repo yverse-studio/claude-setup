@@ -26,3 +26,6 @@ jobs:
       - name: floor guard
         if: github.event_name == 'pull_request'
         run: node scripts/floor-guard.mjs --base origin/${{ github.base_ref }}
+      - name: playtest check # games only: scripts/playtest-check.mjs ships with kind "game"
+        if: github.event_name == 'pull_request' && hashFiles('scripts/playtest-check.mjs') != ''
+        run: node scripts/playtest-check.mjs --base origin/${{ github.base_ref }}
