@@ -55,7 +55,7 @@ test('music, mix and budget without a number fail', () => {
   assert.match(checkDoc(GOOD.replace('Loop 64 s, loop point at bar 33. Two layers: calm, fight, faded in by enemy count above 20.', 'A loop with layers.')).join(), /Music plan has no number/)
   assert.match(checkDoc(GOOD.replace(/Music -18.*\n/, 'Balanced by ear.\n')).join(), /Mix bar has no number/)
 })
-test('a budget line is required', () => assert.match(checkDoc(GOOD.replace('Budget: 600 KB', 'small')).join(), /File budget: write "Budget/))
+test('a budget line is required', () => assert.match(checkDoc(GOOD.replace('Budget: 600 KB', 'small')).join(), /File budget: exactly one/))
 test('a palette table with no length fails', () => assert.match(checkDoc(GOOD.replace(/\| hit .*\n/, '| hit | thud | short | own synthesis | none |\n').replace(/\| pickup .*\n/, '')).join(), /Sound palette/))
 test('fewer than two NOT lines fails', () => assert.match(checkDoc(without(/- no licensed tracks\n/)).join(), /Not this/))
 test('fewer than three references fails', () => assert.match(checkDoc(without(/- C \(.*\n/)).join(), /2 of 3 games/))
@@ -86,16 +86,37 @@ test('a manifest row without source, author or commercial: true fails', () => {
   for (const k of ['source', 'author']) assert.match(checkAudio({ ...REPO, manifest: { assets: [{ ...MANIFEST.assets[0], [k]: '' }] } }).join(), /needs source, author/, k)
   assert.match(checkAudio({ ...REPO, manifest: { assets: [{ ...MANIFEST.assets[0], commercial: false }] } }).join(), /commercial: true/)
 })
-test('a budget of 0 KB does not switch the size check off', () => assert.match(checkDoc(GOOD.replace('Budget: 600 KB', 'Budget: 0 KB')).join(), /File budget: write "Budget/))
+test('a budget of 0 KB does not switch the size check off', () => assert.match(checkDoc(GOOD.replace('Budget: 600 KB', 'Budget: 0 KB')).join(), /File budget: exactly one/))
 test('a palette number outside the Length column does not count', () => {
   const doc = GOOD.replace(/\| hit .*\n/, '| hit | thud | short | own synthesis | 3 takes |\n').replace(/\| pickup .*\n/, '')
   assert.match(checkDoc(doc).join(), /Length/)
+})
+test('a folder row cannot hide a stricter file row, and duplicate rows all count', () => {
+  const folder = { ...MANIFEST.assets[0], path: 'assets/audio/' }
+  const boss = { ...MANIFEST.assets[0], path: 'assets/audio/chime.ogg', licence: 'CC BY 4.0' }
+  assert.match(checkAudio({ ...REPO, manifest: { assets: [folder, boss] } }).join(), /CC BY 4\.0/)
+  assert.match(checkAudio({ ...REPO, manifest: { assets: [{ ...MANIFEST.assets[0], licence: 'ripped' }, MANIFEST.assets[0]] } }).join(), /ripped/)
+})
+test('the budget is read from the File budget section, one line only', () => {
+  const files = [{ path: 'assets/audio/chime.ogg', bytes: 5000 * 1024 }]
+  const wide = GOOD.replace('Budget: 600 KB, OGG, mono sfx.', 'Portal budget: 20480 KB (CrazyGames mobile).\nBudget: 600 KB, OGG.')
+  assert.match(checkAudio({ ...REPO, doc: wide, files }).join(), /over the doc's budget of 600 KB/)
+  const elsewhere = GOOD.replace('Loop 64 s,', 'Budget: 9000 KB for music. Loop 64 s,')
+  assert.match(checkAudio({ ...REPO, doc: elsewhere, files }).join(), /over the doc's budget of 600 KB/)
+  assert.match(checkDoc(GOOD.replace('Budget: 600 KB, OGG, mono sfx.', 'Budget: 600 KB\nBudget: 900 KB')).join(), /exactly one/)
+})
+test('a malformed manifest gives a message, not a crash', () => {
+  assert.match(checkAudio({ ...REPO, manifest: { assets: {} } }).join(), /"assets" must be a list/)
+  assert.match(checkAudio({ ...REPO, manifest: { assets: [{ ...MANIFEST.assets[0], licence: ['CC0'] }] } }).join(), /licence/)
+  const bad = spawnSync('node', [CLI, repo({ 'assets/manifest.json': '{oops', 'assets/audio/a.ogg': 'x' })], { encoding: 'utf8' })
+  assert.equal(bad.status, 1)
+  assert.match(bad.stderr, /not valid JSON/)
 })
 test('audio over the doc budget fails', () => assert.match(checkAudio({ ...REPO, files: [{ path: 'assets/audio/chime.ogg', bytes: 601 * 1024 }] }).join(), /over the doc's budget of 600 KB/))
 
 // pass-table (roles/reviewer.md): ordinary values must not fail
 test('ordinary values pass: licences, paths, game text, CRLF, star bullets, bold labels', () => {
-  for (const licence of ['CC0', 'CC0 1.0 Universal', 'cc0', 'Public Domain', 'own synthesis (jsfxr settings in design/sfx/)', 'Own work', ' CC0 ']) {
+  for (const licence of ['CC0', 'CC0 1.0 Universal', 'cc0', 'Public Domain', 'own synthesis (jsfxr settings in design/sfx/)', 'Own work', ' CC0 ', 'CC0 1.0 Universal (CC0 1.0) Public Domain Dedication', 'Creative Commons CC0']) {
     assert.deepEqual(checkAudio({ ...REPO, manifest: { assets: [{ ...MANIFEST.assets[0], licence }] } }), [], licence)
   }
   const docs = [
@@ -105,6 +126,7 @@ test('ordinary values pass: licences, paths, game text, CRLF, star bullets, bold
     GOOD.replace(/^- /gm, '* '),
     GOOD.replace(/Copy:/g, '**Copy:**').replace(/Skip:/g, '**Skip:**'),
     GOOD.replace('Budget: 600 KB', 'budget: 600 kb'),
+    GOOD.replace('Budget: 600 KB', '- **Budget:** 600 KB'),
   ]
   for (const doc of docs) assert.deepEqual(checkAudio({ ...REPO, doc }), [])
   const exactly = { ...REPO, files: [{ path: 'assets/audio/chime.ogg', bytes: 600 * 1024 }] }
@@ -112,7 +134,7 @@ test('ordinary values pass: licences, paths, game text, CRLF, star bullets, bold
 })
 test('a repo with no sound at all passes', () => assert.deepEqual(checkAudio({ doc: null, files: [], manifest: null, usesAudioCode: false }), []))
 test('the audio file and code patterns match ordinary names and miss look-alikes', () => {
-  for (const f of ['a.ogg', 'sfx/Hit.MP3', 'x.wav', 'm.opus', 'a.weba', 'b.aiff', 'c.mid']) assert.ok(AUDIO_FILE.test(f), f)
+  for (const f of ['a.ogg', 'sfx/Hit.MP3', 'x.wav', 'm.opus', 'a.webm', 'a.weba', 'b.aiff', 'c.mid']) assert.ok(AUDIO_FILE.test(f), f)
   for (const f of ['audio.json', 'oggy.ts', 'a.ogg.map', 'notes.md']) assert.ok(!AUDIO_FILE.test(f), f)
   for (const c of ['new AudioContext()', 'const a = new Audio("x")', 'new Howl({})']) assert.ok(AUDIO_CODE.test(c), c)
   for (const c of ['audioContextName', 'AudioBuffer', 'const radio = 1']) assert.ok(!AUDIO_CODE.test(c), c)

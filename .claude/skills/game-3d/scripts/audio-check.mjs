@@ -11,13 +11,15 @@ const NUMBERED = ['Music plan', 'Mix bar', 'File budget']
 const MIN_REFERENCES = 3
 const MIN_NOT_LINES = 2
 export const PLACEHOLDER = /<(?:name|game|store link|date|moments with sound, music layers, mute behaviour as heard|what|what and why)>/g // the template's own; game text such as <kbd> is not one
-export const AUDIO_FILE = /\.(?:ogg|mp3|wav|m4a|flac|opus|aac|weba|aiff?|midi?)$/i
+export const AUDIO_FILE = /\.(?:ogg|mp3|wav|m4a|flac|opus|aac|weba|webm|aiff?|midi?)$/i
 export const AUDIO_CODE = /\bAudioContext\b|\bnew Audio\(|\bHowl\(/
 // the whole value, not a mention: "not CC0", "CC0-NC" and "CC0 (trust me)" must fail
-const ALLOWED_LICENCE = /^(?:CC0(?:[ -]1\.0)?(?: Universal)?|public domain|own (?:synthesis|work)(?: \([^()]*\))?)$/i
+const ALLOWED_LICENCE = /^(?:(?:Creative Commons )?CC0(?:[ -]1\.0)?(?: Universal)?(?: \(CC0 1\.0\))?(?: Public Domain Dedication)?|public domain|own (?:synthesis|work)(?: \([^()]*\))?)$/i
 const DAY_READ = /\b\d{4}-\d{2}-\d{2}\b/
 const DIVIDER = /^\s*\|?[\s:|-]+\|[\s:|-]*$/
-const BUDGET = /\bBudget:\s*([1-9]\d*)\s*KB\b/i // 0 KB would switch the size check off
+// one `Budget: <n> KB` line (bold, bullet and case allowed) inside ## File budget; 0 KB would switch the size check off
+const BUDGET_LINE = /^\s*(?:[-*]\s+)?\**Budget:\**\s*([1-9]\d*)\s*KB\b/gim
+const budgets = (section) => [...(section ?? '').matchAll(BUDGET_LINE)].map((m) => Number(m[1]))
 const bullets = (text) => text.split('\n').filter((l) => /^\s*[-*]\s+\S/.test(l))
 
 function sections(md) {
@@ -40,7 +42,7 @@ export function checkDoc(md) {
   }
   for (const m of md.matchAll(PLACEHOLDER)) errors.push(`template placeholder left: ${m[0].slice(0, 40)}`)
   for (const h of NUMBERED) if (s[h]?.trim() && !/\d/.test(s[h])) errors.push(`## ${h} has no number`)
-  if (s['File budget']?.trim() && !BUDGET.test(s['File budget'])) errors.push('## File budget: write "Budget: <n> KB"')
+  if (s['File budget']?.trim() && budgets(s['File budget']).length !== 1) errors.push('## File budget: exactly one line "Budget: <n> KB"')
   const [head, ...rows] = (s['Sound palette'] ?? '').split('\n').filter((l) => /^\s*\|/.test(l) && !DIVIDER.test(l)).map((l) => l.trim().replace(/^\||\|$/g, '').split('|'))
   const col = head?.findIndex((c) => /length/i.test(c)) ?? -1
   if (s['Sound palette']?.trim() && !(col >= 0 && rows.some((r) => /^\s*\d+\s*(?:ms)?\s*$/i.test(r[col] ?? '')))) errors.push('## Sound palette: a table with a "Length" column and at least one row that carries a number in ms')
@@ -62,14 +64,17 @@ export function checkAudio({ doc, files, manifest, usesAudioCode }) {
   const errors = []
   if (doc === null) errors.push('this game makes sound but design/AUDIO.md does not exist; the Audio role writes it (roles/audio.md)')
   else errors.push(...checkDoc(doc))
-  const rows = new Map((manifest?.assets ?? []).filter((a) => a.path).map((a) => [a.path.replace(/\/$/, ''), a]))
+  if (manifest && !Array.isArray(manifest.assets)) errors.push('assets/manifest.json: "assets" must be a list')
+  const rows = (Array.isArray(manifest?.assets) ? manifest.assets : []).filter((a) => a && typeof a.path === 'string' && a.path).map((a) => ({ ...a, path: a.path.replace(/\/$/, '') }))
   for (const f of files) {
-    const row = [...rows.entries()].find(([p]) => f.path === p || f.path.startsWith(p + '/'))?.[1]
-    if (!row) errors.push(`${f.path}: no assets/manifest.json row`)
-    else if (!ALLOWED_LICENCE.test((row.licence ?? '').trim())) errors.push(`${f.path}: licence "${row.licence ?? ''}" is not exactly CC0, public domain or own synthesis`)
-    else if (!row.source || !row.author || row.commercial !== true) errors.push(`${f.path}: manifest row needs source, author and commercial: true`)
+    const covering = rows.filter((r) => f.path === r.path || f.path.startsWith(r.path + '/'))
+    if (!covering.length) errors.push(`${f.path}: no assets/manifest.json row`)
+    for (const row of covering) { // every row that covers the file must pass, so a folder row cannot hide a stricter file row
+      if (typeof row.licence !== 'string' || !ALLOWED_LICENCE.test(row.licence.trim())) errors.push(`${f.path}: licence "${row.licence ?? ''}" (row ${row.path}) is not exactly CC0, public domain or own synthesis`)
+      else if (!row.source || !row.author || row.commercial !== true) errors.push(`${f.path}: manifest row ${row.path} needs source, author and commercial: true`)
+    }
   }
-  const budget = Number(doc?.match(BUDGET)?.[1])
+  const [budget] = doc === null ? [] : budgets(sections(doc)['File budget'])
   const total = files.reduce((n, f) => n + f.bytes, 0)
   if (budget && total > budget * 1024) errors.push(`audio files total ${Math.ceil(total / 1024)} KB, over the doc's budget of ${budget} KB`)
   return errors
@@ -91,7 +96,9 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const code = all.filter((p) => /[\\/]src[\\/].+\.(?:ts|js|mjs|vue)$/.test(p) && AUDIO_CODE.test(readFileSync(p, 'utf8')))
   const read = (rel) => (existsSync(join(root, rel)) ? readFileSync(join(root, rel), 'utf8') : null)
   const manifestText = read('assets/manifest.json')
-  const errors = checkAudio({ doc: read('design/AUDIO.md'), files, manifest: manifestText ? JSON.parse(manifestText) : null, usesAudioCode: code.length > 0 })
+  let manifest = null
+  try { manifest = manifestText ? JSON.parse(manifestText) : null } catch { console.error('audio: assets/manifest.json is not valid JSON'); process.exit(1) }
+  const errors = checkAudio({ doc: read('design/AUDIO.md'), files, manifest, usesAudioCode: code.length > 0 })
   for (const e of errors) console.error('audio: ' + e)
   console.log(errors.length ? `audio: ${errors.length} problem(s)` : `audio: ok (${files.length} files${code.length ? `, sound in ${code.length} source files` : ''})`)
   process.exit(errors.length ? 1 : 0)
