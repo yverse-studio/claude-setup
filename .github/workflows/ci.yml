@@ -25,7 +25,7 @@ jobs:
       - name: floor guard
         if: github.event_name == 'pull_request'
         run: node .claude/skills/publish/templates/new-project/scripts/floor-guard.mjs --base origin/${{ github.base_ref }}
-      - run: node --test scripts/floor-guard.test.mjs scripts/new-project.test.mjs scripts/delete-project.test.mjs scripts/build-logs.test.mjs scripts/guards.test.mjs scripts/research-check.test.mjs .claude/skills/game-3d/scripts/check-assets.test.mjs .claude/skills/game-3d/scripts/gdd-check.test.mjs .claude/skills/ui-review/scripts/design-check.test.mjs .claude/skills/operator/templates/loop/loop.test.mjs .claude/skills/operator/templates/mailbox/mailbox.test.mjs
+      - run: node --test scripts/floor-guard.test.mjs scripts/new-project.test.mjs scripts/delete-project.test.mjs scripts/build-logs.test.mjs scripts/guards.test.mjs scripts/research-check.test.mjs .claude/skills/game-3d/scripts/check-assets.test.mjs .claude/skills/game-3d/scripts/gdd-check.test.mjs .claude/skills/game-3d/scripts/audio-check.test.mjs .claude/skills/ui-review/scripts/design-check.test.mjs .claude/skills/operator/templates/loop/loop.test.mjs .claude/skills/operator/templates/mailbox/mailbox.test.mjs
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"

@@ -233,5 +233,16 @@ for (const h of REQUIRED_HEADINGS) {
   if (!new RegExp(`^## ${h}\\s*$`, 'm').test(gddTemplate)) errors.push(`templates/game-design.md: lacks "## ${h}"`)
 }
 
+// Sound doc: one home (roles/audio.md); the template must carry every heading audio-check.mjs requires.
+const { REQUIRED_HEADINGS: AUDIO_HEADINGS } = await import('../.claude/skills/game-3d/scripts/audio-check.mjs')
+const audioRole = readFileSync(join(root, '.claude/skills/operator/roles/audio.md'), 'utf8')
+for (const part of ['## Method', '## Bar', 'audio-check.mjs', 'What it is NOT']) {
+  if (!audioRole.includes(part)) errors.push(`roles/audio.md: lacks "${part}"`)
+}
+const audioTemplate = readFileSync(join(root, '.claude/skills/operator/templates/audio.md'), 'utf8')
+for (const h of AUDIO_HEADINGS) {
+  if (!new RegExp(`^## ${h}\\s*$`, 'm').test(audioTemplate)) errors.push(`templates/audio.md: lacks "## ${h}"`)
+}
+
 if (errors.length) { console.error(errors.map((e) => `x ${e}`).join('\n')); process.exit(1) }
 console.log(`ok: ${seen.skill.size} skills, ${seen.agent.size} agents, ${plugins?.global.length ?? 0}+${plugins?.project.length ?? 0} plugins`)
