@@ -110,7 +110,7 @@ covers them. Stories are data: threads turn yskills' messages into `story/` file
 - **AI props and base models** (image to .glb; route decided 2026-10-18, untested until the first
   run, then correct this): 1) one reference image on a plain background (yskills' own or
   generated; never a look-alike of a real person or a paid-Patreon rehost, e.g. kemono: pirated, out).
-  2) TRELLIS.2 (MIT): the free Hugging Face Space first; if the cloud can't reach it or quality is
+  2) TRELLIS.2 (MIT, github.com/microsoft/TRELLIS.2/blob/main/LICENSE, checked 2026-10-18): the free Hugging Face Space first; if the cloud can't reach it or quality is
   low, run it on the laptop (RTX 4060, VRAM fit unchecked) through Remote Control. 3) Clean in
   Blender via `studio` (decimate, fix normals, UV, real-world scale, one material), then shrink with
   gltf-transform. 4) Record source image, tool and licence in the assets manifest
