@@ -120,7 +120,7 @@ covers them. Stories are data: threads turn yskills' messages into `story/` file
   keeps three screenshots and fails on a page error, a round that never ends or a score under the bot's
   `min`. Rewrite `bot.mjs` together with `rules.ts`: `min` is about 60 % of what the bot scores; a bot that dies is fine, one that cannot move is not. Run it on the Worker Preview before every gate; add each new state a bot needs to the text.
   QA after every slice, not at the end (idea from OpusGameLabs/game-creator, written in our words).
-  `play` and `shots` serve whatever `dist/` holds: run `npm run build` after every code change, or you review stale pictures.
+  `shots` serves whatever `dist/` holds: run `npm run build` after every code change (`play` builds itself when it has no url), or you review stale pictures.
 - **Perf budget per scene** (`tests/perf`, reads `renderer.info` after one frame): under 300
   draw calls, under 500 000 triangles, textures at most 2048 px, assets under 150 MB in total.
   SwiftShader cannot measure frame rate: yskills' PC runs the perf scene once per milestone and
