@@ -107,8 +107,17 @@ covers them. Stories are data: threads turn yskills' messages into `story/` file
 - **Splats** (3D photos): 30 to 200 photos of one place, trained on yskills' PC (Postshot,
   Windows + NVIDIA: free plan trains, export needs Indie 17 €/month; Brush is open source) or a
   paid service, loaded with Spark as vistas and photo spots. No collision: never a floor.
-- **AI props**: Meshy (free tier CC-BY, 20 $/month for commercial), TRELLIS.2 (MIT, needs a
-  GPU); Tripo's free tier is non-commercial. One prop at a time, cleaned in the style pass.
+- **AI props and base models** (image to .glb; route decided 2026-10-18, untested until the first
+  run, then correct this): 1) one reference image on a plain background (yskills' own or
+  generated; never a look-alike of a real person or a paid-Patreon rehost, e.g. kemono: pirated, out).
+  2) TRELLIS.2 (MIT): the free Hugging Face Space first; if the cloud can't reach it or quality is
+  low, run it on the laptop (RTX 4060, VRAM fit unchecked) through Remote Control. 3) Clean in
+  Blender via `studio` (decimate, fix normals, UV, real-world scale, one material), then shrink with
+  gltf-transform. 4) Record source image, tool and licence in the assets manifest
+  (`check-assets.mjs`). Fallback: Meshy 6 (docs.meshy.ai/pricing: free = CC BY 4.0 with credit, paid =
+  full commercial; plan prices disagree across sources, read meshy.ai/pricing first) and only
+  after yskills' word on the plan. Not Tripo free (non-commercial), not Hunyuan3D (Tencent licence
+  has territory limits; read it first), not Fusion (CAD, free tier non-commercial). One prop at a time.
 - Spending on assets or services needs yskills' word first (CLAUDE.md money rule).
 
 ## 4. Testing in cloud threads
