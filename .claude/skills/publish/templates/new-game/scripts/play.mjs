@@ -7,20 +7,21 @@ import { spawn, execFileSync } from 'node:child_process'
 import { mkdirSync } from 'node:fs'
 import { decide, min } from '../test/bot.mjs'
 
+const WIN = process.platform === 'win32' // npx is a .cmd file there
 const PORT = 4173
 const STEP_MS = 100
 const args = process.argv.slice(2)
 const outAt = args.indexOf('--out')
-const out = outAt >= 0 ? args[outAt + 1] : '.shots'
-const outValueAt = outAt >= 0 ? outAt + 1 : -1
+const outValueAt = outAt >= 0 && args[outAt + 1] && !args[outAt + 1].startsWith('--') ? outAt + 1 : -1 // a trailing --out falls back
+const out = outValueAt >= 0 ? args[outValueAt] : '.shots'
 const arg = args.find((a, i) => !a.startsWith('--') && i !== outValueAt) ?? ''
 mkdirSync(out, { recursive: true })
 
 let server
 let base = arg
 if (!base) {
-  execFileSync('npx', ['vite', 'build'], { stdio: 'ignore' })
-  server = spawn('npx', ['vite', 'preview', '--port', String(PORT), '--strictPort'], { stdio: 'ignore' })
+  execFileSync('npx', ['vite', 'build'], { stdio: ['ignore', 'inherit', 'inherit'], shell: WIN }) // a failing build prints why and stops here
+  server = spawn('npx', ['vite', 'preview', '--port', String(PORT), '--strictPort'], { stdio: 'ignore', shell: WIN })
   base = `http://localhost:${PORT}`
   for (let i = 0; i < 50; i++) {
     if (await fetch(base).then((r) => r.ok, () => false)) break
