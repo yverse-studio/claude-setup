@@ -126,7 +126,7 @@ test('the Banner placeholder of the template fails and a filled one passes', () 
   assert.ok(!checkTracking(t.replace('<ja/nein>', 'nein')).includes('template placeholder left: <ja/nein>'))
 })
 
-const roleDoc = readFileSync(ROLE, 'utf8')
+const roleDoc = readFileSync(ROLE, 'utf8').replace(/\r\n/g, '\n') // CRLF on a Windows checkout
 
 test('the shipped role doc passes its own guard', () => assert.deepEqual(checkRoleDoc(roleDoc), []))
 
