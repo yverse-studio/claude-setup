@@ -222,5 +222,16 @@ for (const part of ['## 6. Sources', 'Not checked:']) {
   if (!researchTemplate.includes(part)) errors.push(`templates/research.md: lacks "${part}"`)
 }
 
+// Game design doc: one home (roles/game-designer.md); the template must carry every heading gdd-check.mjs requires.
+const { REQUIRED_HEADINGS } = await import('../.claude/skills/game-3d/scripts/gdd-check.mjs')
+const designerRole = readFileSync(join(root, '.claude/skills/operator/roles/game-designer.md'), 'utf8')
+for (const part of ['## Method', '## Bar', 'gdd-check.mjs', 'What it is NOT']) {
+  if (!designerRole.includes(part)) errors.push(`roles/game-designer.md: lacks "${part}"`)
+}
+const gddTemplate = readFileSync(join(root, '.claude/skills/operator/templates/game-design.md'), 'utf8')
+for (const h of REQUIRED_HEADINGS) {
+  if (!new RegExp(`^## ${h}\\s*$`, 'm').test(gddTemplate)) errors.push(`templates/game-design.md: lacks "## ${h}"`)
+}
+
 if (errors.length) { console.error(errors.map((e) => `x ${e}`).join('\n')); process.exit(1) }
 console.log(`ok: ${seen.skill.size} skills, ${seen.agent.size} agents, ${plugins?.global.length ?? 0}+${plugins?.project.length ?? 0} plugins`)
