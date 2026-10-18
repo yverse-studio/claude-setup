@@ -21,6 +21,7 @@ HIT_RATIO = 1.8           # a frame this much louder than the last 0.5 s is a hi
 HIT_GAP = 0.12            # seconds between two hits
 SYNC_WINDOW = 0.08        # a cut this close to a hit is on the beat
 HOOK_SECONDS = 2.0
+MAX_EVENTS = 120          # rows in the event table
 
 
 def parse_showinfo(stderr: str) -> list[float]:
@@ -153,6 +154,8 @@ def format_report(t: dict, segments: list[dict] | None = None) -> list[str]:
     events = [(c, "cut") for c in t["cuts"]] + [(h, "hit") for h in t["hits"]]
     events += [(s["start"], f"silence {round(s['end'] - s['start'], 1)} s") for s in t["silences"]]
     if events:
-        lines += ["", "| t | event |", "|---|---|"]
-        lines += [f"| {e[0]:.2f} | {e[1]} |" for e in sorted(events)[:120]]
+        shown = sorted(events)[:MAX_EVENTS]
+        lines += ["", f"_First {MAX_EVENTS} of {len(events)} events._" if len(events) > MAX_EVENTS else "",
+                  "| t | event |", "|---|---|"]
+        lines += [f"| {e[0]:.2f} | {e[1]} |" for e in shown]
     return lines

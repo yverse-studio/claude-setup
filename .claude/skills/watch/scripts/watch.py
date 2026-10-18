@@ -311,7 +311,7 @@ def main() -> int:
             timeline_data = analyze_timeline(video_path, full_duration,
                                              has_video=bool(meta.get("has_video", meta.get("width"))),
                                              has_audio=bool(meta.get("has_audio")))
-        except SystemExit as exc:
+        except (SystemExit, Exception) as exc:  # a timeline failure never breaks the report
             errors.append(f"Timeline unavailable: {exc}")
 
     info = dl.get("info") or {}

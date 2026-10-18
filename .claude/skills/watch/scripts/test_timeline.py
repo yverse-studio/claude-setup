@@ -63,7 +63,7 @@ class EndToEnd(unittest.TestCase):
                 "-f", "lavfi", "-i", "color=green:s=160x284:d=1:r=30",
                 "-f", "lavfi", "-i", "aevalsrc='if(between(t,0.5,0.7)+between(t,2.0,2.2),sin(2*PI*880*t),0)':s=44100:d=3",
                 "-filter_complex", "[0:v][1:v][2:v]concat=n=3:v=1:a=0[v]",
-                "-map", "[v]", "-map", "3:a", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac", str(out),
+                "-map", "[v]", "-map", "3:a", "-c:v", "mpeg4", "-c:a", "aac", str(out),
             ], check=True)
             t = tl.analyze(str(out), 3.0)
         self.assertEqual(len(t["cuts"]), 2)
