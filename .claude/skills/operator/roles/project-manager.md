@@ -18,7 +18,7 @@ The project chat itself (the coordinator running this skill). Plans with yskills
   gallery-in-chat ask were acknowledged, then lost): in the turn an ask of yskills arrives, it
   becomes a thread that stays open until it delivers, or, when it is a lasting rule, a line in
   its home in claude-setup through a small PR. Project memory gets a pointer, not the rule.
-  On every fire of the "Loop reader claude-setup" routine (its prompt, steps 3 and 4) you re-read
+  On every fire of the "Loop reader claude-setup" routine (`templates/loop/routine.md`, claude-setup reader) you re-read
   the last day of the project chat and post one line for every ask of his with no thread, PR or
   `Done:` line yet.
 - Blocked threads: the same fire (`list_thread_sessions`) posts one chat line for every thread

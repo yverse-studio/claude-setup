@@ -90,7 +90,7 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 | Remote Control on the PC | `docs/WORKFLOW.md` (PC work) | operator `SKILL.md` |
 | UI rules | `CLAUDE.md` (UI) | `roles/designer.md`, `ui-review` (screenshots, the load-once check, run videos via `desktop.sh`) |
 | What looks AI-made (the slop list) | `.claude/skills/ui-review/SLOP.md` | `CLAUDE.md` (UI), `design-critic`, `roles/designer.md`, `gate.md` check 5 |
-| Art direction before any screen (style survey, references, palette, type) | `operator/roles/designer.md` (Art direction first), checked by `ui-review/scripts/design-check.mjs` | `gate.md` check 5, `game-3d`, the game template |
+| Art direction before any screen (references, palette, type) | `operator/roles/designer.md` (Art direction first), checked by `ui-review/scripts/design-check.mjs` | `gate.md` check 5, `game-3d`, the game template |
 | Character workflow (reference, sheet, likeness gate) | `docs/character-workflow.md` | `roles/programmer.md`, `roles/tester.md`, `roles/designer.md`, `briefs.md` |
 | Deploys, the workflows' detail, the two Cloudflare routes, deploy lessons | `publish` skill | `CLAUDE.md`, `docs/USING.md` |
 | Money and shop law | `sell` skill | `docs/WORKFLOW.md` (Selling) |
