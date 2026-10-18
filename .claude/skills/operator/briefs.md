@@ -30,7 +30,7 @@ ok / no
 ## (b) Design pick
 
 The Project Manager posts it in the project chat (vote rule in CLAUDE.md, How to work). Send 2-3
-directions as live drafts in one vote gallery (`roles/designer.md`, Vote gallery), each with
+directions as screenshots on one vote card (`roles/designer.md`, Vote cards), each with
 a two-word name and one line on the feel, built from yskills' references and the `ui-review`
 skill's `TASTE.md`. Then tap options: the directions, plus "none, try again". yskills can also
 answer in words or pictures ("this one but darker", a screenshot): the design team revises and

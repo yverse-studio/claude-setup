@@ -16,7 +16,8 @@ goes in its home only, everywhere else links it.
 - New page or app: write `projects/<name>.json` and run the `new-project` workflow; it makes the
   repo, Worker, D1 and first deploy. Removing one: the `delete-project` workflow. The steps:
   `docs/USING.md` (Deploy a page in one shot, Delete a page); the detail: `publish` skill.
-- Dashboard: the Claude Setup HQ Artifact (Company view) is the only one; each Project Manager
+- Dashboard: the Company XY Artifact (Company view, the old "Claude Setup HQ") is the only
+  Artifact there is, no votes, galleries or one-off pages (2026-10-18); each Project Manager
   writes its rows there (`docs/hq-rows.md`). New apps are threads in the claude.ai project
   "Company XY", never a new project. [advisory]
 
@@ -44,9 +45,9 @@ goes in its home only, everywhere else links it.
   options and recommendation (the coordinator reads every thread reply) and it goes on with the
   recommendation. The coordinator relays the tap to the thread; a tap against the
   recommendation means change course. Money, a new service, deleting and anything that can't be
-  undone wait for the tap. Visual choices come as live drafts from a Designer thread in one vote
-  gallery Artifact linked in the card post (`designer.md`, Vote gallery); never loose images,
-  never a vote on words alone. [advisory]
+  undone wait for the tap. Visual choices (2026-10-18) are normal cards with screenshots from a Designer thread,
+  saved in `/mnt/project-files/<project>/votes/` and posted with the card (`designer.md`,
+  Vote cards); never an Artifact, never a vote on words alone. [advisory]
 - yskills reads only the project chat (2026-10-08) and opens a thread only when something is
   wrong: the coordinator posts one line per finished part (result, `Done:`, live link), every
   card and every blocker, no narration; PR links and gate talk stay in threads.
