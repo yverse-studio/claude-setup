@@ -15,10 +15,11 @@ against that text. So:
 
 0. **Breadth first** (yskills, 2026-10-18: "reminds me of the styles we already made for yland"):
    before picking, a landscape of 10 or more real style families that could fit the idea
-   (pixel, cut paper, flat silhouette, low poly, hand-drawn ink, claymation...), one capture
-   and a one-line fit verdict each, in `design/STYLES.md`; plus a "not like" list with a
+   (pixel, cut paper, flat silhouette, low poly, hand-drawn ink, claymation...), one real
+   capture (shipped, well-rated game or public-domain art via a store API with curl, never AI
+   images) and a one-line fit verdict each, in `design/STYLES.md`; plus a "not like" list with a
    screenshot of each look we already shipped (yland, Company XY, earlier versions of this
-   project). The three directions for the vote come from the best-fitting families and repeat
+   project) in `design/reference/ours/`. The three directions for the vote come from the best-fitting families and repeat
    none of the "not like" looks. The landscape goes into the same vote gallery as the directions (`CLAUDE.md`, How to work, Cards).
 1. **References:** 3 to 6 captures of the top products of the genre (CrazyGames and Poki top
    pages for a game; the category's leading apps for a product) at 390px and 1440px, shot with
