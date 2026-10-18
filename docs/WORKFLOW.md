@@ -71,6 +71,8 @@ yskills hit most of a weekly limit in under a day (2026-10-18) and wants at leas
 
 Budget: Haiku (effort low) reads, lists, checks files, polls CI and does simple edits; Sonnet builds and reviews; Opus only for a size L verdict or a decision with no clear default, never for an S or M gate; Fable is the escalation step: only when the coordinator names it in the brief, for a thread stuck twice on the same problem or a critical task (launch, money, data loss, a decision with no default). An S or M gate is one Sonnet review round plus CI, a second round only for a real bug, max two fix rounds, then stop and report. Max two working threads at a time. Nothing beyond the ask: no extra research or screenshots. Reuse before research: first read the existing report, role or skill for that kind of work (`research/`, `roles/`) and research only what is new; a thread that solves a new kind of task leaves a short playbook or template in its one home so the next one follows it. The coordinator keeps briefs short and rewrites memory only at milestones.
 
+Why calls, not threads, cost the most (measured 2026-10-18; the breakdown is `audit/2026-10-18-token-start-cost.md` in the project files): a fresh project thread starts at about 114k tokens, only about 10k of it from this repo, and every call re-reads all of it. So batch independent calls in one turn, read several files with one command or one Haiku reader, name in the brief the one file a role must read, and use an Agent subagent (it starts small) instead of a new project thread for a bounded check.
+
 ## The 5/5 gate
 
 Five pass/fail checks by agents that didn't write the code: CI, evaluator on the preview, fresh
