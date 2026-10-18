@@ -230,7 +230,7 @@ for (const part of ['## Method', '## Bar', 'gdd-check.mjs', 'What it is NOT']) {
 }
 const gddTemplate = readFileSync(join(root, '.claude/skills/operator/templates/game-design.md'), 'utf8')
 for (const h of REQUIRED_HEADINGS) {
-  if (!gddTemplate.includes(`## ${h}\n`)) errors.push(`templates/game-design.md: lacks "## ${h}"`)
+  if (!new RegExp(`^## ${h}\\s*$`, 'm').test(gddTemplate)) errors.push(`templates/game-design.md: lacks "## ${h}"`)
 }
 
 if (errors.length) { console.error(errors.map((e) => `x ${e}`).join('\n')); process.exit(1) }
