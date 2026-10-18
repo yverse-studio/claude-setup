@@ -109,7 +109,8 @@ before each step; builder, gate and fix threads read their `roles/<role>.md` ins
    `loop:urgent` and go first. PostHog joins as a second source only when a project needs replay
    or funnels.
 9. **Learn.** Every correction, every gate round that failed for a catchable reason, every test
-   project lesson becomes a rule, skill line, test or check in claude-setup, in a small PR. At the
+   project lesson passes the lessons step (`docs/WORKFLOW.md`, Learning) and lands as a rule,
+   skill line, test or check in claude-setup, in a small PR. At the
    project's end (or a kill), each role that worked adds one dated line per lesson to its
    `roles/<role>.md` (project, type, what to do differently, which tools it needed), so the next
    project of the same kind starts with them.

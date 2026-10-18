@@ -78,6 +78,14 @@ a rule, skill line, test or check in this repo. That is the memory: committed, r
 by every thread. No memory plugin or Obsidian: ECC hooks from the PC install don't run in cloud threads (only the settings hooks `cloud/setup.sh` writes, like the context guard), and the repo already
 does the job.
 
+**Lessons step** (after every merge, the gate thread, one short pass; sources: Every's ce-compound,
+Matt Pocock's retro, both MIT). For each correction or catchable failed round of the PR, ask: would
+the next thread repeat this mistake without the lesson? No: write nothing and say so in one line.
+Yes: update the line that already covers it, else add one line in its single home (`CLAUDE.md`
+line, skill line, or memory). A mechanical lesson (a fixed pattern, a banned call, a file rule)
+becomes a check, test or lint rule in `scripts/` or CI instead of text. Then prune: delete a
+lesson line that a check now covers, or whose guarded thing is gone.
+
 Claude Code's built-in auto-memory stays on as a scratchpad on your PC
 (`~/.claude/projects/*/memory/`). **Memory check**, first session of each month or when you say
 "memory check": read every memory file, move each lasting lesson into claude-setup (rule, skill
