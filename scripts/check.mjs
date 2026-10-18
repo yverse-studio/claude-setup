@@ -212,5 +212,15 @@ for (const a of ['design-critic', 'legal-reviewer', 'red-team']) {
   if (!/Not judged:/.test(readFileSync(join(root, `.claude/agents/${a}.md`), 'utf8'))) errors.push(`agents/${a}.md: report format lacks "Not judged:"`)
 }
 
+// Research method: one home (roles/researcher.md, Method); the report template keeps its checkable parts.
+const researcherRole = readFileSync(join(root, '.claude/skills/operator/roles/researcher.md'), 'utf8')
+for (const part of ['Primary sources only', 'Every claim carries its source', 'Describe before judging', 'Numbers only as read', 'Not checked:']) {
+  if (!researcherRole.includes(part)) errors.push(`roles/researcher.md: Method lacks "${part}"`)
+}
+const researchTemplate = readFileSync(join(root, '.claude/skills/operator/templates/research.md'), 'utf8')
+for (const part of ['## 6. Sources', 'Not checked:']) {
+  if (!researchTemplate.includes(part)) errors.push(`templates/research.md: lacks "${part}"`)
+}
+
 if (errors.length) { console.error(errors.map((e) => `x ${e}`).join('\n')); process.exit(1) }
 console.log(`ok: ${seen.skill.size} skills, ${seen.agent.size} agents, ${plugins?.global.length ?? 0}+${plugins?.project.length ?? 0} plugins`)

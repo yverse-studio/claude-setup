@@ -26,7 +26,7 @@ lives outside this repo.
 | This map | `docs/MAP.md` | Where things live, one home per rule |
 | Run a project | `.claude/skills/operator/` | `SKILL.md` size, roles, files, setup loop, cost; `run.md` the nine steps (Project Manager only); `gate.md` the 5/5 gate and the one merge policy; `briefs.md` the three briefs, key cards and the block every thread brief starts with; `roles/<role>.md` one playbook per role; `templates/` files copied into a project (`loop/` the feedback inbox, `mailbox/` Claude's own e-mail inbox Worker) |
 | Roadmap for yskills | `docs/WORKFLOW.md` | The phases in plain words, the models table, learning and memory check |
-| Other own skills | `.claude/skills/<name>/` | `legal`, `sell`, `market`, `store`, `store-publish`, `publish`, `scaffold`, `onboard-project`, `ship-check`, `ui-review`, `toolbox`, `game-3d`, `roblox`, `studio`, `watch`, `media-editing`, `video-studio`, `social-team` |
+| Other own skills | `.claude/skills/<name>/` | `legal`, `sell`, `market`, `store`, `store-publish`, `publish`, `scaffold`, `onboard-project`, `ship-check`, `ui-review`, `toolbox`, `game-3d`, `roblox`, `studio`, `blender-body`, `watch`, `media-editing`, `video-studio`, `social-team` |
 | Vendored skills, agents, rules | `.claude/skills`, `.claude/agents`, `.claude/rules/ecc` | ECC subset (`config/ecc.json`, refreshed by `scripts/sync-ecc.mjs`), impeccable, web-interface-guidelines, ponytail, claude-video (`THIRD_PARTY.md`); never hand-edited |
 | Own agents | `.claude/agents/` | `design-critic`, `evaluator`, `legal-reviewer`, `red-team` |
 | PC install | `install.mjs`, `global/`, `config/plugins.json`, `mods/team` | Copies this repo into `~/.claude`, settings, status line, context guard, plugins, the team mod |
@@ -62,7 +62,7 @@ added as a second repo, or a plain chat), read that file by path, then the files
 | 3D games, Steam | `game-3d` (three.js + Electron, decided 2026-10-07) | `game-3d/refs/` (camera, game feel, levels, glTF, lighting, perf, Steam) |
 | 2D and web games | `toolbox/catalog/data-web.md` (Phaser, PixiJS, Poki, CrazyGames) | `toolbox/catalog/money.md` (H5 game ads) |
 | Roblox | `roblox` | `toolbox/catalog/roblox.md` (run and see), `studio` (PC) |
-| 3D models, characters | `docs/character-workflow.md` | `game-3d` (VRM pipeline), `studio` (Blender on the PC) |
+| 3D models, characters | `docs/character-workflow.md` | `blender-body` (rigged body: base, shape keys, pose tests, reviewing), `game-3d` (VRM pipeline), `studio` (Blender on the PC) |
 | Videos and ads (the studio: Producer, Writer, Director, Sound, Editor, Motion, Critic) | `video-studio` | `video-studio/learnings.md`, `market` §4 (ads law) |
 | Social media: posting, comments, DMs, idea backlog, brand accounts, brand deals | `social-team` | `social-team/learnings.md`, `market` §4 and §6 |
 | Video and photo edits | `media-editing` | `watch` (understand a video), `toolbox/catalog/video-audio.md` (AI video, voice, music) |
@@ -78,6 +78,7 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 |---|---|---|
 | Org, accounts, where secrets live | `CLAUDE.md` (The world) | `publish` skill, `docs/WORKFLOW.md` (PC work) |
 | Deploy or delete a page (the steps) | `docs/USING.md` | operator `run.md`, `briefs.md`; detail in `publish` |
+| Asks ledger (every ask of yskills becomes a thread or a rule in claude-setup; memory only points; blocked-thread sweep) | `CLAUDE.md` (Lessons stick) | `operator/roles/project-manager.md` |
 | Ask rule (what needs yskills) | `CLAUDE.md` (How to work) | operator `SKILL.md`, `docs/USING.md` |
 | Auto-run, pauses and taste calls | `CLAUDE.md` (How to work) | operator `SKILL.md`, `docs/WORKFLOW.md` |
 | Cards and votes (who posts them, the thread-to-coordinator loop, a live vote gallery per visual choice); yskills reads only the project chat | `CLAUDE.md` (How to work) | `briefs.md` (b), `roles/project-manager.md` |
@@ -90,6 +91,7 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 | UI rules | `CLAUDE.md` (UI) | `roles/designer.md`, `ui-review` (screenshots, the load-once check, run videos via `desktop.sh`) |
 | What looks AI-made (the slop list) | `.claude/skills/ui-review/SLOP.md` | `CLAUDE.md` (UI), `design-critic`, `roles/designer.md`, `gate.md` check 5 |
 | Art direction before any screen (references, palette, type) | `operator/roles/designer.md` (Art direction first), checked by `ui-review/scripts/design-check.mjs` | `gate.md` check 5, `game-3d`, the game template |
+| How a research report is made (primary sources, describe before judging, numbers as read, `Not checked:`) | `operator/roles/researcher.md` (Method), checked by `scripts/research-check.mjs` | `templates/research.md`, `run.md` |
 | Character workflow (reference, sheet, likeness gate) | `docs/character-workflow.md` | `roles/programmer.md`, `roles/tester.md`, `roles/designer.md`, `briefs.md` |
 | Deploys, the workflows' detail, the two Cloudflare routes, deploy lessons | `publish` skill | `CLAUDE.md`, `docs/USING.md` |
 | Money and shop law | `sell` skill | `docs/WORKFLOW.md` (Selling) |

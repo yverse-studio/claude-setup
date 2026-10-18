@@ -8,7 +8,7 @@ before each step; builder, gate and fix threads read their `roles/<role>.md` ins
    and a **design card**: "Send pictures, screenshots or links of apps and sites you like (or
    hate) for this, one line each on why." Linked sites are shot with `ui-review` and saved with
    the pictures in `design/refs/`; the lines go into `design/DESIGN.md`.
-2. **Research**, parallel subagents, one page each. The Researcher writes `research/RESEARCH.md` from [`templates/research.md`](templates/research.md) before `PLAN.md`; a bug fix skips it:
+2. **Research**, parallel subagents, one page each. The Researcher writes `research/RESEARCH.md` from [`templates/research.md`](templates/research.md) before `PLAN.md`, by the method in [`roles/researcher.md`](roles/researcher.md) (Method); a bug fix skips it:
    - **Inside:** our skills and catalog, the lessons in claude-setup's `docs/TEST-PROJECTS.md`,
      yskills' repos with code to reuse.
    - **Outside:** competitors and prices, how the best similar products and open-source projects
