@@ -29,7 +29,7 @@ Gates, run by you before anyone sees the round (a failed gate is said, not hande
 - [ ] No visible regression against the best round in any of the five views.
 
 Hand in
-- [ ] The sheet below, in `proof/<round>/`, via `tools/handin-cloud.sh <round>`.
+- [ ] The sheet below, in `proof/<round>/`; `tools/handin-cloud.sh <round>` renders raw, clay and masks only, you add detail, posed, zoom and numbers.
 - [ ] Blend saved as `build-<round>.blend`; LIVE STATE block updated (keys and their values,
       band map, what is open); one cross-session line to the reviewer and coordinator.
 - [ ] Context nearly full: stop, post one line plus one crop, start the next builder with the
@@ -39,7 +39,7 @@ Hand in
 
 Order is fixed. The first line of the verdict is the bust read vs the best round.
 1. Bust front raw, ref | best | new, full resolution, by eye (cap 4/5 if worse than best).
-2. Neck crops vs ref (a neck that is not the ref neck caps the round at 3/5 on a rebuilt neck; the 14:18 rule).
+2. Neck crops REF | best | new: long and slim (chin to notch about 88 mm, width about 85 mm), no ring, no shelf. A neck that is not the ref neck caps the round at 3/5 and nothing else counts (14:18 rule; the target is the ref, not lc1, since 14:25).
 3. Posed frames: tube neck, groin fold, knee pinch, bust root, shoulders, hands.
 4. The zoom triples, one line per crop "what is off, direction, mm" in `zoom/WHAT-IS-OFF.md`.
 5. Likeness to the ref in the five views.

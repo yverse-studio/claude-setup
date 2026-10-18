@@ -51,9 +51,13 @@ hand-in sheet contract.
      (`luna_facekeysync.py`: stored Face key values 0.3 to 0.45 inverted every edit in renders for
      five rounds). When an edit does not show in a render, evaluate the depsgraph mesh with and
      without the keys before blaming the tool.
-   - Smoothing is local Taubin in narrow bands (6 cm round a 1 to 2 mm step, fillets 25 to 40 mm wide), never global; a 400-iteration pass made the
-     neck ring. Contact tools never push vertices through the body (lc11 pulled 96 deep chest
-     verts up to 20 cm and the stretched sheets drew a hand shape on the back). Groove radius at least 3 cm, amplitudes 5 to 6 mm, never above 15 mm.
+   - Smoothing is local: fillets of about 2 to 3 cm radius in the problem band (under-butt, thigh
+     ring over 6 cm, neck join), never one global pass (a 1.3 mm Taubin did not move cm-scale
+     lumps; lc11's 400-iteration pass on z 1.33 to 1.40 left the neck ring visible). Contact tools
+     never push vertices through the body (lc11 pulled 96 deep chest verts up to 20 cm and the
+     stretched sheets drew a hand shape on the back). A groove needs width (rx) at least 2x its depth
+     and at least 3 cm (rx 1.6 to 1.8 cm read as dark trenches, 3 cm with 3.5 to 6 mm is soft); no
+     region key above 3x, 15 mm.
    - Never name a script `bisect.py` or `inspect.py` in the work folder (shadows the stdlib).
 8. **Thread hygiene.** One builder and one reviewer until the score is 5/5; a builder thread lasts
    one round or less, then hands off. A brief names **only** the LIVE STATE block, the contract
@@ -79,7 +83,7 @@ normal maps for fine anatomy.
 |---|---|---|
 | Bust | `breast_flat` key (Laplacian fill of the chest wall) + ONE generator: an ellipsoid dome per breast, ray-height smooth union, k per direction (under 10, inner 14, upper 22, outer 30 mm), nipple and areola primitive on the apex; all from a json | ellipsoid RMS under 1.5 mm; mirror error under 0.5 mm; no concave window collarbone to apex; gap between domes 0 to 6 mm; pole ratio 48:52 to 52:48; apex and internipple per the ref |
 | Joints | half-angle helper bones (`knee_help`, `groin_help`, `neck_help`, Copy Rotation 0.5), twist on the 02 bones, JCM-style corrective keys per joint, direction and angle (neck back 30 / fwd 35 / twist 45; hip flex 57, 115, abduct 85, back 35; knee 90, 155), driver SWING_TWIST local space | ring cross-section 0.92 to 1.05x rest at neck, thigh root, knee; no self-overlap in the 6 cm band; no fold deeper than 3 mm on raking light |
-| Openings | a welded graft: hole, ring patch, inner tube, cap, bridge, weight transfer, open and spread keys | vulva open 6 +-1 mm, spread 20 to 25 mm across the crest, anus open 10 to 14 mm, tube depth 6 / 3 cm; no back faces in the key 0 and key 1 renders (backface-red debug material, SAMPLES 3); no shading seam at the bridge on raking light; round lips with 3 to 4 mm radius |
+| Openings | a welded graft: hole, ring patch, inner tube, cap, bridge, weight transfer, open and spread keys | vulva open 6 +-1 mm, spread 20 to 25 mm across the crest, anus open 10 to 14 mm, tube depth 6 / 3 cm; no back faces in the key 0 and key 1 renders (backface-red debug material, SAMPLES 3); no shading seam at the bridge on raking light; round lips |
 | Bust and butt motion | 1 to 3 bones per side, weight from the dome height (root 0, apex 1), spring bones | sway clip: apex travel 8 to 15 mm, root under 2 mm, no arm interpenetration |
 | Back detail | calm geometry plus a baked normal map for blades, groove, dimples, lat edge | silhouette bands unchanged within 0.5 mm |
 | Neck | clean tapered cylinder on the neck bones, 20 mm fillets into trapezius and jaw, nothing else touches it | crop vs ref: long and slim, no ring, no shelf, plus a bent head frame (new base only; a locked neck is not touched) |
@@ -99,7 +103,7 @@ and measure, never copy a mesh; his private reference pictures are never uploade
 | lc11 | chest trim at the neck base, 400-iteration smooth | 1, 7 |
 | lc12 | side fit on a wrong trace plus lumbar fill forms | 6 |
 | lc1 to lc13 | no posed frame until the animator's clip showed 11 errors | 3 |
-| 2026-10-18 14:35 | user's decision: Hinata rigged base; its neck, bust shape and rig stay, shape keys on top (waist, hips, butt; bust scaled from Hinata's own breast mesh, no stuck-on spheres) | 1, 2 |
+| 2026-10-18 14:29 | user's decision: Hinata rigged base; its neck, bust shape and rig stay, shape keys on top (waist, hips, butt; bust scaled from Hinata's own breast mesh, no stuck-on spheres) | 1, 2 |
 
 Files: `characters/luna/REVIEWER-TO-BUILDER.md` (contract and verdicts), `BUILDER-HANDOFF.md` (LIVE
 STATE blocks), `REVIEWER-HANDOFF.md`, `proof/rika-test/ERRORS.md` (the 11 posed errors), tools
