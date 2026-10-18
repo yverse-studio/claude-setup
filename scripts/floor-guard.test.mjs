@@ -51,6 +51,50 @@ test('@ts-expect-error without a reason fails', () => fails('silenced-checker', 
 test('a "not implemented" stub fails', () => fails('unfinished-work', (d) => put(d, 'src/new.mjs', 'export const f = () => { throw new Error("Not implemented") }\n')))
 test('an empty catch fails', () => fails('unfinished-work', (d) => put(d, 'src/new.mjs', 'try { go() } catch {}\n')))
 test('a lowered coverage threshold fails', () => fails('threshold-lowered', (d) => put(d, 'vitest.config.ts', BASE['vitest.config.ts'].replace('80', '60'))))
+const T = 'src/sum.test.mjs'
+const mv = (d, to, text) => { mkdirSync(dirname(join(d, to)), { recursive: true }); git(d, 'mv', T, to); if (text !== undefined) put(d, to, text) }
+const keepsRule = (rule, change, n) => {
+  const r = run(change)
+  assert.equal(r.code, 1, r.out)
+  assert.match(r.out, new RegExp(`\\[${rule}\\]`))
+  if (n) assert.match(r.out, new RegExp(`${n} fewer assertion`))
+}
+
+test('renamed test file passes (same assertions under the new path)', () => {
+  const r = run((d) => mv(d, 'src/add.test.mjs'))
+  assert.equal(r.code, 0, r.out)
+})
+test('renamed into another folder with edits that keep the assertions passes', () => {
+  const r = run((d) => mv(d, 'test/sum.test.mjs', BASE[T].replace('sum(1, 2), 3', 'sum(1, 2), 3, "one plus two"')))
+  assert.equal(r.code, 0, r.out)
+})
+test('renamed and rewritten past git rename detection, same assertion count, passes', () => {
+  const r = run((d) => mv(d, 'test/add.test.mjs', "import { it } from 'node:test'\nit('totals', () => {\n  assert.equal(add(10, 20), 30)\n  assert.equal(add(0, 4), 4)\n})\n"))
+  assert.equal(r.code, 0, r.out)
+})
+test('moved by delete + untracked new file (uncommitted) passes', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'floor-'))
+  try {
+    git(dir, 'init', '-q', '-b', 'main'); put(dir, T, BASE[T]); git(dir, 'add', '-A'); git(dir, 'commit', '-qm', 'base')
+    rmSync(join(dir, T)); put(dir, 'src/add.test.mjs', BASE[T])
+    const r = spawnSync('node', [guard, '--base', 'main'], { cwd: dir, encoding: 'utf8' })
+    assert.equal(r.status, 0, r.stdout + r.stderr)
+  } finally { rmSync(dir, { recursive: true, force: true }) }
+})
+test('renamed and an assertion dropped fails with the real count', () => keepsRule('assertion-removed', (d) => mv(d, 'src/add.test.mjs', BASE[T].replace("  assert.equal(sum(2, 2), 4)\n", '')), 1))
+test('renamed and rewritten with fewer assertions fails with the real count', () => keepsRule('assertion-removed', (d) => mv(d, 'test/add.test.mjs', "it('totals', () => {\n  assert.equal(add(10, 20), 30)\n})\n"), 1))
+test('renamed out of the test pattern fails', () => keepsRule('test-deleted', (d) => mv(d, 'src/sum-check.mjs')))
+test('renamed to a skipped test fails', () => keepsRule('test-skipped', (d) => mv(d, 'src/add.test.mjs', BASE[T].replace("test('adds'", "test.skip('adds'"))))
+test('deleted while an unrelated new test file exists still fails', () => keepsRule('test-deleted', (d) => { rmSync(join(d, T)); put(d, 'src/other.test.mjs', "test('x', () => {})\n") }))
+test('one new test file cannot cover two deleted test files', () => keepsRule('assertion-removed', (d) => {
+  rmSync(join(d, T)); rmSync(join(d, 'test/bot.mjs'))
+  put(d, 'test/all.test.mjs', 'assert.ok(1)\nassert.ok(2)\nassert.ok(3)\n')
+}, 1))
+test('a new test file passes', () => {
+  const r = run((d) => put(d, 'src/new.test.mjs', "test('n', () => { assert.ok(1) })\n"))
+  assert.equal(r.code, 0, r.out)
+})
+
 test('a skip in an untracked, uncommitted file fails', () => {
   const dir = mkdtempSync(join(tmpdir(), 'floor-'))
   try {

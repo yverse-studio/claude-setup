@@ -27,7 +27,7 @@ process.chdir(top)
 const mergeBase = git(['merge-base', base, 'HEAD'])?.trim()
 if (!mergeBase) bail(`no merge base against ${base} (shallow clone? use fetch-depth: 0)`)
 
-const tracked = git(['diff', '--unified=0', '--no-color', '--no-ext-diff', '--no-renames', mergeBase, '--'])
+const tracked = git(['diff', '--unified=0', '--no-color', '--no-ext-diff', '-M', mergeBase, '--'])
 if (tracked === null) bail(`could not diff against ${mergeBase}`)
 const untrackedList = git(['ls-files', '--others', '--exclude-standard'])
 if (untrackedList === null) bail('could not list untracked files')
@@ -37,20 +37,26 @@ const untracked = untrackedList.split('\n').filter(Boolean).map((f) => {
   return d
 }).join('\n')
 
+// A rename (-M) shows only its edits, filed under the new path; a move too rewritten for git to see
+// as a rename arrives as a delete plus a new file and is matched by assertion count below.
 // `---`/`+++` are file headers only between a `diff` line and its first `@@`; inside a hunk every
 // line is content (an added `++i` shows as `+++i`).
-const added = [], removed = [], deleted = []
+const added = [], removed = [], deleted = [], created = new Set(), renames = []
 const pathOf = (s) => s.replace(/^[ab]\//, '')
-let file = '', oldFile = '', inHeader = false
+let file = '', oldFile = '', renameFrom = '', inHeader = false, isNew = false
 for (const line of `${tracked}\n${untracked}`.split('\n')) {
-  if (line.startsWith('diff ')) inHeader = true
+  if (line.startsWith('diff ')) { inHeader = true; isNew = false }
   else if (line.startsWith('@@')) inHeader = false
   else if (inHeader) {
-    if (line.startsWith('--- ')) oldFile = pathOf(line.slice(4))
+    if (line.startsWith('new file mode')) isNew = true
+    else if (line.startsWith('rename from ')) renameFrom = line.slice(12)
+    else if (line.startsWith('rename to ')) renames.push({ from: renameFrom, to: line.slice(10) })
+    else if (line.startsWith('--- ')) oldFile = pathOf(line.slice(4))
     else if (line.startsWith('+++ ')) {
       const next = pathOf(line.slice(4))
       file = next === '/dev/null' ? oldFile : next
       if (next === '/dev/null') deleted.push(file)
+      else if (isNew) created.add(file)
     }
   } else if (line.startsWith('+')) added.push({ file, text: line.slice(1) })
   else if (line.startsWith('-')) removed.push({ file, text: line.slice(1) })
@@ -80,9 +86,19 @@ for (const { file: f, text } of added) {
     if (SKIP.test(text)) flag('test-skipped', f, text)
   }
 }
-for (const f of deleted) if (isTest(f)) flag('test-deleted', f, 'file deleted')
+for (const { from, to } of renames) if (isTest(from) && !isTest(to)) flag('test-deleted', from, `renamed to ${to}, out of the test pattern`)
 
 const count = (lines, f) => lines.filter((l) => l.file === f && ASSERT.test(l.text)).length
+// A deleted test file is kept when its assertions reappear in new test files (each new assertion
+// covers one lost assertion once); what is not covered is reported with the real count.
+let pool = [...created].filter((f) => isTest(f) && !self.test(f)).reduce((n, f) => n + count(added, f), 0)
+for (const f of deleted) {
+  if (!isTest(f)) continue
+  const had = count(removed, f), covered = Math.min(had, pool)
+  pool -= covered
+  if (covered === 0) flag('test-deleted', f, 'file deleted')
+  else if (had > covered) flag('assertion-removed', f, `${had - covered} fewer assertion line(s)`)
+}
 for (const f of new Set(removed.map((l) => l.file))) {
   if (!isTest(f) || deleted.includes(f) || self.test(f)) continue
   const lost = count(removed, f) - count(added, f)
