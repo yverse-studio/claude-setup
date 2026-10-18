@@ -69,6 +69,8 @@ before each step; builder, gate and fix threads read their `roles/<role>.md` ins
    `PROGRESS.md`. The operator copies each note and the thread's cost (`get_session`,
    `external_metadata.usage.cost_usd`) into `PROGRESS.md`.
 
+   **A game slice that changes play** gets a fresh `Playtester · <game>` thread on its Preview once CI is green and before the gate: [`roles/playtester.md`](roles/playtester.md) plays it and commits `design/playtests/<date>-<sha>.md`; the game's CI step `playtest-check.mjs` fails the PR without it. An older game copies `scripts/playtest-check.mjs` and the CI step from `publish/templates/new-project/.github/workflows/ci.yml`.
+
    **Probe first** (anything meant to earn). Slice `probe` is built and merged alone, before
    every other slice: a landing page that names the offer and the price, a waitlist with
    double opt-in (no pre-orders: `sell` has no pre-order flow yet), Impressum and Datenschutz,
