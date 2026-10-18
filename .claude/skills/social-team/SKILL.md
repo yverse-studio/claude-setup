@@ -52,20 +52,30 @@ product project's `video/<slug>/` (`video-studio`).
 
 ## Posting
 
-- **Default:** a ready video goes to the account's drafts or queue on "upload" (the Lead sends it); yskills
-  adds a trending sound and taps post in the app (organic posts ship with a silent track).
-- **Auto-post:** only while yskills has switched it on in HQ. The switch is yskills' standing ok
-  for posts under CLAUDE.md's ask rule ("sending mail or posts"); note the date in project memory. Then only videos the Critic passed, only the
-  devlog and learning pillars, never ads, prices or crypto, at most 2 posts a day per account, and
-  a daily one-line summary to the coordinator. An account younger than 30 days or with fewer than
-  20 posts gets drafts only, switch or not (new accounts that direct-posted by API were
-  shadowbanned, `learnings.md`). Start at 1 a day; the second only while reach holds.
+Two kinds of account (yskills, 2026-10-18: "when i give you another account or you make one for
+our projects you get full decision power, it's just my personal now, i want to be authentic and creative"):
+
+- **His personal account (@xyskillsx):** yskills decides what goes up; the team makes each idea great
+  in his taste (`roles/lead.md`). A ready video goes to drafts or the queue on "upload"; yskills adds a
+  trending sound and taps post (organic posts ship with a silent track).
+  - **Auto-post** there only while yskills has switched it on in HQ. The switch is his standing ok for
+    posts under CLAUDE.md's ask rule; note the date in project memory. Only videos the Critic passed,
+    only the devlog and learning pillars.
+- **Project accounts** (one he hands over, or one made for a project): the social team has full
+  decision power over content, schedule, profile and strategy. That message is yskills' standing ok
+  for posts on them; no switch needed. The Lead posts what the Critic passed and sends a daily
+  one-line summary to the coordinator.
+- **On every account:** never ads, prices or crypto promotion without yskills' ok; money, brand deals
+  and signatures stay ask-first (`roles/deals.md`). At most 2 posts a day per account. An account
+  younger than 30 days or with fewer than 20 posts gets drafts only (new accounts that direct-posted
+  by API were shadowbanned, `learnings.md`); start at 1 a day, the second only while reach holds.
 - **AI label:** yskills' call, off by default (2026-10-12); twin videos show "twin" in the preview;
   what the law asks for ads and realistic AI people is `market` §4. Never strip provenance data.
 - **Official APIs only**, through an already-audited posting service. No browser bots, cookie
   uploaders, VPNs or emulators.
-- **Accounts:** one real account per brand, made by yskills with
-  [`templates/account-setup.md`](templates/account-setup.md); never bulk or fake persona accounts.
+- **Accounts:** one real account per brand or project, set up with
+  [`templates/account-setup.md`](templates/account-setup.md) (sign-up with phone and captcha is yskills'
+  hands step); never bulk or fake persona accounts.
 - **Crypto (Y-Coin):** posts about building it are fine; no promotion until `legal` cleared the
   coin (TikTok bans crypto promotion; EU MiCA wants a notified white paper first).
 
