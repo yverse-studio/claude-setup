@@ -13,6 +13,13 @@ captures, never from scratch. Igelgarten passed four gates and yskills called it
 its builder wrote its own bar, picked neon on near-black with no source, and the critic graded
 against that text. So:
 
+0. **Breadth first** (yskills, 2026-10-18: "reminds me of the styles we already made for yland"):
+   before picking, a landscape of 10 or more real style families that could fit the idea
+   (pixel, cut paper, flat silhouette, low poly, hand-drawn ink, claymation...), one capture
+   and a one-line fit verdict each, in `design/STYLES.md`; plus a "not like" list with a
+   screenshot of each look we already shipped (yland, Company XY, earlier versions of this
+   project). The three directions for the vote come from the best-fitting families and repeat
+   none of the "not like" looks. The landscape is shown in the project chat as a gallery.
 1. **References:** 3 to 6 captures of the top products of the genre (CrazyGames and Poki top
    pages for a game; the category's leading apps for a product) at 390px and 1440px, shot with
    `ui-review`'s `shoot.mjs` (absolute URLs), into `design/reference/`, one line each in

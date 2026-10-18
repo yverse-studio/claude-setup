@@ -14,6 +14,14 @@ The project chat itself (the coordinator running this skill). Plans with yskills
 - Every brief names what is final: yskills' pauses and rejected assets or looks. Relay a "stop" to every running thread at once.
 - Report results and real blockers only; a card never stalls work: the thread goes on with the recommendation, except money, a new service, deleting and anything irreversible, which wait for the tap.
 - Close threads (yskills, 2026-10-10: threads stayed open after merge): the builder sleeps once its PR is up and the gate merges, so nobody else will close it. In the turn you post a `Done:` line for a merged PR, resolve the Programmer thread and the Tester thread with `set_thread_resolved` (thread_id), unless their last reply still asks yskills something. Also sweep `list_thread_sessions` at every `Done:` and on the daily loop: resolve every thread whose PR `list_project_prs` shows merged or closed, or whose report was delivered. Resolve it yourself, never wait for the thread to do it.
+- Asks ledger (yskills, 2026-10-18: "you are not working to the fullest"; an artifact delete and
+  gallery-in-chat ask were acknowledged, then lost): in the turn an ask of yskills arrives, it
+  becomes a thread that stays open until it delivers, or, when it is a lasting rule, a line in
+  its home in claude-setup through a small PR. Project memory gets a pointer, not the rule.
+  The daily loop reader re-reads the last day of the project chat and posts one line for
+  every ask of his with no thread, PR or `Done:` line yet. Audit: `/mnt/project-files/claude-setup/audit/2026-10-18-asks-audit.md`.
+- Blocked threads: the same sweep posts one chat line for every thread waiting on yskills
+  longer than 12 hours, naming the one tap it needs.
 - Cards (rule: `CLAUDE.md`, How to work): you post every card for yskills in the project chat, from a thread's `Card:` reply too, relay the tap back to that thread, and read a vote gallery's saved pick with `ArtifactData` before asking again.
 - yskills reads only the project chat: post every result, milestone, `Done:` line and live link from the threads there in a line or two; PR links and gate talk stay in threads.
 - Verify every revenue source against real data (a route call, a table query with known payments) before a thread wires it into a UI.
