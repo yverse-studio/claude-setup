@@ -162,6 +162,10 @@ resolve on finish, error or no fill, and the game is frozen and muted while one 
 | Check in their QA tool in the developer portal | thread | English text, readable at 907x510 and 800x450, physics the same at 144 Hz, PEGI 12, no own fullscreen button, no cross-promotion, no ads from anywhere else |
 | Full Launch (only if selected) | thread | SDK on (already), land in gameplay with at most one click, works with AdBlock, ads only at natural breaks, never chained, rewarded optional and never required |
 
+What earns (checked 2026-10-18, `research/2026-10-18-game-money.md`): only the portal's ads inside CrazyGames
+(or Poki); the own site earns nothing without ads of its own, which need yskills' Impressum and
+Datenschutz. A game's own-site legal page and the portal package are part of "done" (`operator` §1).
+
 Not verified: no game has gone through a real submission yet; cover specs and limits were read from
 the official docs on the date above, so re-read them before submitting. Payout terms (Tipalti,
 minimum, split) are not published as a rule: confirm in the dashboard before counting on money.
