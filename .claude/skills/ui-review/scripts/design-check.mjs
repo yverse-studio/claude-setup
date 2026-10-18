@@ -14,18 +14,16 @@ const MIN_LARGE_CONTRAST = 3;
 const MIN_TYPE_SIZES = 3;
 const IMAGE = /\.(png|jpe?g|webp|gif|avif)$/i;
 const HEX = /#[0-9a-f]{6}\b/gi;
-const MAX_DEFAULT_DISTANCE = 25;
-const MAX_NEAR_BLACK_DISTANCE = 6; // the look is neutral black; a green or blue ground like #0a1210 is a choice
+const MAX_DEFAULT_DISTANCE = 6; // RGB distance to a SLOP.md hex; near-whites such as #faf9f6 sit outside it
+const MAX_NEAR_BLACK_DISTANCE = 1.5; // one step per channel: #121212 and #09090b are choices, #0b0b0b is the look
 const DEFAULT_COLOURS = [
-  { hex: '#f4f1ea', look: 18, name: 'cream ground', warm: true },
+  { hex: '#f4f1ea', look: 18, name: 'cream ground' },
+  { hex: '#f4ecd6', look: 18, name: 'cream ground' },
   { hex: '#d97757', look: 18, name: 'terracotta accent' },
   { hex: '#0b0b0b', look: 22, name: 'tinted near-black', max: MAX_NEAR_BLACK_DISTANCE },
   { hex: '#111111', look: 22, name: 'tinted near-black', max: MAX_NEAR_BLACK_DISTANCE },
 ];
 const NEAR_BLACK_LUMINANCE = 0.02;
-const MIN_WARM_HUE = 30;
-const MAX_WARM_HUE = 60;
-const MIN_WARM_SATURATION = 0.15;
 const MIN_SHOUT_SATURATION = 0.85;
 const SOURCE_DIRS = ['src', 'app', 'pages', 'components', 'layouts', 'public'];
 const SKIPPED_DIRS = new Set(['node_modules', 'fixtures', '__tests__', 'test', 'tests']);
@@ -65,12 +63,6 @@ function hsl(hex) {
 function distance(a, b) {
   const [x, y] = [rgb(a), rgb(b)];
   return Math.hypot(...x.map((c, i) => c - y[i]));
-}
-
-// Cream is warm and a little saturated; neutral greys (#f5f5f5, #fafafa) are not the look.
-function isWarm(hex) {
-  const { h, s } = hsl(hex);
-  return h >= MIN_WARM_HUE && h <= MAX_WARM_HUE && s >= MIN_WARM_SATURATION;
 }
 
 function isSaturated(hex) {
@@ -116,7 +108,7 @@ function checkDefaultLooks(text, captures, fails) {
   const cleared = (row) => captures.some((f) => row.includes(f));
   const rowColours = rows.filter((r) => !cleared(r)).flatMap((r) => (r.match(HEX) ?? []).map((h) => h.toLowerCase()));
   for (const hex of new Set(rowColours)) {
-    const hit = DEFAULT_COLOURS.find((d) => distance(hex, d.hex) <= (d.max ?? MAX_DEFAULT_DISTANCE) && (!d.warm || isWarm(hex)));
+    const hit = DEFAULT_COLOURS.find((d) => distance(hex, d.hex) <= (d.max ?? MAX_DEFAULT_DISTANCE));
     if (hit) fails.push(`## Palette: ${hex} is the SLOP.md ${hit.look} default (${hit.name}); cite a reference capture on its row or pick another`);
   }
   const dark = rowColours.some((h) => luminance(h) < NEAR_BLACK_LUMINANCE);

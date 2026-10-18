@@ -83,12 +83,20 @@ test('tinted near-black from SLOP.md 22 fails', () => {
 
 test('neutral near-black fails at both defaults, a hued dark ground passes', () => {
   assert.match(checkDesign(project(withPalette('| ink | #111111 |'))).join(), /SLOP\.md 22 default/);
-  assert.match(checkDesign(project(withPalette('| ink | #0d0d0d |'))).join(), /SLOP\.md 22 default/);
+  assert.match(checkDesign(project(withPalette('| ink | #0c0c0b |'))).join(), /SLOP\.md 22 default/);
   for (const dark of ['#0a1210', '#0b1226', '#05080a']) assert.deepEqual(checkDesign(project(withPalette(`| ink | ${dark} |`))), [], dark);
 });
 
-test('ordinary light greys and white are not the cream look', () => {
-  for (const grey of ['#f5f5f5', '#fafafa', '#eeeeee', '#ffffff']) assert.deepEqual(checkDesign(project(withPalette(`| paper | ${grey} |`))), [], grey);
+const FLAGGED = ['#f4f1ea', '#f4ecd6', '#f5f0e8', '#d97757', '#0b0b0b', '#111111', '#0c0c0b'];
+const PASSING = [
+  '#ffffff', '#fefefe', '#fdfcfa', '#faf9f6', '#f9f7f4', '#f5f5f5', '#fafafa', '#f8f8f8', '#f0f0f0', '#eeeeee', '#e5e5e5',
+  '#fffaf0', '#e07a5f', '#0a1210', '#0b1226', '#05080a', '#000000', '#121212', '#09090b', '#0a0a0a', '#151515', '#18181b',
+  '#111827', '#ff2a1a', '#e53935', '#dc2626',
+];
+
+test('table: real defaults fail, near-whites, greys, dark greens and blues, danger reds pass', () => {
+  for (const hex of FLAGGED) assert.match(checkDesign(project(withPalette(`| c | ${hex} |`))).join(), /SLOP\.md (18|22) default/, hex);
+  for (const hex of PASSING) assert.deepEqual(checkDesign(project(withPalette(`| c | ${hex} |`))), [], hex);
 });
 
 test('a danger red on a dark ground is not the shout, a second saturated colour breaks the single shout', () => {

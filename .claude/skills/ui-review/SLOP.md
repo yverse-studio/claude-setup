@@ -41,7 +41,7 @@ designer role), so each look below names the values it uses. `scripts/design-che
 these hex values in `## Palette` and the button text below in the project source. A palette row
 that cites a reference capture by file name clears its colour; the colour is then a copied choice.
 
-18. Cream and clay: a background near `#F4F1EA`, a high-contrast serif display, a terracotta
+18. Cream and clay: a background near `#F4F1EA` or `#F4ECD6`, a high-contrast serif display, a terracotta
     accent near `#D97757` (the accent is Anthropic's own, so on a user's brief it reads as a tell).
 19. Black and one shout: a near-black ground with a single acid-green or vermilion accent (hue
     65 to 110 or 8 to 20 degrees, saturation 85 percent or more, our reading of the source's words;
