@@ -1,23 +1,36 @@
 ---
 name: watch
-description: "Use whenever yskills posts an Instagram, TikTok or YouTube link or a video, or asks to explain or fact-check one. Gets frames plus transcript so you can answer questions about it."
+description: "Use whenever yskills posts an Instagram, TikTok or YouTube link or a video, in any project. Frames, transcript and edit timeline, then short Take, Keep, Skip feedback."
 license: MIT
 allowed-tools: Bash, Read, AskUserQuestion
 metadata:
-  version: "0.3.2"
+  version: "0.4.0"
 ---
 
 # /watch
 
-## Shared links (claude-setup, 2026-10-17)
+## Shared links and videos (claude-setup, 2026-10-17 and 2026-10-18)
 
-A message with an Instagram, TikTok or YouTube link is a request to watch it, whatever else it says. yskills shares links, not files (files are too big for chat).
+In every project, a message with an Instagram, TikTok or YouTube link, or a video file, is a request to watch it, whatever else it says. yskills, 2026-10-18: watch it, analyse it, and give short feedback on what we take or keep from it and what's not worth it.
 
-1. Run `setup.py --backend faster-whisper` once per container (installs it with pip if missing; free, no key, CPU), then `watch.py "<link>" --engine local --question "<his words>"`. Public posts download without a login; never use his cookies or password. A login-only or private post: say so in one line and ask for a screen recording.
-2. Read every frame, then reply in four short parts: **Seen** (frames, with times), **Heard** (transcript), **Fact check** (each claim: checked with a source, or unverified), **For claude-setup** (adopt, skip or try, with a reason; a tool or plugin tip goes through `search-first` and the CLAUDE.md install rule before anything is installed).
-3. Say what came from frames and what you inferred. Gemini is not used (yskills picked free local, 2026-10-17).
+1. **Get the video.**
+   - Run `setup.py --backend faster-whisper` once per container (it installs faster-whisper with pip if it's missing; free, no key, runs on the CPU), then `watch.py "<link>" --engine local --question "<his words>"`. Public posts only, without a login; never use his cookies or password.
+   - If the cloud can't reach the host (a proxy 403, "Unable to connect", no route), never ask yskills to change settings. In a claude.ai project thread, start Remote Control on his laptop (`start_rc_session` with the folder from `list_devices`): the brief runs this skill there and replies with the same short feedback. That is one permission card. Anywhere else, ask him to save the video in the app and send the file.
+   - If the post is private or login-only, say so in one line and ask for a screen recording.
+2. **Look at it.** Read every frame and the report's **Timeline** section: cuts, average shot length, audio hits and BPM, the share of cuts on a hit, silences, loudness, and speech rate. Say what came from the frames, what came from the timeline, and what you inferred.
+3. **Reply short by default.** Open with one line of facts: length, number of cuts and average shot length, the hook in the first 2 s, sound, caption style. Then three parts:
+   - **Take:** what we copy and where it goes.
+   - **Keep:** what we already do that it confirms.
+   - **Skip:** what's not worth it, and why.
 
-Tested 2026-10-17 in a cloud thread: a 61 s reel, 8 frames plus a full transcript in about 70 s. Details: `research/video-watching-2026-10-17.md` (project files).
+   Give the long version (Seen, Heard, Fact check, the full timeline) only when he asks.
+4. **Route it by what he wrote.**
+   - "like this", "style", "for later", or no words: the Take lines go into the brand's `taste.md` and hook library (`social-team`; until that project exists, the taste memory), where the Producer reads them.
+   - An idea: one line in the idea backlog.
+   - "edit this": only his own video. Someone else's video becomes "make one like it from our footage" (copyright).
+   - "explain", "is this true", or a tool tip: add the fact check. A tool goes through `search-first` and the CLAUDE.md install rule before anything is installed.
+
+Gemini is not used (yskills picked free and local, 2026-10-17). Tested 2026-10-17 in a cloud thread: a 61 s reel gave 8 frames and a full transcript in about 70 s. On 2026-10-18 the cloud reached no video host, so the laptop route above exists. Details: `research/video-watching-2026-10-17.md` (project files).
 
 Run the bundled Python script. With the **gemini** engine (a `GEMINI_API_KEY` is configured) Google's video model watches the video and the report carries its timestamped answer for you to relay. With the **local** engine the script produces timestamped frames and a transcript; view the frames and answer from that evidence. Native captions come first; the chosen local or cloud backend is only a fallback. Transcript-only evidence cannot establish visual facts.
 

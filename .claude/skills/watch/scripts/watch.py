@@ -25,6 +25,7 @@ from transcribe import filter_range, format_transcript, parse_vtt  # noqa: E402
 from whisper import load_api_key, transcribe_video  # noqa: E402
 from local_faster_whisper import available as faster_whisper_available  # noqa: E402
 from runtime import configure_stdio  # noqa: E402
+from timeline import analyze as analyze_timeline, format_report as format_timeline  # noqa: E402
 
 
 LOCAL_ONLY_FLAGS = (("--detail", "detail"), ("--fps", "fps"), ("--max-frames", "max_frames"),
@@ -143,6 +144,8 @@ def main() -> int:
     ap.add_argument("--engine", choices=["auto", "gemini", "local"], default=None,
                     help="gemini: Google watches the video and answers (needs GEMINI_API_KEY). "
                          "local: frames + transcript on this machine. Default auto: gemini when a key exists.")
+    ap.add_argument("--no-timeline", action="store_true",
+                    help="Skip the edit timeline (cuts, audio hits, silences, loudness)")
     ap.add_argument("--question", default=None,
                     help="The user's question. Sent to Gemini on a gemini run; unused by the local engine.")
     args = ap.parse_args()
@@ -302,6 +305,15 @@ def main() -> int:
     for error in errors:
         print(f"[watch] {error}", file=sys.stderr)
 
+    timeline_data = None
+    if video_path and not args.no_timeline and full_duration > 0:
+        try:
+            timeline_data = analyze_timeline(video_path, full_duration,
+                                             has_video=bool(meta.get("has_video", meta.get("width"))),
+                                             has_audio=bool(meta.get("has_audio")))
+        except (SystemExit, Exception) as exc:  # a timeline failure never breaks the report
+            errors.append(f"Timeline unavailable: {exc}")
+
     info = dl.get("info") or {}
 
     print()
@@ -380,6 +392,15 @@ def main() -> int:
             "re-run with `--start HH:MM:SS --end HH:MM:SS` to zoom into a section, or use "
             "`--detail token-burner` to keep every scene-change frame across the whole video."
         )
+
+    if timeline_data:
+        print()
+        print("## Timeline")
+        print()
+        print("_Edit timeline from ffmpeg: scene cuts, audio hits (beats, SFX, word onsets), silences, loudness._")
+        print()
+        for line in format_timeline(timeline_data, all_segments):
+            print(line)
 
     print()
     print("## Frames")
