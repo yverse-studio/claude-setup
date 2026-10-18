@@ -26,11 +26,12 @@ for (const file of ['global/settings.json', '.claude/settings.json']) {
     for (const c of [
       'wrangler login', 'npx wrangler login', 'npx wrangler login --browser', 'wrangler logout', 'npx wrangler logout',
       'git push --force origin main', 'git push -f origin main', 'git push origin main --force', 'git push --force-with-lease origin main',
-      'git push origin +main', 'git push -u --force origin HEAD:main', 'git push --force origin master',
+      'git push origin +main', 'git push -u --force origin HEAD:main', 'git push origin --delete main', 'git push origin :main', 'git push --mirror',
+      'git -C /repo push --force origin main', 'git -c x=y push -f origin main', 'git push -fu origin main', 'git push --force origin master',
     ]) assert.ok(denied(c, deny), `${c} must be denied`)
     for (const c of [
       'git push -u origin claude/project-thread-vxq6m9', 'git push --force origin claude/feature', 'git push origin main',
-      'wrangler deploy', 'wrangler whoami', 'git push -u origin fix/domain-cleanup',
+      'wrangler deploy', 'wrangler whoami', 'git push -u origin fix/domain-cleanup', 'git push -u origin claude/fix-thing',
     ]) assert.ok(!denied(c, deny), `${c} must not be denied by these rules`)
   })
 }
