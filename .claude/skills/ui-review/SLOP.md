@@ -44,7 +44,8 @@ that cites a reference capture by file name clears its colour; the colour is the
 18. Cream and clay: a background near `#F4F1EA`, a high-contrast serif display, a terracotta
     accent near `#D97757` (the accent is Anthropic's own, so on a user's brief it reads as a tell).
 19. Black and one shout: a near-black ground with a single acid-green or vermilion accent (hue
-    65 to 110 or 355 to 16 degrees, saturation 85 percent or more, our reading of the source's words).
+    65 to 110 or 8 to 20 degrees, saturation 85 percent or more, our reading of the source's words;
+    a plain red reads as danger and passes, a second saturated colour makes it a palette).
 20. Broadsheet: hairline rules, zero radius, dense newspaper columns, whatever the subject.
 21. SaaS card kit: identical rounded cards, one radius on everything, the same soft grey shadow
     (`rgba(0,0,0,.1)`), gradient washes as decoration.
@@ -62,7 +63,7 @@ screenshot and the fix. Any hit makes check 5 fail. End with the slop count.
 
 Sources (ideas, rewritten): gstack's AI-slop checklist and Design Score / AI Slop Score (Garry Tan,
 MIT), Hallmark's slop-test gates and pre-emit critique (Nutlope, MIT), taste-skill's
-reference-images-first flow (Leonxlnx, MIT), `impeccable` (vendored).
+reference-images-first flow (Leonxlnx, MIT), `impeccable` (vendored), Anthropic `frontend-design`.
 
 Sources for 18 to 23 (ideas, rewritten; the hex values are quoted facts): Anthropic
 `skills/frontend-design/SKILL.md` ("Process" list of five AI-default traits and the CTA

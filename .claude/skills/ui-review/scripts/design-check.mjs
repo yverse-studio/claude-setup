@@ -17,12 +17,16 @@ const HEX = /#[0-9a-f]{6}\b/gi;
 const MAX_DEFAULT_DISTANCE = 25;
 const MAX_NEAR_BLACK_DISTANCE = 6; // the look is neutral black; a green or blue ground like #0a1210 is a choice
 const DEFAULT_COLOURS = [
-  { hex: '#f4f1ea', look: 18, name: 'cream ground' },
+  { hex: '#f4f1ea', look: 18, name: 'cream ground', warm: true },
   { hex: '#d97757', look: 18, name: 'terracotta accent' },
   { hex: '#0b0b0b', look: 22, name: 'tinted near-black', max: MAX_NEAR_BLACK_DISTANCE },
   { hex: '#111111', look: 22, name: 'tinted near-black', max: MAX_NEAR_BLACK_DISTANCE },
 ];
 const NEAR_BLACK_LUMINANCE = 0.02;
+const MIN_WARM_HUE = 30;
+const MAX_WARM_HUE = 60;
+const MIN_WARM_SATURATION = 0.15;
+const MIN_SHOUT_SATURATION = 0.85;
 const SOURCE_DIRS = ['src', 'app', 'pages', 'components', 'layouts', 'public'];
 const SKIPPED_DIRS = new Set(['node_modules', 'fixtures', '__tests__', 'test', 'tests']);
 const SOURCE_FILE = /\.(vue|html|jsx|tsx|svelte)$/i;
@@ -63,10 +67,21 @@ function distance(a, b) {
   return Math.hypot(...x.map((c, i) => c - y[i]));
 }
 
+// Cream is warm and a little saturated; neutral greys (#f5f5f5, #fafafa) are not the look.
+function isWarm(hex) {
+  const { h, s } = hsl(hex);
+  return h >= MIN_WARM_HUE && h <= MAX_WARM_HUE && s >= MIN_WARM_SATURATION;
+}
+
+function isSaturated(hex) {
+  const { s, l } = hsl(hex);
+  return s >= MIN_SHOUT_SATURATION && l >= 0.4 && l <= 0.65;
+}
+
+// Acid green or vermilion; a plain red (hue under 8 or over 350) reads as danger, not as the shout.
 function isShout(hex) {
-  const { h, s, l } = hsl(hex);
-  const hueFits = (h >= 65 && h <= 110) || h <= 16 || h >= 355;
-  return hueFits && s >= 0.85 && l >= 0.4 && l <= 0.65;
+  const { h } = hsl(hex);
+  return isSaturated(hex) && ((h >= 65 && h <= 110) || (h >= 8 && h <= 20));
 }
 
 function sections(md) {
@@ -101,11 +116,12 @@ function checkDefaultLooks(text, captures, fails) {
   const cleared = (row) => captures.some((f) => row.includes(f));
   const rowColours = rows.filter((r) => !cleared(r)).flatMap((r) => (r.match(HEX) ?? []).map((h) => h.toLowerCase()));
   for (const hex of new Set(rowColours)) {
-    const hit = DEFAULT_COLOURS.find((d) => distance(hex, d.hex) <= (d.max ?? MAX_DEFAULT_DISTANCE));
+    const hit = DEFAULT_COLOURS.find((d) => distance(hex, d.hex) <= (d.max ?? MAX_DEFAULT_DISTANCE) && (!d.warm || isWarm(hex)));
     if (hit) fails.push(`## Palette: ${hex} is the SLOP.md ${hit.look} default (${hit.name}); cite a reference capture on its row or pick another`);
   }
   const dark = rowColours.some((h) => luminance(h) < NEAR_BLACK_LUMINANCE);
-  const shout = rowColours.find(isShout);
+  const saturated = rowColours.filter(isSaturated);
+  const shout = saturated.length === 1 && isShout(saturated[0]) ? saturated[0] : null; // single: a second saturated colour is a palette
   if (dark && shout) fails.push(`## Palette: near-black ground with the single shout ${shout} is SLOP.md 19; cite a reference capture on its row or pick another`);
 }
 

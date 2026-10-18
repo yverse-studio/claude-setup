@@ -87,6 +87,19 @@ test('neutral near-black fails at both defaults, a hued dark ground passes', () 
   for (const dark of ['#0a1210', '#0b1226', '#05080a']) assert.deepEqual(checkDesign(project(withPalette(`| ink | ${dark} |`))), [], dark);
 });
 
+test('ordinary light greys and white are not the cream look', () => {
+  for (const grey of ['#f5f5f5', '#fafafa', '#eeeeee', '#ffffff']) assert.deepEqual(checkDesign(project(withPalette(`| paper | ${grey} |`))), [], grey);
+});
+
+test('a danger red on a dark ground is not the shout, a second saturated colour breaks the single shout', () => {
+  assert.deepEqual(checkDesign(project(withPalette('| danger | #ff2a1a |'))), []);
+  assert.deepEqual(checkDesign(project(withPalette('| shout | #c6ff00 |\n| dew | #00e5ff |'))), []);
+});
+
+test('a shout row citing a reference capture is cleared', () => {
+  assert.deepEqual(checkDesign(project(withPalette('| shout | #c6ff00 | from a.png |'))), []);
+});
+
 test('a default colour passes when its row cites a reference capture', () => {
   assert.deepEqual(checkDesign(project(withPalette('| paper | #f4f1ea | from a.png |'))), []);
 });
