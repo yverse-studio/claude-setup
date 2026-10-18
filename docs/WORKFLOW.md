@@ -57,7 +57,7 @@ Role table (tiers only; the ids live in the line above):
 | Handoff writing | Haiku or the thread itself | low | | never a new Opus call |
 | Figure and scene pipeline | Sonnet renders and crops | medium | Opus diagnoses once | Fable never |
 | Video and media edits, store and deploy workflows | Sonnet | medium | | |
-| Video studio: Producer, Writer, Director, Editor, Motion | Sonnet | medium | Opus picks the concept and gives the Critic's verdict | |
+| Video studio: Producer, Writer, Director, Sound, Editor, Motion | Sonnet | medium | Opus picks the concept and gives the Critic's verdict | |
 | Social team: Lead, Scout, Community, Partnerships, Analyst | Sonnet | medium | Opus writes the weekly plan, ranks ideas and reads deal contracts | |
 
 Fixed rules: effort medium is the default; high only where listed; max never unless yskills asks. Never switch a running thread's model (the cache is rewritten once, about $1 at 110k). Haiku reading jobs stay under 100k of prompt, because its price doubles above that.
@@ -77,6 +77,14 @@ Every correction, every failed gate round with a catchable cause and every test 
 a rule, skill line, test or check in this repo. That is the memory: committed, reviewed, loaded
 by every thread. No memory plugin or Obsidian: ECC hooks from the PC install don't run in cloud threads (only the settings hooks `cloud/setup.sh` writes, like the context guard), and the repo already
 does the job.
+
+**Lessons step** (after every merge, the gate thread, one short pass; sources: Every's ce-compound,
+Matt Pocock's retro, both MIT). For each correction or catchable failed round of the PR, ask: would
+the next thread repeat this mistake without the lesson? No: write nothing and say so in one line.
+Yes: update the line that already covers it, else add one line in its single home (`CLAUDE.md`
+line, skill line, or memory). A mechanical lesson (a fixed pattern, a banned call, a file rule)
+becomes a check, test or lint rule in `scripts/` or CI instead of text. Then prune: delete a
+lesson line that a check now covers, or whose guarded thing is gone.
 
 Claude Code's built-in auto-memory stays on as a scratchpad on your PC
 (`~/.claude/projects/*/memory/`). **Memory check**, first session of each month or when you say

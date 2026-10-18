@@ -57,7 +57,7 @@ our projects you get full decision power, it's just my personal now, i want to b
 
 - **His personal account (@xyskillsx):** yskills decides what goes up; the team makes each idea great
   in his taste (`roles/lead.md`). A ready video goes to drafts or the queue on "upload"; yskills adds a
-  trending sound and taps post (organic posts ship with a silent track).
+  trending sound and taps post (`video-studio` delivers a music-free master for that).
   - **Auto-post** there only while yskills has switched it on in HQ. The switch is his standing ok for
     posts under CLAUDE.md's ask rule; note the date in project memory. Only videos the Critic passed,
     only the devlog and learning pillars, and a daily one-line summary to the coordinator.

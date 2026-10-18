@@ -21,18 +21,29 @@ Producer fills this before any script. Keep it to one page.
 
 Recommended: <A/B/C> because <reason>. Card sent: <date>. Picked: <letter>.
 
-## Script (picked concept)
+## Files after the brief
+
+Each step writes its own file in this folder; `scripts/ready.py` checks them before delivery
+(`SKILL.md`, The pipeline). Their shapes:
+
+**`script.md` (Writer).** Hook: <picture + words>. Tension or turn: <...>. Payoff: <...>.
 
 | Time | Picture (what moves) | On screen (3-5 words) | Voice |
 |---|---|---|---|
 | 0.0-1.0 | | | |
 
-## Shot list
+**`references.md` (Writer).** 2-3 top videos in the niche: link, why it is the bar.
 
-| Shot | Subject | Framing | Camera move | Into next |
-|---|---|---|---|---|
+**`storyboard.md` (Director).** One row per shot, a real still for each.
 
-## Critic verdicts
+| Shot | Still | Time | Subject and framing | Camera move | Sound cue |
+|---|---|---|---|---|---|
+| 1 | stills/01.png | 0.0-1.0 | | | |
 
-- Animatic: <pass/fail, date, link>
-- Cut: <pass/fail, date, link>
+**`sound.md` (Sound).** Music bed: <title>. Source: <link>. Licence: <name>. BPM and beat map: <times>.
+
+| Time | SFX | Source | Licence |
+|---|---|---|---|
+
+**`critic.md` (Critic).** Scores against the references, then `PASS animatic <date> refs: <url>, <url>`
+and `PASS cut <date> refs: <url>, <url>`.

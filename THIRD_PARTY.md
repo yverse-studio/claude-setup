@@ -102,6 +102,13 @@ Source: https://github.com/addyosmani/agent-skills (MIT, see licenses/AGENT-SKIL
 codes kept; the CONSTRAINTS.md checks dropped; test, threshold and `floor-ok` rules added) as
 `.claude/skills/publish/templates/new-project/scripts/floor-guard.mjs`. Read, not run, before copying.
 
+## Lessons step
+
+Ideas, not copied text: Every's compound-engineering `ce-compound` (durable-lesson bar,
+https://github.com/EveryInc/compound-engineering-plugin, MIT) and Matt Pocock's skills retro
+("build the check, don't write the rule", https://github.com/mattpocock/skills, MIT). Read from
+shallow clones, then written as our own lines in `docs/WORKFLOW.md` (Learning).
+
 ## Game-dev skill references (game-3d)
 
 Read in full before copying (2026-10-07, thread "Researcher: 3D game path"): plain SKILL.md and
