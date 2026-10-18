@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Fails when a game's design doc lacks what roles/game-designer.md asks of it: every heading with
 // content, numbers in the session and difficulty parts, two NOT lines, three references with a
-// link, Copy and Skip, and a Not checked list. Usage: node gdd-check.mjs [design/GDD.md]  (exit 1 on errors)
+// link, the day read, Copy and Skip, and a Not checked list. Usage: node gdd-check.mjs [design/GDD.md]  (exit 1 on errors)
 import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -10,6 +10,8 @@ export const REQUIRED_HEADINGS = ['Core loop', 'Session length', 'Progression', 
 const MIN_REFERENCES = 3
 const MIN_NOT_LINES = 2
 const MIN_CURVE_ROWS = 2
+export const PLACEHOLDER = /<(?:name|game|store link|date|numbers as read|what|what and why)>/g // the template's own; game text such as <kbd> is not one
+const DAY_READ = /\b\d{4}-\d{2}-\d{2}\b/
 const DIVIDER = /^\s*\|?[\s:|-]+\|[\s:|-]*$/
 const bullets = (text) => text.split('\n').filter((l) => /^\s*[-*]\s+\S/.test(l))
 
@@ -31,7 +33,7 @@ export function checkGdd(md) {
     if (!(h in s)) errors.push(`no "## ${h}" section`)
     else if (!s[h].trim()) errors.push(`## ${h} is empty`)
   }
-  for (const m of md.matchAll(/<[^<>\n]+>/g)) errors.push(`template placeholder left: ${m[0].slice(0, 40)}`)
+  for (const m of md.matchAll(PLACEHOLDER)) errors.push(`template placeholder left: ${m[0].slice(0, 40)}`)
   for (const h of ['Session length', 'Difficulty curve']) {
     if (s[h]?.trim() && !/\d/.test(s[h])) errors.push(`## ${h} has no number`)
   }
@@ -41,7 +43,7 @@ export function checkGdd(md) {
   const refs = bullets(s.References ?? '')
   if (s.References !== undefined && refs.length < MIN_REFERENCES) errors.push(`## References: ${refs.length} of ${MIN_REFERENCES} games`)
   for (const r of refs) {
-    for (const [re, what] of [[/https?:\/\//, 'a link'], [/\bCopy:/, '"Copy:"'], [/\bSkip:/, '"Skip:"']]) {
+    for (const [re, what] of [[/https?:\/\//, 'a link'], [/\bCopy:/, '"Copy:"'], [/\bSkip:/, '"Skip:"'], [DAY_READ, 'the day read (YYYY-MM-DD)']]) {
       if (!re.test(r)) errors.push(`reference without ${what}: ${r.trim().slice(0, 50)}`)
     }
   }

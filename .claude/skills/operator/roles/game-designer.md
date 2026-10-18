@@ -29,7 +29,7 @@ Research like [`researcher.md`](researcher.md) (Method): a primary source per cl
 
 What the Tester or the Playtester checks on a game PR that changes play (the evaluator takes these as acceptance criteria):
 
-- `design/GDD.md` exists with every heading of the template; `.claude/skills/game-3d/scripts/gdd-check.mjs` passes (three references with Copy and Skip, numbers in the session and difficulty parts, two NOT lines, `Not checked:`).
+- `design/GDD.md` exists with every heading of the template; `node <game-3d skill folder>/scripts/gdd-check.mjs design/GDD.md` passes (three references with link, day read, Copy and Skip, numbers in the session and difficulty parts, two NOT lines, `Not checked:`).
 - The first reward arrives inside the time the doc names; the first 60 seconds need no reading.
 - The play bot (several seeds, `game-3d` §4) lands in the difficulty table's win-rate band; a build that changes the table also changes the doc in the same PR, and the bot's file is never edited to pass balance.
 - Each feedback line of the doc is visible or audible in the build; each ad placement matches the doc.

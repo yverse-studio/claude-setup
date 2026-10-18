@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { checkGdd, REQUIRED_HEADINGS } from './gdd-check.mjs'
+import { checkGdd, REQUIRED_HEADINGS, PLACEHOLDER } from './gdd-check.mjs'
 
 const GOOD = `# Game design: Bug Garden
 ## Core loop
@@ -49,6 +49,22 @@ test('a reference without a link, Copy or Skip fails', () => {
   assert.match(checkGdd(GOOD.replace('https://www.crazygames.com/a', 'crazygames')).join(), /without a link/)
   assert.match(checkGdd(GOOD.replace('Copy: pacing.', 'Take pacing.')).join(), /without "Copy:"/)
   assert.match(checkGdd(GOOD.replace('Skip: story', 'no story')).join(), /without "Skip:"/)
+})
+test('every placeholder the template carries is one the checker knows', () => {
+  const t = readFileSync(new URL('../../operator/templates/game-design.md', import.meta.url), 'utf8')
+  const all = t.match(/<[^<>\n]+>/g)
+  assert.deepEqual(all, t.match(PLACEHOLDER))
+})
+test('a reference without the day read fails', () => assert.match(checkGdd(GOOD.replace(', read 2026-10-18)', ')')).join(), /without the day read/))
+test('ordinary game text passes: tags, comparisons, CRLF, star bullets, bold labels', () => {
+  const ordinary = [
+    GOOD.replace('Dash through', 'Press <kbd>Space</kbd> or tap a <canvas> button; dash through'),
+    GOOD.replace('95%', '>=95% and <100%'),
+    GOOD.replace(/\n/g, '\r\n'),
+    GOOD.replace(/^- /gm, '* '),
+    GOOD.replace(/Copy:/g, '**Copy:**').replace(/Skip:/g, '**Skip:**'),
+  ]
+  for (const doc of ordinary) assert.deepEqual(checkGdd(doc), [])
 })
 test('a left placeholder fails', () => assert.match(checkGdd(GOOD.replace('Bug Garden', '<name>')).join(), /placeholder/))
 test('a doc without Not checked fails', () => assert.match(checkGdd(without(/Not checked:\n.*\n/)).join(), /Not checked/))
