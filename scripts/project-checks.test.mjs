@@ -47,8 +47,30 @@ test('plan: game docs follow play files; a look-only PR and a site skip them', (
   assert.deepEqual(names(['src/rules.ts'], SITE), ['design', 'copy', 'analytics'], 'a site has no game scripts, so none are due')
 })
 
+// The pass-table: one row per kind of change, what runs for a site and for a game.
+const TABLE = [
+  ['backend-only src/ change', 'src/worker/api.ts', ['design', 'copy', 'analytics'], ['design', 'copy', 'analytics', 'gdd', 'audio']],
+  ['test-only change', 'src/api.test.ts', [], []],
+  ['README change', 'README.md', [], []],
+  ['migration change', 'migrations/0002.sql', [], []],
+  ['asset change', 'assets/hit.ogg', [], ['audio']],
+  ['locale change', 'src/i18n/de.json', ['design', 'copy', 'analytics'], ['design', 'copy', 'analytics', 'gdd', 'audio']],
+  ['public file change', 'public/logo.svg', ['design', 'copy', 'analytics'], ['design', 'copy', 'analytics']],
+  ['play test file', 'test/game.mjs', [], ['gdd', 'audio']],
+]
+test('plan pass-table: which checks run for each kind of change', () => {
+  for (const [what, file, site, game] of TABLE) {
+    assert.deepEqual(names([file], SITE), site, `site: ${what}`)
+    assert.deepEqual(names([file], GAME, isPlayFile), game, `game: ${what}`)
+  }
+})
+
 test('every check with a doc names the fix for it', () => {
-  for (const c of CHECKS.filter((x) => x.doc)) assert.match(c.fix, /claude-setup operator\/roles\/\w[\w-]*\.md/, c.name)
+  const role = { design: 'Designer', copy: 'Content Designer', analytics: 'Analytics owner', gdd: 'Game Designer' } // as roles/*.md title them
+  for (const c of CHECKS.filter((x) => x.doc)) {
+    assert.match(c.fix, /claude-setup operator\/roles\/\w[\w-]*\.md/, c.name)
+    assert.ok(c.fix.includes(`the ${role[c.name]} writes`), `${c.name} names the ${role[c.name]}`)
+  }
 })
 
 const git = (cwd, ...args) => execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', '-c', 'commit.gpgsign=false', ...args], { cwd, stdio: 'pipe', encoding: 'utf8' })
