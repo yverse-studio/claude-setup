@@ -34,3 +34,12 @@ test('claims after the Not checked list are still checked', () => {
 test('sentences and numbered items need a source too', () => {
   assert.match(run('# R\nFoo is free.\n1. Bar is cheap\n## Sources\n- https://x\nNot checked:\n').stderr, /line 2[\s\S]*line 3/)
 })
+test('a sentence after the Not checked list needs a source', () => {
+  assert.match(run('# R\n## Sources\n- https://x\nNot checked:\n- gap\n\nFoo costs 5 euro.\n').stderr, /line 7 has no source/)
+})
+test('a host:port in backticks is not a source', () => {
+  assert.match(run('# R\n- runs on `localhost:8787`\n## Sources\n- https://x\nNot checked:\n').stderr, /line 2 has no source/)
+})
+test('a heading that merely mentions sources is not a Sources section', () => {
+  assert.match(run('# R\n- c (https://x)\n## No sources found\nNot checked:\n').stderr, /no "Sources"/)
+})
