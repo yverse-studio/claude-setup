@@ -166,6 +166,15 @@ for (const f of anyText('.')) {
   }
 }
 
+// Token budget (docs/WORKFLOW.md, Token budget; yskills, 2026-10-18): the Budget line exists and no
+// gate or role file asks for an Opus verdict on an S or M PR.
+const budgetLine = readFileSync(join(root, 'docs/WORKFLOW.md'), 'utf8').match(/^Budget: .*$/m)?.[0]
+if (!budgetLine) errors.push('docs/WORKFLOW.md: the Budget line (Token budget) is missing')
+else if (!/never for an S or M gate/.test(budgetLine)) errors.push('docs/WORKFLOW.md: the Budget line must say Opus is never for an S or M gate')
+for (const f of ['.claude/skills/operator/gate.md', '.claude/skills/operator/roles/tester.md', '.claude/skills/operator/roles/reviewer.md', 'docs/WORKFLOW.md']) {
+  if (/Opus verdict[^|\n]*round 2|verdict is Opus on round 2/i.test(readFileSync(join(root, f), 'utf8'))) errors.push(`${f}: demands an Opus verdict on round 2; Opus is size L only (Token budget)`)
+}
+
 // Rule enforcement: a "never" or "always" rule that only lives in prose is advisory. Each such
 // bullet in these files says so with [advisory], or names the guard that enforces it:
 // [guard: deny <rule>], [guard: ask <rule>] (a rule in global/settings.json), [guard: test <file>]

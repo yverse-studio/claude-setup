@@ -64,7 +64,7 @@ goes in its home only, everywhere else links it.
   scratchpad (monthly memory check, `docs/WORKFLOW.md` Learning).
 - Before calling work done or pushing: run what CI runs (`verify`, the repo's `verify` skill or
   `.github/workflows`), never a deploy script. Report failures honestly with the output. [guard: ask Bash(npm run deploy:*)]
-- Tokens: small context and replies, batched calls, big reads to Haiku subagents. Hand off at
+- Tokens: the Budget line in `docs/WORKFLOW.md` (Token budget) first; small context and replies, batched calls, big reads to Haiku subagents. Hand off at
   200k (guard warns at 150k); a thread idle over an hour is not resumed, a fresh one reads `PROGRESS.md`.
 - Cloud threads: research with WebSearch (every WebFetch of an unposted page makes yskills press
   Allow); never call `connect_device` unless the task needs yskills' own files. [advisory]

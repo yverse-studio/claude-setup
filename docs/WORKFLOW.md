@@ -35,7 +35,7 @@ Remote Control (2026-10-07): yskills allows Claude Code on their PC. Anything th
 
 The one model line (`scripts/check.mjs` fails on a model id anywhere else):
 
-Models: best fitting model per task, cheapest that fits. Fable (claude-fable-5-1) is rare, drawn from yskills' Max plan: only the architecture or plan of a new product, a problem still stuck after a Sonnet round and an Opus checkpoint, or what yskills names; plus the project chat (coordinator), which yskills sets by hand; if Fable is out of credits or unavailable, Opus takes it without asking. Opus (claude-opus-5-5) for plans, design, judgement and full audits. Sonnet (claude-sonnet-5-5) for gates, fixes, research and builds. A simple reading job goes to a Haiku subagent. Cheap first: Sonnet does the work and calls an Opus subagent before committing to an approach, when stuck twice on the same spot and before saying done; the gate's verdict is Opus on round 2 and on size L. A thread never picks Fable for routing, reviews, research, builds or fixes. Effort medium unless yskills asks for more. When a newer model ships, use the newest of each tier. A model yskills names is used as named.
+Models: best fitting model per task, cheapest that fits. Fable (claude-fable-5-1) is rare, drawn from yskills' Max plan: only the architecture or plan of a new product, a problem still stuck after a Sonnet round and an Opus checkpoint, or what yskills names; plus the project chat (coordinator), which yskills sets by hand; if Fable is out of credits or unavailable, Opus takes it without asking. Opus (claude-opus-5-5) for plans, design, judgement and full audits. Sonnet (claude-sonnet-5-5) for gates, fixes, research and builds. A simple reading job goes to a Haiku subagent. Cheap first: Sonnet does the work and calls an Opus subagent before committing to an approach, when stuck twice on the same spot and before saying done; the gate's verdict is Opus on size L only, never on S or M. A thread never picks Fable for routing, reviews, research, builds or fixes. Effort medium unless yskills asks for more. When a newer model ships, use the newest of each tier. A model yskills names is used as named.
 
 Role table (tiers only; the ids live in the line above):
 
@@ -48,7 +48,7 @@ Role table (tiers only; the ids live in the line above):
 | Programmer / builder | Sonnet | medium | Opus subagent | before committing to an approach; stuck twice on the same spot; before "done" |
 | Researcher | Sonnet | medium | Opus | only to weigh conflicting findings |
 | Reviewer subagents (code, ts, vue, db, silent-failure) | Sonnet | medium | | |
-| Tester / gate thread | Sonnet | medium | Opus verdict | round 2+, size L |
+| Tester / gate thread | Sonnet | medium | Opus verdict | size L only |
 | Evaluator, variant comparison | Sonnet | medium | Opus | size L gates, any pick between variants |
 | Security, red team | Sonnet | high on money, auth, secrets | Opus | a finding the builder disputes |
 | Legal, Marketer | Sonnet | medium | | |
@@ -64,6 +64,12 @@ Fixed rules: effort medium is the default; high only where listed; max never unl
 
 Thread starts pass the full ids; agent files use the aliases `fable`, `opus`, `sonnet`, `haiku` (a `fable` agent falls back to Opus by the line above); built-in
 subagents get Sonnet through `CLAUDE_CODE_SUBAGENT_MODEL`. Every other file points here.
+
+## Token budget
+
+yskills hit most of a weekly limit in under a day (2026-10-18) and wants at least 4 days from it. One rule for every thread, project and chat, and the global setup:
+
+Budget: Haiku (effort low) reads, lists, checks files, polls CI and does simple edits; Sonnet builds and reviews; Opus only for a size L verdict or a decision with no clear default, never for an S or M gate; Fable never in a thread. An S or M gate is one Sonnet review round plus CI, a second round only for a real bug, max two fix rounds, then stop and report. Max two working threads at a time. Nothing beyond the ask: no extra research or screenshots. Reuse before research: first read the existing report, role or skill for that kind of work (`research/`, `roles/`) and research only what is new; a thread that solves a new kind of task leaves a short playbook or template in its one home so the next one follows it. The coordinator keeps briefs short and rewrites memory only at milestones.
 
 ## The 5/5 gate
 

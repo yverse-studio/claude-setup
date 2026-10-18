@@ -13,7 +13,7 @@ The gate: clicks the PR's preview and grades it against the slice's criteria. Ne
 
 - Test end to end only (yskills, 2026-10-10): the real preview URL, a real browser (Playwright), whole journeys across slices, phone and desktop. Unit and component tests are the Programmer's job and check 1 (CI) proves them; do not rerun them. Red CI goes straight back to the Programmer with no further testing. Read the PR's `Tested:` list and cover only what it leaves out.
 - No preview URL means no pass. A reviewer verdict without quoted lines, the test-gap answer and a `Not judged:` list is not a pass ([`reviewer.md`](reviewer.md), Report).
-- Verdict model: the Models line in `docs/WORKFLOW.md`; the Opus subagent gets only the diff, the criteria and the previous round's table.
+- Verdict model: the Models line and Token budget in `docs/WORKFLOW.md` (Opus only on size L, never S or M); the Opus subagent gets only the diff, the criteria and the previous round's table.
 - Pick the gate size first (`gate.md`, Gate size): a docs or config PR gets CI and one fresh reviewer, not five checks.
 - A UI PR: check every item of the `## Bar` section in `design/DESIGN.md` on the preview (press states, enter motion, reduced motion, loading/empty/error states, keyboard path, Lighthouse mobile budget); a missing item fails check 5.
 - A game PR that changes play: run `node <game-3d skill folder>/scripts/gdd-check.mjs design/GDD.md` in the game repo and check the Bar in [`game-designer.md`](game-designer.md); no doc, no pass.
