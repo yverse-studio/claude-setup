@@ -75,7 +75,10 @@ hand-in sheet contract.
    0.4/0.3/0.45 invert every tool that skips them (run `luna_facekeysync zero` last); `drender4`
    zeroes non-Face keys, so bake keys; sync `me.vertices` to Basis before building masks; a wrongly
    registered base (Hinata 1.743 m vs 1.598 m) breaks `slicefit`, fit by chin and sole.
-11. **Content line.** Adult characters only, adult face and proportions, no minors ever. Nude
+11. **Content line.** Adult characters only, adult face and proportions, no minors ever. Check every reference set for
+    the source character's canonical age before use; frames of a canonically underage character never
+    enter it, whatever the art style. A thread that declines part of a job says so in one line and hands
+    the rest back. Nude
    bodies and explicit poses live on the private side behind the 18+ gate; public files and the
    hand-in sheets that go to public places stay clean; his references never go into git.
 
