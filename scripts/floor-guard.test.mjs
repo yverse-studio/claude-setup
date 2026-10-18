@@ -34,8 +34,8 @@ function run(change, { commitMessage = 'fix: change', base = 'main', files = BAS
   } finally { rmSync(dir, { recursive: true, force: true }) }
 }
 
-const fails = (rule, change) => {
-  const r = run(change)
+const fails = (rule, change, files) => {
+  const r = run(change, files ? { files: { ...BASE, ...files } } : {})
   assert.equal(r.code, 1, r.out)
   assert.match(r.out, new RegExp(`\\[${rule}\\]`))
 }
@@ -50,6 +50,17 @@ test('eslint-disable fails', () => fails('silenced-checker', (d) => put(d, 'src/
 test('@ts-expect-error without a reason fails', () => fails('silenced-checker', (d) => put(d, 'src/sum.mjs', '// @ts-expect-error\nexport const sum = (a, b) => a + b\n')))
 test('a "not implemented" stub fails', () => fails('unfinished-work', (d) => put(d, 'src/new.mjs', 'export const f = () => { throw new Error("Not implemented") }\n')))
 test('an empty catch fails', () => fails('unfinished-work', (d) => put(d, 'src/new.mjs', 'try { go() } catch {}\n')))
+test('editing a role check script fails', () => fails('checker-changed', (d) => put(d, 'scripts/design-check.mjs', 'export {}\n'), { 'scripts/design-check.mjs': 'export const a = 1\nexport const b = 2\n' }))
+test('deleting a role check script fails', () => fails('checker-changed', (d) => rmSync(join(d, 'scripts/gdd-check.mjs')), { 'scripts/gdd-check.mjs': 'export const a = 1\n' }))
+test('removing the role-check CI step fails', () => fails('checker-changed', (d) => put(d, '.github/workflows/ci.yml', 'steps:\n  - run: npm test\n'), { '.github/workflows/ci.yml': 'steps:\n  - run: npm test\n  - run: node scripts/project-checks.mjs --base origin/main\n' }))
+test('a floor-ok commit waives an edited role check script (the refresh path)', () => {
+  const r = run((d) => put(d, 'scripts/design-check.mjs', 'export {}\n'), { commitMessage: 'chore: refresh checks\n\nfloor-ok: refreshed from claude-setup main', files: { ...BASE, 'scripts/design-check.mjs': 'export const a = 1\n' } })
+  assert.equal(r.code, 0, r.out)
+})
+test('adding a new role check script and keeping the CI step passes', () => {
+  const r = run((d) => { put(d, 'scripts/audio-check.mjs', 'export const a = 1\n'); put(d, '.github/workflows/ci.yml', 'steps:\n  - run: node scripts/project-checks.mjs --base origin/main\n  - run: npm test\n') }, { files: { ...BASE, '.github/workflows/ci.yml': 'steps:\n  - run: node scripts/project-checks.mjs --base origin/main\n' } })
+  assert.equal(r.code, 0, r.out)
+})
 test('a lowered coverage threshold fails', () => fails('threshold-lowered', (d) => put(d, 'vitest.config.ts', BASE['vitest.config.ts'].replace('80', '60'))))
 test('a skip in an untracked, uncommitted file fails', () => {
   const dir = mkdtempSync(join(tmpdir(), 'floor-'))

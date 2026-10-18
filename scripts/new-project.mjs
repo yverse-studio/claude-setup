@@ -117,6 +117,7 @@ export function packageJson({ name, d1, kind }) {
     name,
     private: true,
     type: 'module',
+    claudeSetup: { kind: kind === 'game' ? 'game' : 'site' }, // read by scripts/project-checks.mjs: the kind is declared, never inferred
     engines: { node: '>=24' },
     scripts: {
       dev: 'npm run build && wrangler dev',

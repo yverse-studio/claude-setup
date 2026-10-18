@@ -158,7 +158,7 @@ Claude:
   file (UI or text: design, copy, tracking plan; play or assets: game design and sound; a silent game passes sound; the playtest report keeps its own step). A doc that does not exist yet fails with
   the one-line fix. The rules stay in the scripts, their roles in `docs/MAP.md`. An older project (igelgarten) gets the same by copying those files and the CI step.
   "UI" means any non-test file in `src/`, `public/` or `index.html`: a Worker's `src/` is also its page, so no path split holds across the templates, and a backend-only `src/` change in a project without the three docs fails once and passes as soon as they exist. Play files are `playtest-check.mjs`'s own list (`test/game.mjs` included).
-  The scripts are copies, not links: a project keeps the check version it was made with and nothing updates it. To refresh one, copy the files again from claude-setup `main` (the same list as above) in a PR of its own.
+  The scripts are copies, not links: a project keeps the check version it was made with and nothing updates it. To refresh one, copy the files again from claude-setup `main` (the same list as above) in a PR of its own; the floor guard flags an edited or deleted `scripts/*-check.mjs`, so that PR carries a `floor-ok: refreshed from claude-setup main` commit. The kind (`site` or `game`) is declared by `new-project` in `package.json` (`claudeSetup.kind`), not inferred from the scripts present.
 - A live smoke test on `check_run` `completed`, filtered to the exact name
   `Workers Builds: <worker>`, `conclusion == 'success'`,
   `check_suite.head_branch == '<production branch>'` and `head_sha == github.sha`

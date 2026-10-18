@@ -11,7 +11,7 @@ import { CHECKS, expectedScripts, plan } from '../.claude/skills/publish/templat
 import { isPlayFile } from '../.claude/skills/publish/templates/new-game/scripts/playtest-check.mjs'
 
 const SITE = ['design-check.mjs', 'copy-check.mjs', 'analytics-check.mjs']
-const GAME = [...SITE, 'gdd-check.mjs', 'audio-check.mjs']
+const GAME = [...SITE, 'gdd-check.mjs', 'audio-check.mjs'] // plan() input; the playtest check is expected too but picks nothing itself
 const names = (changed, available, playFile) => plan(changed, available, playFile).map((c) => c.name)
 
 test('the template CI runs project-checks on every PR, for both kinds', () => {
@@ -125,25 +125,52 @@ test('a silent game passes the sound check when only assets changed', () => {
   rmSync(dir, { recursive: true, force: true })
 })
 
-test('a deleted check script fails the run instead of switching its check off', () => {
-  assert.deepEqual(expectedScripts(() => false), SITE)
-  assert.deepEqual(expectedScripts((s) => s === 'playtest-check.mjs'), [...GAME, 'playtest-check.mjs'])
-  for (const [kind, gone] of [['site', 'design-check.mjs'], ['site', 'analytics-check.mjs'], ['game', 'audio-check.mjs'], ['game', 'gdd-check.mjs'], ['game', 'playtest-check.mjs']]) {
-    const dir = project(kind, (d) => { rmSync(join(d, 'scripts', gone)); put(d, 'README.md', 'x\n') })
-    const r = run(dir)
-    assert.equal(r.status, 2, kind)
-    assert.match(r.stderr, new RegExp(`${gone} missing from scripts/`))
+test('the kind is declared in package.json by the scaffold', () => {
+  for (const kind of ['site', 'game']) {
+    const dir = mkdtempSync(join(tmpdir(), `pc-kind-${kind}-`))
+    writeScaffold(dir, { name: 'probe', d1: false, kind })
+    assert.equal(JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8')).claudeSetup.kind, kind)
     rmSync(dir, { recursive: true, force: true })
   }
 })
 
-test('every check script the scaffold ships is in the expected list (a new one cannot be forgotten)', () => {
-  for (const kind of ['site', 'game']) {
-    const dir = mkdtempSync(join(tmpdir(), `pc-exp-${kind}-`))
-    writeScaffold(dir, { name: 'probe', d1: false, kind })
-    const shipped = readdirSync(join(dir, 'scripts')).filter((f) => /-check\.mjs$/.test(f)).sort()
-    const expected = expectedScripts((s) => shipped.includes(s)).sort()
-    assert.deepEqual(expected, shipped, kind)
+test('expectedScripts follows the declared kind', () => {
+  assert.deepEqual(expectedScripts('site'), SITE)
+  assert.deepEqual(expectedScripts('game'), [...GAME, 'playtest-check.mjs'])
+})
+
+test('a deleted check script exits 2 instead of switching its check off, one at a time and all game ones at once', () => {
+  const cases = [['site', ['design-check.mjs']], ['site', ['analytics-check.mjs']], ['game', ['audio-check.mjs']], ['game', ['gdd-check.mjs']], ['game', ['playtest-check.mjs']], ['game', ['gdd-check.mjs', 'audio-check.mjs', 'playtest-check.mjs']]]
+  for (const [kind, gone] of cases) {
+    const dir = project(kind, (d) => { for (const g of gone) rmSync(join(d, 'scripts', g)); put(d, 'src/rules.ts', 'export const x = 2\n') })
+    const r = run(dir)
+    assert.equal(r.status, 2, `${kind} without ${gone}`)
+    for (const g of gone) assert.match(r.stderr, new RegExp(`${g}`))
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('a site with a stray game script does not run it', () => {
+  const dir = project('site', (d) => { put(d, 'scripts/gdd-check.mjs', 'process.exit(1)\n'); put(d, 'README.md', 'x\n') })
+  assert.equal(run(dir).status, 0)
+  assert.doesNotMatch(run(dir).stdout, /gdd/)
+  rmSync(dir, { recursive: true, force: true })
+  const ui = project('site', (d) => { put(d, 'scripts/gdd-check.mjs', 'process.exit(1)\n'); put(d, 'src/rules.ts', 'x\n') })
+  assert.doesNotMatch(run(ui).stderr, /gdd/)
+  rmSync(ui, { recursive: true, force: true })
+})
+
+test('a missing or invalid kind exits 2 with the one-line fix', () => {
+  for (const kind of [undefined, 'shop']) {
+    const dir = project('site', (d) => {
+      const pkg = JSON.parse(readFileSync(join(d, 'package.json'), 'utf8'))
+      if (kind) pkg.claudeSetup = { kind }; else delete pkg.claudeSetup
+      put(d, 'package.json', JSON.stringify(pkg))
+      put(d, 'README.md', 'x\n')
+    })
+    const r = run(dir)
+    assert.equal(r.status, 2, String(kind))
+    assert.match(r.stderr, /package\.json has no claudeSetup\.kind/)
     rmSync(dir, { recursive: true, force: true })
   }
 })

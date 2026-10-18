@@ -9,7 +9,7 @@
 // Exit 0 ok, 1 a check failed, 2 could not run (never read 2 as 0).
 // Usage: node scripts/project-checks.mjs [--base <ref>]   (default origin/main)
 import { execFileSync, spawnSync } from 'node:child_process'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -32,11 +32,12 @@ export function plan(changed, available, playFile = () => false) {
   return CHECKS.filter((c) => available.includes(c.script) && changed.some((f) => c.when(f, playFile)))
 }
 
-// Every project has the three text checks; a game (any of its three checks present) also has the two game ones.
-// A deleted script must fail the run, not switch its check off.
-export function expectedScripts(has) {
-  const game = ['gdd-check.mjs', 'audio-check.mjs', 'playtest-check.mjs']
-  return ['design-check.mjs', 'copy-check.mjs', 'analytics-check.mjs', ...(game.some(has) ? game : [])]
+// The kind is declared by new-project in package.json (claudeSetup.kind), never inferred from which scripts exist:
+// a deleted script must fail the run, not turn a game into a site. Every project has the three text checks;
+// a game also has the game design, sound and playtest checks.
+export const GAME_SCRIPTS = ['gdd-check.mjs', 'audio-check.mjs', 'playtest-check.mjs']
+export function expectedScripts(kind) {
+  return ['design-check.mjs', 'copy-check.mjs', 'analytics-check.mjs', ...(kind === 'game' ? GAME_SCRIPTS : [])]
 }
 
 const lines = (s) => s.split('\n').filter(Boolean)
@@ -58,10 +59,14 @@ async function main() {
   if (tracked === null || untracked === null) bail('could not list the changed files')
   const changed = [...new Set([...lines(tracked), ...lines(untracked)])]
 
-  const playFile = existsSync(join(here, 'playtest-check.mjs')) ? (await import('./playtest-check.mjs')).isPlayFile : undefined
-  const missing = expectedScripts((s) => existsSync(join(here, s))).filter((s) => !existsSync(join(here, s)))
+  let kind
+  try { kind = JSON.parse(readFileSync('package.json', 'utf8')).claudeSetup?.kind } catch { kind = undefined }
+  if (kind !== 'site' && kind !== 'game') bail('package.json has no claudeSetup.kind ("site" or "game"); new-project writes it, add it by hand if the file was edited')
+  const expected = expectedScripts(kind)
+  const missing = expected.filter((s) => !existsSync(join(here, s)))
   if (missing.length) bail(`${missing.join(', ')} missing from scripts/; new-project ships them, restore them from claude-setup (publish skill)`)
-  const due = plan(changed, expectedScripts((s) => existsSync(join(here, s))), playFile)
+  const playFile = kind === 'game' ? (await import('./playtest-check.mjs')).isPlayFile : undefined
+  const due = plan(changed, expected, playFile)
   if (!due.length) return console.log('project-checks: no UI, text or play file changed, nothing to check')
 
   let failed = 0
