@@ -5,9 +5,10 @@ import { mkdtempSync, writeFileSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { checkTracking, checkNumbersLine, eventNameErrors, REQUIRED_HEADINGS, MAX_EVENTS } from './analytics-check.mjs'
+import { checkTracking, checkNumbersLine, checkRoleDoc, eventNameErrors, REQUIRED_HEADINGS, MAX_EVENTS, PLACEHOLDER } from './analytics-check.mjs'
 
 const SCRIPT = fileURLToPath(new URL('./analytics-check.mjs', import.meta.url))
+const ROLE = fileURLToPath(new URL('../../operator/roles/analytics.md', import.meta.url))
 const TEMPLATE = fileURLToPath(new URL('../../operator/templates/tracking-plan.md', import.meta.url))
 const row = (name = 'Checkout Started', metric = 'paying', basis = 'cookieless: no personal data', props = 'plan, price_eur') => `| ${name} | Do visitors start paying? | ${metric} | ${basis} | ${props} |`
 const plan = ({ objectives = '- Sell the pro plan; moves paying.', events = [row(), row('Order Paid', 'revenueMonth')], privacy = '- Tool: Umami\n- Banner: nein' } = {}) => `# Tracking plan: Demo
@@ -80,10 +81,26 @@ test('a numbers line with read values passes', () => {
   assert.deepEqual(checkNumbersLine(line.replace('120', '1.250')), [])
 })
 
-test('a numbers line fails on estimates, missing fields and a missing source', () => {
-  assert.ok(checkNumbersLine(line.replace('Umami, gelesen','geschätzt Umami, gelesen')).length)
-  for (const bad of ['~120', 'ca. 120', 'about 120', 'etwa 120', '≈120'])
-    assert.ok(checkNumbersLine(line.replace('120', bad)).length, bad)
+const estimateErrors = (l) => checkNumbersLine(l).filter((e) => e.includes('estimate'))
+
+test('each estimate word or sign fails on its own', () => {
+  for (const bad of ['~120', '≈120', 'ca. 120', 'circa 120', 'about 120', 'approx. 120', 'approximately 120', 'etwa 120', 'ungefähr 120', 'geschätzt 120'])
+    assert.equal(estimateErrors(line.replace('120', bad)).length, 1, bad)
+  assert.equal(estimateErrors(line.replace('Umami,', 'Umami (Schätzung),')).length, 1, 'schätz in the source')
+})
+
+test('the words analytics.md names are all rejected', () => {
+  const rule = readFileSync(ROLE, 'utf8').match(/`~`, `ca\.`, "about" and "etwa"/)
+  assert.ok(rule, 'the role no longer names ~, ca., about and etwa')
+  for (const bad of ['~', 'ca.', 'about', 'etwa']) assert.equal(estimateErrors(line.replace('120', `${bad} 120`)).length, 1, bad)
+})
+
+test('ordinary lines are not taken for estimates (pass-table)', () => {
+  for (const ok of [line, line.replace('duo-test', 'aboutme'), line.replace('duo-test', 'etwas-app'), line.replace('duo-test', 'circadian'), line.replace('duo-test', 'ca-game'), line.replace('Umami', 'Own count in D1'), line.replace('Umami', 'Cloudflare Web Analytics'), line.replace('120', '1.250').replace('9,00 € live', '0 € Testgeld')])
+    assert.deepEqual(checkNumbersLine(ok), [], ok)
+})
+
+test('a numbers line fails on missing fields and a missing source', () => {
   assert.ok(checkNumbersLine(line.replace('Anmeldungen: 4 | ', '')).some((e) => e.includes('Anmeldungen')))
   assert.ok(checkNumbersLine(line.replace(/ \| Quelle.*/, '')).some((e) => e.includes('Quelle')))
   assert.ok(checkNumbersLine(line.replace('KW42', 'Woche 42')).some((e) => e.includes('KW')))
@@ -94,6 +111,39 @@ test('the shipped template fails on its placeholders and carries every heading',
   const t = readFileSync(TEMPLATE, 'utf8')
   assert.ok(checkTracking(t).some((e) => e.includes('placeholder')))
   for (const h of REQUIRED_HEADINGS) assert.match(t, new RegExp(`^## ${h}\\s*$`, 'm'))
+})
+
+test('every placeholder in the template is one the checker knows, and each known one is in the template', () => {
+  const t = readFileSync(TEMPLATE, 'utf8')
+  const known = new Set([...t.matchAll(PLACEHOLDER)].map((m) => m[0]))
+  for (const m of t.matchAll(/<[^>\n]+>/g)) assert.ok(known.has(m[0]), `${m[0]} would pass the checker unnoticed`)
+  for (const alt of PLACEHOLDER.source.match(/\(\?:(.*)\)/)[1].split('|')) assert.ok(t.includes(`<${alt.replace(/\\/g, '')}>`), `<${alt}> left the template`)
+})
+
+test('the Banner placeholder of the template fails and a filled one passes', () => {
+  const t = readFileSync(TEMPLATE, 'utf8')
+  assert.ok(checkTracking(t).includes('template placeholder left: <ja/nein>'))
+  assert.ok(!checkTracking(t.replace('<ja/nein>', 'nein')).includes('template placeholder left: <ja/nein>'))
+})
+
+const roleDoc = readFileSync(ROLE, 'utf8').replace(/\r\n/g, '\n') // CRLF on a Windows checkout
+
+test('the shipped role doc passes its own guard', () => assert.deepEqual(checkRoleDoc(roleDoc), []))
+
+test('a Tools row without a source or with a wrong cell count fails', () => {
+  const row = roleDoc.split('\n').find((l) => l.startsWith('| Umami Cloud'))
+  const cells = row.split('|')
+  const noSource = roleDoc.replace(row, cells.slice(0, 5).join('|') + '| |')
+  assert.ok(checkRoleDoc(noSource).some((e) => e.includes('Umami Cloud') && e.includes('no source')))
+  assert.ok(checkRoleDoc(roleDoc.replace(row, cells.slice(0, 5).join('|') + '| see their site |')).some((e) => e.includes('no source')))
+  assert.ok(checkRoleDoc(roleDoc.replace(row, row.replace(/\|[^|]*\|$/, '|'))).some((e) => e.includes('cells')))
+  assert.ok(checkRoleDoc(roleDoc.replace(/^## Tools$/m, '## Other')).some((e) => e.includes('no row')))
+})
+
+test('the legal-reviewer check must stay in Method and Bar', () => {
+  assert.ok(checkRoleDoc(roleDoc.replace(/legal-reviewer/g, 'x')).filter((e) => e.includes('legal-reviewer')).length === 2)
+  const noBar = roleDoc.replace(/(## Bar[\s\S]*)/, (b) => b.replace(/legal-reviewer/g, 'x'))
+  assert.deepEqual(checkRoleDoc(noBar).filter((e) => e.includes('legal-reviewer')), ['roles/analytics.md: ## Bar lost the legal-reviewer check'])
 })
 
 test('the CLI exits 1 on a failing plan, 0 on a passing one, 1 on a missing file', () => {

@@ -256,11 +256,12 @@ for (const h of COPY_HEADINGS) {
 }
 
 // Tracking plan: one home (roles/analytics.md); the template must carry every heading analytics-check.mjs requires.
-const { REQUIRED_HEADINGS: TRACKING_HEADINGS } = await import('../.claude/skills/market/scripts/analytics-check.mjs')
+const { REQUIRED_HEADINGS: TRACKING_HEADINGS, checkRoleDoc } = await import('../.claude/skills/market/scripts/analytics-check.mjs')
 const analyticsRole = readFileSync(join(root, '.claude/skills/operator/roles/analytics.md'), 'utf8')
 for (const part of ['## Method', '## Bar', '## Tools', 'analytics-check.mjs', 'Weekly numbers line']) {
   if (!analyticsRole.includes(part)) errors.push(`roles/analytics.md: lacks "${part}"`)
 }
+errors.push(...checkRoleDoc(analyticsRole))
 const trackingTemplate = readFileSync(join(root, '.claude/skills/operator/templates/tracking-plan.md'), 'utf8')
 for (const h of TRACKING_HEADINGS) {
   if (!new RegExp(`^## ${h}\\s*$`, 'm').test(trackingTemplate)) errors.push(`templates/tracking-plan.md: lacks "## ${h}"`)

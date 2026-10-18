@@ -22,6 +22,8 @@ Gates, run by you before anyone sees the round (a failed gate is said, not hande
 - [ ] Neck: crop old | new vs ref (front and side, 2x) reads long, slim, no ring or shelf.
 - [ ] Bust: front raw at full resolution, ref | best | new on one scale, at least as full as best,
       round from front, 3/4 and side.
+- [ ] Same-size sheet: ref | body on one canvas, same height, crown in frame, hair on, hands whole.
+- [ ] Figure frame as in SKILL.md rule 9.
 - [ ] Zoom: `zoom5.py <round> <best>` ran; bust-front and back-upper looked at yourself.
 - [ ] Poses: from-below frame (her above the camera), sway mid-frame, arm up plus head tilt;
       no tube neck, no groin fold, no knee pinch, bust root attached.
@@ -32,8 +34,8 @@ Hand in
 - [ ] The sheet below, in `proof/<round>/`; `tools/handin-cloud.sh <round>` renders raw, clay and masks only, you add detail, posed, zoom and numbers.
 - [ ] Blend saved as `build-<round>.blend`; LIVE STATE block updated (keys and their values,
       band map, what is open); one cross-session line to the reviewer and coordinator.
-- [ ] Context nearly full: stop, post one line plus one crop, start the next builder with the
-      LIVE STATE block only.
+- [ ] Context nearly full: update the LIVE STATE block on disk and carry on after the compaction;
+      no new builder thread.
 
 ## Reviewer, every round
 
