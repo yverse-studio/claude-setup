@@ -1,19 +1,25 @@
 // Play the game with the bot in test/bot.mjs, in the installed Chromium (SwiftShader), and keep
-// screenshots. Usage: npm run play -- [url] [outDir]   (no url: serves the built dist/ itself)
+// screenshots. Usage: npm run play -- [url] [--out dir]   (url first; no url: builds, then serves dist/ itself,
+// so you never play a stale build; a Worker Preview or the live url is played as it is)
 // Fails on a page error, a round that never ends, or a score under the bot's `min`.
 import { chromium } from 'playwright-core'
-import { spawn } from 'node:child_process'
+import { spawn, execFileSync } from 'node:child_process'
 import { mkdirSync } from 'node:fs'
 import { decide, min } from '../test/bot.mjs'
 
 const PORT = 4173
 const STEP_MS = 100
-const [arg = '', out = '.shots'] = process.argv.slice(2)
+const args = process.argv.slice(2)
+const outAt = args.indexOf('--out')
+const out = outAt >= 0 ? args[outAt + 1] : '.shots'
+const outValueAt = outAt >= 0 ? outAt + 1 : -1
+const arg = args.find((a, i) => !a.startsWith('--') && i !== outValueAt) ?? ''
 mkdirSync(out, { recursive: true })
 
 let server
 let base = arg
 if (!base) {
+  execFileSync('npx', ['vite', 'build'], { stdio: 'ignore' })
   server = spawn('npx', ['vite', 'preview', '--port', String(PORT), '--strictPort'], { stdio: 'ignore' })
   base = `http://localhost:${PORT}`
   for (let i = 0; i < 50; i++) {

@@ -12,7 +12,9 @@ You will be given screenshot paths. First look for the project's design directio
 `design/DESIGN.md`, `DESIGN.md`, `docs/design*`, and any reference images under `design/`.
 Then read yskills' taste file, the `ui-review` skill's `TASTE.md`
 (`~/.claude/skills/ui-review/TASTE.md`, or `.claude/skills/ui-review/TASTE.md` in
-yverse-studio/claude-setup), and treat its Rejected list as blocking. Then look at every screenshot.
+yverse-studio/claude-setup), and treat its Rejected list as blocking. A project without its own
+`TASTE.md` (a new game) is judged by `design/DESIGN.md` plus that file; reference images live in
+`design/reference/`. Then look at every screenshot.
 
 Judge, in this order:
 
