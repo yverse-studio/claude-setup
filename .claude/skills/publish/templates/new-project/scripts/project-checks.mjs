@@ -32,11 +32,11 @@ export function plan(changed, available, playFile = () => false) {
   return CHECKS.filter((c) => available.includes(c.script) && changed.some((f) => c.when(f, playFile)))
 }
 
-// Every project has the three text checks; a game (any game script or the playtest check present) also has the two game ones.
+// Every project has the three text checks; a game (any of its three checks present) also has the two game ones.
 // A deleted script must fail the run, not switch its check off.
 export function expectedScripts(has) {
-  const game = ['gdd-check.mjs', 'audio-check.mjs']
-  return ['design-check.mjs', 'copy-check.mjs', 'analytics-check.mjs', ...(['playtest-check.mjs', ...game].some(has) ? game : [])]
+  const game = ['gdd-check.mjs', 'audio-check.mjs', 'playtest-check.mjs']
+  return ['design-check.mjs', 'copy-check.mjs', 'analytics-check.mjs', ...(game.some(has) ? game : [])]
 }
 
 const lines = (s) => s.split('\n').filter(Boolean)

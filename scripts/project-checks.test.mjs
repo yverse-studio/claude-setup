@@ -2,7 +2,7 @@
 // Run: node --test scripts/project-checks.test.mjs
 import assert from 'node:assert/strict'
 import { execFileSync, spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { test } from 'node:test'
@@ -127,12 +127,23 @@ test('a silent game passes the sound check when only assets changed', () => {
 
 test('a deleted check script fails the run instead of switching its check off', () => {
   assert.deepEqual(expectedScripts(() => false), SITE)
-  assert.deepEqual(expectedScripts((s) => s === 'playtest-check.mjs'), GAME)
-  for (const [kind, gone] of [['site', 'design-check.mjs'], ['game', 'audio-check.mjs']]) {
+  assert.deepEqual(expectedScripts((s) => s === 'playtest-check.mjs'), [...GAME, 'playtest-check.mjs'])
+  for (const [kind, gone] of [['site', 'design-check.mjs'], ['site', 'analytics-check.mjs'], ['game', 'audio-check.mjs'], ['game', 'gdd-check.mjs'], ['game', 'playtest-check.mjs']]) {
     const dir = project(kind, (d) => { rmSync(join(d, 'scripts', gone)); put(d, 'README.md', 'x\n') })
     const r = run(dir)
     assert.equal(r.status, 2, kind)
     assert.match(r.stderr, new RegExp(`${gone} missing from scripts/`))
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('every check script the scaffold ships is in the expected list (a new one cannot be forgotten)', () => {
+  for (const kind of ['site', 'game']) {
+    const dir = mkdtempSync(join(tmpdir(), `pc-exp-${kind}-`))
+    writeScaffold(dir, { name: 'probe', d1: false, kind })
+    const shipped = readdirSync(join(dir, 'scripts')).filter((f) => /-check\.mjs$/.test(f)).sort()
+    const expected = expectedScripts((s) => shipped.includes(s)).sort()
+    assert.deepEqual(expected, shipped, kind)
     rmSync(dir, { recursive: true, force: true })
   }
 })
