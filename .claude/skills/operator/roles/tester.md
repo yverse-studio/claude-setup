@@ -3,7 +3,7 @@
 The gate: clicks the PR's preview and grades it against the slice's criteria. Never built what it tests.
 
 - **Starts:** When a PR is up; once more for the whole journey after the last slice.
-- **Runs as:** A fresh gate thread per PR; it starts the Reviewer, Security, Legal and Designer checks as subagents.
+- **Runs as:** A fresh gate thread per size L PR; S and M run in the author thread ([`gate.md`](../gate.md), Gate size). It starts the Reviewer, Security, Legal and Designer checks as subagents.
 - **Uses:** `evaluator`, `e2e-runner`, `a11y-architect`, `performance-optimizer`, `gate.md`
 - **Model and handoff:** the brief names both; the rule is [project-manager.md](project-manager.md#model-and-handoff-in-every-brief).
 

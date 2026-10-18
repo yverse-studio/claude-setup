@@ -1,6 +1,6 @@
 # The 5/5 gate
 
-A fresh gate thread runs this on one PR (in a plain chat: the operator, with fresh subagents).
+A gate runs this on one PR: size S and M in the author thread, size L in a fresh gate thread (see Gate size); in a plain chat the operator, always with fresh subagents.
 Five pass/fail checks, never a star score: judges grade their own team's work too kindly, so each
 check is a hard yes or no from someone who didn't write the code.
 
@@ -24,6 +24,8 @@ Security never drops: any PR touching user input, auth, money or secrets runs ch
 | S | docs, skills, templates, config | 1 and one fresh `code-reviewer` (3); 2, 4, 5 n/a |
 | M | code without UI | 1, 2, 3; 4 when user input, auth, money or secrets are touched |
 | L | UI, auth, payments, data, migrations, launch | the full table |
+
+Who runs it (yskills, 2026-10-18: a gate thread starts at ~114k tokens and every call re-reads it, `docs/WORKFLOW.md` Token budget): S and M run in the author thread: CI, one fresh `code-reviewer` subagent (never the author's own pass) and the merge, with the table headline in the PR. L keeps a fresh gate thread, because it runs the preview, security and design checks. A reviewer subagent still sees only the diff, the criteria and the previous round's table.
 
 ## Scene shots and figure shots
 
