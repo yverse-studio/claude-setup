@@ -126,6 +126,16 @@ reference text, no hooks or MCP config, nothing that phones home.
   skills (Tripo, Gemini, ElevenLabs paid APIs), the `game-director` skill and its credential
   probe script (it sources shell rc files), and `AGENTS.md`.
 
+## Slop list: default looks and button labels
+
+Ideas and quoted hex values, reworded, none copied as text, into `.claude/skills/ui-review/SLOP.md`
+(18 to 23) and `scripts/design-check.mjs`. Read from shallow clones:
+
+- five AI-default traits, their hex values and the button-label rule: Anthropic `skills/frontend-design/SKILL.md`
+  (https://github.com/anthropics/skills, Apache-2.0, commit dbd4588)
+- "give hex codes, not bans": oh-my-claudecode `agents/designer.md` (https://github.com/Yeachan-Heo/oh-my-claudecode, MIT, commit 6688a30)
+- specific button labels: gstack `design-review/SKILL.md` (https://github.com/garrytan/gstack, MIT, commit 25dbe34)
+
 ## Reviewer upgrades
 
 Ideas, reworded, none copied verbatim, into `.claude/skills/operator/roles/reviewer.md` (Report):
