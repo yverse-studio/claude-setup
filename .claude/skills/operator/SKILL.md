@@ -105,7 +105,7 @@ Every extra thread re-reads its context, so take the simplest shape that works.
 |---|---|
 | Site | live, plus legal pages (`legal` skill) and the money path it needs (`sell`) |
 | App | live, plus the paywall working in test mode and the legal pages; live keys wait for yskills' tap |
-| Game | live, plus the money path wired (portal ads via the starter's `platform.ts`, `game-3d` §5a "what earns") and the portal or store package ready (`store-publish`, CrazyGames checklist); only yskills' hands steps remain |
+| Game | live, built to captured portal references (`roles/designer.md`, Reference first), plus the money path wired (portal ads via the starter's `platform.ts`, `game-3d` §5a "what earns") and the portal or store package ready (`store-publish`, CrazyGames checklist); only yskills' hands steps remain |
 
 Name and concept first: settle them with one card, push `new/<name>` after the tap; a changed
 concept later means a second repo, Worker and D1 that only "delete <name>" removes. A thread

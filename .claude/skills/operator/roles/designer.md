@@ -6,6 +6,19 @@ Sets the look before the first screen and checks every UI change so nothing look
 - **Runs as:** Quick subagent (`design-critic`); a thread only for a redesign.
 - **Uses:** `frontend-design`, `impeccable`, `ui-review`, `design-critic`; Figma plugin or Canva only when the plan uses them
 
+## Reference first (the look bar, 2026-10-18)
+
+Before the first build of a game, and of any new product UI, the look comes from real captures, never from scratch
+(Igelgarten was built to a bar its builder wrote itself and yskills rejected it):
+
+1. Collect 3 to 6 captures of the top games of that genre on the target portal (CrazyGames, Poki; the apps of the
+   category for a product) at 390px and 1440px into `design/reference/`, one line each in `design/REFERENCES.md`:
+   link, and what to take from it (palette, shape language, HUD, end card, juice).
+2. `design/DESIGN.md` `## Direction` is written from those lines and names the files it cites; a Direction with no
+   citation is not finished.
+3. `design-critic` gets the references next to the screenshots and lists where the build falls short of them.
+4. Gate check 5 fails when `design/reference/` is empty or `DESIGN.md` does not cite it.
+
 ## Every time
 
 - Variants: any pick between variants is a gallery plus a criteria table judged by an evaluator that did not build them (Opus); one variant per unit, a rebuild replaces its branch, never a "-2" branch.

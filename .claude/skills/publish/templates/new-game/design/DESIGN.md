@@ -5,7 +5,7 @@ read it.
 
 ## Direction
 
-(One clear direction: palette tokens, type, shapes. Real life first, then better. Cute cartoon or
+(Written from `design/reference/` and `REFERENCES.md`, naming the files it cites; rule: claude-setup `operator/roles/designer.md`, Reference first. One clear direction: palette tokens, type, shapes. Real life first, then better. Cute cartoon or
 pixel taste, licence-clean art.)
 
 ## Reference

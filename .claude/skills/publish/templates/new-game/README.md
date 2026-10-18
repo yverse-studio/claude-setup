@@ -4,6 +4,7 @@ A three.js game made by claude-setup's `new-project` workflow (`"kind": "game"`)
 30-second coin dash: replace `src/rules.ts` (rules, tested) and `src/main.ts` (scene, input) with
 the real game; the deploy wiring stays as it is.
 
+- Before the first build: 3 to 6 captures of the genre's top games on the portal into `design/reference/`, `DESIGN.md` written from them (`operator/roles/designer.md`, Reference first in claude-setup).
 - `npm install`, `npm run dev` (Vite), `npm run verify` (what CI and Workers Builds run)
 - Live: `https://__NAME__.<account>.workers.dev`, every other branch a Worker Preview
 - Play and screenshot it in a browser: `game-3d` skill in claude-setup (section 4)
