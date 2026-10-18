@@ -15,6 +15,7 @@ const paused = params.has('paused')
 
 const canvas = document.querySelector<HTMLCanvasElement>('#game')!
 const hud = document.querySelector<HTMLDivElement>('#hud')!
+const end = document.querySelector<HTMLDivElement>('#end')!
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true })
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2))
 
@@ -96,7 +97,7 @@ async function restart() {
   busy = true
   keys.clear()
   pointer = null
-  await platform.midgame(() => { hud.textContent = '' }) // between rounds, never on a menu button
+  await platform.midgame(() => { hud.textContent = ''; end.classList.remove('show') }) // between rounds, never on a menu button
   state = createState(seed)
   wasOver = false
   last = performance.now()
@@ -115,9 +116,10 @@ void loadPlatform().then((loaded) => {
 function draw() {
   player.position.set(state.player.x, 0.5, state.player.z)
   coins.forEach((mesh, i) => mesh.position.set(state.coins[i].x, 0.6, state.coins[i].z))
-  hud.textContent = isOver(state)
-    ? `${text.coins}: ${state.score}  ·  ${text.again}`
-    : `${text.coins}: ${state.score}  ·  ${text.time}: ${Math.ceil(state.timeLeft)}`
+  const over = isOver(state)
+  hud.textContent = `${text.coins}: ${state.score}` + (over ? '' : `  ·  ${text.time}: ${Math.ceil(state.timeLeft)}`)
+  end.classList.toggle('show', over)
+  end.firstElementChild!.textContent = over ? text.again : ''
   renderer.render(scene, camera)
 }
 

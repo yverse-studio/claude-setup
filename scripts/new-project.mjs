@@ -140,7 +140,7 @@ export function writeScaffold(dir, { name, d1, liveId, previewId, kind }) {
   cpSync(TEMPLATE, dir, { recursive: true })
   if (kind === 'game') cpSync(GAME_TEMPLATE, dir, { recursive: true, force: true })
   if (!d1) rmSync(join(dir, 'migrations'), { recursive: true, force: true })
-  for (const file of ['README.md', 'CLAUDE.md', 'src/index.js', ...(kind === 'game' ? ['index.html'] : [])]) {
+  for (const file of ['README.md', 'CLAUDE.md', 'src/index.js', ...(kind === 'game' ? ['index.html', 'design/DESIGN.md'] : [])]) {
     const path = join(dir, file)
     writeFileSync(path, readFileSync(path, 'utf8').replaceAll('__NAME__', name))
   }

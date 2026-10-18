@@ -45,7 +45,8 @@ concrete brief before any build. Order, every time:
 Literal mode and the cost rules: the last block of `operator/briefs.md`.
 
 3. **Build to that bar**: the gate's `design-critic` gets the references next to the
-   screenshots; a slice that falls short of them is not 5/5.
+   screenshots (a reference *picture* is the pick from a Designer vote gallery, saved under
+   `design/reference/`; the links in `REFERENCES.md` alone give the critic nothing to compare); a slice that falls short of them is not 5/5.
 
 Pictures and stories are inputs, never the art: photos become references and splat postcards
 (§3), stories become `story/` files.
@@ -53,7 +54,7 @@ Pictures and stories are inputs, never the art: photos become references and spl
 ## 2. Folder layout
 
 **New game: `projects/<name>.json` with `"kind": "game"`, then the `new-project` workflow** (`publish`
-skill): a static Vite + three.js repo (a 30-second coin dash to replace, rules in `src/rules.ts` with
+skill; the starter is `publish/templates/new-game/`, not `game-3d/starter/`, the figure kit): a static Vite + three.js repo (a 30-second coin dash to replace, rules in `src/rules.ts` with
 Vitest, `window.__gameReady` for `templates/shots.mjs`), live at `https://<name>.yverse.workers.dev`,
 no D1, no login. Its layout below is what you grow it into. Without the workflow, one repo per game,
 scaffolded with the `scaffold` skill (Vue is optional: a game is a Vite app
@@ -115,9 +116,9 @@ covers them. Stories are data: threads turn yskills' messages into `story/` file
   `window.render_game_to_text()` (the visible state as JSON: mode, score, time, positions),
   `window.advanceTime(ms)` (play that much game time at once; open the page with `?paused=1` so it
   is the only clock) and `window.__playInput(x, z)` (hold a direction). `test/bot.mjs` decides from the
-  text, `npm run play -- [url]` (`scripts/play.mjs`, copy both into an older game) plays a whole round,
+  text, `npm run play -- [url] [--out dir]` (`scripts/play.mjs`, copy both into an older game; the url comes first; a Worker Preview or the live url plays as is, no url builds and serves `dist/`) plays a whole round,
   keeps three screenshots and fails on a page error, a round that never ends or a score under the bot's
-  `min`. Run it on the Worker Preview before every gate; add each new state a bot needs to the text.
+  `min`. Rewrite `bot.mjs` together with `rules.ts`: `min` is about 60 % of what the bot scores; a bot that dies is fine, one that cannot move is not. Run it on the Worker Preview before every gate; add each new state a bot needs to the text.
   QA after every slice, not at the end (idea from OpusGameLabs/game-creator, written in our words).
   `play` and `shots` serve whatever `dist/` holds: run `npm run build` after every code change, or you review stale pictures.
 - **Perf budget per scene** (`tests/perf`, reads `renderer.info` after one frame): under 300
