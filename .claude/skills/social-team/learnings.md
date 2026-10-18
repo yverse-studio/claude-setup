@@ -11,6 +11,9 @@ named; newest last; merge duplicates.
 - 2026-10-12 (TikTok heuristics, tiktok-skills): completion, rewatch, shares and saves beat likes; a swipe in the first 2 s is the heaviest negative.
 - 2026-10-12 (many): browser upload bots and cookie uploaders get accounts flagged; official API through an audited service only.
 - 2026-10-17 (ManyChat-style bots): "comment X and I DM you" plus a follower check works on Instagram through the official Messaging API; cold DMs and mass messages do not.
+- 2026-10-18 (Postiz blog, Larry runs): four new accounts that direct-posted by API were shadowbanned within a week; drafts only until 30 days old and 20 posts, then add posting-time jitter.
+- 2026-10-18 (Postiz blog): real photos got 2.3x the saves of AI-made slides; one hook repeated for two weeks went flat; a self-hosted scheduler broke on OAuth refresh and a full disk.
+- 2026-10-18 (Bitdefender, CloudSEK): fake brand deals are a main way creator accounts get taken over (malware "contracts", login links); run the scam check in `roles/deals.md`.
 
 ## Our accounts
 

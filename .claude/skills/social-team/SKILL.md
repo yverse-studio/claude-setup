@@ -1,6 +1,6 @@
 ---
 name: social-team
-description: "Run yskills' brand accounts like a social media team: Social Lead, Scout, Community and Analyst turn ideas and the studio's videos into scheduled posts, replies and weekly numbers. Use for posting, comments, DMs, the idea backlog, account setup or a social media plan."
+description: "Run yskills' brand accounts like a social media team: Social Lead, Scout, Community, Partnerships and Analyst turn ideas and the studio's videos into scheduled posts, replies, brand deals and weekly numbers. Use for posting, comments, DMs, the idea backlog, account setup, brand deals or a social media plan."
 ---
 
 # Social team
@@ -8,8 +8,9 @@ description: "Run yskills' brand accounts like a social media team: Social Lead,
 yskills, 2026-10-12: "be my social media manager", "a real working company start up that generates
 money". The `video-studio` team makes each video; this team decides what gets made, where and when
 it goes out, answers the people who react, and measures what earns. Every post has a money job:
-follow, profile tap, visit, install, sign-up or sale. Checked 2026-10-17; sources in
-[`docs/research/2026-10-17-social-team.md`](../../../docs/research/2026-10-17-social-team.md).
+follow, profile tap, visit, install, sign-up or sale. Checked 2026-10-17 and 2026-10-18; sources in
+[`docs/research/2026-10-17-social-team.md`](../../../docs/research/2026-10-17-social-team.md) and
+[`docs/research/2026-10-18-brand-deals.md`](../../../docs/research/2026-10-18-brand-deals.md).
 
 Every role reads [`learnings.md`](learnings.md) first.
 
@@ -31,16 +32,20 @@ yskills in the project chat (CLAUDE.md, Cards); yskills does not read threads.
 | Social Lead | owns a brand's channels: backlog, weekly plan, calendar, posting, profile, account setup; briefs the studio | [`roles/lead.md`](roles/lead.md) | the weekly routine (fresh session) and a thread `Social · <brand> week <n>` |
 | Scout | trends, rising sounds, competitors' best posts, the hook library | [`roles/scout.md`](roles/scout.md) | subagent of the Lead |
 | Community | comments and DMs: reply drafts, comment-to-DM flows, follower-only gifts, leads | [`roles/community.md`](roles/community.md) | the `social` Worker's webhook plus a daily subagent review |
+| Partnerships | brand deals and sponsors: media kit, brand list, outreach drafts, offers, contract check, delivery, invoice line | [`roles/deals.md`](roles/deals.md) | subagent of the Lead; a thread `Deal · <brand> · <partner>` per real offer |
 | Analyst | numbers per post, what to repeat or drop, new lessons | [`roles/analyst.md`](roles/analyst.md) | subagent of the Lead in the weekly routine |
 
 Paid ads stay with the Marketer (`operator/roles/marketer.md`); the studio makes their creatives.
+No own law or security team: Partnerships hands contracts to the operator's Legal role and
+suspicious brand mail to its Security role (`operator/roles/legal.md`, `security.md`).
 Thread titles follow the operator rule; models per the Models line in
 [`docs/WORKFLOW.md`](../../../docs/WORKFLOW.md) (planning and judgement Opus, the rest Sonnet).
 
 ## Where things live
 
 To build (not made yet): one project `social` (made by the `new-project` workflow, `docs/USING.md`) holds every brand: the
-`social/` folder (`ideas.md`, `calendar.md`, `posts.md` with each post's numbers, `brands.md`),
+`social/` folder (`ideas.md`, `calendar.md`, `posts.md` with each post's numbers, `brands.md`,
+`deals.md`),
 the webhook Worker for comments and DMs, D1 for the queue, and the API behind HQ's Content view
 (player, caption, Post / Change / Drop, the auto-post switch, the schedule). Videos stay in the
 product project's `video/<slug>/` (`video-studio`).
@@ -52,7 +57,9 @@ product project's `video/<slug>/` (`video-studio`).
 - **Auto-post:** only while yskills has switched it on in HQ. The switch is yskills' standing ok
   for posts under CLAUDE.md's ask rule ("sending mail or posts"); note the date in project memory. Then only videos the Critic passed, only the
   devlog and learning pillars, never ads, prices or crypto, at most 2 posts a day per account, and
-  a daily one-line summary to the coordinator.
+  a daily one-line summary to the coordinator. An account younger than 30 days or with fewer than
+  20 posts gets drafts only, switch or not (new accounts that direct-posted by API were
+  shadowbanned, `learnings.md`). Start at 1 a day; the second only while reach holds.
 - **AI label:** yskills' call, off by default (2026-10-12); twin videos show "twin" in the preview;
   what the law asks for ads and realistic AI people is `market` §4. Never strip provenance data.
 - **Official APIs only**, through an already-audited posting service. No browser bots, cookie
@@ -83,4 +90,7 @@ product project's `video/<slug>/` (`video-studio`).
    sites) from the backlog and every new `Done:` with a live link; briefs to the studio's Producer.
 4. Lead: queue the ready videos with caption and time; anything for yskills goes to the coordinator
    as one short list.
-5. Community runs daily; leads (a buyer, a press ask, a collab) go to the coordinator the same day.
+5. Community runs daily; leads (a buyer, a press ask) go to the coordinator the same day, brand
+   and collab messages to Partnerships.
+6. Partnerships, monthly: refresh the media kit, ten fitting partners in `social/deals.md`,
+   outreach drafts for the best three as one ask to the coordinator.

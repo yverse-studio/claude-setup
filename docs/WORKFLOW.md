@@ -59,7 +59,7 @@ Role table (tiers only; the ids live in the line above):
 | Figure and scene pipeline | Sonnet renders and crops | medium | Opus diagnoses once | Fable never |
 | Video and media edits, store and deploy workflows | Sonnet | medium | | |
 | Video studio: Producer, Writer, Director, Editor, Motion | Sonnet | medium | Opus picks the concept and gives the Critic's verdict | |
-| Social team: Lead, Scout, Community, Analyst | Sonnet | medium | Opus writes the weekly plan and ranks ideas | |
+| Social team: Lead, Scout, Community, Partnerships, Analyst | Sonnet | medium | Opus writes the weekly plan, ranks ideas and reads deal contracts | |
 
 Fixed rules: effort medium is the default; high only where listed; max never unless yskills asks. Never switch a running thread's model (the cache is rewritten once, about $1 at 110k). Haiku reading jobs stay under 100k of prompt, because its price doubles above that.
 

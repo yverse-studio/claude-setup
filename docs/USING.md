@@ -83,6 +83,8 @@ What you do: drop ideas, say two words, set one switch. The `social-team` skill 
    HQ (build and learning videos only, never ads or crypto, at most 2 a day, a daily summary).
 4. A new account (one per brand): you sign up and connect it once, about 5 minutes
    (`social-team` `templates/account-setup.md`); Claude runs it from then on.
+5. Brand deals: Claude keeps the media kit and a partner list and drafts the offers; you get
+   one line before any message to a brand, any price and any yes or signature.
 
 ## Delete a page
 
