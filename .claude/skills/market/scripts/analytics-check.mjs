@@ -3,6 +3,7 @@
 // heading filled, few core events named Object + Action in Title Case, no dynamic values in names,
 // snake_case properties, every event tied to a question, one HQ money metric and a cookieless or
 // consent basis that agrees with the banner line. Also checks the weekly numbers line.
+// checkRoleDoc guards the Tools table of operator/roles/analytics.md (every row ends in a source) and its legal-check lines.
 // Usage: node analytics-check.mjs [analytics/TRACKING.md]  (exit 1 lists what fails)
 import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
@@ -11,7 +12,7 @@ import { fileURLToPath } from 'node:url'
 export const REQUIRED_HEADINGS = ['Objectives', 'Events', 'Privacy']
 export const MONEY_METRICS = ['visitors7d', 'signups', 'paying', 'revenueMonth'] // the HQ project-row fields (docs/hq-rows.md)
 export const MAX_EVENTS = 12
-export const PLACEHOLDER = /<(?:name|Object Action|question|metric|basis|properties|tool|ja\/nein|date)>/g // the template's own
+export const PLACEHOLDER = /<(?:name|Object Action|question|metric|basis|properties|tool|ja\/nein)>/g // the template's own
 const PAST_IRREGULAR = ['Paid', 'Sent', 'Left', 'Built', 'Bought', 'Began', 'Won', 'Lost', 'Chose', 'Shown', 'Seen', 'Made']
 const DYNAMIC = /\d|[()#:@/]/
 const DIVIDER = /^\s*\|?[\s:|-]+\|[\s:|-]*$/
@@ -91,6 +92,23 @@ export function checkNumbersLine(line) {
     else if (!/^(?:\d[\d.,]*(?: €)?(?: (?:live|Testgeld))?|nicht gelesen)$/.test(value)) errors.push(`"${key}: ${value}" is neither a number nor "nicht gelesen"`)
   }
   if (!fields.some((f) => /^Quelle: .+, gelesen \d{4}-\d{2}-\d{2}/.test(f))) errors.push('numbers line lacks "Quelle: <tool>, gelesen <ISO date>"')
+  return errors
+}
+
+// operator/roles/analytics.md: each Tools row names its source (a vendor URL or "none needed"), and the legal check stays in Method and Bar.
+export function checkRoleDoc(md) {
+  const errors = []
+  const s = sections(md)
+  const tools = rows(s.Tools ?? '')
+  if (!tools.length) errors.push('roles/analytics.md: ## Tools has no row')
+  for (const cells of tools) {
+    const [tool = '', , , , source = ''] = cells
+    if (cells.length !== 5) errors.push(`roles/analytics.md: Tools row "${tool}" has ${cells.length} cells, expected 5`)
+    else if (!/^(?:https?:\/\/\S+|none needed\b)/.test(source)) errors.push(`roles/analytics.md: Tools row "${tool}" has no source (a vendor URL or "none needed")`)
+  }
+  for (const h of ['Method', 'Bar']) {
+    if (!(s[h] ?? '').includes('legal-reviewer')) errors.push(`roles/analytics.md: ## ${h} lost the legal-reviewer check`)
+  }
   return errors
 }
 
