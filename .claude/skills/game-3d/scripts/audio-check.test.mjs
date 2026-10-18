@@ -118,7 +118,7 @@ test('a heading twice fails, so a second File budget cannot override the first',
 test('the CLI ignores recorded videos and test output in a silent game', () => {
   for (const p of ['.shots/run.webm', 'test-results/a/video.webm', 'playwright-report/trace.zip.mp3', 'src/run.webm']) {
     const r = spawnSync('node', [CLI, repo({ 'src/main.ts': 'const x = 1', [p]: 'x' })], { encoding: 'utf8' })
-    assert.equal(r.status, p === 'playwright-report/trace.zip.mp3' ? 0 : 0, p + r.stderr)
+    assert.equal(r.status, 0, p + r.stderr)
   }
 })
 test('audio over the doc budget fails', () => assert.match(checkAudio({ ...REPO, files: [{ path: 'assets/audio/chime.ogg', bytes: 601 * 1024 }] }).join(), /over the doc's budget of 600 KB/))
