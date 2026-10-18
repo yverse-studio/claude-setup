@@ -61,6 +61,10 @@ Roblox projects have no preview URL: play the test place through the Studio MCP 
 and the operator fixes the deploy first. A flow that depends on mail (a confirm link, a mailed
 cancel) passes check 4 only where mail is configured in that environment, else the flow is off.
 
+To confirm a Preview serves the PR head, read its `/api/config`: `commit` must equal the head SHA. A
+local `npm run verify` leaves `src/commit.js` alone (only Workers Builds and CI write it), so a dirty
+tree after it is a real change.
+
 **No preview yet or any more:** the scaffold PR (before Workers Builds is connected) needs CI
 only. Once branch builds are off (live payment keys, `publish` skill), check 1 is CI only and the
 gate runs the PR's build locally (`wrangler dev`) for checks 2, 4 and 5.
@@ -90,9 +94,10 @@ How to undo a merge, by kind of change (write the line into the PR's "undo" line
 
 ## Rounds
 
-- **5/5:** commit the evaluator's verdict into `features.json` (`passes`) on the PR branch, wait
-  for check 1 on that commit (a commit touching only `features.json` doesn't restart checks 2-5),
-  then post the table below as a PR comment. Then:
+- **5/5:** with a `features.json` (apps), commit the evaluator's verdict into it (`passes`) on the PR
+  branch, wait for check 1 on that commit (a commit touching only `features.json` doesn't restart
+  checks 2-5); a repo without one (a game starter, claude-setup) skips that and only posts the table
+  below as a PR comment. Then:
   - **Pull main first.** If main moved since the branch was cut, merge main into the branch and
     wait for CI again before merging: in the HQ run six slices edited one `dashboard.html`, and a
     merge without the pull would have dropped the previous slice's work.
@@ -108,7 +113,8 @@ How to undo a merge, by kind of change (write the line into the PR's "undo" line
   round re-runs the failed checks with fresh agents on the new head.
 - **2 failed rounds:** send one message to yskills: what the PR does, what is wrong in plain words (from
   the last reports), and two or three ways forward as tap options; the thread goes on with the
-  recommended option and the card lets yskills change course; money, a new service, deleting and
+  recommended option and the card lets yskills change course; when the coordinator already
+  answered, carry on with its answer instead of asking again; money, a new service, deleting and
   anything irreversible wait for the tap (`CLAUDE.md`, Cards).
 
 **Important or hard PRs** (auth, payments, database migrations, secrets, anything that can lose
