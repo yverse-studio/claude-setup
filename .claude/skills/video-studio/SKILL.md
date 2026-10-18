@@ -80,9 +80,8 @@ Skim a free one only if it names something this table lacks.
   product shots are a fail.
 - **Phone first.** 1080x1920, 30 fps, captions in the top band away from TikTok's right-side and
   bottom UI; one caption at a time, 3-5 words.
-- **Sound.** Every video gets sound design and two masters (`roles/sound.md`); ads and business
-  accounts use the platform's commercial music library only; yskills' own voice memo when the
-  concept needs a voice (exact lines from the Writer).
+- **Sound.** Every video gets sound design and two masters; the music source and its licence rules:
+  [`roles/sound.md`](roles/sound.md). yskills' own voice memo when the concept needs a voice (exact lines from the Writer).
 - **Ads.** Label and claims per `market` §4 (German advertising law); three hooks on one body so the
   ad can be tested; paying for ads is yskills' card.
 - **Never posted by the studio.** `final.mp4` goes to the `social-team` queue; it posts per its Posting rules (`social-team`, Posting: personal account vs project accounts).

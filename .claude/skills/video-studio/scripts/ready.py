@@ -12,7 +12,7 @@ from pathlib import Path
 
 TIME_RANGE = re.compile(r"\d+(?:\.\d+)?\s*-\s*\d+(?:\.\d+)?")
 STILL = re.compile(r"[\w./-]+\.(?:png|jpe?g|webp)", re.I)
-LICENCE = re.compile(r"licen[cs]e\**\s*:\**\s*\S", re.I)
+LICENCE = re.compile(r"licen[cs]e\**\s*:\**[ \t]*[^\s<]", re.I)
 PASS = re.compile(r"^\W*PASS\b(.*)$", re.I | re.M)
 MIN_REFS = 2
 
@@ -76,7 +76,7 @@ def check_critic(folder):
         return ["critic: no critic.md"]
     errors = []
     for stage in ("animatic", "cut"):
-        lines = [m.group(1) for m in PASS.finditer(text) if re.search(rf"\b{stage}\b", m.group(1), re.I)]
+        lines = [m.group(1) for m in PASS.finditer(text) if re.match(rf"\W*{stage}\b", m.group(1), re.I)]
         if not lines:
             errors.append(f"critic: no PASS line for the {stage}")
         elif max(ref_count(line) for line in lines) < MIN_REFS:

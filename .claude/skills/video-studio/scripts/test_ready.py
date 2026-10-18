@@ -51,6 +51,14 @@ class Ready(unittest.TestCase):
         self.write("sound.md", "Music bed: something nice\n")
         self.assertEqual(ready.problems(self.dir), ["sound: no filled 'Licence:' line for the music bed"])
 
+    def test_template_placeholder_is_not_a_licence(self):
+        self.write("sound.md", "Music bed: x\nLicence: <name>\n")
+        self.assertEqual(ready.problems(self.dir), ["sound: no filled 'Licence:' line for the music bed"])
+
+    def test_one_pass_line_counts_for_its_own_stage_only(self):
+        self.write("critic.md", "PASS cut, better than the animatic, refs: tiktok.com/@a/1, tiktok.com/@b/2\n")
+        self.assertEqual(ready.problems(self.dir), ["critic: no PASS line for the animatic"])
+
     def test_critic_needs_both_passes_with_references(self):
         self.write("critic.md", "FAIL animatic: hook too slow\nPASS cut refs: tiktok.com/@a/1\n")
         self.assertEqual(ready.problems(self.dir), [
