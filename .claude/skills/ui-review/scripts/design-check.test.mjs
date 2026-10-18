@@ -81,6 +81,12 @@ test('tinted near-black from SLOP.md 22 fails', () => {
   assert.match(checkDesign(project(withPalette('| ink | #0b0b0b |'))).join(), /SLOP\.md 22 default/);
 });
 
+test('neutral near-black fails at both defaults, a hued dark ground passes', () => {
+  assert.match(checkDesign(project(withPalette('| ink | #111111 |'))).join(), /SLOP\.md 22 default/);
+  assert.match(checkDesign(project(withPalette('| ink | #0d0d0d |'))).join(), /SLOP\.md 22 default/);
+  for (const dark of ['#0a1210', '#0b1226', '#05080a']) assert.deepEqual(checkDesign(project(withPalette(`| ink | ${dark} |`))), [], dark);
+});
+
 test('a default colour passes when its row cites a reference capture', () => {
   assert.deepEqual(checkDesign(project(withPalette('| paper | #f4f1ea | from a.png |'))), []);
 });
@@ -119,9 +125,11 @@ test('an arrow after link or button text fails (SLOP.md 22)', () => {
   assert.match(checkDesign(withSource('Hero.html', '<a href="/play">Play now →</a>')).join(), /ends in an arrow/);
 });
 
-test('node_modules is not scanned', () => {
-  const dir = project(GOOD);
-  mkdirSync(join(dir, 'src', 'node_modules'), { recursive: true });
-  writeFileSync(join(dir, 'src', 'node_modules', 'x.html'), '<button>Submit</button>');
-  assert.deepEqual(checkDesign(dir), []);
+test('node_modules and test fixtures are not scanned', () => {
+  for (const skipped of ['node_modules', 'fixtures', '__tests__']) {
+    const dir = project(GOOD);
+    mkdirSync(join(dir, 'src', skipped), { recursive: true });
+    writeFileSync(join(dir, 'src', skipped, 'x.html'), '<button>Submit</button>');
+    assert.deepEqual(checkDesign(dir), [], skipped);
+  }
 });

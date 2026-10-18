@@ -15,14 +15,16 @@ const MIN_TYPE_SIZES = 3;
 const IMAGE = /\.(png|jpe?g|webp|gif|avif)$/i;
 const HEX = /#[0-9a-f]{6}\b/gi;
 const MAX_DEFAULT_DISTANCE = 25;
+const MAX_NEAR_BLACK_DISTANCE = 6; // the look is neutral black; a green or blue ground like #0a1210 is a choice
 const DEFAULT_COLOURS = [
   { hex: '#f4f1ea', look: 18, name: 'cream ground' },
   { hex: '#d97757', look: 18, name: 'terracotta accent' },
-  { hex: '#0b0b0b', look: 22, name: 'tinted near-black' },
-  { hex: '#111111', look: 22, name: 'tinted near-black' },
+  { hex: '#0b0b0b', look: 22, name: 'tinted near-black', max: MAX_NEAR_BLACK_DISTANCE },
+  { hex: '#111111', look: 22, name: 'tinted near-black', max: MAX_NEAR_BLACK_DISTANCE },
 ];
 const NEAR_BLACK_LUMINANCE = 0.02;
 const SOURCE_DIRS = ['src', 'app', 'pages', 'components', 'layouts', 'public'];
+const SKIPPED_DIRS = new Set(['node_modules', 'fixtures', '__tests__', 'test', 'tests']);
 const SOURCE_FILE = /\.(vue|html|jsx|tsx|svelte)$/i;
 const VAGUE_LABELS = ['submit', 'ok', 'click here', 'go', 'absenden', 'hier klicken'];
 const BUTTON_TEXT = /<(button|a)\b[^>]*>\s*([^<>{}]{1,40}?)\s*<\/\1>/gi;
@@ -99,7 +101,7 @@ function checkDefaultLooks(text, captures, fails) {
   const cleared = (row) => captures.some((f) => row.includes(f));
   const rowColours = rows.filter((r) => !cleared(r)).flatMap((r) => (r.match(HEX) ?? []).map((h) => h.toLowerCase()));
   for (const hex of new Set(rowColours)) {
-    const hit = DEFAULT_COLOURS.find((d) => distance(hex, d.hex) <= MAX_DEFAULT_DISTANCE);
+    const hit = DEFAULT_COLOURS.find((d) => distance(hex, d.hex) <= (d.max ?? MAX_DEFAULT_DISTANCE));
     if (hit) fails.push(`## Palette: ${hex} is the SLOP.md ${hit.look} default (${hit.name}); cite a reference capture on its row or pick another`);
   }
   const dark = rowColours.some((h) => luminance(h) < NEAR_BLACK_LUMINANCE);
@@ -111,7 +113,7 @@ function sourceFiles(dir) {
   if (!existsSync(dir)) return [];
   return readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
     const p = join(dir, e.name);
-    if (e.isDirectory()) return e.name === 'node_modules' ? [] : sourceFiles(p);
+    if (e.isDirectory()) return SKIPPED_DIRS.has(e.name) ? [] : sourceFiles(p);
     return SOURCE_FILE.test(e.name) ? [p] : [];
   });
 }
