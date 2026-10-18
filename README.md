@@ -43,7 +43,7 @@ tools that are missing (gh, ffmpeg, docker, python, uv, fnm) with the install co
 |---|---|---|
 | `CLAUDE.md` | How Claude works for you: owns tasks end to end, verifies before pushing, screenshot-reviews UI, your default stack | `CLAUDE.md` |
 | Settings | Auto permission mode, safe allow list, asks before force-push and deploys, denies reading `.env` and key files (a deny rule is not a sandbox), high effort, status line with context bar | `global/settings.json` |
-| 13 plugins on | superpowers, frontend-design, security-guidance, TypeScript and Python LSP, Context7, Playwright, commit-commands, code-simplifier, feature-dev, claude-md-management, claude-code-setup, skill-creator (`/code-review` and the `claude-api` skill are built into Claude Code now) | Anthropic's official marketplace, `config/plugins.json` |
+| 9 plugins on | superpowers, frontend-design, security-guidance, TypeScript and Python LSP, Context7, Playwright, commit-commands, skill-creator (`/code-review` and the `claude-api` skill are built into Claude Code now) | Anthropic's official marketplace, `config/plugins.json` |
 | 7 plugins per project | Cloudflare, Firebase, Stripe, Sentry, PostHog, Supabase, Vercel: installed but off; a repo turns one on in its `.claude/settings.json` | same |
 | 17 ECC skills | Vue, Nuxt 4, Vite, API design, security review, e2e, SEO, i18n... | `.claude/skills`, list in `config/ecc.json` |
 | 15 ECC agents | planner, architect, code/TS/Vue/security/database reviewers, build-error-resolver, e2e-runner, a11y, performance, SEO... | `.claude/agents` |
@@ -76,7 +76,7 @@ Plugins and network need a [cloud environment](https://code.claude.com/docs/en/c
 (Project settings > Cloud environment > Add cloud environment). Pick the same one in every
 project that uses this setup.
 
-- **Setup script:** paste [`cloud/setup.sh`](cloud/setup.sh). It installs 11 of the 13 global
+- **Setup script:** paste [`cloud/setup.sh`](cloud/setup.sh). It installs 7 of the 9 global
   plugins at user scope (Context7 and skill-creator stay on the PC: Context7 asks for a sign-in a
   thread can't do, and threads have Anthropic's skill-creator built in) and makes built-in
   subagents default to Sonnet. The result is cached and rebuilt about weekly, so threads don't
@@ -84,14 +84,13 @@ project that uses this setup.
 - **Network access:** Custom, tick "Also include default list of common package managers", and
   add:
   - `cdn.jsdelivr.net`, `unpkg.com` (CDN scripts, e.g. GSAP for HyperFrames)
-  - `*.yskills.workers.dev` (your own live sites and branch previews, so threads can open and
+  - `*.yverse.workers.dev` and `*.yskills.workers.dev` (your own live sites and branch previews, so threads can open and
     screenshot what they deployed; blocked otherwise)
   - `*.youtube.com`, `*.googlevideo.com`, only if threads work on video
 - **No deploy keys here.** Cloudflare Workers Builds deploys `main` and gives every other branch
   its own preview (the `publish` skill); GitHub only runs `verify` and holds no keys. Threads never
   deploy themselves: `wrangler deploy` through the cloud proxy fails, because the proxy replaces
-  Workers' asset-upload token (401). Optional: a Stripe *test* key as an API credential
-  for `api.stripe.com` (Pro/Max plans); the proxy adds it and Claude never sees it.
+  Workers' asset-upload token (401).
 
 On your PC, `global/settings.json` lets Claude read the official docs of your stack (Nuxt, Vue,
 Cloudflare, Stripe, GitHub, MDN, German law texts...) without asking each time. Cloud threads

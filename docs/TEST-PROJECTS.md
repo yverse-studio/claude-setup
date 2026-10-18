@@ -77,5 +77,5 @@ Test 2 ran as Kleingarten (Roblox), not a Three.js game; its lessons are in the 
 ## Then
 
 The first real project. Every project reports status, revenue, spend and its own key numbers
-into Luna's cockpit, the one dashboard over all apps (CLAUDE.md); the operator reads them weekly
+into its HQ rows, the one dashboard over all apps (`docs/hq-rows.md`); the operator reads them weekly
 and turns the best next step into a slice.

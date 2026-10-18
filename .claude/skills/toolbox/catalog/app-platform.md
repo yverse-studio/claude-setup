@@ -6,7 +6,7 @@ global CLAUDE.md (Nuxt 4 / Vue + Vite, Cloudflare Workers).
 | Need | Pick | Why / watch out | Add it |
 |---|---|---|---|
 | Hosting web apps | **Cloudflare Workers** (Nuxt preset) | Default; see MyPage and TellMeY | `cloudflare` plugin |
-| Long-running service, Docker | VPS + Docker + Caddy (Luna's setup), or **Render** | | `render` plugin |
+| Long-running service, Docker | VPS + Docker + Caddy (Luna's setup), or **Render** | Costs money every month: only after yskills says yes (`CLAUDE.md`, Stack) | `render` plugin |
 | Other hosts | Vercel, Netlify | Only if a project needs them | `vercel` / `netlify-skills` plugins |
 | Database on Cloudflare | **D1** (SQLite) | Free tier, prepared statements | wrangler binding |
 | Postgres | **Neon** or **Supabase** | Supabase adds auth + storage + realtime | `neon` / `supabase` plugins |
@@ -18,7 +18,7 @@ global CLAUDE.md (Nuxt 4 / Vue + Vite, Cloudflare Workers).
 | Heavy compute (FFmpeg, Python, ML) | **Cloudflare Containers** or a VPS | | `cloudflare` plugin |
 | Realtime (multiplayer, live chat) | **Durable Objects** + WebSockets | | wrangler binding |
 | Cache / rate limits | Workers KV, Durable Objects; Redis off-Cloudflare | | `redis-development` plugin |
-| Installable app from the web | **PWA** (`@vite-pwa/nuxt`), Play Store via **TWA** (Bubblewrap) | TellMeY's choice; cheapest path to "an app". `registerType: 'prompt'`, never `'autoUpdate'` (reloads the page after every deploy) | npm |
+| Installable app from the web | **PWA** (`@vite-pwa/nuxt`), Play Store via **Capacitor** (`store-publish`; a TWA is only a browser tab) | TellMeY's choice; cheapest path to "an app". `registerType: 'prompt'`, never `'autoUpdate'` (reloads the page after every deploy) | npm |
 | Native iOS + Android from the Vue app | **Capacitor** | Reuses the web code; shipping to the stores: the `store` skill | npm |
 | Native app, React | **Expo** | | `expo` plugin |
 | Desktop app | **Tauri 2** | Small binaries, web UI | cargo/npm |

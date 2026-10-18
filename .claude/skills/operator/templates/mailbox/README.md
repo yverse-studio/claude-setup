@@ -7,7 +7,8 @@ Claude's own mailbox for 0 €: mail to `anything@yourdomain.de` lands in D1 thr
 
 ## Read the inbox
 
-No public endpoint (nothing to protect). From the repo, with `wrangler login` done once:
+No public endpoint (nothing to protect). Cloud threads never run wrangler and nobody runs `wrangler login`: these run in a laptop session
+(`publish` skill, Two routes to Cloudflare):
 
 ```
 npx wrangler d1 execute DB --remote --json --command "SELECT id, received_at, from_addr, subject, substr(text,1,500) AS text FROM mail ORDER BY received_at DESC LIMIT 10"

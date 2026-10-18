@@ -11,7 +11,7 @@ need it, and say so in the PR. Follow the order; each step commits on its own.
 
 1. `.node-version`: `24`.
 2. `package.json`: `type: module`, `engines.node >=24`, scripts `dev`, `lint`, `typecheck`,
-   `test`, `build`, `check` (= typecheck + test), and `verify` (= lint + typecheck + test +
+   `test`, `build`, `check` (= lint + typecheck + unit tests, no browser tests), and `verify` (= lint + typecheck + test +
    build). `verify` starts with a secret scan, script `secrets` = `! git grep -nIE
    '(sk|rk)_live_[A-Za-z0-9]|whsec_[A-Za-z0-9]{16}|AKIA[0-9A-Z]{16}|BEGIN [A-Z ]*PRIVATE KEY|ghp_[A-Za-z0-9]{30}'
    -- . ':(exclude)*.md' ':(exclude)package-lock.json'` (cloud threads have no secret hook, so CI is

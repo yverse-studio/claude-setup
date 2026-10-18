@@ -108,9 +108,9 @@ All of these are built in the project's design. Replace the placeholders `exampl
 - Refuse a second purchase of the same one-off product (409), and accept a session only when
   `mode`, `amount_total`, `currency` and the product all match.
 - **Live-key lock:** checkout refuses a `sk_live_`/`rk_live_` key until the seller details in
-  `shared/business.ts` (name, street, city, email, phone) are filled and `RESEND_API_KEY` and
-  `MAIL_FROM` exist. Keep it a pure, unit-tested function in `shared/checkout.ts`; it suits every
-  project.
+  the project's own `shared/business.ts` (name, street, city, email, phone) are filled and `RESEND_API_KEY` and
+  `MAIL_FROM` exist. Write it as a pure, unit-tested function in the project's `shared/checkout.ts` (not in
+  `templates/`).
 
 **Subscription (Billing):**
 

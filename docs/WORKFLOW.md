@@ -16,11 +16,11 @@ whole history every turn.
 | 2 | Research, in parallel | **Inside:** our skills, catalog, lessons from `docs/TEST-PROJECTS.md`, your other repos. **Outside:** competitors, how the best similar products and open-source projects are built, tools (`toolbox`, Anthropic Directory). **Money:** who pays, how much, 3 pieces of evidence; none → the plan says no. **Legal:** the `legal` skill's table | one page each | Nothing |
 | 3 | Plan | `planner` | `PLAN.md` (PRD, slices, marketing plan, keys, costs), `features.json` (acceptance criteria per slice, written before any code) | **Brief (a):** ok/no (it includes proof people pay) |
 | 4 | Scaffold + design | one scaffold thread; design team (`frontend-design`, `impeccable`, `design-critic`) | default stack, `verify`, CI; the repo and its deploy already exist from the `new-project` workflow (`publish`); 2-3 directions as screenshots | **Brief (b):** pick one. Later keys come one card at a time, when a slice needs them |
-| 5a | Probe (anything meant to earn) | one builder thread, then the marketing team | slice `probe` live: offer, price, waitlist; pushed in one channel for ~14 days against the go number from `PLAN.md` | Nothing if it hits the number; else one tap: kill, change or build anyway |
+| 5a | Probe (anything meant to earn) | one builder thread, then the marketing team | slice `probe` live: offer, price, waitlist; pushed in one channel for the probe period (7 days default, operator `run.md` step 5) against the go number from `PLAN.md` | Nothing if it hits the number; else one tap: kill, change or build anyway |
 | 5 | Build | builder threads, one per slice, the next in a fresh thread after a merge; a second only when the slices share no file, never more than three; a small site is one thread, no slices | PRs with tests, screenshots, preview link; `PROGRESS.md` updated | Nothing |
 | 6 | Gate each PR | QA: `evaluator` on the preview, fresh `code-reviewer`; security: `security-reviewer` + `red-team`; `design-critic` + `legal-reviewer` | a 5/5 table on the PR and the merge, or one review the builder fixes | nothing |
 | 7 | Launch | full `red-team` and `legal-reviewer` pass; `publish`, `sell` go-live; the loop wired (`docs/LOOP.md`: errors and feedback stored by the app, `loop.yml`, the reader routine) | live site | **Brief (c)** to read; the gate merges (auto-run); live keys when you want real money |
-| 8 | Grow | marketing team (`market` skill, `seo-specialist`); the daily loop reader and a weekly routine | posts, launch, a fix thread per error or red live check, a decision per feedback item, a weekly PR with the `metrics/` file Luna's cockpit reads and the next slice | The gate merges the weekly PR (you tap only if Claude Code's safety check blocks it); approve post batches, pay for ads |
+| 8 | Grow | marketing team (`market` skill, `seo-specialist`); the daily loop reader and a weekly routine | posts, launch, a fix thread per error or red live check, a decision per feedback item, a weekly PR with the `metrics/` file HQ reads and the next slice | The gate merges the weekly PR (you tap only if Claude Code's safety check blocks it); approve post batches, pay for ads |
 | 9 | Learn | operator | each lesson becomes a rule, skill line, test or check in claude-setup | Nothing; the gate merges it (you tap only if Claude Code's safety check blocks it) |
 
 After launch, phases 5-6 repeat for every improvement the weekly numbers suggest.
@@ -33,8 +33,7 @@ Remote Control (2026-10-07): yskills allows Claude Code on their PC. Anything th
 
 ## Models
 
-The one model line (also in every project's instructions, word for word; `scripts/check.mjs`
-keeps the copies equal):
+The one model line (`scripts/check.mjs` fails on a model id anywhere else):
 
 Models: best fitting model per task, cheapest that fits. Fable (claude-fable-5-1) is rare, drawn from yskills' Max plan: only the architecture or plan of a new product, a problem still stuck after a Sonnet round and an Opus checkpoint, or what yskills names; plus the project chat (coordinator), which yskills sets by hand; if Fable is out of credits or unavailable, Opus takes it without asking. Opus (claude-opus-5-5) for plans, design, judgement and full audits. Sonnet (claude-sonnet-5-5) for gates, fixes, research and builds. A simple reading job goes to a Haiku subagent. Cheap first: Sonnet does the work and calls an Opus subagent before committing to an approach, when stuck twice on the same spot and before saying done; the gate's verdict is Opus on round 2 and on size L. A thread never picks Fable for routing, reviews, research, builds or fixes. Effort medium unless yskills asks for more. When a newer model ships, use the newest of each tier. A model yskills names is used as named.
 

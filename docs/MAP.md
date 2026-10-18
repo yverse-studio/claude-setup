@@ -84,7 +84,7 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 | Co-founder | `CLAUDE.md` (How to work) | `roles/*.md` (one role-specific line each) |
 | Literal mode and cost | the brief block in `briefs.md` | `roles/*.md` (one pointer each) |
 | Merge policy, 5/5 gate | `gate.md` (Merge policy) | `CLAUDE.md`, `docs/WORKFLOW.md`, `roles/tester.md` |
-| Models | the one line in `docs/WORKFLOW.md` (Models) | everything else links it; CI fails on a second wording or on the old model name |
+| Models | the one line in `docs/WORKFLOW.md` (Models) | everything else links it; CI fails on a model id outside that line |
 | Context guard numbers (warn 150k, hand off 200k) | `global/context-guard.mjs` | `CLAUDE.md`, `README.md` |
 | Remote Control on the PC | `docs/WORKFLOW.md` (PC work) | operator `SKILL.md` |
 | UI rules | `CLAUDE.md` (UI) | `roles/designer.md`, `ui-review` (screenshots, the load-once check, run videos via `desktop.sh`) |

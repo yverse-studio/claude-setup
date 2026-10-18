@@ -122,8 +122,8 @@ In the same message, ask for this project's keys from `keys.md`:
    shipping and delivery time.
 8. **Orders view** for yskills behind the admin login: paid, shipped, refunded. Refunds happen
    in the Stripe Dashboard and come back by webhook.
-9. **Report into Luna** once Luna's ingest API exists: one small signed event per paid and
-   per refunded order.
+9. **Report into HQ:** each paid and refunded order shows in the project's HQ rows
+   (`docs/hq-rows.md`, revenue verified against real data).
 
 Tests that every shop gets (all in `templates/tests/shop.spec.ts`):
 

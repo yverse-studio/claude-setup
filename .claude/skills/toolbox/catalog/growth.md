@@ -17,4 +17,4 @@ launch sequence and German advertising law are in the `market` skill; this table
 | Transactional email (login links, receipts) | **Resend** | Simple API, React/HTML templates | `resend` plugin |
 | Marketing email / newsletters | Resend audiences, or ActiveCampaign | Needs double opt-in in Germany | `activecampaign` plugin |
 | Conversion tracking for ads | Meta Pixel / Conversions API, TikTok Pixel, Google tag | Only after consent; server-side events are more reliable | tags via consent manager |
-| Report numbers into Luna | Small read-only API or webhook into Luna's cockpit | Luna is the one dashboard for all projects | see luna-monorepo connectors |
+| Report numbers | The project's HQ rows (`docs/hq-rows.md`) | HQ is the one dashboard for all projects | none |
