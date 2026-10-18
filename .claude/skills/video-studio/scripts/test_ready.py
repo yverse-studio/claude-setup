@@ -1,12 +1,12 @@
 """ready.py: a video folder passes only with script, storyboard, sound plan and Critic passes."""
+import importlib
 import sys
 import tempfile
 import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-
-import ready  # noqa: E402
+ready = importlib.import_module("ready")
 
 SCRIPT = "Hook: the result first.\n\n| Time | Picture |\n|---|---|\n| 0.0-1.0 | island |\n\nPayoff at 8 s.\n"
 BOARD = "| Shot | Still | Time | Camera | Sound cue |\n|---|---|---|---|---|\n| 1 | stills/01.png | 0.0-1.0 | push in | whoosh |\n"

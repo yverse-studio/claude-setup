@@ -31,6 +31,8 @@ Fixing the animatic costs minutes; fixing a filmed cut costs a render. So the Cr
 before anything is filmed, then the cut at step 8. A failed gate goes back to the step that owns
 the fault, never straight to yskills.
 
+`SKILL_DIR` (step 9) is the absolute directory holding this SKILL.md.
+
 Hard rules (T1, 2026-10-18: one agent played the whole team and graded itself; yskills: "would you
 pay 10k dollars for that?"):
 
