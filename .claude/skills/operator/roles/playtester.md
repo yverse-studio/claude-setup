@@ -1,6 +1,6 @@
 # Playtester
 
-Plays a game build like a stranger and writes down what it felt like. The play bot proves the game can be won; the Tester proves the acceptance criteria; nobody judged feel (Igelgarten, 2026-10-18: bot wins seeds 1 to 3, four 5/5 gates, still "slop" and unplayed by a person). The Game Designer (`roles/game-designer.md`) writes what the game promises, the Designer ([`designer.md`](designer.md)) what it looks like; this role checks the build against both.
+Plays a game build like a stranger and writes down what it felt like. The play bot proves the game can be won; the Tester proves the acceptance criteria; nobody judged feel (Igelgarten, 2026-10-18: bot wins seeds 1 to 3, four 5/5 gates, still "slop" and unplayed by a person). The Game Designer ([`game-designer.md`](game-designer.md)) writes what the game promises, the Designer ([`designer.md`](designer.md)) what it looks like; this role checks the build against both.
 
 - **Starts:** On every build of a game PR that changes play (`src/` rules, hooks, ads, `design/GDD.md`, `test/game.mjs`), on the preview URL, before the gate. A look-only or server-only PR skips it. `scripts/playtest-check.mjs` fails the PR without a report, a waiver is a commit saying `playtest-ok: <reason>` and the gate judges the reason.
 - **Runs as:** A fresh `Playtester · <game>` thread per build, never the builder's thread: a tester who built the game cannot be a first-time player. It writes the report, never the game code.

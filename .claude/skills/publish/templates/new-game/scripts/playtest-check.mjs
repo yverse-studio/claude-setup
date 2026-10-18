@@ -4,7 +4,8 @@
 // the bot. The newest design/playtests/*.md changed in the PR must name the preview and a commit
 // no play file changed after, give pass/fail for all seven areas with a time and an existing
 // file as evidence, hold no pass-through fail, no template placeholder, and end with Not checked.
-// Escape hatch: a commit message in the PR with `playtest-ok: <reason>` waives it; the reason is printed.
+// Escape hatch: a commit message in the PR with `playtest-ok: <reason>` waives a missing report, the
+// reason is printed; it never waives a report that holds a fail row.
 // Exit 0 ok, 1 violation, 2 could not run (never read 2 as 0).
 // Usage: node scripts/playtest-check.mjs [--base <ref>]   (default origin/main)
 import { execFileSync } from 'node:child_process'
@@ -43,6 +44,8 @@ export function checkReport(md, fileExists) {
   return errors
 }
 
+export const failRows = (md) => AREAS.filter((a) => md.split('\n').some((l) => /^\s*\|/.test(l) && l.split('|')[1]?.trim() === a && /^fail$/i.test(l.split('|')[2]?.trim() ?? '')))
+
 const git = (args) => {
   try { return execFileSync('git', ['-c', 'core.quotepath=off', ...args], { encoding: 'utf8', maxBuffer: 1 << 26, stdio: ['ignore', 'pipe', 'pipe'] }) } catch { return null }
 }
@@ -65,15 +68,20 @@ function main() {
   if (!changed.some(isPlayFile)) return console.log('playtest-check: no play file changed, no report needed')
 
   const waiver = lines(git(['log', '--format=%B', `${mergeBase}..HEAD`]) ?? '').find((l) => /^playtest-ok:\s*\S/.test(l))
+  const report = changed.filter(isReport).filter((f) => existsSync(f)).sort().at(-1)
+  if (waiver && report) {
+    const failed = failRows(readFileSync(report, 'utf8'))
+    if (failed.length) fail([`${report}: ${failed.join(', ')} is fail; playtest-ok does not waive a failing row`])
+  }
   if (waiver) return console.log(`playtest-check: waived (${waiver.trim()}); the gate judges the reason`)
 
-  const report = changed.filter(isReport).filter((f) => existsSync(f)).sort().at(-1)
   if (!report) fail(['a play file changed but the PR has no design/playtests/<date>-<sha>.md (roles/playtester.md)'])
   const md = readFileSync(report, 'utf8')
   const errors = checkReport(md, (rel) => existsSync(join(dirname(report), rel)))
   const sha = md.match(/^Commit:\s*([0-9a-f]{7,40})\s*$/m)?.[1]
   if (sha) {
-    const later = git(['diff', '--name-only', '--no-renames', sha, '--'])
+    // the PR's own commits after the played one; commits that came in from the base branch do not count
+    const later = git(['log', '--no-merges', '--format=', '--name-only', `${sha}..HEAD`, `^${base}`, '--'])
     if (git(['merge-base', '--is-ancestor', sha, 'HEAD']) === null) errors.push(`Commit ${sha} is not in this PR's history`)
     else if (later === null) errors.push(`could not diff against ${sha}`)
     else for (const f of lines(later).filter(isPlayFile)) errors.push(`${f} changed after the played commit ${sha}; play the new build`)

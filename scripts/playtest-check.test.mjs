@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
-import { AREAS, checkReport, isPlayFile } from '../.claude/skills/publish/templates/new-game/scripts/playtest-check.mjs'
+import { AREAS, checkReport, failRows, isPlayFile } from '../.claude/skills/publish/templates/new-game/scripts/playtest-check.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const script = join(root, '.claude/skills/publish/templates/new-game/scripts/playtest-check.mjs')
@@ -115,6 +115,20 @@ test('a playtest-ok commit waives the report and prints the reason', () => {
 test('an empty playtest-ok does not waive', () => {
   const r = run((d) => put(d, 'src/rules.ts', 'changed\n'), { message: 'fix: x\n\nplaytest-ok:' })
   assert.equal(r.code, 1)
+})
+test('a playtest-ok commit does not waive a report with a fail row', () => {
+  const r = run((d) => { withReport(d, (s) => s.replace('| Full run | pass', '| Full run | fail')); git(d, 'add', '-A'); git(d, 'commit', '-qm', 'fix: x\n\nplaytest-ok: tiny') })
+  assert.equal(r.code, 1)
+  assert.match(r.out, /Full run is fail; playtest-ok does not waive/)
+  assert.deepEqual(failRows(report('abc1234')), [])
+})
+test('a play change that came in from the base branch does not make the report stale', () => {
+  const r = run((d) => {
+    withReport(d); git(d, 'add', '-A'); git(d, 'commit', '-qm', 'docs: report')
+    git(d, 'checkout', '-q', 'main'); put(d, 'src/hooks.ts', 'from main\n'); git(d, 'add', '-A'); git(d, 'commit', '-qm', 'feat: other play change')
+    git(d, 'checkout', '-q', 'work'); git(d, 'merge', '-q', '--no-ff', '-m', 'merge main', 'main')
+  })
+  assert.equal(r.code, 0, r.out)
 })
 test('outside a git repo, or with an unknown base, it exits 2 not 0', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pt-'))
