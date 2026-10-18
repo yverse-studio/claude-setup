@@ -2,7 +2,7 @@
 
 Written by the Researcher before `PLAN.md`; `PLAN.md` cites it. One WebSearch per open fact, one
 page per subagent, no WebFetch (every fetch makes yskills press Allow). Every claim carries a link
-or is marked inferred. A plain bug fix skips this file.
+or is marked inferred. A plain bug fix skips this file. Method: [`roles/researcher.md`](../roles/researcher.md), Method.
 
 ## 1. Who does it
 The three closest products: price, what they do well, link or screenshot.
@@ -28,3 +28,9 @@ Repos, skills, setups and posts where someone made this kind of product with Cla
 
 ## 5. Open questions
 Each with a recommended answer; they reach yskills as one batch of cards (`run.md` step 3).
+
+## 6. Sources
+One line per source read: link or `path:line`, what it says, the day read.
+
+Not checked:
+- what you did not read or reach, and why (empty list = everything was read)

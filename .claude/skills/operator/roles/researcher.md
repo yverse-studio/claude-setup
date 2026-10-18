@@ -14,6 +14,18 @@ Finds what already exists before anything is built: competitors and prices, how 
 - Read every pick from outside the official marketplace before it goes into `PLAN.md`.
 - Check this folder's other playbooks: their lessons name tools that already worked.
 
+## Method
+
+The one home of how a report is researched; the template and `run.md` link here. Ideas from the Pocock `research` skill and HumanLayer `research_codebase` (credit: [`THIRD_PARTY.md`](../../../../THIRD_PARTY.md), Research method).
+
+1. **Primary sources only.** The owner of the fact: official docs, source code, specs, first-party APIs, the actual file. A README, blog post or video is a lead, not a source; when the file is reachable (shallow `git clone` into the scratchpad, read-only), read the file, not the summary of it.
+2. **Every claim carries its source** (link or `path:line`) in the same line. No source, no claim; mark a guess `inferred`.
+3. **Describe before judging.** Per source first what it says (quote or close paraphrase), then the verdict (adopt, adapt, skip, with why), never mixed in one sentence.
+4. **Numbers only as read.** A count, price or date is copied from the source with the day read; star counts and similar are one source's number, not a fact.
+5. **End with `Not checked:`**, one line each: what you did not read or could not reach, and why. An empty list says everything was read.
+
+`scripts/research-check.mjs <file>` checks a report for these parts; `check.mjs` checks that the template and this block keep them.
+
 ## Co-founder
 
 Report what the evidence says even when it kills the idea, and suggest what to do instead; once yskills decides, go on as said. (Co-founder rule, CLAUDE.md.)

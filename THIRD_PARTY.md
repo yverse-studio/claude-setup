@@ -140,3 +140,13 @@ Ideas, reworded, none copied verbatim, into `.claude/skills/operator/roles/revie
 
 Copyright (c) 2025 Every; (c) 2025 Jesse Vincent; (c) 2025 BMad Code, LLC. MIT licence text:
 https://opensource.org/license/mit
+
+## Research method
+
+Ideas, reworded, none copied verbatim, into `.claude/skills/operator/roles/researcher.md` (Method):
+
+- primary sources only, follow every claim to the source that owns it, one cited file: Matt Pocock's
+  skills (https://github.com/mattpocock/skills, MIT, commit 49dd158, `skills/engineering/research/SKILL.md`)
+- describe what exists before judging it, file paths and line numbers on every finding, fresh
+  reading instead of old notes: HumanLayer (https://github.com/humanlayer/humanlayer, Apache-2.0,
+  commit 99abe67, `.claude/commands/research_codebase.md`)
