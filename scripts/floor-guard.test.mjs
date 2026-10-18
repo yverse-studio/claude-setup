@@ -68,8 +68,8 @@ test('renamed into another folder with edits that keep the assertions passes', (
   const r = run((d) => mv(d, 'test/sum.test.mjs', BASE[T].replace('sum(1, 2), 3', 'sum(1, 2), 3, "one plus two"')))
   assert.equal(r.code, 0, r.out)
 })
-test('renamed and rewritten past git rename detection, same assertion count, passes', () => {
-  const r = run((d) => mv(d, 'test/add.test.mjs', "import { it } from 'node:test'\nit('totals', () => {\n  assert.equal(add(10, 20), 30)\n  assert.equal(add(0, 4), 4)\n})\n"))
+test('renamed and rewritten past git rename detection, same title and assertion count, passes', () => {
+  const r = run((d) => mv(d, 'test/add.test.mjs', "import { it } from 'node:test'\nit('adds', () => {\n  assert.equal(add(10, 20), 30)\n  assert.equal(add(0, 4), 4)\n})\n"))
   assert.equal(r.code, 0, r.out)
 })
 test('moved by delete + untracked new file (uncommitted) passes', () => {
@@ -82,14 +82,55 @@ test('moved by delete + untracked new file (uncommitted) passes', () => {
   } finally { rmSync(dir, { recursive: true, force: true }) }
 })
 test('renamed and an assertion dropped fails with the real count', () => keepsRule('assertion-removed', (d) => mv(d, 'src/add.test.mjs', BASE[T].replace("  assert.equal(sum(2, 2), 4)\n", '')), 1))
-test('renamed and rewritten with fewer assertions fails with the real count', () => keepsRule('assertion-removed', (d) => mv(d, 'test/add.test.mjs', "it('totals', () => {\n  assert.equal(add(10, 20), 30)\n})\n"), 1))
+test('renamed and rewritten with fewer assertions fails with the real count', () => keepsRule('assertion-removed', (d) => mv(d, 'test/add.test.mjs', "it('adds', () => {\n  assert.equal(add(10, 20), 30)\n})\n"), 1))
+test('moved with a new title and new assertions is a deleted test, even at the same count', () => {
+  const r = run((d) => mv(d, 'test/add.test.mjs', "it('totals', () => {\n  assert.equal(add(10, 20), 30)\n  assert.equal(add(0, 4), 4)\n})\n"))
+  assert.equal(r.code, 1, r.out)
+  assert.match(r.out, /\[test-deleted\].*test "adds"/)
+})
 test('renamed out of the test pattern fails', () => keepsRule('test-deleted', (d) => mv(d, 'src/sum-check.mjs')))
 test('renamed to a skipped test fails', () => keepsRule('test-skipped', (d) => mv(d, 'src/add.test.mjs', BASE[T].replace("test('adds'", "test.skip('adds'"))))
 test('deleted while an unrelated new test file exists still fails', () => keepsRule('test-deleted', (d) => { rmSync(join(d, T)); put(d, 'src/other.test.mjs', "test('x', () => {})\n") }))
 test('one new test file cannot cover two deleted test files', () => keepsRule('assertion-removed', (d) => {
   rmSync(join(d, T)); rmSync(join(d, 'test/bot.mjs'))
-  put(d, 'test/all.test.mjs', 'assert.ok(1)\nassert.ok(2)\nassert.ok(3)\n')
+  put(d, 'test/all.test.mjs', "test('adds', () => {\\n  assert.equal(sum(1, 2), 3)\\n  assert.equal(sum(2, 2), 4)\\n})\\nassert.ok(wins >= 3)\\n")
 }, 1))
+// A test is matched by file and title: a deleted test is not offset by an unrelated new one.
+const TWO = "import { test } from 'node:test'\ntest('adds', () => {\n  assert.equal(sum(1, 2), 3)\n  assert.equal(sum(2, 2), 4)\n})\ntest('keeps', () => {\n  assert.ok(sum(0, 0) === 0)\n})\n"
+const two = (change) => run(change, { files: { ...BASE, [T]: TWO } })
+test('deleted test A plus unrelated new test B with the same assertion count fails, by name', () => {
+  const r = two((d) => put(d, T, TWO.replace(/test\('adds'[\s\S]*?\n\}\)\n/, "test('subtracts', () => {\n  assert.equal(sub(3, 1), 2)\n  assert.equal(sub(4, 2), 2)\n})\n")))
+  assert.equal(r.code, 1, r.out)
+  assert.match(r.out, /\[test-deleted\] src\/sum\.test\.mjs: test "adds"/)
+})
+test('the same swap across two files fails', () => {
+  const r = run((d) => { rmSync(join(d, T)); put(d, 'src/other.test.mjs', "test('other', () => {\n  assert.ok(1)\n  assert.ok(2)\n})\n") })
+  assert.equal(r.code, 1, r.out)
+  assert.match(r.out, /\[test-deleted\].*test "adds"/)
+})
+test('an assertion moved from one test to another in the same file fails', () => {
+  const r = two((d) => put(d, T, TWO.replace("  assert.equal(sum(2, 2), 4)\n", '').replace('assert.ok(sum(0, 0) === 0)', 'assert.ok(sum(0, 0) === 0)\n  assert.ok(sum(5, 5) === 10)')))
+  assert.equal(r.code, 1, r.out)
+  assert.match(r.out, /test "adds": 1 fewer assertion/)
+})
+test('a gone test with no assertions still counts as deleted', () => {
+  const files = { ...BASE, [T]: BASE[T] + "test('boots', () => { run() })\n" }
+  const r = run((d) => put(d, T, BASE[T]), { files })
+  assert.equal(r.code, 1, r.out)
+  assert.match(r.out, /test "boots"/)
+})
+
+// Pass-table: ordinary diffs that keep every assertion.
+const passes = (name, change, files) => test(`passes: ${name}`, () => { const r = run(change, files ? { files } : undefined); assert.equal(r.code, 0, r.out) })
+passes('an added test', (d) => put(d, T, BASE[T] + "test('zero', () => {\n  assert.equal(sum(0, 0), 0)\n})\n"))
+passes('a test split into two', (d) => put(d, T, "import { test } from 'node:test'\ntest('adds one', () => {\n  assert.equal(sum(1, 2), 3)\n})\ntest('adds two', () => {\n  assert.equal(sum(2, 2), 4)\n})\n"))
+passes('two tests merged into one with the same assertions', (d) => put(d, T, "import { test } from 'node:test'\ntest('adds and keeps', () => {\n  assert.equal(sum(1, 2), 3)\n  assert.equal(sum(2, 2), 4)\n  assert.ok(sum(0, 0) === 0)\n})\n"), { ...BASE, [T]: TWO })
+passes('a test title renamed with the same body', (d) => put(d, T, BASE[T].replace("test('adds'", "test('adds two numbers'")))
+passes('a test title renamed and its body reindented', (d) => put(d, T, BASE[T].replace("test('adds'", "test('totals'").replaceAll('  assert', '    assert')))
+passes('a test moved to another file', (d) => { put(d, T, TWO.replace(/test\('keeps'[\s\S]*$/, '')); put(d, 'src/keeps.test.mjs', "test('keeps', () => {\n  assert.ok(sum(0, 0) === 0)\n})\n") }, { ...BASE, [T]: TWO })
+passes('a test moved to another file and given a new title', (d) => { put(d, T, TWO.replace(/test\('keeps'[\s\S]*$/, '')); put(d, 'src/keeps.test.mjs', "test('zero stays zero', () => {\n  assert.ok(sum(0, 0) === 0)\n})\n") }, { ...BASE, [T]: TWO })
+passes('flat assertions wrapped in a test', (d) => put(d, 'test/bot.mjs', "test('bot', () => {\n  assert.ok(wins >= 3)\n  assert.ok(avgNight >= 5)\n})\n"))
+
 test('a new test file passes', () => {
   const r = run((d) => put(d, 'src/new.test.mjs', "test('n', () => { assert.ok(1) })\n"))
   assert.equal(r.code, 0, r.out)
@@ -136,4 +177,9 @@ test('outside a git repo exits 2', () => {
   const dir = mkdtempSync(join(tmpdir(), 'floor-'))
   try { assert.equal(spawnSync('node', [guard], { cwd: dir, encoding: 'utf8', env: { ...process.env, GIT_CEILING_DIRECTORIES: tmpdir() } }).status, 2) }
   finally { rmSync(dir, { recursive: true, force: true }) }
+})
+test('a deleted test file with no assertion or title to match fails', () => {
+  const r = run((d) => rmSync(join(d, 'test/helper.mjs')), { files: { ...BASE, 'test/helper.mjs': 'export const x = 1\n' } })
+  assert.equal(r.code, 1, r.out)
+  assert.match(r.out, /\[test-deleted\] test\/helper\.mjs: file deleted/)
 })
