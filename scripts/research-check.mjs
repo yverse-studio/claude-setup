@@ -1,19 +1,26 @@
 // Checks a research report against roles/researcher.md (Method): a Sources section, a Not checked
-// list, and a link or path:line in every bullet or table row of the body. Usage: node scripts/research-check.mjs <file>...
+// list, and a link or path:line in every content line outside it (bullet, numbered item, table row,
+// sentence). Usage: node scripts/research-check.mjs <file>...
 import { readFileSync } from 'node:fs'
 
 const SOURCE = /https?:\/\/|\]\(|`[^`\s]+:\d+[^`]*`|\binferred\b/
+const DIVIDER = /^\s*\|?[\s:|-]+\|[\s:|-]*$/
 let failed = false
 for (const f of process.argv.slice(2)) {
-  const text = readFileSync(f, 'utf8')
+  const lines = readFileSync(f, 'utf8').split('\n')
   const errors = []
-  if (!/^#+\s.*Sources/im.test(text)) errors.push('no "Sources" section')
-  if (!/^Not checked:/m.test(text)) errors.push('no "Not checked:" list')
-  let tail = false // bullets under "Not checked:" list gaps, not claims
-  text.split('\n').forEach((l, i) => {
-    if (/^Not checked:/.test(l)) tail = true
-    const claim = /^\s*[-*]\s+\S/.test(l) || /^\|\s*[^\s|-]/.test(l)
-    if (claim && !tail && !/^\|\s*(Part|Source)\b/.test(l) && !SOURCE.test(l)) errors.push(`line ${i + 1} has no source: ${l.trim().slice(0, 60)}`)
+  if (!lines.some((l) => /^#+\s.*\bSources\b/i.test(l))) errors.push('no "Sources" section')
+  if (!lines.some((l) => /^Not checked:/.test(l))) errors.push('no "Not checked:" list')
+  let gaps = false // lines under "Not checked:" list gaps, not claims, until the next heading
+  let fence = false
+  lines.forEach((l, i) => {
+    if (/^\s*```/.test(l)) fence = !fence
+    if (fence || /^\s*```/.test(l)) return
+    if (/^#/.test(l)) gaps = false
+    if (/^Not checked:/.test(l)) gaps = true
+    const isHeader = DIVIDER.test(lines[i + 1] ?? '') && /^\s*\|/.test(l)
+    if (gaps || !l.trim() || /^#/.test(l) || DIVIDER.test(l) || isHeader) return
+    if (!SOURCE.test(l)) errors.push(`line ${i + 1} has no source: ${l.trim().slice(0, 60)}`)
   })
   if (errors.length) { failed = true; console.error(`${f}\n${errors.map((e) => `x ${e}`).join('\n')}`) }
 }

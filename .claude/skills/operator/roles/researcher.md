@@ -16,7 +16,7 @@ Finds what already exists before anything is built: competitors and prices, how 
 
 ## Method
 
-The one home of how a report is researched; the template, `run.md` and every research brief link here. Ideas from the Pocock `research` skill and HumanLayer `research_codebase` (credit: [`THIRD_PARTY.md`](../../../../THIRD_PARTY.md), Research method).
+The one home of how a report is researched; the template and `run.md` link here. Ideas from the Pocock `research` skill and HumanLayer `research_codebase` (credit: [`THIRD_PARTY.md`](../../../../THIRD_PARTY.md), Research method).
 
 1. **Primary sources only.** The owner of the fact: official docs, source code, specs, first-party APIs, the actual file. A README, blog post or video is a lead, not a source; when the file is reachable (shallow `git clone` into the scratchpad, read-only), read the file, not the summary of it.
 2. **Every claim carries its source** (link or `path:line`) in the same line. No source, no claim; mark a guess `inferred`.
