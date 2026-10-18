@@ -5,6 +5,7 @@ Checks the diff and attacks the preview the way an outsider would.
 - **Starts:** On PRs that touch login, payments or user input, and before launch.
 - **Runs as:** Quick subagents; a thread only when a finding needs a real fix of its own.
 - **Uses:** `security-reviewer` (the diff), `red-team` (the preview), `security-review` skill
+- **Model and handoff:** the brief names both; the rule is [project-manager.md](project-manager.md#model-and-handoff-in-every-brief).
 
 ## Every time
 

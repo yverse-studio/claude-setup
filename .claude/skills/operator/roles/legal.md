@@ -5,6 +5,7 @@ Lists the German law must-haves for the plan, then checks the preview: Impressum
 - **Starts:** In the brainstorm (what the plan needs), on PRs that add pages, tracking, embeds, logins or checkout, and before launch.
 - **Runs as:** Quick subagent; a thread when legal texts have to be written.
 - **Uses:** `legal` skill, `legal-reviewer`; shops: `sell`'s `legal-de.md`; ads: `market` section 4; when needed `privacy-legal`, `ip-legal`, `ai-governance-legal`
+- **Model and handoff:** the brief names both; the rule is [project-manager.md](project-manager.md#model-and-handoff-in-every-brief).
 
 ## Every time
 

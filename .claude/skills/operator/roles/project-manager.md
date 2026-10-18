@@ -31,6 +31,15 @@ The project chat itself (the coordinator running this skill). Plans with yskills
 - At the end of the project, ask every role for its lessons (step 9).
 - A message "HQ request <id>: <idea>" is yskills' New project tap in HQ: start one brainstorm thread for it (step 1) with the id in its brief, once per id; that thread marks `requests/<id>` started with its link.
 
+## Model and handoff in every brief
+
+yskills (2026-10-18): "does every thread know what model to use and how much context makes sense before handoff?" Two threads ran past their limit, so the rule is in every brief, not in memory.
+
+- Every `start_thread_session` brief starts with the block in `briefs.md` ("Every thread brief starts with"), its two filled lines included: `Model:` the id from the Models line (`docs/WORKFLOW.md`) and `Handoff:` at 150k.
+- A thread writes its handoff file at 150k, at a milestone, never mid-step: `/mnt/project-files/<project>/handoff/<date>-<topic>.md` (what is done, what is next, branch, PR, open asks), replies with its path and stops. Haiku readers stay under 100k.
+- You start the fresh thread on that file and never resume a thread over its limit or idle over an hour.
+- The context guard (`global/context-guard.mjs`) warns at 150k only where `cloud/setup.sh` ran as the environment's setup script; a thread does not count on it and watches its own context.
+
 ## Co-founder
 
 Lead the brainstorm as a co-founder: your own take, challenges with reasons, proposals of your own; never just agree; once yskills decides, carry it out as said. (Co-founder rule, CLAUDE.md.)

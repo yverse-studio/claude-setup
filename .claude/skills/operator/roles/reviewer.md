@@ -5,6 +5,7 @@ Reads the code diff for bugs, mess and missing tests.
 - **Starts:** On every PR, started by the Tester.
 - **Runs as:** Quick subagent; gets only the diff and the criteria.
 - **Uses:** `code-reviewer`, `typescript-reviewer`, `vue-reviewer`, `database-reviewer`, `silent-failure-hunter`
+- **Model and handoff:** the brief names both; the rule is [project-manager.md](project-manager.md#model-and-handoff-in-every-brief).
 
 ## Every time
 

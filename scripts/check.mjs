@@ -212,6 +212,17 @@ for (const a of ['design-critic', 'legal-reviewer', 'red-team']) {
   if (!/Not judged:/.test(readFileSync(join(root, `.claude/agents/${a}.md`), 'utf8'))) errors.push(`agents/${a}.md: report format lacks "Not judged:"`)
 }
 
+// Model and handoff: one rule (roles/project-manager.md); every other role links it, and the brief block carries both lines.
+const roleDir = join(root, '.claude/skills/operator/roles')
+for (const f of readdirSync(roleDir).filter((n) => n.endsWith('.md') && n !== 'project-manager.md')) {
+  if (!readFileSync(join(roleDir, f), 'utf8').includes('project-manager.md#model-and-handoff-in-every-brief')) errors.push(`roles/${f}: lacks the link to "Model and handoff in every brief"`)
+}
+if (!readFileSync(join(roleDir, 'project-manager.md'), 'utf8').includes('## Model and handoff in every brief')) errors.push('roles/project-manager.md: lacks "Model and handoff in every brief"')
+const briefsText = readFileSync(join(root, '.claude/skills/operator/briefs.md'), 'utf8')
+for (const part of ['Model: <id', 'Handoff: at 150k write', '/handoff/<date>-<topic>.md']) {
+  if (!briefsText.includes(part)) errors.push(`briefs.md: thread brief block lacks "${part}"`)
+}
+
 // Research method: one home (roles/researcher.md, Method); the report template keeps its checkable parts.
 const researcherRole = readFileSync(join(root, '.claude/skills/operator/roles/researcher.md'), 'utf8')
 for (const part of ['Primary sources only', 'Every claim carries its source', 'Describe before judging', 'Numbers only as read', 'Not checked:']) {

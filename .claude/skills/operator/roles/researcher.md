@@ -5,6 +5,7 @@ Finds what already exists before anything is built: competitors and prices, how 
 - **Starts:** With the brainstorm, before brief (a).
 - **Runs as:** Quick subagents, one page each; a thread when the research is big (several pages or rounds).
 - **Uses:** `market-research`, `product-lens`, `search-first`, `toolbox` (`find.mjs`), `SearchPlugins` / `SearchSkills` / `SearchMcpRegistry`
+- **Model and handoff:** the brief names both; the rule is [project-manager.md](project-manager.md#model-and-handoff-in-every-brief).
 
 ## Every time
 

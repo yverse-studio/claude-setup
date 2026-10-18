@@ -72,6 +72,8 @@ Then reply "done". Meanwhile: <what the slice keeps building>
 ## Every thread brief starts with
 
 ```
+Model: <id from the Models line in docs/WORKFLOW.md for this role>. Handoff: at 150k write
+/mnt/project-files/<project>/handoff/<date>-<topic>.md, reply with its path, stop.
 Literal mode: yskills' words are orders, done as said. No "yes, but", no offers, no alternatives
 when they ask for one thing; impossible or unsafe = one plain line, then the nearest thing done.
 Shortest reply. No extra subagents, research, screenshots or re-reads. Models as in
@@ -81,7 +83,7 @@ Context (long threads: builds, test runs, renders, fetches; 1M tokens is the mos
 2. Logs are tailed (`tail -n 30`, `grep` for errors), never printed whole.
 3. Open only reduced images (about 1000 px wide), one at a time, to chase a named flaw.
 4. Hand off at a milestone, never mid-step: at 150k finish the step, write the handoff file, stop;
-   never start a new unit past 150k (200k is the hard cap). Keep the handoff and saved artefacts
+   never start a new unit past 150k (200k is the hard cap); the file path is the `Handoff:` line above. Keep the handoff and saved artefacts
    current at every milestone so a successor thread on the same branch and PR loses nothing.
 5. One task per thread; a flaw in shared code is fixed once, by its owner, and the others merge it.
 ```
