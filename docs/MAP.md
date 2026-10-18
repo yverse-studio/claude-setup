@@ -78,6 +78,7 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 |---|---|---|
 | Org, accounts, where secrets live | `CLAUDE.md` (The world) | `publish` skill, `docs/WORKFLOW.md` (PC work) |
 | Deploy or delete a page (the steps) | `docs/USING.md` | operator `run.md`, `briefs.md`; detail in `publish` |
+| Asks ledger (every ask of yskills becomes a thread or a rule in claude-setup; memory only points; blocked-thread sweep) | `CLAUDE.md` (Lessons stick) | `operator/roles/project-manager.md` |
 | Ask rule (what needs yskills) | `CLAUDE.md` (How to work) | operator `SKILL.md`, `docs/USING.md` |
 | Auto-run, pauses and taste calls | `CLAUDE.md` (How to work) | operator `SKILL.md`, `docs/WORKFLOW.md` |
 | Cards and votes (who posts them, the thread-to-coordinator loop, a live vote gallery per visual choice); yskills reads only the project chat | `CLAUDE.md` (How to work) | `briefs.md` (b), `roles/project-manager.md` |
