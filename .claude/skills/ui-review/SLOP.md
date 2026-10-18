@@ -38,7 +38,7 @@ same thing in a top-of-genre product clears a pattern, cited by file name.
 
 A bare ban ("no cream") only moves the model to the next fixed palette (oh-my-claudecode's
 designer role), so each look below names the values it uses. `scripts/design-check.mjs` flags
-these hex values in `## Palette` and the button text below in the project source. A palette row
+these hex values in `## Palette` (also the lime accent `#A3E635` of look 2 on a near-black ground) and the button text below in the project source (markup, `.ts` UI code, and the i18n labels they point at). A palette row
 that cites a reference capture by file name clears its colour; the colour is then a copied choice.
 
 18. Cream and clay: a background near `#F4F1EA` or `#F4ECD6`, a high-contrast serif display, a terracotta
