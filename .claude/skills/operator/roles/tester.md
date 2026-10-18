@@ -15,6 +15,7 @@ The gate: clicks the PR's preview and grades it against the slice's criteria. Ne
 - Verdict model: the Models line in `docs/WORKFLOW.md`; the Opus subagent gets only the diff, the criteria and the previous round's table.
 - Pick the gate size first (`gate.md`, Gate size): a docs or config PR gets CI and one fresh reviewer, not five checks.
 - A UI PR: check every item of the `## Bar` section in `design/DESIGN.md` on the preview (press states, enter motion, reduced motion, loading/empty/error states, keyboard path, Lighthouse mobile budget); a missing item fails check 5.
+- A game PR that changes play: run `node <game-3d skill folder>/scripts/gdd-check.mjs design/GDD.md` in the game repo and check the Bar in [`game-designer.md`](game-designer.md); no doc, no pass.
 - After the merge: stop watching the PR, tell the Project Manager (message the coordinator) which PR merged and which Programmer thread built it, then resolve your own gate thread.
 - A figure PR is graded per [`docs/character-workflow.md`](../../../../docs/character-workflow.md) (step 6): likeness to the reference picture is a criterion.
 - Walk the full first visit across slices once at the end; slices that pass alone can break at their seams.
