@@ -9,7 +9,7 @@ Turns the script into shots: what the camera sees, how close, how it moves, and 
 ## Every time
 
 - Shot list per beat: subject, framing (how big the subject is in the 1080 px width), camera move and its easing, cut or move into the next shot.
-- One real still per shot from the product (not a mock), at phone size, captions placed in their band.
+- `storyboard.md`: a table row per shot starting with its number: the still (`stills/01.png`, from the real product, not a mock, at phone size, captions placed), time range, camera move, sound cue for the Sound role.
 - `animatic.mp4`: the stills held for the script's timings, captions on. The Critic reviews it before the Editor films.
 - People and faces read at phone size: a person on screen is at least about 10% of the frame width in people shots.
 - Frame 1 moves and reads at phone size; no wide static establishing shot as a hook.

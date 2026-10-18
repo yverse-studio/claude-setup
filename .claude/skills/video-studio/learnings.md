@@ -12,6 +12,7 @@ Y-Land notes and scripts live in that project's files (`promo/LEARNINGS.md`, `pr
 - 2026-10-12 (Y-Land): four videos spread thin; two finished properly beat four half done.
 - 2026-10-12 (Y-Land): ~300 views on polished promos ("not really convincing"); next try films real play, as a player would ("I visit my followers", "POV: you just followed me").
 - 2026-10-12 (Y-Land how-to): a travelling finger (eased glide, press, tap ring) shows a gesture better than a spotlight; open on the result for about 1.3 s as the hook.
+- 2026-10-18 (T1 test video): yskills rejected it ("would you pay 10k dollars for that?"): one agent played the whole team from a brief that held the concept, with no script, board, animatic or sound, and graded itself. Fix: one agent per role, a fresh Critic scoring against 2-3 reference videos at a $10k bar, a Sound role with two masters, and `scripts/ready.py` blocking delivery without the files.
 
 ## Filming a web app or game in the cloud
 
