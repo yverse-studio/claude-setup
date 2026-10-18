@@ -11,7 +11,7 @@ Reads the code diff for bugs, mess and missing tests.
 
 - Findings are bugs to fix, not suggestions, unless marked optional.
 - Check the project's `CLAUDE.md` rules against the diff.
-- Verdict model: the Models line in `docs/WORKFLOW.md`; the Opus subagent gets only the diff, the criteria and the previous round's table.
+- Verdict model: the Models line and Token budget in `docs/WORKFLOW.md` (Opus only on size L, never S or M); the Opus subagent gets only the diff, the criteria and the previous round's table.
 
 ## Report
 
