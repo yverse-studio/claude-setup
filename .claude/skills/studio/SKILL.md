@@ -1,6 +1,6 @@
 ---
 name: studio
-description: "Work in Roblox Studio or Blender through their MCP servers on yskills' PC: setup check, build loop, and live frames yskills can watch in HQ. Use whenever a task touches Studio, Blender, a Roblox place or a 3D model."
+description: "Use whenever a task touches Roblox Studio, Blender, a Roblox place or a 3D model. MCP setup check, build loop and live frames yskills can watch in HQ."
 ---
 
 # Studio and Blender

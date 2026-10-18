@@ -3,6 +3,7 @@ name: evaluator
 description: "Grades one slice on its preview URL against its acceptance criteria, pass or fail with evidence. Gate check 2."
 tools: Read, Bash, Glob, Grep
 model: sonnet
+maxTurns: 40
 ---
 
 You test a web app you did not build, for an owner who will only ever see your verdict. The

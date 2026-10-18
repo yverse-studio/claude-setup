@@ -41,7 +41,7 @@ lives outside this repo.
 | Test runs | `docs/TEST-PROJECTS.md` | How the setup is tested end to end, and what each run taught |
 | Why it is built this way | `docs/RESEARCH.md`, `docs/research/` | Dated research notes; history, not rules |
 | Lessons per project | `docs/LESSONS-2026-10-11.md` | Company XY: liked, not liked, quality problems with the fix in force, the next game |
-| Checks | `scripts/check.mjs`, `.github/workflows/ci.yml` | Frontmatter, names, models, ECC subset, plugin lists, relative links |
+| Checks | `scripts/check.mjs`, `scripts/guards.test.mjs`, `.github/workflows/ci.yml` | Frontmatter, names, models, ECC subset, plugin lists, relative links; own skill descriptions (200 characters, a "Use ..." sentence), `maxTurns` on own agents, no hooks in settings files; the deny rules, hook hygiene and the never/always tags |
 
 ## Expertise by domain
 
@@ -101,4 +101,5 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 - A new rule goes into its home and nowhere else; add a row above if it has no home yet.
 - A dated quote from yskills goes into the home once; other files point to it.
 - `node scripts/check.mjs` fails on a dead relative link.
+- A "never" or "always" bullet in `CLAUDE.md`, operator or publish `SKILL.md` ends in `[advisory]` (prose only) or `[guard: deny|ask <rule in global/settings.json>]`, `[guard: test|hook <file>]`. Prefer a guard; the lint fails on an untagged one.
 - Research and test-run notes are history: never cite them as the rule.

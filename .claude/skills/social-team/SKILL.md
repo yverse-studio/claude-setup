@@ -1,6 +1,6 @@
 ---
 name: social-team
-description: "Run yskills' brand accounts like a social media team: Social Lead, Scout, Community, Partnerships and Analyst turn ideas and the studio's videos into scheduled posts, replies, brand deals and weekly numbers. Use for posting, comments, DMs, the idea backlog, account setup, brand deals or a social media plan."
+description: "Use for posting, comments, DMs, the idea backlog, account setup, brand deals or a social media plan. Runs yskills' brand accounts as a team: Social Lead, Scout, Community, Partnerships, Analyst."
 ---
 
 # Social team

@@ -1,6 +1,6 @@
 ---
 name: legal
-description: "German law for any app: Impressum, Datenschutz, cookies, accessibility, AI, accounts, licences, naming, plus the checking tools. Use when planning, before launch, or when adding tracking, embeds, AI, logins or uploads."
+description: "Use when planning, before launch, or when adding tracking, embeds, AI, logins or uploads. German law for any app: Impressum, Datenschutz, cookies, accessibility, licences, plus the checking tools."
 ---
 
 # Legal

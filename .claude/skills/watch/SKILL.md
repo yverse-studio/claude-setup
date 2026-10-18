@@ -1,6 +1,6 @@
 ---
 name: watch
-description: "Watch a video (URL or file): frames plus transcript so you can answer questions about it. Use whenever yskills posts an Instagram, TikTok or YouTube link or a video, or asks to explain or fact-check one."
+description: "Use whenever yskills posts an Instagram, TikTok or YouTube link or a video, or asks to explain or fact-check one. Gets frames plus transcript so you can answer questions about it."
 license: MIT
 allowed-tools: Bash, Read, AskUserQuestion
 metadata:

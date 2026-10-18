@@ -84,7 +84,21 @@
       "Read(~/.wrangler/**)",
       "Edit(**/.dev.vars)",
       "Edit(**/.env.development)",
-      "Edit(**/.env.staging)"
+      "Edit(**/.env.staging)",
+      "Bash(wrangler login:*)",
+      "Bash(npx wrangler login:*)",
+      "Bash(wrangler logout:*)",
+      "Bash(npx wrangler logout:*)",
+      "Bash(git push* --force*main*)",
+      "Bash(git push* --force*master*)",
+      "Bash(git push* -f *main*)",
+      "Bash(git push* -f *master*)",
+      "Bash(git push* +main*)",
+      "Bash(git push* +master*)",
+      "Bash(git push*main* --force*)",
+      "Bash(git push*master* --force*)",
+      "Bash(git push*main* -f*)",
+      "Bash(git push*master* -f*)"
     ]
   },
   "effortLevel": "high",
