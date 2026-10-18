@@ -14,5 +14,5 @@ that is not a row here.
 
 ## Privacy
 - Tool: <tool>
-- Banner: <yes/no>
+- Banner: <ja/nein>
 - Where the numbers are read, and by whom, in one line.

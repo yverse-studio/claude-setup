@@ -11,11 +11,11 @@ import { fileURLToPath } from 'node:url'
 export const REQUIRED_HEADINGS = ['Objectives', 'Events', 'Privacy']
 export const MONEY_METRICS = ['visitors7d', 'signups', 'paying', 'revenueMonth'] // the HQ project-row fields (docs/hq-rows.md)
 export const MAX_EVENTS = 12
-export const PLACEHOLDER = /<(?:name|Object Action|question|metric|basis|properties|tool|yes\/no|date)>/g // the template's own
+export const PLACEHOLDER = /<(?:name|Object Action|question|metric|basis|properties|tool|ja\/nein|date)>/g // the template's own
 const PAST_IRREGULAR = ['Paid', 'Sent', 'Left', 'Built', 'Bought', 'Began', 'Won', 'Lost', 'Chose', 'Shown', 'Seen', 'Made']
-const DYNAMIC = /\d|[()#:@/]|\b(?:id|date|name|email)\b/i
+const DYNAMIC = /\d|[()#:@/]/
 const DIVIDER = /^\s*\|?[\s:|-]+\|[\s:|-]*$/
-const ESTIMATE = /~|≈|\bca\.|\bcirca\b|\babout\b|\bapprox|\betwa\b|\bungefähr\b|\bschätz/i
+const ESTIMATE = /~|≈|\bca\.|\bcirca\b|\babout\b|\bapprox|\betwa\b|\bungefähr\b|schätz/i
 
 function sections(md) {
   const out = {}
@@ -33,7 +33,7 @@ const rows = (text) => text.split('\n').filter((l) => /^\s*\|/.test(l) && !DIVID
 export function eventNameErrors(name) {
   const errors = []
   const words = name.split(/\s+/).filter(Boolean)
-  if (DYNAMIC.test(name)) errors.push(`"${name}" has a dynamic value (a number, date, id or punctuation)`)
+  if (DYNAMIC.test(name)) errors.push(`"${name}" has a dynamic value (a number or punctuation)`)
   if (words.length < 2) errors.push(`"${name}" is one word; name Object + Action`)
   if (words.some((w) => !/^[A-Z][a-z]*$/.test(w))) errors.push(`"${name}" is not Title Case words (e.g. "Checkout Started")`)
   const last = words.at(-1) ?? ''

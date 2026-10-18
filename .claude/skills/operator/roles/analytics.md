@@ -13,8 +13,8 @@ Sources and what each says: [`THIRD_PARTY.md`](../../../../THIRD_PARTY.md) (Anal
 1. **Objectives first.** One line each: the business goal and the HQ field it moves (`visitors7d`, `signups`, `paying`, `revenueMonth`; `docs/hq-rows.md`). Segment: "define business objectives", then map user actions to them. An action that moves none is not tracked.
 2. **Few core events with properties.** At most 12 rows. A new event needs a question it answers that no existing event plus a property answers.
 3. **Object + Action, Title Case, past tense:** `Checkout Started`, `Order Paid`, `Waitlist Joined`. Properties are `snake_case`. Never a date, number, id or name inside an event name, never a property key like `feature_1`: each one makes a new column downstream (Segment's rules).
-4. **One basis per event, cookieless first.** `cookieless` = no cookie, no local storage, no personal data kept (tool list below). `consent` only when a tool needs it (Meta or TikTok pixel, Google tag, session replay); then the consent banner is planned in the PRD (`legal`, § 25 TDDDG) and `Banner: ja` says so. A banner without a consent event is dropped.
-5. **Pick the tool from the table; never add a tracker for a number a table already gives.** Money numbers come from the money source, not the analytics tool: Stripe, or the project's own D1 `/api/stats` (`sell`, `docs/hq-rows.md`).
+4. **One basis per event, cookieless first.** `cookieless` = no cookie, no local storage, no personal data kept (tool list below). `consent` when `legal` says the tool needs it (its Cookies and storage row); then the consent banner is planned in the PRD and `Banner: ja` says so. A banner without a consent event is dropped.
+5. **Pick the tool from the table; never add a tracker for a number a table already gives.** In a live project, adding a tool, a script or any call that sends visitor data to a new service waits for the `legal` check (`legal-reviewer` on the preview) and, when it costs money, for yskills' tap; the cookie-law call is `legal`'s, this role only records its answer in `Basis` and `Banner:`. Money numbers come from the money source, not the analytics tool: Stripe, or the project's own D1 `/api/stats` (`sell`, `docs/hq-rows.md`).
 6. **Wire and prove it.** The Programmer sends each event on the preview; the Analytics owner reads the tool and checks the event arrived with its properties. An event never seen arriving is not "done".
 7. **Weekly numbers line** (a scheduled trigger from launch, `market` §5): read the real sources, write the line, copy it into the project's HQ row fields.
 8. **Co-founder pass:** say plainly when a number cannot move a decision (a vanity count) and which single number would; once yskills decides, track it as decided.
@@ -23,13 +23,13 @@ Sources and what each says: [`THIRD_PARTY.md`](../../../../THIRD_PARTY.md) (Anal
 
 Prices copied from each vendor's own page on 2026-10-18; confirm on the page before a purchase, and a paid plan is an ask-first item (CLAUDE.md).
 
-| Tool | Basis | Price as read | Fit |
-|---|---|---|---|
-| Cloudflare Web Analytics | cookieless: "does not use any client-side state, such as cookies or localStorage" (vendor page) | free | page views only; default for a site with no custom action |
-| Umami Cloud | cookieless (vendor FAQ); MIT licence (LICENSE file) | Hobby $0/month: 100K events, 1 website, 6 months data; Pro $20/month: 1 million events | custom events and UTM; default when a site or game needs actions |
-| Plausible | cookieless (vendor); AGPL-3.0 (LICENSE.md) | Starter $9/month: 10k pageviews, 1 site | alternative if yskills prefers it; hosting it ourselves means AGPL duties |
-| PostHog | per setting; not verified here | first 1 million events/month $0 | funnels and replay; replay needs consent, so only when a decision needs it |
-| Own count in D1 | no third party | free | one Worker route that counts a few events; the least code for 3 to 4 events |
+| Tool | Basis | Price as read | Fit | Source, read 2026-10-18 |
+|---|---|---|---|---|
+| Cloudflare Web Analytics | cookieless: "does not use any client-side state, such as cookies or localStorage" (vendor page) | free | page views only; default for a site with no custom action | https://www.cloudflare.com/web-analytics/ |
+| Umami Cloud | cookieless (vendor FAQ); MIT licence (LICENSE file) | Hobby $0/month: 100K events, 1 website, 6 months data; Pro $20/month: 1 million events | custom events and UTM; default when a site or game needs actions | https://umami.is/pricing; LICENSE in umami-software/umami |
+| Plausible | cookieless (vendor); AGPL-3.0 (LICENSE.md) | Starter $9/month: 10k pageviews, 1 site | alternative if yskills prefers it; hosting it ourselves means AGPL duties | https://plausible.io (pricing section); LICENSE.md in plausible/analytics |
+| PostHog | per setting; not verified here | first 1 million events/month $0 | funnels and replay; replay needs consent, so only when a decision needs it | https://posthog.com/docs/product-analytics/pricing.md |
+| Own count in D1 | no third party | free | one Worker route that counts a few events; the least code for 3 to 4 events | none needed (our own code) |
 
 ## What it writes
 

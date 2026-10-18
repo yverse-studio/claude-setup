@@ -35,7 +35,7 @@ test('each heading is required and must have content', () => {
 })
 
 test('ordinary event names pass (pass-table)', () => {
-  for (const n of ['Checkout Started', 'Order Paid', 'Waitlist Joined', 'Signup Completed', 'Game Started', 'Ad Shown', 'Level Reached', 'Run Ended', 'Revive Accepted', 'Share Clicked'])
+  for (const n of ['Checkout Started', 'Order Paid', 'Waitlist Joined', 'Signup Completed', 'Game Started', 'Ad Shown', 'Level Reached', 'Run Ended', 'Revive Accepted', 'Share Clicked', 'Email Submitted', 'Name Changed', 'Newsletter Subscribed', 'Cart Abandoned'])
     assert.deepEqual(eventNameErrors(n), [], n)
 })
 
@@ -81,6 +81,7 @@ test('a numbers line with read values passes', () => {
 })
 
 test('a numbers line fails on estimates, missing fields and a missing source', () => {
+  assert.ok(checkNumbersLine(line.replace('Umami, gelesen','geschätzt Umami, gelesen')).length)
   for (const bad of ['~120', 'ca. 120', 'about 120', 'etwa 120', '≈120'])
     assert.ok(checkNumbersLine(line.replace('120', bad)).length, bad)
   assert.ok(checkNumbersLine(line.replace('Anmeldungen: 4 | ', '')).some((e) => e.includes('Anmeldungen')))
