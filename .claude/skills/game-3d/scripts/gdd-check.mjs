@@ -20,7 +20,7 @@ function sections(md) {
   let name = null
   for (const line of md.split('\n')) {
     const h = line.match(/^##\s+(.+?)\s*$/)
-    if (h) { name = h[1]; out[name] = '' } else if (/^Not checked:/.test(line)) name = null
+    if (h) { name = h[1]; out[name] = '' } else if (/^\*{0,2}Not checked:/.test(line)) name = null
     else if (name) out[name] += line + '\n'
   }
   return out
@@ -47,7 +47,7 @@ export function checkGdd(md) {
       if (!re.test(r)) errors.push(`reference without ${what}: ${r.trim().slice(0, 50)}`)
     }
   }
-  if (!/^Not checked:/m.test(md)) errors.push('no "Not checked:" list')
+  if (!/^\*{0,2}Not checked:/m.test(md)) errors.push('no "Not checked:" list')
   return errors
 }
 
