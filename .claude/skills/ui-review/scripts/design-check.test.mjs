@@ -159,8 +159,8 @@ test('a lime accent on a near-black ground fails (SLOP.md 2), a near hex too', (
   for (const lime of ['#a3e635', '#a5e83a']) assert.match(checkDesign(project(withPalette(`| accent | ${lime} |`))).join(), /lime accent .* SLOP\.md 2/, lime);
 });
 
-test('table: greens that are not the lime accent pass on a dark ground, lime on a light ground and a cited lime pass', () => {
-  for (const hex of ['#84cc16', '#65a30d', '#4ade80', '#5f7f3a', '#22c55e', '#bef264']) {
+test('table: greens and yellows (a danger yellow among them) that are not the lime accent pass on a dark ground, lime on a light ground and a cited lime pass', () => {
+  for (const hex of ['#84cc16', '#65a30d', '#4ade80', '#5f7f3a', '#22c55e', '#bef264', '#facc15', '#eab308', '#fde047', '#fbbf24', '#ffd60a', '#ffcc00']) {
     assert.deepEqual(checkDesign(project(withPalette(`| accent | ${hex} |`))), [], hex);
   }
   const light = withPalette('| accent | #a3e635 |').replace('| ground | #2b2118 |', '| ground | #e8e2d4 |').replace('#f7ecd8 on #2b2118', '#2b2118 on #e8e2d4');
