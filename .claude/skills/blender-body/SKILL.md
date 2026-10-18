@@ -68,7 +68,8 @@ hand-in sheet contract.
    `apt-get update && apt-get install -y libegl1 libgl1-mesa-dri libegl-mesa0 libgles2 libtbb12`,
    `python3.13 -m pip install bpy scipy pillow numpy matplotlib`.
 9. **Same size, every sheet.** The blobcg reference is the only shape target (other models, and
-   other characters liked for one feature, are bases to shape toward it, never goals). Every sheet shows the body next to the reference on one canvas at the
+   other characters liked for one feature, are bases to shape toward it, never goals; the base keeps its
+   neck, bust and rig, the reference decides everything else). Every sheet shows the body next to the reference on one canvas at the
    same height, registered by chin and sole (side view: chin and knee), crown inside the frame. A sheet
    with a clipped head, stray objects, cut hands, hidden hair or no figure frame (the body in the
    hinata-v1 scene with hair and shader, like the dance video) fails before scoring.
@@ -77,7 +78,7 @@ hand-in sheet contract.
    zeroes non-Face keys, so bake keys; sync `me.vertices` to Basis before building masks; a wrongly
    registered base (Hinata 1.743 m vs 1.598 m) breaks `slicefit`, fit by chin and sole.
 11. **Content line.** Adult characters only, adult face and proportions, no minors ever. Check every reference set for
-    the source character's canonical age before use; frames of a canonically underage character never
+    the source character's canonical age before use and write the checked age and version in LIVE STATE; frames of a canonically underage character never
     enter it, whatever the art style. A thread that declines part of a job says so in one line and hands
     the rest back. Nude
    bodies and explicit poses live on the private side behind the 18+ gate; public files and the
