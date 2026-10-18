@@ -21,3 +21,11 @@ Loop reader for <project> (<owner/repo>). Read-only, one turn, no code changes.
    which fixes claude-setup through the gate (operator SKILL.md, Setup loop); each thread comments "Thread: <link>" on its issue and closes it at merge.
 4. Nothing new (no open issue without a "Thread:" comment, no red run): end the turn right after step 1 or 2 with no message, no reply, no thread. Never open, edit or close issues yourself.
 ```
+
+## claude-setup's own reader
+
+The routine "Loop reader claude-setup" fires into the coordinator and adds two steps after step 4
+(asks ledger and blocked threads, `roles/project-manager.md`). Only for this reader, step 4's
+"end with no message" waits until steps 5 and 6 found nothing too:
+5. Re-read the last day of the project chat (`fetch_project_timeline`); post ONE chat line for every ask of yskills with no thread, PR or `Done:` line yet.
+6. With `list_thread_sessions`, post ONE chat line for every thread waiting on yskills over 12 hours, naming the one tap on its card.
