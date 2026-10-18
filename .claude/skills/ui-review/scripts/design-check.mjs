@@ -28,7 +28,7 @@ const MIN_SHOUT_SATURATION = 0.85;
 const SOURCE_DIRS = ['src', 'app', 'pages', 'components', 'layouts', 'public'];
 const SKIPPED_DIRS = new Set(['node_modules', 'fixtures', '__tests__', 'test', 'tests']);
 const SOURCE_FILE = /\.(vue|html|jsx|tsx|svelte)$/i;
-const VAGUE_LABELS = ['submit', 'ok', 'click here', 'go', 'absenden', 'hier klicken'];
+export const VAGUE_LABELS = ['submit', 'ok', 'click here', 'go', 'absenden', 'hier klicken'];
 const BUTTON_TEXT = /<(button|a)\b[^>]*>\s*([^<>{}]{1,40}?)\s*<\/\1>/gi;
 
 function luminance(hex) {
