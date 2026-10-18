@@ -69,7 +69,7 @@ assets/kits/<kit>/       CC0 kit models as .glb, one folder per kit
 assets/splats/<place>/   .spz or .ply made from photos
 assets/audio/
 story/                   <place>.de.md, <place>.en.md, quests.json, i18n lines
-src/platform/            platform.ts (interface), web.ts, steam.ts (steamworks.js)
+src/platform/            platform.ts (interface), web.ts, crazygames.ts, steam.ts (steamworks.js); the web starter keeps all portals in one src/platform.ts
 src/scenes/<place>/      layout, lights, spawn and camera spots
 src/entities/            player, npc, prop
 src/systems/             walk, camera, dialogue, quests, save
@@ -79,8 +79,8 @@ electron/                main.mjs, preload.mjs (templates/electron-main.mjs), el
 steam/                   app_build.vdf, depot vdfs, store texts de/en, capsule images
 ```
 
-`vite.config.ts` builds twice: `base: '/'` for the Worker Preview and `base: './'` for Electron
-(it loads over `file://`). Game rules (quests, saving, scoring) live in plain TypeScript with no renderer import, so Vitest
+`vite.config.ts` builds with `base: './'` (relative paths) so one build runs on the Worker, in
+CrazyGames' iframe and in Electron (`file://`). Game rules (quests, saving, scoring) live in plain TypeScript with no renderer import, so Vitest
 covers them. Stories are data: threads turn yskills' messages into `story/` files, never code.
 
 ## 3. Assets and characters
@@ -145,6 +145,26 @@ covers them. Stories are data: threads turn yskills' messages into `story/` file
 
 Only yskills' hands: account, tax interview, fee, first upload, release click. Everything else
 is a thread's job; when yskills must act, give the exact Steamworks page and the field names.
+
+## 5a. CrazyGames checklist (web portal, free; checked 2026-10-17 against docs.crazygames.com)
+
+The starter's `src/platform.ts` already wires the SDK (loaded only inside CrazyGames or with
+`?platform=crazygames`, so the own site makes no third-party request): `loadingStart/Stop`,
+`gameplayStart/Stop`, `midgame()` between rounds, `rewarded()` for an optional bonus. Both ad calls
+resolve on finish, error or no fill, and the game is frozen and muted while one runs.
+
+| Step | Who | Rule |
+|---|---|---|
+| Developer account at developer.crazygames.com | yskills (free, once) | the only hands step |
+| Build: `npm run verify`, zip the contents of `dist/` (index.html at the zip root) | thread | relative paths only; initial download at most 50 MB (20 MB for the mobile homepage), total 250 MB, 1500 files |
+| Basic Launch: upload, fill English title, description, controls, orientation | thread drafts, yskills submits | no SDK needed, ads off, live 7 to 21 days (500 plays), then they pick winners by playtime (10+ min good), day-1 retention (10 to 15 %), 1-minute conversion (80 %+) |
+| Covers: landscape 1920x1080, portrait 800x1200, square 800x800, plus a preview video | Designer thread, vote gallery | the game's title only, no border, no store logos, no plain screenshot, originals only |
+| Check in their QA tool in the developer portal | thread | English text, readable at 907x510 and 800x450, physics the same at 144 Hz, PEGI 12, no own fullscreen button, no cross-promotion, no ads from anywhere else |
+| Full Launch (only if selected) | thread | SDK on (already), land in gameplay with at most one click, works with AdBlock, ads only at natural breaks, never chained, rewarded optional and never required |
+
+Not verified: no game has gone through a real submission yet; cover specs and limits were read from
+the official docs on the date above, so re-read them before submitting. Payout terms (Tipalti,
+minimum, split) are not published as a rule: confirm in the dashboard before counting on money.
 
 ## 5b. Tools: what is installed and why (checked 2026-10-07)
 

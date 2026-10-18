@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { loadPlatform, web, type Platform } from './platform'
 import { ARENA, COIN_COUNT, createState, isOver, step, type Input, type State } from './rules'
 import { installHooks } from './hooks'
 
@@ -49,7 +50,7 @@ addEventListener('keydown', (e) => keys.add(e.key.toLowerCase()))
 addEventListener('keyup', (e) => keys.delete(e.key.toLowerCase()))
 const raycaster = new THREE.Raycaster()
 let pointer: THREE.Vector2 | null = null
-canvas.addEventListener('pointerdown', (e) => { pointer = ndc(e); if (isOver(state)) state = createState(seed) })
+canvas.addEventListener('pointerdown', (e) => { pointer = ndc(e); if (isOver(state)) void restart() })
 canvas.addEventListener('pointermove', (e) => { if (pointer) pointer = ndc(e) })
 addEventListener('pointerup', () => { pointer = null })
 const ndc = (e: PointerEvent) => new THREE.Vector2((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1)
@@ -86,6 +87,31 @@ resize()
 let state: State = createState(seed)
 let last = performance.now()
 
+// Portal hooks (platform.ts). `busy` freezes the round while the portal loads and while an ad plays.
+let platform: Platform = web
+let busy = true
+let wasOver = false
+async function restart() {
+  if (busy) return
+  busy = true
+  keys.clear()
+  pointer = null
+  await platform.midgame(() => { hud.textContent = '' }) // between rounds, never on a menu button
+  state = createState(seed)
+  wasOver = false
+  last = performance.now()
+  busy = false
+  platform.gameplayStart()
+}
+void loadPlatform().then((loaded) => {
+  platform = loaded
+  platform.loadingStart() // the SDK exists only now; the first frame is already drawing
+  busy = false
+  last = performance.now()
+  platform.loadingStop()
+  platform.gameplayStart()
+})
+
 function draw() {
   player.position.set(state.player.x, 0.5, state.player.z)
   coins.forEach((mesh, i) => mesh.position.set(state.coins[i].x, 0.6, state.coins[i].z))
@@ -108,7 +134,8 @@ installHooks({
 renderer.setAnimationLoop((now) => {
   const dt = Math.min((now - last) / 1000, 0.1)
   last = now
-  if (!paused) state = step(state, readInput(), dt)
+  if (!busy && !paused) state = step(state, readInput(), dt)
+  if (isOver(state) && !wasOver) { wasOver = true; platform.gameplayStop() }
   coins.forEach((mesh) => { mesh.rotation.z += dt * 2 })
   draw()
   ;(window as unknown as { __gameReady: boolean }).__gameReady = true // shots.mjs waits for this
