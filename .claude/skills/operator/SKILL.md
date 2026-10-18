@@ -67,6 +67,7 @@ grades):
 | Project Manager | the operator: plans with yskills, starts the others, keeps PROGRESS.md and its HQ rows | the project chat | Project Manager · duo-test |
 | Researcher | competitors, prices, tools and skills, proof people pay (step 2) | subagents; a thread when big | Researcher · competitors |
 | Designer | art direction (references, palette, type) before any screen, then every UI screenshot (`roles/designer.md`) | a thread at project start and for a redesign; `design-critic` subagent per UI PR | Designer · art direction |
+| Game Designer | how a game plays before the first build: core loop, run length, difficulty, feedback, ad hooks, three researched references (`roles/game-designer.md`) | a thread at project start of a game and before a PR that changes play | Game Designer · design doc |
 | Programmer | one slice or fix, the PR, green CI | a thread each: one at a time, a second only when the slices share no file, never more than three | Programmer · subscription |
 | Tester | the gate: grades the preview against the criteria | a fresh thread per PR | Tester · PR 23 |
 | Reviewer | reads the diff | subagent the Tester starts | Reviewer · PR 23 |
@@ -106,7 +107,7 @@ Every extra thread re-reads its context, so take the simplest shape that works.
 |---|---|
 | Site | live, plus legal pages (`legal` skill) and the money path it needs (`sell`) |
 | App | live, plus the paywall working in test mode and the legal pages; live keys wait for yskills' tap |
-| Game | live, built to captured portal references (`roles/designer.md`, Art direction first), plus the money path wired (portal ads via the starter's `platform.ts`, `game-3d` §5a "what earns") and the portal or store package ready (`store-publish`, CrazyGames checklist); only yskills' hands steps remain |
+| Game | live, built to a written design doc (`roles/game-designer.md`: core loop, run length, difficulty table) and to captured portal references (`roles/designer.md`, Art direction first), plus the money path wired (portal ads via the starter's `platform.ts`, `game-3d` §5a "what earns") and the portal or store package ready (`store-publish`, CrazyGames checklist); only yskills' hands steps remain |
 
 Name and concept first: settle them with one card, push `new/<name>` after the tap; a changed
 concept later means a second repo, Worker and D1 that only "delete <name>" removes. A thread
