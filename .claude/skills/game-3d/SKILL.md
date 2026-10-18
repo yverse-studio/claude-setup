@@ -34,6 +34,8 @@ The look: captures of the top portal games in `design/reference/` before the fir
 
 How the game plays comes first: the Game Designer writes `design/GDD.md` (core loop, run length, difficulty table, feedback, ad hooks, three researched references) from [`operator/templates/game-design.md`](../operator/templates/game-design.md) before the first build; `node <game-3d skill folder>/scripts/gdd-check.mjs design/GDD.md` (run in the game repo) must pass (rule: [`operator/roles/game-designer.md`](../operator/roles/game-designer.md)).
 
+How it sounds is next: the Audio role writes `design/AUDIO.md` from [`operator/templates/audio.md`](../operator/templates/audio.md) before the build touches sound; `node <game-3d skill folder>/scripts/audio-check.mjs` (run in the game repo) must pass, with every file under `assets/audio/` in `assets/manifest.json` (rule: [`operator/roles/audio.md`](../operator/roles/audio.md)).
+
 yskills says what they want in one sentence, pictures or a story; the team turns it into a
 concrete brief before any build. Order, every time:
 
