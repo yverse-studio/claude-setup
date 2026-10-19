@@ -116,6 +116,16 @@ const jobSwitches = (lines, job, steps) => {
   }
   return shape(keep)
 }
+// Workflow-level keys that decide whether the job runs at all (triggers, env, defaults) are compared too.
+const topSwitches = (lines) => {
+  const keep = []; let on = false
+  for (const l of lines) {
+    if (!l.trim() || l.trim().startsWith('#')) continue
+    if (indentOf(l) === 0) on = /^(on|"on"|env|defaults|concurrency):/.test(l)
+    if (on) keep.push(l)
+  }
+  return shape(keep)
+}
 const roleParts = (text) => {
   const lines = text.split('\n'), steps = [], jobs = []
   lines.forEach((l, start) => {
@@ -126,7 +136,7 @@ const roleParts = (text) => {
     const jk = sk && lines.map((x, i) => [x, i]).filter(([x, i]) => i < sk[1] && x.trim() && indentOf(x) < indentOf(sk[0])).pop()
     if (jk) jobs.push(jobSwitches(lines, jk[1], sk[1]))
   })
-  return { steps: steps.join('\n--\n'), jobs: [...new Set(jobs)].join('\n--\n') }
+  return { steps: steps.join('\n--\n'), jobs: [topSwitches(lines), ...new Set(jobs)].join('\n--\n') }
 }
 for (const f of new Set([...added, ...removed].map((l) => l.file).concat(deleted))) {
   if (!/^\.github\/workflows\/.+\.ya?ml$/.test(f)) continue

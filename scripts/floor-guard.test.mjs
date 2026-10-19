@@ -145,3 +145,7 @@ test('steps written at the key indent are read, and if: false there fails', () =
   const flat = 'jobs:\n  verify:\n    steps:\n    - run: npm test\n    - name: role checks\n      run: node scripts/project-checks.mjs --base origin/main\n'
   fails('checker-changed', (d) => put(d, '.github/workflows/ci.yml', flat.replace('    steps:', '    if: false\n    steps:')), { '.github/workflows/ci.yml': flat })
 })
+test('dropping the pull_request trigger of the role-check workflow fails', () => {
+  const wf = (on) => `on:\n${on}\n${CI_JOB}`
+  fails('checker-changed', (d) => put(d, '.github/workflows/ci.yml', wf('  push:')), { '.github/workflows/ci.yml': wf('  pull_request:\n  push:') })
+})
