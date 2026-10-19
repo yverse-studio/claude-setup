@@ -126,3 +126,12 @@ test('outside a git repo exits 2', () => {
   try { assert.equal(spawnSync('node', [guard], { cwd: dir, encoding: 'utf8', env: { ...process.env, GIT_CEILING_DIRECTORIES: tmpdir() } }).status, 2) }
   finally { rmSync(dir, { recursive: true, force: true }) }
 })
+const CI_JOB = 'jobs:\n  verify:\n    runs-on: ubuntu-latest\n    steps:\n      - run: npm test\n      - name: role checks\n        run: node scripts/project-checks.mjs --base origin/main\n      - name: later\n        run: echo hi\n'
+const jobFails = (edit) => fails('checker-changed', (d) => put(d, '.github/workflows/ci.yml', edit(CI_JOB)), { '.github/workflows/ci.yml': CI_JOB })
+test('if: false on the job that holds the role checks fails', () => jobFails((c) => c.replace('    runs-on', '    if: false\n    runs-on')))
+test('continue-on-error on the job that holds the role checks fails', () => jobFails((c) => c.replace('    runs-on', '    continue-on-error: true\n    runs-on')))
+test('a second step named role checks fails', () => jobFails((c) => c.replace('      - name: later', '      - name: role checks again\n        run: echo ok\n      - name: later')))
+test('re-indenting the CI file passes', () => {
+  const r = run((d) => put(d, '.github/workflows/ci.yml', CI_JOB.split('\n').map((l) => (l ? `  ${l}` : l)).join('\n')), { files: { ...BASE, '.github/workflows/ci.yml': CI_JOB } })
+  assert.equal(r.code, 0, r.out)
+})
