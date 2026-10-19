@@ -15,13 +15,17 @@ import { cpSync, mkdtempSync, readFileSync, writeFileSync, rmSync, appendFileSyn
 import { execFileSync } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 export const BUILD_TOKEN_NAME = 'claude-setup-builds'
 export const MARKER = 'made by claude-setup new-project'
 const TEMPLATE = new URL('../.claude/skills/publish/templates/new-project/', import.meta.url)
 const GAME_TEMPLATE = new URL('../.claude/skills/publish/templates/new-game/', import.meta.url) // laid over TEMPLATE for kind "game"
+const SKILLS = new URL('../.claude/skills/', import.meta.url)
+// Role checks copied into scripts/ so the project's own CI runs them (scripts/project-checks.mjs picks by changed files); each stays in its skill, one home.
+const CHECK_SCRIPTS = ['ui-review/scripts/design-check.mjs', 'ui-review/scripts/copy-check.mjs', 'market/scripts/analytics-check.mjs']
+const GAME_CHECK_SCRIPTS = ['game-3d/scripts/gdd-check.mjs', 'game-3d/scripts/audio-check.mjs']
 const BUILD = 'npm run check && npm run build'
 const BUILD_WAIT_MS = 10 * 60 * 1000
 const POLL_MS = 15 * 1000
@@ -113,6 +117,7 @@ export function packageJson({ name, d1, kind }) {
     name,
     private: true,
     type: 'module',
+    claudeSetup: { kind: kind === 'game' ? 'game' : 'site' }, // read by scripts/project-checks.mjs: the kind is declared, never inferred
     engines: { node: '>=24' },
     scripts: {
       dev: 'npm run build && wrangler dev',
@@ -139,6 +144,7 @@ export function buildCommands(d1) {
 export function writeScaffold(dir, { name, d1, liveId, previewId, kind }) {
   cpSync(TEMPLATE, dir, { recursive: true })
   if (kind === 'game') cpSync(GAME_TEMPLATE, dir, { recursive: true, force: true })
+  for (const script of [...CHECK_SCRIPTS, ...(kind === 'game' ? GAME_CHECK_SCRIPTS : [])]) cpSync(new URL(script, SKILLS), join(dir, 'scripts', basename(script)))
   if (!d1) rmSync(join(dir, 'migrations'), { recursive: true, force: true })
   for (const file of ['README.md', 'CLAUDE.md', 'src/index.js', ...(kind === 'game' ? ['index.html', 'design/DESIGN.md'] : [])]) {
     const path = join(dir, file)

@@ -56,6 +56,8 @@ What you do: write the idea. A thread does the rest.
    `projects/<name>.json` to `main`; the branch is deleted after the run, so nobody else does.
    Delete refuses names without it. A game's first PR replaces the day-zero stub; until it
    merges, the live URL shows the stub.
+   Its CI fails a PR that changes UI, text or play before the docs exist (design, copy, tracking
+   plan; game design and sound for a game); each failure names the fix (`publish` skill).
 4. Wait for the run: `actions_list` `list_workflow_runs` ignores `per_page` and returns about
    20k tokens, so read it once, then `actions_get` `get_workflow_run` by id. Its summary has the
    repo, `https://<name>.yverse.workers.dev` and the first build's status.

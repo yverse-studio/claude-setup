@@ -6,6 +6,7 @@
 // Exit 0 clean, 1 violation, 2 could not run (never read 2 as 0).
 // Escape hatch: a commit message in the PR with `floor-ok: <reason>` waives the findings; they
 // are still printed with the reason.
+// It also flags an edited or deleted role check script, a changed claudeSetup.kind, and any change to the "role checks" CI step or the job and workflow keys around it.
 // Usage: node scripts/floor-guard.mjs [--base <ref>]   (default origin/main)
 // Adapted from addyosmani/agent-skills, floor-guard.md (MIT, see THIRD_PARTY.md in claude-setup).
 import { execFileSync } from 'node:child_process'
@@ -88,6 +89,72 @@ for (const { file: f, text } of added) {
   }
 }
 for (const { from, to } of renames) if (isTest(from) && !isTest(to)) flag('test-deleted', from, `renamed to ${to}, out of the test pattern`)
+
+// The role checks guard themselves: editing or deleting one, or dropping the CI step that runs them, lowers the bar.
+// A role check script that did not exist at the merge base is inert (project-checks.mjs and the CI step, both guarded, decide what runs), so adding one passes.
+const ROLE_CHECK = /^scripts\/(project-checks|design-check|copy-check|analytics-check|gdd-check|audio-check|playtest-check)\.mjs$/
+for (const f of new Set([...deleted, ...added.map((l) => l.file), ...removed.map((l) => l.file)])) if (ROLE_CHECK.test(f) && git(['cat-file', '-e', `${mergeBase}:${f}`]) !== null) flag('checker-changed', f, deleted.includes(f) ? 'file deleted' : 'a role check script was changed')
+// The kind switch and the CI step that runs the checks are guarded the same way: any change to either flags.
+const kindOf = (text) => { try { return JSON.parse(text).claudeSetup?.kind } catch { return 'unreadable' } }
+const kindBefore = git(['show', `${mergeBase}:package.json`])
+if (kindBefore !== null) {
+  let kindNow
+  try { kindNow = kindOf(readFileSync('package.json', 'utf8')) } catch { kindNow = 'missing' }
+  if (kindOf(kindBefore) !== kindNow) flag('checker-changed', 'package.json', `claudeSetup.kind changed: ${kindOf(kindBefore)} -> ${kindNow}`)
+}
+// Everything that decides whether a role-checks step runs is compared: every step whose name says "role checks"
+// and the header of the job holding it (its `if:`, `continue-on-error:`, `needs:`...). Lines are compared by
+// indent relative to the block, so re-indenting a file is not a change; blank and comment-only lines are ignored.
+const indentOf = (l) => l.match(/^\s*/)[0].length
+const shape = (lines) => { const at = lines.find((l) => l.trim())?.match(/^\s*/)[0].length ?? 0; return lines.filter((l) => l.trim() && !l.trim().startsWith('#')).map((l) => `${' '.repeat(Math.max(indentOf(l) - at, 0))}${l.trim().replace(/\s+/g, ' ')}`).join('\n') }
+// Every job key outside `steps:` is compared, wherever it sits; only the job name and a plain runner label are exempt (waive the rest with floor-ok).
+const JOB_HARMLESS = /^(name:|runs-on:\s*(ubuntu|windows|macos)[\w.-]*$)/
+const jobSwitches = (lines, job, steps) => {
+  const jobIndent = indentOf(lines[job]), end = lines.findIndex((x, i) => i > job && x.trim() && indentOf(x) <= jobIndent && !(indentOf(x) === indentOf(lines[steps]) && x.trim().startsWith('-')) && !x.trim().startsWith('#'))
+  const body = lines.slice(job + 1, end < 0 ? undefined : end), keep = []
+  const childIndent = Math.min(...body.filter((x) => x.trim() && !x.trim().startsWith('#')).map(indentOf))
+  let on = false, inSteps = false
+  for (const l of body) {
+    if (!l.trim() || l.trim().startsWith('#')) continue
+    const ind = indentOf(l)
+    if (ind === childIndent && !l.trim().startsWith('-')) { inSteps = /^steps:/.test(l.trim()); on = !inSteps && !JOB_HARMLESS.test(l.trim()) }
+    else if (ind === childIndent && inSteps && !l.trim().startsWith('-')) inSteps = false
+    if (on && !inSteps) keep.push(l)
+  }
+  return shape(keep)
+}
+// Workflow-level keys that decide whether the job runs at all (triggers, env, defaults) are compared too.
+const topSwitches = (lines) => {
+  const keep = []; let on = false
+  for (const l of lines) {
+    if (!l.trim() || l.trim().startsWith('#')) continue
+    if (indentOf(l) === 0) on = /^(on|"on"|env|defaults|concurrency):/.test(l)
+    if (on) keep.push(l)
+  }
+  return shape(keep)
+}
+const roleParts = (text) => {
+  const lines = text.split('\n'), steps = [], jobs = []
+  lines.forEach((l, start) => {
+    if (!/^\s*- name:.*role checks/i.test(l)) return
+    const at = indentOf(l), end = lines.findIndex((x, i) => i > start && x.trim() && indentOf(x) <= at)
+    steps.push(shape(lines.slice(start, end < 0 ? undefined : end)))
+    const sk = lines.map((x, i) => [x, i]).filter(([x, i]) => i < start && /^\s*steps:\s*$/.test(x) && indentOf(x) <= at).pop()
+    const jk = sk && lines.map((x, i) => [x, i]).filter(([x, i]) => i < sk[1] && x.trim() && indentOf(x) < indentOf(sk[0])).pop()
+    if (jk) jobs.push(jobSwitches(lines, jk[1], sk[1]))
+  })
+  return { steps: steps.join('\n--\n'), jobs: [topSwitches(lines), ...new Set(jobs)].join('\n--\n') }
+}
+for (const f of new Set([...added, ...removed].map((l) => l.file).concat(deleted))) {
+  if (!/^\.github\/workflows\/.+\.ya?ml$/.test(f)) continue
+  const before = git(['show', `${mergeBase}:${f}`]), old = before === null ? null : roleParts(before)
+  if (old === null || !old.steps) continue
+  let now = null
+  try { now = readFileSync(f, 'utf8') } catch { /* deleted */ }
+  const cur = now === null ? null : roleParts(now)
+  if (!cur || cur.steps !== old.steps) flag('checker-changed', f, 'a "role checks" CI step was changed, added or removed')
+  else if (cur.jobs !== old.jobs) flag('checker-changed', f, 'the job that runs the "role checks" step was changed (its if, continue-on-error or needs)')
+}
 
 // Tests are matched one by one. A test is a title line (`it('x'`, `test.only('x'`, `def test_x`,
 // `func TestX`) and the assertion lines under it up to the next title; assertions above the first
