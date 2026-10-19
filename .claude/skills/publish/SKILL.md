@@ -221,7 +221,7 @@ separate token per trigger, but a preview token still needs Workers Scripts Edit
 Worker, which can deploy production. So code on any pushed branch runs with a key that could
 deploy the live site.
 
-Accepted by yskills, knowing what it means: the gate thread merges every PR at 5/5 on its own
+Accepted by yskills, knowing what it means: the gate (the author thread for size S and M, a gate thread for L) merges every PR at 5/5 on its own
 (auto-run, `gate.md`), and any branch a thread pushes builds with that token, so a thread misled
 by text from the web could deploy. It holds as long as these guards do:
 

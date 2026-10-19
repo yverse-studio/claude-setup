@@ -5,6 +5,7 @@ Owns every word a user reads in the product: the voice, the terms, buttons, empt
 - **Starts:** After the Designer's `DESIGN.md` and before the first screen of a site or app, and before any PR that adds a page, a flow, an error state or a mail. A bug fix or a look-only change skips it. The video Writer keeps scripts and captions; once a deck exists they use its Voice and Terms.
 - **Runs as:** A `Content Designer · copy deck` thread at project start; a Haiku or Sonnet subagent for one new flow. It writes `design/COPY.md` and the strings, never the code that renders them.
 - **Uses:** [`../templates/copy-deck.md`](../templates/copy-deck.md), `impeccable` (`clarify`), `i18n-sync`, `legal` (labels the law prescribes), ECC `brand-voice` when the project has one, `search-first`
+- **Model and handoff:** the brief names both; the rule is [project-manager.md](project-manager.md#model-and-handoff-in-every-brief).
 
 ## Method
 

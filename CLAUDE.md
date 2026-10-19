@@ -16,7 +16,8 @@ goes in its home only, everywhere else links it.
 - New page or app: write `projects/<name>.json` and run the `new-project` workflow; it makes the
   repo, Worker, D1 and first deploy. Removing one: the `delete-project` workflow. The steps:
   `docs/USING.md` (Deploy a page in one shot, Delete a page); the detail: `publish` skill.
-- Dashboard: the Claude Setup HQ Artifact (Company view) is the only one; each Project Manager
+- Dashboard: the Company XY Artifact (Company view, the old "Claude Setup HQ") is the only
+  Artifact there is, no votes, galleries or one-off pages (2026-10-18); each Project Manager
   writes its rows there (`docs/hq-rows.md`). New apps are threads in the claude.ai project
   "Company XY", never a new project. [advisory]
 
@@ -27,7 +28,7 @@ goes in its home only, everywhere else links it.
 - Own the whole task: understand, plan briefly, build, verify, open the PR, fix CI. "Done" means
   the goal works, not that a step finished.
 - Auto-run (2026-10-06): no taps; a card (below) holds work only on an ask-first item. A fresh
-  gate thread merges every PR at 5/5 (`operator` skill, `gate.md`, the one merge policy), launch,
+  gate (`gate.md`: the author thread for size S and M, a fresh gate thread for L) merges every PR at 5/5 (`operator` skill, `gate.md`, the one merge policy), launch,
   live money and claude-setup included; that merge is the production deploy. yskills taps only
   when Claude Code's safety check blocks a merge.
 - Ask first only before: real money (live key, purchase, ads, paid plan), sending mail or posts,
@@ -44,9 +45,9 @@ goes in its home only, everywhere else links it.
   options and recommendation (the coordinator reads every thread reply) and it goes on with the
   recommendation. The coordinator relays the tap to the thread; a tap against the
   recommendation means change course. Money, a new service, deleting and anything that can't be
-  undone wait for the tap. Visual choices come as live drafts from a Designer thread in one vote
-  gallery Artifact linked in the card post (`designer.md`, Vote gallery); never loose images,
-  never a vote on words alone. [advisory]
+  undone wait for the tap. Visual choices (2026-10-18) are normal cards with screenshots from a Designer thread,
+  saved in `/mnt/project-files/<project>/votes/` and posted with the card (`designer.md`,
+  Vote cards); never an Artifact, never a vote on words alone. [advisory]
 - yskills reads only the project chat (2026-10-08) and opens a thread only when something is
   wrong: the coordinator posts one line per finished part (result, `Done:`, live link), every
   card and every blocker, no narration; PR links and gate talk stay in threads.
@@ -64,7 +65,7 @@ goes in its home only, everywhere else links it.
   scratchpad (monthly memory check, `docs/WORKFLOW.md` Learning).
 - Before calling work done or pushing: run what CI runs (`verify`, the repo's `verify` skill or
   `.github/workflows`), never a deploy script. Report failures honestly with the output. [guard: ask Bash(npm run deploy:*)]
-- Tokens: small context and replies, batched calls, big reads to Haiku subagents. Hand off at
+- Tokens: the Budget line in `docs/WORKFLOW.md` (Token budget) first; small context and replies, batched calls, big reads to Haiku subagents. Hand off at
   200k (guard warns at 150k); a thread idle over an hour is not resumed, a fresh one reads `PROGRESS.md`.
 - Cloud threads: research with WebSearch (every WebFetch of an unposted page makes yskills press
   Allow); never call `connect_device` unless the task needs yskills' own files. [advisory]

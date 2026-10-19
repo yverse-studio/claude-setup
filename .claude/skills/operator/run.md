@@ -25,7 +25,7 @@ before each step; builder, gate and fix threads read their `roles/<role>.md` ins
      no-go. No-go → brief (a) recommends no or a smaller first version. This shows that others
      earn, not that yskills can find buyers; the probe slice (step 5) tests that.
    - **Legal:** the `legal` skill's table for this idea.
-3. **Plan.** The research's open questions go to yskills as ONE batch of cards, posted by the Project Manager together with the Designer's gallery of 2-3 example looks copied from the category leaders, before the plan. `planner` proposes; the operator writes `PLAN.md` and `features.json`. **Brief (a).**
+3. **Plan.** The research's open questions go to yskills as ONE batch of cards, posted by the Project Manager together with the Designer's vote card of 2-3 example looks (screenshots) copied from the category leaders, before the plan. `planner` proposes; the operator writes `PLAN.md` and `features.json`. **Brief (a).**
    No task for yskills: the operator deploys the day-zero site in one shot
    ([`docs/USING.md`](../../../docs/USING.md), Deploy a page in one shot) before the scaffold.
    **Day one in HQ** (the same hour as brief (a), one `ArtifactData` batch, every row with `at`, as
@@ -81,7 +81,7 @@ before each step; builder, gate and fix threads read their `roles/<role>.md` ins
    claude-setup), **change** (one new offer or channel, one more probe) or **build anyway**.
    Never move the go number after the probe started. A small site meant to earn is its own
    probe; one not meant to earn skips it.
-6. **Gate.** A fresh gate thread per PR runs `gate.md` and either posts the 5/5 table and merges
+6. **Gate.** A gate per PR (size S and M in the author thread, L a fresh gate thread) runs `gate.md` and either posts the 5/5 table and merges
    the PR (after pulling main into the branch when another PR merged since) or one review with
    the blocking findings, which the builder fixes. Two failed rounds: `gate.md` (Rounds).
    **The whole journey, once.** After the last slice merges, one `evaluator` run walks the full

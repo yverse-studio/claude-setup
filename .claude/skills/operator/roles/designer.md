@@ -2,9 +2,10 @@
 
 Sets the look before the first screen and checks every UI change so nothing looks AI-made.
 
-- **Starts:** After brief (a), before any screen is built, for every project kind (site, app, game): art direction (below), then 2-3 directions as live drafts in the vote gallery; then on every PR that changes UI.
+- **Starts:** After brief (a), before any screen is built, for every project kind (site, app, game): art direction (below), then 2-3 directions as screenshots on a vote card; then on every PR that changes UI.
 - **Runs as:** A `Designer · art direction` thread at project start and for a redesign; `design-critic` as a quick subagent on every UI PR.
 - **Uses:** `frontend-design`, `impeccable`, `ui-review`, `design-critic`; Figma plugin or Canva only when the plan uses them
+- **Model and handoff:** the brief names both; the rule is [project-manager.md](project-manager.md#model-and-handoff-in-every-brief).
 
 ## Art direction first (2026-10-18)
 
@@ -20,7 +21,7 @@ against that text. So:
    images) and a one-line fit verdict each, in `design/STYLES.md`; plus a "not like" list with a
    screenshot of each look we already shipped (yland, Company XY, earlier versions of this
    project) in `design/reference/ours/`. The three directions for the vote come from the best-fitting families and repeat
-   none of the "not like" looks. The landscape goes into the same vote gallery as the directions (`CLAUDE.md`, How to work, Cards).
+   none of the "not like" looks. The landscape goes on the same vote card as the directions (`CLAUDE.md`, How to work, Cards).
 1. **References:** 3 to 6 captures of the top products of the genre (CrazyGames and Poki top
    pages for a game; the category's leading apps for a product) at 390px and 1440px, shot with
    `ui-review`'s `shoot.mjs` (absolute URLs), into `design/reference/`, one line each in
@@ -36,12 +37,14 @@ against that text. So:
    - `## Bar`: below.
 3. **Check:** `node <ui-review skill folder>/scripts/design-check.mjs` passes, and `design-critic`
    finds no pattern from [`SLOP.md`](../../ui-review/SLOP.md) in the drafts. Only then the vote
-   gallery, then the build.
+   card, then the build.
 4. **Gate:** check 5 runs both on every UI PR (`gate.md`).
 
 ## Every time
 
-- Variants: any pick between variants is a gallery plus a criteria table judged by an evaluator that did not build them (Opus); one variant per unit, a rebuild replaces its branch, never a "-2" branch.
+- Full effort (yskills, 2026-10-18, Mondgarten looked underwhelming): from the next project on, give look, UI and UX everything (screen design, motion, juice, polish). Never scale design down because a project is a "test" or the first of its kind.
+
+- Variants: any pick between variants is a vote card plus a criteria table judged by an evaluator that did not build them (Opus); one variant per unit, a rebuild replaces its branch, never a "-2" branch.
 
 - Start from yskills' reference pictures in `design/refs/`, then `design/DESIGN.md`.
 - Characters: one named reference picture each and the comparison sheet, per [`docs/character-workflow.md`](../../../../docs/character-workflow.md).
@@ -91,25 +94,15 @@ Playwright (gate check 5) and `design-critic` judges the look.
 Sources: web.dev Core Web Vitals thresholds, NN/g response-time limits (0.1/1/10 s) and skeleton
 screens, `impeccable` `reference/animate.md` (durations, reduced motion).
 
-## Vote gallery
+## Vote cards
 
-How every visual choice reaches yskills (proven on the sofa shop, 2026-10-08): one Artifact page
-with every option as a live, clickable draft, never loose screenshots.
+How every visual choice reaches yskills (2026-10-18: no Artifacts, he does not want to clean up after them):
 
-1. Each option is a standalone HTML file; shared data and logic in one JS file, images local.
-2. Copy [`templates/vote-gallery.html`](../templates/vote-gallery.html) as the page and change only
-   its title and the array `D` (letter, name, file, one line; `rec` and `why` on the recommendation).
-   It gives tabs, ←/→ keys (also inside a draft), a counter, a desktop/phone switch (390px frame),
-   the recommendation starred with its reason and a choose button.
-3. Publish it with all drafts through `files` and `root`; capabilities `{db:{}, user:{}}`. The
-   pick lands as `wahl/<user-id>` = `{design, name, at}`; without storage the page says to write
-   the letter in the project chat.
-4. Send the link to the Project Manager, who posts the vote. The pick is read with `ArtifactData`
-   (`list` on collection `wahl`). A new round republishes to the same URL, so the link stays.
-
-5. The Project Manager attaches the gallery as a frame in the project chat, not only as a link. Once the decision is taken, delete the gallery (Artifact `delete`); if that is refused, republish it as one line "Removed <date>".
-
-Where a draft can't run live (a game scene, 3D), the same gallery shows desktop screenshots (1440px).
+1. Each option is a draft rendered with Playwright at 390px and 1440px; a game scene or 3D shows the 1440px frame.
+2. Save the shots as `/mnt/project-files/<project>/votes/<round>/<letter>-<name>-{390,1440}.png`.
+3. The thread's `Card:` reply lists the files, one line per option (letter, two-word name, the feel; recommendation starred with its reason).
+4. The Project Manager posts the card in the project chat with the screenshots attached. The tap is the pick; "none, try again" is an option.
+5. After the decision the thread deletes that round's folder.
 
 ## Co-founder
 

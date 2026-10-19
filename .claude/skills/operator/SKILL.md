@@ -49,7 +49,7 @@ Manager runs the same roles as for a new app, never one catch-all thread. In tha
 1. **Research first:** a `Researcher` subagent (a thread when big) on best practice and the state
    of the art for this idea, one WebSearch per open fact, one page back. A plain bug fix skips it.
 2. **Split by role:** threads titled `<Role> · <what>`: Designer when the look changes (drafts and
-   the vote, `roles/designer.md`), one Programmer per PR, then a fresh Tester per PR running
+   the vote, `roles/designer.md`), one Programmer per PR, then a gate per PR (size S and M in the author thread, L a fresh Tester) running
    `gate.md` with Reviewer and Security inside. Each brief names its playbook and the research.
 3. **Parallel:** several ideas in one message become one chain each; chains that share no file
    run at once (the slice rule below), never more than three Programmer threads; the rest queue
@@ -143,7 +143,7 @@ Templates in `templates/`.
   and, at the top, `Mode: probe` (meant to earn) or `Mode: product` (not meant to earn), the
   probe (offer, price, channel, period, go number) and the 30/60/90-day targets.
 - `features.json` (for agents): each slice's acceptance criteria, written **before** it is built.
-  Builders never touch it; the gate thread records the evaluator's verdict (`passes`). [advisory]
+  Builders never touch it; the gate records the evaluator's verdict (`passes`) verbatim from its report. [advisory]
 - `PROGRESS.md`: the handoff. Done, next, broken, decisions and why, each thread's cost. Every
   thread reads it first; only the operator writes it. Under 100 lines.
 - `metrics/<yyyy>-W<ww>.json`: from launch on, the week's numbers. HQ reads these (`docs/hq-rows.md`).

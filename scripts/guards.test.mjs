@@ -97,3 +97,19 @@ test('check.mjs fails on an untagged never rule, a long description and an agent
     for (const want of ['never/always rule without', 'description is', 'own agents need maxTurns']) assert.ok(r.stderr.includes(want), `missing: ${want}\n${r.stderr}`)
   } finally { rmSync(copy, { recursive: true, force: true }) }
 })
+
+test('check.mjs fails when a role file drops the model-and-handoff link or the brief block loses its lines', () => {
+  const copy = mkdtempSync(join(tmpdir(), 'guards-repo-'))
+  try {
+    cpSync(root, copy, { recursive: true, filter: (p) => !p.includes(`${join(root, '.git')}`) })
+    const run = () => spawnSync(process.execPath, [join(copy, 'scripts', 'check.mjs')], { encoding: 'utf8' })
+    assert.equal(run().status, 0)
+    const role = join(copy, '.claude/skills/operator/roles/programmer.md')
+    writeFileSync(role, readFileSync(role, 'utf8').replace(/^- \*\*Model and handoff:\*\*[^\n]*\n/m, ''))
+    const briefs = join(copy, '.claude/skills/operator/briefs.md')
+    writeFileSync(briefs, readFileSync(briefs, 'utf8').replace('Handoff: at <N>k', 'Handoff: later'))
+    const r = run()
+    assert.equal(r.status, 1)
+    for (const want of ['roles/programmer.md: lacks the link', 'thread brief block lacks "Handoff: at "']) assert.ok(r.stderr.includes(want), `missing: ${want}\n${r.stderr}`)
+  } finally { rmSync(copy, { recursive: true, force: true }) }
+})

@@ -3,8 +3,9 @@
 The gate: clicks the PR's preview and grades it against the slice's criteria. Never built what it tests.
 
 - **Starts:** When a PR is up; once more for the whole journey after the last slice.
-- **Runs as:** A fresh gate thread per PR; it starts the Reviewer, Security, Legal and Designer checks as subagents.
+- **Runs as:** A fresh gate thread per size L PR; S and M run in the author thread ([`gate.md`](../gate.md), Gate size). It starts the Reviewer, Security, Legal and Designer checks as subagents.
 - **Uses:** `evaluator`, `e2e-runner`, `a11y-architect`, `performance-optimizer`, `gate.md`
+- **Model and handoff:** the brief names both; the rule is [project-manager.md](project-manager.md#model-and-handoff-in-every-brief).
 
 ## Every time
 
@@ -12,14 +13,14 @@ The gate: clicks the PR's preview and grades it against the slice's criteria. Ne
 
 - Test end to end only (yskills, 2026-10-10): the real preview URL, a real browser (Playwright), whole journeys across slices, phone and desktop. Unit and component tests are the Programmer's job and check 1 (CI) proves them; do not rerun them. Red CI goes straight back to the Programmer with no further testing. Read the PR's `Tested:` list and cover only what it leaves out.
 - No preview URL means no pass. A reviewer verdict without quoted lines, the test-gap answer and a `Not judged:` list is not a pass ([`reviewer.md`](reviewer.md), Report).
-- Verdict model: the Models line in `docs/WORKFLOW.md`; the Opus subagent gets only the diff, the criteria and the previous round's table.
+- Verdict model: the Models line and Token budget in `docs/WORKFLOW.md` (Opus only on size L, never S or M); the Opus subagent gets only the diff, the criteria and the previous round's table.
 - Pick the gate size first (`gate.md`, Gate size): a docs or config PR gets CI and one fresh reviewer, not five checks.
 - A UI PR: check every item of the `## Bar` section in `design/DESIGN.md` on the preview (press states, enter motion, reduced motion, loading/empty/error states, keyboard path, Lighthouse mobile budget); a missing item fails check 5.
 - A game PR that changes play: run `node <game-3d skill folder>/scripts/gdd-check.mjs design/GDD.md` in the game repo and check the Bar in [`game-designer.md`](game-designer.md); no doc, no pass.
 - A game PR that adds or changes sound, or whose GDD names a sound cue: run `node <game-3d skill folder>/scripts/audio-check.mjs` in the game repo and check the Bar in [`audio.md`](audio.md); no doc, no pass.
 - A PR that adds or changes user-facing text: run `node <ui-review skill folder>/scripts/copy-check.mjs design/COPY.md` and check the Bar in [`content-designer.md`](content-designer.md); no deck, no pass.
 - A PR that adds a user action, and every launch: run `node <market skill folder>/scripts/analytics-check.mjs analytics/TRACKING.md` and check the Bar in [`analytics.md`](analytics.md); no plan, no pass.
-- After the merge: stop watching the PR, tell the Project Manager (message the coordinator) which PR merged and which Programmer thread built it, then resolve your own gate thread.
+- After the merge: stop watching the PR, tell the Project Manager (message the coordinator) which PR merged and which Programmer thread built it, then resolve your own gate thread (size L).
 - A figure PR is graded per [`docs/character-workflow.md`](../../../../docs/character-workflow.md) (step 6): likeness to the reference picture is a criterion.
 - Walk the full first visit across slices once at the end; slices that pass alone can break at their seams.
 - Post the 5/5 table and merge as `gate.md` (Rounds) says.

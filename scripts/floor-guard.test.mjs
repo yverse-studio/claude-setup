@@ -50,40 +50,92 @@ test('eslint-disable fails', () => fails('silenced-checker', (d) => put(d, 'src/
 test('@ts-expect-error without a reason fails', () => fails('silenced-checker', (d) => put(d, 'src/sum.mjs', '// @ts-expect-error\nexport const sum = (a, b) => a + b\n')))
 test('a "not implemented" stub fails', () => fails('unfinished-work', (d) => put(d, 'src/new.mjs', 'export const f = () => { throw new Error("Not implemented") }\n')))
 test('an empty catch fails', () => fails('unfinished-work', (d) => put(d, 'src/new.mjs', 'try { go() } catch {}\n')))
-test('editing a role check script fails', () => fails('checker-changed', (d) => put(d, 'scripts/design-check.mjs', 'export {}\n'), { 'scripts/design-check.mjs': 'export const a = 1\nexport const b = 2\n' }))
-test('deleting a role check script fails', () => fails('checker-changed', (d) => rmSync(join(d, 'scripts/gdd-check.mjs')), { 'scripts/gdd-check.mjs': 'export const a = 1\n' }))
-const CI = 'steps:\n  - run: npm test\n  - name: role checks # x\n    if: github.event_name == \'pull_request\'\n    run: node scripts/project-checks.mjs --base origin/main\n  - name: later\n    run: echo hi\n'
-const ciFails = (edit) => fails('checker-changed', (d) => put(d, '.github/workflows/ci.yml', edit(CI)), { '.github/workflows/ci.yml': CI })
-test('an add-only edit to a role check script fails', () => fails('checker-changed', (d) => put(d, 'scripts/design-check.mjs', 'process.exit(0)\nexport const a = 1\n'), { 'scripts/design-check.mjs': 'export const a = 1\n' }))
-test('a duplicate claudeSetup key that flips the kind fails', () => fails('checker-changed', (d) => put(d, 'package.json', '{"name":"x","claudeSetup":{"kind":"game"},"claudeSetup":{"kind":"site"}}\n'), { 'package.json': '{"name":"x","claudeSetup":{"kind":"game"}}\n' }))
-test('removing the role-check CI step fails', () => ciFails((c) => c.replace(/  - name: role checks[\s\S]*?(?=  - name: later)/, '')))
-test('appending || true to the role-check run line fails', () => ciFails((c) => c.replace('origin/main\n  - name: later', 'origin/main || true\n  - name: later')))
-test('switching the role-check step if: to false fails', () => ciFails((c) => c.replace("if: github.event_name == 'pull_request'", 'if: false')))
-test('continue-on-error on the role-check step fails', () => ciFails((c) => c.replace('    run: node scripts/project-checks', '    continue-on-error: true\n    run: node scripts/project-checks')))
-test('a change in another CI step passes', () => {
-  const r = run((d) => put(d, '.github/workflows/ci.yml', CI.replace('echo hi', 'echo bye')), { files: { ...BASE, '.github/workflows/ci.yml': CI } })
-  assert.equal(r.code, 0, r.out)
-})
-test('changing claudeSetup.kind from game to site fails, and a waiver passes', () => {
-  const pkg = (k) => JSON.stringify({ name: 'x', claudeSetup: { kind: k } }, null, 2) + '\n'
-  fails('checker-changed', (d) => put(d, 'package.json', pkg('site')), { 'package.json': pkg('game') })
-  const r = run((d) => put(d, 'package.json', pkg('site')), { commitMessage: 'chore: x\n\nfloor-ok: really a site', files: { ...BASE, 'package.json': pkg('game') } })
-  assert.equal(r.code, 0, r.out)
-})
-test('an unrelated package.json change passes', () => {
-  const pkg = (v) => JSON.stringify({ name: 'x', version: v, claudeSetup: { kind: 'game' } }, null, 2) + '\n'
-  const r = run((d) => put(d, 'package.json', pkg('2')), { files: { ...BASE, 'package.json': pkg('1') } })
-  assert.equal(r.code, 0, r.out)
-})
-test('a floor-ok commit waives an edited role check script (the refresh path)', () => {
-  const r = run((d) => put(d, 'scripts/design-check.mjs', 'export {}\n'), { commitMessage: 'chore: refresh checks\n\nfloor-ok: refreshed from claude-setup main', files: { ...BASE, 'scripts/design-check.mjs': 'export const a = 1\n' } })
-  assert.equal(r.code, 0, r.out)
-})
-test('adding a new role check script and keeping the CI step passes', () => {
-  const r = run((d) => { put(d, 'scripts/audio-check.mjs', 'export const a = 1\n'); put(d, '.github/workflows/ci.yml', 'steps:\n  - run: node scripts/project-checks.mjs --base origin/main\n  - run: npm test\n') }, { files: { ...BASE, '.github/workflows/ci.yml': 'steps:\n  - run: node scripts/project-checks.mjs --base origin/main\n' } })
-  assert.equal(r.code, 0, r.out)
-})
 test('a lowered coverage threshold fails', () => fails('threshold-lowered', (d) => put(d, 'vitest.config.ts', BASE['vitest.config.ts'].replace('80', '60'))))
+const T = 'src/sum.test.mjs'
+const mv = (d, to, text) => { mkdirSync(dirname(join(d, to)), { recursive: true }); git(d, 'mv', T, to); if (text !== undefined) put(d, to, text) }
+const keepsRule = (rule, change, n) => {
+  const r = run(change)
+  assert.equal(r.code, 1, r.out)
+  assert.match(r.out, new RegExp(`\\[${rule}\\]`))
+  if (n) assert.match(r.out, new RegExp(`${n} fewer assertion`))
+}
+
+test('renamed test file passes (same assertions under the new path)', () => {
+  const r = run((d) => mv(d, 'src/add.test.mjs'))
+  assert.equal(r.code, 0, r.out)
+})
+test('renamed into another folder with edits that keep the assertions passes', () => {
+  const r = run((d) => mv(d, 'test/sum.test.mjs', BASE[T].replace('sum(1, 2), 3', 'sum(1, 2), 3, "one plus two"')))
+  assert.equal(r.code, 0, r.out)
+})
+test('renamed and rewritten past git rename detection, same title and assertion count, passes', () => {
+  const r = run((d) => mv(d, 'test/add.test.mjs', "import { it } from 'node:test'\nit('adds', () => {\n  assert.equal(add(10, 20), 30)\n  assert.equal(add(0, 4), 4)\n})\n"))
+  assert.equal(r.code, 0, r.out)
+})
+test('moved by delete + untracked new file (uncommitted) passes', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'floor-'))
+  try {
+    git(dir, 'init', '-q', '-b', 'main'); put(dir, T, BASE[T]); git(dir, 'add', '-A'); git(dir, 'commit', '-qm', 'base')
+    rmSync(join(dir, T)); put(dir, 'src/add.test.mjs', BASE[T])
+    const r = spawnSync('node', [guard, '--base', 'main'], { cwd: dir, encoding: 'utf8' })
+    assert.equal(r.status, 0, r.stdout + r.stderr)
+  } finally { rmSync(dir, { recursive: true, force: true }) }
+})
+test('renamed and an assertion dropped fails with the real count', () => keepsRule('assertion-removed', (d) => mv(d, 'src/add.test.mjs', BASE[T].replace("  assert.equal(sum(2, 2), 4)\n", '')), 1))
+test('renamed and rewritten with fewer assertions fails with the real count', () => keepsRule('assertion-removed', (d) => mv(d, 'test/add.test.mjs', "it('adds', () => {\n  assert.equal(add(10, 20), 30)\n})\n"), 1))
+test('moved with a new title and new assertions is a deleted test, even at the same count', () => {
+  const r = run((d) => mv(d, 'test/add.test.mjs', "it('totals', () => {\n  assert.equal(add(10, 20), 30)\n  assert.equal(add(0, 4), 4)\n})\n"))
+  assert.equal(r.code, 1, r.out)
+  assert.match(r.out, /\[test-deleted\].*test "adds"/)
+})
+test('renamed out of the test pattern fails', () => keepsRule('test-deleted', (d) => mv(d, 'src/sum-check.mjs')))
+test('renamed to a skipped test fails', () => keepsRule('test-skipped', (d) => mv(d, 'src/add.test.mjs', BASE[T].replace("test('adds'", "test.skip('adds'"))))
+test('deleted while an unrelated new test file exists still fails', () => keepsRule('test-deleted', (d) => { rmSync(join(d, T)); put(d, 'src/other.test.mjs', "test('x', () => {})\n") }))
+test('one new test file cannot cover two deleted test files', () => keepsRule('assertion-removed', (d) => {
+  rmSync(join(d, T)); rmSync(join(d, 'test/bot.mjs'))
+  put(d, 'test/all.test.mjs', "test('adds', () => {\\n  assert.equal(sum(1, 2), 3)\\n  assert.equal(sum(2, 2), 4)\\n})\\nassert.ok(wins >= 3)\\n")
+}, 1))
+// A test is matched by file and title: a deleted test is not offset by an unrelated new one.
+const TWO = "import { test } from 'node:test'\ntest('adds', () => {\n  assert.equal(sum(1, 2), 3)\n  assert.equal(sum(2, 2), 4)\n})\ntest('keeps', () => {\n  assert.ok(sum(0, 0) === 0)\n})\n"
+const two = (change) => run(change, { files: { ...BASE, [T]: TWO } })
+test('deleted test A plus unrelated new test B with the same assertion count fails, by name', () => {
+  const r = two((d) => put(d, T, TWO.replace(/test\('adds'[\s\S]*?\n\}\)\n/, "test('subtracts', () => {\n  assert.equal(sub(3, 1), 2)\n  assert.equal(sub(4, 2), 2)\n})\n")))
+  assert.equal(r.code, 1, r.out)
+  assert.match(r.out, /\[test-deleted\] src\/sum\.test\.mjs: test "adds"/)
+})
+test('the same swap across two files fails', () => {
+  const r = run((d) => { rmSync(join(d, T)); put(d, 'src/other.test.mjs', "test('other', () => {\n  assert.ok(1)\n  assert.ok(2)\n})\n") })
+  assert.equal(r.code, 1, r.out)
+  assert.match(r.out, /\[test-deleted\].*test "adds"/)
+})
+test('an assertion moved from one test to another in the same file fails', () => {
+  const r = two((d) => put(d, T, TWO.replace("  assert.equal(sum(2, 2), 4)\n", '').replace('assert.ok(sum(0, 0) === 0)', 'assert.ok(sum(0, 0) === 0)\n  assert.ok(sum(5, 5) === 10)')))
+  assert.equal(r.code, 1, r.out)
+  assert.match(r.out, /test "adds": 1 fewer assertion/)
+})
+test('a gone test with no assertions still counts as deleted', () => {
+  const files = { ...BASE, [T]: BASE[T] + "test('boots', () => { run() })\n" }
+  const r = run((d) => put(d, T, BASE[T]), { files })
+  assert.equal(r.code, 1, r.out)
+  assert.match(r.out, /test "boots"/)
+})
+
+// Pass-table: ordinary diffs that keep every assertion.
+const passes = (name, change, files) => test(`passes: ${name}`, () => { const r = run(change, files ? { files } : undefined); assert.equal(r.code, 0, r.out) })
+passes('an added test', (d) => put(d, T, BASE[T] + "test('zero', () => {\n  assert.equal(sum(0, 0), 0)\n})\n"))
+passes('a test split into two', (d) => put(d, T, "import { test } from 'node:test'\ntest('adds one', () => {\n  assert.equal(sum(1, 2), 3)\n})\ntest('adds two', () => {\n  assert.equal(sum(2, 2), 4)\n})\n"))
+passes('two tests merged into one with the same assertions', (d) => put(d, T, "import { test } from 'node:test'\ntest('adds and keeps', () => {\n  assert.equal(sum(1, 2), 3)\n  assert.equal(sum(2, 2), 4)\n  assert.ok(sum(0, 0) === 0)\n})\n"), { ...BASE, [T]: TWO })
+passes('a test title renamed with the same body', (d) => put(d, T, BASE[T].replace("test('adds'", "test('adds two numbers'")))
+passes('a test title renamed and its body reindented', (d) => put(d, T, BASE[T].replace("test('adds'", "test('totals'").replaceAll('  assert', '    assert')))
+passes('a test moved to another file', (d) => { put(d, T, TWO.replace(/test\('keeps'[\s\S]*$/, '')); put(d, 'src/keeps.test.mjs', "test('keeps', () => {\n  assert.ok(sum(0, 0) === 0)\n})\n") }, { ...BASE, [T]: TWO })
+passes('a test moved to another file and given a new title', (d) => { put(d, T, TWO.replace(/test\('keeps'[\s\S]*$/, '')); put(d, 'src/keeps.test.mjs', "test('zero stays zero', () => {\n  assert.ok(sum(0, 0) === 0)\n})\n") }, { ...BASE, [T]: TWO })
+passes('flat assertions wrapped in a test', (d) => put(d, 'test/bot.mjs', "test('bot', () => {\n  assert.ok(wins >= 3)\n  assert.ok(avgNight >= 5)\n})\n"))
+
+test('a new test file passes', () => {
+  const r = run((d) => put(d, 'src/new.test.mjs', "test('n', () => { assert.ok(1) })\n"))
+  assert.equal(r.code, 0, r.out)
+})
+
 test('a skip in an untracked, uncommitted file fails', () => {
   const dir = mkdtempSync(join(tmpdir(), 'floor-'))
   try {
@@ -126,6 +178,45 @@ test('outside a git repo exits 2', () => {
   try { assert.equal(spawnSync('node', [guard], { cwd: dir, encoding: 'utf8', env: { ...process.env, GIT_CEILING_DIRECTORIES: tmpdir() } }).status, 2) }
   finally { rmSync(dir, { recursive: true, force: true }) }
 })
+test('a deleted test file with no assertion or title to match fails', () => {
+  const r = run((d) => rmSync(join(d, 'test/helper.mjs')), { files: { ...BASE, 'test/helper.mjs': 'export const x = 1\n' } })
+  assert.equal(r.code, 1, r.out)
+  assert.match(r.out, /\[test-deleted\] test\/helper\.mjs: file deleted/)
+})
+test('editing a role check script fails', () => fails('checker-changed', (d) => put(d, 'scripts/design-check.mjs', 'export {}\n'), { 'scripts/design-check.mjs': 'export const a = 1\nexport const b = 2\n' }))
+test('deleting a role check script fails', () => fails('checker-changed', (d) => rmSync(join(d, 'scripts/gdd-check.mjs')), { 'scripts/gdd-check.mjs': 'export const a = 1\n' }))
+const CI = 'steps:\n  - run: npm test\n  - name: role checks # x\n    if: github.event_name == \'pull_request\'\n    run: node scripts/project-checks.mjs --base origin/main\n  - name: later\n    run: echo hi\n'
+const ciFails = (edit) => fails('checker-changed', (d) => put(d, '.github/workflows/ci.yml', edit(CI)), { '.github/workflows/ci.yml': CI })
+test('an add-only edit to a role check script fails', () => fails('checker-changed', (d) => put(d, 'scripts/design-check.mjs', 'process.exit(0)\nexport const a = 1\n'), { 'scripts/design-check.mjs': 'export const a = 1\n' }))
+test('a duplicate claudeSetup key that flips the kind fails', () => fails('checker-changed', (d) => put(d, 'package.json', '{"name":"x","claudeSetup":{"kind":"game"},"claudeSetup":{"kind":"site"}}\n'), { 'package.json': '{"name":"x","claudeSetup":{"kind":"game"}}\n' }))
+test('removing the role-check CI step fails', () => ciFails((c) => c.replace(/  - name: role checks[\s\S]*?(?=  - name: later)/, '')))
+test('appending || true to the role-check run line fails', () => ciFails((c) => c.replace('origin/main\n  - name: later', 'origin/main || true\n  - name: later')))
+test('switching the role-check step if: to false fails', () => ciFails((c) => c.replace("if: github.event_name == 'pull_request'", 'if: false')))
+test('continue-on-error on the role-check step fails', () => ciFails((c) => c.replace('    run: node scripts/project-checks', '    continue-on-error: true\n    run: node scripts/project-checks')))
+test('a change in another CI step passes', () => {
+  const r = run((d) => put(d, '.github/workflows/ci.yml', CI.replace('echo hi', 'echo bye')), { files: { ...BASE, '.github/workflows/ci.yml': CI } })
+  assert.equal(r.code, 0, r.out)
+})
+test('changing claudeSetup.kind from game to site fails, and a waiver passes', () => {
+  const pkg = (k) => JSON.stringify({ name: 'x', claudeSetup: { kind: k } }, null, 2) + '\n'
+  fails('checker-changed', (d) => put(d, 'package.json', pkg('site')), { 'package.json': pkg('game') })
+  const r = run((d) => put(d, 'package.json', pkg('site')), { commitMessage: 'chore: x\n\nfloor-ok: really a site', files: { ...BASE, 'package.json': pkg('game') } })
+  assert.equal(r.code, 0, r.out)
+})
+test('an unrelated package.json change passes', () => {
+  const pkg = (v) => JSON.stringify({ name: 'x', version: v, claudeSetup: { kind: 'game' } }, null, 2) + '\n'
+  const r = run((d) => put(d, 'package.json', pkg('2')), { files: { ...BASE, 'package.json': pkg('1') } })
+  assert.equal(r.code, 0, r.out)
+})
+test('a floor-ok commit waives an edited role check script (the refresh path)', () => {
+  const r = run((d) => put(d, 'scripts/design-check.mjs', 'export {}\n'), { commitMessage: 'chore: refresh checks\n\nfloor-ok: refreshed from claude-setup main', files: { ...BASE, 'scripts/design-check.mjs': 'export const a = 1\n' } })
+  assert.equal(r.code, 0, r.out)
+})
+test('adding a new role check script and keeping the CI step passes', () => {
+  const r = run((d) => { put(d, 'scripts/audio-check.mjs', 'export const a = 1\n'); put(d, '.github/workflows/ci.yml', 'steps:\n  - run: node scripts/project-checks.mjs --base origin/main\n  - run: npm test\n') }, { files: { ...BASE, '.github/workflows/ci.yml': 'steps:\n  - run: node scripts/project-checks.mjs --base origin/main\n' } })
+  assert.equal(r.code, 0, r.out)
+})
+
 const CI_JOB = 'jobs:\n  verify:\n    runs-on: ubuntu-latest\n    steps:\n      - run: npm test\n      - name: role checks\n        run: node scripts/project-checks.mjs --base origin/main\n      - name: later\n        run: echo hi\n'
 const jobFails = (edit) => fails('checker-changed', (d) => put(d, '.github/workflows/ci.yml', edit(CI_JOB)), { '.github/workflows/ci.yml': CI_JOB })
 test('if: false on the job that holds the role checks fails', () => jobFails((c) => c.replace('    runs-on', '    if: false\n    runs-on')))

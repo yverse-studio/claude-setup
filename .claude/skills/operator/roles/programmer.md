@@ -5,6 +5,7 @@ Builds one slice or one fix, opens the PR with the preview link (plus phone and 
 - **Starts:** After brief (a) is tapped ok, one per slice: one at a time; a second only when the slices share no file; never more than three.
 - **Runs as:** A thread per slice, medium effort, model from the Models line (`docs/WORKFLOW.md`).
 - **Uses:** builder thread; `architect`, `database-reviewer`, `build-error-resolver`; stack plugins via `toolbox`; `publish` for Workers Builds
+- **Model and handoff:** the brief names both; the rule is [project-manager.md](project-manager.md#model-and-handoff-in-every-brief).
 
 ## Every time
 

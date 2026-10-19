@@ -166,6 +166,15 @@ for (const f of anyText('.')) {
   }
 }
 
+// Token budget (docs/WORKFLOW.md, Token budget; yskills, 2026-10-18): the Budget line exists and no
+// gate or role file asks for an Opus verdict on an S or M PR.
+const budgetLine = readFileSync(join(root, 'docs/WORKFLOW.md'), 'utf8').match(/^Budget: .*$/m)?.[0]
+if (!budgetLine) errors.push('docs/WORKFLOW.md: the Budget line (Token budget) is missing')
+else if (!/never for an S or M gate/.test(budgetLine)) errors.push('docs/WORKFLOW.md: the Budget line must say Opus is never for an S or M gate')
+for (const f of ['.claude/skills/operator/gate.md', '.claude/skills/operator/roles/tester.md', '.claude/skills/operator/roles/reviewer.md', 'docs/WORKFLOW.md']) {
+  if (/Opus verdict[^|\n]*round 2|verdict is Opus on round 2/i.test(readFileSync(join(root, f), 'utf8'))) errors.push(`${f}: demands an Opus verdict on round 2; Opus is size L only (Token budget)`)
+}
+
 // Rule enforcement: a "never" or "always" rule that only lives in prose is advisory. Each such
 // bullet in these files says so with [advisory], or names the guard that enforces it:
 // [guard: deny <rule>], [guard: ask <rule>] (a rule in global/settings.json), [guard: test <file>]
@@ -210,6 +219,17 @@ for (const part of ['Quote the line', 'Would a test fail', 'Not judged:']) {
 }
 for (const a of ['design-critic', 'legal-reviewer', 'red-team']) {
   if (!/Not judged:/.test(readFileSync(join(root, `.claude/agents/${a}.md`), 'utf8'))) errors.push(`agents/${a}.md: report format lacks "Not judged:"`)
+}
+
+// Model and handoff: one rule (roles/project-manager.md); every other role links it, and the brief block carries both lines.
+const roleDir = join(root, '.claude/skills/operator/roles')
+for (const f of readdirSync(roleDir).filter((n) => n.endsWith('.md') && n !== 'project-manager.md')) {
+  if (!readFileSync(join(roleDir, f), 'utf8').includes('project-manager.md#model-and-handoff-in-every-brief')) errors.push(`roles/${f}: lacks the link to "Model and handoff in every brief"`)
+}
+if (!readFileSync(join(roleDir, 'project-manager.md'), 'utf8').includes('## Model and handoff in every brief')) errors.push('roles/project-manager.md: lacks "Model and handoff in every brief"')
+const briefsText = readFileSync(join(root, '.claude/skills/operator/briefs.md'), 'utf8')
+for (const part of ['Model: <id', 'Handoff: at ', '/handoff/<date>-<topic>.md']) {
+  if (!briefsText.includes(part)) errors.push(`briefs.md: thread brief block lacks "${part}"`)
 }
 
 // Research method: one home (roles/researcher.md, Method); the report template keeps its checkable parts.

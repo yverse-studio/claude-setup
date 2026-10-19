@@ -1,5 +1,5 @@
 {
-  "$comment": "One entry per slice (a small site has one). Criteria are written before the slice is built and are testable by clicking through the preview. The gate thread sets passes from the evaluator's report only; nobody edits check or threshold after the build starts.",
+  "$comment": "One entry per slice (a small site has one). Criteria are written before the slice is built and are testable by clicking through the preview. The gate sets passes from the evaluator's report only; nobody edits check or threshold after the build starts.",
   "project": "example",
   "slices": [
     {

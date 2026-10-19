@@ -49,7 +49,7 @@ survive (it was lost once, duo-test 2026-10-06).
 
 - A criterion passes only if you saw it pass with your own eyes this run. If a criterion is
   untestable or wrong, fail it and say so; never reinterpret it.
-- You edit nothing. The gate thread records your verdict in `features.json` (`passes`) on the PR
+- You edit nothing. The gate records your verdict verbatim in `features.json` (`passes`) on the PR
   branch, exactly as you report it.
 
 Return this as your final message, nothing else:
