@@ -6,6 +6,12 @@ Rurumu/Lulum 1.10 (VRM 0.x). Files: `C:\Users\Claude\Documents\GameAssetLibrary\
 Clothed, SFW-only study: no genital geometry was inspected and none is documented here. Licences
 (VN3 and similar) make these **study only** for us, as in the licence note in [`SKILL.md`](SKILL.md).
 
+**The template to copy is Yumeka.** It has the cleanest split: one mesh per body, face, hair
+part and garment. It also has clear names (`Yumeka_Cos_*`, `Yumeka_Hair_*`), one material per
+texture sheet, physics chains for each hair part, the bust, the butt and the skirt, and shape keys
+on the body that are mirrored with the same names on every garment above them. Our own
+characters follow this layout unless a project says otherwise.
+
 ## Rule 0: test every built-in shape key at 0 and 1 before building anything
 
 A bought or downloaded base already has the slider you want more often than not. Yumeka's
