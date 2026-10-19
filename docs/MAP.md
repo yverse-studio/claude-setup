@@ -62,7 +62,7 @@ added as a second repo, or a plain chat), read that file by path, then the files
 | 3D games, Steam | `game-3d` (three.js + Electron, decided 2026-10-07) | `game-3d/refs/` (camera, game feel, levels, glTF, lighting, perf, Steam) |
 | 2D and web games | `toolbox/catalog/data-web.md` (Phaser, PixiJS, Poki, CrazyGames) | `toolbox/catalog/money.md` (H5 game ads) |
 | Roblox | `roblox` | `toolbox/catalog/roblox.md` (run and see), `studio` (PC) |
-| 3D models, characters | `docs/character-workflow.md` | `blender-body` (rigged body: base, shape keys, pose tests, reviewing), `game-3d` (VRM pipeline), `studio` (Blender on the PC) |
+| 3D models, characters | `docs/character-workflow.md` | `blender-body` (rigged body: base, shape keys, pose tests, reviewing; pro avatar anatomy in `booth-avatars.md`), `game-3d` (VRM pipeline), `studio` (Blender on the PC) |
 | Videos and ads (the studio: Producer, Writer, Director, Sound, Editor, Motion, Critic) | `video-studio` | `video-studio/learnings.md`, `market` §4 (ads law) |
 | Social media: posting, comments, DMs, idea backlog, brand accounts, brand deals | `social-team` | `social-team/learnings.md`, `market` §4 and §6 |
 | Video and photo edits | `media-editing` | `watch` (understand a video), `toolbox/catalog/video-audio.md` (AI video, voice, music) |

@@ -12,6 +12,9 @@ Every 3D builder and reviewer thread loads it. Blender setup and views: [`studio
 the character order (reference, brief, sheet, gate): [`docs/character-workflow.md`](../../../docs/character-workflow.md).
 The per-round lists live in [`checklists.md`](checklists.md): builder checklist, reviewer checklist,
 hand-in sheet contract.
+How a professional game avatar is built (mesh split, naming, rig and physics bones, clothes,
+face keys, Unity and Mixamo mapping), and **rule 0: test every built-in shape key at 0 and 1
+before building**: [`booth-avatars.md`](booth-avatars.md).
 
 ## The rules (each one cost a round)
 
