@@ -135,3 +135,13 @@ test('re-indenting the CI file passes', () => {
   const r = run((d) => put(d, '.github/workflows/ci.yml', CI_JOB.split('\n').map((l) => (l ? `  ${l}` : l)).join('\n')), { files: { ...BASE, '.github/workflows/ci.yml': CI_JOB } })
   assert.equal(r.code, 0, r.out)
 })
+test('if: false after steps on the role-check job fails', () => jobFails((c) => `${c}    if: false\n`))
+test('continue-on-error after steps on the role-check job fails', () => jobFails((c) => `${c}    continue-on-error: true\n`))
+test('a runner bump on the role-check job passes', () => {
+  const r = run((d) => put(d, '.github/workflows/ci.yml', CI_JOB.replace('ubuntu-latest', 'ubuntu-24.04')), { files: { ...BASE, '.github/workflows/ci.yml': CI_JOB } })
+  assert.equal(r.code, 0, r.out)
+})
+test('steps written at the key indent are read, and if: false there fails', () => {
+  const flat = 'jobs:\n  verify:\n    steps:\n    - run: npm test\n    - name: role checks\n      run: node scripts/project-checks.mjs --base origin/main\n'
+  fails('checker-changed', (d) => put(d, '.github/workflows/ci.yml', flat.replace('    steps:', '    if: false\n    steps:')), { '.github/workflows/ci.yml': flat })
+})

@@ -100,15 +100,31 @@ if (kindBefore !== null) {
 // indent relative to the block, so re-indenting a file is not a change; blank and comment-only lines are ignored.
 const indentOf = (l) => l.match(/^\s*/)[0].length
 const shape = (lines) => { const at = lines.find((l) => l.trim())?.match(/^\s*/)[0].length ?? 0; return lines.filter((l) => l.trim() && !l.trim().startsWith('#')).map((l) => `${' '.repeat(Math.max(indentOf(l) - at, 0))}${l.trim().replace(/\s+/g, ' ')}`).join('\n') }
+// Job keys that can switch a step off, wherever they sit in the job (before or after `steps:`); other job edits (runner, node bump, name) pass.
+const JOB_SWITCH = /^(if|continue-on-error|needs|strategy|container|services|defaults|permissions):/
+const jobSwitches = (lines, job, steps) => {
+  const jobIndent = indentOf(lines[job]), end = lines.findIndex((x, i) => i > job && x.trim() && indentOf(x) <= jobIndent && !(indentOf(x) === indentOf(lines[steps]) && x.trim().startsWith('-')) && !x.trim().startsWith('#'))
+  const body = lines.slice(job + 1, end < 0 ? undefined : end), keep = []
+  const childIndent = Math.min(...body.filter((x) => x.trim() && !x.trim().startsWith('#')).map(indentOf))
+  let on = false, inSteps = false
+  for (const l of body) {
+    if (!l.trim() || l.trim().startsWith('#')) continue
+    const ind = indentOf(l)
+    if (ind === childIndent && !l.trim().startsWith('-')) { inSteps = /^steps:/.test(l.trim()); on = !inSteps && JOB_SWITCH.test(l.trim()) }
+    else if (ind === childIndent && inSteps && !l.trim().startsWith('-')) inSteps = false
+    if (on && !inSteps) keep.push(l)
+  }
+  return shape(keep)
+}
 const roleParts = (text) => {
   const lines = text.split('\n'), steps = [], jobs = []
   lines.forEach((l, start) => {
     if (!/^\s*- name:.*role checks/i.test(l)) return
     const at = indentOf(l), end = lines.findIndex((x, i) => i > start && x.trim() && indentOf(x) <= at)
     steps.push(shape(lines.slice(start, end < 0 ? undefined : end)))
-    const sk = lines.map((x, i) => [x, i]).filter(([x, i]) => i < start && /^\s*steps:\s*$/.test(x) && indentOf(x) < at).pop()
+    const sk = lines.map((x, i) => [x, i]).filter(([x, i]) => i < start && /^\s*steps:\s*$/.test(x) && indentOf(x) <= at).pop()
     const jk = sk && lines.map((x, i) => [x, i]).filter(([x, i]) => i < sk[1] && x.trim() && indentOf(x) < indentOf(sk[0])).pop()
-    if (jk) jobs.push(shape(lines.slice(jk[1], sk[1] + 1)))
+    if (jk) jobs.push(jobSwitches(lines, jk[1], sk[1]))
   })
   return { steps: steps.join('\n--\n'), jobs: [...new Set(jobs)].join('\n--\n') }
 }
