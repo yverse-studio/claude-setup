@@ -1,6 +1,6 @@
 # Blender body: checklists
 
-Rules and reasons: [`SKILL.md`](SKILL.md). Paths are under
+Rules and reasons: [`SKILL.md`](SKILL.md); method [`references/method.md`](references/method.md); gate [`references/gate.md`](references/gate.md). Paths are under
 `/mnt/project-files/companyxy/patches/base-body/` (Luna: `characters/luna/`).
 
 ## Builder, every round
@@ -8,10 +8,10 @@ Rules and reasons: [`SKILL.md`](SKILL.md). Paths are under
 Before you touch anything
 - [ ] Read only the LIVE STATE block, the contract blocks and the top 3 plan items; nothing else.
 - [ ] Start FROM the named base or best round; say which build, and which bands each key owns.
-- [ ] Cloud Blender up (about two minutes, see SKILL.md rule 8); the best round rendered once as baseline.
+- [ ] Cloud Blender up (about two minutes, see references/method.md); the best round rendered once as baseline.
 
 While building
-- [ ] One region, one named shape key, from a parameter json beside the blend. Mirrored.
+- [ ] Simplest first: scale the base's own form; then one region, one named shape key, from a parameter json beside the blend. Mirrored.
 - [ ] Head and neck above the collarbone untouched. No global smooth, no stacked fillet.
 - [ ] The tool printed its max vertex move (stop over 5 cm) and updated Basis and every key.
 - [ ] Face keys synced after any tool that skips them.
@@ -25,6 +25,7 @@ Gates, run by you before anyone sees the round (a failed gate is said, not hande
 - [ ] Same-size sheet: ref | body on one canvas, same height, crown in frame, hair on, hands whole.
 - [ ] Figure frame as in SKILL.md rule 9.
 - [ ] Zoom: `zoom5.py <round> <best>` ran; bust-front and back-upper looked at yourself.
+- [ ] Stance: upright, flat feet, no lean or tiptoe in the rest skeleton.
 - [ ] Poses: from-below frame (her above the camera), sway mid-frame, arm up plus head tilt;
       no tube neck, no groin fold, no knee pinch, bust root attached.
 - [ ] Number gates (hints, after the eye): bust RMS, mirror, gap, ring areas.
