@@ -12,7 +12,7 @@ longer matches the laptop is a bug: fix the page, not your memory.
 ## Where things live
 
 The folder tree, the scene slots and the step-by-step for building a scene by hand live in **one place**:
-`GameAssetLibrary\README.md` on the laptop (a copy for cloud threads: `/mnt/project-files/companyxy/docs/GameAssetLibrary-README.md`).
+`GameAssetLibrary\README.md` on the laptop (references zip `Downloads\CompanyXY-Referenzen.zip` listed there; a copy for cloud threads: `/mnt/project-files/companyxy/docs/GameAssetLibrary-README.md`).
 That README is for yskills and is the home of every laptop path; this page only names the main ones and
 links it. Update both in the same turn when a folder changes.
 
@@ -20,7 +20,7 @@ links it. Update both in the same turn when a folder changes.
 |---|---|
 | Asset library | laptop `C:\Users\Claude\Documents\GameAssetLibrary` (not in git; `catalog.json` one entry per asset) |
 | Female base template (only file in its folder) | `characters\CH_Base\female\Blend\base_female_v4.blend`; tools and work log in `..\_work\` (`sets.py`, `cg_lib.py`, `poses.py`, `body_aware.py`, `HANDOFF.md`) |
-| A character | `characters\CH_<name>\` (Rika: `CH_rika`; man: `CH_male\male.blend`) |
+| A character | `characters\CH_<name>\` (Rika: `CH_rika\Blend\rika.blend`; man: `CH_male\male.blend`) |
 | Rooms | `environment\rooms\<room>\<room>.blend` (built by `_work\sets.py`) |
 | Shots | `scenes\<game>\<chapter>\<shot>\<shot>.blend` + `compare.png`; overview `scenes\companyxy\ch01\overview.png` |
 | Animation | `animations\retarget\ANIMATIONEN.md` (+ `retarget.py`, `maps\`); packs in `animations\AN_<name>\` |
@@ -50,11 +50,11 @@ tail and wings removed, scaled uniformly to 1.65 m (rig and body together; bones
 untouched). Face kit 447 keys + 15 emotion keys; breast and five butt sliders on the body. A new
 character = slider values + head + hair + outfit on this base, never a new body. Method and
 review: `docs/character-workflow.md`, `blender-body` skill. A character file is a copy of the base in
-`characters\CH_<name>\<name>.blend` (Rika: `CH_rika\rika.blend`); `CH_rika\RIKA-FINAL.blend` is the old
+`characters\CH_<name>\<name>.blend` (Rika: `CH_rika\Blend\rika.blend`, profile `CH_rika\README.md`); `CH_rika\RIKA-FINAL.blend` is the old
 MakeHuman archive, not used for scenes. 18+ scenes use a base copy in adult or office clothes or none, never
 Yumeka's school outfit; the Booth characters as delivered never go into 18+ scenes. Yumeka's licence allows
 modification and 18+ with a content rating, no redistribution; check before any release. Claude threads do
-not make the explicit renders; yskills makes them himself on `rika.blend`.
+not make the explicit renders; yskills makes the night loops and stills himself on `rika.blend`.
 
 ## Put an animation on a character
 
