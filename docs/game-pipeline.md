@@ -49,8 +49,12 @@ The base is Yumeka's own file (body, rig, hair, clothes) with our adult head, st
 tail and wings removed, scaled uniformly to 1.65 m (rig and body together; bones and weights
 untouched). Face kit 447 keys + 15 emotion keys; breast and five butt sliders on the body. A new
 character = slider values + head + hair + outfit on this base, never a new body. Method and
-review: `docs/character-workflow.md`, `blender-body` skill. The Booth characters in the library
-are SFW only and never go into sexual scenes; licences: `GameAssetLibrary\README.md`.
+review: `docs/character-workflow.md`, `blender-body` skill. A character file is a copy of the base in
+`characters\CH_<name>\<name>.blend` (Rika: `CH_rika\rika.blend`); `CH_rika\RIKA-FINAL.blend` is the old
+MakeHuman archive, not used for scenes. 18+ scenes use a base copy in adult or office clothes or none, never
+Yumeka's school outfit; the Booth characters as delivered never go into 18+ scenes. Yumeka's licence allows
+modification and 18+ with a content rating, no redistribution; check before any release. Claude threads do
+not make the explicit renders; yskills makes them himself on `rika.blend`.
 
 ## Put an animation on a character
 
