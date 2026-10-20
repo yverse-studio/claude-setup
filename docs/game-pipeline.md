@@ -21,10 +21,10 @@ links it. Update both in the same turn when a folder changes.
 | Asset library | laptop `C:\Users\Claude\Documents\GameAssetLibrary` (not in git; `catalog.json` one entry per asset) |
 | Female base template (only file in its folder) | `characters\CH_Base\female\Blend\base_female_v4.blend`; tools and work log in `..\_work\` (`sets.py`, `cg_lib.py`, `poses.py`, `body_aware.py`, `HANDOFF.md`) |
 | A character | `characters\CH_<name>\` (Rika: `CH_rika\Blend\rika.blend`; man: `CH_male\male.blend`) |
-| Rooms | `environment\rooms\<room>\<room>.blend` (built by `_work\sets.py`) |
+| Rooms | `environment\rooms\<room>\<room>.blend` + `_preview.png` (built by `_work\sets.py`, saved by `save_rooms.py`; office_night has `Camera_POV_stand`, `Camera_POV_sit`, `Camera_Side`) |
 | Shots | `scenes\<game>\<chapter>\<shot>\<shot>.blend` + `compare.png`; overview `scenes\companyxy\ch01\overview.png` |
 | Animation | `animations\retarget\ANIMATIONEN.md` (+ `retarget.py`, `maps\`); packs in `animations\AN_<name>\` |
-| Two-person rig | `rigs\interaction\` (`README.md`, `kiss\`) |
+| Two-person rig | `rigs\interaction\kiss\` (`README.md`, `kiss.json`, `apply_interaction.py`, `bone_maps\`) |
 | Ren'Py game | laptop `GitHub\CompanyXY-Spiel\CompanyXY-1.0-pc\` (`game\art\`, `game\art\loops\`, slots in `game\slots.rpy`); zips in `/mnt/project-files/companyxy/game/` |
 | Story guide + plan | `/mnt/project-files/companyxy/story/storyteller/` (`09-story-plan.md`); Rika's ten chapters: company-xy branch `story-rika-fanservice` |
 | Body building guide + lessons | `/mnt/project-files/companyxy/patches/base-body/` (`GUIDE.md`, `LESSONS.md`); posing `characters/POSEN-ANLEITUNG.md` |
@@ -61,7 +61,7 @@ not make the explicit renders; yskills makes the night loops and stills himself 
 Full steps and the clip table: `GameAssetLibrary\animations\retarget\ANIMATIONEN.md`. Short:
 
 1. New clip: put the FBX in `animations\AN_<pack>\source\`, add a `catalog.json` entry.
-2. Bone map: copy `retarget\maps\mixamo_to_yumeka.json`, fix the target bone names for a new rig.
+2. Bone map: copy `retarget\maps\mixamo_to_rika.json`, fix the target bone names for a new rig.
 3. Bake: `blender -b <char.blend> --python retarget.py -- bake <map.json> <out.blend> <clip.fbx>... [--floor meshA,meshB]`.
    Clips land as actions `MX_<clip>` (fake user, 24 fps) in the character file.
 4. Arm fix: `... -- armfix <out.blend> <action>...` (the body is wider than the Mixamo X Bot).
@@ -72,10 +72,10 @@ Full steps and the clip table: `GameAssetLibrary\animations\retarget\ANIMATIONEN
 7. Add the row to the clip table in `ANIMATIONEN.md`.
 
 Two people (kiss, bed scenes): templates name roles, not bones. Give each character one bone map
-in `rigs\interaction\kiss\bone_maps\<name>.json` (copy `yumeka_v4.json`), then
+in `rigs\interaction\kiss\bone_maps\<name>.json` (copy `rika.json`), then
 `blender -b --factory-startup --python rigs\interaction\kiss\apply_interaction.py -- <scene>.json <charA.blend> <charB.blend> out.blend`.
 The solver links the characters as library overrides and scales contacts by `height_m`;
-characters are never edited. Details: `rigs\interaction\README.md`, scene sheets in `animations\Nsfw\`.
+characters are never edited. Details: `rigs\interaction\kiss\README.md`, scene sheets in `animations\Nsfw\`.
 
 Free mocap in the cloud: 75 CMU BVH clips + `scripts/retarget_cmu_to_mixamo.py` in
 `/mnt/project-files/companyxy/patches/base-body/library/assets/` (`SOURCES.md`).
