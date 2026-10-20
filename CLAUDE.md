@@ -118,6 +118,8 @@ Follow an existing repo's own choices. New ones:
   Actions only runs `verify` (`publish` skill). The preview link goes in the PR. A long-running
   server (Render, VPS) only after yskills says yes: it costs money every month.
 - Know-how by domain (money, games, Roblox, 3D, law, design, video, AI): `docs/MAP.md` (Expertise).
+- Story games with renders (characters, animation, scenes, story, Ren'Py; laptop asset library):
+  read `docs/game-pipeline.md` first and update it in the same PR when a path or step changes.
 
 ## Tools
 

@@ -1,7 +1,8 @@
 # Ren'Py visual novels
 
 Learned building the CompanyXY chapter 1 (2026-10-20). Use it for any story game with renders,
-choices and loops (Being a DIK / Summertime Saga style).
+choices and loops (Being a DIK / Summertime Saga style). Where the art, clips and scenes come
+from: `docs/game-pipeline.md`.
 
 ## Before writing a line
 

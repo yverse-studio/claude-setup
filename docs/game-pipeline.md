@@ -1,0 +1,131 @@
+# Game pipeline handbook (characters, animation, scenes, story, Ren'Py)
+
+The one page a new thread or chat reads before any work on a render-based story game (CompanyXY
+chapter 1 first; every later game the same way). It says where every file lives, how each step
+is done and what we learned. It needs repo access (claude-setup) and, for 3D work, laptop access
+(the folders below). State: 2026-10-20.
+
+**Keep it current.** Whoever adds or moves a folder, changes a step or learns a lesson updates
+this page in the same PR or turn (rule: `CLAUDE.md`, Work for the future). A path here that no
+longer matches the laptop is a bug: fix the page, not your memory.
+
+## Where things live
+
+| What | Where | Notes |
+|---|---|---|
+| Asset library (sources, all games) | laptop `C:\Users\Claude\Documents\GameAssetLibrary` | Not in git. Its `README.md` holds the tree, `catalog.json` one entry per asset (licence, formats, SFW flag) |
+| Female base (one base for all scenes) | `GameAssetLibrary\characters\CH_Base\female\Blend\base_female_v4.blend` | Backups `base_female_v4<letter>-before-<step>.blend` next to it; work log `..\_work\HANDOFF.md` |
+| Male | `GameAssetLibrary\characters\CH_male\male.blend` | 1.90 m; penis = `objects\nsfw\chinko.obj` merged on for now |
+| Rika archive | `GameAssetLibrary\characters\CH_rika\` (`RIKA-FINAL.blend`, `RIKA-SFW.blend`, `RIKA-BLENDER-GUIDE.md`) | Older body; v4 base replaces it for scenes |
+| Animation clips | `GameAssetLibrary\animations\AN_<name>\source\` | Mixamo basics: 24 FBX (`LIST.md`) |
+| Retarget tools + guide | `GameAssetLibrary\animations\retarget\` (`ANIMATIONEN.md`, `retarget.py`, `loop_window.py`, `maps\`, `strips\`) | Read `ANIMATIONEN.md` first |
+| Two-person scene templates | `GameAssetLibrary\animations\Nsfw\*.json` + `README.md` | Solved by the interaction solver below |
+| Interaction rig (kiss, anchors) | `GameAssetLibrary\rigs\interaction\kiss\` (`kiss.json`, `apply_interaction.py`, `bone_maps\<char>.json`) | |
+| Shot sources (now) | `GameAssetLibrary\characters\CH_Base\female\Scenes\cg_<shot>.blend`, renders in `..\Image\bg\`, `..\Image\cg\` | To move to the target layout below |
+| Ren'Py game (built) | laptop `C:\Users\Claude\Documents\GitHub\CompanyXY-Spiel\CompanyXY-1.0-pc\` (`CompanyXY.exe`) | Source copy + Windows zip also in `/mnt/project-files/companyxy/game/` |
+| Story guide + plan | `/mnt/project-files/companyxy/story/storyteller/` (README, 01-09, `09-story-plan.md`) | Rika's ten written chapters: company-xy branch `story-rika-fanservice` |
+| Body building guide + lessons | `/mnt/project-files/companyxy/patches/base-body/` (`GUIDE.md`, `LESSONS.md`, `tools/`, `library/`) | `characters/POSEN-ANLEITUNG.md` for posing |
+| Project memory | `MEMORY.md` of the CompanyXY claude.ai project | Points here; this page is the home |
+
+**Target layout** (yskills 2026-10-20, not built yet; the next scene thread creates it and moves
+the shots): rooms in `GameAssetLibrary\environment\rooms\<room>\<room>.blend` (collections marked
+as assets), furniture packs in `environment\furniture\<pack>\` (licence + `catalog.json` entry,
+catalogs Seating, Tables, Beds, Storage, Office, Decor, Lighting), shots in
+`scenes\<game>\<chapter>\<shot>\` (shot `.blend`, master render, `compare.png` ref | result).
+Scenes **link** rooms and characters, never copy them, so one fix updates every scene. The game
+folder only ever gets exported copies.
+
+## Blender basics on the laptop
+
+- Blender 5.1 at `C:\Program Files\Blender Foundation\Blender 5.1\blender.exe` (not on PATH).
+  Run headless: `blender -b <file> --python <script>.py -- <args>`; the Blender MCP `_for_cli`
+  tools fail.
+- Cloud Blender (no laptop): `apt-get install libegl1 libgl1-mesa-dri libegl-mesa0 libgles2`,
+  `pip install bpy scipy pillow`. github.com is blocked in the cloud; raw.githubusercontent.com
+  and extensions.blender.org work.
+- Before every risky step save a backup `<file>-before-<step>.blend`. Save with the body mesh
+  active and only selected, Layout tab, Object Mode.
+
+## Characters
+
+The base is Yumeka's own file (body, rig, hair, clothes) with our adult head, straight rest pose,
+tail and wings removed, scaled uniformly to 1.65 m (rig and body together; bones and weights
+untouched). Face kit 447 keys + 15 emotion keys; breast and five butt sliders on the body. A new
+character = slider values + head + hair + outfit on this base, never a new body. Method and
+review: `docs/character-workflow.md`, `blender-body` skill. The Booth characters in the library
+are SFW only and never go into sexual scenes; licences: `GameAssetLibrary\README.md`.
+
+## Put an animation on a character
+
+Full steps and the clip table: `GameAssetLibrary\animations\retarget\ANIMATIONEN.md`. Short:
+
+1. New clip: put the FBX in `animations\AN_<pack>\source\`, add a `catalog.json` entry.
+2. Bone map: copy `retarget\maps\mixamo_to_yumeka.json`, fix the target bone names for a new rig.
+3. Bake: `blender -b <char.blend> --python retarget.py -- bake <map.json> <out.blend> <clip.fbx>... [--floor meshA,meshB]`.
+   Clips land as actions `MX_<clip>` (fake user, 24 fps) in the character file.
+4. Arm fix: `... -- armfix <out.blend> <action>...` (the body is wider than the Mixamo X Bot).
+5. QA: `... -- strip <action> <png> --outfit office` (8 frames + `##GATE`: lowest shoe point,
+   arm verts inside the body). Look at the strip yourself.
+6. Loop: `loop_window.py -- <name> <frames> <actions>...` picks the best seamless window
+   (`Dance_Tease` is the example).
+7. Add the row to the clip table in `ANIMATIONEN.md`.
+
+Two people (kiss, bed scenes): templates name roles, not bones. Give each character one bone map
+in `rigs\interaction\kiss\bone_maps\<name>.json` (copy `yumeka_v4.json`), then
+`blender -b --factory-startup --python rigs\interaction\kiss\apply_interaction.py -- <scene>.json <charA.blend> <charB.blend> out.blend`.
+The solver links the characters as library overrides and scales contacts by `height_m`;
+characters are never edited. Details: `animations\Nsfw\README.md`.
+
+Free mocap in the cloud: 75 CMU BVH clips + `scripts/retarget_cmu_to_mixamo.py` in
+`/mnt/project-files/companyxy/patches/base-body/library/assets/` (`SOURCES.md`).
+
+## Build a scene (a still or a loop)
+
+1. Start from the library: link the room (or build it once and save it back as a room asset),
+   link the characters, add props from the furniture packs.
+2. Pose from a clip frame or by hand (`POSEN-ANLEITUNG.md`); for two people use the solver.
+3. Render at 1920x1080 (sprites 700x1000, transparent); loops as seamless WebM VP9.
+4. Check before anyone sees it: overlap check (body, clothes, props), all views, feet planted,
+   arms outside the body; a loop needs a 6+ frame strip including first and last frame.
+5. Export the finished file into the game under its slot name (list: the game's `ASSETS.txt`).
+
+## Story and chapters
+
+- Read before writing: `storyteller/README.md`, the cast and plan (`09-story-plan.md`), and search
+  every branch for chapters that already exist (`git ls-tree -r --name-only <branch>`); Rika has ten.
+- One Ren'Py file per chapter (`kapitel<N>.rpy`), optional 18+ night in its own file
+  (`nacht-kapitel<N>.rpy`) behind an in-game 18+ prompt. UI text German.
+- Content line and adult rule: company-xy `TASTE.md` and the project instructions; every
+  character is an adult.
+
+## The Ren'Py game
+
+Setup, art slots, playthrough test, build and laptop delivery: `docs/renpy.md` (template in
+`docs/renpy-template/`). Slots: `game/art/<name>.png|webp|jpg`, `game/art/loops/<name>.webm`;
+a missing file shows a labelled placeholder, a dropped-in file replaces it with no code change.
+
+Next structural step (yskills 2026-10-20 13:57): the game gets its own repo with the source in
+git (`game/` scripts, `ASSETS.txt`, tests), `*.rpyc`, `cache/`, `saves/`, `log.txt` and built zips
+ignored, big art in Git LFS or kept in the library, and `renpy.sh <proj> lint` + the playthrough
+test in CI. Until then the source lives only as zips on the laptop and in project files.
+
+## Lessons (each one cost a round)
+
+- Never report a clip or still as done unseen: check a frame strip (arms, hands, clipping, loop
+  seam, feet planted). Idle_Flirt went out with floating arms and a drifting body.
+- Every still or clip gets an overlap check: a cardigan went through the body, a cup through a
+  tray, toes showed through shoes.
+- Open every `.blend` fresh as saved and check every workspace tab with the body active.
+  Broken bones and empty tabs were found by yskills, not by us.
+- Start the built game once before saying it works; a template file crashed only the build.
+- Rest pose stands straight (Yumeka's); a forward-leaning rest skews every comparison.
+- Ref beside the model in the same view every round; side view first; fail a round that got worse
+  in any view than the best round.
+- One shape key per form; pose correctives as one full target shape driven by bone angle. No
+  stacked fix keys, no global smoothing. Test every model's own keys at 0 and 1 first.
+- `mesh.transform()` needs `shape_keys=True`, or the Basis key stays put.
+- In `Yumeka.blend` the body is `Yumeka_Body`; the object called `Body` is the head. Use
+  `Yumeka.blend`, not `Rika Aizawa.blend` (its rest pose does not match its mesh).
+- Reuse first: existing models, rigs, clips, chapters and game patterns before anything new;
+  research licence and tools before spending budget.
+- Builders fill context fast: hand off by 200k with a `HANDOFF.md` entry.

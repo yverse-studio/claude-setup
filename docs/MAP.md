@@ -33,6 +33,7 @@ lives outside this repo.
 | Claude's PC user | `docs/pc-claude-user.md` | What differs on the `Claude` Windows user (portable Git, env var, paths) and what still needs hands |
 | Cloud threads | `cloud/setup.sh` | Plugins and the context guard in a cloud environment (paste into Project settings) |
 | HQ rows | `docs/hq-rows.md` | What each Project Manager writes into HQ (the page itself lives in yverse-studio/company-xy) |
+| Game pipeline | `docs/game-pipeline.md` | Where every game file lives (laptop GameAssetLibrary, game folder, project files), how to put an animation on a character, build a scene, write a chapter, plus the lessons |
 | Characters | `docs/character-workflow.md` | The one way to make a 3D character and show it to yskills: reference, build, self-check, comparison sheet, gate, library |
 | Using it (for yskills) | `docs/USING.md` | One phone page: how to start an app, deploy or delete a page in one shot, what you see, what it costs |
 | Project registry | `projects/` | One `<name>.json` per project the `new-project` workflow made; `delete-project` needs it |
@@ -61,7 +62,7 @@ added as a second repo, or a plain chat), read that file by path, then the files
 | Design, UI/UX | `operator/roles/designer.md` (Art direction first), `ui-review/SLOP.md`, the project's `DESIGN.md` | `impeccable`, `make-interfaces-feel-better`, `web-interface-guidelines`, `design-system`, `ui-review`, `design-critic` agent |
 | 3D games, Steam | `game-3d` (three.js + Electron, decided 2026-10-07) | `game-3d/refs/` (camera, game feel, levels, glTF, lighting, perf, Steam) |
 | 2D and web games | `toolbox/catalog/data-web.md` (Phaser, PixiJS, Poki, CrazyGames) | `toolbox/catalog/money.md` (H5 game ads) |
-| Visual novels and story games (Ren'Py: setup, art slots, playthrough test, Windows build, laptop delivery) | `docs/renpy.md` | `docs/renpy-template/`, `docs/character-workflow.md` (renders) |
+| Visual novels and story games (Ren'Py: setup, art slots, playthrough test, Windows build, laptop delivery) | `docs/game-pipeline.md` (all files, animation, scenes, story), `docs/renpy.md` | `docs/renpy-template/`, `docs/character-workflow.md` (renders) |
 | Roblox | `roblox` | `toolbox/catalog/roblox.md` (run and see), `studio` (PC) |
 | 3D models, characters | `docs/character-workflow.md` | `blender-body` (rigged body: base, shape keys, pose tests, reviewing), `game-3d` (VRM pipeline), `studio` (Blender on the PC) |
 | Videos and ads (the studio: Producer, Writer, Director, Sound, Editor, Motion, Critic) | `video-studio` | `video-studio/learnings.md`, `market` §4 (ads law) |
