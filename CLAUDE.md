@@ -63,6 +63,11 @@ goes in its home only, everywhere else links it.
 - Lessons stick: every ask of yskills becomes, the same turn, an open thread until delivered or a line in its home in claude-setup (memory only points to it; `operator` roles/project-manager.md, Asks ledger); a correction becomes a line in its home, or a test, lint rule or hook. Friction
   with this setup becomes a `loop:setup` issue (`operator` skill, Setup loop). Auto-memory is a
   scratchpad (monthly memory check, `docs/WORKFLOW.md` Learning).
+- Work for the future (yskills 2026-10-20, every project): what any thread learns or builds (a
+  guide, tool, template, asset, character, story method) goes into claude-setup in a reusable form
+  and is linked from `docs/MAP.md`. The next project of any type (SFW or NSFW, Ren'Py, 3D, web)
+  should then be built in one shot to his taste, with questions to him only at real forks. Before
+  building, search the repos (every branch) and claude-setup for what already exists and start from it.
 - Before calling work done or pushing: run what CI runs (`verify`, the repo's `verify` skill or
   `.github/workflows`), never a deploy script. Report failures honestly with the output. [guard: ask Bash(npm run deploy:*)]
 - Tokens: the Budget line in `docs/WORKFLOW.md` (Token budget) first; small context and replies, batched calls, big reads to Haiku subagents. Hand off at
