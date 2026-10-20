@@ -45,16 +45,17 @@ README and the private `nacht-kapitel1.rpy` only.
 
 ## Characters
 
-The base is Yumeka's own file (body, rig, hair, clothes) with our adult head, straight rest pose,
-tail and wings removed, scaled uniformly to 1.65 m (rig and body together; bones and weights
-untouched). Face kit 447 keys + 15 emotion keys; breast and five butt sliders on the body. A new
-character = slider values + head + hair + outfit on this base, never a new body. Method and
-review: `docs/character-workflow.md`, `blender-body` skill. A character file is a copy of the base in
-`characters\CH_<name>\<name>.blend` (Rika: `CH_rika\Blend\rika.blend`, profile `CH_rika\README.md`); `CH_rika\RIKA-FINAL.blend` is the old
-MakeHuman archive, not used for scenes. 18+ scenes use a base copy in adult or office clothes or none, never
-Yumeka's school outfit; the Booth characters as delivered never go into 18+ scenes. Yumeka's licence allows
-modification and 18+ with a content rating, no redistribution; check before any release. Claude threads do
-not make the explicit renders; yskills makes the night loops and stills himself on `rika.blend`.
+Our female base is `characters\CH_Base\female\Blend\base_female_v4.blend`: body, rig, hair and clothes
+with our adult head, straight rest pose, scaled uniformly to 1.65 m (rig and body together; bones and weights
+untouched). Face kit 447 keys + 15 emotion keys; breast and five butt sliders on the body. A new character =
+copy of the base in `characters\CH_<name>\Blend\<name>.blend` + slider values, head, hair, outfit, never a new
+body. Rika (18, adult, our first figure): `CH_rika\Blend\rika.blend`, profile `CH_rika\README.md`, rebuilt by
+`CH_Base\female\_work\build_rika.py`. Object names inside the files keep their original prefix (scripts and
+bone maps depend on them; find the body as `*_Body`); never rename them by hand. The body source and its
+licence are named only in `CH_Base\LICENCE-SOURCE.txt` (no redistribution of the model, check before any
+release). 18+ scenes use a base copy in adult or office clothes or none, never school-uniform pieces; bought
+characters as delivered never go into 18+ scenes. Method and review: `docs/character-workflow.md`,
+`blender-body` skill.
 
 ## Put an animation on a character
 
@@ -93,6 +94,26 @@ Free mocap in the cloud: 75 CMU BVH clips + `scripts/retarget_cmu_to_mixamo.py` 
 5. Export the finished file into the game under its slot name (list: `game\slots.rpy`), then rebuild
    `scenes\companyxy\ch01\overview.png` with `make_overview.py`.
 
+## The chapter 1 night scenes (yskills builds them himself)
+
+Claude threads do not render these; they only keep this recipe right. Five seamless loops (one per position)
+and five stills (kiss, three endings, after). The exact file names are in the game source, block `init 2`
+of `game/nacht-kapitel1.rpy` (laptop game folder, or `/mnt/project-files/companyxy/game/` for cloud
+threads), and in `GameAssetLibrary\README.md` (section on the night scenes); they stay out of git.
+
+1. Save a new file as `scenes\companyxy\ch01\<slot>\<slot>.blend`.
+2. File > Link: room `environment\rooms\office_night\office_night.blend` (10th floor, desk, chief chair,
+   window wall with skyline; preview `office_night_preview.png`), Rika `characters\CH_rika\Blend\rika.blend`,
+   the man `characters\CH_male\male.blend` (1.90 m in scenes); Object > Library Override > Make to pose.
+3. Cameras already in the room: `Camera_POV_stand` (eye 1.78 m), `Camera_POV_sit` (1.27 m), `Camera_Side`,
+   `Camera_Render`. Output 1920x1080.
+4. Pose by hand or from an `MX_*` action; references: `C:\Users\Claude\Downloads\CompanyXY-Referenzen.zip`
+   (`INHALT.txt` lists the folders).
+5. Check: nothing inside a body, feet planted, loop's first frame = last frame.
+6. Stills: PNG 1920x1080 into the game's `game\art\`. Loops: render a PNG sequence, then
+   `ffmpeg -framerate 24 -i f_%03d.png -vf "scale=1920:1080,format=yuv420p" -c:v libvpx-vp9 -b:v 0 -crf 30 <slot>.webm`
+   into `game\art\loops\`. Restart the game: the placeholder is replaced.
+
 ## Story and chapters
 
 - Read before writing: `storyteller/README.md`, the cast and plan (`09-story-plan.md`), and search
@@ -122,14 +143,13 @@ test in CI. Until then the source lives only as zips on the laptop and in projec
 - Open every `.blend` fresh as saved and check every workspace tab with the body active.
   Broken bones and empty tabs were found by yskills, not by us.
 - Start the built game once before saying it works; a template file crashed only the build.
-- Rest pose stands straight (Yumeka's); a forward-leaning rest skews every comparison.
+- Rest pose stands straight; a forward-leaning rest skews every comparison.
 - Ref beside the model in the same view every round; side view first; fail a round that got worse
   in any view than the best round.
 - One shape key per form; pose correctives as one full target shape driven by bone angle. No
   stacked fix keys, no global smoothing. Test every model's own keys at 0 and 1 first.
 - `mesh.transform()` needs `shape_keys=True`, or the Basis key stays put.
-- In `Yumeka.blend` the body is `Yumeka_Body`; the object called `Body` is the head. Use
-  `Yumeka.blend`, not `Rika Aizawa.blend` (its rest pose does not match its mesh).
+- In the base the body mesh is `*_Body`; the object called `Body` is the head.
 - Reuse first: existing models, rigs, clips, chapters and game patterns before anything new;
   research licence and tools before spending budget.
 - Builders fill context fast: hand off by 200k with a `HANDOFF.md` entry.
