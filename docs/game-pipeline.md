@@ -11,29 +11,26 @@ longer matches the laptop is a bug: fix the page, not your memory.
 
 ## Where things live
 
-| What | Where | Notes |
-|---|---|---|
-| Asset library (sources, all games) | laptop `C:\Users\Claude\Documents\GameAssetLibrary` | Not in git. Its `README.md` holds the tree, `catalog.json` one entry per asset (licence, formats, SFW flag) |
-| Female base (one base for all scenes) | `GameAssetLibrary\characters\CH_Base\female\Blend\base_female_v4.blend` | Backups `base_female_v4<letter>-before-<step>.blend` next to it; work log `..\_work\HANDOFF.md` |
-| Male | `GameAssetLibrary\characters\CH_male\male.blend` | 1.90 m; penis = `objects\nsfw\chinko.obj` merged on for now |
-| Rika archive | `GameAssetLibrary\characters\CH_rika\` (`RIKA-FINAL.blend`, `RIKA-SFW.blend`, `RIKA-BLENDER-GUIDE.md`) | Older body; v4 base replaces it for scenes |
-| Animation clips | `GameAssetLibrary\animations\AN_<name>\source\` | Mixamo basics: 24 FBX (`LIST.md`) |
-| Retarget tools + guide | `GameAssetLibrary\animations\retarget\` (`ANIMATIONEN.md`, `retarget.py`, `loop_window.py`, `maps\`, `strips\`) | Read `ANIMATIONEN.md` first |
-| Two-person scene templates | `GameAssetLibrary\animations\Nsfw\*.json` + `README.md` | Solved by the interaction solver below |
-| Interaction rig (kiss, anchors) | `GameAssetLibrary\rigs\interaction\kiss\` (`kiss.json`, `apply_interaction.py`, `bone_maps\<char>.json`) | |
-| Shot sources (now) | `GameAssetLibrary\characters\CH_Base\female\Scenes\cg_<shot>.blend`, renders in `..\Image\bg\`, `..\Image\cg\` | To move to the target layout below |
-| Ren'Py game (built) | laptop `C:\Users\Claude\Documents\GitHub\CompanyXY-Spiel\CompanyXY-1.0-pc\` (`CompanyXY.exe`) | Source copy + Windows zip also in `/mnt/project-files/companyxy/game/` |
-| Story guide + plan | `/mnt/project-files/companyxy/story/storyteller/` (README, 01-09, `09-story-plan.md`) | Rika's ten written chapters: company-xy branch `story-rika-fanservice` |
-| Body building guide + lessons | `/mnt/project-files/companyxy/patches/base-body/` (`GUIDE.md`, `LESSONS.md`, `tools/`, `library/`) | `characters/POSEN-ANLEITUNG.md` for posing |
-| Project memory | `MEMORY.md` of the CompanyXY claude.ai project | Points here; this page is the home |
+The folder tree, the scene slots and the step-by-step for building a scene by hand live in **one place**:
+`GameAssetLibrary\README.md` on the laptop (a copy for cloud threads: `/mnt/project-files/companyxy/docs/GameAssetLibrary-README.md`).
+That README is for yskills and is the home of every laptop path; this page only names the main ones and
+links it. Update both in the same turn when a folder changes.
 
-**Target layout** (yskills 2026-10-20, not built yet; the next scene thread creates it and moves
-the shots): rooms in `GameAssetLibrary\environment\rooms\<room>\<room>.blend` (collections marked
-as assets), furniture packs in `environment\furniture\<pack>\` (licence + `catalog.json` entry,
-catalogs Seating, Tables, Beds, Storage, Office, Decor, Lighting), shots in
-`scenes\<game>\<chapter>\<shot>\` (shot `.blend`, master render, `compare.png` ref | result).
-Scenes **link** rooms and characters, never copy them, so one fix updates every scene. The game
-folder only ever gets exported copies.
+| What | Where |
+|---|---|
+| Asset library | laptop `C:\Users\Claude\Documents\GameAssetLibrary` (not in git; `catalog.json` one entry per asset) |
+| Female base template (only file in its folder) | `characters\CH_Base\female\Blend\base_female_v4.blend`; tools and work log in `..\_work\` (`sets.py`, `cg_lib.py`, `poses.py`, `body_aware.py`, `HANDOFF.md`) |
+| A character | `characters\CH_<name>\` (Rika: `CH_rika`; man: `CH_male\male.blend`) |
+| Rooms | `environment\rooms\<room>\<room>.blend` (built by `_work\sets.py`) |
+| Shots | `scenes\<game>\<chapter>\<shot>\<shot>.blend` + `compare.png`; overview `scenes\companyxy\ch01\overview.png` |
+| Animation | `animations\retarget\ANIMATIONEN.md` (+ `retarget.py`, `maps\`); packs in `animations\AN_<name>\` |
+| Two-person rig | `rigs\interaction\` (`README.md`, `kiss\`) |
+| Ren'Py game | laptop `GitHub\CompanyXY-Spiel\CompanyXY-1.0-pc\` (`game\art\`, `game\art\loops\`, slots in `game\slots.rpy`); zips in `/mnt/project-files/companyxy/game/` |
+| Story guide + plan | `/mnt/project-files/companyxy/story/storyteller/` (`09-story-plan.md`); Rika's ten chapters: company-xy branch `story-rika-fanservice` |
+| Body building guide + lessons | `/mnt/project-files/companyxy/patches/base-body/` (`GUIDE.md`, `LESSONS.md`); posing `characters/POSEN-ANLEITUNG.md` |
+
+Explicit slot names and scene contents stay out of git (company-xy PR 80 rule): they live in the laptop
+README and the private `nacht-kapitel1.rpy` only.
 
 ## Blender basics on the laptop
 
@@ -74,20 +71,23 @@ Two people (kiss, bed scenes): templates name roles, not bones. Give each charac
 in `rigs\interaction\kiss\bone_maps\<name>.json` (copy `yumeka_v4.json`), then
 `blender -b --factory-startup --python rigs\interaction\kiss\apply_interaction.py -- <scene>.json <charA.blend> <charB.blend> out.blend`.
 The solver links the characters as library overrides and scales contacts by `height_m`;
-characters are never edited. Details: `animations\Nsfw\README.md`.
+characters are never edited. Details: `rigs\interaction\README.md`, scene sheets in `animations\Nsfw\`.
 
 Free mocap in the cloud: 75 CMU BVH clips + `scripts/retarget_cmu_to_mixamo.py` in
 `/mnt/project-files/companyxy/patches/base-body/library/assets/` (`SOURCES.md`).
 
 ## Build a scene (a still or a loop)
 
-1. Start from the library: link the room (or build it once and save it back as a room asset),
-   link the characters, add props from the furniture packs.
+1. New `.blend` under `scenes\<game>\<chapter>\<shot>\`. Link the room from `environment\rooms\`
+   (a new room: build it in `sets.py`, save it there), link the characters, make library overrides to pose.
+   By script instead: copy a shot script from `_work\` (`cg_desk_pact.py` still, `loop_stretch.py` loop);
+   scripts never save into the base.
 2. Pose from a clip frame or by hand (`POSEN-ANLEITUNG.md`); for two people use the solver.
 3. Render at 1920x1080 (sprites 700x1000, transparent); loops as seamless WebM VP9.
-4. Check before anyone sees it: overlap check (body, clothes, props), all views, feet planted,
-   arms outside the body; a loop needs a 6+ frame strip including first and last frame.
-5. Export the finished file into the game under its slot name (list: the game's `ASSETS.txt`).
+4. Check before anyone sees it: `body_aware.overlap()` (flags anything over 2 mm; `##GATE ... bad 0`),
+   all views, feet planted, arms outside the body; a loop needs a 6+ frame strip including first and last frame.
+5. Export the finished file into the game under its slot name (list: `game\slots.rpy`), then rebuild
+   `scenes\companyxy\ch01\overview.png` with `make_overview.py`.
 
 ## Story and chapters
 
