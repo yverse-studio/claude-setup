@@ -83,6 +83,8 @@ Free mocap in the cloud: 75 CMU BVH clips + `scripts/retarget_cmu_to_mixamo.py` 
 
 ## Build a scene (a still or a loop)
 
+Two figures (poses, contact solver, motion, POV camera, look, export): `docs/two-figure-scenes.md`.
+
 1. New `.blend` under `scenes\<game>\<chapter>\<shot>\`. Link the room from `environment\rooms\`
    (a new room: build it in `sets.py`, save it there), link the characters, make library overrides to pose.
    By script instead: copy a shot script from `_work\` (`cg_desk_pact.py` still, `loop_stretch.py` loop);
