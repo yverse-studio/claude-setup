@@ -1,6 +1,6 @@
 ---
 name: blender-body
-description: "Use for any 3D character body, rig or review work in Blender: picking a base, shape keys, posed tests, hand-in sheets, grading a body. Born from 13 failed Luna rounds."
+description: "Use for any 3D character body, rig or review work in Blender: picking a base, shape keys, posed tests, hand-in sheets, grading a body. Born from 13 failed Luna rounds and 15 Miss Galaxy rounds."
 ---
 
 # Blender body: build and review a rigged character body
@@ -12,6 +12,41 @@ Every 3D builder and reviewer thread loads it. Blender setup and views: [`studio
 the character order (reference, brief, sheet, gate): [`docs/character-workflow.md`](../../../docs/character-workflow.md).
 The per-round lists live in [`checklists.md`](checklists.md): builder checklist, reviewer checklist,
 hand-in sheet contract.
+How a professional game avatar is built (mesh split, naming, rig and physics bones, clothes,
+face keys, Unity and Mixamo mapping), and **rule 0: test every built-in shape key at 0 and 1
+before building**: [`booth-avatars.md`](booth-avatars.md).
+
+## Method v2 (Miss Galaxy line, 2026-10-19): read this first
+
+15 more rounds (mg1 to mg15) taught what the Luna rules did not. Details and the why:
+[`references/method.md`](references/method.md) (build), [`references/gate.md`](references/gate.md)
+(review), [`references/master-base.md`](references/master-base.md) (one mesh for every woman).
+
+1. **Simplest method first, and say so before building.** Scale the base's own form before adding
+   any shaping key. The bust finally worked (mg14, "way better") as the PURE original breast, every
+   extra key and the nipple-ring key off, scaled evenly 1.4x and a bit fuller; the butt the same at
+   1.25x. Nine rounds of extra shaping keys on top made the dent and the teardrop. If a simpler
+   or better method exists, tell yskills before building; he lost two weeks to a method nobody
+   proposed.
+2. **One key per form, never stacked.** A bad key is switched off, never patched. No added loops:
+   Subdivision Surface gives density. Subdivision runs after the rig; pose correctives are keys
+   driven by bone angle. Subdivision needs quads. A bust key masked by arm weights leaves a step:
+   fade it.
+3. **The best round is the baseline.** Never regress from it (mg2-w9 stays as the untouched
+   fallback). A new round shows ref | best | new on one canvas; anything worse fails.
+4. **Never again** (ERROR-SEARCH, `references/method.md`): no head or neck tools once the base is
+   chosen; no stacked fix keys; no global smoothing; no profile fit against a fresh trace; no base
+   switch without a same-size sheet plus two gates; crown and soles in frame; same cameras every
+   round; posed set every round; never a teardrop bust.
+5. **Review: one standing reviewer, plus an independent check for 5/5.** The same reviewer thread
+   re-grades every round (it holds the best-round history); do not start a fresh one per round. A
+   5/5 counts only after the reviewer re-ran all views itself AND a fresh, independent reviewer
+   with the checklist agreed. Gates: [`references/gate.md`](references/gate.md).
+6. **Tracking.** The dense tracker and overlay bands were Luna's outline tool. With a good base the
+   gate is `tools/review/review_mg.py` (frame contract, bust apex, bow, butt shelf) plus the eye.
+   Numbers are hints; yskills' eye on the reference picture beats every number.
+7. **Builders hand in early.** They run out of context mid-list. Update the handoff after every
+   finished version.
 
 ## The rules (each one cost a round)
 
@@ -64,7 +99,7 @@ hand-in sheet contract.
    threads, no new thread per round). A brief names **only** the LIVE STATE block, the contract
    blocks and the top 3 items of the current plan; a builder that reads whole study libraries fills
    its context on one item (a Luna builder stopped at its 210k context budget with nothing handed in). Hand-in comes
-   first in the plan, research second. Cloud Blender setup is about two minutes:
+   first in the plan, research second. Cloud Blender setup is about two minutes (also in `references/method.md`):
    `apt-get update && apt-get install -y libegl1 libgl1-mesa-dri libegl-mesa0 libgles2 libtbb12`,
    `python3.13 -m pip install bpy scipy pillow numpy matplotlib`.
 9. **Same size, every sheet.** The blobcg reference is the only shape target (other models, and

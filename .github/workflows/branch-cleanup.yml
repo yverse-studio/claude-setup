@@ -1,0 +1,63 @@
+name: branch-cleanup
+
+# Tidies an org repo: every branch that is not the default branch and has no open PR gets a tag
+# `archive/<branch>` on its tip, then the branch is deleted. Nothing is lost: `git checkout
+# archive/<branch>` brings it back. Run workflow only (Actions page or a thread's run_workflow).
+# `dry_run` (default) only logs the plan; `keep` names extra branches to leave alone.
+on:
+  workflow_dispatch:
+    inputs:
+      repo:
+        description: 'Repo name in yverse-studio'
+        required: true
+        type: string
+      keep:
+        description: 'Extra branches to keep, comma-separated'
+        required: false
+        type: string
+        default: ''
+      dry_run:
+        description: 'Only print what would be archived and deleted'
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: branch-cleanup-${{ inputs.repo }}
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - run: |
+          set -euo pipefail
+          case "$REPO_NAME" in (*[!A-Za-z0-9._-]*|'') echo "bad repo name"; exit 1;; esac
+          R="yverse-studio/$REPO_NAME"
+          default=$(gh api "repos/$R" --jq .default_branch)
+          gh api --paginate "repos/$R/pulls?state=open&per_page=100" \
+            --jq ".[] | select(.head.repo.full_name == \"$R\") | .head.ref" > open.txt
+          echo "$KEEP" | tr ',' '\n' | sed 's/^ *//;s/ *$//' | grep -v '^$' >> open.txt || true
+          gh api --paginate "repos/$R/branches?per_page=100" --jq '.[] | "\(.name) \(.commit.sha)"' > branches.txt
+          n=0
+          while read -r name sha; do
+            [ "$name" = "$default" ] && continue
+            grep -qxF "$name" open.txt && { echo "keep  $name (open PR or keep list)"; continue; }
+            n=$((n+1))
+            if [ "$DRY_RUN" = "true" ]; then echo "would archive+delete $name"; continue; fi
+            tag="archive/$name"
+            have=$(gh api "repos/$R/git/ref/tags/$tag" --jq .object.sha 2>/dev/null || true)
+            if [ -n "$have" ] && [ "$have" != "$sha" ]; then tag="archive/$name-${sha:0:7}"; have=""; fi
+            [ -z "$have" ] && gh api -X POST "repos/$R/git/refs" -f ref="refs/tags/$tag" -f sha="$sha" --silent
+            gh api -X DELETE "repos/$R/git/refs/heads/$name" --silent
+            echo "archived $tag, deleted $name"
+          done < branches.txt
+          echo "$n branches $( [ "$DRY_RUN" = "true" ] && echo 'would be' ) archived and deleted in $R"
+        env:
+          GH_TOKEN: ${{ secrets.PROJECTS_GITHUB_TOKEN }}
+          REPO_NAME: ${{ inputs.repo }}
+          KEEP: ${{ inputs.keep }}
+          DRY_RUN: ${{ inputs.dry_run }}
