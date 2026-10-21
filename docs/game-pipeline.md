@@ -25,7 +25,7 @@ links it. Update both in the same turn when a folder changes.
 | Shots | `scenes\<game>\<chapter>\<shot>\<shot>.blend` + `compare.png`; overview `scenes\companyxy\ch01\overview.png` |
 | Animation | `animations\retarget\ANIMATIONEN.md` (+ `retarget.py`, `maps\`); packs in `animations\AN_<name>\` |
 | Two-person rig | `rigs\interaction\kiss\` (`README.md`, `kiss.json`, `apply_interaction.py`, `bone_maps\`) |
-| Ren'Py game | laptop `GitHub\CompanyXY-Spiel\CompanyXY-1.0-pc\` (`game\art\`, `game\art\loops\`, slots in `game\slots.rpy`); zips in `/mnt/project-files/companyxy/game/` |
+| Ren'Py game | private repo `yverse-studio/companyxy-spiel` (`game/` source, `story/<char>/` chapters, `story/briefs/` scene list + briefs); playable build on the laptop `GitHub\CompanyXY-Spiel\CompanyXY-1.0-pc\` (art in `game\art\`, `game\art\loops\`, slots in `game\slots.rpy`) |
 | Story guide + plan | `/mnt/project-files/companyxy/story/storyteller/` (`09-story-plan.md`); Rika's ten chapters: company-xy branch `story-rika-fanservice` |
 | Body building guide + lessons | `/mnt/project-files/companyxy/patches/base-body/` (`GUIDE.md`, `LESSONS.md`); posing `characters/POSEN-ANLEITUNG.md` |
 
@@ -144,10 +144,9 @@ Setup, art slots, playthrough test, build and laptop delivery: `docs/renpy.md` (
 `docs/renpy-template/`). Slots: `game/art/<name>.png|webp|jpg`, `game/art/loops/<name>.webm`;
 a missing file shows a labelled placeholder, a dropped-in file replaces it with no code change.
 
-Next structural step (yskills 2026-10-20 13:57): the game gets its own repo with the source in
-git (`game/` scripts, `ASSETS.txt`, tests), `*.rpyc`, `cache/`, `saves/`, `log.txt` and built zips
-ignored, big art in Git LFS or kept in the library, and `renpy.sh <proj> lint` + the playthrough
-test in CI. Until then the source lives only as zips on the laptop and in project files.
+The game has its own private repo, `yverse-studio/companyxy-spiel` (since 2026-10-21): `game/` scripts,
+`ASSETS.txt`, tests and the story; `*.rpyc`, `cache/`, `saves/`, `log.txt` and built zips ignored; big art stays
+in the library. A new story game copies this layout.
 
 ## Lessons (each one cost a round)
 
