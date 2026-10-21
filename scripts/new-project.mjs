@@ -10,7 +10,7 @@
 // and takes only that json from the branch), else NAME, ORG, D1 from a workflow_dispatch. The json: `{ "name", "d1", "org" }` and, for
 // an existing repo, `"repo"` (its GitHub name; production builds its default branch), `"build"`,
 // `"deploy"`, `"preview"` (Workers Builds commands) and `"secret": false` (no BETTER_AUTH_SECRET,
-// e.g. a static site), `"kind": "game"` (a static Vite + three.js game, no D1), `"kv": ["CACHE"]` (a KV namespace `<name>-CACHE` and `<name>-CACHE-preview` per binding, ids in the log).
+// e.g. a static site), `"kind": "game"` (a static Vite + three.js game, no D1), `"kind": "repo"` (a private repo with a README only: no Worker, D1 or scaffold, for code that is not a web page, e.g. a Ren'Py game), `"kv": ["CACHE"]` (a KV namespace `<name>-CACHE` and `<name>-CACHE-preview` per binding, ids in the log).
 import { cpSync, mkdtempSync, readFileSync, writeFileSync, rmSync, appendFileSync, existsSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
@@ -54,7 +54,7 @@ export const ORG = 'yverse-studio'
 // default branch, and a Worker of the same name is never adopted. Without it the repo is new and
 // shares the Worker's name. Build commands are the day-zero site's unless the json names its own.
 export function projectConfig(name, cfg = {}) {
-  const kind = cfg.kind === 'game' ? 'game' : 'site'
+  const kind = ['game', 'repo'].includes(cfg.kind) ? cfg.kind : 'site'
   const d1 = kind === 'site' && cfg.d1 !== false // a game is static: no database
   const defaults = buildCommands(d1)
   return {
@@ -457,18 +457,34 @@ async function ensureSecret(cf, name, key, text) {
   log('secret', `${key} set`)
 }
 
-function pushScaffold(dir, org, name, branch, token) {
+// A repo-only project (`"kind": "repo"`) starts from one README; its first PR brings the code.
+export function writeRepoReadme(dir, name) {
+  writeFileSync(join(dir, 'README.md'), `# ${name}\n\nMade by claude-setup's new-project workflow (\`"kind": "repo"\`): a private repo, no Worker. The first PR brings the code and its CLAUDE.md.\n`)
+}
+
+function pushScaffold(dir, org, name, branch, token, message = `feat: day-zero site for ${name}`) {
   const run = (args) => execFileSync('git', args, { cwd: dir, stdio: ['ignore', 'pipe', 'pipe'], encoding: 'utf8' })
   run(['init', '-q', '-b', branch])
   run(['config', 'user.name', 'Claude'])
   run(['config', 'user.email', 'noreply@anthropic.com'])
   run(['add', '-A'])
-  run(['commit', '-q', '-m', `feat: day-zero site for ${name}\n\nMade by claude-setup's new-project workflow.`])
+  run(['commit', '-q', '-m', `${message}\n\nMade by claude-setup's new-project workflow.`])
   try {
     run(['push', '-q', `https://x-access-token:${token}@github.com/${org}/${name}.git`, `HEAD:${branch}`])
   } catch (err) {
     throw new Error(`git push to ${org}/${name} failed: ${String(err.stderr || err.message).replaceAll(token, '***').slice(0, 300)}`)
   }
+}
+
+async function repoOnly(gh, { org, name, repo, branch, token }) {
+  if (await repoIsEmpty(gh, org, name)) {
+    const dir = mkdtempSync(join(tmpdir(), 'new-project-'))
+    writeRepoReadme(dir, name)
+    pushScaffold(dir, org, name, branch, token, `docs: start ${name}`)
+    log('repo', `pushed a README to ${branch}; no Worker for kind "repo"`)
+  }
+  if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, `## ${name}\n\n- Repo: ${repo.html_url} (private, kind "repo": no Worker)\n`)
+  console.log(JSON.stringify({ repo: repo.html_url, kind: 'repo' }, null, 2))
 }
 
 export async function main() {
@@ -493,6 +509,7 @@ export async function main() {
   const repo = existing ? found.json : await ensureRepo(gh, org, repoName)
   const branch = existing ? repo.default_branch : 'main'
   if (!validBranch(branch || '')) throw new Error(`default branch "${branch}" of ${org}/${repoName} is not a branch name`)
+  if (kind === 'repo') return repoOnly(gh, { org, name: repoName, repo, branch, token: ghToken })
   // A Worker of the same name is adopted only on a re-run for a repo this workflow made.
   const adopt = found.ok && !existing
   const liveId = d1 ? await ensureD1(cf, name) : undefined

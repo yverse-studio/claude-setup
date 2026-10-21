@@ -24,10 +24,10 @@ on:
         type: boolean
         default: true
       kind:
-        description: 'site (day-zero site) or game (static three.js game, no D1)'
+        description: 'site (day-zero site), game (static three.js game, no D1) or repo (private repo only, no Worker)'
         required: false
         type: choice
-        options: [site, game]
+        options: [site, game, repo]
         default: site
       org:
         description: 'GitHub org that owns the repo'

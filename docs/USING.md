@@ -48,10 +48,10 @@ What you do: write the idea. A thread does the rest.
 2. Start it: push branch `new/<name>` **in one push, with the file in it** (git, or `push_files` to
    a new branch; `create_branch` then `create_or_update_file` is two pushes and the first, empty
    one makes a site), file `projects/<name>.json`:
-   `{ "name": "<name>", "d1": true, "org": "yverse-studio" }`, plus `"kind": "game"` for a game.
+   `{ "name": "<name>", "d1": true, "org": "yverse-studio" }`, plus `"kind": "game"` for a game, `"kind": "repo"` for a private repo with no Worker (e.g. a Ren'Py game).
    Or start `new-project.yml` in `yverse-studio/claude-setup`: GitHub MCP `actions_run_trigger`
    `run_workflow`, ref `main`, inputs `name`, `d1` (false when the page stores no data), `kind`
-   (`site` or `game`).
+   (`site`, `game` or `repo`).
 3. Register it: the new repo's first PR (or a small PR in claude-setup) adds
    `projects/<name>.json` to `main`; the branch is deleted after the run, so nobody else does.
    Delete refuses names without it. A game's first PR replaces the day-zero stub; until it
