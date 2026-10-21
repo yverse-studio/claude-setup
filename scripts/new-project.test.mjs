@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { mkdtempSync, readFileSync, existsSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { projectFromBranch, validName, wranglerConfig, packageJson, buildCommands, writeScaffold, describe, redact, hookIdFrom, connectRepo, ensureBuilds, buildState, pickBuildToken } from './new-project.mjs'
+import { projectFromBranch, validName, wranglerConfig, packageJson, buildCommands, writeScaffold, describe, redact, hookIdFrom, connectRepo, ensureBuilds, buildState, pickBuildToken, writeRepoReadme } from './new-project.mjs'
 
 test('names are workers.dev safe', () => {
   assert.ok(validName('duo-test'))
@@ -158,6 +158,15 @@ test('pickBuildToken takes the only token, and honours BUILD_TOKEN_NAME', async 
 
 test('pickBuildToken still stops on two unknown tokens and no secret', async () => {
   await assert.rejects(pickBuildToken(tokenList('a', 'b'), undefined, undefined), /none is named "claude-setup-builds"/)
+})
+
+test('a repo project is a private repo with a README only: no database, login or Worker scaffold', () => {
+  const r = projectFromBranch('new/novel', (file) => (file.startsWith('incoming/') ? { kind: 'repo', d1: true } : null))
+  assert.deepEqual([r.kind, r.d1, r.secret], ['repo', false, false])
+  const dir = mkdtempSync(join(tmpdir(), 'np-repo-'))
+  writeRepoReadme(dir, 'novel')
+  assert.ok(readFileSync(join(dir, 'README.md'), 'utf8').startsWith('# novel'))
+  rmSync(dir, { recursive: true, force: true })
 })
 
 test('a game project is a static Vite + three.js Worker without a database or login', () => {
