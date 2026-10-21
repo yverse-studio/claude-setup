@@ -153,3 +153,17 @@ test in CI. Until then the source lives only as zips on the laptop and in projec
 - Reuse first: existing models, rigs, clips, chapters and game patterns before anything new;
   research licence and tools before spending budget.
 - Builders fill context fast: hand off by 200k with a `HANDOFF.md` entry.
+- Check what the body already has first: every model job starts with an inventory of existing shape keys,
+  geometry, painted details, weights and materials, and improves those. Grafting new anatomy geometry over
+  detail the body already had wasted a whole budget (10-21); the fix that stuck opened the existing
+  painted detail with sliders that read closed at 0, plus a vertex group for the region.
+- Soft-body keys (squeeze, push-up, hand dents, sit-flatten, POV head) go on the character file as one named
+  key each, driven where a bone angle decides; list them in the laptop README so the animator finds them.
+- Blender drops actions with no user on save: set `use_fake_user = True` on every action before saving, and
+  verify full lists, never a truncated print.
+- Renames happen all at once or not at all, with the bone/animation maps updated in the same step; a half
+  rename broke the animator's maps (10-21). Adopted models are named after the current character.
+- New downloads land in `GameAssetLibrary\temp` (the inbox): unpack, keep only what is needed, sort into the
+  library with licence and catalog entry, then empty temp.
+- Back up a file before a body change as `<name>_before-<change>.blend`; scale uniformly, never touch bones
+  or weights.

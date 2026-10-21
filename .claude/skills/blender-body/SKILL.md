@@ -16,6 +16,11 @@ How a professional game avatar is built (mesh split, naming, rig and physics bon
 face keys, Unity and Mixamo mapping), and **rule 0: test every built-in shape key at 0 and 1
 before building**: [`booth-avatars.md`](booth-avatars.md).
 
+**Where the know-how lives:** this skill (method, rules, technique), [`booth-avatars.md`](booth-avatars.md)
+(how pro avatars are laid out), [`checklists.md`](checklists.md), and `docs/game-pipeline.md` (laptop paths,
+characters, animation, scenes, Ren'Py and the latest lessons). Project specifics (file paths, slider values,
+scene slots) live in the private game repo and the laptop `GameAssetLibrary\README.md`.
+
 ## Method v2 (Miss Galaxy line, 2026-10-19): read this first
 
 15 more rounds (mg1 to mg15) taught what the Luna rules did not. Details and the why:
