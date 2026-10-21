@@ -108,6 +108,12 @@ What you do: say "delete <name>". Deleting is the one step Claude asks for first
 It refuses protected names, names without `projects/<name>.json` on `main`, and repos the
 workflow did not make. Detail: `publish` skill (Delete a project).
 
+## Tidy a repo's branches
+
+Run `branch-cleanup.yml` (`actions_run_trigger` `run_workflow`, ref `main`) with `repo`, `dry_run`
+true, read the plan, then again with `dry_run` false. Every branch without an open PR gets a tag
+`archive/<branch>` and is deleted; `git checkout archive/<branch>` brings one back.
+
 ## When Claude asks you
 
 Only for real money, mail or posts, deleting data, force-push, rotating a secret, a choice with
