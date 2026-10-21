@@ -94,6 +94,19 @@ Free mocap in the cloud: 75 CMU BVH clips + `scripts/retarget_cmu_to_mixamo.py` 
 5. Export the finished file into the game under its slot name (list: `game\slots.rpy`), then rebuild
    `scenes\companyxy\ch01\overview.png` with `make_overview.py`.
 
+## Scene brief (what the animator gets per scene)
+
+One file per game: a scene table (chapter, beat, slot, type), then one brief per animated scene:
+- **Slot**: `<char>_c<NN>_<what>` = `game/art/<slot>.png` (still) or `game/art/loops/<slot>.webm` (loop).
+- **Type**: still, loop (length in frames at 24 fps, seam frame) or loop + finish (finish length).
+- **Room**: existing room file from `environment\rooms\` or a new-room spec (size, furniture with
+  positions, light sources, time of day, props).
+- **Characters**: file per character, outfit state at start and end, hair state.
+- **Action**: per phase, pose and motion with timing; existing clips to start from.
+- **Camera**: which camera (POV stand or sit, side, close), lens, framing.
+- **Shape keys and expressions**: by name from the laptop README; values per phase.
+- **Sound** cues, and **checks**: feet planted, no clipping, loop seam, hands.
+
 ## The chapter 1 night scenes (yskills builds them himself)
 
 Claude threads do not render these; they only keep this recipe right. Five seamless loops (one per position)
@@ -116,8 +129,8 @@ threads), and in `GameAssetLibrary\README.md` (section on the night scenes); the
 
 ## Story and chapters
 
-- Read before writing: `storyteller/README.md`, the cast and plan (`09-story-plan.md`), and search
-  every branch for chapters that already exist (`git ls-tree -r --name-only <branch>`); Rika has ten.
+- Load the `storyteller` skill. Read the game repo's cast and plan, and search every branch for
+  chapters that already exist (`git ls-tree -r --name-only <branch>`) before writing new ones.
 - One Ren'Py file per chapter (`kapitel<N>.rpy`), optional 18+ night in its own file
   (`nacht-kapitel<N>.rpy`) behind an in-game 18+ prompt. UI text German.
 - Content line and adult rule: company-xy `TASTE.md` and the project instructions; every
