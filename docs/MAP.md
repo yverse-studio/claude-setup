@@ -60,12 +60,12 @@ added as a second repo, or a plain chat), read that file by path, then the files
 | German law, DSGVO | `legal` | `legal-reviewer` agent; `sell/legal-de.md` for shops |
 | Security | `security-review` | `security-reviewer`, `red-team` agents |
 | Design, UI/UX | `operator/roles/designer.md` (Art direction first), `ui-review/SLOP.md`, the project's `DESIGN.md` | `impeccable`, `make-interfaces-feel-better`, `web-interface-guidelines`, `design-system`, `ui-review`, `design-critic` agent |
-| 3D games, Steam | `game-3d` (three.js + Electron, decided 2026-10-07) | `game-3d/refs/` (camera, game feel, levels, glTF, lighting, perf, Steam) |
+| 3D games, Steam | `game-3d` (three.js + Electron, decided 2026-10-07) | `game-3d/refs/` (camera, game feel, levels, glTF, lighting, perf, Steam, `vfx-nodes.md`) |
 | 2D and web games | `toolbox/catalog/data-web.md` (Phaser, PixiJS, Poki, CrazyGames) | `toolbox/catalog/money.md` (H5 game ads) |
 | Visual novels and story games (Ren'Py: setup, art slots, playthrough test, Windows build, laptop delivery) | `docs/game-pipeline.md` (all files, animation, scenes, scene briefs), `docs/two-figure-scenes.md`, `docs/renpy.md`, `storyteller` skill | `docs/renpy-template/`, `docs/character-workflow.md` (renders) |
 | Roblox | `roblox` | `toolbox/catalog/roblox.md` (run and see), `studio` (PC) |
 | 3D models, characters | `docs/character-workflow.md` | `blender-body` (rigged body: base, shape keys, pose tests, reviewing; pro avatar anatomy in `booth-avatars.md`), `game-3d` (VRM pipeline), `studio` (Blender on the PC) |
-| Videos and ads (the studio: Producer, Writer, Director, Sound, Editor, Motion, Critic) | `video-studio` | `video-studio/learnings.md`, `market` §4 (ads law) |
+| Videos and ads (the studio: Producer, Writer, Director, Sound, Editor, Motion, Critic) | `video-studio` | `video-studio/learnings.md`, `video-studio/formats.md` (mascot-explainer, POV magic, blockout to AI video), `market` §4 (ads law) |
 | Social media: posting, comments, DMs, idea backlog, brand accounts, brand deals | `social-team` | `social-team/learnings.md`, `market` §4 and §6 |
 | Video and photo edits | `media-editing` | `watch` (understand a video), `toolbox/catalog/video-audio.md` (AI video, voice, music) |
 | AI features, local models | `toolbox/catalog/ai.md` | the built-in `claude-api` skill; `docs/research/2026-10-07-own-local-model.md` |

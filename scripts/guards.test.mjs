@@ -113,3 +113,59 @@ test('check.mjs fails when a role file drops the model-and-handoff link or the b
     for (const want of ['roles/programmer.md: lacks the link', 'thread brief block lacks "Handoff: at "']) assert.ok(r.stderr.includes(want), `missing: ${want}\n${r.stderr}`)
   } finally { rmSync(copy, { recursive: true, force: true }) }
 })
+
+// Attempt guard: a round is a failed run of the same command; success resets; PROGRESS.md unblocks.
+const guardFile = join(root, 'global/attempt-guard.mjs')
+const runGuard = (mode, session, cwd, command) => spawnSync(process.execPath, [guardFile, mode], {
+  input: JSON.stringify({ session_id: session, cwd, tool_name: 'Bash', tool_input: { command } }), encoding: 'utf8', timeout: 5000,
+})
+
+test('attempt guard: reminder at 3, block at 5 until a diagnosis, hand-off at 8, success resets', () => {
+  const cwd = mkdtempSync(join(tmpdir(), 'attempt-'))
+  const session = `t${Date.now()}`
+  const cmd = 'npm test -- --seed 7'
+  try {
+    for (let i = 1; i <= 2; i++) { runGuard('fail', session, cwd, cmd); assert.equal(runGuard('pre', session, cwd, cmd).status, 0) }
+    assert.match(runGuard('fail', session, cwd, cmd).stdout, /round 3/)
+    runGuard('fail', session, cwd, cmd)
+    assert.equal(runGuard('pre', session, cwd, cmd).status, 0, 'round 4 still runs')
+    runGuard('fail', session, cwd, cmd)
+    const blocked = runGuard('pre', session, cwd, cmd)
+    assert.equal(blocked.status, 2)
+    assert.match(blocked.stderr, /Diagnosis/)
+    assert.equal(runGuard('pre', session, cwd, 'npm run other').status, 0, 'other commands are not blocked')
+    writeFileSync(join(cwd, 'PROGRESS.md'), '## Diagnosis seed 7\nthe cause is X\n')
+    assert.equal(runGuard('pre', session, cwd, cmd).status, 0, 'a fresh diagnosis unblocks')
+    for (let i = 0; i < 3; i++) runGuard('fail', session, cwd, cmd)
+    const stop = runGuard('pre', session, cwd, cmd)
+    assert.equal(stop.status, 2)
+    assert.match(stop.stderr, /Hand off/)
+    runGuard('ok', session, cwd, cmd)
+    assert.equal(runGuard('pre', session, cwd, cmd).status, 0, 'a success resets the count')
+  } finally { rmSync(cwd, { recursive: true, force: true }) }
+})
+
+test('attempt guard: read-only commands are no rounds, off switch works', () => {
+  const cwd = mkdtempSync(join(tmpdir(), 'attempt-'))
+  try {
+    for (let i = 0; i < 9; i++) runGuard('fail', 'ro', cwd, 'grep nothing file.txt')
+    assert.equal(runGuard('pre', 'ro', cwd, 'grep nothing file.txt').status, 0)
+    for (let i = 0; i < 9; i++) runGuard('fail', 'off', cwd, 'make build')
+    const r = spawnSync(process.execPath, [guardFile, 'pre'], {
+      input: JSON.stringify({ session_id: 'off', cwd, tool_name: 'Bash', tool_input: { command: 'make build' } }),
+      env: { ...process.env, CLAUDE_SETUP_ATTEMPT_GUARD: 'off' }, encoding: 'utf8',
+    })
+    assert.equal(r.status, 0)
+  } finally { rmSync(cwd, { recursive: true, force: true }) }
+})
+
+test('attempt guard: chained commands count by their non-read-only part, long commands do not collide', () => {
+  const cwd = mkdtempSync(join(tmpdir(), 'attempt-'))
+  try {
+    for (let i = 0; i < 5; i++) runGuard('fail', 'chain', cwd, `cd app && git add . && npm test -- --run ${i}`)
+    assert.equal(runGuard('pre', 'chain', cwd, 'npm test -- --run 9').status, 2, 'the chain counts as npm test')
+    const long = 'node -e "' + 'x'.repeat(150)
+    for (let i = 0; i < 5; i++) runGuard('fail', 'long', cwd, `${long}a"`)
+    assert.equal(runGuard('pre', 'long', cwd, `${long}b"`).status, 0, 'a different long command is a different command')
+  } finally { rmSync(cwd, { recursive: true, force: true }) }
+})

@@ -43,6 +43,10 @@ Say plainly when a build is technically fine and not fun, and what you would cha
 
 The block every brief starts with: literal mode, cost and the context rules for long threads (`briefs.md`, "Every thread brief starts with").
 
+## Gap checks (from Claude-Code-Game-Studios, MIT, 2026-10-24; take only what our roles lack)
+
+Before each slice's gate: gate-check (the slice's `features.json` items all have a run proof), scope-check (anything built that the GDD does not list is cut or added to the GDD on purpose), balance-check (one number table of the economy and difficulty, no upgrade unlocks in a single run). Write the result into the playtest report.
+
 ## Lessons
 
 Added at the end of each project (operator step 9): date, project and its type, what to do differently. Newest last; merge duplicates.

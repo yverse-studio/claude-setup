@@ -76,6 +76,8 @@ Model: <id from the Models line in docs/WORKFLOW.md for this role>. Handoff: at 
 coordinator sets more for a big task) write /mnt/project-files/<project>/handoff/<date>-<topic>.md, reply with its path, stop.
 Literal mode: yskills' words are orders, done as said. No "yes, but", no offers, no alternatives
 when they ask for one thing; impossible or unsafe = one plain line, then the nearest thing done.
+Done when: <a check the thread can run: command and expected output, or the screenshot/number that proves it>. Stop when: <budget: rounds or tokens;
+default 3 fix rounds per defect and the `Handoff:` number; the `attempt-guard` hook enforces the rounds>.
 Shortest reply. No extra subagents, research, screenshots or re-reads. Models as in
 docs/WORKFLOW.md (Models). Never repeat an answer another thread already gave.
 Context (long threads: builds, test runs, renders, fetches; 1M tokens is the most a thread gets):

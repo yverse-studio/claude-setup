@@ -21,6 +21,13 @@ before building**: [`booth-avatars.md`](booth-avatars.md).
 characters, animation, scenes, Ren'Py and the latest lessons). Project specifics (file paths, slider values,
 scene slots) live in the private game repo and the laptop `GameAssetLibrary\README.md`.
 
+## Order of attack: buy, generate, then model (2026-10-24)
+
+Hand-modelling a body round after round caused the 22-round loop of 2026-10-23. Try in this order and say which step you are on:
+1. An existing asset or a BOOTH/VRoid base ([`booth-avatars.md`](booth-avatars.md)).
+2. A generator (image-to-3D such as TRELLIS or Hunyuan3D, or the Blender connector's asset tools), then clean up.
+3. bpy modelling, only for edits to what steps 1 and 2 gave. The `attempt-guard` hook blocks a command that fails 5 times without a `## Diagnosis` in `PROGRESS.md`.
+
 ## Method v2 (Miss Galaxy line, 2026-10-19): read this first
 
 15 more rounds (mg1 to mg15) taught what the Luna rules did not. Details and the why:
