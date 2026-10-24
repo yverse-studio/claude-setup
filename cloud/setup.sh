@@ -43,8 +43,8 @@ import { closeSync, existsSync, openSync, readFileSync, readSync, statSync, writ
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-const WARN = Number(process.env.CLAUDE_SETUP_CONTEXT_WARN) || 150_000
-const HANDOFF = Number(process.env.CLAUDE_SETUP_CONTEXT_HANDOFF) || 200_000
+const WARN = Number(process.env.CLAUDE_SETUP_CONTEXT_WARN) || 250_000
+const HANDOFF = Number(process.env.CLAUDE_SETUP_CONTEXT_HANDOFF) || 350_000
 const REFIRE = 50_000 // after the hand-off, nag again every further REFIRE tokens
 const CHUNK = 256 * 1024
 

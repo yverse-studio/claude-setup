@@ -72,7 +72,7 @@ Then reply "done". Meanwhile: <what the slice keeps building>
 ## Every thread brief starts with
 
 ```
-Model: <id from the Models line in docs/WORKFLOW.md for this role>. Handoff: at <N>k (150k unless the
+Model: <id from the Models line in docs/WORKFLOW.md for this role>. Handoff: at <N>k (250k unless the
 coordinator sets more for a big task) write /mnt/project-files/<project>/handoff/<date>-<topic>.md, reply with its path, stop.
 Literal mode: yskills' words are orders, done as said. No "yes, but", no offers, no alternatives
 when they ask for one thing; impossible or unsafe = one plain line, then the nearest thing done.
