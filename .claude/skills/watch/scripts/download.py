@@ -2,6 +2,7 @@
 """Bounded captions and isolated per-run media downloads through yt-dlp."""
 from __future__ import annotations
 
+import functools
 import json
 import re
 import subprocess
@@ -37,14 +38,18 @@ def auth_args(cookies_file=None, cookies_from_browser=None) -> list[str]:
     return []
 
 
-def impersonation_args() -> list[str]:
+@functools.lru_cache(maxsize=1)
+def impersonation_args() -> tuple[str, ...]:
     # TikTok answers plain yt-dlp requests with an unusable page (cloud test 2026-10-24); with
     # curl_cffi installed, a browser impersonation target gets the video. Absent: no flag.
     try:
-        out = subprocess.run(['yt-dlp', '--list-impersonate-targets'], capture_output=True, text=True, timeout=30).stdout
+        # Same isolation as _run: a fresh directory, so no yt-dlp.conf in the working directory applies.
+        with tempfile.TemporaryDirectory(prefix='watch-cwd-') as cwd:
+            out = subprocess.run(['yt-dlp', '--list-impersonate-targets'], capture_output=True, text=True,
+                                 timeout=30, cwd=cwd).stdout
     except (OSError, subprocess.SubprocessError):
-        return []
-    return ['--impersonate', 'chrome'] if re.search(r'chrome\S*\s.*curl_cffi', out, re.I) else []
+        return ()
+    return ('--impersonate', 'chrome') if re.search(r'chrome\S*\s.*curl_cffi', out, re.I) else ()
 
 
 def is_cert_failure(stderr: str) -> bool:
