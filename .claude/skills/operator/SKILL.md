@@ -41,6 +41,7 @@ with a recommended pick on every open question, posted as brief (a). Under auto-
 starts from that plan right away; yskills' "no" or a change sends the operator back to the
 brainstorm. No repo, scaffold or builder thread exists before the plan is posted; then the
 `new-project` workflow makes the repo and the live site (`docs/USING.md`, Deploy a page in one shot).
+The brainstorm ends with a stress test (from a video, yskills 2026-10-24): write 3 to 10 different versions of the idea, let three hostile voices attack each (a customer: would I pay? a competitor: how do I crush it? an investor: does it make money?), drop the weakest, merge the best three, and put the scoreboard and the survivor into `PLAN.md`. Prompt text only, no tool.
 
 **Idea for a live project** (yskills, 2026-10-12: "where are my teams?"). When yskills posts an
 idea or change for a project that already runs (feature, fix, art, video, a tutorial), the Project
