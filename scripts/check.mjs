@@ -67,6 +67,8 @@ if (plugins) {
   for (const m of plugins.marketplaces) if (!sh.includes(`marketplace add ${m.source}`)) errors.push(`cloud/setup.sh does not add marketplace ${m.source}`)
   const inlined = sh.match(/<<'GUARD'\r?\n([\s\S]*?)\r?\nGUARD\r?\n/)?.[1]
   if (inlined?.replace(/\r/g, '').trim() !== readFileSync(join(root, 'global/context-guard.mjs'), 'utf8').replace(/\r/g, '').trim()) errors.push('cloud/setup.sh context guard differs from global/context-guard.mjs')
+  const attempt = sh.match(/<<'ATTEMPT'\r?\n([\s\S]*?)\r?\nATTEMPT\r?\n/)?.[1]
+  if (attempt?.replace(/\r/g, '').trim() !== readFileSync(join(root, 'global/attempt-guard.mjs'), 'utf8').replace(/\r/g, '').trim()) errors.push('cloud/setup.sh attempt guard differs from global/attempt-guard.mjs')
 }
 
 // Own skills and agents (the ECC subset is vendored and never hand-edited). A long description gets

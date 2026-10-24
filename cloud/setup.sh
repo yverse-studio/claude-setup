@@ -101,6 +101,84 @@ process.stdin.on('end', () => {
   }
 })
 GUARD
+# Attempt guard: the same file as global/attempt-guard.mjs (scripts/check.mjs keeps them equal);
+# three failed rounds of one command get a reminder, five are blocked until PROGRESS.md has a diagnosis.
+cat > "$HOME/.claude/claude-setup/attempt-guard.mjs" <<'ATTEMPT'
+#!/usr/bin/env node
+// Loop breaker. Usage: attempt-guard.mjs pre|ok|fail (one hook entry each: PreToolUse,
+// PostToolUse, PostToolUseFailure). A round is one failed run of the same command (Bash) or the
+// same tool call (MCP) in a session; a success of it resets the count. At DIAGNOSE the next result
+// carries a reminder, at BLOCK the call is refused (exit 2) until PROGRESS.md has a
+// "## Diagnosis" heading and was saved after the stall, at STOP it is refused for good.
+// CLAUDE_SETUP_ATTEMPT_GUARD=off turns it off. It never breaks a tool call on its own errors.
+import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+
+const num = (v, d) => Number(v) || d
+const DIAGNOSE = num(process.env.CLAUDE_SETUP_ATTEMPT_DIAGNOSE, 3)
+const BLOCK = num(process.env.CLAUDE_SETUP_ATTEMPT_BLOCK, 5)
+const STOP = num(process.env.CLAUDE_SETUP_ATTEMPT_STOP, 8)
+// Read-only commands fail on "no match" all the time; that is not a round.
+const READ_ONLY = /^(cd|ls|cat|head|tail|grep|rg|find|diff|test|\[|echo|pwd|which|stat|wc|git|gh|curl|sleep)\b/
+
+export function keyOf(tool, input = {}) {
+  if (tool === 'Bash') {
+    const cmd = String(input.command ?? '').trim().replace(/\s+/g, ' ')
+    if (!cmd || READ_ONLY.test(cmd)) return null
+    return `Bash:${cmd.replace(/\d+/g, '#').slice(0, 120)}`
+  }
+  if (tool.startsWith('mcp__')) return `${tool}:${JSON.stringify(input).replace(/\d+/g, '#').slice(0, 120)}`
+  return null
+}
+
+export function diagnosed(cwd, since) {
+  const file = join(cwd, 'PROGRESS.md')
+  if (!existsSync(file) || statSync(file).mtimeMs <= since) return false
+  return /^## Diagnosis/m.test(readFileSync(file, 'utf8'))
+}
+
+function decide(mode, state, key, cwd, now = Date.now()) {
+  const e = state[key] ?? { fails: 0 }
+  if (mode === 'ok') { delete state[key]; return {} }
+  if (mode === 'fail') {
+    e.fails += 1
+    if (e.fails === BLOCK) e.stalledAt = now
+    state[key] = e
+    if (e.fails === DIAGNOSE) return { context: `Attempt guard: round ${e.fails} on this command. Stop patching. Write what is wrong, the cause and why the last fixes failed under "## Diagnosis" in PROGRESS.md before the next try; at round ${BLOCK} this command is blocked until you have.` }
+    return {}
+  }
+  if (e.fails >= STOP) return { block: `Attempt guard: ${e.fails} failed rounds on this command. Hand off: a fresh thread with a better brief, or a Card to yskills (change the approach: use an existing asset or generator instead of hand-modelling, cut scope, or stop).` }
+  if (e.fails >= BLOCK && !diagnosed(cwd, e.stalledAt ?? 0)) return { block: `Attempt guard: ${e.fails} failed rounds on this command. Write a "## Diagnosis" section in PROGRESS.md (what is wrong, the cause, why the last fixes failed), then try once more. ${STOP - e.fails} rounds left before a hand-off.` }
+  return {}
+}
+
+export { decide }
+
+if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/').split('/').pop())) {
+  let raw = ''
+  process.stdin.setEncoding('utf8')
+  process.stdin.on('data', (c) => { raw += c })
+  process.stdin.on('end', () => {
+    try {
+      if (process.env.CLAUDE_SETUP_ATTEMPT_GUARD === 'off') return
+      const mode = process.argv[2]
+      const { session_id: id = 'unknown', cwd = process.cwd(), tool_name: tool = '', tool_input: input } = JSON.parse(raw || '{}')
+      const key = keyOf(tool, input)
+      if (!key) return
+      const stateFile = join(tmpdir(), `claude-attempt-guard-${String(id).replace(/[^\w-]/g, '')}.json`)
+      const state = existsSync(stateFile) ? JSON.parse(readFileSync(stateFile, 'utf8')) : {}
+      const out = decide(mode, state, key, cwd)
+      if (mode !== 'pre') writeFileSync(stateFile, JSON.stringify(state))
+      if (out.block) { process.stderr.write(out.block); process.exitCode = 2 }
+      else if (out.context) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PostToolUseFailure', additionalContext: out.context } }))
+    } catch {
+      // A guard must never break a tool call.
+    }
+  })
+}
+ATTEMPT
+
 node -e '
 const fs = require("fs"), p = require("os").homedir() + "/.claude/settings.json"
 const s = fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, "utf8")) : {}
@@ -108,5 +186,9 @@ const cmd = `node "${require("os").homedir()}/.claude/claude-setup/context-guard
 s.hooks = s.hooks || {}
 s.hooks.PostToolUse = (s.hooks.PostToolUse || []).filter((h) => !JSON.stringify(h).includes("context-guard.mjs"))
 s.hooks.PostToolUse.push({ matcher: "*", hooks: [{ type: "command", command: cmd, timeout: 5 }] })
+for (const [event, mode] of [["PreToolUse", "pre"], ["PostToolUse", "ok"], ["PostToolUseFailure", "fail"]]) {
+  s.hooks[event] = (s.hooks[event] || []).filter((h) => !JSON.stringify(h).includes("attempt-guard.mjs"))
+  s.hooks[event].push({ matcher: "Bash|mcp__.*", hooks: [{ type: "command", command: `node "${require("os").homedir()}/.claude/claude-setup/attempt-guard.mjs" ${mode}`, timeout: 5 }] })
+}
 fs.writeFileSync(p, JSON.stringify(s, null, 2))
 ' || echo "claude-setup: could not add the context guard hook"

@@ -44,7 +44,7 @@ and yskills had to say it twice. This page is the fix.
      made in Blender that never reaches the export does not count (Hinata, 2026-10-08: a near-white
      iris texture plus a big highlight vanished in the game).
    - Renders sit on a mid-tone background, never white, so pale skin and light clothes stay readable.
-   - The same spot fails a second gate round: stop patching. Write a short diagnosis first (an ID
+   - The same spot fails a second gate round: stop patching (the `attempt-guard` hook enforces this for repeated failing commands). Write a short diagnosis first (an ID
      pass or a per-mesh isolate that names the mesh, vertices and pixel coordinates that cause it),
      then fix. Prove each fix with a pixel diff of that crop before pushing; a diff that moves
      almost nothing means the change did not reach the file the viewer loads (Hinata blouse,
