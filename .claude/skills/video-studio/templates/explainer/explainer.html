@@ -1,0 +1,36 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+html,body{margin:0;background:#111}
+#c{position:relative;width:1080px;height:1920px;overflow:hidden;font-family:Inter,'DejaVu Sans',sans-serif}
+svg{position:absolute;left:0;top:0}
+#cap{position:absolute;left:60px;right:60px;top:1120px;text-align:center;font-weight:900;font-size:84px;line-height:1.12;color:#fff;
+  -webkit-text-stroke:14px #2b2140;paint-order:stroke fill;letter-spacing:-1px}
+#cap span{display:inline-block;margin:0 24px;transition:none}
+#cap .on{color:#ffd23f;transform:scale(1.12)}
+#title{position:absolute;left:60px;right:60px;top:90px;text-align:center;font-weight:900;font-size:64px;color:#fff;-webkit-text-stroke:12px #2b2140;paint-order:stroke fill}
+</style></head><body>
+<div id="c"><svg id="bg" width="1080" height="1920"></svg><svg id="stage" width="1080" height="1920"></svg>
+<svg id="mascot" width="1080" height="1920"></svg><div id="title"></div><div id="cap"></div></div>
+<script src="mascot.js"></script><script src="visuals.js"></script>
+<script>
+// Deterministic: everything is a function of t (seconds). render.mjs calls seek(t) per frame.
+let T=null;
+window.setup=t=>{T=t;document.getElementById('title').textContent=t.title||'';};
+const $=id=>document.getElementById(id);
+const ease=x=>x<0?0:x>1?1:x*x*(3-2*x);
+function chunks(words,n=4){const o=[];for(let i=0;i<words.length;i+=n)o.push(words.slice(i,i+n));return o;}
+window.seek=t=>{
+  const sc=T.scenes.find(s=>t>=s.start&&t<s.end+0.35)||T.scenes[T.scenes.length-1];
+  const lt=t-sc.start, prog=Math.min(1,Math.max(0,lt/(sc.end-sc.start)));
+  const V=VISUALS[sc.visual]||VISUALS.blank, pal=V.bg||['#9ad7ff','#e6f6ff'];
+  $('bg').innerHTML=`<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${pal[0]}"/><stop offset="1" stop-color="${pal[1]}"/></linearGradient></defs><rect width="1080" height="1920" fill="url(#g)"/>`;
+  const pop=ease(lt/0.4);
+  $('stage').innerHTML=`<g transform="translate(0,${(1-pop)*60})" opacity="${pop}">${V.draw(lt,prog,sc)}</g>`;
+  const all=sc.words, cur=all.findIndex(w=>t>=w.s&&t<w.e+0.05);
+  const idx=cur<0?(t<all[0].s?0:all.findIndex(w=>w.s>t)-1):cur;
+  const ch=chunks(all), ci=ch.findIndex(c=>c.includes(all[Math.max(0,idx)]));
+  $('cap').innerHTML=(ch[Math.max(0,ci)]||[]).map(w=>`<span class="${w===all[idx]&&t<w.e+0.05?'on':''}">${w.w}</span>`).join('');
+  const talking=all.some(w=>t>=w.s&&t<=w.e);
+  $('mascot').innerHTML=Mascot.draw({t,talking,pose:V.pose||'idle',x:300,y:1880,scale:1.5});
+};
+</script></body></html>

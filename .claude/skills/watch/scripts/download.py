@@ -2,8 +2,10 @@
 """Bounded captions and isolated per-run media downloads through yt-dlp."""
 from __future__ import annotations
 
+import functools
 import json
 import re
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -36,10 +38,29 @@ def auth_args(cookies_file=None, cookies_from_browser=None) -> list[str]:
     return []
 
 
+@functools.lru_cache(maxsize=1)
+def impersonation_args() -> tuple[str, ...]:
+    # TikTok answers plain yt-dlp requests with an unusable page (cloud test 2026-10-24); with
+    # curl_cffi installed, a browser impersonation target gets the video. Absent: no flag.
+    try:
+        # Same isolation as _run: a fresh directory, so no yt-dlp.conf in the working directory applies.
+        with tempfile.TemporaryDirectory(prefix='watch-cwd-') as cwd:
+            out = subprocess.run(['yt-dlp', '--list-impersonate-targets'], capture_output=True, text=True,
+                                 timeout=30, cwd=cwd).stdout
+    except (OSError, subprocess.SubprocessError):
+        return ()
+    return ('--impersonate', 'chrome') if re.search(r'chrome\S*\s.*curl_cffi', out, re.I) else ()
+
+
+def is_cert_failure(stderr: str) -> bool:
+    lower = stderr.lower()
+    return any(s in lower for s in ('certificate_verify_failed', 'certificate verify failed', 'unable to get local issuer certificate'))
+
+
 def _common(directory: Path, auth: list[str]) -> list[str]:
     # Escape literal percent signs in the directory, while retaining template fields.
     prefix = str(directory.resolve()).replace('%', '%%')
-    return ['yt-dlp', '--no-playlist', '--no-simulate', *auth,
+    return ['yt-dlp', '--no-playlist', '--no-simulate', *impersonation_args(), *auth,
             '-o', f'{prefix}/video.%(ext)s',
             '-o', f'subtitle:{prefix}/video.%(ext)s',
             '-o', f'infojson:{prefix}/video.%(ext)s']
@@ -71,6 +92,9 @@ def _run(cmd: list[str]):
     # temp dir) can add options. The user's own ~/.config/yt-dlp still applies.
     with tempfile.TemporaryDirectory(prefix='watch-cwd-') as cwd:
         result = run_text(cmd, cwd=cwd)
+        if result.returncode != 0 and is_cert_failure(result.stderr):
+            # Behind a proxy, certifi lacks its CA: use the system store, TLS verification stays on.
+            result = run_text([cmd[0], '--compat-options', 'no-certifi', *cmd[1:]], cwd=cwd)
     if result.returncode != 0:
         raise SystemExit(f'yt-dlp failed (exit {result.returncode}): {network_diagnostic(result.stderr)}')
     return result
