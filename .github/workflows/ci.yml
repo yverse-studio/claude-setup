@@ -12,7 +12,7 @@ jobs:
   check:
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest] # macOS bills 10x on private repos
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
