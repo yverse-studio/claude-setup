@@ -44,6 +44,10 @@ pay 10k dollars for that?"):
 - **`ready.py` decides delivery**, not the Producer's word: it fails without the script, the
   board's stills, the music licence and the Critic's passes with their reference videos.
 
+## Explainer format (Miso, 2026-10-24)
+
+yskills liked a viral TikTok explainer (one recurring toon character, flat 3D-ish world, pixel inserts, word-by-word captions on the beat) and asked for our own version. [`templates/explainer/`](templates/explainer/README.md): `script.json` (title, scenes with `visual` and `text`) → `build.py` (Piper voice, word times from faster-whisper) → `render.mjs` (Playwright frames + ffmpeg) → 1080x1920 `video.mp4`, no video model, ~35 s to render 18 s. Our mascot is **Miso** (cream cat, mint scarf, original); new topics add entries to `visuals.js`. Free and local; background music is optional (`music.*` in the out folder, licence in `sound.md`). It still goes through the pipeline's script, board and Critic steps before anything is posted. Style source and the other 28 videos: `docs/research/2026-10-24-video-batch.md`.
+
 ## Roles
 
 | Role | Does | Playbook | Runs as |
