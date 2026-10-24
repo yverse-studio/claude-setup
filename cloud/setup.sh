@@ -145,6 +145,11 @@ export function diagnosed(cwd, since) {
   return false
 }
 
+// Missing or corrupt state starts over.
+function readState(file) {
+  try { return JSON.parse(readFileSync(file, 'utf8')) } catch { return {} }
+}
+
 function decide(mode, state, key, cwd, now = Date.now()) {
   const e = state[key] ?? { fails: 0 }
   if (mode === 'ok') { delete state[key]; return {} }
@@ -174,8 +179,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
       const key = keyOf(tool, input)
       if (!key) return
       const stateFile = join(tmpdir(), `claude-attempt-guard-${String(id).replace(/[^\w-]/g, '')}.json`)
-      let state = {}
-      try { state = JSON.parse(readFileSync(stateFile, 'utf8')) } catch {} // missing or corrupt: start over
+      const state = readState(stateFile)
       const out = decide(mode, state, key, cwd)
       if (mode !== 'pre') writeFileSync(stateFile, JSON.stringify(state))
       if (out.block) { process.stderr.write(out.block); process.exitCode = 2 }
