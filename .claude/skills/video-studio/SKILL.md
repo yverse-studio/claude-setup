@@ -76,6 +76,8 @@ Models line in [`docs/WORKFLOW.md`](../../../docs/WORKFLOW.md).
 Sold "Claude skill packs" from Instagram or Gumroad are prompt lists, not workflows: never bought.
 Skim a free one only if it names something this table lacks.
 
+Shot lists and scripts for the mascot-explainer, POV-magic and blockout-to-AI-video formats: [`formats.md`](formats.md).
+
 ## Every video
 
 - **Real product, real footage.** The video shows what the app really does; mocked UI or AI-made
