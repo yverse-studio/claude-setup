@@ -158,3 +158,14 @@ test('attempt guard: read-only commands are no rounds, off switch works', () => 
     assert.equal(r.status, 0)
   } finally { rmSync(cwd, { recursive: true, force: true }) }
 })
+
+test('attempt guard: chained commands count by their non-read-only part, long commands do not collide', () => {
+  const cwd = mkdtempSync(join(tmpdir(), 'attempt-'))
+  try {
+    for (let i = 0; i < 5; i++) runGuard('fail', 'chain', cwd, `cd app && git add . && npm test -- --run ${i}`)
+    assert.equal(runGuard('pre', 'chain', cwd, 'npm test -- --run 9').status, 2, 'the chain counts as npm test')
+    const long = 'node -e "' + 'x'.repeat(150)
+    for (let i = 0; i < 5; i++) runGuard('fail', 'long', cwd, `${long}a"`)
+    assert.equal(runGuard('pre', 'long', cwd, `${long}b"`).status, 0, 'a different long command is a different command')
+  } finally { rmSync(cwd, { recursive: true, force: true }) }
+})

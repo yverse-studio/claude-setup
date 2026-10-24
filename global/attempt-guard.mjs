@@ -5,9 +5,10 @@
 // carries a reminder, at BLOCK the call is refused (exit 2) until PROGRESS.md has a
 // "## Diagnosis" heading and was saved after the stall, at STOP it is refused for good.
 // CLAUDE_SETUP_ATTEMPT_GUARD=off turns it off. It never breaks a tool call on its own errors.
+import { createHash } from 'node:crypto'
 import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 
 const num = (v, d) => Number(v) || d
 const DIAGNOSE = num(process.env.CLAUDE_SETUP_ATTEMPT_DIAGNOSE, 3)
@@ -16,20 +17,26 @@ const STOP = num(process.env.CLAUDE_SETUP_ATTEMPT_STOP, 8)
 // Read-only commands fail on "no match" all the time; that is not a round.
 const READ_ONLY = /^(cd|ls|cat|head|tail|grep|rg|find|diff|test|\[|echo|pwd|which|stat|wc|git|gh|curl|sleep)\b/
 
+const hash = (t) => createHash('sha1').update(t).digest('hex').slice(0, 12)
+
 export function keyOf(tool, input = {}) {
   if (tool === 'Bash') {
-    const cmd = String(input.command ?? '').trim().replace(/\s+/g, ' ')
-    if (!cmd || READ_ONLY.test(cmd)) return null
-    return `Bash:${cmd.replace(/\d+/g, '#').slice(0, 120)}`
+    // "cd app && git add . && npm test" is a run of "npm test": read-only parts do not count.
+    const parts = String(input.command ?? '').split(/&&|\|\||;|\|/).map((x) => x.trim().replace(/\s+/g, ' ')).filter((x) => x && !READ_ONLY.test(x))
+    if (!parts.length) return null
+    return `Bash:${hash(parts.join(' && ').replace(/\d+/g, '#'))}`
   }
-  if (tool.startsWith('mcp__')) return `${tool}:${JSON.stringify(input).replace(/\d+/g, '#').slice(0, 120)}`
+  if (tool.startsWith('mcp__')) return `${tool}:${hash(JSON.stringify(input).replace(/\d+/g, '#'))}`
   return null
 }
 
+// PROGRESS.md of the working folder or of a parent (the hook's cwd can be a subfolder).
 export function diagnosed(cwd, since) {
-  const file = join(cwd, 'PROGRESS.md')
-  if (!existsSync(file) || statSync(file).mtimeMs <= since) return false
-  return /^## Diagnosis/m.test(readFileSync(file, 'utf8'))
+  for (let dir = cwd, i = 0; i < 4; i++, dir = dirname(dir)) {
+    const file = join(dir, 'PROGRESS.md')
+    if (existsSync(file)) return statSync(file).mtimeMs > since && /^## Diagnosis/m.test(readFileSync(file, 'utf8'))
+  }
+  return false
 }
 
 function decide(mode, state, key, cwd, now = Date.now()) {
@@ -61,7 +68,8 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
       const key = keyOf(tool, input)
       if (!key) return
       const stateFile = join(tmpdir(), `claude-attempt-guard-${String(id).replace(/[^\w-]/g, '')}.json`)
-      const state = existsSync(stateFile) ? JSON.parse(readFileSync(stateFile, 'utf8')) : {}
+      let state = {}
+      try { state = JSON.parse(readFileSync(stateFile, 'utf8')) } catch {} // missing or corrupt: start over
       const out = decide(mode, state, key, cwd)
       if (mode !== 'pre') writeFileSync(stateFile, JSON.stringify(state))
       if (out.block) { process.stderr.write(out.block); process.exitCode = 2 }
