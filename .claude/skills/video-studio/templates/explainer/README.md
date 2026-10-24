@@ -1,4 +1,4 @@
-# Explainer format (Miso)
+# Explainer pipeline (the Miso look is rejected, keep the pipeline only)
 
 ```bash
 pip install piper-tts faster-whisper numpy      # Piper voice file: huggingface.co/rhasspy/piper-voices (en_US-lessac-medium used for the test)
