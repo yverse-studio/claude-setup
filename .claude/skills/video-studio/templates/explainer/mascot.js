@@ -1,4 +1,4 @@
-// Miso: our own original mascot (cream cat, mint scarf). Flat toon, thick outline. Pure function of t.
+// REJECTED look (yskills 2026-10-24): replace per the new art direction. Old: cream cat, mint scarf. Flat toon, thick outline. Pure function of t.
 const Mascot=(()=>{
   const O='#2b2140',CREAM='#fff1dc',INNER='#f2a7b0',MINT='#5fd3b5',MINT2='#3aa88f',CHEEK='#ffb3a7';
   const sw=7;
