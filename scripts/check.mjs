@@ -64,6 +64,11 @@ if (plugins) {
   if (shIds.join() !== want.join()) errors.push('cloud/setup.sh plugin list differs from config/plugins.json global')
   // Plugins come from setup.sh at user scope; a second list in the repo's settings would drift.
   if (json('.claude/settings.json')?.enabledPlugins) errors.push('.claude/settings.json must not list plugins; cloud/setup.sh installs them')
+  // The retired plugins setup.sh uninstalls are the ones plugins.json retires; the stub fetches this repo's script.
+  const uninstall = sh.match(/^for id in ([a-z0-9 -]+); do\n\s*claude plugin uninstall/m)?.[1].split(' ')
+  const retired = plugins.retired.filter((p) => p.id.endsWith('@claude-plugins-official')).map((p) => p.id.split('@')[0])
+  if (!uninstall || !retired.every((id) => uninstall.includes(id))) errors.push('cloud/setup.sh does not uninstall every official retired plugin in config/plugins.json')
+  if (!readFileSync(join(root, 'cloud/bootstrap.sh'), 'utf8').includes('yverse-studio/claude-setup/main/cloud/setup.sh')) errors.push('cloud/bootstrap.sh must fetch cloud/setup.sh from main')
   for (const m of plugins.marketplaces) if (!sh.includes(`marketplace add ${m.source}`)) errors.push(`cloud/setup.sh does not add marketplace ${m.source}`)
   const inlined = sh.match(/<<'GUARD'\r?\n([\s\S]*?)\r?\nGUARD\r?\n/)?.[1]
   if (inlined?.replace(/\r/g, '').trim() !== readFileSync(join(root, 'global/context-guard.mjs'), 'utf8').replace(/\r/g, '').trim()) errors.push('cloud/setup.sh context guard differs from global/context-guard.mjs')

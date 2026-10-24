@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Setup script for Claude cloud environments (project threads).
-# Paste it into Project settings > Cloud environment > Setup script. It installs the global
+# cloud/bootstrap.sh (pasted once into Project settings > Cloud environment > Setup script) runs it. It installs the global
 # plugins from config/plugins.json at user scope (minus those marked "cloud": false), so they load in every thread, whichever
 # repo the thread runs in. scripts/check.mjs fails if this list drifts from config/plugins.json.
 set -u
@@ -17,7 +17,7 @@ do
 done
 # Retired plugins (config/plugins.json "retired") load their skill listing into every session: remove
 # them when an older copy of this script left them behind.
-for id in code-simplifier feature-dev claude-md-management claude-code-setup; do
+for id in code-review chrome-devtools-mcp code-simplifier feature-dev claude-md-management claude-code-setup; do
   claude plugin uninstall "$id@claude-plugins-official" --scope user >/dev/null 2>&1 || true
 done
 
