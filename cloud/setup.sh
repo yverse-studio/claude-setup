@@ -10,12 +10,15 @@ for id in \
   superpowers@claude-plugins-official \
   frontend-design@claude-plugins-official \
   security-guidance@claude-plugins-official \
-  typescript-lsp@claude-plugins-official \
-  pyright-lsp@claude-plugins-official \
   playwright@claude-plugins-official \
   commit-commands@claude-plugins-official
 do
   claude plugin install "$id" --scope user || echo "claude-setup: could not install $id"
+done
+# Retired plugins (config/plugins.json "retired") load their skill listing into every session: remove
+# them when an older copy of this script left them behind.
+for id in code-simplifier feature-dev claude-md-management claude-code-setup; do
+  claude plugin uninstall "$id@claude-plugins-official" --scope user >/dev/null 2>&1 || true
 done
 
 # Built-in subagents (Explore, general-purpose) default to Sonnet instead of inheriting Opus;
