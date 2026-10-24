@@ -46,6 +46,8 @@ pay 10k dollars for that?"):
 
 ## Explainer format (Miso, 2026-10-24)
 
+**Miso look REJECTED (yskills, 2026-10-24: "looks shit"; final taste call).** The cream cat, mint scarf and flat toon world never come back as a style. Only the pipeline below is kept (script, voice, word times, frames, encode); a new video gets a new look from the Designer's art direction and yskills' reference clips.
+
 yskills liked a viral TikTok explainer (one recurring toon character, flat 3D-ish world, pixel inserts, word-by-word captions on the beat) and asked for our own version. [`templates/explainer/`](templates/explainer/README.md): `script.json` (title, scenes with `visual` and `text`) → `build.py` (Piper voice, word times from faster-whisper) → `render.mjs` (Playwright frames + ffmpeg) → 1080x1920 `video.mp4`, no video model, ~35 s to render 18 s. Our mascot is **Miso** (cream cat, mint scarf, original); new topics add entries to `visuals.js`. Free and local; background music is optional (`music.*` in the out folder, licence in `sound.md`). It still goes through the pipeline's script, board and Critic steps before anything is posted. Style source and the other 28 videos: `docs/research/2026-10-24-video-batch.md`.
 
 ## Roles
