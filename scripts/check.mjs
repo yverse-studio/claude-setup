@@ -65,7 +65,7 @@ if (plugins) {
   // Plugins come from setup.sh at user scope; a second list in the repo's settings would drift.
   if (json('.claude/settings.json')?.enabledPlugins) errors.push('.claude/settings.json must not list plugins; cloud/setup.sh installs them')
   // The retired plugins setup.sh uninstalls are the ones plugins.json retires; the stub fetches this repo's script.
-  const uninstall = sh.match(/^for id in ([a-z0-9 -]+); do\n\s*claude plugin uninstall/m)?.[1].split(' ')
+  const uninstall = sh.match(/^for id in ([a-z0-9 -]+); do\r?\n\s*claude plugin uninstall/m)?.[1].split(' ')
   const retired = plugins.retired.filter((p) => p.id.endsWith('@claude-plugins-official')).map((p) => p.id.split('@')[0])
   if (!uninstall || !retired.every((id) => uninstall.includes(id))) errors.push('cloud/setup.sh does not uninstall every official retired plugin in config/plugins.json')
   if (!readFileSync(join(root, 'cloud/bootstrap.sh'), 'utf8').includes('yverse-studio/claude-setup/main/cloud/setup.sh')) errors.push('cloud/bootstrap.sh must fetch cloud/setup.sh from main')
