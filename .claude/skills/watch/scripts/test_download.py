@@ -7,7 +7,7 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-import download as dl  # noqa: E402
+import download as dl
 
 
 def fake_run(stdout):
