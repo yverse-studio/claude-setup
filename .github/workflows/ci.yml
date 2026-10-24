@@ -60,5 +60,5 @@ jobs:
           node -e "const s=require(process.env.HOME+'/.claude/settings.json'); if(!JSON.stringify(s.hooks.PostToolUse).includes('context-guard.mjs')) process.exit(1)"
           export T="$RUNNER_TEMP/t.jsonl"
           echo '{"message":{"usage":{"input_tokens":1,"cache_read_input_tokens":40000}}}' > "$T"
-          echo '{"message":{"usage":{"input_tokens":1,"cache_read_input_tokens":160000}}}' >> "$T"
+          echo '{"message":{"usage":{"input_tokens":1,"cache_read_input_tokens":260000}}}' >> "$T"
           node -e "process.stdout.write(JSON.stringify({session_id:'ci',transcript_path:process.env.T}))" | node "$HOME/.claude/claude-setup/context-guard.mjs" | grep -q 'Context guard'
