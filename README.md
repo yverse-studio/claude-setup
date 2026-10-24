@@ -76,9 +76,10 @@ Plugins and network need a [cloud environment](https://code.claude.com/docs/en/c
 (Project settings > Cloud environment > Add cloud environment). Pick the same one in every
 project that uses this setup.
 
-- **Setup script:** paste [`cloud/setup.sh`](cloud/setup.sh). It installs 7 of the 9 global
+- **Setup script:** paste [`cloud/bootstrap.sh`](cloud/bootstrap.sh) once (it runs the current [`cloud/setup.sh`](cloud/setup.sh) from main, so a pasted copy can never go stale). It installs 5 of the 9 global
   plugins at user scope (Context7 and skill-creator stay on the PC: Context7 asks for a sign-in a
-  thread can't do, and threads have Anthropic's skill-creator built in) and makes built-in
+  thread can't do, and threads have Anthropic's skill-creator built in; the TypeScript and Python
+  language servers stay on the PC too, a thread runs `tsc` anyway) and removes the retired ones, and makes built-in
   subagents default to Sonnet. The result is cached and rebuilt about weekly, so threads don't
   pay for it each time. Plugin tools connect a few seconds after a thread starts.
 - **Network access:** Custom, tick "Also include default list of common package managers", and

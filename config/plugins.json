@@ -25,12 +25,14 @@
     {
       "id": "typescript-lsp@claude-plugins-official",
       "why": "go-to-definition, references and type errors for TS/JS",
-      "tokens": 0
+      "tokens": 0,
+      "cloud": false
     },
     {
       "id": "pyright-lsp@claude-plugins-official",
       "why": "same for Python",
-      "tokens": 0
+      "tokens": 0,
+      "cloud": false
     },
     {
       "id": "context7@claude-plugins-official",
