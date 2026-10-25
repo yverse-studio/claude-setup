@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Prints the boot text for a claude.ai project: the template below its `---` line, filled from
 // projects/<name>.json and flags. Usage: node scripts/project-instructions.mjs <name>
-//   [--about "<one line>"] [--kind site|game|repo|video|social|story] [--repo <org/repo>]
+//   [--about "<one line>"] [--kind site|game|repo|video|social|story] [--repo <org/repo>|none|new]
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -13,7 +13,11 @@ const SETUP = 'claude-setup'
 const SETUP_ABOUT = 'the toolkit every other project loads'
 const PRODUCT_LINE = /^Its repo's CLAUDE\.md.*$/m
 const SETUP_LINE = 'The repo is claude-setup itself, so there is no product lessons file (docs/LESSONS.md).'
-const USAGE = 'usage: node scripts/project-instructions.mjs <name> [--about "<one line>"] [--kind site|game|repo|video|social|story] [--repo <org/repo>]'
+// --repo none: a project with no repo of its own (a social or video team); --repo new: the
+// new-project workflow makes the repo at the first idea (docs/USING.md), so until then it has none.
+const NONE_LINE = 'This project has no repo of its own: its lessons go to claude-setup (the skill of its kind, e.g. social-team or video-studio learnings.md; docs/MAP.md Kits names it).'
+const NEW_LINE = 'Its repo does not exist yet: the new-project workflow makes it at the first idea (claude-setup docs/USING.md, Deploy a page in one shot); from then on its CLAUDE.md and docs/LESSONS.md come next and product lessons go there.'
+const USAGE = 'usage: node scripts/project-instructions.mjs <name> [--about "<one line>"] [--kind site|game|repo|video|social|story] [--repo <org/repo>|none|new]'
 
 const NAME = /^[a-z0-9][a-z0-9-]*$/ // the same shape new-project accepts: repo and Worker name
 
@@ -44,6 +48,8 @@ export function fill(name, flags = {}) {
   }
   let text = readFileSync(TEMPLATE, 'utf8').split(/^---\r?\n/m)[1].trim()
   if (setup) text = text.replace(PRODUCT_LINE, SETUP_LINE)
+  else if (values.repo === 'none') text = text.replace(PRODUCT_LINE, NONE_LINE).replace('; repo {{repo}})', ')')
+  else if (values.repo === 'new') text = text.replace(PRODUCT_LINE, NEW_LINE).replace('; repo {{repo}})', ')')
   return text.replace(/\{\{(\w+)\}\}/g, (m, k) => values[k] ?? m)
 }
 

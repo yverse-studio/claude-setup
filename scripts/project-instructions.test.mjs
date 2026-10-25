@@ -47,3 +47,14 @@ test('kind and org come from the project file', () => {
   assert.match(fill('companyxy-spiel'), /kind: repo/)
   assert.match(fill('igelgarten'), /kind: game/)
 })
+
+test('--repo none and --repo new say where lessons go without a product repo', () => {
+  const none = fill('social-media-manager', { about: 'the brand accounts', kind: 'social', repo: 'none' })
+  assert.match(none, /no repo of its own/)
+  assert.doesNotMatch(none, /repo none|LESSONS\.md\b.*none/)
+  const fresh = fill('new-game', { about: 'a new game', kind: 'game', repo: 'new' })
+  assert.match(fresh, /does not exist yet/)
+  assert.doesNotMatch(fresh, /repo new\)/)
+  for (const t of [none, fresh]) assert.ok(t.split('\n').filter((l) => l.trim()).length < 15)
+})
+
