@@ -90,7 +90,7 @@ does the job.
 Matt Pocock's retro, both MIT). For each correction or catchable failed round of the PR, ask: would
 the next thread repeat this mistake without the lesson? No: write nothing and say so in one line.
 Yes: update the line that already covers it, else add one line in its single home (`CLAUDE.md`
-line, skill line, or memory). A mechanical lesson (a fixed pattern, a banned call, a file rule)
+line, skill line, or a product repo's `docs/LESSONS.md`; `docs/MAP.md`, Where a lesson goes, decides; never project memory). A mechanical lesson (a fixed pattern, a banned call, a file rule)
 becomes a check, test or lint rule in `scripts/` or CI instead of text. Then prune: delete a
 lesson line that a check now covers, or whose guarded thing is gone.
 

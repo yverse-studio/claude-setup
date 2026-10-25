@@ -310,7 +310,7 @@ for (const t of ['project-memory', 'lessons']) {
   if (!existsSync(join(root, `.claude/skills/operator/templates/${t}.md`))) errors.push(`templates/${t}.md: missing; docs/MAP.md (Start here) points to it`)
 }
 const memoryTemplate = join(root, '.claude/skills/operator/templates/project-memory.md')
-if (existsSync(memoryTemplate) && statSync(memoryTemplate).size >= 3072) errors.push('templates/project-memory.md: 3 KB or more; a MEMORY.md of this shape must stay under 3072 bytes, shorten the examples')
+if (existsSync(memoryTemplate) && statSync(memoryTemplate).size >= 3072) errors.push('templates/project-memory.md: 3 KB or more; the template must stay under 3072 bytes so a MEMORY.md in its shape does too, shorten the examples')
 
 if (errors.length) { console.error(errors.map((e) => `x ${e}`).join('\n')); process.exit(1) }
 console.log(`ok: ${seen.skill.size} skills, ${seen.agent.size} agents, ${plugins?.global.length ?? 0}+${plugins?.project.length ?? 0} plugins`)
