@@ -31,11 +31,22 @@ The project chat itself (the coordinator running this skill). Plans with yskills
 - At the end of the project, ask every role for its lessons (step 9).
 - A message "HQ request <id>: <idea>" is yskills' New project tap in HQ: start one brainstorm thread for it (step 1) with the id in its brief, once per id; that thread marks `requests/<id>` started with its link.
 
+## Session start
+
+The one home of the coordinator's start protocol. Every new coordinator session, in this order:
+
+1. Read `MEMORY.md`: the state, in the shape of `templates/project-memory.md`.
+2. `list_thread_sessions`: the board.
+3. `add_repo` claude-setup if it is not loaded; read `CLAUDE.md` and `docs/MAP.md` (Start here).
+4. Reconcile. Every working or blocked thread on the board has a line under `## Threads` in `MEMORY.md`, and every Threads line has a live thread. The board wins: correct memory in the same turn. Every ask of yskills in the last day of chat has a thread, a PR or a `Done:` line (the asks ledger above).
+5. Cheap memory check: `MEMORY.md` has only the template's five sections and no rule line. A line that is a rule becomes a `loop:setup` issue (`docs/WORKFLOW.md`, Learning).
+6. Post nothing unless something is wrong.
+
 ## Model and handoff in every brief
 
 yskills (2026-10-18): "does every thread know what model to use and how much context makes sense before handoff?" Two threads ran past their limit, so the rule is in every brief, not in memory.
 
-- Every `start_thread_session` brief starts with the block in `briefs.md` ("Every thread brief starts with"), its two filled lines included: `Model:` the id from the Models line (`docs/WORKFLOW.md`) and `Handoff:` at <N>k. N is 250 by default; you raise it in the brief for a big task, per thread (yskills, 2026-10-18), and the thread then watches that number.
+- Every `start_thread_session` brief starts with the block in `briefs.md` ("Every thread brief starts with"), its two filled lines included: `Model:` the id from the Models line (`docs/WORKFLOW.md`) and `Handoff:` at <N>k. N is 350 by default (its home is `global/context-guard.mjs`: warn 250k, hand off 350k); you raise it in the brief for a big task, per thread (yskills, 2026-10-18), and the thread then watches that number.
 - A thread writes its handoff file at its `Handoff:` number, at a milestone, never mid-step: `/mnt/project-files/<project>/handoff/<date>-<topic>.md` (what is done, what is next, branch, PR, open asks), replies with its path and stops. Haiku readers stay under 100k.
 - You start the fresh thread on that file and never resume a thread over its limit or idle over an hour.
 - The context guard (`global/context-guard.mjs`) warns at 250k only where `cloud/setup.sh` ran as the environment's setup script; a thread does not count on it and watches its own context.
