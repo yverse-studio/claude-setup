@@ -15,9 +15,11 @@ const PRODUCT_LINE = /^Its repo's CLAUDE\.md.*$/m
 const SETUP_LINE = 'The repo is claude-setup itself, so there is no product lessons file (docs/LESSONS.md).'
 const USAGE = 'usage: node scripts/project-instructions.mjs <name> [--about "<one line>"] [--kind site|game|repo|video|social|story] [--repo <org/repo>]'
 
-const projectFile = (name) => {
+const NAME = /^[a-z0-9][a-z0-9-]*$/ // the same shape new-project accepts: repo and Worker name
+
+export const projectFile = (name) => {
   const f = join(root, 'projects', `${name}.json`)
-  return existsSync(f) ? JSON.parse(readFileSync(f, 'utf8')) : {}
+  return existsSync(f) ? JSON.parse(readFileSync(f, 'utf8')) : null
 }
 
 export function parseArgs(argv) {
@@ -31,8 +33,9 @@ export function parseArgs(argv) {
 }
 
 export function fill(name, flags = {}) {
+  if (!NAME.test(name)) throw new Error(`name must be lowercase letters, digits and dashes: ${name}`)
   const setup = name === SETUP
-  const file = setup ? {} : projectFile(name)
+  const file = (setup ? null : projectFile(name)) ?? {}
   const values = {
     name,
     about: flags.about ?? (setup ? SETUP_ABOUT : name),
@@ -46,9 +49,10 @@ export function fill(name, flags = {}) {
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const { name, flags } = parseArgs(process.argv.slice(2))
-  if (!name) {
+  if (!name || !NAME.test(name) || Object.values(flags).some((v) => v === undefined)) {
     console.error(USAGE)
     process.exit(1)
   }
+  if (name !== SETUP && !projectFile(name)) console.error(`note: no projects/${name}.json; using the name and flags only`)
   console.log(fill(name, flags))
 }
