@@ -1,6 +1,6 @@
 # Blender POV test (2026-10-25, headless, no GPU)
 
-`pip install bpy` (Blender 5.2 as a Python module, works in the cloud container, Cycles on CPU).
+Run both scripts from the folder that holds `scene.blend` (`pov.py` opens it from the current directory and imports the second character from `/mnt/project-files/claude-setup/hq-characters/remix/rosa.vrm`, edit that path). `pip install bpy` (Blender 5.2 as a Python module, works in the cloud container, Cycles on CPU).
 
 ```bash
 python3 -I scene.py . /path/to/character.vrm     # blockout + VRM import (glTF importer reads VRM) -> scene.blend
