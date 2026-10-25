@@ -49,6 +49,27 @@ and calls that showing him.
 - **Roblox Studio:** later, once Claude has a Roblox login.
 - **Laptop allow list (drafted 2026-10-10, never applied):** a `permissions.allow` block (git/gh read and PR commands) plus an `autoMode.environment` entry trusting `github.com/yverse-studio` and Claude's Cloudflare account, with `"$defaults"` kept, goes into `C:\Users\Claude\.claude\settings.json` (user scope; `claude auto-mode config` shows the effective rules). Repo transfers, collaborator invites and `.git/config` edits stay blocked on purpose. The ready block is `autonomy/laptop-settings.json.md` in the reports zip.
 
+## Long laptop jobs
+
+yskills (2026-10-25): a POV render failed three times (GPU out of memory, a 1h+ hang, a CUDA launch failure), the laptop slept at 01:42 and the session went offline at 09:32, and nobody said so. This section is the one home of the rule.
+
+- Run every job longer than ~10 minutes (render, bake, batch) through `node scripts/laptop-job.mjs --name <job> --timeout-min <N> -- <command>`. It refuses to start when the GPU is busy (more than 1500 MB in use, "Blender is open" named), warns when AC sleep or hibernate is not off, keeps Windows awake while the job runs, kills the whole process tree on timeout or after 15 silent minutes, and always ends with one line: `JOB OK|FAIL|HANG|TIMEOUT|BLOCKED <name>: <why>`. [advisory]
+- The thread that started the job posts that line as its reply at once, then goes on (smaller settings, a retry, the next step); a failure is never a silent wait. [advisory]
+- One retry with a changed setting is fine; the same job failing a third time goes to yskills as one line plus the cause, and the rest keeps running. [advisory]
+- The coordinator checks `remote_control_status` on every wake and when a laptop job is running; a device that goes offline mid-job gets one line in the project chat ("laptop offline since <time> during <job>"), with the likely cause (sleep, crash, GPU) if the log shows one. [advisory]
+
+**Overnight and long runs:** a thread works until the goal is reached or its limit is used up, whichever comes first, and does not stop to ask on the way (ask-first items excepted). While yskills sleeps it writes one short progress line per milestone to its checklist (what finished, what runs now, what failed) so the morning read is the checklist, not a scroll. At its `Handoff:` number it still writes the handoff file and stops (`roles/project-manager.md`, Model and handoff in every brief); "run on" never means past that number. [advisory]
+
+**Hands step, once (yskills, admin PowerShell on the laptop):** Windows must not sleep on AC. The script warns at every job start until this is done.
+
+```
+powercfg /change standby-timeout-ac 0
+powercfg /change hibernate-timeout-ac 0
+powercfg /change monitor-timeout-ac 0
+```
+
+Check: `powercfg /query SCHEME_CURRENT SUB_SLEEP STANDBYIDLE` shows `Current AC Power Setting Index: 0x00000000`. Settings, System, Power also works: "Plugged in: sleep after" = Never. The script's keep-awake covers the job itself without admin, but not an idle gap between jobs.
+
 ## Update
 
 ```

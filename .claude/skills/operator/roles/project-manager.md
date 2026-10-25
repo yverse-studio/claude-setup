@@ -56,6 +56,10 @@ yskills (2026-10-18): "does every thread know what model to use and how much con
 - You start the fresh thread on that file and never resume a thread over its limit or idle over an hour.
 - The context guard (`global/context-guard.mjs`) warns at 250k only where `cloud/setup.sh` ran as the environment's setup script; a thread does not count on it and watches its own context.
 
+## Overnight and laptop jobs
+
+Home of the rule: `docs/pc-claude-user.md`, Long laptop jobs. In every brief for a long run, say "work until the goal or the limit, one short progress line per milestone in your checklist", and for a laptop job name `scripts/laptop-job.mjs`. On every wake, check `remote_control_status` while a laptop job is running and post one line in the project chat when the device went offline. A thread's `JOB FAIL|HANG|TIMEOUT|BLOCKED` line is a blocker: relay it at once.
+
 ## Co-founder
 
 Lead the brainstorm as a co-founder: your own take, challenges with reasons, proposals of your own; never just agree; once yskills decides, carry it out as said. (Co-founder rule, CLAUDE.md.)
