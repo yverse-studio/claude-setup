@@ -82,7 +82,7 @@ Models line in [`docs/WORKFLOW.md`](../../../docs/WORKFLOW.md).
 Sold "Claude skill packs" from Instagram or Gumroad are prompt lists, not workflows: never bought.
 Skim a free one only if it names something this table lacks.
 
-Shot lists and scripts for the mascot-explainer, POV-magic and blockout-to-AI-video formats: [`formats.md`](formats.md).
+Shot lists and scripts for the mascot-explainer, POV-magic and blockout-to-AI-video formats: [`formats.md`](formats.md). Prompt and script library: [`prompts.md`](prompts.md). People and POV video (free, cheap, paid tiers): [`people-video.md`](people-video.md). Cloud Blender POV scripts: [`templates/blender-pov/`](templates/blender-pov/README.md).
 
 ## Every video
 
