@@ -48,3 +48,7 @@ test('kills a silent job', () => {
   const r = run(['--idle-min', '0.05'], 'node', '-e', 'setInterval(()=>{},1000)')
   assert.match(lastLine(r), /^JOB HANG job: no output/)
 })
+test('kills grandchildren and still reports (POSIX)', { skip: process.platform === 'win32' }, () => {
+  const r = run(['--timeout-min', '0.05'], 'sh', '-c', 'sleep 300 & wait')
+  assert.match(lastLine(r), /^JOB TIMEOUT job:/)
+})

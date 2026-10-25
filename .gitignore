@@ -3,3 +3,4 @@ node_modules/
 .DS_Store
 *.whl
 __pycache__/
+laptop-job.log

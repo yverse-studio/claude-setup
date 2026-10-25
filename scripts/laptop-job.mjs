@@ -7,6 +7,7 @@ import { spawn, spawnSync } from 'node:child_process'
 import { appendFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
+const KILL_GRACE_MS = 5000
 const KEEP_AWAKE_PS = `Add-Type -MemberDefinition '[DllImport("kernel32.dll")] public static extern uint SetThreadExecutionState(uint f);' -Name P -Namespace W; while ($true) { [W.P]::SetThreadExecutionState(0x80000001) | Out-Null; Start-Sleep 30 }`
 
 export function parseArgs(argv) {
@@ -52,7 +53,8 @@ const statusLine = (state, name, why) => `JOB ${state} ${name}: ${why}`
 
 function finish(line, code) {
   console.log(line)
-  try { appendFileSync(process.env.LAPTOP_JOB_LOG ?? 'laptop-job.log', `${new Date().toISOString()} ${line}\n`) } catch (e) { console.error(`could not write the log: ${e.message}`) }
+  const log = process.env.LAPTOP_JOB_LOG ?? 'laptop-job.log'
+  try { appendFileSync(log, `${new Date().toISOString()} ${line}\n`) } catch (e) { console.error(`WARN could not write ${log}: ${e.message}`) }
   process.exit(code)
 }
 
@@ -69,7 +71,7 @@ function main() {
     if (busy) finish(statusLine('BLOCKED', opt.name, `${busy}; close the app or pass --gpu-max-used-mb`), 3)
   }
   const awake = win ? spawn('powershell', ['-NoProfile', '-Command', KEEP_AWAKE_PS], { stdio: 'ignore' }) : null
-  const child = spawn(cmd[0], cmd.slice(1), { stdio: ['ignore', 'pipe', 'pipe'] })
+  const child = spawn(cmd[0], cmd.slice(1), { stdio: ['ignore', 'pipe', 'pipe'], detached: !win })
   const started = Date.now()
   let lastOutput = started
   const touch = (chunk) => { lastOutput = Date.now(); process.stdout.write(chunk) }
@@ -80,21 +82,26 @@ function main() {
     if (verdict) return
     verdict = [state, why]
     if (win) spawnSync('taskkill', ['/PID', String(child.pid), '/T', '/F'])
-    else child.kill('SIGKILL')
+    else { try { process.kill(-child.pid, 'SIGKILL') } catch { child.kill('SIGKILL') } }
+    setTimeout(() => done(null), KILL_GRACE_MS).unref()
   }
   const watch = setInterval(() => {
     const now = Date.now()
     if (now - started > opt.timeoutMin * 60000) kill('TIMEOUT', `over ${opt.timeoutMin} min`)
     else if (now - lastOutput > opt.idleMin * 60000) kill('HANG', `no output for ${opt.idleMin} min`)
   }, 10000)
+  let finished = false
   const done = (code, why) => {
+    if (finished) return
+    finished = true
     clearInterval(watch)
     awake?.kill()
-    const [state, reason] = verdict ?? (code === 0 ? ['OK', `finished in ${Math.round((Date.now() - started) / 60000)} min`] : ['FAIL', why ?? `exit code ${code}`])
+    const [state, reason] = verdict ?? (code === 0 ? ['OK', `finished in ${Math.round((Date.now() - started) / 60000)} min`] : ['FAIL', why ?? (code === null ? 'ended by a signal' : `exit code ${code}`)])
     finish(statusLine(state, opt.name, reason), state === 'OK' ? 0 : 1)
   }
   child.on('error', (e) => done(1, `could not start: ${e.message}`))
   child.on('close', (code) => done(code))
+  child.on('exit', (code) => { if (verdict) done(code) })
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) main()
