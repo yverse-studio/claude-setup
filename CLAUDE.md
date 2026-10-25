@@ -65,9 +65,9 @@ goes in its home only, everywhere else links it.
   project": the `operator` skill (live project: its "Idea for a live project"), never one
   catch-all thread. One thread per plan or PR, closed when done (`docs/WORKFLOW.md`). [advisory]
 - Models: the one line in `docs/WORKFLOW.md` (Models). A model yskills names is used as named.
-- Lessons stick: every ask of yskills becomes, the same turn, an open thread until delivered or a line in its home in claude-setup (memory only points to it; `operator` roles/project-manager.md, Asks ledger); a correction becomes a line in its home, or a test, lint rule or hook. Friction
-  with this setup becomes a `loop:setup` issue (`operator` skill, Setup loop). Auto-memory is a
-  scratchpad (monthly memory check, `docs/WORKFLOW.md` Learning).
+- Lessons stick: every ask of yskills becomes, the same turn, an open thread until delivered or a line in its home in claude-setup (`operator` roles/project-manager.md, Asks ledger); a correction becomes a line in its home, or a test, lint rule or hook. Friction
+  with this setup becomes a `loop:setup` issue (`operator` skill, Setup loop). Where a lesson goes:
+  `docs/MAP.md` (Start here); memory holds state only (`operator` `templates/project-memory.md`).
 - Work for the future (yskills 2026-10-20, every project): what any thread learns or builds (a
   guide, tool, template, asset, character, story method) goes into claude-setup in a reusable form
   and is linked from `docs/MAP.md`. The next project of any type (SFW or NSFW, Ren'Py, 3D, web)
