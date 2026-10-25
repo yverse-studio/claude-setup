@@ -90,16 +90,17 @@ does the job.
 Matt Pocock's retro, both MIT). For each correction or catchable failed round of the PR, ask: would
 the next thread repeat this mistake without the lesson? No: write nothing and say so in one line.
 Yes: update the line that already covers it, else add one line in its single home (`CLAUDE.md`
-line, skill line, or memory). A mechanical lesson (a fixed pattern, a banned call, a file rule)
+line, skill line, or a product repo's `docs/LESSONS.md`; `docs/MAP.md`, Where a lesson goes, decides; never project memory). A mechanical lesson (a fixed pattern, a banned call, a file rule)
 becomes a check, test or lint rule in `scripts/` or CI instead of text. Then prune: delete a
 lesson line that a check now covers, or whose guarded thing is gone.
 
-Claude Code's built-in auto-memory stays on as a scratchpad on your PC
-(`~/.claude/projects/*/memory/`). **Memory check**, first session of each month or when you say
-"memory check": read every memory file, move each lasting lesson into claude-setup (rule, skill
-line or check, in one PR), delete notes that are wrong, stale or now in the repo, and tell you in
-three lines what moved and what went. If the files keep holding things the repo should, it says
-so; if they stay empty or useless twice in a row, it suggests turning auto-memory off.
+**Memory check, two speeds.** Every coordinator start, cheap: `MEMORY.md` has only the five sections of
+[the template](../.claude/skills/operator/templates/project-memory.md) and no line that is a rule; a rule
+found there becomes a `loop:setup` issue. Monthly, or when you say "memory check": full. Every fact
+file and auto-memory note is moved into its home ([`docs/MAP.md`, Start here](MAP.md#start-here)) or
+deleted, the raw copy archived under `docs/archive/` first, and you get three lines on what moved and
+what went. Claude Code's built-in auto-memory on your PC (`~/.claude/projects/*/memory/`) stays a
+scratchpad that the full check empties.
 
 Before the first real project, three test projects run this roadmap end to end
 (`docs/TEST-PROJECTS.md`).
