@@ -27,7 +27,7 @@ In every project, a message with an Instagram, TikTok or YouTube link, or a vide
 
    Give the long version (Seen, Heard, Fact check, the full timeline) only when he asks.
 4. **Route it by what he wrote.**
-   - "like this", "style", "for later", or no words: the Take lines go into the brand's `taste.md` and hook library (`social-team`; until that project exists, the taste memory), where the Producer reads them.
+   - "like this", "style", "for later", or no words: the Take lines go to their home: a Take about look to `ui-review/TASTE.md` (Rejected or Liked, one dated line), a video-format Take to `video-studio/learnings.md`; the hook library is `social-team`'s.
    - An idea: one line in the idea backlog.
    - "edit this": only his own video. Someone else's video becomes "make one like it from our footage" (copyright).
    - "explain", "is this true", or a tool tip: add the fact check. A tool goes through `search-first` and the CLAUDE.md install rule before anything is installed.

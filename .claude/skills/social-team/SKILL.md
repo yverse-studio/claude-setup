@@ -50,6 +50,10 @@ the webhook Worker for comments and DMs, D1 for the queue, and the API behind HQ
 (player, caption, Post / Change / Drop, the auto-post switch, the schedule). Videos stay in the
 product project's `video/<slug>/` (`video-studio`).
 
+A project without a repo (the Social Media Manager) keeps these files in `/mnt/project-files/<project>/social/`, shared by its threads; that is where "any idea" lands today.
+
+Until HQ's Content view exists, finished videos are attached as files in the thread reply and listed in the project chat, and auto-post stays off (no switch exists).
+
 ## Posting
 
 Two kinds of account (yskills, 2026-10-18: "when i give you another account or you make one for

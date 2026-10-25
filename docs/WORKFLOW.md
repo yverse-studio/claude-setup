@@ -45,6 +45,8 @@ Role table (tiers only; the ids live in the line above):
 | Architect, plan of a new product | Fable | medium (high when yskills asks) | | only the three Fable cases above |
 | Planner (feature plan, PLAN.md) | Opus | medium | Fable | plan rejected twice |
 | Designer, design-critic, vote verdict | Opus | medium | | taste is judgement |
+| Game Designer | Opus | medium | | play is judgement |
+| Audio, Analytics, Playtester, Content Designer | Sonnet | medium | | |
 | Programmer / builder | Sonnet | medium | Opus subagent | before committing to an approach; stuck twice on the same spot; before "done" |
 | Researcher | Sonnet | medium | Opus | only to weigh conflicting findings |
 | Reviewer subagents (code, ts, vue, db, silent-failure) | Sonnet | medium | | |
