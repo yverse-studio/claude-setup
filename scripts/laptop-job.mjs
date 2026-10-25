@@ -51,7 +51,7 @@ const statusLine = (state, name, why) => `JOB ${state} ${name}: ${why}`
 
 function finish(line, code) {
   console.log(line)
-  try { appendFileSync(process.env.LAPTOP_JOB_LOG ?? 'laptop-job.log', `${new Date().toISOString()} ${line}\n`) } catch {}
+  try { appendFileSync(process.env.LAPTOP_JOB_LOG ?? 'laptop-job.log', `${new Date().toISOString()} ${line}\n`) } catch (e) { console.error(`could not write the log: ${e.message}`) }
   process.exit(code)
 }
 
