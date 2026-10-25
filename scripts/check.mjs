@@ -294,6 +294,14 @@ for (const h of TRACKING_HEADINGS) {
   if (!new RegExp(`^## ${h}\\s*$`, 'm').test(trackingTemplate)) errors.push(`templates/tracking-plan.md: lacks "## ${h}"`)
 }
 
+// Boot text: the template is the generator's source; four placeholders, and the pasted part stays short.
+const bootTemplate = readFileSync(join(root, '.claude/skills/operator/templates/project-instructions.md'), 'utf8')
+for (const ph of ['name', 'about', 'repo', 'kind']) {
+  if (!bootTemplate.includes(`{{${ph}}}`)) errors.push(`templates/project-instructions.md: lacks {{${ph}}}`)
+}
+const bootText = bootTemplate.split(/^---\r?\n/m)[1] ?? ''
+if (bootText.split('\n').filter((l) => l.trim()).length >= 15) errors.push('templates/project-instructions.md: the text below --- must be under 15 non-empty lines')
+
 // One index: every lessons home (a `## Lessons` or `## Learnings` heading, or learnings.md) is linked from docs/MAP.md.
 const mapText = readFileSync(join(root, 'docs/MAP.md'), 'utf8')
 const eccAgents = new Set((ecc?.agents ?? []).map((a) => `.claude/agents/${a}.md`))
@@ -310,7 +318,7 @@ for (const t of ['project-memory', 'lessons']) {
   if (!existsSync(join(root, `.claude/skills/operator/templates/${t}.md`))) errors.push(`templates/${t}.md: missing; docs/MAP.md (Start here) points to it`)
 }
 const memoryTemplate = join(root, '.claude/skills/operator/templates/project-memory.md')
-if (existsSync(memoryTemplate) && statSync(memoryTemplate).size >= 3072) errors.push('templates/project-memory.md: 3 KB or more; a MEMORY.md of this shape must stay under 3072 bytes, shorten the examples')
+if (existsSync(memoryTemplate) && statSync(memoryTemplate).size >= 3072) errors.push('templates/project-memory.md: 3 KB or more; the template must stay under 3072 bytes so a MEMORY.md in its shape does too, shorten the examples')
 
 // Kits: docs/MAP.md (Kits) has one row per project kind, and every "Read first" path resolves.
 const KINDS = ['site', 'app', 'game', 'video', 'social', 'story', 'setup', 'repo']

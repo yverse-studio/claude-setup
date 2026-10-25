@@ -8,12 +8,10 @@ Once per new claude.ai project, before the first message. The text is a short po
 session, the project chat included, loads this repo with `add_repo` and follows its `CLAUDE.md`,
 so the rules live here only.
 
-1. Open [`operator/templates/project-instructions.md`](../.claude/skills/operator/templates/project-instructions.md)
-   and copy everything below the `---` line.
-2. In the project: **Project settings > Memory > Project instructions**, paste, replace `<app>`
-   with one line on what the project is, save.
-3. **Project settings > Repositories**: add `yverse-studio/claude-setup` (threads load the
-   details from it).
+1. Run `node scripts/project-instructions.mjs <name> --about "<one line>"` (or ask a thread to
+   print it) and copy the text.
+2. In the project: **Project settings > Memory > Project instructions**, paste, save.
+3. **Project settings > Repositories**: add `yverse-studio/claude-setup` and the project's repo.
 
 A rule change needs no new paste: sessions read the rules from this repo.
 

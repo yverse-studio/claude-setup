@@ -188,3 +188,18 @@ test('check.mjs fails when a Kits row is removed or a Read-first link is dead', 
     assert.ok(deadLink.stderr.includes('story reads no-such-file.md'), deadLink.stderr)
   } finally { rmSync(copy, { recursive: true, force: true }) }
 })
+
+test('check.mjs fails when a lessons file is not linked from docs/MAP.md or the memory template grows past 3 KB', () => {
+  const copy = mkdtempSync(join(tmpdir(), 'guards-repo-'))
+  try {
+    cpSync(root, copy, { recursive: true, filter: (p) => !p.includes(`${join(root, '.git')}`) })
+    const run = () => spawnSync(process.execPath, [join(copy, 'scripts', 'check.mjs')], { encoding: 'utf8' })
+    assert.equal(run().status, 0)
+    writeFileSync(join(copy, 'docs/new-lessons.md'), '# New\n\n## Lessons\n\n- 2026-10-25: a lesson nobody indexed\n')
+    const memory = join(copy, '.claude/skills/operator/templates/project-memory.md')
+    writeFileSync(memory, readFileSync(memory, 'utf8') + 'x'.repeat(3072))
+    const r = run()
+    assert.equal(r.status, 1)
+    for (const want of ['docs/new-lessons.md: holds lessons but docs/MAP.md does not link it', 'project-memory.md: 3 KB or more']) assert.ok(r.stderr.includes(want), `missing: ${want}\n${r.stderr}`)
+  } finally { rmSync(copy, { recursive: true, force: true }) }
+})
