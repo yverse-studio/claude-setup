@@ -139,8 +139,8 @@ const walk = (d) => readdirSync(join(root, d)).flatMap((n) => {
   return rel.endsWith('.md') ? [rel] : []
 })
 const eccDirs = (ecc?.skills ?? []).map((n) => `.claude/skills/${n}/`)
-// docs/research holds dated notes that quote old paths; they are history, not instructions.
-const OWN_DOCS = ['README.md', 'CLAUDE.md', ...walk('docs').filter((f) => !f.startsWith('docs/research/'))]
+// docs/research and docs/archive hold dated notes that quote old paths and old rules; they are history, not instructions.
+const OWN_DOCS = ['README.md', 'CLAUDE.md', ...walk('docs').filter((f) => !f.startsWith('docs/research/') && !f.startsWith('docs/archive/'))]
 const own = [...OWN_DOCS, ...walk('.claude/skills').filter((f) => !eccDirs.some((e) => f.startsWith(e))), ...walk('.claude/agents')]
 // Vendored files are link-checked too: sync-ecc.mjs unlinks targets the subset left out.
 for (const f of [...own, ...walk('.claude/rules'), ...walk('.claude/skills').filter((f) => eccDirs.some((e) => f.startsWith(e)))]) {
@@ -158,7 +158,7 @@ if (!modelLine) errors.push('docs/WORKFLOW.md: the Models line is missing')
 const lineIds = new Set(modelLine?.match(/claude-[a-z]+-[\d-]+/g) ?? [])
 const anyText = (d) => readdirSync(join(root, d)).flatMap((n) => {
   const rel = d === '.' ? n : `${d}/${n}`
-  if (['.git', 'node_modules', 'research'].includes(n)) return []
+  if (['.git', 'node_modules', 'research', 'archive'].includes(n)) return []
   if (statSync(join(root, rel)).isDirectory()) return anyText(rel)
   return /\.(md|mjs|js|json|sh|ya?ml|tsx?)$/.test(n) ? [rel] : []
 })
