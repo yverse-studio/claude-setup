@@ -35,6 +35,23 @@ The thread board is read at every coordinator start and wins over memory.
 4. State (what is open, who owes what): the `MEMORY.md` section it belongs to.
 5. Everything else (how the day went, a dead end, a report): `/mnt/project-files/<project>/`; nothing to do.
 
+## Kits
+
+A project loads only what its kind needs. Read the row for the kind; load nothing else until a job names it.
+
+| Kind | Read first | Team that starts, in order | Skipped | Run steps ([`run.md`](../.claude/skills/operator/run.md)) |
+|---|---|---|---|---|
+| `site` | [`scaffold`](../.claude/skills/scaffold/SKILL.md), [`publish`](../.claude/skills/publish/SKILL.md), [`roles/designer.md`](../.claude/skills/operator/roles/designer.md), [`roles/content-designer.md`](../.claude/skills/operator/roles/content-designer.md), [`legal`](../.claude/skills/legal/SKILL.md), [`USING.md`](USING.md) | Designer, Content Designer, Programmer, Tester; Legal at launch | Game Designer, Audio, Playtester, Security; Analytics unless the plan tracks events | 1 to 9 |
+| `app` | the `site` files, [`sell`](../.claude/skills/sell/SKILL.md), [`roles/analytics.md`](../.claude/skills/operator/roles/analytics.md), [`security-review`](../.claude/skills/security-review/SKILL.md) | Designer, Content Designer, Programmer, Analytics, Security, Tester; Legal at launch | Game Designer, Audio, Playtester | 1 to 9 |
+| `game` | [`game-pipeline.md`](game-pipeline.md), [`game-3d`](../.claude/skills/game-3d/SKILL.md) (3D) or [`data-web.md`](../.claude/skills/toolbox/catalog/data-web.md) (2D), [`roles/game-designer.md`](../.claude/skills/operator/roles/game-designer.md), [`roles/audio.md`](../.claude/skills/operator/roles/audio.md), [`roles/playtester.md`](../.claude/skills/operator/roles/playtester.md), [`store-publish`](../.claude/skills/store-publish/SKILL.md) | Game Designer, Designer (art direction), Audio, Programmer, Playtester, Tester | Content Designer (unless the game has a lot of text), Marketer before the first playable | 1 to 9 |
+| `video` | [`video-studio`](../.claude/skills/video-studio/SKILL.md), its [`learnings.md`](../.claude/skills/video-studio/learnings.md) and [`formats.md`](../.claude/skills/video-studio/formats.md), [`media-editing`](../.claude/skills/media-editing/SKILL.md) | the video-studio roles: Producer, Writer, Director, Sound, Editor, Motion, Critic | Researcher, Programmer, gate, scaffold, launch | 1, 9; the rest runs by `video-studio` |
+| `social` | [`social-team`](../.claude/skills/social-team/SKILL.md), its [`learnings.md`](../.claude/skills/social-team/learnings.md), [`market`](../.claude/skills/market/SKILL.md) §4 and §6 | the social-team roles: Lead, Scout, Community, Partnerships, Analyst | Researcher, Programmer, gate, scaffold, launch | 1, 9; the rest runs by `social-team` |
+| `story` (Ren'Py visual novel) | [`renpy.md`](renpy.md), [`game-pipeline.md`](game-pipeline.md), [`two-figure-scenes.md`](two-figure-scenes.md), [`character-workflow.md`](character-workflow.md), [`storyteller`](../.claude/skills/storyteller/SKILL.md) | Storyteller (`storyteller` skill), Designer for renders, Programmer for Ren'Py, Tester | Game Designer's difficulty table, Audio until the story is locked, Analytics, Security, Marketer | 1 to 6 |
+| `setup` (claude-setup itself) | [`CLAUDE.md`](../CLAUDE.md), this file, [`WORKFLOW.md`](WORKFLOW.md) | Programmer, Reviewer | Designer, Researcher, Marketer, Legal, `sell`, launch, grow | 1, 5, 6, 9 |
+| `repo` (private repo, no Worker) | the row of the kind its content says; default `site` | that kind's team | that kind's skipped list | that kind's steps |
+
+A fix, a small change or a question is one thread of the role it needs; no Researcher, Designer or research step. A new product starts the kit's team in the kit's order; the Project Manager posts the team list in brief (a). A kind not in the table is sized as `site`.
+
 ## What loads when
 
 | Loads | What | Cost (tokens, est.) |
@@ -114,6 +131,7 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 | Rule | Home | Others only link |
 |---|---|---|
 | Org, accounts, where secrets live | `CLAUDE.md` (The world) | `publish` skill, `docs/WORKFLOW.md` (PC work) |
+| Which team a project kind starts (Kits) | `docs/MAP.md` (Kits) | `operator/SKILL.md` (Size the job), `operator/run.md` |
 | Deploy or delete a page (the steps) | `docs/USING.md` | operator `run.md`, `briefs.md`; detail in `publish` |
 | Where a lesson goes (the decision tree) | `docs/MAP.md` (Start here) | `CLAUDE.md` (Lessons stick), `docs/WORKFLOW.md` (Learning) |
 | Project memory holds state only (its shape) | `operator/templates/project-memory.md` | `operator/roles/project-manager.md`, `docs/WORKFLOW.md` |
