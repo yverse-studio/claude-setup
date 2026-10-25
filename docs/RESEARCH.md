@@ -114,3 +114,14 @@ Added from these sources:
   [FireRed-OpenStoryline](https://github.com/FireRedTeam/FireRed-OpenStoryline) (Apache-2.0,
   style skills) and [VideoDB Director](https://github.com/video-db/Director) (MIT, agent
   structure; don't depend on its paid cloud).
+
+## Rejected and open (from the reports, 2026-10-25)
+
+So nobody proposes them again, or loses an open gap:
+
+- 2026-10-24 (setup overhaul): kits as plugins rejected for now (saves about 700 tokens a session; auto-load of `enabledPlugins` unconfirmed; a multi-repo cloud thread loads no repo plugins); an LLM `qa-gate` with claude-code-action rejected (needs an API key or an OAuth token that eats the Max limit, and no project holds secrets in GitHub). Org rulesets need the GitHub Team plan on private repos.
+- 2026-10-18 (setup-research, 13 setups ranked): skipped with reason: gstack and oh-my-claudecode hook runtimes (own TypeScript runtime), spec-kit CLI and its human-gate bugfix flow (against auto-run), agency-agents marketing roles (generic), theme-factory presets (anti-slop), Pocock git-guardrails (blocks every push, our threads must push), GSD model profiles (the Models line does it), SDD WebFetch cache (we avoid WebFetch). Matt Pocock's co-author was not found in 7 searches.
+- 2026-10-18 (web-social roster): the Release step (changelog, version and a live check after the merge; `gate.md` has only the undo table) is an open gap, to decide after the Content Designer and Analytics roles; it may fit as a section of an existing file instead of a role.
+- 2026-10-18 (3D route): the two YouTube links on 3D base models were never watched (cloud got 429 / bot check; no cookies by rule); the fix is a laptop RC session, which needs a card.
+- 2026-10-10 (model and tools): no "indexed folder structure for workflows like payment" exists (queries listed in the report); the coordinator model is the Models line in `docs/WORKFLOW.md`.
+- 2026-10-08 (Luna audit): `luna-monorepo` is the live Luna (Docker + Caddy); `aissistant` and `personal-luna` are stale duplicates, suggested for archive (`trayding-bot` still reads `aissistant`); `ARCHITECTURE-3-REPOS-DE.md` in the monorepo describes the old 3 repos and needs a rewrite on yskills' call.

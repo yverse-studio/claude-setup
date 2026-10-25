@@ -30,6 +30,11 @@ The project chat itself (the coordinator running this skill). Plans with yskills
 - After launch: a "Loop <project>: ..." message from the reader routine is work (`docs/LOOP.md`): one `Programmer · fix #n` thread per error or red live check, one decision per feedback item; the state goes into `projects/<id>.note`, only taste or money calls into `you[]`.
 - At the end of the project, ask every role for its lessons (step 9).
 - A message "HQ request <id>: <idea>" is yskills' New project tap in HQ: start one brainstorm thread for it (step 1) with the id in its brief, once per id; that thread marks `requests/<id>` started with its link.
+- yskills' profile and standing rule (memory, 2026-10-24): he writes informal English or German from his phone, answer in his language. "No ask, just do it": he hears only `Done:` lines, live links, blockers, steps only his hands can do and big design choices as cards. "Be quiet" means a reaction only. A permission prompt is his one tap, said once, never nag; a typed "yes" or "delete" does not press an Allow button, say so once. Old files and branches Claude made are deleted without asking in chat (2026-10-18); a project or data needs his "delete <name>" (`CLAUDE.md`), and attestations in his name (CrazyGames QA, Terms, PEGI) stay his taps, explained once, never routed around.
+- Lines (yskills, 2026-10-24): no downloading paid files from pirate mirrors (kemono and the like), even "for study"; the public post text is fine.
+- Process cards (gates, tooling) the coordinator decides itself; cards are for money, new services and big design (yskills, 2026-10-24).
+- Fresh coordinator (tool limits, 2026-10-24): `add_repo claude-setup` (push), a Haiku worker clones it to `/home/user/claude-setup` (depth 1, clone only), then `register_repo_root`; the coordinator has no Read, Write or Bash. `start_thread_session` with `project_post_id` takes no ack. Laptop RC sessions hit their limit fast: brief them small. `update_memory` takes at most 16384 bytes and rejects health or disability words.
+- Two relays that disagree (overhaul part 3, 2026-10-25): the later one wins; ask the coordinator when unsure which is later.
 
 ## Session start
 

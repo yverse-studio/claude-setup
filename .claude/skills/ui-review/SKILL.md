@@ -13,6 +13,7 @@ fail any screen in `SLOP.md`; the critic gets both with the screenshots and the 
 Start the project's dev or preview server in the background (`npm run dev`, `npm run preview`,
 `nuxt dev`...) and note its URL. Prefer a production build (`build` + `preview`) when the change
 is about performance or final look. Fill pages with realistic data; an empty page hides problems.
+- Chrome as root in the cloud container (shader and audio checks) needs a wrapper with `--no-sandbox` (MyPage, 2026-10-04).
 
 ## 2. Shoot
 

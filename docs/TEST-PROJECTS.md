@@ -35,6 +35,8 @@ repo; then the next one starts.
 2. A line in the table below.
 3. The next test project starts only after that PR is merged.
 
+A run's playbook lives in the skill or role file of that kind (`docs/MAP.md`, Kits and Expertise), not in a `toolbox/playbooks/` folder: that folder does not exist (2026-10-25).
+
 | # | Date | Touches outside briefs | Gate rounds | Cost (USD) | Lessons PR |
 |---|---|---|---|---|---|
 | 1 duo-test | 2026-10-05 to 10-06 | 6 (design cards, a typed ok, 3 key-card rounds, "merge everything", Build settings, the live test that found bugs) | #21: 2, #20 and #22: none on a preview | 38.04 | [lessons-1.md](https://claude.ai/code/project/chan_01XKnLb2nhGBYoEt3HNp26NS) (project files `test-runs/lessons-1.md`), folded in over #23 to #28 and this PR |

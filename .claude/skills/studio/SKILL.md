@@ -30,6 +30,8 @@ thread or Claude Code there. Cloud threads write code and tests (`roblox`, `tool
 4. Ship: Studio places publish from CI, models export as `.glb` into the repo
    (`game-3d`). "Done" carries a screenshot from step 3.
 
+Blender notes: the connector's "model from primitives" is weak for organic shapes and fine for hard-surface and blockouts (3d-route, 2026-10-18). A stylised FX recipe: moving a Mapping node's location is cheaper than animating Noise 4D W (the manual says a higher dimension costs more; the size of the gap is inference), and W morphs in place while location drifts, so they are not interchangeable; the "5 nodes" count is unverified (low-poly-and-sources, 2026-10-24).
+
 ## Live frames in HQ
 
 yskills watches from HQ's Team page ("Live in Studio und Blender"): one small monitor per app with

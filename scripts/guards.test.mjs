@@ -203,3 +203,4 @@ test('check.mjs fails when a lessons file is not linked from docs/MAP.md or the 
     for (const want of ['docs/new-lessons.md: holds lessons but docs/MAP.md does not link it', 'project-memory.md: 3 KB or more']) assert.ok(r.stderr.includes(want), `missing: ${want}\n${r.stderr}`)
   } finally { rmSync(copy, { recursive: true, force: true }) }
 })
+

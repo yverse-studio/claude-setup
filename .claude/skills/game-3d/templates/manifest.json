@@ -7,6 +7,10 @@
       "author": "pixiv (VRoid Studio sample)",
       "licence": "VRoid sample model terms: modification and commercial use allowed",
       "commercial": true,
+      "version": "VRM 0",
+      "retrieved": "2026-10-07",
+      "termsShot": "not needed, the licence is in the VRM meta",
+      "ships": true,
       "usedFor": "team roster"
     },
     {

@@ -68,6 +68,8 @@ presets), ellipsoid face normals, blush layer, 2D stickers for comedy.
 
 Still missing for all figures: `><` eyes, pout, tears, the face SDF shadow in MToon.
 
+- 2026-10-06 (hq-game PLAN): animals act out real state: working = idle at the desk with a typing bob, done = dance, blocked = gesture-negative, waiting for yskills = gesture-positive facing the camera, idle = static or nap (Kenney Cube Pets clips, see [models.md](models.md)).
+
 ## Physics and motion
 
 - Game: VRM spring bones on bust, hair and skirt with sphere colliders (head, chest, hips, thighs);
@@ -100,3 +102,18 @@ contact shadow under straps and bust. Full size target ≤100k triangles after S
 - Faces read at a glance; brows visible over bangs.
 - Render, look at every frame as an AAA character artist would, fix, then show; name what is weak.
 - Content line: sexy lingerie; the base is a smooth high detailed nude body with working genitals
+
+## Headless VRM remix (no Blender)
+
+How the HQ remix (Vita becomes Kira, `remix.mjs`, 2026-10-07) reshapes a rigged VRM in Node with no Blender and no paid service. The code (`remix.mjs`, `params.json`, `viewer.html`, `shots.mjs`, `office.mjs`) lives only in `/mnt/project-files/claude-setup/hq-characters/remix/`; keep that folder.
+
+- 2026-10-07 (hq-characters remix REPORT): body reshape = a smooth displacement field of positions: bust = an ellipsoid fitted to the `J_Sec_*_Bust` weights; hips, waist and thighs = bands from the hip, spine, chest and leg bones; zero near neck and wrists; normals follow the field's Jacobian; 8 spring-bone colliders refitted. Skin and baked clothes at one spot move alike, so there are no seams or spikes.
+- 2026-10-07 (hq-characters remix REPORT): the body poked through the coarse neon overlay at the bust; fix = a wider bust field plus a cloth-lift pass (overlay corners lifted where skin would show, 50 vertices). The lift only covers cloth over SKIN in the same mesh.
+- 2026-10-07 (hq-characters remix REPORT): height = scale the skeleton's Root node (x1.06 moves the head bone 1.466 to 1.554 m); HQ r147 sizes cards by the unskinned box, so the height shows.
+- 2026-10-07 (hq-characters remix REPORT, params.json): recolour by material name: hue / hueTo / sat / light, plus `tint` (colourise by brightness) for white or grey sources (white hair cannot go red by hue shift). A suit painted into `Body_00_SKIN` needs a recolour of the non-skin pixels. Shared textures (`Matcap_Rim`) stay. Every texture at most 1024 px.
+- 2026-10-07 (hq-characters remix REPORT): limits: the VRM 1.0 path (VRMC_vrm meta, VRMC_springBone, MToon factors) is untested for lack of a file; the embedded portrait stays the original's (render one in `viewer.html`, about 30 lines); not checked in motion (arms hang close to the wider hips).
+- 2026-10-07 (hq-characters remix REPORT): hard, hair swap between VRoid models: the hair is skinned to the model's own HairJoint bones with its own spring groups and colliders; merge skins, nodes, inverse bind matrices, spring bones and materials, then fit another head, about 1 to 2 days.
+- 2026-10-07 (hq-characters remix REPORT): face variety: VRoid has no shape keys for face proportions (the 41 face targets are expressions). Cheap variety = swap eye, brow, lash and eyeline textures between VRoid models (same UV layout), about 0.5 day; changing face geometry is hard.
+- 2026-10-07 (hq-characters remix REPORT, HANDOFF): ten distinct people from two bases (F and G): shape plus colour variants take about 2 h (5 s build plus one look each) but look like siblings; distinct people need face-texture swaps (+0.5 day) plus more licence-clean VRoid bases or a hair transplant (+1 to 2 days). Plan: 3 bases x shape x colour x face-texture swaps, named originals after the references.
+- 2026-10-07 (hq-characters HANDOFF): rejected: a Node `remix.mjs` approach for the ten originals (a translucent mask sat over G's lower face); the ten were built with numpy + Pillow `remix.py` by skin weights, set by `roster.json` + `build.sh` (those scripts were on branches that never merged).
+- 2026-10-07 (hq-characters HANDOFF): untested idea, texture-space outfit painting: a per-texel 3D position and body-part map of the VRoid body texture (`bodymap.py`), garments painted as 3D shapes (tops, briefs, stockings, jeans, bodysuit; stripes, dots, lace, denim), skin repainted first, then garments, and a `cover()` check that refuses any outfit leaving chest or hips bare. Written, never run or screenshot.
