@@ -1,6 +1,6 @@
 # Low-poly best practice (research 2026-10-25)
 
-Report with every URL: `/mnt/project-files/claude-setup/research/2026-10-25-low-poly-and-sources.md`. Tags: **V** primary source seen, **C** secondary or common practice, **U** no source, our choice. Open the primary page once before leaning on a number. Where to get assets: [`asset-sources.md`](asset-sources.md).
+Report with every URL: `docs/research/2026-10-25-low-poly-and-sources.md`. Tags: **V** primary source seen, **C** secondary or common practice, **U** no source, our choice. Open the primary page once before leaning on a number. Where to get assets: [`asset-sources.md`](asset-sources.md).
 
 ## Budgets (no primary source gives hard numbers; they depend on engine and target)
 | Item | Number | Tag |

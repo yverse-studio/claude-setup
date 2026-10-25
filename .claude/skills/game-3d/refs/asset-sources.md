@@ -1,6 +1,6 @@
 # Pick the best source for the job (research 2026-10-25)
 
-No vendor is hard-coded: choose by the criteria below, then log it. Every row's URLs and the open gaps are in `/mnt/project-files/claude-setup/research/2026-10-25-low-poly-and-sources.md`. Zero budget is the default; money means a card first (CLAUDE.md). Contexts: **G** game, **A** animation (own render), **V** video.
+No vendor is hard-coded: choose by the criteria below, then log it. Every row's URLs and the open gaps are in `docs/research/2026-10-25-low-poly-and-sources.md`. Zero budget is the default; money means a card first (CLAUDE.md). Contexts: **G** game, **A** animation (own render), **V** video.
 
 ## Criteria, in order
 1. Licence clear for commercial use **and shipping**? G needs redistribution rights (the asset ships in the bundle); A and V only need use in the output. Not clear: skip.
@@ -10,6 +10,8 @@ No vendor is hard-coded: choose by the criteria below, then log it. Every row's 
 5. Risk: AI output, mixed-licence packs, GPL/SA, NC, region-excluding licences.
 
 ## Table
+Licence facts below are search snapshots (some from help pages, not the legal text): the report lists the URLs, and the licence page is re-read before any asset is used.
+
 | Source class | Cost | Licence check before use | Ceiling | Pick when |
 |---|---|---|---|---|
 | Free CC0 stores (Kenney, Quaternius, Poly Haven, ambientCG) | free | confirm CC0 on the asset page | consistent low-poly kits, PBR textures, HDRIs; no unique hero | first choice for G props and textures, A and V backgrounds |
@@ -28,4 +30,4 @@ No vendor is hard-coded: choose by the criteria below, then log it. Every row's 
 - **Video:** least licence friction; AI props fine in the background; check each tool's output terms before publishing commercially.
 
 ## Record every asset
-Name, URL, author, licence and version, date, a screenshot of the terms (marketplaces, hosted AI), and whether it ships in the bundle. `scripts/check-assets.mjs` checks the manifest. Login sites and adult-gated downloads stay yskills' hands.
+Name, URL, author, licence and version, date, a screenshot of the terms (marketplaces, hosted AI), and whether it ships in the bundle. `.claude/skills/game-3d/scripts/check-assets.mjs` checks the manifest. Login sites and adult-gated downloads stay yskills' hands.
