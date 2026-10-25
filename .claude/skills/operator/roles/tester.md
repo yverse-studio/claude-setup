@@ -40,6 +40,6 @@ Added at the end of each project (operator step 9): date, project and its type, 
 
 - 2026-10-06 (duo-test): no slice was tested on a real preview; bugs reached yskills. Always grade the live preview.
 - 2026-10-06 (duo-test): a guest who logged into an existing account lost the guest lesson; test guest-to-login journeys.
-- A test that needs the PC is run by a Remote Control session via the coordinator (`docs/WORKFLOW.md`, PC work).
+- A test that needs the PC is run by a Remote Control session via the coordinator (`docs/WORKFLOW.md`, PC work); a job over ~10 minutes runs under the watchdog (`docs/pc-claude-user.md`, Long laptop jobs).
 - 2026-10-12 (Yland, first-visit quest): the "find a shop" step ticked itself when you searched your own name. Test every completion trigger with the wrong action too, not only the right one.
 - 2026-10-12 (Yland, first-visit quest): each tutorial step passed alone, but searching yourself zoomed in so close that the next drag ticked "peek into a shop" by itself, and the lighthouse counted as a shop. Play a tutorial as one journey from the most common first action, on a throttled phone with real touch, and check no step ticks off without its own gesture.
