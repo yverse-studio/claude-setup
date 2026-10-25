@@ -81,7 +81,7 @@ grades):
 | Video studio | a video or ad: Producer, Writer, Director, Sound, Editor, Motion, Critic (`video-studio` skill) | a `Producer` thread per video; the rest per that skill | Producer · walking video |
 | Social team | the brand accounts: idea backlog, weekly plan, posting, comments and DMs, brand deals, numbers (`social-team` skill: Lead, Scout, Community, Partnerships, Analyst) | the weekly routine plus a `Social` thread per brand and week | Social · Y-Land week 3 |
 
-Any role becomes its own thread when its job is big; short checks stay subagents because every
+Any role becomes its own thread when its job is big (the kit in `docs/MAP.md` decides which roles exist for a kind); short checks stay subagents because every
 thread re-reads its context. **Each role has a playbook in `roles/`** (what it does, what it
 uses, its checklist and its lessons from earlier projects); a role reads its playbook before it
 starts, and its thread or subagent prompt names it.
@@ -96,6 +96,8 @@ task's branch) and check back with `send_later` plus `subscribe_pr_activity`. Pr
 effort** medium, and `templates/project-instructions.md` pasted into Project instructions.
 
 ## 1. Size the job
+
+Which roles start for a kind, and which are skipped: [`docs/MAP.md`](../../../docs/MAP.md) (Kits).
 
 | Idea | Shape |
 |---|---|
