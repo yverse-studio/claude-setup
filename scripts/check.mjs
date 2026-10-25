@@ -158,7 +158,7 @@ if (!modelLine) errors.push('docs/WORKFLOW.md: the Models line is missing')
 const lineIds = new Set(modelLine?.match(/claude-[a-z]+-[\d-]+/g) ?? [])
 const anyText = (d) => readdirSync(join(root, d)).flatMap((n) => {
   const rel = d === '.' ? n : `${d}/${n}`
-  if (['.git', 'node_modules', 'research'].includes(n) || rel === 'docs/archive') return []
+  if (['.git', 'node_modules', 'research', 'worktrees'].includes(n) || rel === 'docs/archive') return []
   if (statSync(join(root, rel)).isDirectory()) return anyText(rel)
   return /\.(md|mjs|js|json|sh|ya?ml|tsx?)$/.test(n) ? [rel] : []
 })
@@ -307,7 +307,7 @@ const mapText = readFileSync(join(root, 'docs/MAP.md'), 'utf8')
 const eccAgents = new Set((ecc?.agents ?? []).map((a) => `.claude/agents/${a}.md`))
 const lessonsHomes = (dir) => readdirSync(join(root, dir), { withFileTypes: true }).flatMap((d) => {
   const rel = `${dir}/${d.name}`
-  if (d.isDirectory()) return /^(research|archive|node_modules|ecc)$/.test(d.name) ? [] : lessonsHomes(rel)
+  if (d.isDirectory()) return /^(research|archive|node_modules|ecc|worktrees)$/.test(d.name) ? [] : lessonsHomes(rel)
   if (!d.name.endsWith('.md') || eccAgents.has(rel)) return []
   return d.name === 'learnings.md' || /^## (Lessons|Learnings)\b/m.test(readFileSync(join(root, rel), 'utf8')) ? [rel] : []
 })

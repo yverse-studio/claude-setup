@@ -9,7 +9,9 @@ session, the project chat included, loads this repo with `add_repo` and follows 
 so the rules live here only.
 
 1. Run `node scripts/project-instructions.mjs <name> --about "<one line>"` (or ask a thread to
-   print it) and copy the text.
+   print it) and copy the text. Add `--kind` when `projects/<name>.json` doesn't say it,
+   `--repo none` for a project with no repo (a social or video team), `--repo new` before the
+   repo exists; the flags: the script's header.
 2. In the project: **Project settings > Memory > Project instructions**, paste, save.
 3. **Project settings > Repositories**: add `yverse-studio/claude-setup` and the project's repo.
 
