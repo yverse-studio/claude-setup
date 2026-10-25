@@ -64,7 +64,7 @@ added as a second repo, or a plain chat), read that file by path, then the files
 | 2D and web games | `toolbox/catalog/data-web.md` (Phaser, PixiJS, Poki, CrazyGames) | `toolbox/catalog/money.md` (H5 game ads) |
 | Visual novels and story games (Ren'Py: setup, art slots, playthrough test, Windows build, laptop delivery) | `docs/game-pipeline.md` (all files, animation, scenes, scene briefs), `docs/two-figure-scenes.md`, `docs/renpy.md`, `storyteller` skill | `docs/renpy-template/`, `docs/character-workflow.md` (renders) |
 | Roblox | `roblox` | `toolbox/catalog/roblox.md` (run and see), `studio` (PC) |
-| 3D models, characters | `docs/character-workflow.md` | `blender-body` (rigged body: base, shape keys, pose tests, reviewing; pro avatar anatomy in `pro-avatars.md`), `game-3d` (VRM pipeline), `studio` (Blender on the PC) |
+| 3D models, characters | `docs/character-workflow.md` | `blender-body` (rigged body: base, shape keys, pose tests, reviewing; pro avatar anatomy in `pro-avatars.md`), `game-3d` (VRM pipeline; `refs/low-poly.md`, `refs/asset-sources.md`), `studio` (Blender on the PC) |
 | Videos and ads (the studio: Producer, Writer, Director, Sound, Editor, Motion, Critic) | `video-studio` | `video-studio/learnings.md`, `video-studio/formats.md` (mascot-explainer, POV magic, blockout to AI video), `market` §4 (ads law) |
 | Social media: posting, comments, DMs, idea backlog, brand accounts, brand deals | `social-team` | `social-team/learnings.md`, `market` §4 and §6 |
 | Video and photo edits | `media-editing` | `watch` (understand a video), `toolbox/catalog/video-audio.md` (AI video, voice, music), `docs/research/2026-10-24-video-batch.md` (29 shared videos, verdicts) |

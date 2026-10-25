@@ -196,6 +196,7 @@ ones its slice needs:
 | `gamedev-skills/threejs-scene-setup`, `threejs-gltf-loading`, `threejs-materials-lighting` | current three.js API (r186: `setAnimationLoop`, `Timer`, physical lights, DRACO/Meshopt/KTX2) |
 | `gamedev-skills/camera-systems`, `game-feel`, `level-design`, `audio-design` | the follow camera, juice, pacing, adaptive music |
 | `gamedev-skills/performance-optimization` | frame and asset budgets (engine-neutral) |
+| `low-poly.md`, `asset-sources.md` | our sourced low-poly budgets, shading, rigging and glTF rules; and the pick-the-best-source table with licence checks (2026-10-25) |
 | `gamedev-skills/steam-publish` | SteamPipe, depots, branches, store page (engine exports there are Godot/Unity; our Electron path is §5) |
 | `threejs-game-skills/threejs-gameplay-systems` | Vite + TypeScript scaffold (`assets/threejs-vite-game`), physics choice, genre notes |
 | `threejs-game-skills/threejs-aaa-graphics-builder` | `references/visual-scorecard.md`: the 10-point look check the design critic uses with the references |
