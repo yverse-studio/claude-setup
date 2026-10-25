@@ -71,9 +71,10 @@ from a pushed branch; private repo, no outside collaborators, `yskills-claude` i
 
 ### Per project, Claude
 
-1. Start the workflow from the thread: dispatch `new-project.yml` on `main` with inputs `name`,
-   `d1`, `kind` (`site`, `game` or `repo`), `org` (GitHub MCP `actions_run_trigger` `run_workflow`;
-   threads can, checked 2026-10-08 19:50), or push a branch: in claude-setup, branch
+1. Start the workflow from the thread by pushing a branch, the route that works from a thread
+   (dispatching `new-project.yml` with GitHub MCP `actions_run_trigger` `run_workflow`, inputs `name`,
+   `d1`, `kind` (`site`, `game` or `repo`), `org`, is the second route: it answered 403 in one thread
+   at 2026-10-08 17:31 and worked at 19:50; `docs/USING.md` names both): in claude-setup, branch
    `new/<name>` off `main` with one file `projects/<name>.json`, **in one push** (git, or
    `push_files`; `create_branch` then `create_or_update_file` is two pushes, and the first, empty
    one builds a plain site that a later `kind: game` run never converts, 2026-10-18), `{ "name": "<name>", "d1": true, "org": "yverse-studio" }` (`name`:
