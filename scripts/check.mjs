@@ -158,7 +158,7 @@ if (!modelLine) errors.push('docs/WORKFLOW.md: the Models line is missing')
 const lineIds = new Set(modelLine?.match(/claude-[a-z]+-[\d-]+/g) ?? [])
 const anyText = (d) => readdirSync(join(root, d)).flatMap((n) => {
   const rel = d === '.' ? n : `${d}/${n}`
-  if (['.git', 'node_modules', 'research', 'archive'].includes(n)) return []
+  if (['.git', 'node_modules', 'research'].includes(n) || rel === 'docs/archive') return []
   if (statSync(join(root, rel)).isDirectory()) return anyText(rel)
   return /\.(md|mjs|js|json|sh|ya?ml|tsx?)$/.test(n) ? [rel] : []
 })

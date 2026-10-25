@@ -112,14 +112,14 @@ covers them. Stories are data: threads turn yskills' messages into `story/` file
 - **Places**: build from CC0 kits (Kenney, Quaternius, Poly Haven) in the project's DESIGN.md
   taste, with the photos as references. Shrink every .glb in CI with gltf-transform (meshopt or
   Draco, KTX2 textures at most 2048 px).
-  Exception (office research, 2026-10-07): Draco, meshopt and KTX2 need decoder files (extra requests, wasm); for low-poly atlases of a few MB skip them under the 16 MB Artifact limit, and meshopt is the lighter decoder.
+  Exception (office research, 2026-10-07) [judgement]: Draco, meshopt and KTX2 need decoder files (extra requests, wasm); for low-poly atlases of a few MB skip them under the 16 MB Artifact limit, and meshopt is the lighter decoder.
 - **Shrinking**: `gltf-transform optimize in.glb out.glb --compress meshopt --texture-compress webp` (flags vary by version). Meshopt covers geometry, morph targets and keyframe animation while Draco is geometry only, so animated characters use meshopt; the Draco decoder is about 10x larger. Resize textures first, then WebP (download size) or KTX2 (GPU memory) (low-poly-and-sources, 2026-10-24).
 - **One palette texture** shared by all kit props (UVs on colour cells) = one material and one draw call; textures are usually 80 % or more of a GLB and all GPU memory (low-poly-and-sources, 2026-10-24).
 - **Splats** (3D photos): 30 to 200 photos of one place, trained on yskills' PC (Postshot,
   Windows + NVIDIA: free plan trains, export needs Indie 17 €/month; Brush is open source) or a
   paid service, loaded with Spark as vistas and photo spots. No collision: never a floor.
 - **AI props**: Meshy (free tier CC-BY, 20 $/month for commercial), TRELLIS.2 (MIT, needs a
-  GPU); Tripo's free tier is non-commercial. One prop at a time, cleaned in the style pass.
+  GPU); Tripo's free tier is non-commercial (sources conflict; treat it so until the ToS is read). One prop at a time, cleaned in the style pass.
 - Meshy free is CC BY 4.0 (credit Meshy, the models become public), 100 credits a month at 20 per model (about 5 models); paid, about 10 to 20 USD a month (sources disagree on the price), gives private ownership and no credit (3d-route, low-poly-and-sources, 2026-10-18/24).
 - **Look**: `MeshToonMaterial` with a `gradientMap` whose `minFilter` and `magFilter` must be `NearestFilter`; the map is a 3 to 5 pixel `DataTexture` of grey steps (low-poly-and-sources, 2026-10-24).
 - **Export from Blender** (low-poly-and-sources, 2026-10-24): a flat or unlit look in glTF is `KHR_materials_unlit` ("Shadeless" in the exporter). The exporter writes Metal/Rough PBR and unlit only, PNG or JPEG, roughness from the green and metallic from the blue channel, tangent-space normals only, emission via Principled. Procedural nodes (noise, voronoi, wave) are not exported by glTF, FBX or USD (MaterialX partial): bake them to textures or rebuild as an engine shader. A Blender toon made with Shader to RGB into a Color Ramp set to Constant (Eevee only) gives hard bands but breaks the PBR chain (AO, soft shadows, SSR, SSS) and does not export to glTF [U]: rebuild it as `MeshToonMaterial` or bake. Vertex colours are glTF `COLOR_0`, used in three.js with `vertexColors: true` [U, not confirmed].
@@ -147,7 +147,7 @@ covers them. Stories are data: threads turn yskills' messages into `story/` file
   QA after every slice, not at the end (idea from OpusGameLabs/game-creator, written in our words).
   `play` and `shots` build first when they have no url; a Preview or live url is shown as deployed.
 - **Perf budget per scene** (`tests/perf`, reads `renderer.info` after one frame): under 300
-  draw calls, under 500 000 triangles, textures at most 2048 px, assets under 150 MB in total.
+  draw calls (mobile about 150, a guess), under 500 000 triangles, textures at most 2048 px, assets under 150 MB in total.
   SwiftShader cannot measure frame rate: yskills' PC runs the perf scene once per milestone and
   the number goes into PROGRESS.md.
 - **Per-asset defaults** for low-poly web games (low-poly-and-sources, 2026-10-24; common practice, no primary source): mobile character 3 to 10k triangles, mobile prop 300 to 1,500, PC character 20 to 80k, Polycount's mobile figure about 1 to 3k with 512 px maps; shaders and overdraw hurt mobile more than triangles. Our proposed defaults: character 3 to 8k, prop 100 to 1,500, scene under 150k visible triangles on web, 1 material per object, 512 to 1024 px textures. The scene numbers above (500k) are the test ceiling; `starter/figures.md` (full figure at most 100k) and `refs/.../profiling-and-budgets.md` (30 to 80k / 5 to 20k) are other contexts.
