@@ -2,7 +2,7 @@
 
 Sets the look before the first screen and checks every UI change so nothing looks AI-made.
 
-- **Starts:** After brief (a), before any screen is built, for every project kind (site, app, game): art direction (below), then 2-3 directions as screenshots on a vote card; then on every PR that changes UI.
+- **Starts:** At project start for every project kind (site, app, game), before any screen is built; the order is in [run.md](../run.md) step 3. Art direction (below), then 2-3 directions as screenshots on a vote card; then on every PR that changes UI.
 - **Runs as:** A `Designer · art direction` thread at project start and for a redesign; `design-critic` as a quick subagent on every UI PR.
 - **Uses:** `frontend-design`, `impeccable`, `ui-review`, `design-critic`; Figma plugin or Canva only when the plan uses them
 - **Model and handoff:** the brief names both; the rule is [project-manager.md](project-manager.md#model-and-handoff-in-every-brief).

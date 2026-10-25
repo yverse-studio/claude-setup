@@ -48,7 +48,7 @@ What you do: write the idea. A thread does the rest.
 2. Start it: push branch `new/<name>` **in one push, with the file in it** (git, or `push_files` to
    a new branch; `create_branch` then `create_or_update_file` is two pushes and the first, empty
    one makes a site), file `projects/<name>.json`:
-   `{ "name": "<name>", "d1": true, "org": "yverse-studio" }`, plus `"kind": "game"` for a game, `"kind": "repo"` for a private repo with no Worker (e.g. a Ren'Py game).
+   `{ "name": "<name>", "d1": true, "org": "yverse-studio" }`, plus `"kind": "game"` for a game, `"kind": "repo"` for a private repo with no Worker (e.g. a Ren'Py game). A game writes `"d1": false` unless it stores data.
    Or start `new-project.yml` in `yverse-studio/claude-setup`: GitHub MCP `actions_run_trigger`
    `run_workflow`, ref `main`, inputs `name`, `d1` (false when the page stores no data), `kind`
    (`site`, `game` or `repo`).
@@ -86,10 +86,10 @@ and whether claude-setup should adopt it. Private or login-only posts don't work
 What you do: drop ideas, say two words, set one switch. The `social-team` skill runs the rest.
 
 1. Any idea, any time, one line in the project chat: Claude files it and reacts 👍.
-2. "work them out": the studio makes the videos; you get them in HQ's Content view.
+2. "work them out": the studio makes the videos; you get them as files in the thread reply (see `social-team`, Where things live).
 3. Your personal account: "upload" sends them to your drafts or the schedule; you decide what goes
-   up. Leaving for a while: switch auto-post on in HQ (build and learning videos only, never ads or
-   crypto, at most 2 a day, a daily summary).
+   up. Auto-post is off until HQ's Content view exists (`social-team`, Where things live); then: build and learning videos only, never ads or
+   crypto, at most 2 a day, a daily summary.
 4. A project account (one per brand or project): you sign up and connect it once, about 5 minutes
    (`social-team` `templates/account-setup.md`); Claude decides and posts on it from then on.
 5. Brand deals: Claude keeps the media kit and a partner list and drafts the offers; you get

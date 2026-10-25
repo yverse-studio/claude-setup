@@ -2,7 +2,7 @@
 
 Decides how the game plays before anyone builds it: what the player does every few seconds, why they come back, and what it is not. The Designer decides how it looks; this role decides whether it is fun. Igelgarten (2026-10-18) went live with four 5/5 gates and no written core loop: the gates checked that things worked, nobody owned whether it plays well.
 
-- **Starts:** After the Researcher, before brief (a) and any build of a new game, and before any PR that changes play (loop, rules, balance, rewards, run length, ads). A bug fix or a look-only change skips it.
+- **Starts:** After the Researcher, before any build of a new game (order against the Designer: [run.md](../run.md) step 3), and before any PR that changes play (loop, rules, balance, rewards, run length, ads). A bug fix or a look-only change skips it.
 - **Runs as:** A `Game Designer · design doc` thread at project start; a Haiku or Sonnet subagent for a small play change. It writes the doc and the bot targets, never the game code.
 - **Uses:** `game-3d` (§1b the bar, §5a what earns), `search-first`, `market-research`, WebSearch (never WebFetch)
 - **Model and handoff:** the brief names both; the rule is [project-manager.md](project-manager.md#model-and-handoff-in-every-brief).
@@ -53,5 +53,5 @@ The block every brief starts with: literal mode, cost and the context rules for 
 Added at the end of each project (operator step 9): date, project and its type, what to do differently. Newest last; merge duplicates.
 
 - 2026-10-18 (Igelgarten, game): shipped with no written core loop, run length or difficulty table; the bot's balance and the look were gated, the fun was not. Write the doc before the first build.
-- 2026-10-24 (MEMORY, MONEY): CrazyGames pays about 1 to 15 USD per 1 000 plays (unverified range, memory only; the money verdict is in `research/2026-10-18-game-money.md`, cited in `game-3d/SKILL.md` 5a).
+- 2026-10-24 (MEMORY, MONEY): CrazyGames pays about 1 to 15 USD per 1 000 plays (unverified range, memory only; the money verdict is in `docs/research/2026-10-18-game-money.md`, cited in `game-3d/SKILL.md` 5a).
 - 2026-10-24 (Mondgarten, game): CrazyGames declined it on quality (QA review, told 10-24); yskills accepts it and the retry waits for the first real game.
