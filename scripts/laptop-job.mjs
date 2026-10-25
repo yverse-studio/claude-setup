@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 // Runs one long laptop job (render, bake, batch) under a watchdog. Home of the rule: docs/pc-claude-user.md (Long laptop jobs).
+// Runs the command directly (no shell): wrap a .cmd or .bat as `cmd /c x.bat`.
 // node scripts/laptop-job.mjs [--name n] [--timeout-min 60] [--idle-min 15] [--gpu-max-used-mb 1500] [--no-gpu] -- <command> [args]
 // Always ends with ONE line on stdout: `JOB OK|FAIL|HANG|TIMEOUT|BLOCKED <name>: <why>`; exit 0 only for OK.
 import { spawn, spawnSync } from 'node:child_process'
@@ -68,7 +69,7 @@ function main() {
     if (busy) finish(statusLine('BLOCKED', opt.name, `${busy}; close the app or pass --gpu-max-used-mb`), 3)
   }
   const awake = win ? spawn('powershell', ['-NoProfile', '-Command', KEEP_AWAKE_PS], { stdio: 'ignore' }) : null
-  const child = spawn(cmd[0], cmd.slice(1), { stdio: ['ignore', 'pipe', 'pipe'], shell: win })
+  const child = spawn(cmd[0], cmd.slice(1), { stdio: ['ignore', 'pipe', 'pipe'] })
   const started = Date.now()
   let lastOutput = started
   const touch = (chunk) => { lastOutput = Date.now(); process.stdout.write(chunk) }
