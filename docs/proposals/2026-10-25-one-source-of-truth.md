@@ -11,7 +11,7 @@ the design; one PR per step follows it, each through `gate.md` (size L verdict).
 | Place | Holds | Loaded when | Problem |
 |---|---|---|---|
 | claude-setup (`CLAUDE.md`, `docs/`, skills, roles) | the rules, the know-how, the one-home table (`docs/MAP.md`) | after `add_repo` and a read of `CLAUDE.md`, never by itself | lessons sit in 24 files (`## Lessons` in 16 roles, `learnings.md` in 3 skills, `docs/LESSONS-2026-10-11.md`, `docs/game-pipeline.md`, `store-publish`, `TEST-PROJECTS.md`) and no index names them |
-| claude.ai project memory (`MEMORY.md` 6 KB + 40 fact files, 67 KB) | state (goal, threads, pending), rules copied from the repo, history | `MEMORY.md` is in every coordinator and thread start | fact files restate rules and drift: `merge-rule-until-launch.md` says claude-setup PRs wait for a tap (gate.md: the gate merges them), `claude-setup-repo.md` says Remote Control was declined (used since 10-07), `model-routing.md` names the 10-06 routing (replaced 10-17) |
+| claude.ai project memory (`MEMORY.md` 6 KB + 37 fact files, 67 KB) | state (goal, threads, pending), rules copied from the repo, history | `MEMORY.md` is in every coordinator and thread start | fact files restate rules and drift: `merge-rule-until-launch.md` says claude-setup PRs wait for a tap (gate.md: the gate merges them), `claude-setup-repo.md` says Remote Control was declined (used since 10-07), `model-routing.md` names the 10-06 routing (replaced 10-17) |
 | Project instructions (pasted text per project) | a second copy of the rules | every session of that project | the live text says `Handoff: at 150k` and "a fresh Tester thread per PR"; the repo says 350k and S/M gates in the author thread; the template (`operator/templates/project-instructions.md`) is a 4-line pointer that nobody pasted |
 | `/mnt/project-files/claude-setup/` (82 reports, 68 KB of text, 259 MB with images) | research, audits, handoffs, proposals | only when a brief names a file | lessons inside them never reached a home (e.g. `audit/2026-10-18-token-start-cost.md` is cited from `docs/WORKFLOW.md` as if it were part of the repo) |
 | Thread board (`list_thread_sessions`) | which threads run and what they owe | only when the coordinator calls it | last night the coordinator missed running threads because memory listed a different set |
@@ -80,6 +80,18 @@ the raw files under `docs/archive/<project>-memory-<date>/` in claude-setup, rew
 the template, delete the fact files, report in three lines. The sweep is the monthly memory check run
 once, so it needs no new mechanism.
 
+### Kits: a project loads only what its kind needs (yskills, 00:11)
+
+"My game team doesn't need all skills and know-how"; "new projects and chats don't always start
+with research, designer or whatever." One table, `docs/MAP.md` (Kits), is the home: per kind
+(`site`, `app`, `game`, `video`, `social`, `story`, `setup`) the files to read first, the roles that
+start and in which order, and the roles and steps that are skipped. The boot text carries the
+project's `kind`, so a session reads that row and nothing else. The staffing rule next to it:
+a fix, a small change or a question is one thread of the role it needs, no Researcher and no
+Designer thread; a new product starts the kit's team in the kit's order; `operator` SKILL.md
+(Size the job) links the table instead of restating it. The existing "Expertise by domain" table
+stays the reference behind the kits.
+
 ## 3. The steps, as PRs
 
 | PR | Step | Size | Files | Done when |
@@ -87,10 +99,12 @@ once, so it needs no new mechanism.
 | 1 | One index; memory only points | S | `docs/MAP.md` (Start here, Lessons row, archive row), `operator/templates/project-memory.md`, `operator/templates/lessons.md`, `CLAUDE.md` (Lessons stick line: the decision tree's home), `docs/WORKFLOW.md` (Learning: the two-speed memory check), `scripts/check.mjs` (every file with `## Lessons`, `## Learnings` or named `learnings.md` is linked from `docs/MAP.md`; the two templates exist), this proposal | `node scripts/check.mjs` green with the new lint; a lessons file unlinked on purpose fails it |
 | 2 | Script writes the project instructions | M | `scripts/project-instructions.mjs` + test, `operator/templates/project-instructions.md` (the generator's source), `docs/USING.md` (Start a project: one command, paste), `projects/README.md` | the test proves the output for `claude-setup`, a `projects/<name>.json` project and a name with no file; under 15 lines each; a rule word in the template fails |
 | 3 | Every coordinator start reads board and index | S | `operator/roles/project-manager.md` (Session start block), `operator/templates/loop/routine.md` (the daily reader reconciles too), `briefs.md` (the brief block names `docs/MAP.md` Start here) | reviewer confirms the block is the only place the start protocol is written and every other file links it |
-| 4 | Lasting lessons move in; archive; delete the rest | S (+ the delete, listed in the body) | `docs/archive/claude-setup-memory-2026-10-25/` (raw copy of `MEMORY.md` and all 40 files), the home lines that move, `/mnt/project-files/claude-setup/archive/reports-2026-10-25.zip` (the 82 reports), a fresh `MEMORY.md` from the template | the PR body holds the inventory (every file: covered, moved to path, stale with proof, state); every MOVE row has a diff line; only then the 40 files are deleted and `MEMORY.md` rewritten |
+| 4 | Lasting lessons move in; archive; delete the rest | S (+ the delete, listed in the body) | `docs/archive/claude-setup-memory-2026-10-25/` (raw copy of `MEMORY.md` and all 37 files), the home lines that move, `/mnt/project-files/claude-setup/archive/reports-2026-10-25.zip` (the 82 reports), a fresh `MEMORY.md` from the template | the PR body holds the inventory (every file: covered, moved to path, stale with proof, state); every MOVE row has a diff line; only then the 37 files are deleted and `MEMORY.md` rewritten |
 | 5 | Every thread writes lessons into the repo | S | `.github/pull_request_template.md` (`Lessons:` line), `scripts/pr-lessons-check.mjs` + test, `.github/workflows/ci.yml` (runs it on `pull_request` with the body from the event), `operator/gate.md` (check 3 reads the `Lessons:` line), `briefs.md` | CI fails a PR body without the line, passes `Lessons: none, because ...` and `Lessons: <path>` |
 
-Order: 1, 2, 3, 5, then 4, because 4 needs the homes and the template from 1 and the sweep rule from 2.
+| 6 | Kits and what starts when | S | `docs/MAP.md` (Kits table), `operator/SKILL.md` (Size the job links it; the staffing rule), `operator/run.md` (each step names the kinds it applies to), `scripts/check.mjs` (every kind in the boot-text script has a Kits row) | reviewer confirms a game project's start reads only the game row; a "fix the button" ask starts one Programmer thread |
+
+Order: 1, 2, 3, 5, 6, then 4, because 4 needs the homes and the template from 1 and the sweep rule from 2.
 PR 4 is the only one that deletes; nothing is deleted before its archive copy is on `main`.
 
 ## 4. Check against the five steps
@@ -104,6 +118,8 @@ PR 4 is the only one that deletes; nothing is deleted before its archive copy is
 | 5 Every thread writes lessons into the repo, never only into memory | `Lessons:` line checked by CI; PR 5 |
 | + Nothing lost (00:03) | raw archive in git before any delete; inventory in the PR body; a lesson with no home gets one |
 | + Other projects (00:03) | boot text + one-time sweep; product lessons in the product repo; §2 |
+| + Token efficient, kit per project, clear start (00:11) | Kits table and staffing rule; PR 6 |
+| + Blender, 3D and animation lessons kept (00:09) | the 3D sweep of every handoff and report against `character-workflow.md`, `blender-body`, `game-pipeline.md`; MOVE rows land in PR 4 |
 
 ## 5. Decisions taken (no card needed) and why
 

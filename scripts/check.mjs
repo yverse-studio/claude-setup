@@ -294,6 +294,14 @@ for (const h of TRACKING_HEADINGS) {
   if (!new RegExp(`^## ${h}\\s*$`, 'm').test(trackingTemplate)) errors.push(`templates/tracking-plan.md: lacks "## ${h}"`)
 }
 
+// Boot text: the template is the generator's source; four placeholders, and the pasted part stays short.
+const bootTemplate = readFileSync(join(root, '.claude/skills/operator/templates/project-instructions.md'), 'utf8')
+for (const ph of ['name', 'about', 'repo', 'kind']) {
+  if (!bootTemplate.includes(`{{${ph}}}`)) errors.push(`templates/project-instructions.md: lacks {{${ph}}}`)
+}
+const bootText = bootTemplate.split(/^---\r?\n/m)[1] ?? ''
+if (bootText.split('\n').filter((l) => l.trim()).length >= 15) errors.push('templates/project-instructions.md: the text below --- must be under 15 non-empty lines')
+
 // One index: every lessons home (a `## Lessons` or `## Learnings` heading, or learnings.md) is linked from docs/MAP.md.
 const mapText = readFileSync(join(root, 'docs/MAP.md'), 'utf8')
 const eccAgents = new Set((ecc?.agents ?? []).map((a) => `.claude/agents/${a}.md`))
@@ -311,6 +319,21 @@ for (const t of ['project-memory', 'lessons']) {
 }
 const memoryTemplate = join(root, '.claude/skills/operator/templates/project-memory.md')
 if (existsSync(memoryTemplate) && statSync(memoryTemplate).size >= 3072) errors.push('templates/project-memory.md: 3 KB or more; the template must stay under 3072 bytes so a MEMORY.md in its shape does too, shorten the examples')
+
+// Kits: docs/MAP.md (Kits) has one row per project kind, and every "Read first" path resolves.
+const KINDS = ['site', 'app', 'game', 'video', 'social', 'story', 'setup', 'repo']
+const kitsBlock = mapText.split(/^## Kits\s*$/m)[1]?.split(/^## /m)[0]
+if (!kitsBlock) errors.push('docs/MAP.md: lacks a "## Kits" section')
+else {
+  const rows = kitsBlock.split('\n').filter((l) => l.startsWith('| `'))
+  for (const kind of KINDS) {
+    const row = rows.find((l) => l.startsWith(`| \`${kind}\``))
+    if (!row) { errors.push(`docs/MAP.md (Kits): no row for kind "${kind}"`); continue }
+    for (const [, target] of (row.split('|')[2] ?? '').matchAll(/\]\(([^)#]+)/g)) {
+      if (!existsSync(join(root, 'docs', target))) errors.push(`docs/MAP.md (Kits): ${kind} reads ${target}, which does not exist`)
+    }
+  }
+}
 
 if (errors.length) { console.error(errors.map((e) => `x ${e}`).join('\n')); process.exit(1) }
 console.log(`ok: ${seen.skill.size} skills, ${seen.agent.size} agents, ${plugins?.global.length ?? 0}+${plugins?.project.length ?? 0} plugins`)

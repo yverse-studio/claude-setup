@@ -170,6 +170,25 @@ test('attempt guard: chained commands count by their non-read-only part, long co
   } finally { rmSync(cwd, { recursive: true, force: true }) }
 })
 
+test('check.mjs fails when a Kits row is removed or a Read-first link is dead', () => {
+  const copy = mkdtempSync(join(tmpdir(), 'guards-repo-'))
+  try {
+    cpSync(root, copy, { recursive: true, filter: (p) => !p.includes(`${join(root, '.git')}`) })
+    const run = () => spawnSync(process.execPath, [join(copy, 'scripts', 'check.mjs')], { encoding: 'utf8' })
+    assert.equal(run().status, 0)
+    const map = join(copy, 'docs/MAP.md')
+    const original = readFileSync(map, 'utf8')
+    writeFileSync(map, original.split('\n').filter((l) => !l.startsWith('| `video`')).join('\n'))
+    const missingRow = run()
+    assert.equal(missingRow.status, 1)
+    assert.ok(missingRow.stderr.includes('no row for kind "video"'), missingRow.stderr)
+    writeFileSync(map, original.replace('(renpy.md)', '(no-such-file.md)'))
+    const deadLink = run()
+    assert.equal(deadLink.status, 1)
+    assert.ok(deadLink.stderr.includes('story reads no-such-file.md'), deadLink.stderr)
+  } finally { rmSync(copy, { recursive: true, force: true }) }
+})
+
 test('check.mjs fails when a lessons file is not linked from docs/MAP.md or the memory template grows past 3 KB', () => {
   const copy = mkdtempSync(join(tmpdir(), 'guards-repo-'))
   try {
