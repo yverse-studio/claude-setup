@@ -4,6 +4,37 @@ One page to find any part of this setup. Each rule has **one home**; every other
 that home instead of restating it. When two files disagree, the home wins and the other gets
 fixed.
 
+## Start here
+
+Four layers, each with one job. A fact lives in exactly one layer.
+
+| Layer | What | Where | Who writes | Loaded |
+|---|---|---|---|---|
+| Rules and lessons | every rule, lesson and how-to | claude-setup, one home each, indexed here; product lessons in `<product repo>/docs/LESSONS.md` | threads, through gated PRs | every session, after `add_repo` |
+| State | goal, live projects, pending on yskills, open threads, products | the project's `MEMORY.md` only, shape in `.claude/skills/operator/templates/project-memory.md` | the coordinator at milestones; threads their own line | automatically, every start |
+| Boot text | how a session gets to the other layers | Project settings > Project instructions; a pointer, never a rule | yskills pastes, once | every session of that project |
+| History | research, audits, handoffs, screenshots | `/mnt/project-files/<project>/` and `docs/archive/` | threads | only when a brief names it |
+
+What every session does at start:
+
+| Surface | Reads first | Then |
+|---|---|---|
+| Coordinator (project chat) | `MEMORY.md`, the thread board | `add_repo` claude-setup, `CLAUDE.md`, this section, `roles/project-manager.md` Session start; reconciles board and state |
+| Thread | its brief, `MEMORY.md` | `add_repo` claude-setup, `CLAUDE.md`, this section, its role file; for a product also that repo's `CLAUDE.md` and `docs/LESSONS.md` |
+| Claude Code on the laptop | `~/.claude/CLAUDE.md` | the project's `CLAUDE.md`; auto-memory is a scratchpad |
+| New claude.ai project | the generated boot text | as a coordinator; its first session sweeps old memory into the repo |
+| Plain chat (no project) | yskills' user preferences | this section; the `operator` skill sizes the job; no memory |
+
+The thread board is read at every coordinator start and wins over memory.
+
+### Where a lesson goes
+
+1. A mechanical pattern (a banned call, a file rule, a number): a check in `scripts/` or CI, not text.
+2. True for every project: the home named in One home per rule below; no home yet: add a row there.
+3. True for one product only: `<product repo>/docs/LESSONS.md` (template `.claude/skills/operator/templates/lessons.md`), dated, newest last.
+4. State (what is open, who owes what): the `MEMORY.md` section it belongs to.
+5. Everything else (how the day went, a dead end, a report): `/mnt/project-files/<project>/`; nothing to do.
+
 ## What loads when
 
 | Loads | What | Cost (tokens, est.) |
@@ -42,6 +73,10 @@ lives outside this repo.
 | Test runs | `docs/TEST-PROJECTS.md` | How the setup is tested end to end, and what each run taught |
 | Why it is built this way | `docs/RESEARCH.md`, `docs/research/` | Dated research notes; history, not rules |
 | Lessons per project | `docs/LESSONS-2026-10-11.md` | Company XY: liked, not liked, quality problems with the fix in force, the next game |
+| Lessons homes | [.claude/skills/game-3d/starter/learnings.md](../.claude/skills/game-3d/starter/learnings.md), [.claude/skills/operator/roles/analytics.md](../.claude/skills/operator/roles/analytics.md), [.claude/skills/operator/roles/audio.md](../.claude/skills/operator/roles/audio.md), [.claude/skills/operator/roles/content-designer.md](../.claude/skills/operator/roles/content-designer.md), [.claude/skills/operator/roles/designer.md](../.claude/skills/operator/roles/designer.md), [.claude/skills/operator/roles/game-designer.md](../.claude/skills/operator/roles/game-designer.md), [.claude/skills/operator/roles/legal.md](../.claude/skills/operator/roles/legal.md), [.claude/skills/operator/roles/marketer.md](../.claude/skills/operator/roles/marketer.md), [.claude/skills/operator/roles/playtester.md](../.claude/skills/operator/roles/playtester.md), [.claude/skills/operator/roles/programmer.md](../.claude/skills/operator/roles/programmer.md), [.claude/skills/operator/roles/project-manager.md](../.claude/skills/operator/roles/project-manager.md), [.claude/skills/operator/roles/researcher.md](../.claude/skills/operator/roles/researcher.md), [.claude/skills/operator/roles/reviewer.md](../.claude/skills/operator/roles/reviewer.md), [.claude/skills/operator/roles/security.md](../.claude/skills/operator/roles/security.md), [.claude/skills/operator/roles/tester.md](../.claude/skills/operator/roles/tester.md), [.claude/skills/social-team/learnings.md](../.claude/skills/social-team/learnings.md), [.claude/skills/store-publish/SKILL.md](../.claude/skills/store-publish/SKILL.md), [.claude/skills/video-studio/learnings.md](../.claude/skills/video-studio/learnings.md), [.claude/skills/video-studio/roles/director.md](../.claude/skills/video-studio/roles/director.md), [.claude/skills/video-studio/roles/writer.md](../.claude/skills/video-studio/roles/writer.md), [docs/game-pipeline.md](game-pipeline.md) | Every file with a `## Lessons` or `## Learnings` heading, or named `learnings.md`; `node scripts/check.mjs` fails when one is not linked here |
+| State template | `.claude/skills/operator/templates/project-memory.md` | The shape of a project's `MEMORY.md`: five sections, under 3 KB |
+| Product lessons template | `.claude/skills/operator/templates/lessons.md` | The `docs/LESSONS.md` of a product repo |
+| Archive | `docs/archive/` | Raw copies of retired memory and reports; history only, never a rule |
 | Checks | `scripts/check.mjs`, `scripts/guards.test.mjs`, `.github/workflows/ci.yml`, `.claude/skills/publish/templates/new-project/scripts/floor-guard.mjs` (+ `scripts/floor-guard.test.mjs`) | Frontmatter, names, models, ECC subset, plugin lists, relative links; own skill descriptions (200 characters, a "Use ..." sentence), `maxTurns` on own agents, no hooks in settings files; the deny rules, hook hygiene and the never/always tags; floor guard: a PR that skips or deletes a test (matched test by test, so a new unrelated test does not offset it), drops assertions, adds a suppression or stub or lowers a coverage threshold fails unless a commit says `floor-ok: <reason>` (every new project's CI runs the same script); `publish/templates/new-project/scripts/project-checks.mjs` (+ `scripts/project-checks.test.mjs`): every new project's CI also runs the design, copy, tracking-plan (and for a game game-design and sound) checks on the files a PR changes |
 
 ## Expertise by domain
@@ -80,6 +115,8 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 |---|---|---|
 | Org, accounts, where secrets live | `CLAUDE.md` (The world) | `publish` skill, `docs/WORKFLOW.md` (PC work) |
 | Deploy or delete a page (the steps) | `docs/USING.md` | operator `run.md`, `briefs.md`; detail in `publish` |
+| Where a lesson goes (the decision tree) | `docs/MAP.md` (Start here) | `CLAUDE.md` (Lessons stick), `docs/WORKFLOW.md` (Learning) |
+| Project memory holds state only (its shape) | `operator/templates/project-memory.md` | `operator/roles/project-manager.md`, `docs/WORKFLOW.md` |
 | Asks ledger (every ask of yskills becomes a thread or a rule in claude-setup; memory only points; blocked-thread sweep) | `CLAUDE.md` (Lessons stick) | `operator/roles/project-manager.md` |
 | Ask rule (what needs yskills) | `CLAUDE.md` (How to work) | operator `SKILL.md`, `docs/USING.md` |
 | Auto-run, pauses and taste calls | `CLAUDE.md` (How to work) | operator `SKILL.md`, `docs/WORKFLOW.md` |
