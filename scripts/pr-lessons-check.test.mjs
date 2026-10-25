@@ -2,6 +2,7 @@
 // Run: node --test scripts/pr-lessons-check.test.mjs
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
+import { readFileSync } from 'node:fs'
 import { checkLessons } from './pr-lessons-check.mjs'
 
 const body = (line) => `## What changes\nx\n\n${line}\n`
@@ -28,3 +29,14 @@ test('fails on none without a because', () => {
 test('fails on a too short reason', () => {
   assert.equal(checkLessons(body('Lessons: none, because x')), false)
 })
+
+test('passes for a hook, a test or a python file, and with CRLF line endings', () => {
+  assert.equal(checkLessons(body('Lessons: global/attempt-guard.mjs, scripts/guards.test.mjs')), true)
+  assert.equal(checkLessons(body('Lessons: .claude/skills/watch/scripts/watch.py (Learnings)')), true)
+  assert.equal(checkLessons(body('Lessons: none, because the check covers it').replace(/\n/g, '\r\n')), true)
+})
+
+test('the unfilled PR template fails, so the hint comment never counts as the line', () => {
+  assert.equal(checkLessons(readFileSync(new URL('../.github/pull_request_template.md', import.meta.url), 'utf8')), false)
+})
+

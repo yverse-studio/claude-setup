@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+    types: [opened, synchronize, reopened, edited] # edited: a fixed Lessons: line re-runs the check
 
 permissions:
   contents: read
