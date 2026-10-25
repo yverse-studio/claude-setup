@@ -18,6 +18,8 @@ Source: videos yskills shared; tool names marked (unverified) came from captions
 ## Blockout to AI video (from @aisavvy, @comfyorg)
 Claude builds a rough scene and camera in Blender through the Blender connector, renders a cheap clip, and the AI video tool uses it as the motion reference with the character references. Camera and timing are planned for free before any paid credits. The tool name/version in the source (Seedance 2.5) is unverified; fal.ai models are in `toolbox/catalog/video-audio.md`.
 
+Cautions (low-poly-and-sources, 2026-10-24): plausible but untested end to end. Test one 5 s shot first; identity and props drift; keep the blockout render in simple flat colours; check the tool's licence for commercial use.
+
 ## What free tools reach, per style (research 2026-10-25)
 Report: `/mnt/project-files/claude-setup/research/2026-10-25-creator-video-styles.md`; prompts: [`prompts.md`](prompts.md); people and POV: [`people-video.md`](people-video.md).
 

@@ -61,6 +61,7 @@ against that text. So:
 - Every view gets its own camera per screen shape: a tall phone looks down the room's long side and fills
   the height; check with screenshots at a real 390 css px (`isMobile` without a viewport meta lays the page
   out at 980 px and every phone finding is wrong).
+- Phone framing in unit terms (Igelgarten, 2026-10-18): u = shorter screen side / 10; the hero is at least 2.9 u wide on a phone; the camera pulls back on narrow screens (a phone fits 17 units of garden); the title hero is about 340 px at 1440.
 
 ## UI/UX bar
 
@@ -128,3 +129,6 @@ Added at the end of each project (operator step 9): date, project and its type, 
 - 2026-10-07 (Claude Setup HQ, Kassenbuch round 2): yskills found the money view unclear and missed the cents. Every amount anywhere on a page shows two decimals (one formatter, `de-DE`, 28,80 €), and every place that shows the same money (wall chart, laptop, Company, cash book) reads it from the same source, or one of them says a rounded 30 € next to a 28,80 €. Say the result in plain words ("Bleibt dir", "Kunden haben bezahlt", "Stripe-Gebühr"), not Netto/Brutto, and fold parts with no data yet into one quiet line instead of a heading each.
 - 2026-10-18 (Igelgarten, game): yskills called the live game "holy ai slop" after four 5/5 gates: neon glow on every sprite, a SaaS-dark menu with stripe rows in a garden game, no palette or type decision. Fix: art direction first, `design-check.mjs` and `SLOP.md` in check 5.
 - 2026-10-24 (MEMORY, TASTE): yskills rejected Igelgarten v1, Nachtwache, Bilderbuch, Pixel-Abend and Mondnacht as AI slop; a new look must not start from those names.
+- 2026-10-06 (hq-cozy HANDOFF): a pixel check showed the "milky veil" on phones was the pastel palette itself, not an overlay: diagnose a washed look by sampling pixels before adding fixes.
+- 2026-10-18 (Igelgarten designer-handoff-4): a clay or plasticine look can be faked with SVG lighting filters now; the real version wants Blender-baked sprites and is the heaviest to produce.
+- 2026-10-18 (Mondgarten DESIGN, mondgarten-build): a woodblock look is cheap as vector plus one grain filter, with no baked sprites; the grain filter must stay under 2 ms a frame on a mid phone, chalk (Kreide) is the fallback. The build switched from a three.js world to a 2D canvas view (three removed, 0.1 MB flat build).

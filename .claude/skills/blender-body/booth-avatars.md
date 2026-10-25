@@ -100,6 +100,9 @@ swapped.
   DynamicBone components on the root of each chain.
 - Weights: a skirt mesh is weighted to the skirt chains plus a little `UpperLeg` near the hem
   (Aoi skirt has 201 groups for 737 verts); hair only to hair chains plus `Head`.
+- VRM 1.0 requires 15 humanoid bones; neck and chest are required only in VRM 0 (low-poly-and-sources, 2026-10-24).
+- Cap skin influences at 4 bones per vertex (the Unity Standard default; glTF `JOINTS_0`/`WEIGHTS_0` is one vec4) (low-poly-and-sources, 2026-10-24).
+- Joint topology [U, no source]: 2 to 3 edge loops at elbows and knees, no triangles in bending zones; a bone-count budget for mobile is also unsourced (low-poly-and-sources, 2026-10-24).
 
 ## Clothes
 

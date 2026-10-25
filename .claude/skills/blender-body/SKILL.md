@@ -25,7 +25,7 @@ scene slots) live in the private game repo and the laptop `GameAssetLibrary\READ
 
 Hand-modelling a body round after round caused the 22-round loop of 2026-10-23. Try in this order and say which step you are on:
 1. An existing asset or a BOOTH/VRoid base ([`booth-avatars.md`](booth-avatars.md)).
-2. A generator (image-to-3D such as TRELLIS or Hunyuan3D, or the Blender connector's asset tools), then clean up.
+2. A generator (image-to-3D, or the Blender connector's asset tools), then clean up. Order (3d-route, 2026-10-18): TRELLIS.2 (MIT; free Hugging Face Space or a laptop GPU such as an RTX 4060) first, then Blender cleanup (decimate, UV, scale) through the `studio` skill; test Meshy's free tier only if TRELLIS quality is too low; Autodesk Fusion makes no game bases. Not Hunyuan3D 2.1: Tencent's community licence excludes the EU, UK and South Korea. Open-source AI 3D output (TRELLIS, Hunyuan) needs retopology and UV cleanup and has weak hands and faces: concept props and background clutter only, never hero or rigged characters (low-poly-and-sources, 2026-10-24).
 3. bpy modelling, only for edits to what steps 1 and 2 gave. The `attempt-guard` hook blocks a command that fails 5 times without a `## Diagnosis` in `PROGRESS.md`.
 
 ## Method v2 (Miss Galaxy line, 2026-10-19): read this first

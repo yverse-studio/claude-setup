@@ -21,6 +21,8 @@ needs consoles). Electron ships the same Chromium we test in; `steamworks.js` gi
 cloud saves and the overlay. Vampire Survivors, CrossCode and GoreScript shipped this way.
 Trade-offs to say in PLAN.md: about 250 MB download, no consoles, no photo-real graphics.
 
+Tauri instead of Electron (game-dev plan, 2026-10-07): a smaller download, but Steam features must be written in Rust by hand. Godot mobile notes (low-poly-and-sources, 2026-10-24): use the Mobile renderer, not Forward+; MultiMesh draws thousands in one call but always renders all and needs an AABB; keep transparent objects few and join meshes ahead of time.
+
 Stack (versions checked on npm 2026-10-07; take the current ones): `three` 0.186,
 `@pixiv/three-vrm` 3.5, `three-mesh-bvh` 0.9 (collision against the level), `@dimforge/rapier3d-compat`
 0.21 only when a game needs real physics, `@sparkjsdev/spark` 2.3 (Gaussian splats), Vite +
@@ -56,6 +58,8 @@ Literal mode and the cost rules: the last block of `operator/briefs.md`.
 
 Pictures and stories are inputs, never the art: photos become references and splat postcards
 (§3), stories become `story/` files.
+
+- 2026-10-17 (research/game-route): the first game is a small casual one-mechanic 3D low-poly game shipped in days, which proves the route; the big cozy vacation game stays the Steam candidate.
 
 ## 2. Folder layout
 
@@ -93,22 +97,33 @@ covers them. Stories are data: threads turn yskills' messages into `story/` file
 - **No file without a manifest row.** `node scripts/check-assets.mjs assets/manifest.json`
   fails on a file with no row, a row with no file, or a licence that forbids a paid game
   (CC-BY-NC, personal use, VRM meta `commercialUsage: personalNonProfit`). It runs in `verify`.
-- **Characters: VRM only** (why: `research/characters-formats.md`). A model may be loaded from
+- **Characters: VRM only** (why: [`starter/learnings.md`](starter/learnings.md), Decisions). A model may be loaded from
   a link (VRoid Hub, BOOTH, a shared card) at runtime: the game shows the VRM meta (author,
   commercial use, allowed users) before use and refuses one that forbids games. Make or remix in VRoid
   Studio (free), pick from VRoid Hub, BOOTH or Sketchfab after reading the licence; the game
   refuses a model whose VRM meta forbids games. Ten original roster characters, never look-alikes.
+- A plain GLB has no humanoid bones or expressions and would stand as a statue, so it is not accepted as a character; FBX or MMD PMX go through Blender plus the VRM add-on to .vrm (hq-characters HANDOFF, 2026-10-07).
+- Loading from a link today: a thread curls the file, reads the licence from it and shelves it. Artifact pages cannot fetch VRoid Hub, BOOTH or Sketchfab pages (no CORS); an in-page link box only works for CORS-open direct hosts (GitHub raw, some CDNs). Show the licence before keeping (hq-characters HANDOFF, 2026-10-07).
+- The VRM sample "Vita" (AvatarSample_F) reads in its VRM 0 meta as: everyone, commercial, credit unnecessary, modification and redistribution allowed; E, F and G are Vivi, Vita and Victoria from OpenGameArt `vroid-studio-cc0-models` (hq-characters HANDOFF, 2026-10-07).
+- VRM loader security for user-supplied files: block external URIs inside the glTF and accept only png and jpeg portraits (hq-characters HANDOFF, 2026-10-07).
 - **Moves are shared files**, not baked into models: VRMA from vrm.dev, or Mixamo FBX (free
   with an Adobe account, unmaintained) retargeted at load with `vrm-mixamo-retarget` or
   three-vrm's `loadMixamoAnimation` example; Quaternius Universal Animation Library is CC0.
 - **Places**: build from CC0 kits (Kenney, Quaternius, Poly Haven) in the project's DESIGN.md
   taste, with the photos as references. Shrink every .glb in CI with gltf-transform (meshopt or
   Draco, KTX2 textures at most 2048 px).
+  Exception (office research, 2026-10-07): Draco, meshopt and KTX2 need decoder files (extra requests, wasm); for low-poly atlases of a few MB skip them under the 16 MB Artifact limit, and meshopt is the lighter decoder.
+- **Shrinking**: `gltf-transform optimize in.glb out.glb --compress meshopt --texture-compress webp` (flags vary by version). Meshopt covers geometry, morph targets and keyframe animation while Draco is geometry only, so animated characters use meshopt; the Draco decoder is about 10x larger. Resize textures first, then WebP (download size) or KTX2 (GPU memory) (low-poly-and-sources, 2026-10-24).
+- **One palette texture** shared by all kit props (UVs on colour cells) = one material and one draw call; textures are usually 80 % or more of a GLB and all GPU memory (low-poly-and-sources, 2026-10-24).
 - **Splats** (3D photos): 30 to 200 photos of one place, trained on yskills' PC (Postshot,
   Windows + NVIDIA: free plan trains, export needs Indie 17 €/month; Brush is open source) or a
   paid service, loaded with Spark as vistas and photo spots. No collision: never a floor.
 - **AI props**: Meshy (free tier CC-BY, 20 $/month for commercial), TRELLIS.2 (MIT, needs a
   GPU); Tripo's free tier is non-commercial. One prop at a time, cleaned in the style pass.
+- Meshy free is CC BY 4.0 (credit Meshy, the models become public), 100 credits a month at 20 per model (about 5 models); paid, about 10 to 20 USD a month (sources disagree on the price), gives private ownership and no credit (3d-route, low-poly-and-sources, 2026-10-18/24).
+- **Look**: `MeshToonMaterial` with a `gradientMap` whose `minFilter` and `magFilter` must be `NearestFilter`; the map is a 3 to 5 pixel `DataTexture` of grey steps (low-poly-and-sources, 2026-10-24).
+- **Export from Blender** (low-poly-and-sources, 2026-10-24): a flat or unlit look in glTF is `KHR_materials_unlit` ("Shadeless" in the exporter). The exporter writes Metal/Rough PBR and unlit only, PNG or JPEG, roughness from the green and metallic from the blue channel, tangent-space normals only, emission via Principled. Procedural nodes (noise, voronoi, wave) are not exported by glTF, FBX or USD (MaterialX partial): bake them to textures or rebuild as an engine shader. A Blender toon made with Shader to RGB into a Color Ramp set to Constant (Eevee only) gives hard bands but breaks the PBR chain (AO, soft shadows, SSR, SSS) and does not export to glTF [U]: rebuild it as `MeshToonMaterial` or bake. Vertex colours are glTF `COLOR_0`, used in three.js with `vertexColors: true` [U, not confirmed].
+- **Manifest rule, extended** (low-poly-and-sources, 2026-10-24): besides name, URL, author and licence, a row records the version, the date retrieved, a screenshot of the terms for BOOTH and hosted AI, and whether the asset ships in the bundle (`templates/manifest.json` shows the optional fields).
 - Spending on assets or services needs yskills' word first (CLAUDE.md money rule).
 
 ## 4. Testing in cloud threads
@@ -135,10 +150,14 @@ covers them. Stories are data: threads turn yskills' messages into `story/` file
   draw calls, under 500 000 triangles, textures at most 2048 px, assets under 150 MB in total.
   SwiftShader cannot measure frame rate: yskills' PC runs the perf scene once per milestone and
   the number goes into PROGRESS.md.
+- **Per-asset defaults** for low-poly web games (low-poly-and-sources, 2026-10-24; common practice, no primary source): mobile character 3 to 10k triangles, mobile prop 300 to 1,500, PC character 20 to 80k, Polycount's mobile figure about 1 to 3k with 512 px maps; shaders and overdraw hurt mobile more than triangles. Our proposed defaults: character 3 to 8k, prop 100 to 1,500, scene under 150k visible triangles on web, 1 material per object, 512 to 1024 px textures. The scene numbers above (500k) are the test ceiling; `starter/figures.md` (full figure at most 100k) and `refs/.../profiling-and-budgets.md` (30 to 80k / 5 to 20k) are other contexts.
+- **LOD** is usually not worth it for stylised web games under about 5k triangles per object; instancing and culling matter more [U]. Godot has visibility-range LOD (low-poly-and-sources, 2026-10-24).
+- **Instance or merge**: merged geometry loses per-object frustum culling, so merge only parts smaller than the viewport. Rule of thumb: instance 100+ identical objects, merge static non-identical parts (low-poly-and-sources, 2026-10-24).
 - **Electron smoke**: CI runs the packaged app under `xvfb-run`, waits for the first frame and
   quits; Steam calls are stubbed outside Steam (`platform/web.ts`).
 - **Gate preview**: the web build deploys to a Worker Preview like every project, so the
   evaluator plays the branch in a browser.
+- **Local test server** must send `charset=utf-8`: Python's `http.server` alone garbles "Büro" and a click on it fails (set `extensions_map` for .html and .js and '' as octet-stream); copy the page files, never symlink (hq-characters HANDOFF, 2026-10-07).
 
 ## 5. Steam checklist
 
@@ -181,6 +200,8 @@ Checked by a real upload (2026-10-18, Hedgehog Garden): the English fallback and
 the official docs on the date above, so re-read them before submitting. Payout terms (Tipalti,
 minimum, split) are not published as a rule: confirm in the dashboard before counting on money.
 
+Store art (Igelgarten crazygames-listing, 2026-10-18): covers and gameplay shots are rendered natively at 1920x1080, 800x1200 and 800x800 (headless Chromium, software WebGL, the bot at the wheel, seed 1), never upscaled.
+
 ## 5b. Tools: what is installed and why (checked 2026-10-07)
 
 Plugin directory, skills.sh and the ECC index were searched (`toolbox` `find.mjs`,
@@ -205,6 +226,12 @@ Libraries are per game via npm (§1); nothing global to install. Blender's offic
 (PC only) and VRoid Studio stay yskills' PC tools (`toolbox` catalog `data-web.md`). When a
 better tool appears, fix this table and the catalog, not a thread's memory.
 
+Verdicts that cost a search each:
+
+- Autodesk Fusion: free personal use is non-commercial with revenue under 1000 USD a year, and it is CAD, not a game-base tool: skip (3d-route, 2026-10-18).
+- Do not install OpusGameLabs/game-creator: no licence file (all rights reserved by default), its money step is a crypto wallet and it deploys to GitHub Pages; copy only the ideas (QA after every step, play hooks) (game-route, 2026-10-17).
+- Selling 3D models comes last, from assets our games already made: Fab pays 88 % but needs clean topology, which AI meshes rarely have [inferred]; CGTrader payout is 55 % rising to 80 % by yearly sales since 2026-09-15 and sellers report falling sales (game-route, 2026-10-17).
+
 ## 6. Lessons
 
 - 2026-10-07 (HQ characters): test every loaded model in a browser with a real sample file before
@@ -221,3 +248,7 @@ better tool appears, fix this table and the catalog, not a thread's memory.
   that never clips through walls); moves as shared VRMA files; every model through the manifest
   with its licence shown; perf budget and fixed-clock screenshot spots in the tests; scene,
   entities and systems kept apart so the office lifts into a Vite game unchanged.
+
+- 2026-10-07 (HQ office HANDOFF vs HQ characters HANDOFF): yskills decided at 09:02 that `assets/manifest.json` stays silent: no licence or money-use text anywhere in the UI. That wins for HQ; "every model through the manifest with its licence shown" (above) and "show the licence before keeping" (§3) stand for products, where a CC-BY licence still needs its credits file.
+
+- 2026-10-06 (hq-characters HANDOFF, hq-game findings): single-file Artifact pages: three-vrm 1.x needs three r140 or newer; r147 is the last with the `examples/js` globals; switching r128 to r147 needs RGBFormat gradient textures changed to RGBAFormat; load GLTFLoader from the jsdelivr `examples/js` path. (The starter above uses r186 modules.)

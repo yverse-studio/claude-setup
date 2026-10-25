@@ -36,6 +36,14 @@ What the Tester or the Playtester checks on a game PR that changes play (the eva
 - Each feedback line of the doc is visible or audible in the build; each ad placement matches the doc.
 - Anything in the doc's NOT list that shows up in the build fails the PR.
 
+## Reference loops and what we copy
+
+From the "call a team member" brief (hq-characters game-research, 2026-10-06; WebSearch of otome and office-idle games, some points genre knowledge):
+
+- Character-call loop (1 to 2 min a visit): call button, the member walks in, a greeting tied to their real project state (merged PR, failing CI, idle), 2 to 3 replies each with its own reaction, a payoff (bond, a line of real status, a small gift). Bond comes from calls (1 free + 2 more a day, capped), correct replies, gifts and real work (a merged PR gives bonus bond). Unlocks by bond: 1 intro scene, default outfit, bare desk; 2 personal chat, desk plant or mug; 3 work-story scene, outfit 2; 4 heart-to-heart, desk poster; 5 finale, signature outfit, special desk item and title badge.
+- Copy: real-time contact feel, card collect plus upgrade, a visible bond meter with level gates, choice then reaction then payoff, strong distinct personalities, assigning staff to jobs, gifts and decor on the desk, production feel (voice blips, blink, nod, bounce).
+- Avoid: pay-to-win and gacha (every unlock deterministic), an endless grind (daily caps, 3 to 5 visits a level), guilt hooks (no streak loss), fake progress (if there is no data, say so), scenes that cannot be skipped or run over 30 s.
+
 ## Literal mode and cost
 
 The block every brief starts with: literal mode, cost and the context rules for long threads (`briefs.md`, "Every thread brief starts with").
