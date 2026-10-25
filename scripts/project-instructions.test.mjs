@@ -27,8 +27,23 @@ test('setup says it is the repo itself; kinds come from the file or the flag', (
   assert.match(cases['an unknown name with flags'].text, /kind: game/)
 })
 
-test('no name prints usage and exits 1', () => {
-  const r = spawnSync('node', ['scripts/project-instructions.mjs'], { encoding: 'utf8' })
-  assert.equal(r.status, 1)
-  assert.match(r.stderr, /usage/)
+test('no name, a path-like name or a flag without a value print usage and exit 1', () => {
+  for (const args of [[], ['../README'], ['Yland'], ['yland', '--about']]) {
+    const r = spawnSync('node', ['scripts/project-instructions.mjs', ...args], { encoding: 'utf8' })
+    assert.equal(r.status, 1, args.join(' '))
+    assert.match(r.stderr, /usage/)
+  }
+  assert.throws(() => fill('../README'), /lowercase/)
+})
+
+test('a name without projects/<name>.json warns on stderr but still prints', () => {
+  const r = spawnSync('node', ['scripts/project-instructions.mjs', 'nope', '--about', 'x'], { encoding: 'utf8' })
+  assert.equal(r.status, 0)
+  assert.match(r.stderr, /no projects\/nope\.json/)
+  assert.match(r.stdout, /yverse-studio\/nope/)
+})
+
+test('kind and org come from the project file', () => {
+  assert.match(fill('companyxy-spiel'), /kind: repo/)
+  assert.match(fill('igelgarten'), /kind: game/)
 })

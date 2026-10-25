@@ -302,5 +302,23 @@ for (const ph of ['name', 'about', 'repo', 'kind']) {
 const bootText = bootTemplate.split(/^---\r?\n/m)[1] ?? ''
 if (bootText.split('\n').filter((l) => l.trim()).length >= 15) errors.push('templates/project-instructions.md: the text below --- must be under 15 non-empty lines')
 
+// One index: every lessons home (a `## Lessons` or `## Learnings` heading, or learnings.md) is linked from docs/MAP.md.
+const mapText = readFileSync(join(root, 'docs/MAP.md'), 'utf8')
+const eccAgents = new Set((ecc?.agents ?? []).map((a) => `.claude/agents/${a}.md`))
+const lessonsHomes = (dir) => readdirSync(join(root, dir), { withFileTypes: true }).flatMap((d) => {
+  const rel = `${dir}/${d.name}`
+  if (d.isDirectory()) return /^(research|archive|node_modules|ecc)$/.test(d.name) ? [] : lessonsHomes(rel)
+  if (!d.name.endsWith('.md') || eccAgents.has(rel)) return []
+  return d.name === 'learnings.md' || /^## (Lessons|Learnings)\b/m.test(readFileSync(join(root, rel), 'utf8')) ? [rel] : []
+})
+for (const f of [...lessonsHomes('.claude'), ...lessonsHomes('docs')]) {
+  if (f !== 'docs/MAP.md' && !mapText.includes(`](${f.startsWith('docs/') ? f.slice(5) : `../${f}`})`)) errors.push(`${f}: holds lessons but docs/MAP.md does not link it; add it to the "Lessons homes" row of the Parts table`)
+}
+for (const t of ['project-memory', 'lessons']) {
+  if (!existsSync(join(root, `.claude/skills/operator/templates/${t}.md`))) errors.push(`templates/${t}.md: missing; docs/MAP.md (Start here) points to it`)
+}
+const memoryTemplate = join(root, '.claude/skills/operator/templates/project-memory.md')
+if (existsSync(memoryTemplate) && statSync(memoryTemplate).size >= 3072) errors.push('templates/project-memory.md: 3 KB or more; the template must stay under 3072 bytes so a MEMORY.md in its shape does too, shorten the examples')
+
 if (errors.length) { console.error(errors.map((e) => `x ${e}`).join('\n')); process.exit(1) }
 console.log(`ok: ${seen.skill.size} skills, ${seen.agent.size} agents, ${plugins?.global.length ?? 0}+${plugins?.project.length ?? 0} plugins`)
