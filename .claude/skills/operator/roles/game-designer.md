@@ -45,3 +45,5 @@ The block every brief starts with: literal mode, cost and the context rules for 
 Added at the end of each project (operator step 9): date, project and its type, what to do differently. Newest last; merge duplicates.
 
 - 2026-10-18 (Igelgarten, game): shipped with no written core loop, run length or difficulty table; the bot's balance and the look were gated, the fun was not. Write the doc before the first build.
+- 2026-10-24 (MEMORY, MONEY): CrazyGames pays about 1 to 15 USD per 1 000 plays (unverified range, memory only; the money verdict is in `research/2026-10-18-game-money.md`, cited in `game-3d/SKILL.md` 5a).
+- 2026-10-24 (Mondgarten, game): CrazyGames declined it on quality (QA review, told 10-24); yskills accepts it and the retry waits for the first real game.

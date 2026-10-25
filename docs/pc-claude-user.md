@@ -47,6 +47,7 @@ and calls that showing him.
 - **context7:** the plugin's MCP server asks for authentication once (`/mcp` in an interactive
   session).
 - **Roblox Studio:** later, once Claude has a Roblox login.
+- **Laptop allow list (drafted 2026-10-10, never applied):** a `permissions.allow` block (git/gh read and PR commands) plus an `autoMode.environment` entry trusting `github.com/yverse-studio` and Claude's Cloudflare account, with `"$defaults"` kept, goes into `C:\Users\Claude\.claude\settings.json` (user scope; `claude auto-mode config` shows the effective rules). Repo transfers, collaborator invites and `.git/config` edits stay blocked on purpose. The ready block is `autonomy/laptop-settings.json.md` in the reports zip.
 
 ## Update
 

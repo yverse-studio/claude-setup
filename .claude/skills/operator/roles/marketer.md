@@ -24,4 +24,4 @@ The block every brief starts with: literal mode, cost and the context rules for 
 
 Added at the end of each project (operator step 9): date, project and its type, what to do differently. Newest last; merge duplicates.
 
-- None yet.
+- 2026-10-08 (brand, research/brand-name.md): the brand is the Y family (yland, ycoin, yblox), umbrella domain yverse.de (yskills 13:51); rejected as "awful": Otterwick, Kleinmoos, Lindwick, Mimbelwerk, Kringelwerk, never propose them again. Alternates: yorbit, yheim (yheim.com and the YouTube handle were free). Before printing a logo or paying for a mark, search "yverse" once at register.dpma.de and tmdn.org/tmview (classes 9, 35, 41, 42). Checks used: DENIC RDAP `rdap.denic.de/domain/<name>.de` (404 = free), TikTok page statusCode (10221 = no such user), YouTube `/@<name>` 404.

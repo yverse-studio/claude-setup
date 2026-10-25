@@ -73,6 +73,8 @@ Budget: Haiku (effort low) reads, lists, checks files, polls CI and does simple 
 
 Why calls, not threads, cost the most (measured 2026-10-18; the breakdown is `claude-setup/audit/2026-10-18-token-start-cost.md` in the claude.ai project's shared files, not in this repo): a fresh project thread starts at about 114k tokens, only about 10k of it from this repo, and every call re-reads all of it. So batch independent calls in one turn, read several files with one command or one Haiku reader, name in the brief the one file a role must read, and use an Agent subagent (it starts small) instead of a new project thread for a bounded check.
 
+Cache-read price per M tokens (2026-10-17, architect report): Fable $0.25, Opus $0.20, Sonnet $0.10, Haiku $0.01 up to 100k and $0.05 above, so a Haiku reader stays under 100k and a Fable read costs 1.25x Opus, not 2.2x. Cloud promo credit ($100 Pro, $250 Max, expires 2026-11-04; found 2026-10-04): it covers only plain claude.ai/code sessions, never Projects, Routines or Remote Control, so every project thread spends the plan's 5-hour and weekly limits; never tell yskills the credit keeps project threads going.
+
 ## The 5/5 gate
 
 Five pass/fail checks by agents that didn't write the code: CI, evaluator on the preview, fresh

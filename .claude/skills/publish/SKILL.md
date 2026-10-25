@@ -202,6 +202,7 @@ Lessons from the deploy tests (10-08, runs 1 to 9) and the move to Claude's acco
   regenerate it, never hand-edit. [advisory]
 - `projects/<name>.json` goes in first, through a size-S gate; delete and later runs need it.
 - Old copies in yskills' own Cloudflare stay until yskills says "delete <name>".
+- A lockfile written by npm 11 needs `npx -y npm@11.17.0 ci` in the cloud container (MyPage, 2026-10-04); a default-branch name other than `main` (MyPage's was `origin`) breaks every doc that says main.
 
 ## Delete a project
 
