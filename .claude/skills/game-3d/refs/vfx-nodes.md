@@ -7,4 +7,4 @@ From a TikTok (@goodgood3d, 420k views; caption and transcript only, recipe not 
 - An `age` attribute from Geometry Nodes drives the mask (dissolve/spawn over lifetime).
 - Swirl: centred mapping plus a gradient-scaled rotation.
 - Look: emission, alpha, a different back-face colour.
-- Animate the Mapping node's location rather than the 4D noise W input: cheaper, and it carries over to game engines.
+- Animate the Mapping node's location rather than the 4D noise W input: 4D costs more render time (Blender manual), but the two look different (W morphs in place, location drifts). Good for renders. **It does not carry to game engines**: procedural nodes do not export to glTF; bake or rebuild the shader in the engine (`low-poly.md`). The five-node count is unverified.

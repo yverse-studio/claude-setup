@@ -36,8 +36,8 @@ in each section.
   armature, Mask modifiers for clipping ([figures.md](figures.md)).
 - **Moves are shared files** (VRMA, Quaternius UAL CC0); Mixamo only with yskills' Adobe account.
 - **Library outside git** (635 MB) with a pinned, hashed index; binaries never in the repo.
-- If quality must jump later, the step up is one paid pro base with a fitted-outfit market (BOOTH
-  VRChat bases, about 60 to 120 € for a figure plus outfits): yskills buys, everything else stays.
+- If quality must jump later, the step up is one paid pro base with a fitted-outfit market (a marketplace
+  base, about 60 to 120 € for a figure plus outfits; pick by `refs/asset-sources.md`): yskills buys, everything else stays.
 
 ## Settings that worked
 
