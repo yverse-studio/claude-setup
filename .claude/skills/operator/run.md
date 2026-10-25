@@ -10,7 +10,7 @@ before each step; builder, gate and fix threads read their `roles/<role>.md` ins
    and a **design card**: "Send pictures, screenshots or links of apps and sites you like (or
    hate) for this, one line each on why." Linked sites are shot with `ui-review` and saved with
    the pictures in `design/refs/`; the lines go into `design/DESIGN.md`.
-2. **Research** (site, app, game, story; a fix skips it), parallel subagents, one page each. The Researcher writes `research/RESEARCH.md` from [`templates/research.md`](templates/research.md) before `PLAN.md`, by the method in [`roles/researcher.md`](roles/researcher.md) (Method); a bug fix skips it:
+2. **Research** (site, app, game, story, video, social; a fix skips it), parallel subagents, one page each. The Researcher writes `research/RESEARCH.md` from [`templates/research.md`](templates/research.md) before `PLAN.md`, by the method in [`roles/researcher.md`](roles/researcher.md) (Method); a bug fix skips it:
    - **Inside:** our skills and catalog, the lessons in claude-setup's `docs/TEST-PROJECTS.md`,
      yskills' repos with code to reuse.
    - **Outside:** competitors and prices, how the best similar products and open-source projects
@@ -83,14 +83,14 @@ before each step; builder, gate and fix threads read their `roles/<role>.md` ins
    claude-setup), **change** (one new offer or channel, one more probe) or **build anyway**.
    Never move the go number after the probe started. A small site meant to earn is its own
    probe; one not meant to earn skips it.
-6. **Gate.** (all kinds) A gate per PR (size S and M in the author thread, L a fresh gate thread) runs `gate.md` and either posts the 5/5 table and merges
+6. **Gate.** (site, app, game, story, setup; video: its Critic gate) A gate per PR (size S and M in the author thread, L a fresh gate thread) runs `gate.md` and either posts the 5/5 table and merges
    the PR (after pulling main into the branch when another PR merged since) or one review with
    the blocking findings, which the builder fixes. Two failed rounds: `gate.md` (Rounds).
    **The whole journey, once.** After the last slice merges, one `evaluator` run walks the full
    first visit on live (or main's preview) along the journey criteria in `features.json` (one
    criterion per user journey that crosses slices) before yskills hears "ready to test". Test run
    1's slices each passed and broke at their seams.
-7. **Launch.** (site, app, game; story at release) The last PR gets the full `red-team` and `legal-reviewer` pass. **Brief (c)** is
+7. **Launch.** (site, app, game; story at release: `store-publish` or a Windows build) The last PR gets the full `red-team` and `legal-reviewer` pass. **Brief (c)** is
    posted, and the gate merges at 5/5, which goes live (auto-run: launch included); live keys
    are the one thing on it that waits for yskills' hands. Then `sell`'s go-live (§4) if it sells.
    **The loop is wired before launch** (`docs/LOOP.md`): the app stores its errors and feedback
