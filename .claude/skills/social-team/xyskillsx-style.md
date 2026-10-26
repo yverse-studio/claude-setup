@@ -28,7 +28,7 @@ words that day: "thats lowk the style i wanted but everything lacks quality caus
 | "bro only has 30 followers" deadpan | 69k, 406 comments | self-roast that invites replies |
 | "18h flight, expect to be famous" | 23.7k | face close-up, ironic promise |
 
-The recipe behind every hit: **his face in frame, one ironic caption from frame 1, 7-9 s, 0-5 cuts,
+The recipe behind his self-irony hits: **his face in frame, one ironic caption from frame 1, 7-9 s, 0-5 cuts,
 a trending sound, a loop.** Plain scenery stays at 250-1.1k. **Food is his second hit lane** when
 it carries a joke or a real recipe (Metricool, May-Oct 2026: sushi bake 21.6k with the recipe in the
 caption, "10 secs to cook… summer body (for 2027)" 9.8k, Spätzle 6.1k, "struggle meal" 5.1k, KBBQ
