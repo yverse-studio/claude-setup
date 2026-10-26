@@ -1,4 +1,5 @@
 import { test } from 'node:test'
+import { readFileSync } from 'node:fs'
 import assert from 'node:assert/strict'
 import { run } from './preview-login.mjs'
 import { previewEnv, setRepoSecret, wranglerConfig, packageJson } from './new-project.mjs'
@@ -32,7 +33,7 @@ test('setRepoSecret puts the sealed value in a default-branch-only environment, 
 
 test('setRepoSecret says what is missing when the key lacks the permission', async () => {
   const gh = async (path) => (path === '/repos/o/r' ? ok({ default_branch: 'main' }) : { ok: false, status: 403, json: null, text: '' })
-  await assert.rejects(setRepoSecret(gh, { org: 'o', repo: 'r', value: TOKEN }), /Environments and Secrets read and write/)
+  await assert.rejects(setRepoSecret(gh, { org: 'o', repo: 'r', value: TOKEN }), /Administration.*Environments/)
 })
 
 test('run patches the previews env of the named Worker, sets the repo secret and prints no token', async () => {
@@ -60,4 +61,38 @@ test('run stops before changing anything when the Worker does not exist', async 
 test('a new site scaffold has a journey script and a previews block', () => {
   assert.ok(packageJson({ name: 'app', d1: true }).scripts.journey)
   assert.ok(wranglerConfig({ name: 'app', d1: true, liveId: 'l', previewId: 'p' }).previews)
+})
+
+test('a re-run is fine when the branch policy already exists (422)', async () => {
+  const gh = async (path, init) => {
+    if (path === '/repos/o/r') return ok({ default_branch: 'main' })
+    if (path.endsWith('/deployment-branch-policies')) return { ok: false, status: 422, json: null, text: 'exists' }
+    if (path.endsWith('public-key')) return ok({ key: 'PK', key_id: 'K1' })
+    return ok({}, init?.method === 'PUT' && path.includes('/secrets/') ? 204 : 200)
+  }
+  await setRepoSecret(gh, { org: 'o', repo: 'r', value: TOKEN, seal: async () => 'sealed' })
+})
+
+test('the repo secret is set before the Worker changes, and a failing GitHub step leaves the Worker alone', async () => {
+  const order = []
+  const cf = async (path, init) => {
+    if (init?.method === 'PATCH') order.push('worker')
+    return path.startsWith('/workers/workers?') ? ok({ result: [{ id: 'w1', name: 'social' }] }) : ok({ result: { previews_base_config: { env: {} } } })
+  }
+  const good = async (path, init) => {
+    if (init?.method === 'PUT' && path.includes('/secrets/')) order.push('secret')
+    return path === '/repos/o/r' ? ok({ default_branch: 'main' }) : path.endsWith('public-key') ? ok({ key: 'PK', key_id: 'K1' }) : ok({}, 204)
+  }
+  await run({ cf, gh: good, seal: async () => 's', org: 'o', repo: 'r', name: 'social', log: () => {} })
+  assert.deepEqual(order, ['secret', 'worker'])
+  order.length = 0
+  const denied = async () => ({ ok: false, status: 403, json: null, text: '' })
+  await assert.rejects(run({ cf, gh: denied, seal: async () => 's', org: 'o', repo: 'r', name: 'social', log: () => {} }), /Administration/)
+  assert.deepEqual(order, [])
+})
+
+test('both workflows that seal the secret install libsodium at the same pinned version', () => {
+  const pin = (file) => readFileSync(new URL(`../.github/workflows/${file}`, import.meta.url), 'utf8').match(/npm install [^\n]*libsodium-wrappers@([\d.]+)/)?.[1]
+  assert.ok(pin('new-project.yml'), 'new-project.yml installs libsodium-wrappers before new-project.mjs')
+  assert.equal(pin('new-project.yml'), pin('preview-login.yml'))
 })

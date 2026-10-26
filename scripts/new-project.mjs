@@ -264,7 +264,7 @@ export async function sealWithSodium(publicKey, text) {
 // job, `pull_request_target` runs on the base branch). Never logs the value.
 export const PREVIEW_ENV = 'preview-login'
 export async function setRepoSecret(gh, { org, repo, value, seal = sealWithSodium }) {
-  const fail = (what, r) => new Error(`${org}/${repo}: ${what} answered ${r.status}; PROJECTS_GITHUB_TOKEN needs Environments and Secrets read and write on the repo`)
+  const fail = (what, r) => new Error(`${org}/${repo}: ${what} answered ${r.status}; PROJECTS_GITHUB_TOKEN needs repository permissions Administration (read and write, for the environment and its branch policy) and Environments (read and write, for its secret)`)
   const info = await gh(`/repos/${org}/${repo}`)
   if (!info.ok || !info.json?.default_branch) throw fail('reading the repo', info)
   const envPath = `/repos/${org}/${repo}/environments/${PREVIEW_ENV}`

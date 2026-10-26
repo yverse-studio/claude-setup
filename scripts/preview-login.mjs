@@ -8,7 +8,7 @@
 // The token is masked before it exists and never printed, written or returned. A re-run rotates it (and the
 // previews' BETTER_AUTH_SECRET, which is resent because Cloudflare never returns secret values): rotating a
 // secret waits for yskills' tap (CLAUDE.md, Ask first). Reads CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID,
-// PROJECTS_GITHUB_TOKEN (needs Secrets read and write on the project repo).
+// PROJECTS_GITHUB_TOKEN (repository permissions Administration and Environments, read and write).
 import { existsSync, readFileSync, appendFileSync } from 'node:fs'
 import { randomBytes } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
@@ -20,10 +20,11 @@ export async function run({ cf, gh, seal, org, repo, name, token = randomBytes(3
   if (!worker) throw new Error(`no Worker named ${name} in this account`)
   const current = (await cf(`/workers/workers/${worker.id}`)).json?.result
   const env = previewEnv(current?.previews_base_config?.env, authSecret, token)
-  await cf(`/workers/workers/${worker.id}`, { method: 'PATCH', body: { previews_base_config: { ...current?.previews_base_config, env } } })
-  log(`[preview-login] ${name}: previews env set (live Worker untouched)`)
+  // The repo secret first: if it fails nothing changed; if the Worker PATCH then fails, a re-run sets both again.
   await setRepoSecret(gh, { org, repo, value: token, seal })
   log(`[preview-login] ${org}/${repo}: environment secret ${PREVIEW_LOGIN} set`)
+  await cf(`/workers/workers/${worker.id}`, { method: 'PATCH', body: { previews_base_config: { ...current?.previews_base_config, env } } })
+  log(`[preview-login] ${name}: previews env set (live Worker untouched)`)
   return { name, repo: `${org}/${repo}` }
 }
 
@@ -57,10 +58,7 @@ async function main() {
     if (!r.ok) throw new Error(`Cloudflare ${init?.method || 'GET'} ${path.replace(/workers\/[0-9a-f]{32}/, 'workers/<id>')}: ${r.status} ${redact(r.text).slice(0, 300)}`)
     return r
   }
-  const gh = (path, init) => http('https://api.github.com', ghToken, path, init).then((r) => {
-    if (!r.ok) throw new Error(`GitHub ${init?.method || 'GET'} ${path}: ${r.status} ${redact(r.text).slice(0, 300)}`)
-    return r
-  })
+  const gh = (path, init) => http('https://api.github.com', ghToken, path, init) // returns non-ok answers: setRepoSecret checks each one
   const out = await run({ cf, gh, seal: sealWithSodium, org: project.org, repo: project.repo, name, token })
   if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, `## preview-login ${name}\n\n- Worker previews env and ${out.repo} environment secret ${PREVIEW_LOGIN} set (value never shown)\n`)
 }

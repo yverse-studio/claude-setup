@@ -208,8 +208,9 @@ and sat behind the owner's passkey, so nobody clicked the real app.
   the PR's own preview receives it, so it opens only the preview's test data (separate D1, `wrangler.jsonc` test).
   A project that predates it, or a run that warned "preview login not wired": the `preview-login` workflow
   (`name` input) does the same; re-running rotates the token, which waits for yskills' tap. The one thing that can need
-  his hands: `PROJECTS_GITHUB_TOKEN` lacking Secrets read and write on the org's repos (a one-time permission edit; the
-  step then fails with exactly that message). A short-lived token per run is a later hardening: the preview Worker
+  his hands: `PROJECTS_GITHUB_TOKEN` lacking the repository permissions Administration (read and write: creates the
+  environment and its default-branch policy) and Environments (read and write: its secret), a one-time permission edit; the
+  step then fails with exactly that message. A short-lived token per run is a later hardening: the preview Worker
   holds the master anyway, so it would not stop malicious PR code, only a leaked log line. Known and accepted: every
   branch preview of the project holds the token and shares the preview D1 (worst case: someone resets another branch's
   test data, never live); the journey starts only after the preview serves the PR head's commit, so a lookalike host of
