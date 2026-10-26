@@ -84,11 +84,12 @@ Two kinds of account (yskills, 2026-10-18: "when i give you another account or y
 our projects you get full decision power, it's just my personal now, i want to be authentic and creative"):
 
 - **His personal account (@xyskillsx):** yskills decides what goes up; the team makes each idea great
-  in his taste (`roles/lead.md`, [`xyskillsx-style.md`](xyskillsx-style.md)). A ready video goes to drafts or the queue on "upload"; yskills adds a
-  trending sound and taps post (`video-studio` delivers a music-free master for that). Route
-  (yskills, 2026-10-26): Metricool with `autoPublish` off, so his phone gets the video at the planned
-  time; never a browser bot into TikTok Studio's drafts (`learnings.md`).
-  - **Auto-post** there only while yskills has switched it on in the `social` app. The switch is his
+  in his taste (`roles/lead.md`, [`xyskillsx-style.md`](xyskillsx-style.md)). On his "upload" or "poste" for a named video
+  the team posts it itself: Metricool with `autoPublish` on at the planned slot, the licensed-bed master
+  (yskills, 2026-10-26: "why should I post it and not you?"). `final-nomusic.mp4` is kept for when he
+  wants to add a trending sound himself and asks for it. Never a browser bot into TikTok Studio's
+  drafts (`learnings.md`); under 30 days or 20 posts it stays a draft (below).
+  - **Unattended slots** (no "upload" for that video) there only while yskills has switched auto-post on in the `social` app. The switch is his
     standing ok for posts under CLAUDE.md's ask rule; note the date in project memory. Only videos the
     Critic passed, only the devlog and learning pillars, at most 2 a day, and a daily one-line summary
     to the coordinator. He chose it on 2026-10-26 ("jeden Tag 2 Videos hochladen"); the switch starts
@@ -118,7 +119,7 @@ our projects you get full decision power, it's just my personal now, i want to b
 | Job | Pick | Notes |
 |---|---|---|
 | Schedule and post | **Metricool** (picked 2026-10-18; its claude.ai connector `createScheduledPost`, `getScheduledPosts`, `getBestTimeToPostByNetwork`) | setup below; fallback upload-post (free tier) or Ayrshare if the free plan's monthly cap is below 2 a day; a paid plan is a card |
-| Media URL for a scheduled post | the `social` Worker serves the draft's `final.mp4` from its D1 clip store at a short-lived URL (free, no card; build as a small slice of the app, not yet built); until then the working path below | `createScheduledPost` needs a public URL and copies the file on create. Working path today (free, used 2026-10-26): a temporary branch `media-<video>` holding only that file on claude-setup, linked as `raw.githubusercontent.com/...`; it stays until the post has gone out, then the `branch-cleanup` workflow archives it as a tag and deletes it. The D1 URL replaces it once built |
+| Media URL for a scheduled post | today: a temporary branch `media-<video>` holding only that file on claude-setup, linked as `raw.githubusercontent.com/...` (free, used 2026-10-26); later: the `social` Worker serves `final.mp4` from its D1 clip store at a short-lived URL (free, no card, not built yet) | `createScheduledPost` needs a public URL and copies the file on create. The branch stays until the post has gone out, then the `branch-cleanup` workflow archives it as a tag and deletes it (the first run's `media-brag-2026-10-26` is the coordinator's to clean after the post) |
 | Instagram comments and DMs | Instagram Messaging API from the `social` Worker | private reply to a comment (one per comment, within 7 days), sent on its own only for keywords and gift texts yskills approved per brand in `social/brands.md`; replies only inside the 24-hour window; `is_user_follow_business` in the user profile gates follower-only gifts; needs a Business or Creator account and Meta app review, else ManyChat (Meta partner) by card |
 | TikTok comments and DMs | no general DM API: Community drafts replies for yskills | partner tools that automate TikTok DMs only where TikTok allows it, by card |
 | Hooks, captions, humanizer | `sergebulaev/tiktok-skills` references (MIT) | read first (CLAUDE.md install rule) |

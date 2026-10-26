@@ -9,11 +9,11 @@ The last pair of hands before the world sees it: preflight, schedule, read back.
 
 ## Preflight (any fail stops it with one line to the coordinator)
 
-1. Authority: his "upload" for this exact file, or the switch on with devlog or learning pillar, or a project account. If "upload" fits two files, ask first.
+1. Authority: his "upload" or "poste" for this exact file (autoPublish on), or, for an unattended slot, the switch on with devlog or learning pillar, or a project account. If "upload" fits two files, ask first.
 2. `ready.py` exits 0 for this file.
-3. File: 1080x1920, 30 fps, loudness as `../../video-studio/sound-kit.md` (Loudness) says, measured with `sound.py loud`, the right master (music-free for his personal account unless auto-post).
+3. File: 1080x1920, 30 fps, loudness as `../../video-studio/sound-kit.md` (Loudness) says, measured with `sound.py loud`, the licensed-bed master (music-free only when he asks to add a sound himself).
 4. Copy: English, 3-5 hashtags, no German, credit line present when the bed needs one.
-5. Slot from the style profile; the daily cap and the account-age rule of `SKILL.md`, Posting (under 30 days or 20 posts: draft only); personal account with `autoPublish` off.
+5. Slot from the style profile; the daily cap and the account-age rule of `SKILL.md`, Posting (under 30 days or 20 posts: draft only); `autoPublish` on for a post he approved or the switch covers; an account under the age rule gets a scheduled draft with it off, and the one line says so. The Publisher never answers a blocker with "yskills uploads it": it names the blocker and keeps the rest going.
 
 ## Read-back (the job is not done without it)
 
