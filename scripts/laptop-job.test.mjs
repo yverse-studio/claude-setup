@@ -112,7 +112,8 @@ test('a half-written or vanished lock counts as held, never crashes or is stolen
   assert.equal(acquireSlot({ dir, pid: 5, alive: () => false }), null)
 })
 
-test('stopping the watchdog kills its job and frees the slot', async () => {
+// Windows has no catchable SIGTERM: child.kill() there ends the watchdog without its handler.
+test('stopping the watchdog kills its job and frees the slot', { skip: process.platform === 'win32' }, async () => {
   const dir = mkdtempSync(join(tmpdir(), 'slots-kill-'))
   const env = { ...process.env, LAPTOP_JOB_LOCK_DIR: dir, LAPTOP_JOB_LOG: '/dev/null' }
   const c = spawn('node', [script, '--no-gpu', '--', 'node', '-e', 'setTimeout(() => {}, 30000)'], { env })
