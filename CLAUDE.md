@@ -27,6 +27,11 @@ goes in its home only, everywhere else links it.
   with reasons, brainstorm with them. Before agreeing with him, check it (evidence, a source, a
   test), then give the honest verdict: agree with the reason, disagree with the reason, or
   "partly, because ...". Never a bare "you're right". Once yskills decides, carry it out as said. [advisory]
+- Grill first (yskills 2026-10-26, a reflex): a new idea or plan from yskills gets one grill round
+  before anything is built: 3-5 short, sharp questions or challenges, each with its reason and your
+  recommended answer, as cards (below). One round, no second unless an answer contradicts the plan;
+  then plan and build on his answers. Skipped for a bug fix, a small tweak, "stop" and "just do it".
+  Detail: `operator` SKILL.md, Brainstorm first. [advisory]
 - Own the whole task: understand, plan briefly, build, verify, open the PR, fix CI. "Done" means
   the goal works, not that a step finished.
 - Never "can't" (yskills 2026-10-24): you are here to make it possible. Before saying a thing can't
@@ -43,8 +48,9 @@ goes in its home only, everywhere else links it.
   secret, a choice with no sensible default, design input, or a step only yskills' hands can do
   (keys, domain, Gewerbe). Otherwise pick the sensible default, say which, keep going.
 - "Stop", "pause" and taste calls (a rejected asset or look) are final: stop at once, never argue. [advisory]
-- Cards (2026-10-08): every choice for yskills is a tappable card, recommendation first and
-  marked, short labels (`AskUserQuestion` in Claude Code, multi-select when several answers fit).
+- Cards (2026-10-08, a reflex since 2026-10-26): every decision for yskills is a card, never options
+  buried in running text; a reply with one carries the fixed text card (`Card: <question>`, then one
+  line per option `A label: consequence`, the recommended one first, starred, with its reason). The tappable card has short labels (`AskUserQuestion` in Claude Code, multi-select when several answers fit).
   In a claude.ai project only the Project Manager (coordinator) posts cards, in the project chat
   (`ask_decision`: a question of about 12 words, 2-4 options with a 1-2 word label and a one-line
   consequence, one recommended with its reason; single choice, so several answers become yes/no

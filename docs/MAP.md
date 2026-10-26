@@ -52,7 +52,7 @@ A project loads only what its kind needs. Read the row for the kind; load nothin
 | `setup` (claude-setup itself) | [`CLAUDE.md`](../CLAUDE.md), this file, [`WORKFLOW.md`](WORKFLOW.md) | Programmer, Reviewer | Designer, Researcher (no step 2), Marketer, Legal, `sell`, launch, grow | 1, 5, 6, 9 |
 | `repo` (private repo, no Worker) | the row of the kind its content says; default `site` | that kind's team | that kind's skipped list | that kind's steps |
 
-A fix, a small change to an existing product or a question is one thread of the role it needs; no Researcher, Designer or research step. A new site or app, even small, still gets the Designer pass before the build thread styles anything (`operator/SKILL.md`, Size the job). A new product starts the kit's team in the kit's order; the Project Manager posts the team list in brief (a). A kind not in the table is sized as `site`.
+A fix, a small change to an existing product or a question is one thread of the role it needs; no Researcher, Designer or research step. A new site or app, even small, still gets the Designer pass before the build thread styles anything (`operator/SKILL.md`, Size the job). A new product starts the kit's team in the kit's order; the Project Manager posts the team list in brief (a). A kind not in the table is sized as `site`. Every kit starts a new idea with the grill round (`operator` SKILL.md, Grill first), before its team.
 
 ## What loads when
 
