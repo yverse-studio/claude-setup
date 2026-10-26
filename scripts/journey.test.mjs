@@ -2,13 +2,13 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { verifyJourney } from './journey.mjs'
-import { isJourneyFile, isNonApp, needsJourney, planJourney, previewHosts, previewUrl, statusFor } from '../.claude/skills/publish/templates/new-project/scripts/journey-gate.mjs'
+import { isGateFile, isJourneyFile, isNonApp, needsJourney, planJourney, previewHosts, previewUrl, statusFor } from '../.claude/skills/publish/templates/new-project/scripts/journey-gate.mjs'
 
 const SHA = 'c'.repeat(40)
 const BASE = 'a'.repeat(40)
 const REPO = 'yverse-studio/social'
 const RUN = 'https://github.com/yverse-studio/social/actions/runs/123456'
-const RUN_INFO = { id: 123456, display_title: `journey ${SHA}`, status: 'completed', conclusion: 'success', head_branch: 'main', path: '.github/workflows/journey.yml', event: 'pull_request_target', repository: { full_name: 'yverse-studio/social' } }
+const RUN_INFO = { id: 123456, display_title: `journey ${SHA}`, status: 'completed', conclusion: 'success', head_sha: SHA, path: '.github/workflows/journey.yml', event: 'pull_request_target', html_url: RUN }
 
 test('previewUrl follows the Workers Builds branch alias', () => {
   assert.equal(previewUrl('claude/Fix_Drop', 'social'), 'https://claude-fix-drop-social.yverse.workers.dev')
@@ -51,29 +51,34 @@ test('only docs, tests and CI files are n/a; every app, server and config file r
 // A PR branch can post `journey` with the same GITHUB_TOKEN; verify tells it from the real workflow run.
 test('verifyJourney passes only the newest journey status, by github-actions[bot], linked to a pull_request_target run of journey.yml in the same repo', () => {
   const bot = { context: 'journey', state: 'success', creator: { login: 'github-actions[bot]' }, target_url: RUN, created_at: '2026-10-26T10:00:00Z', id: 1, description: 'journey passed' }
-  assert.equal(verifyJourney([bot], RUN_INFO, SHA, 'main').ok, true)
-  assert.equal(verifyJourney({ statuses: [bot] }, RUN_INFO, SHA, 'main').ok, true, 'the combined-status shape works too')
-  assert.equal(verifyJourney([], RUN_INFO, SHA, 'main').ok, false, 'no status: blocked without a run')
-  assert.equal(verifyJourney([{ ...bot, context: 'ci' }], RUN_INFO, SHA, 'main').ok, false, 'another context')
+  assert.equal(verifyJourney([bot], RUN_INFO, SHA, 'main', 'main').ok, true)
+  assert.equal(verifyJourney({ statuses: [bot] }, RUN_INFO, SHA, 'main', 'main').ok, true, 'the combined-status shape works too')
+  assert.equal(verifyJourney([], RUN_INFO, SHA, 'main', 'main').ok, false, 'no status: blocked without a run')
+  assert.equal(verifyJourney([{ ...bot, context: 'ci' }], RUN_INFO, SHA, 'main', 'main').ok, false, 'another context')
   assert.match(verifyJourney([bot]).reason, /pass the linked run/, 'the run is required')
-  assert.equal(verifyJourney([{ ...bot, creator: { login: 'someone' } }], RUN_INFO, SHA, 'main').ok, false, 'a human or other app')
-  assert.equal(verifyJourney([{ ...bot, target_url: 'https://example.com/x' }], RUN_INFO, SHA, 'main').ok, false, 'a link elsewhere')
-  assert.match(verifyJourney([bot], { ...RUN_INFO, event: 'pull_request' }, SHA, 'main').reason, /forged/, 'a PR workflow run is no gate run')
-  assert.match(verifyJourney([bot], { ...RUN_INFO, path: '.github/workflows/evil.yml' }, SHA, 'main').reason, /forged/)
-  assert.match(verifyJourney([bot], { ...RUN_INFO, event: 'workflow_dispatch' }, SHA, 'main').reason, /forged/)
-  assert.match(verifyJourney([bot], { ...RUN_INFO, repository: { full_name: 'yverse-studio/other' } }, SHA, 'main').reason, /belongs to/)
-  assert.match(verifyJourney([bot], { ...RUN_INFO, id: 9 }, SHA, 'main').reason, /pass the linked run/)
-  assert.match(verifyJourney([bot], { ...RUN_INFO, display_title: `journey ${'d'.repeat(40)}` }, SHA, 'main').reason, /another PR's real run/, 'a status that links to the real run of another head')
-  assert.match(verifyJourney([bot], RUN_INFO, '', 'main').reason, /another PR's real run/, 'no head sha, no pass')
-  assert.match(verifyJourney([bot], { ...RUN_INFO, status: 'in_progress', conclusion: null }, SHA, 'main').reason, /wait for it/, 'the status is posted before the run ends')
-  assert.match(verifyJourney([bot], { ...RUN_INFO, conclusion: 'failure' }, SHA, 'main').reason, /wait for it/, 'a real red run beats a forged green status')
-  assert.match(verifyJourney([bot], { ...RUN_INFO, head_branch: 'evil' }, SHA, 'main').reason, /not the default branch/, 'a PR into a branch with its own journey.yml')
-  assert.match(verifyJourney([bot], RUN_INFO, SHA).reason, /not the default branch/, 'no default branch given, no pass')
+  assert.equal(verifyJourney([{ ...bot, creator: { login: 'someone' } }], RUN_INFO, SHA, 'main', 'main').ok, false, 'a human or other app')
+  const { creator, ...noCreator } = bot
+  assert.equal(verifyJourney([noCreator], RUN_INFO, SHA, 'main', 'main').ok, true, 'the MCP status output names no creator: the run decides')
+  assert.equal(verifyJourney([noCreator], { ...RUN_INFO, conclusion: 'failure' }, SHA, 'main', 'main').ok, false)
+  assert.equal(verifyJourney([{ ...bot, target_url: 'https://example.com/x' }], RUN_INFO, SHA, 'main', 'main').ok, false, 'a link elsewhere')
+  assert.match(verifyJourney([bot], { ...RUN_INFO, event: 'pull_request' }, SHA, 'main', 'main').reason, /forged/, 'a PR workflow run is no gate run')
+  assert.match(verifyJourney([bot], { ...RUN_INFO, path: '.github/workflows/evil.yml' }, SHA, 'main', 'main').reason, /forged/)
+  assert.match(verifyJourney([bot], { ...RUN_INFO, event: 'workflow_dispatch' }, SHA, 'main', 'main').reason, /forged/)
+  assert.match(verifyJourney([bot], { ...RUN_INFO, html_url: 'https://github.com/yverse-studio/other/actions/runs/123456' }, SHA, 'main', 'main').reason, /wrong repo or run/)
+  assert.match(verifyJourney([bot], { ...RUN_INFO, id: 9 }, SHA, 'main', 'main').reason, /pass the linked run/)
+  assert.match(verifyJourney([bot], { ...RUN_INFO, display_title: `journey ${'d'.repeat(40)}` }, SHA, 'main', 'main').reason, /another PR's real run/, 'a status that links to the real run of another head')
+  assert.match(verifyJourney([bot], RUN_INFO, '', 'main', 'main').reason, /another PR's real run/, 'no head sha, no pass')
+  assert.match(verifyJourney([bot], { ...RUN_INFO, status: 'in_progress', conclusion: null }, SHA, 'main', 'main').reason, /wait for it/, 'the status is posted before the run ends')
+  assert.match(verifyJourney([bot], { ...RUN_INFO, conclusion: 'failure' }, SHA, 'main', 'main').reason, /wait for it/, 'a real red run beats a forged green status')
+  assert.match(verifyJourney([bot], { ...RUN_INFO, head_sha: 'e'.repeat(40) }, SHA, 'main', 'main').reason, /not the head/, 'a run for another commit')
+  assert.match(verifyJourney([bot], RUN_INFO, SHA, 'evil', 'main').reason, /not the default branch/, 'a PR into a branch with its own journey.yml')
+  assert.match(verifyJourney([bot], RUN_INFO, SHA, 'main').reason, /not the default branch/, 'no default branch given, no pass')
+  assert.match(verifyJourney([noCreator], { ...RUN_INFO, head_sha: 'e'.repeat(40) }, SHA, 'main', 'main').reason, /not the head/, 'no creator does not skip the head check')
   const red = { ...bot, state: 'failure', created_at: '2026-10-26T09:00:00Z', id: 0 }
-  assert.equal(verifyJourney([bot, red], RUN_INFO, SHA, 'main').ok, true, 'the newest status wins over an older red')
+  assert.equal(verifyJourney([bot, red], RUN_INFO, SHA, 'main', 'main').ok, true, 'the newest status wins over an older red')
   const redNew = { ...bot, state: 'failure', created_at: '2026-10-26T12:00:00Z', id: 3 }
-  assert.equal(verifyJourney([redNew, bot], RUN_INFO, SHA, 'main').ok, false, 'a newer red beats an older green')
-  assert.equal(verifyJourney([{ ...bot, state: 'pending' }], RUN_INFO, SHA, 'main').ok, false, 'pending is no pass')
+  assert.equal(verifyJourney([redNew, bot], RUN_INFO, SHA, 'main', 'main').ok, false, 'a newer red beats an older green')
+  assert.equal(verifyJourney([{ ...bot, state: 'pending' }], RUN_INFO, SHA, 'main', 'main').ok, false, 'pending is no pass')
 })
 
 // A fake GitHub: routes by path. `files` is the PR's changed files; `heads` the head sha on each read.
@@ -101,6 +106,13 @@ test('planJourney refuses a fork, a moved head, a non-default base and a preview
   await assert.rejects(planJourney(REPO, '7', 'social', fakeApi({ baseRef: 'dev' })), /not the default branch/)
   await assert.rejects(planJourney(REPO, '7', 'social', fakeApi({ baseRef: 'dev', files: ['README.md'] })), /not the default branch/, 'n/a is issued only for PRs to the default branch')
   await assert.rejects(planJourney(REPO, '7', 'social', fakeApi({ checkRuns: [{ output: { summary: 'https://other-social.yverse.workers.dev' } }] })), /no pass/)
+})
+
+test('planJourney flags a docs-only PR that changes the journey gate itself', async () => {
+  const plan = await planJourney(REPO, '7', 'social', fakeApi({ files: ['.github/workflows/journey.yml'] }))
+  assert.deepEqual([plan.ui, plan.gateChanged], [false, true])
+  assert.equal((await planJourney(REPO, '7', 'social', fakeApi({ files: ['README.md'] }))).gateChanged, false)
+  assert.deepEqual(['.github/workflows/journey.yml', 'scripts/journey-gate.mjs', '.github/workflows/ci.yml'].map(isGateFile), [true, true, false])
 })
 
 test('planJourney counts a PR too long to list as app code', async () => {

@@ -77,8 +77,8 @@ on every PR by itself, `pull_request_target`, built-in `GITHUB_TOKEN`): `n/a` wh
 after the PR's preview served its head and the default branch's `npm run journey` passed there on a phone
 profile (`publish` skill, Preview journey). Anything else, Nuxt `app/`, `server/`, configs, `package.json`,
 runs the journey. A PR workflow can post a `journey` status with the same token (and overwrite a red), so a
-green tick in the UI proves nothing. **Check 1 runs `verify`:** put `{"sha": <the head sha>, "default_branch": <the repo's>, "statuses": <the head's commits/<sha>/statuses>, "run": <actions_get get_workflow_run of the run its newest journey status links to>}` on stdin of `node scripts/journey.mjs verify`. It passes only when
-the newest `journey` status is a success created by `github-actions[bot]` that links to a run of `.github/workflows/journey.yml` from `pull_request_target` in the same repo, titled `journey <head sha>`, on the default branch and finished green; a missing, pending, red or forged one is not 5/5. Until a branch ruleset requires the status on the
+green tick in the UI proves nothing. **Check 1 runs `verify`:** put `{"sha": <the head sha>, "base": <the PR's base ref>, "default_branch": <the repo's>, "statuses": <the head's commits/<sha>/statuses>, "run": <actions_get get_workflow_run of the run its newest journey status links to>}` on stdin of `node scripts/journey.mjs verify`. It passes only when
+the newest `journey` status is a success created by `github-actions[bot]` that links to a run of `.github/workflows/journey.yml` from `pull_request_target` in the same repo, titled `journey <head sha>`, for that head and finished green, and the PR targets the default branch; a missing, pending, red or forged one is not 5/5. Until a branch ruleset requires the status on the
 project repos, `verify` is the gate. When the description says the PR changes journey files, the Tester
 reads them (they run only after the merge) and runs the new journey by hand in check 2 (incident
 2026-10-26: three gated PRs passed on local `verify` while the preview was broken).

@@ -3,7 +3,7 @@
 // `wait` reads the PR, posts `n/a` when it changes only docs, tests or CI files, else posts pending,
 // waits until the PR's Worker Preview serves its head (`/api/config` `commit`) and writes ui, sha and
 // url to GITHUB_OUTPUT; a preview that never serves it fails. `report` posts the result.
-// The workflow is `pull_request_target`: it comes from the PR base branch (the gate accepts only runs on the default branch), not the PR, so a PR cannot
+// The workflow is `pull_request_target`: GitHub takes it from the default branch, not the PR, so a PR cannot
 // edit it; no PR code runs on a runner (incident 2026-10-26, claude-setup gate.md).
 // Reads GH_TOKEN, REPO, NAME (the Worker name), PR; `report` also SHA, RESULT, RUN_URL.
 import { appendFileSync } from 'node:fs'
@@ -38,6 +38,7 @@ export const needsJourney = (files) => files.some((f) => !isNonApp(f))
 
 // The journey specs run from the default branch, so a PR's own change to them (or to the package.json
 // that names the script) is not run here: the status says so and the Tester reads it.
+export const isGateFile = (f) => f === '.github/workflows/journey.yml' || f === 'scripts/journey-gate.mjs'
 export const isJourneyFile = (f) => /(^|\/)(journey|e2e)(\/|\.[\w.]+$)/i.test(f) || f === 'package.json'
 
 // Every *.yverse.workers.dev host a Workers Builds check run of the head names (its summary, text or link).
@@ -83,7 +84,7 @@ export async function planJourney(repo, pr, name, api) {
   const files = await changedFiles(repo, pr, api)
   if ((await api(`repos/${repo}/pulls/${pr}`)).head.sha !== head.sha) throw new Error('the PR head moved while its files were listed: the next run covers the new head')
   if (base.ref !== (await api(`repos/${repo}`)).default_branch) throw new Error(`the PR targets ${base.ref}, not the default branch: journey runs only PRs to the default branch`)
-  if (!needsJourney(files)) return { sha: head.sha, ui: false }
+  if (!needsJourney(files)) return { sha: head.sha, ui: false, gateChanged: files.some(isGateFile) }
   const url = previewUrl(head.ref, name)
   const named = previewHosts((await api(`repos/${repo}/commits/${head.sha}/check-runs`)).check_runs || [])
   if (named.length && !named.includes(url)) throw new Error(`Workers Builds names ${named.join(', ')} but the branch alias gives ${url}: no pass`)
@@ -98,7 +99,8 @@ async function wait() {
   out('sha', plan.sha)
   if (!plan.ui) {
     out('ui', 'false')
-    await post(repo, plan.sha, { state: 'success', description: 'n/a: only docs, tests or CI files changed' })
+    const note = plan.gateChanged ? ' (this PR changes the journey gate itself: the Tester reads it)' : ''
+    await post(repo, plan.sha, { state: 'success', description: `n/a: only docs, tests or CI files changed${note}` })
     return console.log(`[journey] ${repo}#${pr} changes only docs, tests or CI files: n/a`)
   }
   const { sha, url } = plan
