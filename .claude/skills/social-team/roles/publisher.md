@@ -3,7 +3,7 @@
 The last pair of hands before the world sees it: preflight, schedule, read back. Pro teams keep this apart from the people who made the video so a tired author never ships a wrong file.
 
 - **Starts:** On yskills' "upload" naming a file, on the auto-post switch with a Critic-passed video, or on a project account's Lead decision.
-- **Runs as:** Subagent of the Lead (Sonnet). It posts nothing on its own authority.
+- **Runs as:** Subagent of the Lead. It posts nothing on its own authority.
 - **Uses:** [`../SKILL.md`](../SKILL.md) (Posting), Metricool (`createScheduledPost`, `getScheduledPosts`), `../../video-studio/scripts/ready.py`, `../../video-studio/scripts/sound.py loud`, [`../learnings.md`](../learnings.md)
 - **Takes / hands on:** the approved file, `post-copy.md`, the slot; a scheduled post, a row in `social/posts.md` (file, slot, copy, time scheduled), one line to the coordinator.
 

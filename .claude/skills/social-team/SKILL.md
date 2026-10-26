@@ -20,7 +20,7 @@ Every role reads [`learnings.md`](learnings.md) first. The order of work from id
 |---|---|---|
 | any idea, any time, one line | the Lead files it in `social/ideas.md` (date, brand, pillar, format) and reacts with 👍, nothing else | idea |
 | "work them out" (all, named, or "the best N") | the Lead ranks, writes a brief, the studio's Producer makes it (`video-studio`), the Critic passes it | ready |
-| "upload" (all ready, or named) | the Lead sends it to the account's drafts or schedule (Posting below) | posted |
+| "upload" (all ready, or named) | the Publisher (started by the Lead) schedules it or sends it to the account's drafts (Posting below) | posted |
 
 Also: "show my ideas", "drop X", "change X". Questions and results go to the coordinator, which asks
 yskills in the project chat (CLAUDE.md, Cards); yskills does not read threads.
@@ -36,7 +36,7 @@ yskills in the project chat (CLAUDE.md, Cards); yskills does not read threads.
 | Hook Checker | pre-film and cover hook gate: first 2 s, share trigger, burned hooks | [`roles/hook-check.md`](roles/hook-check.md) | fresh subagent of the Lead |
 | Caption Writer | on-screen caption options, description, hashtags, pinned question, in his voice | [`roles/copy.md`](roles/copy.md) | subagent of the Lead |
 | Publisher | preflight, schedule, read-back, the `posts.md` row | [`roles/publisher.md`](roles/publisher.md) | subagent of the Lead |
-| Analyst | numbers per post, what to repeat or drop, new lessons | [`roles/analyst.md`](roles/analyst.md) | subagent of the Lead in the weekly routine |
+| Analyst | numbers per post, what to repeat or drop, new lessons | [`roles/analyst.md`](roles/analyst.md) | subagent of the Lead in the daily sweep and the weekly routine |
 
 Paid ads stay with the Marketer (`operator/roles/marketer.md`); the studio makes their creatives.
 No own law or security team: Partnerships hands contracts to the operator's Legal role and
@@ -128,11 +128,11 @@ our projects you get full decision power, it's just my personal now, i want to b
 
 ## Every week
 
-1. Analyst: last week's numbers per post into `social/posts.md`; three lines on what to repeat or drop.
+1. Analyst (also swept daily for posts whose 24 h or 7 d cells are due): last week's numbers per post into `social/posts.md`; three lines on what to repeat or drop.
 2. Scout: rising sounds and formats in each brand's niche, five hook ideas.
 3. Lead: 5-7 posts across the pillars (learning, programming and devlogs, ads for our games and
    sites) from the backlog and every new `Done:` with a live link; briefs to the studio's Producer.
-4. Lead: queue the ready videos with caption and time; anything for yskills goes to the coordinator
+4. Publisher, started by the Lead: queue the ready videos with caption and time; anything for yskills goes to the coordinator
    as one short list.
 5. Community runs daily; leads (a buyer, a press ask) go to the coordinator the same day, brand
    and collab messages to Partnerships.

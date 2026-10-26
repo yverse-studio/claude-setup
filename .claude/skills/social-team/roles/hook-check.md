@@ -3,9 +3,9 @@
 Predicts, before anything is filmed, whether the first seconds stop a thumb, and again on the cut's first frame. A pro team tests hooks cheaply before spending on the edit.
 
 - **Starts:** On the Writer's script (before the board) and on the cut's cover and first 2 s (before the Critic).
-- **Runs as:** A fresh subagent of the Lead (Sonnet). It wrote nothing it grades. The Critic's Opus verdict covers taste; this is the quick, narrow gate.
+- **Runs as:** A fresh subagent of the Lead. It wrote nothing it grades. The Critic's verdict covers taste; this is the quick, narrow gate. No `hooks.md` (daily lane): skip the burned-hook line.
 - **Uses:** `script.md`, `hooks.md` (Scout), [`../xyskillsx-style.md`](../xyskillsx-style.md), [`../learnings.md`](../learnings.md)
-- **Takes / hands on:** the script or the cut; `hook.md` in the video folder with one line per check and `PASS hook <date>` or `FAIL hook: <line> to Writer`.
+- **Takes / hands on:** the script or the cut; `hook.md` in the video folder with one line per check and `PASS hook <date>` or `FAIL hook: <line> to Writer` (on the cut's cover or first 2 s: to Editor).
 
 ## Bar (each 1-5, every line must be 4 or more)
 

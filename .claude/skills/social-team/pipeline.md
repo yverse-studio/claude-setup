@@ -3,9 +3,10 @@
 The one home of the social order of work (yskills 2026-10-26: "update our social team to pro level
 and how it would really run until posting"; the first full run was the Y-Land brag post, below).
 `SKILL.md` has the loop and the posting rules, `../video-studio/SKILL.md` the film steps 1-9 that
-rows 4 and 6-10 here call, `docs/TEAMS.md` (Social, Film) the model of every role. For the film
-steps the Lead acts as the studio's Producer (it briefs, hands on and delivers; it still writes,
-edits and grades nothing). Every role reads
+rows 4 and 6-10 here call, `docs/TEAMS.md` (Social, Film) the model of every role. The Lead briefs a
+`Producer · <video>` thread, which runs the film rows (4, 6-8, 10) with its own agents and runs
+`ready.py`; the Lead writes, edits and grades nothing. `video-studio` step 2 (three concepts, his
+pick on a card) stays for a full-studio video; for an idea he wrote himself he has already chosen. Every role reads
 [`learnings.md`](learnings.md) and [`xyskillsx-style.md`](xyskillsx-style.md) (international
 audience) before its step, because both arrived late in the first run and forced rework.
 
@@ -18,24 +19,24 @@ Row 6 is for the full studio only; a daily-lane video skips 3 and 6 and runs the
 | 1 | Idea in | Social Lead (routine or thread) | yskills' line, the feed, a `Done:` line | `social/ideas.md` row: brand, pillar, format, account | filed, 👍 only |
 | 2 | Plan | Social Lead | idea, style profile, the Analyst's last lines, the audience slots | brief: job of the post (follow, tap, visit), format, length, slot, who is on screen, the rules it applied | one job; matches his recipe or says why not; slot free; within the daily cap (`SKILL.md`, Posting) |
 | 3 | Trends | Scout (subagent) | brief | `hooks.md`: 3 live hooks or sounds with the source post, 2 reference videos | each watched with `watch`, still climbing, runs in English feeds |
-| 4 | Script | Writer (`video-studio`) | brief, `hooks.md` | `script.md`: 3 hooks, one picked, beats with times, the on-screen lines | `video-studio` step 3 |
+| 4 | Script | Writer (`video-studio`) | brief, `hooks.md` | `script.md`: 3 hooks, one picked, beats with times, the on-screen lines with 3 caption options in his voice | `video-studio` step 3 |
 | 5 | Hook check | Hook Checker ([`roles/hook-check.md`](roles/hook-check.md)), fresh | script, `hooks.md` | `hook.md`: PASS or FAIL with the line that failed | every line 4 or more |
 | 6 | Board (full studio) | Director; Critic on the animatic | script | `storyboard.md`, `animatic.mp4` | Critic PASS on the animatic |
 | 7 | Sound plan | Sound (subagent) | script, preset | `sound.md` | `video-studio` step 5 |
 | 8 | Make | Editor thread; Motion for graphics; Sound mixes | script, board, `sound.md`, footage | `draft.mp4`, both masters | the pre-Critic checks in [`../video-studio/roles/editor.md`](../video-studio/roles/editor.md) pass |
-| 9 | Copy | Caption Writer ([`roles/copy.md`](roles/copy.md)) | final script, the cut's first frame | `post-copy.md`: 3 post-caption options, description, 3-5 hashtags, pinned question, credit line | English, one idea, share trigger, tags per the style profile; its pick replaces the script's caption |
-| 10 | Critic | Critic (fresh) | cut, masters, copy, references; the Hook Checker's second pass on the cover and first 2 s | `critic.md`, then `ready.py` exits 0 | every line 4 or more, floor passes; one fix round, then the Lead decides (below) |
-| 11 | Approve | yskills, through the coordinator | the cut, the copy, one question: which option | his pick, or "upload" with the exact file | personal account: his word; project account: the Lead; auto-post: the switch |
+| 9 | Copy | Caption Writer ([`roles/copy.md`](roles/copy.md)) | the final cut, the script's caption | `post-copy.md`: description, 3-5 hashtags, pinned question, cover text, credit line | English, one idea, share trigger, tags per the style profile |
+| 10 | Critic | Hook Checker's second pass on the cover and first 2 s (a fail goes to the Editor), then the Critic (fresh) | cut, masters, copy, references | `critic.md`, then `ready.py` exits 0 | every line 4 or more, floor passes; one fix round, then the Lead decides (below) |
+| 11 | Approve | yskills, through the coordinator | the cut, the copy, one question: which option | his pick of caption, or "upload" with the exact file | personal account: his word; project account: the Lead; auto-post: the switch |
 | 12 | Publish | Publisher ([`roles/publisher.md`](roles/publisher.md)) | approved file, copy, slot | scheduled post, a row from [`templates/posts.md`](templates/posts.md), one line to the coordinator | preflight and read-back pass |
 | 13 | Engage | Community | comments, the first 60 minutes (`xyskillsx-style.md`, Community) | reply drafts; leads to the coordinator | nothing sent in his name without the switch |
-| 14 | Measure | Analyst | `social/posts.md`, Metricool | 24 h and 7 d columns, then repeat, drop, test; found by the daily round's sweep of rows with empty numbers | the Lead writes a lesson into `learnings.md` once it holds on two posts |
+| 14 | Measure | Analyst | `social/posts.md`, Metricool | 24 h and 7 d columns, then repeat, drop, test; found by the daily round's sweep of rows with empty numbers | the Analyst proposes, the Lead writes the lesson into `learnings.md` once it holds on two weeks of posts |
 
 Rules that make it a team and not one agent in a row (T1, `video-studio` hard rules):
 
-- Each role is its own agent; the Lead briefs and decides, never writes, edits or grades.
+- Each role is its own agent; the Lead briefs and decides, never writes, edits or grades. The Hook Checker also reads the daily lane's script without `hooks.md` (it then skips the burned-hook line).
 - The Hook Checker and the Critic made nothing they grade. A fail goes back to the step that owns
-  the line, never to yskills; one fix round, then the Lead picks: drop, or ship a weaker cut with the
-  honest verdict in the one line to the coordinator.
+  the line, never to yskills; one fix round, then the Lead picks: drop the post, or send the cut to yskills
+  labelled "unchecked" as a draft that is never scheduled (the Publisher needs `ready.py` to pass).
 - yskills sees a cut only after step 10, or labelled "unchecked" when he asked to see it early.
   The first run showed him a jittering carousel because the motion check came after his look.
 - An "upload" names one file. If it can mean two files, the Publisher asks the coordinator one
@@ -46,8 +47,9 @@ Rules that make it a team and not one agent in a row (T1, `video-studio` hard ru
 
 ## Timing for a post that must be live at slot S
 
-A default, not a measured rule: brief 12 h before, script and hook check 8 h, cut 4 h, Critic and copy 2 h, approve 1 h, scheduled by
-S minus 30 min. Anything late drops to the next slot; nothing skips the Critic to catch a slot.
+Work backwards from the slot: brief, script and hook check, cut, copy and Critic, approval, scheduled with
+spare time before S. Anything late drops to the next slot; nothing skips the Critic to catch a slot.
+A daily-lane video runs the same steps from a template, in minutes (`SKILL.md`, Daily lane).
 
 ## What the first run showed (Y-Land brag post, 2026-10-26)
 
@@ -55,7 +57,7 @@ Steps as they ran, read from the thread "Post first test video today" and its fi
 
 | Step | What happened | Fix |
 |---|---|---|
-| 1-2 | Brief changed three times: vacation clip, update video, /brag-style, then his face-first recipe at 10:50 (style profile), then English-only international at 13:05 | Plan reads the style profile and audience rule first; the brief lists the rules it applied |
+| 1-2 | Brief changed three times: vacation clip, update video, /brag-style, then his face-first recipe (style profile), then English-only international (audience rule) | Plan reads the style profile and audience rule first; the brief lists the rules it applied |
 | 3 | yskills' reels watched with `watch` on the laptop; no hook library, no Scout | step 3 writes `hooks.md` |
 | 4 | `script.md` with three hooks and a pick: worked | kept |
 | 5 | none | new role |
