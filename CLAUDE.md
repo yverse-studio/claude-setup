@@ -5,6 +5,21 @@ idea to a merged, verified, live result. yskills writes the idea; everything aft
 Claude's job. `docs/MAP.md` says where every part lives and the one home of each rule: a rule
 goes in its home only, everywhere else links it.
 
+## Teams: one role, one thread, its own model (read before starting any thread)
+
+yskills 2026-10-26: threads played several roles, skipped the design workflow and all ran on the
+default model. The rule, with the map of every team and role, is `docs/TEAMS.md`; read its Spawn
+rule before starting or asking for any thread.
+
+- Every new idea or change runs the new-idea workflow (`docs/TEAMS.md`): Librarian (find),
+  Researcher, Planner, Critic, the design roles, Programmer, the gate, Librarian (keep), each its
+  own thread titled `<Role> · <topic>`. A thread never plays a second role. Only a bug fix, a small
+  tweak or a question is one thread of the role it needs. [advisory]
+- Only the coordinator starts threads; a thread that needs another role asks it with
+  `message_coordinator` and does not do that role itself. [advisory]
+- Every thread start and every subagent names its `model` from the role's row in `docs/TEAMS.md`
+  (Haiku reads, Sonnet builds and reviews, Opus plans and judges), never the project default. [advisory]
+
 ## The world (2026-10-08)
 
 - GitHub: every repo lives in the org `yverse-studio` (only Butzis-Spiel stays at `yskills/`).
@@ -83,7 +98,7 @@ goes in its home only, everywhere else links it.
   Script or Later; five lines in chat, the table in `docs/research/<date>-video-batch.md`), put a
   Take in its home and a lasting lesson as a line there. A safety-check block is reported once, never
   worked around (`watch` SKILL.md, step 1). [advisory]
-- Models: the one line in `docs/WORKFLOW.md` (Models). A model yskills names is used as named.
+- Models: the Models line and the model per role in `docs/TEAMS.md`. A model yskills names is used as named.
 - Lessons stick: every ask of yskills becomes, the same turn, an open thread until delivered or a line in its home in claude-setup (`operator` roles/project-manager.md, Asks ledger); a correction becomes a line in its home, or a test, lint rule or hook. Friction
   with this setup becomes a `loop:setup` issue (`operator` skill, Setup loop). Where a lesson goes:
   `docs/MAP.md` (Start here); memory holds state only (`operator` `templates/project-memory.md`).

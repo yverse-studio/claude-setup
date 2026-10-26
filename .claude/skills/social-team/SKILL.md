@@ -38,8 +38,8 @@ yskills in the project chat (CLAUDE.md, Cards); yskills does not read threads.
 Paid ads stay with the Marketer (`operator/roles/marketer.md`); the studio makes their creatives.
 No own law or security team: Partnerships hands contracts to the operator's Legal role and
 suspicious brand mail to its Security role (`operator/roles/legal.md`, `security.md`).
-Thread titles follow the operator rule; models per the Models line in
-[`docs/WORKFLOW.md`](../../../docs/WORKFLOW.md).
+Thread titles follow the operator rule; team map and models in
+[`docs/TEAMS.md`](../../../docs/TEAMS.md) (Social).
 
 ## Where things live
 

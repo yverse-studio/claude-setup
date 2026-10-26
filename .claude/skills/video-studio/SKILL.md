@@ -64,7 +64,7 @@ The test build behind this pipeline copied a viral TikTok explainer's format (re
 
 Thread titles follow the operator rule (`<Role> · <what>`). Text roles stay subagents because every
 thread re-reads its context; Editor gets a thread because filming and encoding run long. Models: the
-Models line in [`docs/WORKFLOW.md`](../../../docs/WORKFLOW.md).
+role rows in [`docs/TEAMS.md`](../../../docs/TEAMS.md) (Film).
 
 ## Tools (one pick per job)
 

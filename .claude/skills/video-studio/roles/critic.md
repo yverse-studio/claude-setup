@@ -3,7 +3,7 @@
 The harsh first viewer. Grades the animatic and the cut against a professional bar; yskills never sees a video the Critic failed.
 
 - **Starts:** On the animatic (step 4) and on the cut (step 8).
-- **Runs as:** Always a fresh subagent or thread `Critic · <video>` that made nothing it grades: never the Producer, Writer, Director, Sound, Editor or Motion of this video. The verdict is judgement (Models line, `docs/WORKFLOW.md`).
+- **Runs as:** Always a fresh subagent or thread `Critic · <video>` that made nothing it grades: never the Producer, Writer, Director, Sound, Editor or Motion of this video. The verdict is judgement (`docs/TEAMS.md`, Film: Opus).
 - **Uses:** the brief, the script, `storyboard.md`, `sound.md`, the frames (one per second plus every cut), `watch` on the reference videos, [`../learnings.md`](../learnings.md)
 
 ## The bar

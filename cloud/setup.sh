@@ -194,6 +194,41 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
 }
 ATTEMPT
 
+# Team brief: the same file as global/team-brief.mjs (scripts/check.mjs keeps them equal); prints
+# docs/TEAMS.md's Spawn rule at every session start, so every thread knows one role per thread and
+# the model per role.
+cat > "$HOME/.claude/claude-setup/team-brief.mjs" <<'TEAM'
+#!/usr/bin/env node
+// SessionStart hook: prints the Spawn rule of claude-setup's docs/TEAMS.md into every new session,
+// so no coordinator or thread starts work without it (yskills, 2026-10-26: threads played several
+// roles and all ran on the default model). Reads the file live, so the text never drifts; when no
+// checkout is found it prints a pointer. Never blocks.
+import { existsSync, readFileSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { dirname, join } from 'node:path'
+
+const POINTER = 'Before starting or asking for any thread, add_repo yverse-studio/claude-setup and read docs/TEAMS.md (Spawn rule): one role per thread titled "<Role> · <topic>", only the coordinator starts threads, every start and subagent names its model from the role\'s row.'
+
+function spawnRule() {
+  const cwd = process.cwd()
+  const dirs = [process.env.CLAUDE_PROJECT_DIR, cwd, join(cwd, 'claude-setup'), join(dirname(cwd), 'claude-setup'),
+    '/home/user/claude-setup', join(homedir(), 'claude-setup'), join(homedir(), 'Documents', 'GitHub', 'claude-setup')]
+  for (const d of dirs) {
+    const f = d && join(d, 'docs', 'TEAMS.md')
+    if (!f || !existsSync(f)) continue
+    const section = readFileSync(f, 'utf8').match(/^## Spawn rule\r?\n([\s\S]*?)(?=^## )/m)?.[1]?.trim()
+    if (section) return `claude-setup team rule (docs/TEAMS.md, Spawn rule; the team tables there give each role's model):\n${section}`
+  }
+  return POINTER
+}
+
+try {
+  process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: spawnRule() } }))
+} catch {
+  // A hook must never break a session start.
+}
+TEAM
+
 node -e '
 const fs = require("fs"), p = require("os").homedir() + "/.claude/settings.json"
 const s = fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, "utf8")) : {}
@@ -205,5 +240,7 @@ for (const [event, mode] of [["PreToolUse", "pre"], ["PostToolUse", "ok"], ["Pos
   s.hooks[event] = (s.hooks[event] || []).filter((h) => !JSON.stringify(h).includes("attempt-guard.mjs"))
   s.hooks[event].push({ matcher: "Bash|mcp__.*", hooks: [{ type: "command", command: `node "${require("os").homedir()}/.claude/claude-setup/attempt-guard.mjs" ${mode}`, timeout: 5 }] })
 }
+s.hooks.SessionStart = (s.hooks.SessionStart || []).filter((h) => !JSON.stringify(h).includes("team-brief.mjs"))
+s.hooks.SessionStart.push({ matcher: "startup|clear|compact", hooks: [{ type: "command", command: `node "${require("os").homedir()}/.claude/claude-setup/team-brief.mjs"`, timeout: 5 }] })
 fs.writeFileSync(p, JSON.stringify(s, null, 2))
-' || echo "claude-setup: could not add the context and attempt guard hooks"
+' || echo "claude-setup: could not add the context, attempt guard and team brief hooks"

@@ -19,8 +19,8 @@ What every session does at start:
 
 | Surface | Reads first | Then |
 |---|---|---|
-| Coordinator (project chat) | `MEMORY.md`, the thread board | `add_repo` claude-setup, `CLAUDE.md`, this section, `roles/project-manager.md` Session start; reconciles board and state |
-| Thread | its brief, `MEMORY.md` | `add_repo` claude-setup, `CLAUDE.md`, this section, its role file; for a product also that repo's `CLAUDE.md` and `docs/LESSONS.md` |
+| Coordinator (project chat) | `MEMORY.md`, the thread board | `add_repo` claude-setup, `CLAUDE.md`, this section, [`TEAMS.md`](TEAMS.md) (before starting any thread), `roles/project-manager.md` Session start; reconciles board and state |
+| Thread | its brief, `MEMORY.md` | `add_repo` claude-setup, `CLAUDE.md`, this section, [`TEAMS.md`](TEAMS.md) Spawn rule, its role file; for a product also that repo's `CLAUDE.md` and `docs/LESSONS.md` |
 | Claude Code on the laptop | `~/.claude/CLAUDE.md` | the project's `CLAUDE.md`; auto-memory is a scratchpad |
 | New claude.ai project | the generated boot text | as a coordinator; its first session sweeps old memory into the repo |
 | Plain chat (no project) | yskills' user preferences | this section; the `operator` skill sizes the job; no memory |
@@ -74,6 +74,7 @@ lives outside this repo.
 | Working rules | `CLAUDE.md` | The world (org, accounts, secrets, the one deploy path), how Claude works for yskills (ask rule, co-founder, auto-run), code, UI, stack. Short; detail lives in the homes below |
 | Front door | `README.md` | Install, what you get, cloud setup, how to change the repo |
 | This map | `docs/MAP.md` | Where things live, one home per rule |
+| Teams | `docs/TEAMS.md` | The Spawn rule (one role, one thread, model on every start), the new-idea workflow, every team with its roles' focus, tasks, inputs, outputs, handoffs and model; the Models line |
 | Run a project | `.claude/skills/operator/` | `SKILL.md` size, roles, files, setup loop, cost; `run.md` the nine steps (Project Manager only); `gate.md` the 5/5 gate and the one merge policy; `briefs.md` the three briefs, key cards and the block every thread brief starts with; `roles/<role>.md` one playbook per role; `templates/` files copied into a project (`loop/` the feedback inbox, `mailbox/` Claude's own e-mail inbox Worker) |
 | Roadmap for yskills | `docs/WORKFLOW.md` | The phases in plain words, the models table, learning and memory check |
 | Other own skills | `.claude/skills/<name>/` | `legal`, `sell`, `market`, `store`, `store-publish`, `publish`, `scaffold`, `onboard-project`, `ship-check`, `ui-review`, `toolbox`, `game-3d`, `roblox`, `studio`, `blender-body`, `storyteller`, `watch`, `media-editing`, `video-studio`, `social-team` |
@@ -133,6 +134,7 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 | Rule | Home | Others only link |
 |---|---|---|
 | Org, accounts, where secrets live | `CLAUDE.md` (The world) | `publish` skill, `docs/WORKFLOW.md` (PC work) |
+| Teams, roles, the new-idea workflow, one role per thread, the model per role | `docs/TEAMS.md` | `CLAUDE.md` (Teams), `operator/SKILL.md`, `roles/project-manager.md`, `global/team-brief.mjs` prints its Spawn rule |
 | Which team a project kind starts (Kits) | `docs/MAP.md` (Kits) | `operator/SKILL.md` (Size the job), `operator/run.md` |
 | Deploy or delete a page (the steps) | `docs/USING.md` | operator `run.md`, `briefs.md`; detail in `publish` |
 | Where a lesson goes (the decision tree) | `docs/MAP.md` (Start here) | `CLAUDE.md` (Lessons stick), `docs/WORKFLOW.md` (Learning) |
@@ -148,7 +150,7 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 | Co-founder | `CLAUDE.md` (How to work) | `roles/*.md` (one role-specific line each) |
 | Literal mode and cost | the brief block in `briefs.md` | `roles/*.md` (one pointer each) |
 | Merge policy, 5/5 gate | `gate.md` (Merge policy) | `CLAUDE.md`, `docs/WORKFLOW.md`, `roles/tester.md` |
-| Models | the one line in `docs/WORKFLOW.md` (Models) | everything else links it; CI fails on a model id outside that line |
+| Models (the line, the model per role and per task) | `docs/TEAMS.md` (Spawn rule, The teams) | everything else links it; CI fails on a model id outside that line |
 | Context guard numbers (warn 250k, hand off 350k) | `global/context-guard.mjs` | `CLAUDE.md`, `README.md` |
 | Remote Control on the PC | `docs/WORKFLOW.md` (PC work) | operator `SKILL.md` |
 | UI rules | `CLAUDE.md` (UI) | `roles/designer.md`, `ui-review` (screenshots, the load-once check, run videos via `desktop.sh`) |

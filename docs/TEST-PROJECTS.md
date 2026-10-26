@@ -69,7 +69,7 @@ rules. What it taught, and where it now lives:
   pixel taste (CLAUDE.md UI, Designer playbook).
 - Brainstorm first for every new project, a typed idea and an HQ request alike (`operator`,
   Project Manager playbook).
-- Model routing: the Models line in `docs/WORKFLOW.md`.
+- Model routing: the Models line in `docs/TEAMS.md`.
 
 duo-test stays web-only in test 1; its App Store and Google Play release (`store` skill) is a
 slice after test 1, once test 3 has proven the store path or the web version earns.
