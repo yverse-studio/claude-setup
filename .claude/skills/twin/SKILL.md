@@ -5,8 +5,8 @@ description: "Use when a video needs yskills to say lines he did not record: his
 
 # Twin
 
-yskills, 2026-10-12: train on his face and voice, build our own HeyGen. Later the same day he said free only, with no paid or rented tools. Also 2026-10-26: "it
-should never look ai, my videos always high quality and not slop". The twin is his **real** face
+yskills, 2026-10-12: train on his face and voice, build our own HeyGen. 2026-10-26: "it
+should never look ai, my videos always high quality and not slop", and free only (no paid or rented tools). The twin is his **real** face
 clip with only the mouth re-synced, plus his cloned voice. Nothing about him is generated from
 scratch: that is what keeps it from looking AI.
 
