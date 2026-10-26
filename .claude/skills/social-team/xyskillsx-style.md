@@ -64,6 +64,7 @@ at about 340. The Y-Land card video (284 views) looked clean but read like an ap
 - Corporate or salesy captions, hashtag walls, "link in bio" energy.
 - Over-editing: zoom on every word, whoosh on every cut, colour looks he would not use.
 - Changing his humour into "content": the joke and the caption are his; offer alternatives, he picks.
+- "Fixing" odd spellings and cut-offs in his own captions (yskills 2026-10-26: CREPEWITHMARZIPAN was his old name, STRAWBE is cut off on purpose, "you should understand those nuance"): they are deliberate jokes. Ask before treating one as an error, never correct it, and never write copy that claims not to understand it.
 
 ## International audience (yskills 2026-10-26)
 
