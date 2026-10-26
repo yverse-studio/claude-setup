@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { logLines, latestBuild, scrub } from './build-logs.mjs'
+import { logLines, latestBuild, recentLines, scrub } from './build-logs.mjs'
 
 test('logLines keeps the tail and reads [time, text] pairs and plain strings', () => {
   const json = { result: { lines: [['t1', 'one'], ['t2', 'two'], 'three'] } }
@@ -33,4 +33,15 @@ test('scrub hides vendor tokens and flag or keyword values after a space', () =>
   assert.equal(scrub('--secret abcdef1234'), '--secret ***')
   assert.equal(scrub('npm warn config token abc123'), 'npm warn config token ***')
   assert.equal(scrub('password abc'), 'password ***')
+})
+
+test('recentLines lists builds newest first and scrubs user-chosen branch names', () => {
+  const lines = recentLines([
+    { created_on: '2026-10-26T10:00:00Z', status: 'stopped', build_outcome: 'success', build_trigger_metadata: { branch: 'main', commit_hash: 'abcdef123456' } },
+    { created_on: '2026-10-26T11:00:00Z', status: 'queued', build_outcome: null, build_trigger_metadata: { branch: 'x-sk_live_51Habcdefghijklmnopqrst', commit_hash: '1234567890' } },
+  ])
+  assert.equal(lines.length, 2)
+  assert.equal(lines[0], '[build-logs] recent: 2026-10-26T11:00:00Z queued/null x-*** 1234567')
+  assert.equal(lines[1], '[build-logs] recent: 2026-10-26T10:00:00Z stopped/success main abcdef1')
+  assert.deepEqual(recentLines(undefined), [])
 })
