@@ -80,7 +80,7 @@ the deliverables of step 5, and a pointer to this page.
 ## Context budget (2026-10-08)
 
 Why figure threads fill up after about 35 minutes of Blender work and need a handoff. Facts: a thread
-(model per [`docs/WORKFLOW.md`](WORKFLOW.md), Models) has a 1M-token window, the largest there is; the effort level does not
+(model per [`docs/TEAMS.md`](TEAMS.md), Models line) has a 1M-token window, the largest there is; the effort level does not
 change it. More tokens for one thread cannot be bought, so the spending is what goes down. (The
 three consumers below are read off the handoffs of Hinata, Rangiku, Mitsuri, Rias and Mira in the
 game; the sessions' own token logs are not visible from the project.)

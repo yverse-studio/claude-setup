@@ -60,11 +60,11 @@ The test build behind this pipeline copied a viral TikTok explainer's format (re
 | Sound | music bed and licence, beat map, SFX, mix, loudness, both masters | [`roles/sound.md`](roles/sound.md) | subagent of the Producer; mixes in the Editor's thread |
 | Editor | capture, cut, captions, grade, encode, frame check | [`roles/editor.md`](roles/editor.md) | thread `Editor · <video>` (renders are long) |
 | Motion | the "After Effects" job: titles, end cards, kinetic text, transitions, overlays | [`roles/motion.md`](roles/motion.md) | subagent of the Editor; a thread for a template set |
-| Critic | the harsh first viewer; never made what it grades | [`roles/critic.md`](roles/critic.md) | a fresh subagent or thread `Critic · <video>` |
+| Critic | the harsh first viewer; never made what it grades | [`roles/critic.md`](roles/critic.md) | a fresh subagent of the Producer (`docs/TEAMS.md`, Film) |
 
 Thread titles follow the operator rule (`<Role> · <what>`). Text roles stay subagents because every
 thread re-reads its context; Editor gets a thread because filming and encoding run long. Models: the
-Models line in [`docs/WORKFLOW.md`](../../../docs/WORKFLOW.md).
+role rows in [`docs/TEAMS.md`](../../../docs/TEAMS.md) (Film).
 
 ## Tools (one pick per job)
 

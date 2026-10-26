@@ -15,7 +15,7 @@ Loop reader for <project> (<owner/repo>). Read-only, one turn, no code changes.
 3. For every issue that has no comment starting with "Thread:" and for every red run, send the
    coordinator session <coordinator session> ONE message with `send_message`, all items in one list:
    "Loop <project>: <n> items. #<number> <title> (urgent|error|feedback|live) ..."
-   The coordinator starts one thread per error or red run (Programmer · fix #<number>, model from the Models line
+   The coordinator starts one thread per error or red run (Programmer · fix #<number>, model from its row in claude-setup docs/TEAMS.md; Models line
    in claude-setup docs/WORKFLOW.md) and one per feedback batch (Project Manager decides: slice,
    answer or close), and one `Programmer · setup #<number>` thread per `loop:setup` issue,
    which fixes claude-setup through the gate (operator SKILL.md, Setup loop); each thread comments "Thread: <link>" on its issue and closes it at merge.

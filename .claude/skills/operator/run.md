@@ -1,6 +1,6 @@
 # The run (operator §4)
 
-Each step names the kinds it applies to; the kit row in [`docs/MAP.md`](../../../docs/MAP.md) (Kits) says which run for a kind.
+Each step names the kinds it applies to; the kit row and the size in [`docs/TEAMS.md`](../../../docs/TEAMS.md) (Pipeline, Kits) say which run and who runs them.
 
 The Project Manager's steps from brainstorm to launch and after. Read at project start and
 before each step; builder, gate and fix threads read their `roles/<role>.md` instead.
