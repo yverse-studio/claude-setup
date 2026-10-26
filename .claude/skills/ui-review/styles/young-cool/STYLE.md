@@ -7,12 +7,14 @@ file and fixes its own palette and face. yskills likes it too (2026-10-26).
 Source: one TikTok, "GAME OVER SCREEN???", 19.8 s, 576x1024, a Roblox-style clip ending on a
 pixel-art game-over pile. One clip is a lead, not a system: use it as a starting direction and
 confirm in the project's own art direction. Reference stills (downscaled, internal reference
-only) are in `refs/young-cool/`: `gameover-pile.jpg`, `cut-yellow.jpg`, `world-start.jpg`.
+only) are in `refs/`: `gameover-pile.jpg`, `cut-yellow.jpg`, `world-start.jpg`.
 
 Each line is tagged by how sure it is. **M** measured from frames or audio (re-checked
 2026-10-26), **F** read from the frames by eye, **P** our proposal, not in the video.
 
-## Tokens (M, sampled from `refs/young-cool/`; a project sets its own)
+## Tokens
+
+M, sampled from `refs/`; a project sets its own.
 
 ```css
 --yc-ground:   #F8F8F0; /* result screen, off-white (M) */
@@ -26,7 +28,7 @@ Each line is tagged by how sure it is. **M** measured from frames or audio (re-c
 
 SLOP.md applies unchanged. Lilac and cyan are flat fills here, never a gradient (item 1); the
 off-white ground is a result screen, not a cream-and-serif look (item 18) and is cleared by
-citing `refs/young-cool/gameover-pile.jpg` in the project's `## Palette` (item 10).
+citing `refs/gameover-pile.jpg` in the project's `## Palette` (item 10).
 
 ## Game-over screen
 
