@@ -12,6 +12,7 @@ import tempfile
 from pathlib import Path
 from urllib.parse import urlparse
 
+import publicmeta
 import tiktok
 from runtime import configure_stdio, diagnostic, run_text
 
@@ -91,6 +92,10 @@ def network_diagnostic(stderr: str) -> str:
         hint = 'Check your trusted CA configuration; keep TLS verification enabled.'
     else:
         hint = 'Check the original error and update the owning yt-dlp package if needed.'
+    if os.environ.get('CLAUDE_CODE_REMOTE') == 'true' and re.search(
+            r"sign in|not a bot|login required|\b(403|429)\b|too many requests|forbidden|not granting access|empty media|network policy|egress denied|allowlist",
+            lower):
+        hint += ' NEXT: the cloud is refused here, start the laptop route (Remote Control, SKILL.md step 1.2); do not work around the check.'
     return f'{detail}\n{hint}'
 
 
@@ -198,6 +203,10 @@ def fetch_captions(url: str, out_dir: Path, *, sub_lang='auto', cookies_file=Non
             raise SystemExit('yt-dlp did not produce the selected caption track.')
         result['subtitle_path'] = str(subtitle)
     except SystemExit as exc:
+        meta = None if result['info_path'] else publicmeta.fetch(url)  # yt-dlp's own metadata wins
+        if meta:
+            result['info'] = meta
+            print(f"[watch] yt-dlp refused; using the platform's public {meta['source']} for the scan", file=sys.stderr)
         result['errors'].append(str(exc))
         print(f'[watch] captions unavailable: {exc}', file=sys.stderr)
     return result
