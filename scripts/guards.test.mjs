@@ -34,7 +34,8 @@ for (const file of ['global/settings.json', '.claude/settings.json']) {
     ]) assert.ok(denied(c, deny), `${c} must be denied`)
     for (const c of [
       'git push -u origin claude/project-thread-vxq6m9', 'git push --force origin claude/feature',
-      'wrangler whoami', 'npm run deploy:preview', 'git push -u origin fix/domain-cleanup', 'git push -u origin claude/fix-thing',
+      'wrangler whoami', 'npm run deploy:preview',
+      'git -C /repo push -u origin fix/domain-cleanup', 'git push -u origin claude/fix-main-menu', 'git -C /repo push origin claude/fix-main-menu', 'git push -u origin fix/domain-cleanup', 'git push -u origin claude/fix-thing',
     ]) assert.ok(!denied(c, deny), `${c} must not be denied by these rules`)
   })
 }
