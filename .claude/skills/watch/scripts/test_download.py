@@ -33,10 +33,15 @@ class Flags(unittest.TestCase):
         with fake_run('Chrome-136 Macos-15 curl_cffi\n'):
             self.assertEqual(dl.impersonation_args(), ())
 
-    def test_env_forces_impersonation_in_cloud(self):
+    def test_env_cannot_force_impersonation_in_cloud(self):
         os.environ.update(CLAUDE_CODE_REMOTE='true', WATCH_IMPERSONATE='1')
         with fake_run('Chrome-136 Macos-15 curl_cffi\n'):
-            self.assertEqual(dl.impersonation_args(), ('--impersonate', 'chrome'))
+            self.assertEqual(dl.impersonation_args(), ())
+
+    def test_env_turns_impersonation_off_on_laptop(self):
+        os.environ['WATCH_IMPERSONATE'] = '0'
+        with fake_run('Chrome-136 Macos-15 curl_cffi\n'):
+            self.assertEqual(dl.impersonation_args(), ())
 
     def test_no_flag_without_curl_cffi(self):
         with fake_run('Client Source\nChrome-136 Macos-15 (unavailable)\n'):
