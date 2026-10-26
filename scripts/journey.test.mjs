@@ -46,9 +46,10 @@ test('previewHosts reads the preview URLs a Workers Builds check run names', () 
 // HIGH 2 of gate round 1: the n/a must fail closed. Only docs, tests and CI files may skip the journey.
 test('only docs, tests and CI files are n/a; every app, server and config file runs the journey', () => {
   const app = ['app/pages/index.vue', 'app/components/Drop.vue', 'pages/index.vue', 'components/A.vue', 'app.vue', 'assets/main.css', 'server/api/drop.post.ts',
-    'nuxt.config.ts', 'wrangler.jsonc', 'worker/index.ts', 'package.json', 'src/index.js', 'public/app.css', 'index.html', 'migrations/0002.sql', 'src/commit.js']
+    'nuxt.config.ts', 'wrangler.jsonc', 'worker/index.ts', 'package.json', 'src/index.js', 'public/app.css', 'index.html', 'migrations/0002.sql', 'src/commit.js',
+    'server/routes/x.test.ts', 'src/a.test.js', 'app/notes.md', 'content/post.md', 'public/robots.txt', 'LICENSE.exe', 'a/b/README.md']
   for (const f of app) assert.equal(isNonApp(f), false, `${f} runs the journey`)
-  const other = ['README.md', 'docs/a.png', 'test/a.spec.ts', 'src/a.test.js', 'e2e/x.spec.ts', '.github/workflows/ci.yml', 'LICENSE', 'notes.txt']
+  const other = ['README.md', 'docs/a.png', 'test/a.spec.ts', 'e2e/x.spec.ts', '.github/workflows/ci.yml', 'LICENSE', 'notes.txt', '.gitignore']
   for (const f of other) assert.equal(isNonApp(f), true, `${f} is n/a`)
   assert.equal(needsJourney(['README.md', 'app/pages/index.vue']), true, 'one app file is enough')
   assert.equal(needsJourney(['README.md', 'docs/a.md']), false)
@@ -94,6 +95,7 @@ test('planJourney refuses a fork, a moved head, a non-default base and a preview
   await assert.rejects(planJourney(REPO, '7', 'social', fakeApi({ fork: true })), /fork/)
   await assert.rejects(planJourney(REPO, '7', 'social', fakeApi({ heads: [SHA, 'd'.repeat(40)] })), /head moved/)
   await assert.rejects(planJourney(REPO, '7', 'social', fakeApi({ baseRef: 'dev' })), /not the default branch/)
+  await assert.rejects(planJourney(REPO, '7', 'social', fakeApi({ baseRef: 'dev', files: ['README.md'] })), /not the default branch/, 'n/a is issued only for PRs to the default branch')
   await assert.rejects(planJourney(REPO, '7', 'social', fakeApi({ checkRuns: [{ output: { summary: 'https://other-social.yverse.workers.dev' } }] })), /no pass/)
 })
 

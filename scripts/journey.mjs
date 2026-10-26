@@ -37,7 +37,8 @@ export const isJourneyFile = (f) => /(^|\/)(journey|e2e)(\/|\.[\w.]+$)/i.test(f)
 
 // A file that cannot change what the app does. Everything else (Nuxt app/, pages/, server/, worker/,
 // configs, package.json, assets) runs the journey: the n/a fails closed, not open.
-export const isNonApp = (f) => /\.(md|txt)$/i.test(f) || /^(docs|test|tests|\.github)\//.test(f) || /\.(test|spec)\.[\w]+$/.test(f) || /^(LICENSE|\.gitignore)/.test(f)
+const APP_DIR = /^(app|pages|components|layouts|plugins|middleware|server|worker|src|public|content|assets)\//
+export const isNonApp = (f) => !APP_DIR.test(f) && (/^[^/]+\.(md|txt)$/i.test(f) || /^(docs|test|tests|e2e|\.github)\//.test(f) || /^(LICENSE|\.gitignore)$/.test(f))
 export const needsJourney = (files) => files.some((f) => !isNonApp(f))
 
 export const JOURNEY_BOT = 'yskills-claude'
@@ -99,8 +100,8 @@ export async function planJourney(repo, pr, name, api) {
   if (head.repo?.full_name !== repo) throw new Error('a PR from a fork never gets the preview login: journey runs only branches of the project repo')
   const files = await changedFiles(repo, pr, api)
   if ((await api(`repos/${repo}/pulls/${pr}`)).head.sha !== head.sha) throw new Error('the PR head moved while its files were listed: run journey again')
+  if (base.ref !== (await api(`repos/${repo}`)).default_branch) throw new Error(`the PR targets ${base.ref}, not the default branch: journey runs only PRs to the default branch`)
   if (!needsJourney(files)) return { sha: head.sha, ui: false }
-  if (base.ref !== (await api(`repos/${repo}`)).default_branch) throw new Error(`the PR targets ${base.ref}, not the default branch: journey specs run from the default branch`)
   const url = previewUrl(head.ref, name)
   const named = previewHosts((await api(`repos/${repo}/commits/${head.sha}/check-runs`)).check_runs || [])
   if (named.length && !named.includes(url)) throw new Error(`Workers Builds names ${named.join(', ')} but the branch alias gives ${url}: no pass`)
