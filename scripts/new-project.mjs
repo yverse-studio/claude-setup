@@ -142,14 +142,14 @@ export function buildCommands(d1) {
   }
 }
 
-export function writeScaffold(dir, { name, d1, liveId, previewId, kind }) {
+export function writeScaffold(dir, { name, d1, liveId, previewId, kind, org = ORG, repo = name }) {
   cpSync(TEMPLATE, dir, { recursive: true })
   if (kind === 'game') cpSync(GAME_TEMPLATE, dir, { recursive: true, force: true })
   for (const script of [...CHECK_SCRIPTS, ...(kind === 'game' ? GAME_CHECK_SCRIPTS : [])]) cpSync(new URL(script, SKILLS), join(dir, 'scripts', basename(script)))
   if (!d1) rmSync(join(dir, 'migrations'), { recursive: true, force: true })
   for (const file of ['README.md', 'CLAUDE.md', 'src/index.js', '.github/workflows/live.yml', '.github/workflows/journey.yml', ...(kind === 'game' ? ['index.html', 'design/DESIGN.md'] : [])]) {
     const path = join(dir, file)
-    writeFileSync(path, readFileSync(path, 'utf8').replaceAll('__NAME__', name))
+    writeFileSync(path, readFileSync(path, 'utf8').replaceAll('__NAME__', name).replaceAll('__REPO__', `${org}/${repo}`))
   }
   writeFileSync(join(dir, 'wrangler.jsonc'), JSON.stringify(wranglerConfig({ name, d1, liveId, previewId, kind }), null, 2) + '\n')
   writeFileSync(join(dir, 'package.json'), JSON.stringify(packageJson({ name, d1, kind }), null, 2) + '\n')
@@ -523,7 +523,7 @@ export async function main() {
   if (existing && await repoIsEmpty(gh, org, repoName)) throw new Error(`${org}/${repoName} is empty; an existing-repo project needs its code on ${branch}`)
   if (await repoIsEmpty(gh, org, repoName)) {
     const dir = mkdtempSync(join(tmpdir(), 'new-project-'))
-    writeScaffold(dir, { name, d1, liveId, previewId, kind })
+    writeScaffold(dir, { name, d1, liveId, previewId, kind, org, repo: repoName })
     pushScaffold(dir, org, repoName, branch, ghToken)
     log('repo', `pushed the day-zero site to ${branch}`)
   } else {

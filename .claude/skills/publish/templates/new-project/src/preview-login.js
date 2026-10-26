@@ -24,7 +24,8 @@ async function signingKey(kid, fetchJwks, now) {
   if (!find() && now - keys.at > KEY_REFRESH_MS) {
     keys.at = now
     const res = await fetchJwks(JWKS_URL)
-    if (res.ok) keys.list = (await res.json()).keys || []
+    const body = res.ok ? await res.json() : null
+    if (Array.isArray(body?.keys)) keys.list = body.keys // a malformed answer is ignored, never cached
   }
   const jwk = find()
   return jwk && crypto.subtle.importKey('jwk', { kty: 'RSA', n: jwk.n, e: jwk.e, alg: 'RS256', ext: true }, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['verify'])

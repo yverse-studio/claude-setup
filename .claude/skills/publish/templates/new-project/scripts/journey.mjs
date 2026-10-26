@@ -19,8 +19,9 @@ try {
   await page.goto('/')
   await page.locator('h1, canvas').first().waitFor({ timeout: 15000 })
   const login = await context.request.post('/api/test-login', { headers: await previewLoginHeaders(base) })
-  if (!login.ok()) throw new Error(`test login answered ${login.status()}`)
-  console.log('journey: preview test login ok')
+  if (login.status() === 404) console.log('journey: this app has no /api/test-login, login steps skipped') // an app without a login
+  else if (!login.ok()) throw new Error(`test login answered ${login.status()}`)
+  else console.log('journey: preview test login ok')
   await page.screenshot({ path: 'test-results/home.png' })
   console.log('journey: ok')
 } catch (e) {

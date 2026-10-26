@@ -9,5 +9,6 @@ export async function previewLoginHeaders(base) {
   const res = await fetch(`${url}&audience=${encodeURIComponent(audience)}`, { headers: { authorization: `Bearer ${bearer}` } })
   if (!res.ok) throw new Error(`GitHub OIDC token request answered ${res.status}`)
   const { value } = await res.json()
+  console.log(`::add-mask::${value}`) // a later log line or Playwright call log can never show the token
   return { authorization: `Bearer ${value}`, origin: new URL(base).origin }
 }

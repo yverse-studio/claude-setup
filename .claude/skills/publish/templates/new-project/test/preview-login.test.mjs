@@ -98,3 +98,19 @@ test('an unknown key id refetches GitHub keys, but at most once a minute', async
   assert.equal(await verify(unknown, { fetchJwks: counting, now: later + 61000 }), false)
   assert.equal(fetches, 2)
 })
+
+test('a failing or malformed key fetch fails closed and does not poison later logins', async () => {
+  const later = NOW + 6 * 3600e3
+  const unknown = await token({}, { header: { alg: 'RS256', kid: 'again' } })
+  assert.equal(await verify(unknown, { fetchJwks: async () => { throw new Error('down') }, now: later }), false)
+  assert.equal(await verify(unknown, { fetchJwks: async () => new Response('nope', { status: 500 }), now: later + 61000 }), false)
+  assert.equal(await verify(unknown, { fetchJwks: async () => Response.json({ keys: 'x' }), now: later + 122000 }), false)
+  assert.equal(await verify(await token(), { fetchJwks, now: NOW }), true, 'the cached good key still works')
+})
+
+test('HS256, a missing exp or iat, and a custom domain are refused or ignored', async () => {
+  assert.equal(await verify(await token({}, { header: { alg: 'HS256', kid: 'k1' } })), false)
+  for (const field of ['exp', 'iat']) assert.equal(await verify(await token({ [field]: undefined })), false, field)
+  const bearer = await token({ aud: 'demo.example.com' })
+  assert.equal((await call('demo.example.com', { bearer })).res, null)
+})
