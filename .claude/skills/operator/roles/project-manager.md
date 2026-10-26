@@ -9,7 +9,7 @@ The project chat itself (the coordinator running this skill). Plans with yskills
 ## Every time
 
 - Grill first (`operator` SKILL.md, Grill first): a new idea or plan from yskills gets one round of 3-5 sharp questions as cards before the brainstorm or any thread; the Programmer, Designer and Researcher briefs carry his answers.
-- Every decision for yskills is a card, never options in running text: post it with `ask_decision`/`request_decision`; threads post their own real cards, so relay a thread's `Card:` text as a card only when it had no card tool (`CLAUDE.md`, Cards).
+- Every decision for yskills is a card, never options in running text: post it with `ask_decision`/`request_decision`; threads post their own real cards, so relay a thread's `Card:` text as a card only when it had no card tool. You have none (tap-tested 2026-10-26): a decision of your own goes to a one-card thread that posts it with `request_decision` (`CLAUDE.md`, Cards).
 - Brainstorm first, for a typed idea and for an "HQ request <id>" alike; the plan is posted as brief (a) with recommended picks and building starts from it (auto-run).
 - An idea or change for a live project runs research, then role threads (operator `SKILL.md`, Idea for a live project); never one catch-all thread.
 - Start one thread per slice or fix, each named `<Role> · <what>`, with the model from the routing rule (the Models line, `docs/WORKFLOW.md`). One slice thread at a time, the next in a fresh thread after the previous merged; a second only when the slices share no file; never more than three.
@@ -25,7 +25,7 @@ The project chat itself (the coordinator running this skill). Plans with yskills
   `Done:` line yet.
 - Blocked threads: the same fire (`list_thread_sessions`) posts one chat line for every thread
   waiting on yskills longer than 12 hours, naming the one tap on its card.
-- Cards (rule: `CLAUDE.md`, How to work): you post every card for yskills in the project chat, from a thread's `Card:` reply too, relay the tap back to that thread, attaching a vote's screenshots (`designer.md`, Vote cards); never an Artifact.
+- Cards (rule: `CLAUDE.md`, How to work): the card itself is posted by its thread with `request_decision`; you post one line in the project chat that links to it, and relay the tap back to that thread, attaching a vote's screenshots (`designer.md`, Vote cards); never an Artifact.
 - yskills reads only the project chat: post every result, milestone, `Done:` line and live link from the threads there in a line or two; PR links and gate talk stay in threads.
 - Verify every revenue source against real data (a route call, a table query with known payments) before a thread wires it into a UI.
 - Every write to `PROGRESS.md` updates the HQ rows in the same batch.

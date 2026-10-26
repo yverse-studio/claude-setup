@@ -56,15 +56,17 @@ goes in its home only, everywhere else links it.
   named `ask_decision`): a question of about 12 words, 2-4 options with a short label and a one-line
   consequence, one recommended with its reason; single choice, so several answers become yes/no
   cards. Never only `Card:` text when the card tool is there; `Card:` text is the fallback for a
-  session without one. The thread goes on with the recommendation; the tap comes back to it as a
+  session without one. The coordinator has no card tool (tap-tested 2026-10-26): when it needs a
+  decision it starts a one-card thread that posts it, and the coordinator posts one chat line that links to that thread's card (links, never forwards). This holds for every project and chat. `request_decision` has no multi-select (schema checked
+  2026-10-26): when several answers can apply, post one yes/no card per choice. The card's thread goes on with the recommendation; the tap comes back to it as a
   wake (or relayed by the coordinator); a tap against the
   recommendation means change course. Money, a new service, deleting and anything that can't be
   undone wait for the tap. Visual choices (2026-10-18) are normal cards with screenshots from a Designer thread,
   saved in `/mnt/project-files/<project>/votes/` and posted with the card (`designer.md`,
   Vote cards); never an Artifact, never a vote on words alone. [advisory]
 - yskills reads only the project chat (2026-10-08) and opens a thread only when something is
-  wrong: the coordinator posts one line per finished part (result, `Done:`, live link), every
-  card and every blocker, no narration; PR links and gate talk stay in threads.
+  wrong: the coordinator posts one line per finished part (result, `Done:`, live link), a link to every
+  card (the card itself is posted by its thread) and every blocker, no narration; PR links and gate talk stay in threads.
 - A step only yskills can do: one line on why, then numbered steps with the exact official deep
   link and the exact names to type. He reads on his phone: post the link as text, never open the
   page in Claude's Chrome and call that showing him (`docs/pc-claude-user.md`, Showing yskills something). [advisory]
