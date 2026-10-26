@@ -5,7 +5,7 @@ description: "Use when a video needs yskills to say lines he did not record: his
 
 # Twin
 
-yskills, 2026-10-12: train on his face and voice, build our own HeyGen, free first. 2026-10-26: "it
+yskills, 2026-10-12: train on his face and voice, build our own HeyGen. 2026-10-26: free only, no paid or rented tools. 2026-10-26: "it
 should never look ai, my videos always high quality and not slop". The twin is his **real** face
 clip with only the mouth re-synced, plus his cloned voice. Nothing about him is generated from
 scratch: that is what keeps it from looking AI.
@@ -73,10 +73,10 @@ The `video-studio` Critic ([`roles/critic.md`](../video-studio/roles/critic.md))
 
 Voice by ear is yskills' call in his first test (the plan's T3): "would a friend notice?" yes or no.
 
-## Quality ceiling (2026-10-26, search snapshots)
+## Quality ceiling (2026-10-26)
 
 8 GB VRAM caps lip-sync at 256 px mouth crops (MuseTalk 1.5, LatentSync 1.5); a face that fills the
-frame can look soft at 1080p. Sharper: LatentSync 1.6 (512 px, ~18 GB, rented GPU) or paid sync.so
-lipsync-2-pro; voice top: ElevenLabs' trained clone (30 min+ of audio, which `record.md` asks for).
-Paid or rented only after yskills' card. Full avatars that generate the whole face (HeyGen, InfiniteTalk)
-read more AI and are not the default.
+frame can look soft at 1080p. yskills chose free only (2026-10-26): the answer to a soft mouth is a
+smaller twin shot (a cut-in, the face not filling the frame), voice-only over real footage, or real
+footage, never a paid or rented tool. Full avatars that generate the whole face (HeyGen,
+InfiniteTalk) read more AI and are not used.

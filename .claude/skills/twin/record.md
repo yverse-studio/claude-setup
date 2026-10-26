@@ -1,21 +1,21 @@
 # Twin recording: the one ask, and the reading script
 
-What yskills records once so the twin sounds and looks like him. About 45 minutes. The ask below is
+What yskills records once so the twin sounds and looks like him. About 35 minutes. The ask below is
 sent as it is (through the coordinator); the reading script follows it. Written 2026-10-26.
 
 ## The ask (send this)
 
-One session, about 45 min. Same day, same room, same look as your normal TikToks.
+One session, about 35 min. Same day, same room, same look as your normal TikToks.
 
 **Before you start**
 - iPhone: Settings > Apps > Voice Memos > Audio Quality > **Lossless**.
 - Quiet room with soft stuff (bed, curtains). Window closed, fan and music off.
 - Face a window or a lamp, light in front of you, nothing bright behind you.
 
-**1. Voice, about 30 min (Voice Memos, phone 20-30 cm from your mouth, a bit to the side)**
+**1. Voice, about 20 min (Voice Memos, phone 20-30 cm from your mouth, a bit to the side)**
 - `voice-calm`: read Part A below, normal TikTok voice. ~8 min.
 - `voice-hyped`: read Part B, like you just saw something crazy. ~4 min.
-- `voice-free`: 15 min free talk, no script: your day, Y-Land, a trip, a story, roast yourself. This one matters most, it is how you really talk. 30 min of voice in total also keeps the paid ElevenLabs clone open without recording again (it needs 30 min+).
+- `voice-free`: 10 min free talk, no script: your day, Y-Land, a trip, a story, roast yourself. This one matters most, it is how you really talk.
 - A mistake: pause 2 s, say the line again. Don't cut anything.
 
 **2. Face, about 3 min, ONE take, no cuts**

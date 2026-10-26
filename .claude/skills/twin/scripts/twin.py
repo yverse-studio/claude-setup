@@ -30,7 +30,7 @@ AUDIO_EXT = (".wav", ".m4a", ".flac", ".aif", ".aiff", ".mp3")
 VIDEO_EXT = (".mov", ".mp4", ".m4v")
 
 MIN_SAMPLE_RATE = 44100
-MIN_VOICE_S = {"voice-calm": 240, "voice-hyped": 120, "voice-free": 600}
+MIN_VOICE_S = {"voice-calm": 240, "voice-hyped": 120, "voice-free": 420}
 MAX_PEAK_DB = -1.0          # louder means clipping
 MAX_NOISE_FLOOR_DB = -50.0  # quieter rooms read lower
 MIN_FACE_S = 170
