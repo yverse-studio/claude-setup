@@ -76,7 +76,7 @@ lives outside this repo.
 | This map | `docs/MAP.md` | Where things live, one home per rule |
 | Teams | `docs/TEAMS.md` | The Spawn rule (one role, one thread, model on every start), the new-idea workflow, every team with its roles' focus, tasks, inputs, outputs, handoffs and model; the Models line |
 | Run a project | `.claude/skills/operator/` | `SKILL.md` size, roles, files, setup loop, cost; `run.md` the nine steps (Project Manager only); `gate.md` the 5/5 gate and the one merge policy; `briefs.md` the three briefs, key cards and the block every thread brief starts with; `roles/<role>.md` one playbook per role; `templates/` files copied into a project (`loop/` the feedback inbox, `mailbox/` Claude's own e-mail inbox Worker) |
-| Roadmap for yskills | `docs/WORKFLOW.md` | The phases in plain words, the models table, learning and memory check |
+| Roadmap for yskills | `docs/WORKFLOW.md` | The phases in plain words, the token budget, learning and memory check (models: `docs/TEAMS.md`) |
 | Other own skills | `.claude/skills/<name>/` | `legal`, `sell`, `market`, `store`, `store-publish`, `publish`, `scaffold`, `onboard-project`, `ship-check`, `ui-review`, `toolbox`, `game-3d`, `roblox`, `studio`, `blender-body`, `storyteller`, `watch`, `media-editing`, `video-studio`, `social-team` |
 | Vendored skills, agents, rules | `.claude/skills`, `.claude/agents`, `.claude/rules/ecc` | ECC subset (`config/ecc.json`, refreshed by `scripts/sync-ecc.mjs`), impeccable, web-interface-guidelines, ponytail, claude-video (`THIRD_PARTY.md`); never hand-edited |
 | Own agents | `.claude/agents/` | `design-critic`, `evaluator`, `legal-reviewer`, `red-team` |

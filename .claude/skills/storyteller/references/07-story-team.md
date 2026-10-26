@@ -1,6 +1,6 @@
 # 07 · The Story team (a standing team in the company, roles and models)
 
-yskills (2026-10-17): the story planner is part of a new team, like a real company, with a story writer and so on; later it helps the game and the ads for the page. Below: how narrative teams are staffed in the industry, then our version per `docs/WORKFLOW.md` (models table) and the operator skill (one thread per PR, playbooks in `roles/`).
+yskills (2026-10-17): the story planner is part of a new team, like a real company, with a story writer and so on; later it helps the game and the ads for the page. Below: how narrative teams are staffed in the industry, then our version per `docs/TEAMS.md` and the operator skill (one thread per PR, playbooks in `roles/`).
 
 ## How real studios do it
 
@@ -8,7 +8,7 @@ Game narrative (AAA and VN studios, Being a DIK is a two-person team doing all o
 
 ## Our Story team (threads, not people; titles "Role · what")
 
-| Role | Does | Model (WORKFLOW.md tier) | Playbook home |
+| Role | Does | Model (TEAMS.md tier) | Playbook home |
 |---|---|---|---|
 | **Story Director** (project manager of the team) | owns the bible, the endgame contract, the archetype map, the heat bands, the order of PRs; posts `Done:` lines and cards; the only one who talks taste with yskills | Opus (plan of the whole story once with Fable, the three Fable cases) | `operator/roles/story-director.md` (new) |
 | **Story Planner** | one chapter or storylet plan (15 lines) from the ladder and the engines; checks the pacing numbers | Opus | `story-planner.md` |
