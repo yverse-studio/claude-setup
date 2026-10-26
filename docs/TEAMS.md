@@ -6,7 +6,25 @@ over five files). Step detail lives in [`run.md`](../.claude/skills/operator/run
 [`gate.md`](../.claude/skills/operator/gate.md), each role's checklist in its playbook (linked in
 the roster). Every other file links here.
 
+## Coordinator or thread
+
+Building a team is the coordinator's job only (yskills 2026-10-26: "they dont need to make a team
+in the thread they are one part of it"). Check first which one you are:
+
+- **You are a thread if** your first message is a coordinator brief (a `Model:` and a
+  `Role:` line), or your tools have `message_coordinator` but no thread start. Otherwise (the
+  project chat, a plain chat, the laptop) you are the coordinator and the Spawn rule below is yours.
+- **A thread** is one role, the one its `Role:` line names (no `Role:` line: the role its title
+  `<Role> · <what>` names). It reads that role's Roster row and playbook and its kit row's Read
+  first files, does that job, and calls as `Agent` subagents only the helpers its Roster row and
+  the Sizes row of its size list (Reviewer, Researcher, an Opus checkpoint, ...), each with `model`.
+  It never starts a thread, never sizes the task again, never staffs a team and never plays a second
+  role; work for another thread-role goes to the coordinator with `message_coordinator` (role,
+  topic, files, done-when), and the thread goes on with its own job.
+
 ## Spawn rule
+
+Coordinator only (a thread: Coordinator or thread, above).
 
 1. **Task first, then kit, then size.** Every task is routed on its own, never by the project it
    comes from: what it makes picks the kit (a post or reel: `social`; a video: `video`; an app,
@@ -108,7 +126,7 @@ Critic is the studio's QA: the first harsh viewer, so yskills never sees a faile
 
 ### Social (`social-team`)
 
-Runs yskills' accounts; the loop and posting rules: [`social-team`](../.claude/skills/social-team/SKILL.md).
+Runs yskills' accounts; the loop and posting rules: [`social-team`](../.claude/skills/social-team/SKILL.md); the order from idea to numbers, with the Film roles in it: [`pipeline.md`](../.claude/skills/social-team/pipeline.md).
 
 | Role and playbook | Job | Called when | Runs as | Model |
 |---|---|---|---|---|
@@ -116,7 +134,10 @@ Runs yskills' accounts; the loop and posting rules: [`social-team`](../.claude/s
 | Scout ([`scout.md`](../.claude/skills/social-team/roles/scout.md)) | rising sounds, formats, hooks, competitors' best posts | the weekly routine, before a brief | subagent of the Lead | Haiku to read and watch; Sonnet to sum up |
 | Community ([`community.md`](../.claude/skills/social-team/roles/community.md)) | comments and DMs, follower gifts, leads | each comment or DM, a daily review | the Worker's webhook plus a daily subagent | Sonnet |
 | Partnerships ([`deals.md`](../.claude/skills/social-team/roles/deals.md)) | brand deals: media kit, outreach drafts, offers | a brand message, "find deals" | subagent; a thread `Deal · <brand> · <partner>` per real offer | Sonnet; Opus reads a contract |
-| Analyst ([`analyst.md`](../.claude/skills/social-team/roles/analyst.md)) | numbers per post, what to repeat or drop | the weekly routine | subagent of the Lead | Sonnet |
+| Hook Checker ([`hook-check.md`](../.claude/skills/social-team/roles/hook-check.md)) | gate on the hook before filming and on the cut's first seconds | after the script, and on the cut before the Critic | fresh subagent of the Lead | Sonnet |
+| Caption Writer ([`copy.md`](../.claude/skills/social-team/roles/copy.md)) | description, hashtags, pinned question, cover text in his voice | on the final cut, before the Critic | subagent of the Lead | Sonnet |
+| Publisher ([`publisher.md`](../.claude/skills/social-team/roles/publisher.md)) | preflight, scheduling, read-back, `posts.md` row | "upload", the switch, a project account | subagent of the Lead | Sonnet |
+| Analyst ([`analyst.md`](../.claude/skills/social-team/roles/analyst.md)) | numbers per post at 24 h and 7 d, what to repeat or drop | the daily sweep (24 h and 7 d due), the weekly routine | subagent of the Lead | Sonnet |
 
 ### Story (`storyteller`)
 

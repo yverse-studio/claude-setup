@@ -20,7 +20,7 @@ What every session does at start:
 | Surface | Reads first | Then |
 |---|---|---|
 | Coordinator (project chat) | `MEMORY.md`, the thread board | `add_repo` claude-setup, `CLAUDE.md`, this section, [`TEAMS.md`](TEAMS.md) (before starting any thread), `roles/project-manager.md` Session start; reconciles board and state |
-| Thread | its brief, `MEMORY.md` | `add_repo` claude-setup, `CLAUDE.md`, this section, [`TEAMS.md`](TEAMS.md) Spawn rule, its role file; for a product also that repo's `CLAUDE.md` and `docs/LESSONS.md` |
+| Thread | its brief, `MEMORY.md` | `add_repo` claude-setup, `CLAUDE.md`, this section, [`TEAMS.md`](TEAMS.md) (Coordinator or thread) and its own Roster row, its role file, never the Spawn rule; for a product also that repo's `CLAUDE.md` and `docs/LESSONS.md` |
 | Claude Code on the laptop | `~/.claude/CLAUDE.md` | the project's `CLAUDE.md`; auto-memory is a scratchpad |
 | New claude.ai project | the generated boot text | as a coordinator; its first session sweeps old memory into the repo |
 | Plain chat (no project) | yskills' user preferences | this section; the `operator` skill sizes the job; no memory |
@@ -105,7 +105,7 @@ added as a second repo, or a plain chat), read that file by path, then the files
 | Roblox | `roblox` | `toolbox/catalog/roblox.md` (run and see), `studio` (PC) |
 | 3D models, characters | `docs/character-workflow.md` | `blender-body` (rigged body: base, shape keys, pose tests, reviewing; pro avatar anatomy in `booth-avatars.md`), `game-3d` (VRM pipeline), `studio` (Blender on the PC) |
 | Videos and ads (the studio: Producer, Writer, Director, Sound, Editor, Motion, Critic) | `video-studio` | `video-studio/learnings.md`, `video-studio/formats.md` (mascot-explainer, POV magic, blockout to AI video), `video-studio/templates/launch-video/` (15 s launch promo from any repo, free), `market` §4 (ads law) |
-| Social media: posting, comments, DMs, idea backlog, brand accounts, brand deals | `social-team` | `social-team/learnings.md`, `social-team/xyskillsx-style.md` (his personal style: keep, raise, never), `market` §4 and §6, `docs/research/2026-10-26-claude-video-autopost.md` (what people use, ideas-to-posts app) |
+| Social media: posting, comments, DMs, idea backlog, brand accounts, brand deals | `social-team` | `social-team/pipeline.md` (idea to post to numbers, every role), `social-team/learnings.md`, `social-team/xyskillsx-style.md` (his personal style: keep, raise, never), `market` §4 and §6, `docs/research/2026-10-26-claude-video-autopost.md` (what people use, ideas-to-posts app) |
 | Video and photo edits | `media-editing` | `watch` (understand a video), `toolbox/catalog/video-audio.md` (AI video, voice, music), `docs/research/2026-10-24-video-batch.md` (29 shared videos, verdicts) |
 | AI features, local models | `toolbox/catalog/ai.md` | the built-in `claude-api` skill; `docs/research/2026-10-07-own-local-model.md` |
 | Marketing, SEO | `market` | `seo`, `market-research`, `product-lens`, `toolbox/catalog/growth.md` |

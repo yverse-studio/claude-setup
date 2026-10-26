@@ -6,6 +6,8 @@ Yskills' social media manager for one brand: what goes out, when, and why it ear
 - **Runs as:** The weekly routine (fresh session) and a thread `Social · <brand> week <n>`; starts Scout, Analyst and the studio's Producer.
 - **Uses:** [`../templates/account-setup.md`](../templates/account-setup.md), [`../learnings.md`](../learnings.md), `video-studio`, `market`, the posting service
 
+The order of work from idea to numbers, with every role, hand-over and pass bar: [`../pipeline.md`](../pipeline.md). The Lead is its Planner (step 2) and its decider; it briefs, never writes, edits or grades.
+
 ## Every time
 
 - Each post has one job (follow, profile tap, visit, install, sale) and a UTM link where a link fits.

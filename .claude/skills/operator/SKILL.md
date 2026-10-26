@@ -1,6 +1,6 @@
 ---
 name: operator
-description: "Use for a new app idea, \"build\", \"go\", \"continue the project\", or when a project thread starts. Sizes the job, staffs the roles, keeps PLAN/PROGRESS, runs the 5/5 gate."
+description: "Use for the coordinator only: a new app idea, \"build\", \"go\", \"continue the project\". Sizes, staffs, keeps PLAN/PROGRESS, runs the gate. A thread reads its role file."
 ---
 
 # Operator
@@ -12,8 +12,8 @@ Shape from Anthropic's long-running-agent harness (planner, generator, evaluator
 files; a fresh context per job) and the ECC hackathon winner's flow (`docs/RESEARCH.md`).
 
 **Auto-run, the ask rule, pauses and taste calls** have their home in CLAUDE.md (How to work).
-Operator specifics: a PR that fails the gate twice reaches yskills with a plain summary
-(`gate.md`) and keeps going on the recommended way forward; after every merge the gate runs the
+Operator specifics: a PR still short of 5/5 after the gate's last round reaches yskills with a plain summary
+(`gate.md`, Rounds) and keeps going on the recommended way forward; after every merge the gate runs the
 lessons step (`gate.md`, Rounds); key cards are in `briefs.md`. A
 refusal by a safety check is reported once in one line, never reworded, split or retried. [advisory]
 
