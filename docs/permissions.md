@@ -44,7 +44,9 @@ read 2026-10-26):
   `wrangler secret`, `gh repo edit` (visibility), `create_repository` (can be public), and the raw
   deletes of a Worker, database or repo: `wrangler delete`, `d1 delete`, `r2 bucket delete`,
   `gh repo delete`). Allowed: `gh workflow run delete-project` (it refuses live projects),
-  `gh issue delete`, `gh run delete`. Workflows are allowed by name only; `actions_run_trigger` is not allowed
+  `gh issue delete`, `gh run delete`. `delete-project` runs only from `main`: a dispatch with
+  `--ref` or `-r` is denied and the job checks `github.ref` (a branch copy could drop that check:
+  issue #311 moves the secrets into a main-only Environment). Workflows are allowed by name only; `actions_run_trigger` is not allowed
   (it can't be narrowed by argument), so the classifier and the autoMode workflow list decide.
   `scripts/guards.test.mjs` checks that no ask-first command matches an allow rule, and that the
   deletes are allowed.

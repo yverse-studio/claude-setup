@@ -31,7 +31,7 @@ test('nothing is deleted without the name typed twice', () => {
 })
 
 test('protected repos are refused before any call', async () => {
-  for (const name of ['claude-setup', 'duo-test', 'company-xy', 'mypage', 'worker', 'luna-monorepo', 'yland', 'anime-filter', 'tellmey', 'ideaworld', 'social']) {
+  for (const name of ['claude-setup', 'duo-test', 'company-xy', 'mypage', 'worker', 'luna-monorepo', 'yland', 'anime-filter', 'tellmey', 'ideaworld', 'social', 'igelgarten', 'companyxy-spiel']) {
     const apis = fakeApis()
     await assert.rejects(go({ NAME: name, CONFIRM: name, DRY_RUN: 'false' }, apis), /protected/)
     assert.equal(apis.calls.length, 0)

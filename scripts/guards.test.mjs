@@ -31,7 +31,7 @@ for (const file of ['global/settings.json', '.claude/settings.json']) {
       'git -C /repo push --force origin main', 'git -c x=y push -f origin main', 'git push -fu origin main', 'git push --force origin master',
       // main changes only through a gated merge, and deploys only through Workers Builds (docs/permissions.md)
       'git push origin main', 'git push -u origin HEAD:main', 'git -C /repo push upstream main', 'git -C /repo push origin refs/heads/main', 'git -C /repo push origin +main', 'git -C /repo push origin --delete main',
-      'gh workflow run delete-project --ref claude/x -f name=yland -f confirm=yland', 'gh workflow run delete-project -r x -f name=y', 'wrangler deploy', 'npx wrangler deploy', 'npm run deploy',
+      'gh workflow run delete-project --ref claude/x -f name=yland -f confirm=yland', 'gh workflow run delete-project -r x -f name=y', 'gh workflow run delete-project -rclaude/x -f name=yland -f confirm=yland', 'gh workflow run delete-project --ref=x -f name=y', 'wrangler deploy', 'npx wrangler deploy', 'npm run deploy',
     ]) assert.ok(denied(c, deny), `${c} must be denied`)
     for (const c of [
       'git push -u origin claude/project-thread-vxq6m9', 'git push --force origin claude/feature',
