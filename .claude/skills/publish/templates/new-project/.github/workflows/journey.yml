@@ -1,4 +1,5 @@
 name: journey
+run-name: journey ${{ github.event.pull_request.head.sha }}
 
 # The gate's preview journey for every PR of this repo (claude-setup gate.md; incident 2026-10-26:
 # UI PRs passed on local tests while the preview was broken). No keys: the built-in GITHUB_TOKEN reads

@@ -3,7 +3,7 @@
 // posted by the project's own `.github/workflows/journey.yml` (template: publish skill, scripts/journey-gate.mjs)
 // with the built-in GITHUB_TOKEN; a PR branch can post a `journey` status with that same token, so
 // a green tick proves nothing until this checks who made it. Stdin: {"statuses": the head's
-// `commits/<sha>/statuses` (API list or combined object), "run": the workflow run its newest
+// `commits/<sha>/statuses` (API list or combined object), "sha": that head sha, "run": the workflow run its newest
 // `journey` status links to (`actions_get get_workflow_run`)}. Exit 0 = PASS.
 import { fileURLToPath } from 'node:url'
 
@@ -14,8 +14,11 @@ export const RUN_LINK = /^https:\/\/github\.com\/(yverse-studio\/[\w.-]+)\/actio
 // The NEWEST `journey` status must be a success, created by github-actions[bot] and linked to a run
 // of this repo's journey workflow that came from `pull_request_target`. That event runs the file from
 // the default branch, so a PR cannot change it; a forged status from a PR workflow links to a run of
-// another path or event, or to another repo.
-export function verifyJourney(statuses, run) {
+// another path, event or repo. A PR workflow can also link a real run of another PR, so the run's title
+// (`run-name`, set by the same file) must carry this head sha, and the run must have finished green.
+export const runTitle = (sha) => `journey ${sha}`
+
+export function verifyJourney(statuses, run, sha = '') {
   const list = Array.isArray(statuses) ? statuses : statuses?.statuses || []
   const newest = list.filter((s) => s.context === 'journey').sort((a, b) => Date.parse(b.created_at || 0) - Date.parse(a.created_at || 0) || (b.id || 0) - (a.id || 0))[0]
   if (!newest) return { ok: false, reason: 'no journey status on the head: the PR has no journey run (is .github/workflows/journey.yml on the default branch?)' }
@@ -25,6 +28,8 @@ export function verifyJourney(statuses, run) {
   if (!run || String(run.id) !== link[2]) return { ok: false, reason: `pass the linked run (id ${link[2]}) as "run"` }
   if (run.repository?.full_name !== link[1]) return { ok: false, reason: `the linked run belongs to ${run.repository?.full_name ?? 'another repo'}, not ${link[1]}` }
   if (run.path !== JOURNEY_WORKFLOW || run.event !== 'pull_request_target') return { ok: false, reason: `the linked run is ${run.path} on ${run.event}, not ${JOURNEY_WORKFLOW} on pull_request_target: forged or not run` }
+  if (!/^[0-9a-f]{40}$/.test(sha) || run.display_title !== runTitle(sha)) return { ok: false, reason: `the linked run is for "${run.display_title}", not ${runTitle(sha || '<head sha>')}: a status can link to another PR's real run` }
+  if (run.status !== 'completed' || run.conclusion !== 'success') return { ok: false, reason: `the linked run is ${run.status}/${run.conclusion ?? 'no conclusion'}: wait for it to finish green` }
   if (newest.state !== 'success') return { ok: false, reason: `the newest journey status is ${newest.state}: ${newest.description || ''}`.trim() }
   return { ok: true, reason: newest.description }
 }
@@ -33,7 +38,7 @@ async function verify() {
   const chunks = []
   for await (const c of process.stdin) chunks.push(c)
   const input = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}')
-  const { ok, reason } = verifyJourney(input.statuses ?? [], input.run)
+  const { ok, reason } = verifyJourney(input.statuses ?? [], input.run, input.sha)
   console.log(`[journey] verify: ${ok ? 'PASS' : 'FAIL'} (${reason})`)
   process.exit(ok ? 0 : 1)
 }
