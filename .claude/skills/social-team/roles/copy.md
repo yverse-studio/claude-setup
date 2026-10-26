@@ -14,4 +14,4 @@ Writes the post text a viewer reads around the video, in his voice. The Writer o
 - Sounds like him on a good day (self-irony, "lowk", "pov:" only where he would); never salesy, no hashtag wall, no `#fyp`-only tags.
 - Every claim true to the footage; no invented numbers; a real follower's name only with consent.
 - The joke stays his: if the description needs one, offer two lines and he picks.
-- Music: a CC BY bed gets its credit line in the description; the music-free master needs none.
+- Music: beds are CC0 or own and need no credit (`video-studio/roles/sound.md`); only the launch-video lane's bundled CC BY track, if kept, adds its credit line.

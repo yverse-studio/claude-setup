@@ -72,7 +72,7 @@ anything important (captions go there). Stay in one spot; do not lean in and out
 3. Captions: his plain white bold look, one short line at a time in the top band, spell-checked; the key word of each answer, not the whole sentence. No
    emoji, no cards.
 4. At most 2 real-photo gags (his own photos or clips, never stock or AI): one in the middle, one on the last answer.
-5. Sound: no bed by default (final.mp4 may carry one); preset real_talk from [`../../sound-kit.md`](../../sound-kit.md), at most 2 SFX on the punchline, -14 LUFS; two masters (final.mp4, final-nomusic.mp4); he adds the trending sound in the app.
+5. Sound: no bed by default (final.mp4 may carry one); preset real_talk from [`../../sound-kit.md`](../../sound-kit.md), at most 2 SFX on the punchline, -14 LUFS; two masters (final.mp4, final-nomusic.mp4); he adds a sound in the app only when he asks.
 6. Caption options (3, he picks), all one line: "Q&A without the Q", "Guess the questions, I'll wait", "My therapist said keep it short".
 
 ## Question list (30; the first 10 are the short cut)
