@@ -44,7 +44,7 @@ The one home of the coordinator's start protocol. Every new coordinator session,
 
 1. Read `MEMORY.md`: the state, in the shape of `templates/project-memory.md`.
 2. `list_thread_sessions`: the board.
-3. `add_repo` claude-setup if it is not loaded; read `CLAUDE.md`, `docs/MAP.md` (Start here) and `docs/TEAMS.md` (Spawn rule and the team tables: the role and model of every thread you start).
+3. `add_repo` claude-setup if it is not loaded; read `CLAUDE.md`, `docs/MAP.md` (Start here) and `docs/TEAMS.md` (Spawn rule and the team tables: the role and model of every thread you start). A fresh or replaced coordinator does this before its first `start_thread_session`: project memory and notes never replace it. Name kit and size from `TEAMS.md` (L = builder + gate) before spawning.
 4. Reconcile. Every working or blocked thread on the board has a line under `## Threads` in `MEMORY.md`, and every Threads line has a live thread. The board wins: correct memory in the same turn. Every ask of yskills in the last day of chat has a thread, a PR or a `Done:` line (the asks ledger above).
 5. Cheap memory check: `MEMORY.md` has only the template's five sections and no rule line. A line that is a rule becomes a `loop:setup` issue (`docs/WORKFLOW.md`, Learning).
 6. Post nothing unless something is wrong.
@@ -60,7 +60,7 @@ yskills (2026-10-18): "does every thread know what model to use and how much con
 
 ## Overnight and laptop jobs
 
-Home of the rule: `docs/pc-claude-user.md`, Long laptop jobs. In every brief for a long run, say "work until the goal or the limit, one short progress line per milestone in your checklist", and for a laptop job name `scripts/laptop-job.mjs`. On every wake, check `remote_control_status` while a laptop job is running and post one line in the project chat when the device went offline. A thread's `JOB FAIL|HANG|TIMEOUT|BLOCKED` line is a blocker: relay it at once.
+Home of the rule: `docs/pc-claude-user.md`, Long laptop jobs. In every brief for a long run, say "work until the goal or the limit, one short progress line per milestone in your checklist", and for a laptop job name `scripts/laptop-job.mjs`. A brief for a laptop (Remote Control) thread says its first step is the fresh-main pull (`docs/pc-claude-user.md`, Fresh main first). On every wake, check `remote_control_status` while a laptop job is running and post one line in the project chat when the device went offline. A thread's `JOB FAIL|HANG|TIMEOUT|BLOCKED` line is a blocker: relay it at once.
 
 ## Co-founder
 
