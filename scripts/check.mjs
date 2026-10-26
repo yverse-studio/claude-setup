@@ -275,11 +275,17 @@ for (const h of AUDIO_HEADINGS) {
 const stylesDir = join(root, '.claude/skills/ui-review/styles')
 const stylesIndex = readFileSync(join(stylesDir, 'README.md'), 'utf8')
 for (const name of readdirSync(stylesDir, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name)) {
-  const style = readFileSync(join(stylesDir, name, 'STYLE.md'), 'utf8')
+  const stylePath = join(stylesDir, name, 'STYLE.md')
+  if (!existsSync(stylePath)) {
+    errors.push(`styles/${name}: no STYLE.md`)
+    continue
+  }
+  const style = readFileSync(stylePath, 'utf8')
   for (const h of ['Tokens', 'Do', "Don't", 'How to use it']) {
     if (!new RegExp(`^## ${h}\\s*$`, 'm').test(style)) errors.push(`styles/${name}/STYLE.md: lacks "## ${h}"`)
   }
-  if (!readdirSync(join(stylesDir, name, 'refs')).some((f) => /\.(png|jpe?g|webp)$/i.test(f))) errors.push(`styles/${name}/refs: no image`)
+  const refsDir = join(stylesDir, name, 'refs')
+  if (!existsSync(refsDir) || !readdirSync(refsDir).some((f) => /\.(png|jpe?g|webp)$/i.test(f))) errors.push(`styles/${name}/refs: no image`)
   if (!stylesIndex.includes(`](${name}/STYLE.md)`)) errors.push(`styles/README.md: no row for ${name}`)
 }
 
