@@ -12,6 +12,7 @@ Sources: https://www.runflow.io/blog/comfyui-wan-2-2-image-to-video , https://do
 
 Rules: a person from a model needs the AI label (`market` §4); original worlds only, no Avatar, One Piece or Harry Potter names; a real person's face only with their consent.
 Realistic human base for tier 0 (MPFB or MakeHuman) was not tested: do it before promising a real-life look from Blender; expect uncanny skin without a render pass of hours.
+yskills himself: the `twin` skill (his real face, only the mouth re-synced), not these tiers.
 Own people generator: not a thing Claude can build cheaply. Tier 1 is that route (open weights on his GPU).
 
 ## Which styles each tier reaches
