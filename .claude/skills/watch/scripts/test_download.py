@@ -1,4 +1,5 @@
 """Download flags: impersonation only when curl_cffi is usable, cert retry detection."""
+import os
 import subprocess
 import sys
 import unittest
@@ -17,9 +18,24 @@ def fake_run(stdout):
 class Flags(unittest.TestCase):
     def setUp(self):
         dl.impersonation_args.cache_clear()
+        env = mock.patch.dict(os.environ)
+        env.start()
+        self.addCleanup(env.stop)
+        os.environ.pop('CLAUDE_CODE_REMOTE', None)
+        os.environ.pop('WATCH_IMPERSONATE', None)
 
     def test_impersonates_when_curl_cffi_listed(self):
         with fake_run('Client Source\nChrome-136 Macos-15 curl_cffi\n'):
+            self.assertEqual(dl.impersonation_args(), ('--impersonate', 'chrome'))
+
+    def test_cloud_runs_plain_yt_dlp(self):
+        os.environ['CLAUDE_CODE_REMOTE'] = 'true'
+        with fake_run('Chrome-136 Macos-15 curl_cffi\n'):
+            self.assertEqual(dl.impersonation_args(), ())
+
+    def test_env_forces_impersonation_in_cloud(self):
+        os.environ.update(CLAUDE_CODE_REMOTE='true', WATCH_IMPERSONATE='1')
+        with fake_run('Chrome-136 Macos-15 curl_cffi\n'):
             self.assertEqual(dl.impersonation_args(), ('--impersonate', 'chrome'))
 
     def test_no_flag_without_curl_cffi(self):

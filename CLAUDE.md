@@ -72,6 +72,14 @@ goes in its home only, everywhere else links it.
 - New app idea, an idea or change for a live project (feature, fix, art, video) or "continue the
   project": the `operator` skill (live project: its "Idea for a live project"), never one
   catch-all thread. One thread per plan or PR, closed when done (`docs/WORKFLOW.md`). [advisory]
+- Videos (yskills 2026-10-26, every chat everywhere): an Instagram, TikTok or YouTube link or a video
+  file is a request to watch it, whatever else the message says, with no "watch this" needed and no
+  WebSearch in its place. First run `watch.py` of the `watch` skill (`.claude/skills/watch/` in this
+  repo's checkout; `add_repo` it if you are elsewhere), plain, no impersonation. It fails: laptop via
+  Remote Control; no laptop: his sentence or a screenshot. Then give a verdict per video (Use, Skip,
+  Script or Later; five lines in chat, the table in `docs/research/<date>-video-batch.md`), put a
+  Take in its home and a lasting lesson as a line there. A safety-check block is reported once, never
+  worked around (`watch` SKILL.md, step 1). [advisory]
 - Models: the one line in `docs/WORKFLOW.md` (Models). A model yskills names is used as named.
 - Lessons stick: every ask of yskills becomes, the same turn, an open thread until delivered or a line in its home in claude-setup (`operator` roles/project-manager.md, Asks ledger); a correction becomes a line in its home, or a test, lint rule or hook. Friction
   with this setup becomes a `loop:setup` issue (`operator` skill, Setup loop). Where a lesson goes:
