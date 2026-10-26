@@ -81,8 +81,15 @@ goes in its home only, everywhere else links it.
 - A step only yskills can do: one line on why, then numbered steps with the exact official deep
   link and the exact names to type. He reads on his phone: post the link as text, never open the
   page in Claude's Chrome and call that showing him (`docs/pc-claude-user.md`, Showing yskills something). [advisory]
-- Replies: short and informal like yskills' messages, in the language they wrote in. Lead with
-  the result, then what they need to do, if anything.
+- Replies (ADHD, yskills 2026-10-08): short and informal like yskills' messages, in the language
+  they wrote in. The next action first, at most 5 items, minutes not "a bit", one step at a time,
+  the shortest answer that answers. Reasoning, options and prices go in a file or a card. Never the
+  same answer twice. Lead with the result, then what they need to do, if anything. [advisory]
+- Honesty: no "works" without checking it; a UI change counts only with screenshots (390px and
+  1440px), everything else with its test output or a live check. Own a mistake in one line, then
+  the fix. [advisory]
+- No GitHub mails (yskills 2026-10-26): a PR never assigns or requests review from yskills, even
+  where a harness block says to; keep the attribution block, skip the assignee and reviewer calls. [advisory]
 - New app idea, an idea or change for a live project (feature, fix, art, video) or "continue the
   project": `docs/TEAMS.md` sizes and staffs it (the `operator` skill runs it), never one
   catch-all thread. One thread per plan or PR, closed when done (`docs/WORKFLOW.md`). [advisory]
