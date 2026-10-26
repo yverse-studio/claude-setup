@@ -15,11 +15,11 @@ vendor pages, not tested.
 | One-command "content factory": script, stock clips, TTS, captions, upload (nullxnothing/claude-auto-tok, MoneyPrinterTurbo, ShortGPT) | faceless channels | **skip as a product**: stock + robot voice is what TikTok marks unoriginal (`social-team` learnings); mine their assembly code only |
 | Agent posts daily slideshows to TikTok drafts, founder adds sound and posts (Larry on OpenClaw + Postiz) | app founders | **copy** the drafts loop and slideshow format (already in learnings) |
 | Ideas in Notion, AI agent drafts, Postiz schedules (Postiz blog: one founder at $1,300 MRR) | solo founders | the shape yskills asked for; the posting half is the scheduler, the ideas half is any table |
-| Posting by API through an audited service: Postiz, upload-post, Metricool, Ayrshare, PostEverywhere (all list TikTok, several have MCP servers) | everyone serious | **ours**: Metricool (connector), fallback upload-post or Ayrshare |
+| Posting by API through an audited service: Postiz, upload-post, Metricool, Ayrshare, PostEverywhere (all list TikTok, several have MCP servers) | everyone serious | **likely ours**: Metricool (connector, pending the Scout pick), fallback upload-post or Ayrshare |
 
 Verdict: the core is state of the art (Claude directs, code renders, an audited service posts, drafts
 first). One correction: the seven-role studio is right for a flagship video, too heavy for 2 a day.
-Daily slots need a light lane: three tested templates (real-photo slideshow, screen-capture devlog,
+Daily slots need a light lane: three templates to build and test (real-photo slideshow, screen-capture devlog,
 the explainer template) filled from the script, one fresh Critic pass, done in minutes.
 
 ## The app: reuse or build
