@@ -3,6 +3,194 @@
  "rules": "claude-setup .claude/skills/video-studio/sound-kit.md",
  "entries": [
   {
+   "id": "chill-music",
+   "kind": "music",
+   "mood": "chill",
+   "source": "Xusu, chill music (Freesound)",
+   "url": "https://freesound.org/people/Xusu/sounds/320725/",
+   "licence": "CC0-1.0",
+   "proof": "licences/freesound/xusu-chill-music.html",
+   "tags": [
+    "chill",
+    "mellow",
+    "background"
+   ],
+   "presets": [
+    "real_talk",
+    "explainer"
+   ],
+   "original": "xusu-chill-music.mp3",
+   "note": "first 120 s, 128 kbps mp3, 2 s fade out",
+   "file": "music/chill/chill-music.mp3",
+   "lufs": -12.5,
+   "rms": -12.716783,
+   "peak": 0.1,
+   "seconds": 107.807,
+   "bpm": 99.4
+  },
+  {
+   "id": "cinematic-lofi-beat",
+   "kind": "music",
+   "mood": "chill",
+   "source": "Seth_Makes_Sounds, Cinematic Lofi Beat (Freesound)",
+   "url": "https://freesound.org/people/Seth_Makes_Sounds/sounds/687006/",
+   "licence": "CC0-1.0",
+   "proof": "licences/freesound/seth-makes-sounds-cinematic-lofi-beat.html",
+   "tags": [
+    "lofi",
+    "chill",
+    "warm",
+    "soft",
+    "hiphop"
+   ],
+   "presets": [
+    "real_talk",
+    "explainer"
+   ],
+   "original": "seth-makes-sounds-cinematic-lofi-beat.mp3",
+   "note": "first 120 s, 128 kbps mp3, 2 s fade out",
+   "file": "music/chill/cinematic-lofi-beat.mp3",
+   "lufs": -16.7,
+   "rms": -19.087265,
+   "peak": -0.5,
+   "seconds": 120.033,
+   "bpm": 117.5
+  },
+  {
+   "id": "cool-guitar-bed",
+   "kind": "music",
+   "mood": "chill",
+   "source": "Seth_Makes_Sounds, Cool Guitar Background Music Thing (Freesound)",
+   "url": "https://freesound.org/people/Seth_Makes_Sounds/sounds/684980/",
+   "licence": "CC0-1.0",
+   "proof": "licences/freesound/seth-makes-sounds-cool-guitar-background-music-thing.html",
+   "tags": [
+    "guitar",
+    "chill",
+    "relaxed",
+    "background"
+   ],
+   "presets": [
+    "real_talk",
+    "explainer"
+   ],
+   "original": "seth-makes-sounds-cool-guitar-background-music-thing.mp3",
+   "note": "first 120 s, 128 kbps mp3, 2 s fade out",
+   "file": "music/chill/cool-guitar-bed.mp3",
+   "lufs": -17.3,
+   "rms": -20.096498,
+   "peak": -0.5,
+   "seconds": 120.024,
+   "bpm": 117.5
+  },
+  {
+   "id": "hiphop-chill-calm",
+   "kind": "music",
+   "mood": "chill",
+   "source": "klaudux, Hip Hop beat Chill   calm  music (Freesound)",
+   "url": "https://freesound.org/people/klaudux/sounds/264081/",
+   "licence": "CC0-1.0",
+   "proof": "licences/freesound/klaudux-hip-hop-beat-chill-calm-music.html",
+   "tags": [
+    "hiphop",
+    "chill",
+    "calm",
+    "beat"
+   ],
+   "presets": [
+    "real_talk",
+    "explainer"
+   ],
+   "original": "klaudux-hip-hop-beat-chill-calm-music.mp3",
+   "note": "first 120 s, 128 kbps mp3, 2 s fade out",
+   "file": "music/chill/hiphop-chill-calm.mp3",
+   "lufs": -13.5,
+   "rms": -14.291528,
+   "peak": -0.0,
+   "seconds": 120.033,
+   "bpm": 129.2
+  },
+  {
+   "id": "lofi-type-beat",
+   "kind": "music",
+   "mood": "chill",
+   "source": "freelncr, Lo-fi Type Beat FREELNCR (Freesound)",
+   "url": "https://freesound.org/people/freelncr/sounds/561282/",
+   "licence": "CC0-1.0",
+   "proof": "licences/freesound/freelncr-lo-fi-type-beat-freelncr.html",
+   "tags": [
+    "lofi",
+    "chill",
+    "beat",
+    "hiphop"
+   ],
+   "presets": [
+    "real_talk",
+    "explainer"
+   ],
+   "original": "freelncr-lo-fi-type-beat-freelncr.mp3",
+   "note": "first 120 s, 128 kbps mp3, 2 s fade out",
+   "file": "music/chill/lofi-type-beat.mp3",
+   "lufs": -16.0,
+   "rms": -17.768219,
+   "peak": 0.2,
+   "seconds": 120.033,
+   "bpm": 89.1
+  },
+  {
+   "id": "epic-synth-orchestral",
+   "kind": "music",
+   "mood": "cinematic",
+   "source": "Bertsz, Epic Synth/Orchestral Music (Freesound)",
+   "url": "https://freesound.org/people/Bertsz/sounds/545459/",
+   "licence": "CC0-1.0",
+   "proof": "licences/freesound/bertsz-epic-synth-orchestral-music.html",
+   "tags": [
+    "epic",
+    "orchestral",
+    "synth",
+    "build"
+   ],
+   "presets": [
+    "big"
+   ],
+   "original": "bertsz-epic-synth-orchestral-music.mp3",
+   "note": "first 120 s, 128 kbps mp3, 2 s fade out",
+   "file": "music/cinematic/epic-synth-orchestral.mp3",
+   "lufs": -14.8,
+   "rms": -17.787607,
+   "peak": -0.5,
+   "seconds": 74.24,
+   "bpm": 112.3
+  },
+  {
+   "id": "circuit-synthwave",
+   "kind": "music",
+   "mood": "drive",
+   "source": "Doctor_Dreamchip, Circuit Synthwave (Freesound)",
+   "url": "https://freesound.org/people/Doctor_Dreamchip/sounds/460357/",
+   "licence": "CC0-1.0",
+   "proof": "licences/freesound/doctor-dreamchip-circuit-synthwave.html",
+   "tags": [
+    "synthwave",
+    "electronic",
+    "driving",
+    "retro"
+   ],
+   "presets": [
+    "explainer",
+    "big"
+   ],
+   "original": "doctor-dreamchip-circuit-synthwave.mp3",
+   "note": "first 120 s, 128 kbps mp3, 2 s fade out",
+   "file": "music/drive/circuit-synthwave.mp3",
+   "lufs": -10.2,
+   "rms": -11.477631,
+   "peak": -0.0,
+   "seconds": 120.033,
+   "bpm": 123.0
+  },
+  {
    "id": "junkala-level-1",
    "kind": "music",
    "mood": "drive",
@@ -49,6 +237,90 @@
    "peak": 1.6,
    "seconds": 91.141,
    "bpm": 107.7
+  },
+  {
+   "id": "disco-funk-loop",
+   "kind": "music",
+   "mood": "funky",
+   "source": "josefpres, Disco funk loops 001 remix 1 long loop with drums 120 bpm (Freesound)",
+   "url": "https://freesound.org/people/josefpres/sounds/567959/",
+   "licence": "CC0-1.0",
+   "proof": "licences/freesound/josefpres-disco-funk-loops-001-remix-1-long-loop-with-drums-.html",
+   "tags": [
+    "funk",
+    "disco",
+    "groove",
+    "drums",
+    "loop",
+    "120bpm"
+   ],
+   "presets": [
+    "real_talk",
+    "explainer",
+    "big"
+   ],
+   "original": "josefpres-disco-funk-loops-001-remix-1-long-loop-with-drums-.mp3",
+   "note": "first 120 s, 128 kbps mp3, 2 s fade out",
+   "file": "music/funky/disco-funk-loop.mp3",
+   "lufs": -19.8,
+   "rms": -20.588104,
+   "peak": -7.3,
+   "seconds": 120.033,
+   "bpm": 117.5
+  },
+  {
+   "id": "funky-house-22",
+   "kind": "music",
+   "mood": "funky",
+   "source": "Warlightwolf, Funky House MUSIC 22 (Freesound)",
+   "url": "https://freesound.org/people/Warlightwolf/sounds/612139/",
+   "licence": "CC0-1.0",
+   "proof": "licences/freesound/warlightwolf-funky-house-music-22.html",
+   "tags": [
+    "house",
+    "funky",
+    "groove",
+    "electronic"
+   ],
+   "presets": [
+    "explainer",
+    "big"
+   ],
+   "original": "warlightwolf-funky-house-music-22.mp3",
+   "note": "first 120 s, 128 kbps mp3, 2 s fade out",
+   "file": "music/funky/funky-house-22.mp3",
+   "lufs": -13.2,
+   "rms": -14.529246,
+   "peak": -1.0,
+   "seconds": 103.993,
+   "bpm": 123.0
+  },
+  {
+   "id": "fun-music-loop",
+   "kind": "music",
+   "mood": "playful",
+   "source": "Seth_Makes_Sounds, Fun Music Loop (Freesound)",
+   "url": "https://freesound.org/people/Seth_Makes_Sounds/sounds/688623/",
+   "licence": "CC0-1.0",
+   "proof": "licences/freesound/seth-makes-sounds-fun-music-loop.html",
+   "tags": [
+    "fun",
+    "playful",
+    "loop",
+    "electronic"
+   ],
+   "presets": [
+    "explainer",
+    "big"
+   ],
+   "original": "seth-makes-sounds-fun-music-loop.mp3",
+   "note": "first 120 s, 128 kbps mp3, 2 s fade out",
+   "file": "music/playful/fun-music-loop.mp3",
+   "lufs": -14.6,
+   "rms": -17.070024,
+   "peak": 0.1,
+   "seconds": 120.033,
+   "bpm": 117.5
   },
   {
    "id": "junkala-stage-1",
