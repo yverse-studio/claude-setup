@@ -18,3 +18,7 @@ named; newest last; merge duplicates.
 ## Our accounts
 
 - 2026-10-12 (Y-Land): polished promos got about 300 views; film real play as a player would (`video-studio` learnings).
+- 2026-10-26 (@xyskillsx, 30 own videos watched): every hit (69k-509k) is his face plus one ironic caption from frame 1, 7-9 s, 0-5 cuts; faceless travel and food clips stay at 250-1.1k; style profile in `xyskillsx-style.md`.
+- 2026-10-26 (@xyskillsx): a caption that asks the viewer something (KBBQ, 5.7k) or roasts himself ("only 30 followers", 406 comments) earns the comments; plain scenery earns none.
+- 2026-10-26 (@xyskillsx): builder content in designed cards read as an app ad (Y-Land, 284 views); the tech flex told as a meme (hand-tracking filter, 277k) is his best non-face lane.
+- 2026-10-26 (Metricool): the connector has no saves and no history before the connect date; saves and older follower numbers come from TikTok Studio.

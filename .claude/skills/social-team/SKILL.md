@@ -80,8 +80,10 @@ Two kinds of account (yskills, 2026-10-18: "when i give you another account or y
 our projects you get full decision power, it's just my personal now, i want to be authentic and creative"):
 
 - **His personal account (@xyskillsx):** yskills decides what goes up; the team makes each idea great
-  in his taste (`roles/lead.md`). A ready video goes to drafts or the queue on "upload"; yskills adds a
-  trending sound and taps post (`video-studio` delivers a music-free master for that).
+  in his taste (`roles/lead.md`, [`xyskillsx-style.md`](xyskillsx-style.md)). A ready video goes to drafts or the queue on "upload"; yskills adds a
+  trending sound and taps post (`video-studio` delivers a music-free master for that). Route
+  (yskills, 2026-10-26): Metricool with `autoPublish` off, so his phone gets the video at the planned
+  time; never a browser bot into TikTok Studio's drafts (`learnings.md`).
   - **Auto-post** there only while yskills has switched it on in the `social` app. The switch is his
     standing ok for posts under CLAUDE.md's ask rule; note the date in project memory. Only videos the
     Critic passed, only the devlog and learning pillars, at most 2 a day, and a daily one-line summary
