@@ -43,20 +43,28 @@ class TikTokUnavailable(Exception):
     pass
 
 
-class _SameFamilyRedirects(urllib.request.HTTPRedirectHandler):
+class _AllowedRedirects(urllib.request.HTTPRedirectHandler):
+    def __init__(self, allowed):
+        self._allowed = allowed
+
     def redirect_request(self, req, fp, code, msg, headers, newurl):
-        if not _allowed(newurl):
-            raise urllib.error.URLError(f'redirect to a non-TikTok host refused: {urlparse(newurl).hostname}')
+        if not self._allowed(newurl):
+            raise urllib.error.URLError(f'redirect to a host off the allowlist refused: {urlparse(newurl).hostname}')
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
-def _opener() -> urllib.request.OpenerDirector:
-    # Built from scratch: https and cookies only, no file:, ftp: or data: handlers.
+def locked_opener(allowed=None) -> urllib.request.OpenerDirector:
+    """https and cookies only (no file:, ftp:, data:); redirects only where `allowed(url)` says so."""
     opener = urllib.request.OpenerDirector()
-    for handler in (urllib.request.HTTPSHandler(), _SameFamilyRedirects(), urllib.request.HTTPErrorProcessor(), urllib.request.HTTPDefaultErrorHandler(),
+    for handler in (urllib.request.HTTPSHandler(), _AllowedRedirects(allowed or _allowed),
+                    urllib.request.HTTPErrorProcessor(), urllib.request.HTTPDefaultErrorHandler(),
                     urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar())):
         opener.add_handler(handler)
     return opener
+
+
+def _opener() -> urllib.request.OpenerDirector:
+    return locked_opener()
 
 
 def fetch_item(url: str, opener=None) -> tuple[dict, urllib.request.OpenerDirector]:

@@ -203,7 +203,7 @@ def fetch_captions(url: str, out_dir: Path, *, sub_lang='auto', cookies_file=Non
             raise SystemExit('yt-dlp did not produce the selected caption track.')
         result['subtitle_path'] = str(subtitle)
     except SystemExit as exc:
-        meta = publicmeta.fetch(url)
+        meta = None if result['info_path'] else publicmeta.fetch(url)  # yt-dlp's own metadata wins
         if meta:
             result['info'] = meta
             print(f"[watch] yt-dlp refused; using the platform's public {meta['source']} for the scan", file=sys.stderr)

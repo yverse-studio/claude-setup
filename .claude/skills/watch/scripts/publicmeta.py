@@ -12,9 +12,14 @@ import re
 import urllib.request
 from urllib.parse import quote, urlparse
 
+import tiktok  # its locked_opener: https only, no file:/ftp:, redirects checked
+
 UA = 'claude-setup-watch/1.0 (+https://github.com/yverse-studio/claude-setup)'
 YT_HOSTS = ('youtube.com', 'youtu.be')
 IG_PATH = re.compile(r'^/(?:[\w.]+/)?(p|reel|reels|tv)/([\w-]+)')
+
+
+ALLOWED = ('youtube.com', 'youtu.be', 'instagram.com')
 
 
 def _host_is(url: str, *domains: str) -> bool:
@@ -23,14 +28,24 @@ def _host_is(url: str, *domains: str) -> bool:
     return parts.scheme == 'https' and any(host == d or host.endswith('.' + d) for d in domains)
 
 
+def _on_platform(url: str) -> bool:
+    return _host_is(url, *ALLOWED)
+
+
 def _get(url: str, limit: int = 2_000_000) -> str:
+    if not _on_platform(url):
+        raise OSError('not a YouTube or Instagram https URL')
     request = urllib.request.Request(url, headers={'User-Agent': UA})
-    with urllib.request.urlopen(request, timeout=20) as resp:  # https only: callers checked the host
+    with tiktok.locked_opener(_on_platform).open(request, timeout=20) as resp:
+        if not _on_platform(resp.geturl()):
+            raise OSError('redirected off the platform')
         return resp.read(limit).decode('utf-8', 'replace')
 
 
 def youtube(url: str) -> dict | None:
     data = json.loads(_get(f'https://www.youtube.com/oembed?format=json&url={quote(url, safe="")}', 200_000))
+    if not isinstance(data, dict):
+        return None
     return {'title': data.get('title'), 'uploader': data.get('author_name'), 'duration': None, 'url': url,
             'cover': data.get('thumbnail_url'), 'source': 'youtube-oembed'}
 
