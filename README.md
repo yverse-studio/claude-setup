@@ -125,3 +125,5 @@ list to the setup script would stop that is untested. Threads research with WebS
 Research notes and sources behind these choices: [docs/RESEARCH.md](docs/RESEARCH.md).
 The roadmap every new project follows: [docs/WORKFLOW.md](docs/WORKFLOW.md). The practice runs
 before the first real one: [docs/TEST-PROJECTS.md](docs/TEST-PROJECTS.md).
+
+Licence: [MIT](LICENSE). Vendored third-party parts keep their own licences: [THIRD_PARTY.md](THIRD_PARTY.md).

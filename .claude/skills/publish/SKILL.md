@@ -176,9 +176,11 @@ Decided 2026-10-11. Read this before touching anything Cloudflare; a thread that
 starts here, not with yskills.
 
 **Route 1, cloud threads: the claude-setup workflows.** `new-project` (also the existing-repo
-path), `delete-project`, `build-logs`, run with the Actions token. That token has Workers
+path), `delete-project`, `build-logs`, run with the Actions token. The Actions token has Workers
 Scripts, D1, Builds Configuration and Account Settings, and nothing else: no KV, no token
-management. Cloud threads never run wrangler (the proxy breaks asset uploads and there is no [advisory]
+management. `branch-cleanup.yml` also holds a key (`PROJECTS_GITHUB_TOKEN`, the org GitHub
+token, not a Cloudflare one). These and kleingarten's Roblox publish are the only workflows
+allowed to hold keys. Cloud threads never run wrangler (the proxy breaks asset uploads and there is no [advisory]
 safe login) and never ask yskills for `wrangler login`, a token edit or a dashboard click. [advisory]
 
 **Route 2, everything that token cannot do:** KV namespaces, a dashboard-only setting, token or
