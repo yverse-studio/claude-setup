@@ -62,7 +62,7 @@ the ideas-to-posts app for every brand: `https://social.yverse.workers.dev`, Wor
 - HQ (Company XY) gets one row with the link and today's count (`docs/hq-rows.md`), not a copy of the app.
 - Until a slice of the app is live, ideas land in `/mnt/project-files/<project>/social/ideas.md` and finished videos are attached in the thread reply. Videos of a product's own campaign stay in its `video/<slug>/` (`video-studio`).
 
-The comments and DMs webhook and the `posts.md`, `brands.md`, `deals.md` notes join the same project when Community and Partnerships start.
+`social/posts.md` (one row per post, [`templates/posts.md`](templates/posts.md)) is written by the Publisher and Analyst from the first post. The comments and DMs webhook and the `brands.md`, `deals.md` notes join the same project when Community and Partnerships start.
 
 ## Daily lane and the full studio
 

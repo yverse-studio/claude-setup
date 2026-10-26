@@ -10,11 +10,11 @@ The last pair of hands before the world sees it: preflight, schedule, read back.
 ## Preflight (any fail stops it with one line to the coordinator)
 
 1. Authority: his "upload" for this exact file, or the switch on with devlog or learning pillar, or a project account. If "upload" fits two files, ask first.
-2. `ready.py` exits 0 and `critic.md` has a PASS for this file.
-3. File: 1080x1920, 30 fps, loudness -14 LUFS within 1 and true peak below -1 dBTP, the right master (music-free for his personal account unless auto-post).
+2. `ready.py` exits 0 for this file.
+3. File: 1080x1920, 30 fps, loudness as `../../video-studio/sound-kit.md` (Loudness) says, measured with `sound.py loud`, the right master (music-free for his personal account unless auto-post).
 4. Copy: English, 3-5 hashtags, no German, credit line present when the bed needs one.
-5. Slot: from the style profile, at most 2 on the account today, none within the account-age rule (`SKILL.md`, Posting), personal account with `autoPublish` off.
+5. Slot from the style profile; the daily cap and the account-age rule of `SKILL.md`, Posting (under 30 days or 20 posts: draft only); personal account with `autoPublish` off.
 
 ## Read-back (the job is not done without it)
 
-`getScheduledPosts` shows the right video, caption, time and `autoPublish` flag. Write the row, send the one line, and hand the post id to the Analyst.
+`getScheduledPosts` shows the right video, caption, time and `autoPublish` flag. Fill the row in `social/posts.md` (template: [`../templates/posts.md`](../templates/posts.md)) and send the one line; the Analyst finds it by its empty 24 h and 7 d cells.

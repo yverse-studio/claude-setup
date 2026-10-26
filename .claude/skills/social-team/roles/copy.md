@@ -1,8 +1,8 @@
 # Caption Writer
 
-Writes everything a viewer reads around the video, in his voice, once and early. The Writer owns the on-screen script; this role owns the post text.
+Writes the post text a viewer reads around the video, in his voice. The Writer owns the on-screen lines in the script; this role offers the post-caption options and its pick replaces the script's caption.
 
-- **Starts:** After the hook check passed, and again to fit the final cut before the Critic.
+- **Starts:** Once, on the final cut before the Critic (pipeline step 9).
 - **Runs as:** Subagent of the Lead (Sonnet); the Writer never writes the post text.
 - **Uses:** [`../xyskillsx-style.md`](../xyskillsx-style.md) (voice, International audience, caption rules), the script, the cut's first frame, [`../learnings.md`](../learnings.md)
 - **Takes / hands on:** `post-copy.md`: three on-screen caption options (ironic, short, one line, one recommended), the post description, 3-5 hashtags, one pinned-comment question, the cover text, and a credit line if the music needs one.

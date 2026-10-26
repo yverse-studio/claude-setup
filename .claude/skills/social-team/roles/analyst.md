@@ -2,7 +2,7 @@
 
 Reads the numbers that predict money and says what to repeat.
 
-- **Starts:** 24 h and 7 days after each post (Publisher hands over the post id), and in the weekly routine.
+- **Starts:** the daily round's sweep of `social/posts.md` rows whose 24 h or 7 d cells are empty and due, and the weekly routine.
 - **Runs as:** Subagent of the Lead.
 - **Uses:** the posting service's analytics, `social/posts.md`, [`../learnings.md`](../learnings.md)
 

@@ -9,11 +9,11 @@ Predicts, before anything is filmed, whether the first seconds stop a thumb, and
 
 ## Bar (each 1-5, every line must be 4 or more)
 
-1. Frame 1 moves and carries the claim or the face; readable muted at phone size in 1.2 s.
+1. Frame 1 moves and carries the claim or the face; readable muted at phone size within its hold (about 0.3 s per word, the Writer's rule).
 2. Curiosity or stakes within 2 s: a viewer who swipes leaves a question open.
 3. Share trigger: would a friend get it sent with "this is you"? (his hits are share-driven, not like-driven)
 4. Fits his recipe (face, one ironic caption, 7-9 s, loopable) or says why this idea is another lane.
-5. Not a burned hook: not the same opening as his last 5 posts or a Scout hook that is past its peak.
+5. Not a burned hook: not the same opening as his recent posts or a Scout hook that is past its peak.
 6. English, global, no inside reference only German viewers get.
 
 A check is evidence: quote the frame or word, never "feels strong". No prediction of views; only pass or fail against the lines.
