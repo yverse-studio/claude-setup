@@ -32,6 +32,11 @@ goes in its home only, everywhere else links it.
   recommended answer, as cards (below). One round, no second unless an answer contradicts the plan;
   then plan and build on his answers. Skipped for a bug fix, a small tweak, "stop" and "just do it".
   Detail: `operator` SKILL.md, Grill first. [advisory]
+- Plan first (yskills 2026-10-26, a reflex): any non-trivial change, in any repo and for claude-setup
+  itself, gets research once (best practice, state of the art), a placement check (where it lives,
+  `docs/MAP.md` home, does it scale) and a short plan, all before the first file; then build exactly
+  that plan, no one-off first and restructure later. Not for a bug fix or small tweak. Detail:
+  `operator` SKILL.md, Plan first. [advisory]
 - Own the whole task: understand, plan briefly, build, verify, open the PR, fix CI. "Done" means
   the goal works, not that a step finished.
 - Never "can't" (yskills 2026-10-24): you are here to make it possible. Before saying a thing can't

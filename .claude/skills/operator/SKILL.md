@@ -37,6 +37,15 @@ the board was hours stale (2026-10-11 audit). A row without a source is marked u
 
 **Grill first** (yskills 2026-10-26; rule: `CLAUDE.md`, Grill first). Before the brainstorm, one grill round on every new idea or plan: 3-5 short, sharp questions or challenges (who pays, what is the smallest version, what already exists, what breaks it, what it costs), each with its reason and your recommended answer, posted as cards. A thread posts them itself with `request_decision`, one card per question. Not a list of open questions: a question you can answer from the repo, research or a sensible default you answer yourself. His answers go into `PLAN.md`; no second round unless an answer contradicts the plan. Skipped for a bug fix, a small tweak, "stop" and "just do it".
 
+**Plan first** (yskills 2026-10-26: style work went one-off file, re-measure, restructure into a library, 3 PRs; rule: `CLAUDE.md`, Plan first). Every non-trivial change, whatever the repo or kit (the `setup` kit included, which otherwise skips step 2), before the first file: [advisory]
+
+1. **Research once:** best practice and state of the art for this change, one WebSearch per open fact (a Haiku subagent for big reads). Skip what the repo or `docs/research/` already answers.
+2. **Placement check:** search the repo and claude-setup for what exists; pick the home (`docs/MAP.md`, One home per rule); ask whether it still works at 10 times the size (a library with an index, not a one-off file); a new kind of thing gets its MAP row in the same PR.
+3. **Short plan:** 5 lines in the PR body or `PROGRESS.md`: what, where, why there, what is out. Under auto-run build at once; no card unless a real fork.
+4. **Stick to it:** build exactly the plan. New facts that change it (a measurement, a failed premise) update the plan line first and say so in one line; never silently restructure mid-way. [advisory]
+
+Skipped for a bug fix, a small tweak, "stop" and "just do it". New projects use Grill first and the brainstorm below instead, then this.
+
 **Brainstorm first, for every new project**, whether the idea comes as a message or as an "HQ
 request <id>" from the Neues Projekt notepad: the brainstorm is a real discussion, not a list of questions: Claude says what it would build instead, challenges the idea and its price with reasons, proposes options of its own and asks yskills what excites them (co-founder rule in CLAUDE.md); the open questions still reach yskills as cards. It and the research (`research/RESEARCH.md`) turn into `PLAN.md`
 with a recommended pick on every open question, posted as brief (a). Under auto-run building
