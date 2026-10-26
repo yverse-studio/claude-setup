@@ -57,7 +57,9 @@ goes in its home only, everywhere else links it.
   consequence, one recommended with its reason; single choice, so several answers become yes/no
   cards. Never only `Card:` text when the card tool is there; `Card:` text is the fallback for a
   session without one. The coordinator has no card tool (tap-tested 2026-10-26): when it needs a
-  decision it starts a one-card thread that posts it. The thread goes on with the recommendation; the tap comes back to it as a
+  decision it starts a one-card thread that posts it, and posts one chat line with the link to the
+  card. This holds for every project and chat. `request_decision` has no multi-select (schema checked
+  2026-10-26): when several answers can apply, post one yes/no card per choice. The thread goes on with the recommendation; the tap comes back to it as a
   wake (or relayed by the coordinator); a tap against the
   recommendation means change course. Money, a new service, deleting and anything that can't be
   undone wait for the tap. Visual choices (2026-10-18) are normal cards with screenshots from a Designer thread,
