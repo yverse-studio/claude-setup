@@ -101,7 +101,7 @@ How every visual choice reaches yskills (2026-10-18: no Artifacts, he does not w
 
 1. Each option is a draft rendered with Playwright at 390px and 1440px; a game scene or 3D shows the 1440px frame.
 2. Save the shots as `/mnt/project-files/<project>/votes/<round>/<letter>-<name>-{390,1440}.png`.
-3. The thread's `Card:` reply lists the files, one line per option (letter, two-word name, the feel; recommendation starred with its reason).
+3. The thread posts the real card with `request_decision` and a reply with the files, one line per option (letter, two-word name, the feel; recommendation starred with its reason).
 4. The Project Manager posts the card in the project chat with the screenshots attached. The tap is the pick; "none, try again" is an option.
 5. After the decision the thread deletes that round's folder.
 

@@ -49,14 +49,15 @@ goes in its home only, everywhere else links it.
   (keys, domain, Gewerbe). Otherwise pick the sensible default, say which, keep going.
 - "Stop", "pause" and taste calls (a rejected asset or look) are final: stop at once, never argue. [advisory]
 - Cards (2026-10-08, a reflex since 2026-10-26): every decision for yskills is a card, never options
-  buried in running text; a reply with one carries the fixed text card (`Card: <question>`, then one
+  buried in running text; in Claude Code a reply with one carries the fixed text card (`Card: <question>`, then one
   line per option `A label: consequence`, the recommended one first, starred, with its reason). The tappable card has short labels (`AskUserQuestion` in Claude Code, multi-select when several answers fit).
-  In a claude.ai project only the Project Manager (coordinator) posts cards, in the project chat
-  (`ask_decision`: a question of about 12 words, 2-4 options with a 1-2 word label and a one-line
+  In a claude.ai project (yskills 2026-10-26: "cards are no real cards any more, fix it") every
+  session posts the real card itself, the thread too: `request_decision` (the coordinator's may be
+  named `ask_decision`): a question of about 12 words, 2-4 options with a short label and a one-line
   consequence, one recommended with its reason; single choice, so several answers become yes/no
-  cards). A thread never posts a card itself: its reply carries `Card:` with the question,
-  options and recommendation (the coordinator reads every thread reply) and it goes on with the
-  recommendation. The coordinator relays the tap to the thread; a tap against the
+  cards. Never only `Card:` text when the card tool is there; `Card:` text is the fallback for a
+  session without one. The thread goes on with the recommendation; the tap comes back to it as a
+  wake (or relayed by the coordinator); a tap against the
   recommendation means change course. Money, a new service, deleting and anything that can't be
   undone wait for the tap. Visual choices (2026-10-18) are normal cards with screenshots from a Designer thread,
   saved in `/mnt/project-files/<project>/votes/` and posted with the card (`designer.md`,
