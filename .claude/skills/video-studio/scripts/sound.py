@@ -274,7 +274,8 @@ def pick_from_library(cues, library, preset_name, salt=""):
     entries = sound_library.load(Path(library))["entries"]
     last, picked, offset = None, [], zlib.crc32(salt.encode())
     for i, c in enumerate(sorted(cues, key=lambda c: c["t"])):
-        ok = [e["file"] for e in entries if e["kind"] == "sfx" and e["category"] == c["sfx"] and preset_name in e["presets"]]
+        ok = [e["file"] for e in entries if e["kind"] == "sfx" and e["category"] == c["sfx"] and preset_name in e["presets"]
+              and ("opt-in" in e.get("tags", []) ) == bool(c.get("opt_in"))]  # opt-in sounds (glitch) only when the cue asks for them
         if not ok:
             raise ValueError(f"no {c['sfx']!r} sound for preset {preset_name!r}")
         n = (i + offset) % len(ok)

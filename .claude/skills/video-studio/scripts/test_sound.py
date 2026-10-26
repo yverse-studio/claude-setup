@@ -204,6 +204,17 @@ class Library(unittest.TestCase):
         with self.assertRaises(ValueError):
             sound.pick_from_library(self.cues(1, "whoosh"), self.root, "real_talk")
 
+    def test_opt_in_sounds_only_when_the_cue_asks(self):
+        m = json.loads((self.root / "manifest.json").read_text())
+        m["entries"].append(dict(id="gl0", kind="sfx", category="glitch", tags=["opt-in"], presets=["big"], file="sfx/glitch/gl0.wav"))
+        (self.root / "manifest.json").write_text(json.dumps(m))
+        with self.assertRaises(ValueError):
+            sound.pick_from_library([{"t": 0, "sfx": "glitch"}], self.root, "big")
+        picked = sound.pick_from_library([{"t": 0, "sfx": "glitch", "opt_in": True}], self.root, "big")
+        self.assertEqual(picked[0][1].name, "gl0.wav")
+        with self.assertRaises(ValueError):  # a plain category never serves an opt-in cue
+            sound.pick_from_library([{"t": 0, "sfx": "hit", "opt_in": True}], self.root, "big")
+
     def test_own_synthesis_manifest_is_not_a_library(self):
         (self.root / "manifest.json").write_text("[]")
         self.assertIsNone(sound.library_manifest(self.root))
