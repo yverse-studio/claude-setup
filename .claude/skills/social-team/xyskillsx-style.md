@@ -65,6 +65,62 @@ at about 340. The Y-Land card video (284 views) looked clean but read like an ap
 - Over-editing: zoom on every word, whoosh on every cut, colour looks he would not use.
 - Changing his humour into "content": the joke and the caption are his; offer alternatives, he picks.
 
+## International audience (yskills 2026-10-26)
+
+yskills: "NOT a German audience but international, everything English; goal an authentic, nice
+community, money someday." His account is all-English already (his captions in the 2026-08 to
+2026-10 Metricool export), so the German signal is not the text: it is who follows him, where he
+posts from and when. Hold the rules below on every post; the personal account stays him.
+
+**What the data says (Metricool, 2026-09-26 to 10-26, Europe/Berlin):**
+- His followers' busiest hours are 10:00, 12:00 and 18:00 on weekdays (index about 1,100-1,470 at
+  10:00, 1,050-1,360 at 12:00, 1,100-1,390 at 18:00; Tue-Thu strongest), a second shelf at 16-17:00,
+  weekends about 40% lower, 02-05:00 the trough. That is the habit of today's mostly German
+  followers, not of the audience we want.
+- His hits did not follow the clock: 23.7k at 11:31 (Thu), 21.6k at 19:27 (Wed), 8.4k at 17:34 (Thu),
+  5.7k at 12:14 (Sun). Content and shares decide reach; the slot only decides who gets the first
+  push.
+- Country and language split of viewers: Metricool returns nothing for his personal account
+  (demographics need a business account, which loses trending sounds, `SKILL.md` Posting). It is
+  read from TikTok Studio instead: Analytics, Viewers, Top territories (screenshot from yskills,
+  asked once). Until then "did past hits reach non-German viewers" is unknown, not assumed.
+
+**The two slots (Europe/Berlin, scheduled by Metricool so he need not be awake):**
+
+| Slot | Berlin | UK | US East | US West | Why |
+|---|---|---|---|---|---|
+| A | 18:00 | 17:00 | 12:00 | 09:00 | his best Berlin peak, UK after work, US lunch; he can answer comments live |
+| B | 01:00 | 00:00 | 19:00 | 16:00 | US evening scroll, the hours no German is awake, so the first test audience is not his followers |
+
+This is a hypothesis for 14 days, not a fact: every post logs slot, views at 24 h, shares and
+saves; after 14 days the slot with the higher median 24 h views keeps both, or B moves to 03:00 or
+the second slot to 21:00 (UK evening). Weekends keep the same two. Comments on B posts are answered
+by him the next morning; his replies stay his.
+
+**Language and caption rules (all posts):**
+- English only: caption, on-screen text, spoken words and auto-captions, no German word without a
+  joke that explains it ("Spaetzle", not "Spätzle" in a hashtag; umlauts and ß only inside a quoted
+  word).
+- Plain global Gen Z English, short, one idea; no German slang, idioms translated word for word, or
+  German brands and places the world does not know (Lidl, Bahn, Rewe) unless the clip is the joke.
+- Dates "Oct 26", times "6 PM", money in $ or no number, miles or "km" with the number, Fahrenheit
+  and Celsius both or neither.
+- Hashtags: 3-5, English, one broad (#fyp is fine), two for the topic (#friedrice #hanoi), none
+  German (#fyp, never #fürdich, #deutschland, #germany unless the video is in Germany). No other
+  language's hashtag walls.
+- Trends: only sounds and formats that run in English-speaking feeds; check the sound page shows
+  global use before he adds it; no Germany-only meme or challenge.
+- Settings (his hands, one time): app language English, English added under Content preferences
+  languages, location tag on a post only when the place is real and well known (Hanoi, London),
+  otherwise none. No VPN and no faked region: it looks like bot behaviour and risks the account.
+- The friends who comment from Germany stay: they are the core of the community, he answers them
+  like everyone else.
+
+**Community (authentic, not growth-hacked):** he replies himself, first 60 minutes where he can
+(slot A), in English; one pinned comment that asks a real question; no engagement pods, no bought
+followers, no follow-for-follow. Money stays parked until trust (project memory); when it comes,
+the account's territory split decides which affiliate and brand lanes fit.
+
 ## How the team uses this
 
 - Writer: write 3 caption options in his voice for every clip (ironic, short, one line); he picks.
