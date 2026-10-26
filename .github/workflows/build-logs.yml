@@ -10,6 +10,11 @@ on:
         description: 'Worker name (lowercase letters, digits, dashes)'
         required: true
         type: string
+      cancel:
+        description: 'Cancel builds stuck queued or running for over 10 minutes'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -30,5 +35,6 @@ jobs:
       - run: node scripts/build-logs.mjs
         env:
           NAME: ${{ inputs.name }}
+          CANCEL: ${{ inputs.cancel }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}

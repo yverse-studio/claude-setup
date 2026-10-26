@@ -14,6 +14,8 @@ check is a hard yes or no from someone who didn't write the code.
 
 A check that doesn't apply passes; say "n/a" in the table. A reviewer verdict in checks 3 to 5 without quoted lines, the test-gap answer and a `Not judged:` list is not a pass ([`roles/reviewer.md`](roles/reviewer.md), Report).
 
+**Until the `journey` status can be posted (2026-10-26).** claude-setup's `journey.yml` fails on every run (GitHub 403 on the project repo, PR 292 replaces it), so a missing or red `journey` status from it is a warning, not a fail, until a project's own `journey.yml` posts one (this overrides "missing, pending, red ... is not 5/5" in The `journey` status below; a green one is still run through `verify` and a forged one still fails). Instead, check 2 runs the default branch's `npm run journey` against the preview by hand (or, without that script, the evaluator's preview run) and quotes its output. A check that cannot pass for anyone never blocks a merge (yskills 2026-10-26).
+
 ## Gate size
 
 The PR's size decides which checks run; the headline names it: `Gate 5/5 (S, round <n>)`.
@@ -70,6 +72,17 @@ output or a live check.
 Roblox projects have no preview URL: play the test place through the Studio MCP server and
 `screen_capture` it (`toolbox/catalog/roblox.md`, The loop).
 
+**The `journey` status (every project PR).** It is posted only by the project's own `journey.yml` (it runs
+on every PR by itself, `pull_request_target`, built-in `GITHUB_TOKEN`): `n/a` when the PR changes only docs, tests or `.github/` files, else green
+after the PR's preview served its head and the default branch's `npm run journey` passed there on a phone
+profile (`publish` skill, Preview journey). Anything else, Nuxt `app/`, `server/`, configs, `package.json`,
+runs the journey. A PR workflow can post a `journey` status with the same token (and overwrite a red), so a
+green tick in the UI proves nothing. **Check 1 runs `verify`:** put `{"sha": <the head sha>, "default_branch": <the repo's>, "statuses": <the head's commits/<sha>/statuses>, "run": <actions_get get_workflow_run of the run its newest journey status links to>}` on stdin of `node scripts/journey.mjs verify`. It passes only when
+the newest `journey` status is a success created by `github-actions[bot]` that links to a run of `.github/workflows/journey.yml` from `pull_request_target` in the same repo, titled `journey <head sha>`, on the default branch and finished green; a missing, pending, red or forged one is not 5/5. Until a branch ruleset requires the status on the
+project repos, `verify` is the gate. When the description says the PR changes journey files, the Tester
+reads them (they run only after the merge) and runs the new journey by hand in check 2 (incident
+2026-10-26: three gated PRs passed on local `verify` while the preview was broken).
+
 **No preview URL is not a pass.** Check 2 runs on the branch's Worker Preview. A PR without one
 (the Deploy or Preview command isn't set up, `publish` §A new project) is not 5/5: the gate stops
 and the operator fixes the deploy first. A flow that depends on mail (a confirm link, a mailed
@@ -120,6 +133,12 @@ How to undo a merge, by kind of change (write the line into the PR's "undo" line
     Claude's auto mode refuses, it doesn't try another way: it asks yskills for the tap.
   - **claude-setup PRs:** the gate merges them too; only when Claude Code's safety check
     blocks the merge does yskills tap **Merge it** on the card or GitHub's Merge button.
+  - **Live check after the merge** (incident 2026-10-26: ~3 h of social merges never deployed):
+    the merge is not done until live serves it. Within 15 minutes, read live `/api/config`; its
+    `commit` must equal the merge commit on `main` (`send_later` for the wait, never a sleep). Not
+    there: run the `build-logs` workflow (`cancel` for builds stuck over 10 min), say so in the
+    thread and to the coordinator, and post no `Done:` line. `deploy-watch.yml` checks every
+    project every 15 minutes as the net behind this and opens a `deploy-drift` issue.
   - **After the merge:** one lessons step (`docs/WORKFLOW.md`, Learning): save a lesson only if
     the next thread would repeat the mistake, mechanical ones as a check, prune what a check covers.
 - **Last PR before launch:** the operator posts brief (c) with the table; the gate merges at 5/5

@@ -51,14 +51,16 @@ the ideas-to-posts app for every brand: `https://social.yverse.workers.dev`, Wor
 
 | yskills sees | What it holds |
 |---|---|
-| Ideen | one text box; each idea gets date, brand, pillar, status (idea, scripted, draft, approved, scheduled, posted, dropped) |
+| Ideen | one text box plus a Stil (Real Talk, Erklär-Video, Großes Video) and an optional own clip (up to 300 MB, chunked into D1); links in the text are style examples to watch; checkboxes plus "Jetzt ausarbeiten" mark ideas queued |
 | Entwürfe | per draft: script, player, caption, slot; buttons Freigeben, Ändern (one line why), Verwerfen, Jetzt hochladen |
 | Plan | the next days' two slots per account, what fills them |
 | Auto-Post | the switch per account (Posting below) |
 
 - Login: a passkey on his phone (Face ID); the first passkey registered after the deploy is the owner, registration closes after it. No password, no secret anywhere.
-- Claude reads `GET /api/feed` (ideas, statuses, his taps; nothing private in it) and writes drafts by committing `content/drafts/<id>/` (script, caption, `final.mp4`) to the repo; the merge deploys them. Posted state goes back the same way. No API key for Claude.
-- The daily routine (a cloud trigger at 07:00 Berlin, the Social Lead's daily step): read the feed, script new ideas, make drafts through the daily lane (below), the Publisher queues approved ones (or, with auto-post on, Critic-passed ones) into today's slots through Metricool, write the one-line summary to the coordinator.
+- Claude reads `GET /api/feed` (ideas with preset and upload state, his taps; nothing private in it), fetches an attached clip at `GET /api/uploads/<id>/<n>` (chunks of 1.8 MB, `chunks` from the feed), and writes drafts by committing `content/drafts.json` + `public/media/` (contract: the repo's `docs/DRAFTS.md`; set `ideaId` and `uploadId`, which frees the clip's space); the merge deploys them. Posted state goes back the same way. No API key for Claude.
+- Presets (yskills 2026-10-26, he never writes "cinematic" himself): real_talk = cut pauses, light grade, his white caption in the safe zone, loudness normalised; explainer = that plus punch-ins and B-roll from his own footage; big = full `video-studio`. The style profile (`/mnt/project-files/social/style/xyskillsx-style.md`) is the default for every idea.
+- Install on the phone: the app is a PWA (`store` skill, free phone app); no store account.
+- The daily round (scheduled task "Social daily round", 06:41 Berlin, once a day: yskills 2026-10-26 "no wasted tokens"; prompt: `/mnt/project-files/social/routine/daily-round-prompt.md`): first a bare feed check that stops before loading anything when nothing is queued, changed or approved; otherwise one thread works queued ideas by preset, reworks change notes, queues approved (or, with auto-post on, Critic-passed) drafts into Metricool, writes every tap, note and post number back to `learnings.md` and the style profile, and reports one line. "ausarbeiten" in the project chat runs the same brief at once.
 - HQ (Company XY) gets one row with the link and today's count (`docs/hq-rows.md`), not a copy of the app.
 - Until a slice of the app is live, ideas land in `/mnt/project-files/<project>/social/ideas.md` and finished videos are attached in the thread reply. Videos of a product's own campaign stay in its `video/<slug>/` (`video-studio`).
 

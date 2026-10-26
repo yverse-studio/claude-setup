@@ -29,6 +29,7 @@ Any line below 4 fails and goes back to the step that owns it. On the animatic, 
 4. Smooth: no repeated frames in motion, no stale frame after a cut.
 5. Honest: shows the real product today; ads labelled and claims true (`market` §4).
 6. Safe zones clear; the call to action is one line.
+7. A shot with his digital twin (voice clone or re-synced face): also the twin lines in [`twin`](../../twin/SKILL.md) (Critic); any fail means real footage.
 
 ## Verdict
 

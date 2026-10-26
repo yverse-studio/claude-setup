@@ -24,6 +24,10 @@ in `install.mjs` works as on yskills' own user (`C:\Users\Ich`); this page lists
 A shell started before a PATH change does not see it, and Remote Control sessions inherit the
 PATH of the process that hosts them. After installs, restart that host (not just the session).
 
+## Fresh main first
+
+yskills (2026-10-26): a laptop thread read claude-setup from an old branch and missed the current rules. The first step of every laptop or Remote Control thread, before it reads anything: `git -C <claude-setup clone> fetch origin && git -C <clone> checkout main && git -C <clone> pull --ff-only` (clone: `C:\Users\Claude\claude-setup`, or the one under `Documents\GitHub`); run `node install.mjs` too when the pull changed `global/` or `config/`. Only then read `CLAUDE.md`, `docs/MAP.md` and the brief's guides. A dirty tree or a failed pull is reported in one line, not read around.
+
 ## What still needs yskills' hands
 
 **Showing yskills something** (2026-10-18, he reads on his phone): a page opened in Claude's Chrome

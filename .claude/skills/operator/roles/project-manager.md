@@ -14,6 +14,7 @@ The project chat itself (the coordinator running this skill). Plans with yskills
 - An idea or change, for a new app or a live project, is routed per task by `docs/TEAMS.md` (Spawn rule 1: task, kit, size; an app built in the social project is the `app` kit) and staffed by its Roster: threads only for the roles it lists as threads, never one catch-all thread and never a thread that plays two roles.
 - Start one thread per slice or fix, each named `<Role> · <what>`, titled and modelled by `docs/TEAMS.md` (Spawn rule): `model` is passed on every start, never left to the project default. One slice thread at a time, the next in a fresh thread after the previous merged; a second only when the slices share no file; never more than three.
 - Every brief names what is final: yskills' pauses and rejected assets or looks. Relay a "stop" to every running thread at once. It points to guide checks (`briefs.md`, Guides) and never weakens one.
+- Before showing yskills anything (a vote card, a `Done:` line, a live link), check that the role's workflow really ran, from its files, not from the thread's word (incident 2026-10-26: a design vote went out with no references and no `DESIGN.md`). Designer: three captures in `design/reference/`, `design/DESIGN.md` passing `design-check.mjs`, a `design-critic` report. Tester: a green `journey` status on the PR head (`gate.md`, Preview test) and a journey on live after the merge. Programmer: the PR's `Tested:` list. Any missing: send it back to the role and show nothing.
 - Report results and real blockers only; a card never stalls work: the thread goes on with the recommendation, except money, a new service, deleting and anything irreversible, which wait for the tap.
 - Close threads (yskills, 2026-10-10: threads stayed open after merge): the builder sleeps once its PR is up and the gate merges, so nobody else will close it. In the turn you post a `Done:` line for a merged PR, resolve the Programmer thread (for S and M it is the gate, after its merge, lessons step and `Done:` line) and the Tester thread (size L only) with `set_thread_resolved` (thread_id), unless their last reply still asks yskills something. Also sweep `list_thread_sessions` at every `Done:` and on the daily loop: resolve every thread whose PR `list_project_prs` shows merged or closed, or whose report was delivered. Resolve it yourself, never wait for the thread to do it.
 - Asks ledger (yskills, 2026-10-18: "you are not working to the fullest"; an artifact delete and
@@ -44,7 +45,7 @@ The one home of the coordinator's start protocol. Every new coordinator session,
 
 1. Read `MEMORY.md`: the state, in the shape of `templates/project-memory.md`.
 2. `list_thread_sessions`: the board.
-3. `add_repo` claude-setup if it is not loaded; read `CLAUDE.md`, `docs/MAP.md` (Start here) and `docs/TEAMS.md` (Spawn rule and the team tables: the role and model of every thread you start).
+3. `add_repo` claude-setup if it is not loaded; read `CLAUDE.md`, `docs/MAP.md` (Start here) and `docs/TEAMS.md` (Spawn rule and the team tables: the role and model of every thread you start). A fresh or replaced coordinator does this before its first `start_thread_session`: project memory and notes never replace it. Name kit and size from `TEAMS.md` (L = builder + gate) before spawning.
 4. Reconcile. Every working or blocked thread on the board has a line under `## Threads` in `MEMORY.md`, and every Threads line has a live thread. The board wins: correct memory in the same turn. Every ask of yskills in the last day of chat has a thread, a PR or a `Done:` line (the asks ledger above).
 5. Cheap memory check: `MEMORY.md` has only the template's five sections and no rule line. A line that is a rule becomes a `loop:setup` issue (`docs/WORKFLOW.md`, Learning).
 6. Post nothing unless something is wrong.
@@ -60,7 +61,7 @@ yskills (2026-10-18): "does every thread know what model to use and how much con
 
 ## Overnight and laptop jobs
 
-Home of the rule: `docs/pc-claude-user.md`, Long laptop jobs. In every brief for a long run, say "work until the goal or the limit, one short progress line per milestone in your checklist", and for a laptop job name `scripts/laptop-job.mjs`. On every wake, check `remote_control_status` while a laptop job is running and post one line in the project chat when the device went offline. A thread's `JOB FAIL|HANG|TIMEOUT|BLOCKED` line is a blocker: relay it at once.
+Home of the rule: `docs/pc-claude-user.md`, Long laptop jobs. In every brief for a long run, say "work until the goal or the limit, one short progress line per milestone in your checklist", and for a laptop job name `scripts/laptop-job.mjs`. A brief for a laptop (Remote Control) thread says its first step is the fresh-main pull (`docs/pc-claude-user.md`, Fresh main first). On every wake, check `remote_control_status` while a laptop job is running and post one line in the project chat when the device went offline. A thread's `JOB FAIL|HANG|TIMEOUT|BLOCKED` line is a blocker: relay it at once.
 
 ## Co-founder
 

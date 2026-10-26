@@ -229,6 +229,25 @@ test('team guard: blocks Agent and thread starts without model, passes with one'
   } finally { rmSync(cwd, { recursive: true, force: true }) }
 })
 
+test('team guard: a size L Programmer brief needs a Tester line first', () => {
+  const cwd = mkdtempSync(join(tmpdir(), 'team-'))
+  try {
+    const start = (brief) => runTeam('pre', { cwd, tool_name: 'mcp__hearthbot__start_thread', tool_input: { brief, model: 'claude-x-1' } })
+    const r = start('Role: Programmer · Kit: app · Size: L\nModel: x')
+    assert.equal(r.status, 2)
+    assert.match(r.stderr, /Tester/)
+    assert.equal(start('Role: Programmer · Kit: app · Size: L\nTester: Tester · social app\nModel: x').status, 0)
+    assert.equal(start('Role: Planner then Programmer · Kit: setup · Size: L').status, 2)
+    assert.equal(start('Role: Programmer · Kit: app · Size: M').status, 0)
+    assert.equal(start('Role: Tester · Kit: app · Size: L').status, 0)
+    assert.equal(start('Role: Programmer · Kit: app · Size: L\nTester:   ').status, 2, 'an empty Tester line does not count')
+    assert.equal(start('**Role:** Programmer · Kit: app · size: l').status, 2, 'markdown and lowercase do not hide an L Programmer')
+    assert.equal(start('Size: L\nRole: Programmer · Kit: app').status, 2, 'Size before Role does not hide it')
+    assert.equal(start('Role: Programmer · Kit: app · Size: L\nTester: <its thread id or title>').status, 2, 'the unfilled placeholder does not count')
+    assert.equal(start('Role: Programmer · Kit: app · Size: L\nTester: none').status, 2)
+  } finally { rmSync(cwd, { recursive: true, force: true }) }
+})
+
 test('team guard: an agent file with its own model passes, one without does not', () => {
   const cwd = mkdtempSync(join(tmpdir(), 'team-'))
   try {

@@ -163,12 +163,49 @@ Claude:
 - A live smoke test on `check_run` `completed`, filtered to the exact name
   `Workers Builds: <worker>`, `conclusion == 'success'`,
   `check_suite.head_branch == '<production branch>'` and `head_sha == github.sha`
-  (duo-test `live.yml`). Without the conclusion filter it would smoke-test a failed build.
+  (duo-test `live.yml`; `new-project` ships it from `templates/new-project/.github/workflows/live.yml`,
+  with a 6-hourly schedule so a queued or stuck build cannot go silent). Without the conclusion filter it would smoke-test a failed build.
+  Across all projects, claude-setup's `deploy-watch.yml` compares live `/api/config` with each
+  repo's main HEAD every 15 minutes and opens a `deploy-drift` issue after 15 minutes of drift
+  (incident 2026-10-26: ~3 h of social merges did not deploy). A project that serves no commit is
+  unwatched: give it `/api/config` `commit`.
   Its first test checks that the live site runs the commit just built: the app serves the
   `WORKERS_CI_COMMIT_SHA` that Workers Builds sets at build time (duo-test: `commit` in
   `/api/config`; a static site: a generated `version.txt`), and the test compares it with
   `check_run.head_sha` (`github.sha` on the weekly run). A green Workers Builds check and a 200 prove neither: on 2026-10-05
   duo-test's main builds passed for hours while a day-old version stayed live.
+
+### Preview journey and preview login
+
+Incident 2026-10-26 (social): the gates judged UI PRs on local tests, because the preview was broken
+and sat behind the owner's passkey, so nobody clicked the real app.
+
+- **Journey script:** every site, app or game needs `npm run journey` (the new-project template does not scaffold it yet: until a project adds it, its UI PRs fail the journey): Playwright against `BASE_URL`
+  with the device named in `JOURNEY_DEVICE` (`devices[...]`, touch on), walking the main journeys
+  end to end, the destructive-action list (`operator/roles/programmer.md`) included. Results go to
+  `test-results/`. No script means `journey.yml` fails, and a UI PR cannot pass (`gate.md`, UI PRs).
+- **Run:** the project's own `.github/workflows/journey.yml` (template, with `scripts/journey-gate.mjs`) runs by itself on
+  every PR: `pull_request_target`, so the file comes from the default branch and a PR cannot edit it, with the
+  built-in `GITHUB_TOKEN` (`pull-requests: read, statuses: write, checks: read`): no key, nothing to dispatch or rotate.
+  A project that predates it gets the two files in a PR (they must be on the default branch before they run).
+  It posts `n/a` for a PR that changes only docs, tests or `.github/` files; otherwise it
+  waits up to 20 minutes for the PR's preview to serve the head (the URL from the branch alias, refused
+  if the Workers Builds check names another), checks out the default branch (not the PR), runs
+  the specs from it in a job with read-only rights, and posts the `journey` status from a
+  fresh job. The template CI has no status permission, but a PR workflow could post one with the same
+  token, so the gate runs `journey.mjs verify`: creator `github-actions[bot]`, linked run of `journey.yml`
+  from `pull_request_target` in the same repo.
+- **Preview login:** a journey behind a login signs in with a seeded test owner that exists only in
+  the preview database. The app accepts `POST /api/test-login` with `PREVIEW_LOGIN_TOKEN` (a Worker
+  secret, compared in constant time) only on a preview host (`*-<name>.yverse.workers.dev`), never
+  on the live host, and answers 404 when the secret is unset. Not wired into the project workflow yet: no project
+  holds a GitHub secret, so a journey behind a login needs a decision first (open). The runner would run only the default branch's specs; the PR's Worker (the preview)
+  receives it in the request, so it opens only the preview's test data, and a PR from a fork never gets it
+  (`journey-gate.mjs` refuses). A short-lived token minted per run is a later hardening. Creating or rotating it waits
+  for yskills' tap (`CLAUDE.md`, Ask first). [advisory]
+- **Builds run one at a time** on Workers Builds: every `claude/*` push queues in front of `main`'s
+  deploy. Push once per finished round, at most three branches building at once; a stuck build is
+  cancelled with `build-logs` (`cancel`). `deploy-watch.yml` catches what still slips. [advisory]
 
 ## Two routes to Cloudflare, and what the deploy tests taught
 

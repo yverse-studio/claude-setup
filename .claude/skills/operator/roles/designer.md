@@ -78,6 +78,11 @@ Playwright (gate check 5) and `design-critic` judges the look.
 - **States:** every data view has loading (a skeleton for waits of 1-10 s, never blank), empty
   (one sentence and the next action), error (plain German and a retry) and success; an offline
   page when it is a PWA.
+- **Destructive actions** (incident 2026-10-26: Drop removed a scheduled draft with no confirm and
+  no undo, and it stayed in the Plan and in Metricool): delete, drop, cancel and archive are soft
+  deletes with a 10 s Undo toast; an item that is scheduled, queued or already handed to another
+  service (a planned post, a Metricool slot, a sent order) asks first, says what else it removes
+  (Plan, Metricool) and removes it there too, or refuses.
 - **Layout:** 390 and 1440 px shots, no sideways scroll at 320 px, the main action in thumb reach
   on a phone.
 - **Accessibility (WCAG 2.2 AA):** text contrast 4.5:1, a visible focus ring, targets at least

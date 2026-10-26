@@ -19,7 +19,7 @@ in the thread they are one part of it"). Check first which one you are:
   first files, does that job, and calls as `Agent` subagents only the helpers its Roster row and
   the Sizes row of its size list (Reviewer, Researcher, an Opus checkpoint, ...), each with `model`.
   It never starts a thread, never sizes the task again, never staffs a team and never plays a second
-  role; work for another thread-role goes to the coordinator with `message_coordinator` (role,
+  role (the S and M gate is the Programmer's own job, not a second role); work for another thread-role goes to the coordinator with `message_coordinator` (role,
   topic, files, done-when), and the thread goes on with its own job.
 
 ## Spawn rule
@@ -63,9 +63,16 @@ Models: best fitting model per task, cheapest that fits. Fable (claude-fable-5-1
 |---|---|---|---|---|
 | S | a bug fix, a small tweak, docs, skills, config, a question | one, of the role it needs (usually `Programmer · fix <what>`); it runs its own S gate | Reviewer; a Researcher only for an open fact | one checkpoint subagent |
 | M | a feature or change of code with no new look, no user input, auth, money or data; a garment move or refit with no new look (`gate.md`, Asset PRs) | `Planner · <topic>` (grill, short plan), then `Programmer · <slice>`; the M gate runs in the Programmer's thread | Researcher, Reviewer | the Planner, plus one checkpoint in the Programmer |
-| L | a new product, anything a user sees, user input, auth, money, data, a launch | the kit's team (Kits below), a fresh `Tester · PR <n>` per PR | all the kit lists | the Planner, the Designer, the Game Designer, the gate verdict |
+| L | a new product, anything a user sees, user input, auth, money, data, a launch | first a `Tester · <app>` thread that walks the preview and live app from day one (Tester first, below); then the kit's team (Kits below), a fresh `Tester · PR <n>` per PR | all the kit lists | the Planner, the Designer, the Game Designer, the gate verdict |
 
 A video is the `video` kit and a post the `social` kit at any size; their own pipelines size them.
+
+**Tester first** (incident 2026-10-26: an L app shipped a Drop bug through three gated PRs because
+no Tester ever clicked the real app). For size L of a site, app or game the coordinator starts the
+`Tester · <app>` thread before any Programmer thread; every L Programmer brief carries a line
+`Tester: <that thread>` and the `team-guard` hook (`global/team-guard.mjs`) blocks a size L
+Programmer start without it. The `setup` kit has no app to walk: its line says
+`Tester: per PR (gate.md)`. The journey runs by itself in the project's `journey.yml` (`gate.md`, Preview test).
 
 ## Pipeline
 

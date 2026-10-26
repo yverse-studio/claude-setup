@@ -89,3 +89,31 @@ test('the command exits 1 on a bad deck and 0 on a good one', () => {
   assert.equal(spawnSync('node', [SCRIPT, join(dir, 'bad.md')]).status, 1)
   assert.equal(spawnSync('node', [SCRIPT, join(dir, 'missing.md')]).status, 1)
 })
+
+test('a deck with a "Languages: en" line is English only: terms are term | never, strings are where | text', () => {
+  const en = `# Copy deck: Demo
+
+Languages: en
+
+## Voice
+- Parents who book fast.
+- Calm, direct.
+- Never loud.
+
+## Terms
+| Term | Never |
+|---|---|
+| cart | basket, bag |
+| account | profile |
+
+## Strings
+| Where | Text |
+|---|---|
+| Button: primary action | Book now |
+| Empty state | Your cart is empty. |
+`
+  assert.deepEqual(checkCopy(en), [])
+  assert.ok(checkCopy(en.replace('Book now', 'Add a basket')).some((e) => /rules out/.test(e)))
+  assert.ok(checkCopy(en.replace('Book now', 'Unlock savings')).some((e) => /promo word/.test(e)))
+  assert.ok(checkCopy(en.replace('Languages: en\n', '')).some((e) => /lacks a German or an English/.test(e)))
+})

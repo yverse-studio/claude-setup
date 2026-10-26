@@ -14,18 +14,18 @@ The per-round lists live in [`checklists.md`](checklists.md): builder checklist,
 hand-in sheet contract.
 How a professional game avatar is built (mesh split, naming, rig and physics bones, clothes,
 face keys, Unity and Mixamo mapping), and **rule 0: test every built-in shape key at 0 and 1
-before building**: [`booth-avatars.md`](booth-avatars.md).
+before building**: [`pro-avatars.md`](pro-avatars.md).
 
-**Where the know-how lives:** this skill (method, rules, technique), [`booth-avatars.md`](booth-avatars.md)
+**Where the know-how lives:** this skill (method, rules, technique), [`pro-avatars.md`](pro-avatars.md)
 (how pro avatars are laid out), [`checklists.md`](checklists.md), and `docs/game-pipeline.md` (laptop paths,
 characters, animation, scenes, Ren'Py and the latest lessons). Project specifics (file paths, slider values,
 scene slots) live in the private game repo and the laptop `GameAssetLibrary\README.md`.
 
-## Order of attack: buy, generate, then model (2026-10-24)
+## Order of attack: pick the best source, then model (2026-10-24)
 
-Hand-modelling a body round after round caused the 22-round loop of 2026-10-23. Try in this order and say which step you are on:
-1. An existing asset or a BOOTH/VRoid base ([`booth-avatars.md`](booth-avatars.md)). Props and rooms: free CC0 libraries first (Poly Haven; list in [`game-3d/starter/models.md`](../game-3d/starter/models.md)).
-2. A generator (image-to-3D, or the Blender connector's asset tools), then clean up. Order (3d-route, 2026-10-18): TRELLIS.2 (MIT; free Hugging Face Space or a laptop GPU such as an RTX 4060) first, then Blender cleanup (decimate, UV, scale) through the `studio` skill; test Meshy's free tier only if TRELLIS quality is too low; Autodesk Fusion makes no game bases. Not Hunyuan3D 2.1: Tencent's community licence excludes the EU, UK and South Korea. Open-source AI 3D output (TRELLIS, Hunyuan) needs retopology and UV cleanup and has weak hands and faces: concept props and background clutter only, never hero or rigged characters (low-poly-and-sources, 2026-10-24).
+Hand-modelling a body round after round caused the 22-round loop of 2026-10-23. Pick the best source for the job with the criteria and table in [`game-3d/refs/asset-sources.md`](../game-3d/refs/asset-sources.md) (licence first, free first), and say which step you are on:
+1. An existing base from the best source: a free CC0 or VRM base, or a paid pro base after yskills' word ([`pro-avatars.md`](pro-avatars.md)). Props and rooms: free CC0 libraries first (Poly Haven; list in [`game-3d/starter/models.md`](../game-3d/starter/models.md)).
+2. A generator (open-weight image-to-3D, licence read for our country, or the Blender connector's asset tools), then clean up. Order (3d-route, 2026-10-18): TRELLIS.2 (MIT; free Hugging Face Space or a laptop GPU such as an RTX 4060) first, then Blender cleanup (decimate, UV, scale) through the `studio` skill; test Meshy's free tier only if TRELLIS quality is too low; Autodesk Fusion makes no game bases. Not Hunyuan3D 2.1: Tencent's community licence excludes the EU, UK and South Korea. Open-source AI 3D output (TRELLIS, Hunyuan) needs retopology and UV cleanup and has weak hands and faces: concept props and background clutter only, never hero or rigged characters (low-poly-and-sources, 2026-10-24).
    Cleaning a generated or downloaded mesh: merge by distance, fill holes, recalculate normals outward, cut in half and mirror for true symmetry, then scale to real size. Paid or API-key options (only listed, never signed up for without yskills' OK): Tripo, Meshy paid, Hyper3D Rodin and Sketchfab (the community Blender MCP has Rodin and Sketchfab toggles, both need a key).
 3. bpy modelling, only for edits to what steps 1 and 2 gave. The `attempt-guard` hook blocks a command that fails 5 times without a `## Diagnosis` in `PROGRESS.md`.
 
@@ -131,6 +131,30 @@ Hand-modelling a body round after round caused the 22-round loop of 2026-10-23. 
     the rest back. Nude
    bodies and explicit poses live on the private side behind the 18+ gate; public files and the
    hand-in sheets that go to public places stay clean; his references never go into git.
+
+## Rig conventions for every figure (2026-10-26, from the night scenes)
+
+Same for every character and the man, so one script poses all of them:
+
+- **Fingers:** bone +y points along the finger, -z is the palm, **+x on a finger bone bends toward the palm**
+  (set `Armature["rig_version"] = 2`). A rig whose +x bends to the back of the hand looks "turned 180°"; fix it with
+  a 180° bone roll plus converting the F-curves (pose identical to 0.001 mm), then old scenes with
+  `migrate_rig_v2.py`. Check every new figure: fingertip offset · palm normal must be negative.
+- **IK:** hand and foot IK bones with pole targets in a bone collection "IK", and the switches (`ik_arm_L/R`,
+  `ik_leg_L/R`, `wrist_limit`, `toe_auto`, `skirt_follow`) as properties on the armature object. Put the constraints
+  in the figure file: they survive a library override, constraints added in the scene do not. Wrist limits are
+  anatomical (flex 75°, extend 70°, radial 20°, ulnar 30°).
+- **Openings:** each opening (lips, vulva, anus) is a ring vertex group (`Lips_Ring`, ...) plus a path, so contact
+  depth is measured from the group, not guessed. A test script reports full depth and zero skin hits after every
+  body change.
+- **Vertex groups:** one per body part, without `_NNN` suffixes; POV groups per part (`POV_Hips/Belly/Chest/Arms/
+  Legs/Head/Penis/Hands`) so a camera hides only what it must. Lock the location of `Penis_1` so the base stays
+  on the body.
+- **Normals point out** on every body mesh (inward normals made the solver shove figures 25 cm); scale 1.
+- **Soft parts:** dent keys driven by the distance of a probe object; talking is the viseme keys at 0.3-0.5, not
+  the wide expression keys.
+- **Files:** one `.blend` per figure; every old state (backups, `_before-*`, wip, `.blend1`) goes in one zip archive
+  (`characters\_archive\modelle_vorher_<date>.zip` plus a list), so no thread opens a stale file.
 
 ## Technique (how the pros do it, what we copy)
 

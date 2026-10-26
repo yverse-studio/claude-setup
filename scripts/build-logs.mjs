@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-// build-logs: prints the tail of a project's latest Workers Builds log, so a cloud thread (which
+// build-logs: lists the 10 newest Workers Builds (status, branch, commit) and prints the tail of the latest log, so a cloud thread (which
 // cannot open the Cloudflare dashboard) can read why a build failed. Run by
 // .github/workflows/build-logs.yml (workflow_dispatch). Every line goes through new-project's
 // redact(): ids, uuids and token-like strings never reach the public Actions log.
-// Only registered projects (`projects/<name>.json` on main). Reads CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID, read-only calls only.
+// With CANCEL=true it also cancels builds stuck for over 10 minutes (the one write call). Only registered projects (`projects/<name>.json` on main). Reads CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID, read-only calls only.
 import { existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { validName, redact, describe } from './new-project.mjs'
@@ -32,6 +32,20 @@ export function latestBuild(builds) {
   return [...(builds || [])].sort((a, b) => String(b.created_on).localeCompare(String(a.created_on)))[0] || null
 }
 
+// One scrubbed line per build, newest first; branch names are user-chosen and the Actions log is public.
+export function recentLines(builds) {
+  return [...(builds || [])].sort((a, b) => String(b.created_on).localeCompare(String(a.created_on))).map((b) => {
+    const m = b.build_trigger_metadata || {}
+    return scrub(`[build-logs] recent: ${b.created_on} ${b.status}/${b.build_outcome} ${m.branch || '?'} ${String(m.commit_hash || '?').slice(0, 7)}`)
+  })
+}
+
+// Builds that never reached "stopped": queued, initializing or running. A stuck one blocks the queue.
+export const STUCK_MINUTES = 10
+export function openBuilds(builds, now = Date.now(), minutes = STUCK_MINUTES) {
+  return (builds || []).filter((b) => b.status !== 'stopped' && now - Date.parse(b.created_on) > minutes * 60000)
+}
+
 async function main() {
   const name = process.env.NAME || ''
   if (!validName(name)) throw new Error(`name "${name}" must be lowercase letters, digits and dashes`)
@@ -39,8 +53,8 @@ async function main() {
   const token = process.env.CLOUDFLARE_API_TOKEN
   const account = process.env.CLOUDFLARE_ACCOUNT_ID
   if (!token || !account) throw new Error('CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID are required')
-  const cf = async (path) => {
-    const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${account}${path}`, { headers: { authorization: `Bearer ${token}` } })
+  const cf = async (path, method = 'GET') => {
+    const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${account}${path}`, { method, headers: { authorization: `Bearer ${token}` } })
     const text = await res.text()
     let json = null
     try { json = JSON.parse(text) } catch { json = null }
@@ -51,8 +65,19 @@ async function main() {
   const workers = (await cf('/workers/workers?per_page=100')).json?.result || []
   const worker = workers.find((w) => w.name === name)
   if (!worker) throw new Error(`no Worker named ${name} in this account`)
-  const build = latestBuild((await cf(`/builds/workers/${worker.id}/builds?per_page=10`)).json?.result)
+  const builds = (await cf(`/builds/workers/${worker.id}/builds?per_page=50`)).json?.result || []
+  const build = latestBuild(builds)
   if (!build) throw new Error(`${name} has no builds yet`)
+  for (const line of recentLines(builds.slice(0, 10))) console.log(line)
+  const stuck = openBuilds(builds)
+  console.log(`[build-logs] ${stuck.length} of ${builds.length} builds are older than ${STUCK_MINUTES} min and not stopped`)
+  for (const line of recentLines(stuck)) console.log(line.replace('recent:', 'stuck:'))
+  if (process.env.CANCEL === 'true') {
+    for (const b of stuck) {
+      const r = await cf(`/builds/builds/${b.build_uuid}/cancel`, 'PUT').then(() => 'cancelled', (e) => `failed: ${redact(e.message)}`)
+      console.log(`[build-logs] cancel ${b.created_on}: ${r}`)
+    }
+  }
   const meta = build.build_trigger_metadata || {}
   console.log(`[build-logs] ${name}: ${build.status}, outcome ${build.build_outcome}, branch ${meta.branch || '?'}, commit ${String(meta.commit_hash || '?').slice(0, 7)}, created ${build.created_on}`)
   for (const line of logLines((await cf(`/builds/builds/${build.build_uuid}/logs`)).json)) console.log(line)

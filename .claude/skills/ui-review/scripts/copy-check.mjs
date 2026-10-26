@@ -2,6 +2,7 @@
 // Fails when a project's copy deck breaks what roles/content-designer.md asks of it: every heading
 // filled, a voice with three lines, a DE and an EN cell on every term and string, no avoided
 // term, no vague or long button label, no promo word or "not just X" pattern in either language.
+// A copy deck with a "Languages: en" line is English only: Terms are term | never, Strings are where | text.
 // Usage: node copy-check.mjs [design/COPY.md]  (exit 1 lists what fails)
 import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
@@ -42,20 +43,23 @@ export function checkCopy(md) {
   for (const m of md.matchAll(PLACEHOLDER)) errors.push(`template placeholder left: ${m[0]}`)
   const voice = (s.Voice ?? '').split('\n').filter((l) => /^\s*[-*]\s+\S/.test(l))
   if (s.Voice?.trim() && voice.length < MIN_VOICE_LINES) errors.push(`## Voice has ${voice.length} lines, needs ${MIN_VOICE_LINES}`)
+  const enOnly = /^Languages:\s*en\s*$/mi.test(md)
   const terms = rows(s.Terms ?? '')
   if (s.Terms?.trim() && terms.length < MIN_TERMS) errors.push(`## Terms has ${terms.length} rows, needs ${MIN_TERMS}`)
   const avoid = []
-  terms.forEach(([de, en, never = ''], i) => {
+  terms.forEach((row, i) => {
+    const [de, en, never = ''] = enOnly ? [row[0], row[0], row[1]] : row
     if (!de || !en) errors.push(`## Terms row ${i + 1} lacks a German or an English term`)
     avoid.push(...never.split(',').map((w) => w.trim()).filter(Boolean))
   })
   const strings = rows(s.Strings ?? '')
   if (s.Strings?.trim() && !strings.length) errors.push('## Strings has no row')
-  strings.forEach(([where = '', de = '', en = ''], i) => {
+  strings.forEach((row, i) => {
+    const [where = '', de = '', en = ''] = enOnly ? [row[0], row[1], row[1]] : row
     const at = `## Strings row ${i + 1} (${where.slice(0, 30)})`
     if (!de || !en) return errors.push(`${at} lacks a German or an English text`)
-    if (de.toLowerCase() === en.toLowerCase() && /\s/.test(de)) errors.push(`${at}: German and English are the same sentence`)
-    for (const [lang, text] of [['DE', de], ['EN', en]]) {
+    if (!enOnly && de.toLowerCase() === en.toLowerCase() && /\s/.test(de)) errors.push(`${at}: German and English are the same sentence`)
+    for (const [lang, text] of enOnly ? [['EN', en]] : [['DE', de], ['EN', en]]) {
       for (const w of PROMO) if (wordRe(w).test(text)) errors.push(`${at}: ${lang} uses promo word "${w}" (SLOP.md 9)`)
       for (const w of avoid) if (wordRe(w).test(text)) errors.push(`${at}: ${lang} uses "${w}", which ## Terms rules out`)
       if (NOT_JUST.test(text)) errors.push(`${at}: ${lang} says "not just X" (a rejected option nobody raised)`)
