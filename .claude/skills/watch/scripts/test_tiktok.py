@@ -1,0 +1,76 @@
+"""TikTok page route: parse the embedded JSON, refuse challenge pages, never impersonate."""
+import email.message
+import io
+import json
+import sys
+import urllib.request
+import unittest
+from pathlib import Path
+from unittest import mock
+
+sys.path.insert(0, str(Path(__file__).parent))
+
+import tiktok
+
+ITEM = {'id': '1', 'desc': 'hi #x', 'author': {'uniqueId': 'bob'}, 'stats': {'playCount': 5},
+        'video': {'duration': 9, 'playAddr': 'https://v16.tiktokcdn-us.com/a.mp4', 'cover': 'c'}}
+
+
+def page(item):
+    data = {'__DEFAULT_SCOPE__': {'webapp.video-detail': {'itemInfo': {'itemStruct': item}}}}
+    return f'<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__" type="application/json">{json.dumps(data)}</script>'.encode()
+
+
+def fake_opener(body):
+    resp = mock.MagicMock()
+    resp.__enter__.return_value = resp
+    resp.read.return_value = body
+    resp.geturl.return_value = 'https://www.tiktok.com/x'
+    opener = mock.MagicMock()
+    opener.open.return_value = resp
+    return opener
+
+
+class Page(unittest.TestCase):
+    def test_host_check(self):
+        self.assertTrue(tiktok.is_tiktok('https://vm.tiktok.com/abc/'))
+        self.assertFalse(tiktok.is_tiktok('https://nottiktok.com/x'))
+
+    def test_summary_from_page(self):
+        item, _ = tiktok.fetch_item('https://www.tiktok.com/x', fake_opener(page(ITEM)))
+        info = tiktok.summary(item, 'u')
+        self.assertEqual((info['uploader'], info['duration'], info['title']), ('bob', 9, 'hi #x'))
+
+    def test_challenge_page_is_refused(self):
+        with self.assertRaises(tiktok.TikTokUnavailable):
+            tiktok.fetch_item('https://www.tiktok.com/x', fake_opener(b'<html>verify you are human</html>'))
+
+    def test_media_url_must_be_tiktok_https(self):
+        for bad in ('file:///etc/passwd', 'http://v.tiktok.com/a.mp4', 'https://evil.example/a.mp4'):
+            with self.assertRaises(tiktok.TikTokUnavailable):
+                tiktok.fetch_item('https://www.tiktok.com/x', fake_opener(page({**ITEM, 'video': {'playAddr': bad}})))
+
+    def test_redirect_off_tiktok_is_refused(self):
+        opener = fake_opener(page(ITEM))
+        opener.open.return_value.geturl.return_value = 'https://evil.example/x'
+        with self.assertRaises(tiktok.TikTokUnavailable):
+            tiktok.fetch_item('https://www.tiktok.com/x', opener)
+
+    def test_blocked_status_falls_back(self):
+        for code in (403, 429):
+            class Blocked(urllib.request.BaseHandler):
+                def https_open(self, req, code=code):
+                    resp = urllib.request.addinfourl(io.BytesIO(b"no"), email.message.Message(), req.full_url, code)
+                    resp.msg = 'blocked'
+                    return resp
+            with mock.patch.object(tiktok.urllib.request, 'HTTPSHandler', Blocked):
+                with self.assertRaises(tiktok.TikTokUnavailable):
+                    tiktok.fetch_item(f'https://www.tiktok.com/blocked{code}')
+
+    def test_private_post_without_video(self):
+        with self.assertRaises(tiktok.TikTokUnavailable):
+            tiktok.fetch_item('https://www.tiktok.com/x', fake_opener(page({**ITEM, 'video': {}})))
+
+
+if __name__ == '__main__':
+    unittest.main()
