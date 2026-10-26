@@ -18,6 +18,9 @@ and yskills had to say it twice. This page is the fix.
    `/mnt/project-files/<project>/references/named/<slug>.png`, listed in `references/README.md`
    (character, series, original file). "Basis" always means the character in that picture, never
    a model file. No reference picture, no build.
+   For a 3D build add a turnaround: front, side and back, orthographic, same scale, lined up
+   (an image generator may make it; check the views line up before using it). The builder
+   measures against it instead of guessing from one perspective picture.
 2. **Brief.** One thread per figure (`Programmer · <Name> figure`). The brief names the reference
    file and lists what is off, biggest first (eyes, hair, face, skin, body, outfits), from a
    diagnosis sheet: reference beside the current render.

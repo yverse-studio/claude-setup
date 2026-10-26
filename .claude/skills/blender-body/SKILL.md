@@ -24,8 +24,9 @@ scene slots) live in the private game repo and the laptop `GameAssetLibrary\READ
 ## Order of attack: buy, generate, then model (2026-10-24)
 
 Hand-modelling a body round after round caused the 22-round loop of 2026-10-23. Try in this order and say which step you are on:
-1. An existing asset or a BOOTH/VRoid base ([`booth-avatars.md`](booth-avatars.md)).
+1. An existing asset or a BOOTH/VRoid base ([`booth-avatars.md`](booth-avatars.md)). Props and rooms: free CC0 libraries first (Poly Haven; list in [`game-3d/starter/models.md`](../game-3d/starter/models.md)).
 2. A generator (image-to-3D, or the Blender connector's asset tools), then clean up. Order (3d-route, 2026-10-18): TRELLIS.2 (MIT; free Hugging Face Space or a laptop GPU such as an RTX 4060) first, then Blender cleanup (decimate, UV, scale) through the `studio` skill; test Meshy's free tier only if TRELLIS quality is too low; Autodesk Fusion makes no game bases. Not Hunyuan3D 2.1: Tencent's community licence excludes the EU, UK and South Korea. Open-source AI 3D output (TRELLIS, Hunyuan) needs retopology and UV cleanup and has weak hands and faces: concept props and background clutter only, never hero or rigged characters (low-poly-and-sources, 2026-10-24).
+   Cleaning a generated or downloaded mesh: merge by distance, fill holes, recalculate normals outward, cut in half and mirror for true symmetry, then scale to real size. Paid or API-key options (only listed, never signed up for without yskills' OK): Tripo, Meshy paid, Hyper3D Rodin and Sketchfab (the community Blender MCP has Rodin and Sketchfab toggles, both need a key).
 3. bpy modelling, only for edits to what steps 1 and 2 gave. The `attempt-guard` hook blocks a command that fails 5 times without a `## Diagnosis` in `PROGRESS.md`.
 
 ## Method v2 (Miss Galaxy line, 2026-10-19): read this first
@@ -50,7 +51,7 @@ Hand-modelling a body round after round caused the 22-round loop of 2026-10-23. 
    chosen; no stacked fix keys; no global smoothing; no profile fit against a fresh trace; no base
    switch without a same-size sheet plus two gates; crown and soles in frame; same cameras every
    round; posed set every round; never a teardrop bust.
-5. **Review: one standing reviewer, plus an independent check for 5/5.** The same reviewer thread
+5. **Review: one standing reviewer, plus an independent check for 5/5.** The independent reviewer is blind: it gets the written requirements, the reference and the renders, never the builder's explanation. The same reviewer thread
    re-grades every round (it holds the best-round history); do not start a fresh one per round. A
    5/5 counts only after the reviewer re-ran all views itself AND a fresh, independent reviewer
    with the checklist agreed. Gates: [`references/gate.md`](references/gate.md).
