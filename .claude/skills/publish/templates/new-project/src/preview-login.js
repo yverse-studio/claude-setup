@@ -1,33 +1,66 @@
-// Test login for previews only: how the journey check (and Claude) gets past an app login with no human.
-// `POST /api/test-login` with `Authorization: Bearer <PREVIEW_LOGIN_TOKEN>` resets the preview's test data to
-// the seed and signs in as the seeded test owner. PREVIEW_LOGIN_TOKEN is set by claude-setup's new-project
-// (or the preview-login workflow) on the Worker's previews env and as the repo's Actions secret, never on the
-// live Worker, so live has no token and this returns null there. A preview host is `<alias>-<name>.<sub>.workers.dev`;
-// the live host is `<name>.<sub>.workers.dev`. Previews have their own D1, so the reset never touches live data.
-const enc = new TextEncoder()
+// Test login for previews only: how the journey check (and Claude) gets past an app login with no human and no stored
+// secret. The journey job (journey.yml `run`, default branch only) asks GitHub for an OIDC token whose audience is the
+// preview's host and sends it as `POST /api/test-login` with `Authorization: Bearer <jwt>`. The Worker checks the
+// signature against GitHub's published keys and that the token comes from THIS repo's journey.yml job on the default
+// branch (job_workflow_ref, event pull_request_target, github-hosted runner), then resets the preview's test data to the
+// seed and signs in as the seeded test owner. A preview host is `<alias>-<name>.<sub>.workers.dev`; the live host is
+// `<name>.<sub>.workers.dev` and answers nothing, and previews have their own D1, so the reset never touches live data.
+const ISSUER = 'https://token.actions.githubusercontent.com'
+const JWKS_URL = `${ISSUER}/.well-known/jwks`
+const KEY_REFRESH_MS = 60 * 1000
+const CLOCK_SKEW_S = 60
+const keys = { at: 0, list: [] } // module cache: one JWKS fetch serves many logins; an unknown key id refetches at most once a minute
 
 export function isPreviewHost(hostname, name) {
   const label = String(hostname).split('.')[0]
   return String(hostname).endsWith('.workers.dev') && label.length > name.length + 1 && label.endsWith(`-${name}`)
 }
 
-// Constant time: compares HMACs of both strings under a throwaway key, so length and content leak nothing.
-async function sameToken(a, b) {
-  const key = await crypto.subtle.generateKey({ name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
-  const [x, y] = await Promise.all([a, b].map(async (s) => new Uint8Array(await crypto.subtle.sign('HMAC', key, enc.encode(s)))))
-  let diff = 0
-  for (let i = 0; i < x.length; i++) diff |= x[i] ^ y[i]
-  return diff === 0
+const b64u = (s) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(s.length / 4) * 4, '=')), (c) => c.charCodeAt(0))
+const part = (seg) => JSON.parse(new TextDecoder().decode(b64u(seg)))
+
+async function signingKey(kid, fetchJwks, now) {
+  const find = () => keys.list.find((k) => k.kid === kid && k.kty === 'RSA')
+  if (!find() && now - keys.at > KEY_REFRESH_MS) {
+    keys.at = now
+    const res = await fetchJwks(JWKS_URL)
+    if (res.ok) keys.list = (await res.json()).keys || []
+  }
+  const jwk = find()
+  return jwk && crypto.subtle.importKey('jwk', { kty: 'RSA', n: jwk.n, e: jwk.e, alg: 'RS256', ext: true }, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['verify'])
+}
+
+// True only for a live GitHub OIDC token meant for `audience` that this repo's journey job on `branch` minted.
+export async function verifyJourneyToken(token, { audience, repo, branch, fetchJwks = fetch, now = Date.now() }) {
+  try {
+    const [h, p, s, extra] = String(token).split('.')
+    if (!h || !p || !s || extra !== undefined) return false
+    const header = part(h)
+    if (header.alg !== 'RS256' || typeof header.kid !== 'string') return false
+    const key = await signingKey(header.kid, fetchJwks, now)
+    if (!key || !(await crypto.subtle.verify('RSASSA-PKCS1-v1_5', key, b64u(s), new TextEncoder().encode(`${h}.${p}`)))) return false
+    const c = part(p)
+    const t = now / 1000
+    return c.iss === ISSUER && c.aud === audience && c.exp > t && c.iat <= t + CLOCK_SKEW_S && !(c.nbf > t + CLOCK_SKEW_S)
+      && c.repository === repo && c.repository_owner === repo.split('/')[0]
+      && c.job_workflow_ref === `${repo}/.github/workflows/journey.yml@refs/heads/${branch}`
+      && c.ref === `refs/heads/${branch}` && c.event_name === 'pull_request_target' && c.runner_environment === 'github-hosted'
+  } catch {
+    return false
+  }
 }
 
 // Returns a Response, or null when this is not a test login the caller should answer (the caller then answers 404).
-// seed(env): wipe the preview's test data and insert the known rows. signIn(request, env): the project's own session
-// (a Response with its Set-Cookie); it runs after seed, so the test owner exists.
-export async function previewLogin(request, env, { name, seed, signIn }) {
+// repo: "<org>/<repo>" whose journey.yml may log in; branch: its default branch. seed(env): wipe the preview's test data
+// and insert the known rows. signIn(request, env): the project's own session (a Response with its Set-Cookie); it runs
+// after seed, so the test owner exists. fetchJwks and now are for tests.
+export async function previewLogin(request, env, { name, repo, branch = 'main', seed, signIn, fetchJwks, now }) {
   const host = new URL(request.url).hostname
-  if (request.method !== 'POST' || !env.PREVIEW_LOGIN_TOKEN || !isPreviewHost(host, name)) return null
-  const given = (request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '')
-  if (!(await sameToken(given, env.PREVIEW_LOGIN_TOKEN))) return Response.json({ error: 'forbidden' }, { status: 403, headers: { 'cache-control': 'no-store' } })
+  if (request.method !== 'POST' || !isPreviewHost(host, name)) return null
+  const token = (request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '')
+  if (!(await verifyJourneyToken(token, { audience: host, repo, branch, fetchJwks, now }))) {
+    return Response.json({ error: 'forbidden' }, { status: 403, headers: { 'cache-control': 'no-store' } })
+  }
   await seed(env)
   return signIn(request, env)
 }
