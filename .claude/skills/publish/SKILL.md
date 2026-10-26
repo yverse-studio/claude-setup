@@ -120,6 +120,8 @@ Claude:
 - `wrangler.jsonc` (wrangler 4.147 or newer, which is what knows the block):
   - a `previews` block, required even as `{}`
   - every binding repeated in `previews` with its own resource, because previews inherit none
+  - every var a preview reads repeated in `previews.vars`: top-level `vars` don't reach previews either
+    (social#45, 2026-10-26: no `PROD_HOST` on previews, so the test login answered 404 on every PR)
   - D1 ids committed, and `preview_database_id` set to the preview database's id
   - `"workers_dev": true` and `"preview_urls": true`, so each deploy switches the live address and
     the preview links back on. Without `preview_urls` the PR comment says "No Preview URL", and
