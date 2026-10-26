@@ -6,11 +6,14 @@ the one home of how that is set up. The ask rule itself (what needs yskills) is 
 
 ## The only things that wait for yskills
 
-Real money (live key, purchase, ads, paid plan), a new paid service, deleting data or a repo
-(a project needs his "delete <name>"), force-pushing `main` (denied outright), rotating a production
-secret, sending mail or posts publicly, and merging a PR that widens permissions (allow or autoMode
+Real money (live key, purchase, ads, paid plan), a new paid service, force-pushing `main` (denied
+outright), rotating a production secret, sending mail or posts publicly, and merging a PR that widens permissions (allow or autoMode
 in `global/settings.json`, the sync in `cloud/setup.sh`, `install.mjs`): every thread loads those
-from main, so a widening needs his explicit yes on a card first. Everything else runs, and a card for any other choice
+from main, so a widening needs his explicit yes on a card first. Deleting on GitHub and Cloudflare runs without
+asking, except a live project or a database (yskills 2026-10-26: "only serious live projects or
+databases"): `delete-project` runs unasked and itself refuses every live project (`PROTECTED` in
+`scripts/delete-project.mjs`; deleting one needs his yes and a PR that drops it there), while raw
+`wrangler delete`, `d1 delete`, `r2 bucket delete` and `gh repo delete` ask. Everything else runs, and a card for any other choice
 goes on with its recommendation (`CLAUDE.md`, Cards).
 
 ## Layer 1: our own rules
@@ -38,11 +41,15 @@ read 2026-10-26):
   auto-mode classifier. Broad rules (`Bash(*)`, `Bash(node *)`, `Bash(npm run *)`) are dropped by
   auto mode, so the list names commands one by one. A compound command needs every part allowed.
 - **ask**: always prompts, even in auto mode, so it holds only the list above (publish to npm,
-  `wrangler delete` / `d1 delete` / `r2 bucket delete`, `wrangler secret`, `gh repo delete|edit`,
-  `gh workflow run delete-project`, `gh issue delete`, `gh run delete`, `delete_file`,
-  `create_repository`). Workflows are allowed by name only; `actions_run_trigger` is not allowed
+  `wrangler secret`, `gh repo edit` (visibility), `create_repository` (can be public), and the raw
+  deletes of a Worker, database or repo: `wrangler delete`, `d1 delete`, `r2 bucket delete`,
+  `gh repo delete`). Allowed: `gh workflow run delete-project` (it refuses live projects),
+  `gh issue delete`, `gh run delete`. `delete-project` runs only from `main`: a dispatch with
+  `--ref` or `-r` is denied and the job checks `github.ref` (a branch copy could drop that check:
+  issue #311 moves the secrets into a main-only Environment). Workflows are allowed by name only; `actions_run_trigger` is not allowed
   (it can't be narrowed by argument), so the classifier and the autoMode workflow list decide.
-  `scripts/guards.test.mjs` checks that no ask-first command matches an allow rule.
+  `scripts/guards.test.mjs` checks that no ask-first command matches an allow rule, and that the
+  deletes are allowed.
 - **deny**: secrets files, `wrangler login`, force-push or delete of `main`/`master`, and local
   deploy commands (deploys go only through Workers Builds: a deny answers at once, an ask would stall).
 - **autoMode**: read from user settings only (never from a repo's `.claude/settings.json`). It keeps

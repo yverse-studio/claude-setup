@@ -15,8 +15,9 @@ import { validName, redact } from './new-project.mjs'
 export const ORG = 'yverse-studio'
 export const MARKER = 'made by claude-setup new-project'
 const BUILD_TOKEN_NAME = 'claude-setup-builds'
-// Real repos, never deletable here whatever their description says.
-export const PROTECTED = new Set(['claude-setup', 'duo-test', 'company-xy', 'mypage', 'ydeas-world', 'worker', 'yland', 'kleingarten', 'luna-monorepo', 'y-games', 'trayding-bot', 'anime-filter', 'luna-assistant-service', 'personal-luna', 'aissistant', 'tiktokisland', 'butzis-spiel'])
+// Real repos and live projects (Worker and D1 go by the project name), never deletable here whatever
+// their description says. Deleting one of these needs yskills' yes and a gated PR that drops it here.
+export const PROTECTED = new Set(['tellmey', 'ideaworld', 'social', 'igelgarten', 'companyxy-spiel', 'claude-setup', 'duo-test', 'company-xy', 'mypage', 'ydeas-world', 'worker', 'yland', 'kleingarten', 'luna-monorepo', 'y-games', 'trayding-bot', 'anime-filter', 'luna-assistant-service', 'personal-luna', 'aissistant', 'tiktokisland', 'butzis-spiel'])
 
 export function checkRequest({ name, confirm, registered }) {
   if (!validName(name || '')) throw new Error(`name "${name}" must be lowercase letters, digits and dashes`)

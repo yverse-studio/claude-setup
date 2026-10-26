@@ -53,15 +53,18 @@
       "Bash(gh workflow run branch-cleanup*)",
       "Bash(gh workflow run deploy-watch*)",
       "Bash(gh workflow run store-publish-test*)",
+      "Bash(gh workflow run delete-project*)",
       "Bash(gh issue view *)",
       "Bash(gh issue list *)",
       "Bash(gh issue create *)",
       "Bash(gh issue comment *)",
       "Bash(gh issue edit *)",
       "Bash(gh issue close *)",
+      "Bash(gh issue delete *)",
       "Bash(gh run view *)",
       "Bash(gh run list *)",
       "Bash(gh run watch *)",
+      "Bash(gh run delete *)",
       "Bash(gh repo view *)",
       "Bash(gh release view *)",
       "Bash(npm ci *)",
@@ -131,11 +134,7 @@
       "Bash(npx wrangler secret *)",
       "Bash(gh repo delete *)",
       "Bash(gh repo edit *)",
-      "mcp__github__delete_file",
-      "mcp__github__create_repository",
-      "Bash(gh workflow run delete-project*)",
-      "Bash(gh issue delete *)",
-      "Bash(gh run delete *)"
+      "mcp__github__create_repository"
     ],
     "deny": [
       "Read(**/.env)",
@@ -202,7 +201,9 @@
       "Bash(git -C* push * main)",
       "Bash(git -C* push*refs/heads/main*)",
       "Bash(git -C* push*+main*)",
-      "Bash(git -C* push*--delete*main*)"
+      "Bash(git -C* push*--delete*main*)",
+      "Bash(gh workflow run delete-project*--ref*)",
+      "Bash(gh workflow run delete-project* -r*)"
     ]
   },
   "effortLevel": "high",
@@ -220,13 +221,13 @@
       "Organization: yverse-studio, a solo studio run by yskills. Claude works as the GitHub user yskills-claude, an org Owner. Every repo under github.com/yverse-studio (and github.com/yskills/Butzis-Spiel) is a trusted repo; source control is GitHub only.",
       "Trusted internal domains: *.yverse.workers.dev (our Cloudflare Workers, live and preview) and raw.githubusercontent.com/yverse-studio.",
       "CI/CD: GitHub Actions runs verify only; Cloudflare Workers Builds deploys main on merge and every other branch as a preview. Secrets live only in claude-setup GitHub Actions secrets and as Worker secrets, never in files.",
-      "Standing approval (yskills, 2026-10-06 and 2026-10-26): Claude runs every task end to end without asking. yskills is asked only before real money, a new paid service, deleting data or repos, force-pushing main, rotating a production secret, or sending mail or posts publicly."
+      "Standing approval (yskills, 2026-10-06 and 2026-10-26): Claude runs every task end to end without asking, deletes included (test projects via the delete-project workflow, branches, issues, runs). yskills is asked only before real money, a new paid service, deleting a live project or a database, force-pushing main, rotating a production secret, or sending mail or posts publicly."
     ],
     "allow": [
       "$defaults",
       "Gated merge: merging a pull request in a yverse-studio repo after a separate Claude gate review reported 5/5 (claude-setup gate.md) is the approved production deploy (yskills, 2026-10-06, \"merge everything\"). It is not Merge Without Review, Self-Approval or Production Deploy; the gate review is the review. Not covered: a PR that widens permissions (allow or autoMode in global/settings.json, the permission sync in cloud/setup.sh, install.mjs); it needs yskills explicit yes in the thread first.",
       "Setup repo edits: editing files of yverse-studio/claude-setup or a product repo (CLAUDE.md, gate.md, global/, cloud/, install.mjs, .claude/ settings, skills, hooks, workflows) on a feature branch to open a gated pull request is the normal work of the repo, not Self-Modification or Instruction Poisoning; the running session is not changed by it.",
-      "Routine GitHub writes in yverse-studio: creating branches, pushing to non-default branches, opening, updating and commenting on PRs and issues, labels, resolving review threads, and dispatching this org own workflows (new-project, build-logs, branch-cleanup, deploy-watch, store-publish-test) are expected and not External System Writes or ChatOps.",
+      "Routine GitHub writes in yverse-studio: creating branches, pushing to non-default branches, opening, updating and commenting on PRs and issues, labels, resolving review threads, and dispatching this org own workflows (new-project, delete-project, build-logs, branch-cleanup, deploy-watch, store-publish-test; delete-project refuses live projects itself) are expected and not External System Writes or ChatOps.",
       "Verified replace: replacing or deleting a file in the working folder or the laptop asset library after a backup copy was made and checked (hash or size compared) is routine, not Irreversible Local Destruction."
     ]
   }

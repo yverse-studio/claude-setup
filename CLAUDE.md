@@ -56,8 +56,9 @@ goes in its home only, everywhere else links it.
   included; that merge is the production deploy. A refused call takes its fixed way around
   (`docs/permissions.md`, Layer 3) and never waits. [advisory]
 - Ask first only before: real money (live key, purchase, ads, paid plan), a new paid service,
-  deleting data or a repo (a project needs yskills' "delete <name>"), force-pushing `main`, rotating
-  a production secret, sending mail or posts publicly. A step only his hands can do (keys, domain,
+  force-pushing `main`, rotating a production secret, sending mail or posts publicly. Deleting on
+  GitHub and Cloudflare (test projects, branches, issues, runs) needs no ask (yskills 2026-10-26);
+  only a live project or a database asks (`docs/permissions.md`). Say what went in one line. A step only his hands can do (keys, domain,
   Gewerbe) is one line plus the steps while the rest goes on. Everything else: pick the sensible
   default, say which, keep going; a taste or design choice is a card that goes on with its
   recommendation. Prompts and safety checks: `docs/permissions.md`.

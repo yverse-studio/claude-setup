@@ -30,7 +30,8 @@ for (const file of ['global/settings.json', '.claude/settings.json']) {
       'git push origin +main', 'git push -u --force origin HEAD:main', 'git push origin --delete main', 'git push origin :main', 'git push --mirror',
       'git -C /repo push --force origin main', 'git -c x=y push -f origin main', 'git push -fu origin main', 'git push --force origin master',
       // main changes only through a gated merge, and deploys only through Workers Builds (docs/permissions.md)
-      'git push origin main', 'git push -u origin HEAD:main', 'git -C /repo push upstream main', 'git -C /repo push origin refs/heads/main', 'git -C /repo push origin +main', 'git -C /repo push origin --delete main', 'wrangler deploy', 'npx wrangler deploy', 'npm run deploy',
+      'git push origin main', 'git push -u origin HEAD:main', 'git -C /repo push upstream main', 'git -C /repo push origin refs/heads/main', 'git -C /repo push origin +main', 'git -C /repo push origin --delete main',
+      'gh workflow run delete-project --ref claude/x -f name=yland -f confirm=yland', 'gh workflow run delete-project -r x -f name=y', 'gh workflow run delete-project -rclaude/x -f name=yland -f confirm=yland', 'gh workflow run delete-project --ref=x -f name=y', 'wrangler deploy', 'npx wrangler deploy', 'npm run deploy',
     ]) assert.ok(denied(c, deny), `${c} must be denied`)
     for (const c of [
       'git push -u origin claude/project-thread-vxq6m9', 'git push --force origin claude/feature',
@@ -45,14 +46,17 @@ for (const file of ['global/settings.json', '.claude/settings.json']) {
 test('no ask-first command is allowed', () => {
   const { allow, ask } = read('global/settings.json').permissions
   for (const c of [
-    'gh workflow run delete-project -f name=x -f confirm=x -f dry_run=false', 'gh issue delete 5', 'gh run delete 9',
-    'gh repo delete yverse-studio/x', 'wrangler secret put KEY', 'npx wrangler d1 delete db', 'npm publish',
+    'gh repo delete yverse-studio/x', 'wrangler delete --name yland', 'wrangler secret put KEY', 'npx wrangler d1 delete db', 'npm publish',
   ]) {
     assert.ok(!allow.some((r) => matches(r, c)), `${c} must match no allow rule`)
     assert.ok(ask.some((r) => matches(r, c)), `${c} must match an ask rule`)
   }
-  for (const t of ['mcp__github__actions_run_trigger', 'mcp__github__delete_file', 'mcp__github__create_repository']) assert.ok(!allow.includes(t), `${t} must not be allowed`)
-  assert.ok(allow.some((r) => matches(r, 'gh workflow run new-project -f name=x')), 'new-project dispatch stays allowed')
+  for (const t of ['mcp__github__actions_run_trigger', 'mcp__github__create_repository']) assert.ok(!allow.includes(t), `${t} must not be allowed`)
+  // Test projects come and go unasked (yskills 2026-10-26); delete-project itself refuses live ones (PROTECTED).
+  for (const c of ['gh workflow run new-project -f name=x', 'gh workflow run delete-project -f name=x -f confirm=x -f dry_run=false', 'gh issue delete 5', 'gh run delete 9']) {
+    assert.ok(allow.some((r) => matches(r, c)), `${c} must be allowed`)
+    assert.ok(!ask.some((r) => matches(r, c)), `${c} must not ask`)
+  }
 })
 
 test('the two deny lists are the same', () => {

@@ -152,7 +152,7 @@ How to undo a merge, by kind of change (write the line into the PR's "undo" line
   still fails and the problems in plain words (from the last reports), and two or three ideas to
   solve it as tap options; the thread goes on with the
   recommended option and the card lets yskills change course; when the coordinator already
-  answered, carry on with its answer instead of asking again; money, a new service, deleting and
+  answered, carry on with its answer instead of asking again; money, a new service, secrets, public posts, deleting a live project or database and
   anything irreversible wait for the tap (`CLAUDE.md`, Cards).
 
 **Important or hard PRs** (auth, payments, database migrations, secrets, anything that can lose
