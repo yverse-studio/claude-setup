@@ -29,6 +29,7 @@ const STEPS = [34, 33, 33]; // 100 ms per 3 frames, each frame crossing exactly 
   for (let si = 0; si < SHOTS.length; si++) {
     const shot = SHOTS[si];
     const c = shot.need ? await p.evaluate(z => { const fs = window.__island.simulation.followers.filter(f => f.spot && f.spot.zoneId === z); return { x: fs.reduce((a, f) => a + f.spot.x, 0) / fs.length, y: fs.reduce((a, f) => a + f.spot.y, 0) / fs.length, n: fs.length }; }, shot.need) : null;
+    if (c && !c.n) throw new Error(`shot ${si}: no followers in zone ${shot.need}`);
     if (c) { await setCam({ x: c.x, y: c.y, z: 2.5 }); await p.clock.runFor(1500); } // wake moods near the camera
     let key = null;
     if (shot.pick) key = await p.evaluate(({ z, kind }) => {
@@ -36,6 +37,7 @@ const STEPS = [34, 33, 33]; // 100 ms per 3 frames, each frame crossing exactly 
       const q = kind === 'fish' ? [f => f.spot.activity === 'fish' && f.emoji, f => f.spot.activity === 'fish' && f.isSeated, f => f.spot.activity === 'fish'] : [f => ['😄', '🥰', '😆', '🤩'].includes(f.emoji), f => !!f.emoji, f => f.isSeated];
       for (const p of q) { const f = F.find(p); if (f) return f.key; } return F[0] && F[0].key;
     }, { z: shot.need, kind: shot.pick });
+    if (shot.pick && !key) throw new Error(`shot ${si}: no ${shot.pick} subject in ${shot.need}`);
     const subject = () => key ? p.evaluate(k => { const f = window.__island.simulation.followers.find(x => x.key === k); return { x: f.x, y: f.y, name: f.name, e: f.emoji }; }, key) : null;
     for (let i = 0; i < shot.n; i++, frame++) {
       const t = i / (shot.n - 1);
