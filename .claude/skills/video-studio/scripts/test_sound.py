@@ -225,6 +225,7 @@ class Library(unittest.TestCase):
         self.assertIsNone(sound.library_manifest(self.root))
 
     def test_missing_module_says_restore_it(self):
+        """The error names the missing file, so the fix is obvious."""
         with mock.patch.dict(sys.modules, {"sound_library": None}), self.assertRaises(SystemExit) as err:
             sound.pick_from_library(self.cues(1), self.root, "big")
         self.assertIn("sound_library.py is missing", str(err.exception))
