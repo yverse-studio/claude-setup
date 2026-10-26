@@ -183,3 +183,28 @@ characters, room, action, optional furniture, ticks for intro/loop/finish) that 
 adjust it, renders the clips after saving and puts them in the game. The base exists: `run_scenes.py`,
 `projects/<project>.json`, `<action>/<action>.json`, `rooms.json`. Before building a heavy part, look at how existing
 scene tools solve it (VaM, sandbox games, pose editors, Blender pose-library add-ons) and copy before inventing.
+
+## Recipe: the mund scene from zero (state 2026-10-26)
+
+A fresh agent follows this with claude-setup plus the laptop handoffs, no questions. Handoffs (read-only sources, in
+`GameAssetLibrary\`): `rigs\interaction\HANDOFF.md` (sections 6-8 gate, image language, engineering lessons; 9a vision;
+9e order), `characters\CH_rika\Blend\HANDOFF.md` ("Rig v2"), `scenes\companyxy\ch01\INTEGRATION.md` (player).
+
+1. Models: Rika `characters\CH_rika\Blend\rika.blend` (Rig v2), the man `characters\CH_male\male.blend` (v2.2, 1.90 m,
+   normals out), room `environment\rooms\office_night`. Check first: bone maps (`rika_now.json`, `mh_male.json`:
+   names), `core\test_openings.py` (0 hits, stop ~61 mm), finger-axis measurement, then `--pos` with numbers.
+2. Geometry in the side view (she kneels at the desk edge, he leans back, shaft 15-30° up); face 45-55° to the camera,
+   camera at his eyes +0.15 forward, lens 22. Then `python rigs\interaction\core\run_scenes.py <slot> --pos`.
+3. Timeline (frames at 24 fps): intro 1-144 (close-up tease, hands to the chest 44-96, mouth opens, first stroke), loop
+   145-192 (48, seamless), finish 193-268 (burst 24, hold with breathing, still). Render order: `intro=1-144
+   loop=145-192 finish=193-268`; B camera extra (`--camera Camera_B --hide ... --mask mh_body:Penis_2`).
+4. Mover = her, through the spine (bend about the cross axis, head counter-turn, roll ±4°, knees and hands fixed
+   from frame 49), depth from the opening script per frame, strokes alternate (49 mm, 58 mm); camera still except
+   breathing, Dutch ~7°, sway; soft parts as keys on the breast bones (3 frames lag, 2nd harmonic) because Wiggle 2
+   does not run headless.
+5. Look: dark warm night (world ~0.12, key ~70 W, cold rim), toon skin; headless test frames 960x540, fixed lights saved
+   in the file. Effects (finish) from a reusable generator with presets and JSON, visible in the still.
+6. Gate: sheets (A, B, hands close-ups, speed curve, loop strip next to the reference strip) -> five-star table ->
+   yskills -> 1080p, 24-32 samples, one render at a time -> copy to the game, rebuild the contact sheet.
+7. Known open points are listed at the end of `rigs\interaction\HANDOFF.md` section 9d/9e; do not repeat the listed
+   mistakes below.
