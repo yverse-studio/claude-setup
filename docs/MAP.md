@@ -20,7 +20,7 @@ What every session does at start:
 | Surface | Reads first | Then |
 |---|---|---|
 | Coordinator (project chat) | `MEMORY.md`, the thread board | `add_repo` claude-setup, `CLAUDE.md`, this section, [`TEAMS.md`](TEAMS.md) (before starting any thread), `roles/project-manager.md` Session start; reconciles board and state |
-| Thread | its brief, `MEMORY.md` | `add_repo` claude-setup, `CLAUDE.md`, this section, [`TEAMS.md`](TEAMS.md) Spawn rule, its role file; for a product also that repo's `CLAUDE.md` and `docs/LESSONS.md` |
+| Thread | its brief, `MEMORY.md` | `add_repo` claude-setup, `CLAUDE.md`, this section, [`TEAMS.md`](TEAMS.md) (Coordinator or thread) and its own Roster row, its role file, never the Spawn rule; for a product also that repo's `CLAUDE.md` and `docs/LESSONS.md` |
 | Claude Code on the laptop | `~/.claude/CLAUDE.md` | the project's `CLAUDE.md`; auto-memory is a scratchpad |
 | New claude.ai project | the generated boot text | as a coordinator; its first session sweeps old memory into the repo |
 | Plain chat (no project) | yskills' user preferences | this section; the `operator` skill sizes the job; no memory |

@@ -115,8 +115,13 @@ How to undo a merge, by kind of change (write the line into the PR's "undo" line
   live without them.
 - **Less:** post the blocking findings as one PR review and stop. The builder fixes them; the next
   round re-runs the failed checks with fresh agents on the new head.
-- **2 failed rounds:** send one message to yskills: what the PR does, what is wrong in plain words (from
-  the last reports), and two or three ways forward as tap options; the thread goes on with the
+- **Up to 6 rounds** (yskills 2026-10-26: "6-7 versuche", was 2; the one home of the gate's round
+  limit, every other file links here): the builder fixes and the gate re-runs until 5/5, at most six
+  rounds. A defect that fails the same check twice gets a diagnosis before the next fix
+  (`character-workflow.md`, step 4), not a blind patch.
+- **Still not 5/5 after round 6:** the Tester sends one message to yskills: what the PR does, why it
+  still fails and the problems in plain words (from the last reports), and two or three ideas to
+  solve it as tap options; the thread goes on with the
   recommended option and the card lets yskills change course; when the coordinator already
   answered, carry on with its answer instead of asking again; money, a new service, deleting and
   anything irreversible wait for the tap (`CLAUDE.md`, Cards).
