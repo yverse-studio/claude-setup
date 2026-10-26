@@ -201,8 +201,8 @@ and sat behind the owner's passkey, so nobody clicked the real app.
   on the live host, and answers 404 when the secret is unset. Not wired into the project workflow yet: no project
   holds a GitHub secret, so a journey behind a login needs a decision first (open). The runner would run only the default branch's specs; the PR's Worker (the preview)
   receives it in the request, so it opens only the preview's test data, and a PR from a fork never gets it
-  (`journey-gate.mjs` refuses). A short-lived token minted per run is a later hardening. Creating or rotating it waits
-  for yskills' tap (`CLAUDE.md`, Ask first). [advisory]
+  (`journey-gate.mjs` refuses). A short-lived token minted per run is a later hardening. It is a preview-only
+  secret, so creating it needs no tap. [advisory]
 - **Builds run one at a time** on Workers Builds: every `claude/*` push queues in front of `main`'s
   deploy. Push once per finished round, at most three branches building at once; a stuck build is
   cancelled with `build-logs` (`cancel`). `deploy-watch.yml` catches what still slips. [advisory]

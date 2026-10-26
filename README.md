@@ -42,7 +42,7 @@ tools that are missing (gh, ffmpeg, docker, python, uv, fnm) with the install co
 | Piece | What | Where it comes from |
 |---|---|---|
 | `CLAUDE.md` | How Claude works for you: owns tasks end to end, verifies before pushing, screenshot-reviews UI, your default stack | `CLAUDE.md` |
-| Settings | Auto permission mode, safe allow list, asks before force-push and deploys, denies reading `.env` and key files (a deny rule is not a sandbox), high effort, status line with context bar | `global/settings.json` |
+| Settings | Auto permission mode, an allow list and autoMode lines so routine work never prompts, asks only before deletes, secret rotation and npm publish, denies local deploys, force-push of `main` and reading `.env` and key files (a deny rule is not a sandbox), high effort, status line with context bar (`docs/permissions.md`) | `global/settings.json` |
 | 9 plugins on | superpowers, frontend-design, security-guidance, TypeScript and Python LSP, Context7, Playwright, commit-commands, skill-creator (`/code-review` and the `claude-api` skill are built into Claude Code now) | Anthropic's official marketplace, `config/plugins.json` |
 | 7 plugins per project | Cloudflare, Firebase, Stripe, Sentry, PostHog, Supabase, Vercel: installed but off; a repo turns one on in its `.claude/settings.json` | same |
 | 17 ECC skills | Vue, Nuxt 4, Vite, API design, security review, e2e, SEO, i18n... | `.claude/skills`, list in `config/ecc.json` |
@@ -94,13 +94,12 @@ project that uses this setup.
   Workers' asset-upload token (401).
 
 On your PC, `global/settings.json` lets Claude read the official docs of your stack (Nuxt, Vue,
-Cloudflare, Stripe, GitHub, MDN, German law texts...) without asking each time. Cloud threads
-don't get these settings (the setup script installs plugins and one env key, not the permission
-list), so there a link nobody posted in the chat still asks before it opens; whether adding the
-list to the setup script would stop that is untested. Threads research with WebSearch instead.
+Cloudflare, Stripe, GitHub, MDN, German law texts...) without asking each time. Cloud threads get
+the same list through `cloud/setup.sh`; a link nobody posted in the chat may still ask there, so
+threads research with WebSearch.
 
 - **Settings screens:** Claude cannot see the claude.ai settings screens, only the docs page (yskills, 2026-10-04: "how do you not know your own ui"): say so up front, name the exact field (gear next to the cloud environment > Edit > Environment variables) and ask for a screenshot when it is not there. An environment variable reaches every process (wrangler needs `CLOUDFLARE_API_TOKEN` as one); an API credential is added by the proxy for one host and the process never sees it, so it only fits keys called over HTTP.
-- **Cloud limits** (autonomy research, 2026-10-10): cloud threads ignore `defaultMode` bypassPermissions and dontAsk; `permissions.allow` in a repo's `.claude/settings.json` applies in cloud only in a project with exactly one repository; `autoMode` rules are read from user or managed settings, never from project files; writes to protected paths (`.git/`, `.claude/`, policy files) are never auto-approved, so such a refusal is not a bug and not tunable. Never use bypass anywhere that holds keys.
+- **Cloud limits:** cloud threads ignore `defaultMode` bypassPermissions and dontAsk; the permission list and autoMode reach them through `cloud/setup.sh` (`docs/permissions.md`). Never use bypass anywhere that holds keys.
 
 ## Using it
 

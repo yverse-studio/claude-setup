@@ -100,14 +100,14 @@ gate runs the PR's build locally (`wrangler dev`) for checks 2, 4 and 5.
 
 Under auto-run the gate merges (squash) every PR at 5/5: launch, live money and
 claude-setup PRs included (yskills, "merge everything", 2026-10-06). That merge is the approved
-production deploy. If Claude Code's safety check or auto mode refuses a merge, the gate asks
-yskills for the tap on the card and tries no other way. Other files say this in one line and
-point here.
+production deploy. `global/settings.json` allows the merge and tells auto mode the gate review is
+the review (`docs/permissions.md`). If a merge is still refused, the gate reports it once in the
+thread and to the coordinator and goes on with the next PR; it tries no other way. Other files say
+this in one line and point here.
 
-Policy files (`CLAUDE.md`, this file, `hq-refresh.md` in yverse-studio/company-xy, `global/`, `cloud/`, `install.mjs`): the
-cloud safety check may refuse an edit to them. The thread says so once and asks yskills to tap
-Allow in that thread (it cleared this file on 2026-10-10); it never rewords, splits or routes the
-edit another way.
+Policy files (`CLAUDE.md`, this file, `hq-refresh.md` in yverse-studio/company-xy, `global/`, `cloud/`, `install.mjs`): edits on
+a branch are allowed by an autoMode line; a refusal follows `docs/permissions.md` (Layer 3), never
+reworded, split or routed another way.
 
 How to undo a merge, by kind of change (write the line into the PR's "undo" line):
 
@@ -129,10 +129,8 @@ How to undo a merge, by kind of change (write the line into the PR's "undo" line
     wait for CI again before merging: in the HQ run six slices edited one `dashboard.html`, and a
     merge without the pull would have dropped the previous slice's work.
   - **One batch at the merge:** write the events (`pr-<repo>-<number>` `pr_merged`, `gate-<repo>-<number>` `gate_passed`) together with `projects/<id>`, the `team/*` rows and `phases`, every doc stamped `at`, so XP and rows never disagree.
-  - **Every PR**, launch and live money included: the gate merges it (squash). If
-    Claude's auto mode refuses, it doesn't try another way: it asks yskills for the tap.
-  - **claude-setup PRs:** the gate merges them too; only when Claude Code's safety check
-    blocks the merge does yskills tap **Merge it** on the card or GitHub's Merge button.
+  - **Every PR**, launch, live money and claude-setup included: the gate merges it (squash). A
+    refused merge: Merge policy above.
   - **Live check after the merge** (incident 2026-10-26: ~3 h of social merges never deployed):
     the merge is not done until live serves it. Within 15 minutes, read live `/api/config`; its
     `commit` must equal the merge commit on `main` (`send_later` for the wait, never a sleep). Not
