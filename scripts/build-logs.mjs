@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// build-logs: prints the tail of a project's latest Workers Builds log, so a cloud thread (which
+// build-logs: lists the 10 newest Workers Builds (status, branch, commit) and prints the tail of the latest log, so a cloud thread (which
 // cannot open the Cloudflare dashboard) can read why a build failed. Run by
 // .github/workflows/build-logs.yml (workflow_dispatch). Every line goes through new-project's
 // redact(): ids, uuids and token-like strings never reach the public Actions log.
@@ -32,6 +32,14 @@ export function latestBuild(builds) {
   return [...(builds || [])].sort((a, b) => String(b.created_on).localeCompare(String(a.created_on)))[0] || null
 }
 
+// One scrubbed line per build, newest first; branch names are user-chosen and the Actions log is public.
+export function recentLines(builds) {
+  return [...(builds || [])].sort((a, b) => String(b.created_on).localeCompare(String(a.created_on))).map((b) => {
+    const m = b.build_trigger_metadata || {}
+    return scrub(`[build-logs] recent: ${b.created_on} ${b.status}/${b.build_outcome} ${m.branch || '?'} ${String(m.commit_hash || '?').slice(0, 7)}`)
+  })
+}
+
 async function main() {
   const name = process.env.NAME || ''
   if (!validName(name)) throw new Error(`name "${name}" must be lowercase letters, digits and dashes`)
@@ -51,8 +59,10 @@ async function main() {
   const workers = (await cf('/workers/workers?per_page=100')).json?.result || []
   const worker = workers.find((w) => w.name === name)
   if (!worker) throw new Error(`no Worker named ${name} in this account`)
-  const build = latestBuild((await cf(`/builds/workers/${worker.id}/builds?per_page=10`)).json?.result)
+  const builds = (await cf(`/builds/workers/${worker.id}/builds?per_page=10`)).json?.result || []
+  const build = latestBuild(builds)
   if (!build) throw new Error(`${name} has no builds yet`)
+  for (const line of recentLines(builds)) console.log(line)
   const meta = build.build_trigger_metadata || {}
   console.log(`[build-logs] ${name}: ${build.status}, outcome ${build.build_outcome}, branch ${meta.branch || '?'}, commit ${String(meta.commit_hash || '?').slice(0, 7)}, created ${build.created_on}`)
   for (const line of logLines((await cf(`/builds/builds/${build.build_uuid}/logs`)).json)) console.log(line)

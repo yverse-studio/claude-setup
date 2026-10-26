@@ -153,8 +153,32 @@ The game has its own private repo, `yverse-studio/companyxy-spiel` (since 2026-1
 `ASSETS.txt`, tests and the story; `*.rpyc`, `cache/`, `saves/`, `log.txt` and built zips ignored; big art stays
 in the library. A new story game copies this layout.
 
+## Scene clips and the player (2026-10-26, night scenes)
+
+Per slot in `game\art\loops\`: `<slot>_intro.webm` (once), `_loop` (A, POV, seamless), `_B_loop` (B, close-up on the
+action, seamless, no `_B_fast`), `_fast` (double tempo, seamless, camera A only), `_finish` (once, last frame = the
+still `cg_nacht_kommen_<x>.png`). All VP9 webm 24 fps, frame N = frame 0; tempo stages only through clips, never by
+playback speed. Lengths per slot live in the laptop `README.md` (`ANIM_LEN`) and the Ren'Py code reads them:
+intro 4-6 s, loop 48 frames (2 s), fast 24 frames (every 2nd frame), finish ~76 frames (burst 1.0 s, then hold).
+
+- Player: auto-advance is a game option, default on (fast after 12 s of loop, finish after 8 s of fast), switchable
+  to click-only; a click works in both. A and B switch by hard cut every 4-8 s (1-2 frames, dissolve 0.05 s).
+- Dialog and sound live in the game, not in the video: intro lines on top at the beats (look, hands, mouth), none in
+  the last second; in loops only short auto lines (6 words at most, every 5-8 s), text low, 30 % height, half
+  transparent; no line in the burst, one line in the hold, then the still with normal dialog. The epilogue
+  (6-7 s wide angle) is its own still.
+- Option "hide the man" per clip, same keys, render time only: `_nm` (penis and hands only) and `_gh` (his body as a
+  blue Fresnel shell, alpha 0.2-0.3, penis normal). Material override in the scene, never in the figure file.
+- Cut lessons from the reference videos (Jane/Zhu): intro 15-20 s with a static camera; cuts only at position
+  changes (17-38 s without a cut, a hard cut plus 1-2 frames of RGB offset); tempo stages 0.4 / 1.2 / 2.3 Hz of
+  10-15 s each, burst 2 s at most; a reaction insert of 1.5-2 s (35 mm, two faces) mid-scene; subtitles one line at
+  beat borders; finish = burst, hard cut, 6-7 s wide-angle epilogue; clothing as a layer (one script for
+  bare/half/dressed).
+- Scene gate, camera and motion rules: [`two-figure-scenes.md`](two-figure-scenes.md).
+
 ## Lessons (each one cost a round)
 
+- A clip is rendered only at 5/5 on the gate sheet, never "good enough for now" (`two-figure-scenes.md`).
 - Never report a clip or still as done unseen: check a frame strip (arms, hands, clipping, loop
   seam, feet planted). Idle_Flirt went out with floating arms and a drifting body.
 - Every still or clip gets an overlap check: a cardigan went through the body, a cup through a

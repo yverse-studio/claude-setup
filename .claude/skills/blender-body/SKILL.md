@@ -132,6 +132,30 @@ Hand-modelling a body round after round caused the 22-round loop of 2026-10-23. 
    bodies and explicit poses live on the private side behind the 18+ gate; public files and the
    hand-in sheets that go to public places stay clean; his references never go into git.
 
+## Rig conventions for every figure (2026-10-26, from the night scenes)
+
+Same for every character and the man, so one script poses all of them:
+
+- **Fingers:** bone +y points along the finger, -z is the palm, **+x on a finger bone bends toward the palm**
+  (set `Armature["rig_version"] = 2`). A rig whose +x bends to the back of the hand looks "turned 180°"; fix it with
+  a 180° bone roll plus converting the F-curves (pose identical to 0.001 mm), then old scenes with
+  `migrate_rig_v2.py`. Check every new figure: fingertip offset · palm normal must be negative.
+- **IK:** hand and foot IK bones with pole targets in a bone collection "IK", and the switches (`ik_arm_L/R`,
+  `ik_leg_L/R`, `wrist_limit`, `toe_auto`, `skirt_follow`) as properties on the armature object. Put the constraints
+  in the figure file: they survive a library override, constraints added in the scene do not. Wrist limits are
+  anatomical (flex 75°, extend 70°, radial 20°, ulnar 30°).
+- **Openings:** each opening (lips, vulva, anus) is a ring vertex group (`Lips_Ring`, ...) plus a path, so contact
+  depth is measured from the group, not guessed. A test script reports full depth and zero skin hits after every
+  body change.
+- **Vertex groups:** one per body part, without `_NNN` suffixes; POV groups per part (`POV_Hips/Belly/Chest/Arms/
+  Legs/Head/Penis/Hands`) so a camera hides only what it must. Lock the location of `Penis_1` so the base stays
+  on the body.
+- **Normals point out** on every body mesh (inward normals made the solver shove figures 25 cm); scale 1.
+- **Soft parts:** dent keys driven by the distance of a probe object; talking is the viseme keys at 0.3-0.5, not
+  the wide expression keys.
+- **Files:** one `.blend` per figure; every old state (backups, `_before-*`, wip, `.blend1`) goes in one zip archive
+  (`characters\_archive\modelle_vorher_<date>.zip` plus a list), so no thread opens a stale file.
+
 ## Technique (how the pros do it, what we copy)
 
 Research: `/mnt/project-files/companyxy/patches/base-body/library/agent-3d-study/PRO-ADULT-BODY.md`
