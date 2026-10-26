@@ -21,7 +21,7 @@ wrong and how they were fixed.
 | 2 | Three concepts | Writer (Producer recommends) | three pitches, each with a first-frame still from the real product | **card**: yskills picks one |
 | 3 | Script | Writer | hooks and `script.md`: hook, tension or turn, payoff; two columns with time ranges; `references.md` (2-3 top videos in the niche) | |
 | 4 | Board | Director | `storyboard.md` (one still per shot from the real product, with timing, camera and sound cue), `animatic.mp4` (stills on the script's timing) | Critic on the animatic |
-| 5 | Sound plan | Sound | `sound.md`: music bed with source and licence, beat map, SFX cue sheet on the cut points | |
+| 5 | Sound plan | Sound | `sound.md`: music bed with source and licence, beat map, SFX cue sheet on the cut points, per the preset in [`sound-kit.md`](sound-kit.md) | |
 | 6 | Film and cut | Editor | raw capture, cut to the beat map, captions, grade, `draft.mp4` | |
 | 7 | Motion and mix | Motion, Sound | titles, end card, transitions, overlays; then the mix and both masters | |
 | 8 | Gate | Critic (fresh) | `critic.md`: scores against the references, pass or fail | pass before yskills sees it |
@@ -82,7 +82,7 @@ Models line in [`docs/WORKFLOW.md`](../../../docs/WORKFLOW.md).
 Sold "Claude skill packs" from Instagram or Gumroad are prompt lists, not workflows: never bought.
 Skim a free one only if it names something this table lacks.
 
-Shot lists and scripts for the mascot-explainer, POV-magic and blockout-to-AI-video formats: [`formats.md`](formats.md). Prompt and script library: [`prompts.md`](prompts.md). People and POV video (free, cheap, paid tiers): [`people-video.md`](people-video.md). Cloud Blender POV scripts: [`templates/blender-pov/`](templates/blender-pov/README.md).
+Shot lists and scripts for the mascot-explainer, POV-magic and blockout-to-AI-video formats: [`formats.md`](formats.md). Prompt and script library: [`prompts.md`](prompts.md). People and POV video (free, cheap, paid tiers): [`people-video.md`](people-video.md). Cloud Blender POV scripts: [`templates/blender-pov/`](templates/blender-pov/README.md). Real Y-Land footage with real followers, plus a face cut-in in yskills' style: [`templates/yland-film/`](templates/yland-film/README.md). Fast, free launch or update promo from any repo in the product's own look (/brag + HyperFrames), not for his face-first posts: [`templates/launch-video/`](templates/launch-video/README.md).
 
 ## Every video
 
@@ -90,7 +90,7 @@ Shot lists and scripts for the mascot-explainer, POV-magic and blockout-to-AI-vi
   product shots are a fail.
 - **Phone first.** 1080x1920, 30 fps, captions in the top band away from TikTok's right-side and
   bottom UI; one caption at a time, 3-5 words.
-- **Sound.** Every video gets sound design and two masters; the music source and its licence rules:
+- **Sound.** Every video gets sound design and two masters, scaled by its preset ([`sound-kit.md`](sound-kit.md): presets, cut-on-beat, free library, `scripts/sound.py`); the role:
   [`roles/sound.md`](roles/sound.md). yskills' own voice memo when the concept needs a voice (exact lines from the Writer).
 - **Ads.** Label and claims per `market` §4 (German advertising law); three hooks on one body so the
   ad can be tested; paying for ads is yskills' card.

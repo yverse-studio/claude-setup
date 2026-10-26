@@ -119,7 +119,7 @@ added as a second repo, or a plain chat), read that file by path, then the files
 | Visual novels and story games (Ren'Py: setup, art slots, playthrough test, Windows build, laptop delivery) | `docs/game-pipeline.md` (all files, animation, scenes, scene briefs), `docs/two-figure-scenes.md`, `docs/renpy.md`, `storyteller` skill | `docs/renpy-template/`, `docs/character-workflow.md` (renders) |
 | Roblox | `roblox` | `toolbox/catalog/roblox.md` (run and see), `studio` (PC) |
 | 3D models, characters | `docs/character-workflow.md` | `blender-body` (rigged body: base, shape keys, pose tests, reviewing; pro avatar anatomy in `booth-avatars.md`), `game-3d` (VRM pipeline), `studio` (Blender on the PC) |
-| Videos and ads (the studio: Producer, Writer, Director, Sound, Editor, Motion, Critic) | `video-studio` | `video-studio/learnings.md`, `video-studio/formats.md` (mascot-explainer, POV magic, blockout to AI video), `market` §4 (ads law) |
+| Videos and ads (the studio: Producer, Writer, Director, Sound, Editor, Motion, Critic) | `video-studio` | `video-studio/learnings.md`, `video-studio/formats.md` (mascot-explainer, POV magic, blockout to AI video), `video-studio/templates/launch-video/` (15 s launch promo from any repo, free), `market` §4 (ads law) |
 | Social media: posting, comments, DMs, idea backlog, brand accounts, brand deals | `social-team` | `social-team/learnings.md`, `social-team/xyskillsx-style.md` (his personal style: keep, raise, never), `market` §4 and §6, `docs/research/2026-10-26-claude-video-autopost.md` (what people use, ideas-to-posts app) |
 | Video and photo edits | `media-editing` | `watch` (understand a video), `toolbox/catalog/video-audio.md` (AI video, voice, music), `docs/research/2026-10-24-video-batch.md` (29 shared videos, verdicts) |
 | AI features, local models | `toolbox/catalog/ai.md` | the built-in `claude-api` skill; `docs/research/2026-10-07-own-local-model.md` |
@@ -154,6 +154,7 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 | UI rules | `CLAUDE.md` (UI) | `roles/designer.md`, `ui-review` (screenshots, the load-once check, run videos via `desktop.sh`) |
 | What looks AI-made (the slop list) | `.claude/skills/ui-review/SLOP.md` | `CLAUDE.md` (UI), `design-critic`, `roles/designer.md`, `gate.md` check 5 |
 | Art direction before any screen (references, palette, type) | `operator/roles/designer.md` (Art direction first), checked by `ui-review/scripts/design-check.mjs` | `gate.md` check 5, `game-3d`, the game template |
+| Style library (reusable style directions: tokens, captures, do/don't; first: young-cool) | [`ui-review/styles/README.md`](../.claude/skills/ui-review/styles/README.md) | `operator/roles/designer.md` (step 0), `ui-review/TASTE.md` |
 | How a game plays before it is built (core loop, run length, difficulty, feedback, ad hooks, references) | `operator/roles/game-designer.md`, template `operator/templates/game-design.md`, checked by `game-3d/scripts/gdd-check.mjs` | `game-3d` (§1b), `roles/tester.md` |
 | How a game sounds before it is built (sound palette per feedback moment, music plan, mix bar, mute, autoplay, KB budget, licences) | `operator/roles/audio.md`, template `operator/templates/audio.md`, checked by `game-3d/scripts/audio-check.mjs` | `game-3d`, `roles/game-designer.md`, `roles/tester.md` |
 | How a research report is made (primary sources, describe before judging, numbers as read, `Not checked:`) | `operator/roles/researcher.md` (Method), checked by `scripts/research-check.mjs` | `templates/research.md`, `run.md` |
@@ -163,6 +164,7 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 | Project instructions text (a pointer to this repo) | `operator/templates/project-instructions.md` | the live text in each project's settings |
 | An idea or change for a live project | operator `SKILL.md` (Idea for a live project) | `CLAUDE.md`, `roles/project-manager.md` |
 | How a video or ad is made (roles, pipeline, video lessons) | `video-studio` skill | operator `SKILL.md`, `roles/marketer.md`, `market` |
+| Free sound library (CC0 SFX and music, manifest with licence proof, BPM, loudness) | `video-studio/sound/README.md`, checked by `video-studio/scripts/sound_library.py` | `video-studio/roles/sound.md`, `sound-kit.md` |
 | How posts go out, auto-post guardrails, comments and DMs, brand accounts | `social-team` skill | operator `SKILL.md`, `video-studio`, `market` §6, `docs/USING.md` |
 
 ## Keeping it clean

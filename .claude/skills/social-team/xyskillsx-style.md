@@ -67,6 +67,7 @@ at about 340. The Y-Land card video (284 views) looked clean but read like an ap
   clip on a good day, not like an edit.
 - Critic: score against the 5 hits above, not against an agency reel. "Would his friends notice it
   was edited by someone else?" must be no.
+- Sound and cuts: preset real_talk in [`../video-studio/sound-kit.md`](../video-studio/sound-kit.md) (no music, at most 2 SFX on the punchline, -14 LUFS).
 - Delivery: `SKILL.md`, Posting.
 - Re-check this profile after 30 new posts or when a video beats 50k; add the reason as a dated line
   in `learnings.md`.

@@ -23,6 +23,9 @@ Y-Land notes and scripts live in that project's files (`promo/LEARNINGS.md`, `pr
 - 2026-10-11 (Y-Land): when the app runs its simulation in a Web Worker, make the worker fail during filming so the page's synchronous fallback runs on the hand-stepped clock.
 - 2026-10-12 (Y-Land): film the real UI with `preserveDrawingBuffer` patched and step every CSS animation on the film clock (`document.getAnimations()`); Playwright's `click` times out on a paused clock, so trigger with `evaluate` or synthetic `PointerEvent`s (`pointerType: 'touch'` on a touch context).
 - 2026-10-12 (Y-Land): injected overlays must be `pointer-events:none` and removed when hidden, or the next real tap lands on them.
+- 2026-10-26 (Y-Land): the Storybook villagers paint their atlas in a worker; fail that worker too while filming, or villagers are invisible (only name tags and feet). Hide the weather layer and remove the `clamp-zoom` plugin for close-ups; the rig is `templates/yland-film/`.
+- 2026-10-26 (Y-Land): villagers only get emojis and moods near the camera, and the sim still drifts between runs even with a seeded `Math.random`: pick each shot's subject by what it is doing at the shot's first frame, never by a name from a dry run.
+- 2026-10-26 (Y-Land): the first cut juddered on the carousel and yskills saw it before we did: frame steps of [33,33,34] ms skip or double 30 Hz sim steps (use [34,33,33]), a camera locked to a spinning rider shakes (film rides from the hub), and the 2026-10-07 pacing check was skipped. Run it on every cut before showing it.
 - 2026-10-12 (Y-Land): serve the page under the live origin (routes rewritten to the local build) so shared links and pictures show the real address.
 
 ## Captions, overlays and encode
@@ -31,4 +34,5 @@ Y-Land notes and scripts live in that project's files (`promo/LEARNINGS.md`, `pr
 - 2026-10-12 (Y-Land): ffmpeg's looped-still overlays land one frame late; start fades a frame early and check the switch frames.
 - 2026-10-12 (Y-Land): a caption-only change needs no re-film: overlay the new card on the old MP4 from the card's first frame; anything the app draws needs a re-film.
 - 2026-10-07 (Y-Land): always check frame pacing before delivering (`mpdecimate` or a mean frame diff); zero difference during motion is stutter.
+- 2026-10-26 (Y-Land /brag): the brag render measured -24.4 LUFS (no loudness pass, no ducking), about 10 LU quieter than the feed; every master goes through `sound.py mix` or `loud` at -14 LUFS (`sound-kit.md`).
 - 2026-10-07 (Y-Land): everything was free (Playwright, Chromium, ffmpeg); about 1.5 s of render per frame on the cloud CPU, so a 24 s video takes about 20 minutes.
