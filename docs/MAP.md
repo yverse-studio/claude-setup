@@ -67,7 +67,7 @@ lives outside this repo.
 | Claude's PC user | `docs/pc-claude-user.md` | What differs on the `Claude` Windows user (portable Git, env var, paths) and what still needs hands |
 | Cloud threads | `cloud/bootstrap.sh` (paste once), runs `cloud/setup.sh` | Plugins and the guards in a cloud environment (Project settings > Cloud environment) |
 | HQ rows | `docs/hq-rows.md` | What each Project Manager writes into HQ (the page itself lives in yverse-studio/company-xy) |
-| Clothing pipeline | `docs/clothing-pipeline.md` | How garments are stored, fitted once per base and inherited by every character (follow keys, masks, dress script, naming, backups), moving existing garments, the clipping numbers of the done report |
+| Clothing pipeline | `docs/clothing-pipeline.md` | How garments are stored, fitted once per base and inherited by every character (follow keys, masks, dress script, naming, backups), moving existing garments, the clipping numbers of the done report (measured by `scripts/clipping.mjs`, + `scripts/clipping.test.mjs`) |
 | Game pipeline | `docs/game-pipeline.md` | Where every game file lives (laptop GameAssetLibrary, game folder, project files), how to put an animation on a character, build a scene, write a chapter, plus the lessons |
 | Characters | `docs/character-workflow.md` | The one way to make a 3D character and show it to yskills: reference, build, self-check, comparison sheet, gate, library |
 | Using it (for yskills) | `docs/USING.md` | One phone page: how to start an app, deploy or delete a page in one shot, what you see, what it costs |

@@ -65,7 +65,7 @@ distance from each garment vertex to the body surface (positive = outside), as t
 mm and the share of vertices below 0 in %. Measured on the evaluated mesh at rest, in the one big
 pose, and with each slider at each of its extremes, one at a time. Limit, everywhere: smallest
 clearance 0 mm or more and 0 % of vertices inside (the 2-4 mm fit offset of step 3 is the margin).
-A piece without its row is not done, a row over the limit fails the report. The render sheet (idle,
+A piece without its row is not done, a row over the limit fails the report. Measure with `node scripts/clipping.mjs <file.vrm|glb> [--body SKIN] [--parts CLOTH] --out rest.json` (rest pose, one JSON and one summary line; exit 1 over the limit; pose or slider extremes: export that state as GLB and run it again with `--label`). The render sheet (idle,
 big pose, back, close-up of each hem, seam and the body parts under the garment) goes beside it.
 The gate checks both (`gate.md`, Asset PRs).
 
