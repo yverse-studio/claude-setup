@@ -77,11 +77,17 @@ class Say(unittest.TestCase):
     MANIFEST = {"face": {"talk": {"file": "face/talk.mp4", "seconds": 60}, "hyped": {"file": "face/hyped.mp4", "seconds": 30}}}
 
     def test_pick_clip_by_mood(self):
-        self.assertEqual(twin.pick_clip(self.MANIFEST, "calm", 12)["file"], "face/talk.mp4")
+        self.assertEqual(twin.pick_clip(self.MANIFEST, "calm", 7.5)["file"], "face/talk.mp4")
+
+    def test_face_shot_over_8_s_falls_back_to_real_footage(self):
+        with self.assertRaises(SystemExit) as e:
+            twin.pick_clip(self.MANIFEST, "talk", 12)
+        self.assertIn("real footage", str(e.exception))
 
     def test_script_longer_than_clip_falls_back_to_real_footage(self):
+        short = {"face": {"hyped": {"file": "face/hyped.mp4", "seconds": 5}}}
         with self.assertRaises(SystemExit) as e:
-            twin.pick_clip(self.MANIFEST, "hyped", 31)
+            twin.pick_clip(short, "hyped", 6)
         self.assertIn("real footage", str(e.exception))
 
     def test_musetalk_config_uses_forward_slashes(self):

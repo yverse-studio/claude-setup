@@ -51,7 +51,7 @@ The exact ask, the drop folder and the reading script: [`record.md`](record.md).
   rented GPU, a card first).
 - Voice: Chatterbox reads each sentence, faster-whisper listens back, a sentence with more than 8 %
   wrong words is made again (twice), then the run fails. No wrong word ships.
-- A script longer than the mood's face clip stops with "real footage" (the hard rule).
+- A face shot over 8 s, or longer than the mood's face clip, stops with "real footage" (the hard rule); split the script or use `--voice-only`.
 - Longer than ~10 minutes: run it through `scripts/laptop-job.mjs` (`docs/pc-claude-user.md`, Long laptop jobs).
 
 Callers: `video-studio`'s Editor (a twin shot in a cut), the `social` app's daily lane through the
@@ -68,6 +68,7 @@ The `video-studio` Critic ([`roles/critic.md`](../video-studio/roles/critic.md))
 | Sync | lips fully closed on every b, p, m | `critic/closure-*.png` |
 | Voice | every word right (`report.json` WER 0 on names), his pace, breaths between sentences, no flat robot read | `words.json`, transcript |
 | Face | blinks and head moves are his (they come from the real clip), no frozen face, no loop jump | side frames |
+| Length | twin face on screen 8 s at most per shot, cut with real footage | `report.json` seconds |
 | Friend test | his friends would not notice; when in doubt, fail | all of the above |
 
 Voice by ear is yskills' call in his first test (the plan's T3): "would a friend notice?" yes or no.

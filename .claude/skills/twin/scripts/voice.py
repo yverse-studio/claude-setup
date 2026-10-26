@@ -6,6 +6,7 @@ Usage: python voice.py SCRIPT.txt REF.wav OUT.wav WORDS.json [--exaggeration 0.5
 """
 import argparse
 import json
+import os
 
 import torch
 import torchaudio as ta
@@ -19,8 +20,7 @@ GAP_S = 0.18          # breath between sentences
 WHISPER = "small.en"
 
 
-def transcribe(whisper, wav, sr, offset):
-    path = "_sentence.wav"
+def transcribe(whisper, wav, sr, offset, path):
     ta.save(path, wav, sr)
     segments, _ = whisper.transcribe(path, word_timestamps=True, language="en")
     words = [{"word": w.word.strip(), "start": w.start + offset, "end": w.end + offset}
@@ -41,13 +41,14 @@ def main():
     tts = ChatterboxTTS.from_pretrained(device=device)
     whisper = WhisperModel(WHISPER, device=device, compute_type="int8_float16" if device == "cuda" else "int8")
     sentences = split_sentences(open(args.script, encoding="utf-8").read())
+    scratch = os.path.join(os.path.dirname(os.path.abspath(args.out)), "_sentence.wav")  # stays in the run folder
     gap = torch.zeros(1, int(tts.sr * GAP_S))
     pieces, words, offset, errors = [], [], 0.0, []
     for sentence in sentences:
         for attempt in range(RETRIES + 1):
             wav = tts.generate(sentence, audio_prompt_path=args.ref,
                                exaggeration=args.exaggeration, cfg_weight=args.cfg)
-            heard, found = transcribe(whisper, wav, tts.sr, offset)
+            heard, found = transcribe(whisper, wav, tts.sr, offset, scratch)
             wer = word_error_rate(sentence, heard)
             if wer <= args.max_wer:
                 break
@@ -56,6 +57,8 @@ def main():
         pieces += [wav, gap]
         words += found
         offset += wav.shape[-1] / tts.sr + GAP_S
+    if os.path.exists(scratch):
+        os.remove(scratch)
     ta.save(args.out, torch.cat(pieces[:-1], dim=-1), tts.sr)
     worst = max(errors, default=0.0)
     json.dump({"wer": worst, "words": words}, open(args.words, "w", encoding="utf-8"), indent=1)

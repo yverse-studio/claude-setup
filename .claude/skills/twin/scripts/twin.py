@@ -38,6 +38,7 @@ MIN_SHORT_SIDE = 1080
 MIN_FPS = 24
 REF_SECONDS = 12            # Chatterbox clones from a ~10 s clean clip
 MUSETALK_FPS = 25           # MuseTalk was trained on 25 fps
+MAX_FACE_S = 8              # twin face on screen in short bursts only (SKILL.md, Hard rule)
 MAX_WER = 0.08              # more wrong words than this and the take is rejected
 CLOSURE_LETTERS = ("b", "p", "m")
 
@@ -136,6 +137,9 @@ def face_segments(duration):
 
 
 def pick_clip(manifest, mood, seconds):
+    if seconds > MAX_FACE_S:
+        raise SystemExit(f"script is {seconds:.1f} s, a twin face shot is {MAX_FACE_S} s at most: "
+                         "split it, --voice-only over real footage, or real footage (SKILL.md, Hard rule)")
     _, clip_mood = MOODS[mood]
     clip = manifest["face"].get(clip_mood)
     if not clip:
