@@ -80,6 +80,7 @@ when they ask for one thing; impossible or unsafe = one plain line, then the nea
 Done when: <a check the thread can run: command and expected output, or the screenshot/number that proves it>. Stop when: <budget: rounds or tokens;
 default the `Handoff:` number; gate rounds as `gate.md` (Rounds); the `attempt-guard` hook only counts a command failing again>.
 Start: read MEMORY.md, then claude-setup CLAUDE.md and docs/MAP.md (Start here); for a product, its repo's CLAUDE.md and docs/LESSONS.md. Lessons: at the end, say where each lesson went (docs/MAP.md, Where a lesson goes) or `none, because ...`.
+Guides: a brief only points to the guide's checks (`docs/clothing-pipeline.md`, `character-workflow.md`) and never weakens them (no exception, no skipped step, no lower limit); wording like "no visual change" or "just compare" does not override a check, and the thread follows the guide. The thread reads each named guide fresh from current `main` at start (`git fetch origin main`, then `git show origin/main:<path>` or check out main on a laptop), never an earlier draft or a remembered copy.
 Shortest reply. No extra subagents, research, screenshots or re-reads. Models as in
 docs/TEAMS.md (Roster); subagents name theirs too. Never repeat an answer another thread already gave.
 Context (long threads: builds, test runs, renders, fetches; 1M tokens is the most a thread gets):

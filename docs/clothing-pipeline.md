@@ -37,7 +37,7 @@ Rule that follows: **fit per base, never per character.** Characters differ only
    - **cloth set** (only for loose pieces: skirt, dress hem, open shirt): pin group from the
      weights, cloth and collision settings saved, nothing baked.
    - Check: every follow key at 0 and at 1, each slider at its extremes, a frame strip of the
-     idle and one big pose; poke-through test (garment never inside the body by more than the offset).
+     idle and one big pose; poke-through test with the numbers of the Done report below.
 4. **Dress** a character with `_tools\dress.py <character> CL_<item>`: brings the fitted garment
    from `fitted\<base>.blend` into the character file, points its armature at the character rig and
    adds drivers so each follow key copies the character body's key of the same name. Re-running
@@ -45,6 +45,29 @@ Rule that follows: **fit per base, never per character.** Characters differ only
 5. **Physics in a scene**: loose pieces get their cloth bake per shot in the scene file (cache in
    the scene folder), tight pieces just follow the rig. Real-time jiggle and sim belong to the
    engine, not the garment file.
+
+## Moving or re-dressing existing garments
+
+Clothes moved onto a model clipped through the body, because the brief said "no
+visual change" and this page only described new garments. Moving, re-dressing or refitting a
+garment that already exists (to a new base, character, rig or file) is **a new fit**: steps 3 and 4
+run in full, including the poke-through check of step 3.
+
+- "No visual change" or "compare before and after" never waives clipping. A pixel-identical result
+  proves only that the old fit was copied; if the old fit clipped, identical is still broken.
+  The before/after proof ("Prove a move", Lessons) comes after the clipping numbers below, never instead.
+- A brief that says otherwise does not change this rule (`briefs.md`, Every thread brief starts with).
+
+## Done report (required numbers)
+
+The done report of every garment fit or move lists, **per piece**, the **clearance**: the signed
+distance from each garment vertex to the body surface (positive = outside), as the smallest value in
+mm and the share of vertices below 0 in %. Measured on the evaluated mesh at rest, in the one big
+pose, and with each slider at each of its extremes, one at a time. Limit, everywhere: smallest
+clearance 0 mm or more and 0 % of vertices inside (the 2-4 mm fit offset of step 3 is the margin).
+A piece without its row is not done, a row over the limit fails the report. The render sheet (idle,
+big pose, back, close-up of each hem, seam and the body parts under the garment) goes beside it.
+The gate checks both (`gate.md`, Asset PRs).
 
 ## Characters from a base
 
@@ -93,4 +116,5 @@ Rule that follows: **fit per base, never per character.** Characters differ only
 - Patterns on "Generated" texture coordinates move when the garment's rest size changes (a `CH_` key does
   that): put patterns on UVs or object coordinates.
 - Prove a move with evaluated vertex positions (rest, a pose, sliders at 1) before vs after, plus one render
-  per look; zero difference is reachable for the character the garment was fitted on.
+  per look; zero difference is reachable for the character the garment was fitted on. It never replaces the
+  clipping numbers (Moving or re-dressing, above).
