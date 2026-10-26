@@ -65,7 +65,13 @@ distance from each garment vertex to the body surface (positive = outside), as t
 mm and the share of vertices below 0 in %. Measured on the evaluated mesh at rest, in the one big
 pose, and with each slider at each of its extremes, one at a time. Limit, everywhere: smallest
 clearance 0 mm or more and 0 % of vertices inside (the 2-4 mm fit offset of step 3 is the margin).
-A piece without its row is not done, a row over the limit fails the report. Measure with `node scripts/clipping.mjs <file.vrm|glb> [--body SKIN] [--parts CLOTH] --out rest.json` (rest pose, one JSON and one summary line; exit 1 over the limit; pose or slider extremes: export that state as GLB and run it again with `--label`). The render sheet (idle,
+A piece without its row is not done, a row over the limit fails the report. Measure with `node scripts/clipping.mjs <file.vrm|glb> [--body SKIN] [--parts CLOTH] --out rest.json` (rest pose, one JSON and one summary line; exit 1 over the limit; pose or slider extremes: export that state as GLB and run it again with `--label`).  For a `.blend` character and every garment, hair piece or accessory worn on it,
+the **mandatory measuring step** is [`scripts/blender/clearance.py`](../scripts/blender/clearance.py) (library copy: `_tools\clearance.py`,
+the same file): `blender -b <character>.blend --factory-startup -P clearance.py -- look=<look> pieces=<names> faces report=<out.json>` writes the
+smallest clearance, the vertices inside and the share inside for rest, **every follow key at 1** and 3 frames of each pose in one JSON. `faces`
+also measures polygon centres and edge midpoints, because skin shows between vertices (a vertex-only report passed a shirt whose faces cut the
+chest). Self-collision of the body (arm through torso in the pose) is counted apart as `selfcol` and named in the report as animation, not clothing.
+The same script fixes what it finds (`rounds=2`, key and weight correction, see its docstring). The render sheet (idle,
 big pose, back, close-up of each hem, seam and the body parts under the garment) goes beside it.
 The gate checks both (`gate.md`, Asset PRs).
 
@@ -104,6 +110,13 @@ The gate checks both (`gate.md`, Asset PRs).
 
 ## Lessons
 
+- A hidden object is not evaluated: no armature pose, no follow keys, no modifiers. Measuring a piece of an inactive look returned the
+  rest-shape piece against the posed body (-30 mm in every pose, -16 mm on every key) and three builders chased that number for hours.
+  `clearance.py` unhides what it measures; any other check script must do the same (`hide_viewport = False`) and compare the evaluated
+  mesh against the raw one once to prove the pose reached the piece.
+- Shrinkwrap 'Outside' with an offset leaves vertices `-offset` inside where a fold is narrower than twice the offset (butt crease,
+  groin); stacking it makes no difference. Tight pieces clear better with corrected follow keys plus the skin's own weights
+  (`snapw`) and no Shrinkwrap; keep it only for loose pieces whose raw corrections cannot cover every pose.
 - A body-cut shell (garment cut out of the body mesh) never follows sliders or physics; always a
   separate garment mesh on the rig.
 - Fit after the body is final: every later body key needs a new follow key on every garment, so
