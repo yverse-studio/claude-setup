@@ -39,6 +39,21 @@ for (const file of ['global/settings.json', '.claude/settings.json']) {
   })
 }
 
+// An allow rule is decided before the autoMode classifier: no ask-first command may match one
+// (gate round 1, PR 302: `gh workflow *` let delete-project run unasked).
+test('no ask-first command is allowed', () => {
+  const { allow, ask } = read('global/settings.json').permissions
+  for (const c of [
+    'gh workflow run delete-project -f name=x -f confirm=x -f dry_run=false', 'gh issue delete 5', 'gh run delete 9',
+    'gh repo delete yverse-studio/x', 'wrangler secret put KEY', 'npx wrangler d1 delete db', 'npm publish',
+  ]) {
+    assert.ok(!allow.some((r) => matches(r, c)), `${c} must match no allow rule`)
+    assert.ok(ask.some((r) => matches(r, c)), `${c} must match an ask rule`)
+  }
+  for (const t of ['mcp__github__actions_run_trigger', 'mcp__github__delete_file', 'mcp__github__create_repository']) assert.ok(!allow.includes(t), `${t} must not be allowed`)
+  assert.ok(allow.some((r) => matches(r, 'gh workflow run new-project -f name=x')), 'new-project dispatch stays allowed')
+})
+
 test('the two deny lists are the same', () => {
   assert.deepEqual(read('global/settings.json').permissions.deny, read('.claude/settings.json').permissions.deny)
 })

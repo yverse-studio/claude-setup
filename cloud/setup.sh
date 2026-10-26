@@ -275,7 +275,7 @@ const fs = require("fs"), p = require("os").homedir() + "/.claude/settings.json"
 const ours = JSON.parse(fs.readFileSync(process.argv[1], "utf8"))
 const s = fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, "utf8")) : {}
 const { defaultMode, ...perms } = ours.permissions || {}
-s.permissions = perms
+s.permissions = { ...(s.permissions || {}), ...perms }
 if (ours.autoMode) s.autoMode = ours.autoMode
 fs.writeFileSync(p, JSON.stringify(s, null, 2))
 ' "$f"

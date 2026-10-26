@@ -120,6 +120,8 @@ Claude:
 - `wrangler.jsonc` (wrangler 4.147 or newer, which is what knows the block):
   - a `previews` block, required even as `{}`
   - every binding repeated in `previews` with its own resource, because previews inherit none
+  - every var a preview reads repeated in `previews.vars`: top-level `vars` don't reach previews either
+    (social#45, 2026-10-26: no `PROD_HOST` on previews, so the test login answered 404 on every PR)
   - D1 ids committed, and `preview_database_id` set to the preview database's id
   - `"workers_dev": true` and `"preview_urls": true`, so each deploy switches the live address and
     the preview links back on. Without `preview_urls` the PR comment says "No Preview URL", and
@@ -180,7 +182,7 @@ Claude:
 Incident 2026-10-26 (social): the gates judged UI PRs on local tests, because the preview was broken
 and sat behind the owner's passkey, so nobody clicked the real app.
 
-- **Journey script:** every site, app or game needs `npm run journey` (the new-project template does not scaffold it yet: until a project adds it, its UI PRs fail the journey): Playwright against `BASE_URL`
+- **Journey script:** every site, app or game needs `npm run journey` (the new-project template scaffolds a day-zero one; an older project adds it or its UI PRs fail the journey): Playwright against `BASE_URL`
   with the device named in `JOURNEY_DEVICE` (`devices[...]`, touch on), walking the main journeys
   end to end, the destructive-action list (`operator/roles/programmer.md`) included. Results go to
   `test-results/`. No script means `journey.yml` fails, and a UI PR cannot pass (`gate.md`, UI PRs).
@@ -195,14 +197,22 @@ and sat behind the owner's passkey, so nobody clicked the real app.
   fresh job. The template CI has no status permission, but a PR workflow could post one with the same
   token, so the gate runs `journey.mjs verify`: creator `github-actions[bot]`, linked run of `journey.yml`
   from `pull_request_target` in the same repo.
-- **Preview login:** a journey behind a login signs in with a seeded test owner that exists only in
-  the preview database. The app accepts `POST /api/test-login` with `PREVIEW_LOGIN_TOKEN` (a Worker
-  secret, compared in constant time) only on a preview host (`*-<name>.yverse.workers.dev`), never
-  on the live host, and answers 404 when the secret is unset. Not wired into the project workflow yet: no project
-  holds a GitHub secret, so a journey behind a login needs a decision first (open). The runner would run only the default branch's specs; the PR's Worker (the preview)
-  receives it in the request, so it opens only the preview's test data, and a PR from a fork never gets it
-  (`journey-gate.mjs` refuses). A short-lived token minted per run is a later hardening. It is a preview-only
-  secret, so creating it needs no tap. [advisory]
+- **Preview login (standard test environment, yskills 2026-10-26: he never does a step, and no secret exists at all):** a journey
+  behind a login signs in with a seeded test owner that exists only in the preview database. `journey.yml`'s `run` job
+  (default branch's specs, no PR code, `id-token: write`) asks GitHub for an OIDC token whose audience is the preview's host
+  (`scripts/journey-login.mjs`) and sends it as `POST /api/test-login` with `Authorization: Bearer <jwt>`. The Worker
+  (`src/preview-login.js`) answers only on a preview host (`<alias>-<name>.<sub>.workers.dev`; the live host
+  `<name>.<sub>.workers.dev` and custom domains get nothing) and only when the token is signed by GitHub's keys (JWKS,
+  cached), has `iss` GitHub, `aud` = that host, a live `exp`, and claims `repository` = this repo, `job_workflow_ref` =
+  `<repo>/.github/workflows/journey.yml@refs/heads/<default>`, `ref` the default branch, `event_name` `pull_request_target`,
+  GitHub-hosted runner. Then it resets the preview's test data to the seed and signs in as the test owner (`seed` and
+  `signIn` are the project's callbacks; the day-zero ones are in the template, a project with a login replaces both). Nothing
+  is stored in GitHub or Cloudflare, so there is nothing to set, rotate or leak, and every project and branch preview has it
+  from its first deploy; `new-project` needs no key for it. A workflow on another branch, a fork or a push cannot mint a
+  token with those claims. Accepted: PR code in a preview sees a token valid for minutes and only for its own host, so the
+  worst case is someone resetting that preview's test data (separate D1, `wrangler.jsonc` test), never live. Never enable
+  Playwright tracing in the specs (a trace stores the Authorization header). Claude cannot mint the token outside
+  `journey.yml`: to test a login by hand, push the PR and read the journey run. [advisory]
 - **Builds run one at a time** on Workers Builds: every `claude/*` push queues in front of `main`'s
   deploy. Push once per finished round, at most three branches building at once; a stuck build is
   cancelled with `build-logs` (`cancel`). `deploy-watch.yml` catches what still slips. [advisory]

@@ -1,0 +1,58 @@
+name: delete-helper-branch
+
+# Deletes one throwaway helper branch (name starts with `media-`) in an org repo, after tagging its
+# tip `archive/<branch>` so nothing is lost (`git checkout archive/<branch>`). Run workflow only. It
+# refuses any other branch name, the default branch and a branch with an open PR. This is the
+# approved route for helper cleanup: a session's own safety check blocks raw branch deletes.
+on:
+  workflow_dispatch:
+    inputs:
+      repo:
+        description: 'Repo name in yverse-studio'
+        required: true
+        type: string
+        default: claude-setup
+      branch:
+        description: 'Helper branch to delete (must start with media-)'
+        required: true
+        type: string
+      dry_run:
+        description: 'Only print what would be deleted'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: delete-helper-branch-${{ inputs.repo }}
+
+jobs:
+  delete:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - run: |
+          set -euo pipefail
+          case "$REPO_NAME" in (*[!A-Za-z0-9._-]*|.*|'') echo "bad repo name"; exit 1;; esac
+          case "$BRANCH" in (media-*[!A-Za-z0-9._-]*|media-|'') echo "branch must be media-<name> with letters, digits . _ -"; exit 1;; (media-*) ;; (*) echo "only media-* branches"; exit 1;; esac
+          case "$REPO_NAME$BRANCH" in (*..*) echo "no '..' in names"; exit 1;; esac
+          R="yverse-studio/$REPO_NAME"
+          [ "$BRANCH" = "$(gh api "repos/$R" --jq .default_branch)" ] && { echo "default branch"; exit 1; }
+          open=$(gh api "repos/$R/pulls?state=open&head=yverse-studio:$BRANCH" --jq length)
+          [ "$open" = "0" ] || { echo "open PR on $BRANCH, not deleting"; exit 1; }
+          sha=$(gh api "repos/$R/git/ref/heads/$BRANCH" --jq .object.sha)
+          if [ "$DRY_RUN" = "true" ]; then echo "would tag archive/$BRANCH at $sha and delete $BRANCH"; exit 0; fi
+          tag="archive/$BRANCH"
+          have=$(gh api "repos/$R/git/ref/tags/$tag" --jq .object.sha 2>/dev/null || true)
+          if [ -n "$have" ] && [ "$have" != "$sha" ]; then tag="archive/$BRANCH-${sha:0:7}"; have=""; fi
+          [ -z "$have" ] && gh api -X POST "repos/$R/git/refs" -f ref="refs/tags/$tag" -f sha="$sha" --silent
+          gh api "repos/$R/git/ref/tags/$tag" --jq .object.sha | grep -qx "$sha"
+          gh api -X DELETE "repos/$R/git/refs/heads/$BRANCH" --silent
+          echo "tagged $tag at $sha, deleted $BRANCH"
+        env:
+          GH_TOKEN: ${{ secrets.PROJECTS_GITHUB_TOKEN }}
+          REPO_NAME: ${{ inputs.repo }}
+          BRANCH: ${{ inputs.branch }}
+          DRY_RUN: ${{ inputs.dry_run }}

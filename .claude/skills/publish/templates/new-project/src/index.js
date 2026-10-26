@@ -1,4 +1,5 @@
 import { COMMIT } from './commit.js'
+import { previewLogin } from './preview-login.js'
 
 const texts = {
   de: { title: '__NAME__', line: 'Hier entsteht gerade etwas.', note: 'Bald mehr.' },
@@ -36,6 +37,16 @@ export default {
     const url = new URL(request.url)
     if (url.pathname === '/api/config') {
       return Response.json({ commit: COMMIT, db: Boolean(env.DB) })
+    }
+    if (url.pathname === '/api/test-login') {
+      // Day-zero seed: the one `meta` row a journey can read back; a project with a login replaces both callbacks.
+      const out = await previewLogin(request, env, {
+        name: '__NAME__',
+        repo: '__REPO__', // <org>/<repo> of this project; new-project fills it, so it also fits a repo named differently from the Worker
+        seed: async (e) => { if (e.DB) await e.DB.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('seed', 'test')").run() },
+        signIn: async () => Response.json({ ok: true }, { headers: { 'cache-control': 'no-store' } }),
+      })
+      return out || Response.json({ error: 'not_found' }, { status: 404 })
     }
     const lang = (request.headers.get('accept-language') || '').toLowerCase().startsWith('en') ? 'en' : 'de'
     return new Response(page(lang), { headers: { 'content-type': 'text/html; charset=utf-8' } })

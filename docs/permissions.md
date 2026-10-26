@@ -39,7 +39,10 @@ read 2026-10-26):
   auto mode, so the list names commands one by one. A compound command needs every part allowed.
 - **ask**: always prompts, even in auto mode, so it holds only the list above (publish to npm,
   `wrangler delete` / `d1 delete` / `r2 bucket delete`, `wrangler secret`, `gh repo delete|edit`,
-  `delete_file`, `create_repository`).
+  `gh workflow run delete-project`, `gh issue delete`, `gh run delete`, `delete_file`,
+  `create_repository`). Workflows are allowed by name only; `actions_run_trigger` is not allowed
+  (it can't be narrowed by argument), so the classifier and the autoMode workflow list decide.
+  `scripts/guards.test.mjs` checks that no ask-first command matches an allow rule.
 - **deny**: secrets files, `wrangler login`, force-push or delete of `main`/`master`, and local
   deploy commands (deploys go only through Workers Builds: a deny answers at once, an ask would stall).
 - **autoMode**: read from user settings only (never from a repo's `.claude/settings.json`). It keeps
@@ -58,7 +61,7 @@ way around so it never stalls work. Never reword, split or retry a refused call.
 
 | Refusal | How often | Way around |
 |---|---|---|
-| Force-push (any branch) | rare: after a rebase | Never rebase a pushed branch: `git merge origin/main`, or push to a new name (`<branch>-2`) and open a fresh PR |
+| Force-push of `main` (denied) or of a branch in a cloud thread (proxy) | rare: after a rebase | Never rebase a pushed branch: `git merge origin/main`, or push to a new name (`<branch>-2`) and open a fresh PR |
 | Branch delete from a cloud thread (403) | every merged PR | `branch-cleanup.yml` archives and deletes merged branches; nobody deletes by hand |
 | Actions re-run from a cloud thread (403) | per flaky CI | Push the real fix, or dispatch the workflow (`actions_run_trigger`) |
 | `git reset --hard` | rare | `git merge --ff-only origin/<branch>` or `git stash` then `git checkout` |
@@ -68,6 +71,10 @@ way around so it never stalls work. Never reword, split or retry a refused call.
 | Writes to `.git/`, `.claude/` | rare | Always classifier-checked by design; the autoMode allow lines cover the normal case |
 
 ## Lessons
+
+- 2026-10-26 (gate round 1, PR 302): an allow rule is decided before the autoMode classifier, so a
+  broad allow (`gh workflow *`) defeated the narrow autoMode workflow list and let `delete-project`
+  run unasked. Allow by exact name; a test keeps ask-first commands out of allow.
 
 - 2026-10-26: running `install.mjs` in a cloud thread without `--skip-hooks` writes the ECC hooks into the thread's real `~/.claude` (the ECC installer ignores `CLAUDE_CONFIG_DIR`); test it with `--skip-plugins --skip-hooks`.
 - 2026-10-26: the first edit of `global/settings.json` for this page was refused as

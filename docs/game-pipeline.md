@@ -176,6 +176,27 @@ intro 4-6 s, loop 48 frames (2 s), fast 24 frames (every 2nd frame), finish ~76 
   bare/half/dressed).
 - Scene gate, camera and motion rules: [`two-figure-scenes.md`](two-figure-scenes.md).
 
+## Sound for scene games (2026-10-26)
+
+Practice for the scene player, general game audio (ambience as the bed, foley synced to motion, ducking, fades):
+
+- **Layers, quiet to loud:** room bed (always on, -13 dBFS peak, 24 s seamless loop, fade 1.5-2 s) < music (0.35 in
+  loops, 0.6 fast, 0.8 finish) < breath and voice (loop per phase) < contact foley (the loudest, because it carries
+  the motion). Never all at the same level: equal layers read as mud.
+- **Sync only what must be synced:** the contact layer is exactly as long as its clip and starts with it (loop 2 s =
+  2 strokes, fast 1 s = 2 strokes); breath and room are free loops. A slot without its own file falls back to a
+  generic one of the same type, so a new scene is never silent.
+- **Stage the intensity** through files, not volume sliders: intro (soft breath), loop, fast (shorter cycle, more
+  voice), finish (peak, then pants decaying, one sigh). Cycle length 3.4 s, 2.5 s, 1.5 s, 1.1 s.
+- **Duck:** the room drops to 0.55 under voice and returns after; music dips the same way in the player.
+- **No repetition tells:** a loop carries 4-6 different takes in random order, never one clip repeated every 2 s.
+- **Routes without a player** get the same layers from hooks: room from the location card text, breath and contact
+  from the looping clip's name (the game repo's sound hook), a test lane asserts it.
+- **Own synthesis first, files second:** `scripts/make_sounds.py` in the game repo (numpy, scipy, ffmpeg) builds rooms
+  (noise beds, hum, drips, crowd, waves), breath and vowels (glottal pulse through formants) and contact foley
+  (slap, wet click, bubble). Licence: own work, credits file next to the audio. A found file needs CC0 or CC-BY and a
+  line in the credits file; paid packs are a purchase, so a card to yskills.
+
 ## Lessons (each one cost a round)
 
 - A clip is rendered only at 5/5 on the gate sheet, never "good enough for now" (`two-figure-scenes.md`).

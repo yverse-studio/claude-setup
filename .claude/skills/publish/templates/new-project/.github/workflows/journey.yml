@@ -57,6 +57,7 @@ jobs:
     timeout-minutes: 20
     permissions:
       contents: read
+      id-token: write # the test login's proof: an OIDC token for the preview's host; this job runs the default branch's specs and no PR code
     steps:
       - uses: actions/checkout@v5
         with:
@@ -82,6 +83,7 @@ jobs:
             test-results/
             playwright-report/
           if-no-files-found: ignore
+          retention-days: 1
 
   report:
     needs: [preview, run]
