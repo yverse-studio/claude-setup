@@ -1,25 +1,18 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { isJourneyFile, isNonApp, needsJourney, planJourney, previewHosts, previewUrl, projectRepo, statusFor, verifyJourney } from './journey.mjs'
+import { verifyJourney } from './journey.mjs'
+import { isJourneyFile, isNonApp, needsJourney, planJourney, previewHosts, previewUrl, statusFor } from '../.claude/skills/publish/templates/new-project/scripts/journey-gate.mjs'
 
 const SHA = 'c'.repeat(40)
 const BASE = 'a'.repeat(40)
 const REPO = 'yverse-studio/social'
-const RUN = 'https://github.com/yverse-studio/claude-setup/actions/runs/123456'
+const RUN = 'https://github.com/yverse-studio/social/actions/runs/123456'
+const RUN_INFO = { id: 123456, path: '.github/workflows/journey.yml', event: 'pull_request_target', repository: { full_name: 'yverse-studio/social' } }
 
 test('previewUrl follows the Workers Builds branch alias', () => {
   assert.equal(previewUrl('claude/Fix_Drop', 'social'), 'https://claude-fix-drop-social.yverse.workers.dev')
   assert.equal(previewUrl('a@evil.com#x', 'social'), 'https://a-evil-com-x-social.yverse.workers.dev', 'no userinfo, host or hash can sneak in')
-})
-
-test('projectRepo reads the registry and refuses unknown or Worker-less projects', () => {
-  const reg = { 'projects/social.json': { name: 'social' }, 'projects/ideaworld.json': { name: 'ideaworld', repo: 'ydeas-world' }, 'projects/spiel.json': { name: 'spiel', kind: 'repo' } }
-  const read = (f) => reg[f] ?? null
-  assert.equal(projectRepo('social', read), 'yverse-studio/social')
-  assert.equal(projectRepo('ideaworld', read), 'yverse-studio/ydeas-world')
-  assert.throws(() => projectRepo('nope', read), /not on main/)
-  assert.throws(() => projectRepo('spiel', read), /no Worker/)
 })
 
 test('statusFor passes only a successful run; a missing preview or a skipped run fails', () => {
@@ -55,21 +48,26 @@ test('only docs, tests and CI files are n/a; every app, server and config file r
   assert.equal(needsJourney(['README.md', 'docs/a.md']), false)
 })
 
-// HIGH 3 of gate round 1: a PR branch can post `journey` with its own token; verify tells it from the bot.
-test('verifyJourney passes only the newest journey status, created by the bot, linked to a claude-setup run, in state success', () => {
-  const bot = { context: 'journey', state: 'success', creator: { login: 'yskills-claude' }, target_url: RUN, created_at: '2026-10-26T10:00:00Z', id: 1, description: 'journey passed' }
-  assert.equal(verifyJourney([bot]).ok, true)
-  assert.equal(verifyJourney({ statuses: [bot] }).ok, true, 'the combined-status shape works too')
-  assert.equal(verifyJourney([]).ok, false, 'no status')
-  assert.equal(verifyJourney([{ ...bot, context: 'ci' }]).ok, false, 'another context')
-  const forged = { ...bot, creator: { login: 'github-actions[bot]' }, target_url: 'https://example.com/x', created_at: '2026-10-26T11:00:00Z', id: 2 }
-  assert.match(verifyJourney([forged, bot]).reason, /github-actions\[bot\]/, 'a bot-forged success after a real pass fails')
+// A PR branch can post `journey` with the same GITHUB_TOKEN; verify tells it from the real workflow run.
+test('verifyJourney passes only the newest journey status, by github-actions[bot], linked to a pull_request_target run of journey.yml in the same repo', () => {
+  const bot = { context: 'journey', state: 'success', creator: { login: 'github-actions[bot]' }, target_url: RUN, created_at: '2026-10-26T10:00:00Z', id: 1, description: 'journey passed' }
+  assert.equal(verifyJourney([bot], RUN_INFO).ok, true)
+  assert.equal(verifyJourney({ statuses: [bot] }, RUN_INFO).ok, true, 'the combined-status shape works too')
+  assert.equal(verifyJourney([], RUN_INFO).ok, false, 'no status: blocked without a run')
+  assert.equal(verifyJourney([{ ...bot, context: 'ci' }], RUN_INFO).ok, false, 'another context')
+  assert.match(verifyJourney([bot]).reason, /pass the linked run/, 'the run is required')
+  assert.equal(verifyJourney([{ ...bot, creator: { login: 'someone' } }], RUN_INFO).ok, false, 'a human or other app')
+  assert.equal(verifyJourney([{ ...bot, target_url: 'https://example.com/x' }], RUN_INFO).ok, false, 'a link elsewhere')
+  assert.match(verifyJourney([bot], { ...RUN_INFO, event: 'pull_request' }).reason, /forged/, 'a PR workflow run is no gate run')
+  assert.match(verifyJourney([bot], { ...RUN_INFO, path: '.github/workflows/evil.yml' }).reason, /forged/)
+  assert.match(verifyJourney([bot], { ...RUN_INFO, event: 'workflow_dispatch' }).reason, /forged/)
+  assert.match(verifyJourney([bot], { ...RUN_INFO, repository: { full_name: 'yverse-studio/other' } }).reason, /belongs to/)
+  assert.match(verifyJourney([bot], { ...RUN_INFO, id: 9 }).reason, /pass the linked run/)
   const red = { ...bot, state: 'failure', created_at: '2026-10-26T09:00:00Z', id: 0 }
-  assert.equal(verifyJourney([bot, red]).ok, true, 'the newest status wins over an older red')
-  assert.equal(verifyJourney([{ ...forged, creator: { login: 'yskills-claude' } }, red]).ok, false, 'the org bot linking elsewhere fails')
+  assert.equal(verifyJourney([bot, red], RUN_INFO).ok, true, 'the newest status wins over an older red')
   const redNew = { ...bot, state: 'failure', created_at: '2026-10-26T12:00:00Z', id: 3 }
-  assert.equal(verifyJourney([redNew, bot]).ok, false, 'a newer red beats an older green')
-  assert.equal(verifyJourney([{ ...forged, creator: { login: 'github-actions[bot]' }, state: 'success' }, { ...bot, created_at: '2026-10-26T12:30:00Z', id: 9 }]).ok, true, 'the newer real pass beats an older forgery')
+  assert.equal(verifyJourney([redNew, bot], RUN_INFO).ok, false, 'a newer red beats an older green')
+  assert.equal(verifyJourney([{ ...bot, state: 'pending' }], RUN_INFO).ok, false, 'pending is no pass')
 })
 
 // A fake GitHub: routes by path. `files` is the PR's changed files; `heads` the head sha on each read.
@@ -84,9 +82,9 @@ function fakeApi({ fork = false, files = ['app/pages/index.vue'], heads = [SHA, 
   }
 }
 
-test('planJourney: a Nuxt UI PR runs the journey from the base sha; a docs PR is n/a', async () => {
+test('planJourney: a Nuxt UI PR runs the journey; a docs PR is n/a', async () => {
   const run = await planJourney(REPO, '7', 'social', fakeApi())
-  assert.deepEqual(run, { sha: SHA, ui: true, url: 'https://claude-fix-social.yverse.workers.dev', specsRef: BASE, specsChanged: false })
+  assert.deepEqual(run, { sha: SHA, ui: true, url: 'https://claude-fix-social.yverse.workers.dev', specsChanged: false })
   assert.equal((await planJourney(REPO, '7', 'social', fakeApi({ files: ['README.md', 'docs/a.md'] }))).ui, false)
   assert.equal((await planJourney(REPO, '7', 'social', fakeApi({ files: ['package.json'] }))).specsChanged, true)
 })
@@ -108,14 +106,16 @@ test('planJourney counts a PR too long to list as app code', async () => {
 })
 
 // CRLF checkouts (Windows) must not break the workflow shape tests.
-const yml = readFileSync(new URL('../.github/workflows/journey.yml', import.meta.url), 'utf8').replace(/\r\n/g, '\n')
+const yml = readFileSync(new URL('../.claude/skills/publish/templates/new-project/.github/workflows/journey.yml', import.meta.url), 'utf8').replace(/\r\n/g, '\n')
 
-test('the specs run from the base in a job without the org token; the PR is never checked out on a runner', () => {
+test('the project workflow comes from the default branch and never checks the PR out; the specs run with read-only rights', () => {
+  assert.match(yml, /\non:\n  pull_request_target:\n/)
+  assert.ok(!/\n  pull_request:/.test(yml), 'a plain pull_request run would use the PR\'s own workflow file')
+  assert.ok(!/head\.(sha|ref)/.test(yml), 'no PR head is checked out')
+  assert.equal(yml.match(/ref: \$\{\{ github\.event\.pull_request\.base\.sha \}\}/g).length, 3, 'all three jobs check out the base')
   const run = yml.slice(yml.indexOf('\n  run:'), yml.indexOf('\n  report:'))
-  assert.ok(!/PROJECTS_GITHUB_TOKEN/.test(run), 'no org token in the run job')
-  assert.ok(!/actions\/checkout/.test(run), 'the run job checks nothing out; it downloads the specs artifact')
-  assert.match(run, /download-artifact/)
-  assert.ok(!/needs\.preview\.outputs\.sha/.test(yml.slice(yml.indexOf('\n  preview:'), yml.indexOf('\n  run:'))), 'the PR head sha is not checked out in the preview job')
-  assert.match(yml, /ref: \$\{\{ steps\.wait\.outputs\.specs_ref \}\}/)
+  assert.match(run, /permissions:\n      contents: read\n/)
+  assert.ok(!/statuses: write|secrets\./.test(run), 'the job that runs the specs can post no status and holds no secret')
   assert.match(yml, /\n  report:\n    needs: \[preview, run\]/)
+  assert.ok(!/secrets\./.test(yml), 'no secrets in a project repo')
 })

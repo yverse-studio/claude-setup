@@ -72,7 +72,7 @@ no Tester ever clicked the real app). For size L of a site, app or game the coor
 `Tester · <app>` thread before any Programmer thread; every L Programmer brief carries a line
 `Tester: <that thread>` and the `team-guard` hook (`global/team-guard.mjs`) blocks a size L
 Programmer start without it. The `setup` kit has no app to walk: its line says
-`Tester: per PR (gate.md)`. The Tester's journeys run in `journey.yml` (`gate.md`, Preview test).
+`Tester: per PR (gate.md)`. The journey runs by itself in the project's `journey.yml` (`gate.md`, Preview test).
 
 ## Pipeline
 

@@ -184,21 +184,24 @@ and sat behind the owner's passkey, so nobody clicked the real app.
   with the device named in `JOURNEY_DEVICE` (`devices[...]`, touch on), walking the main journeys
   end to end, the destructive-action list (`operator/roles/programmer.md`) included. Results go to
   `test-results/`. No script means `journey.yml` fails, and a UI PR cannot pass (`gate.md`, UI PRs).
-- **Run:** claude-setup's `journey.yml` (`name`, `pr`; `actions_run_trigger` `run_workflow`, ref
-  `main`) for every project PR. It posts `n/a` for a PR that changes only docs, tests or `.github/` files; otherwise it
+- **Run:** the project's own `.github/workflows/journey.yml` (template, with `scripts/journey-gate.mjs`) runs by itself on
+  every PR: `pull_request_target`, so the file comes from the default branch and a PR cannot edit it, with the
+  built-in `GITHUB_TOKEN` (`pull-requests: read, statuses: write, checks: read`): no key, nothing to dispatch or rotate.
+  A project that predates it gets the two files in a PR (they must be on the default branch before they run).
+  It posts `n/a` for a PR that changes only docs, tests or `.github/` files; otherwise it
   waits up to 20 minutes for the PR's preview to serve the head (the URL from the branch alias, refused
-  if the Workers Builds check names another), fetches the project's default branch as an artifact, runs
-  the specs from it in a job with no org token and no PR code, and posts the `journey` status from a
-  fresh job. Only this workflow posts `journey`; the template CI has no status permission, and a PR
-  branch could still post one with its own token, so the gate runs `journey.mjs verify` (creator and link).
+  if the Workers Builds check names another), checks out the default branch (not the PR), runs
+  the specs from it in a job with read-only rights, and posts the `journey` status from a
+  fresh job. The template CI has no status permission, but a PR workflow could post one with the same
+  token, so the gate runs `journey.mjs verify`: creator `github-actions[bot]`, linked run of `journey.yml`
+  from `pull_request_target` in the same repo.
 - **Preview login:** a journey behind a login signs in with a seeded test owner that exists only in
   the preview database. The app accepts `POST /api/test-login` with `PREVIEW_LOGIN_TOKEN` (a Worker
   secret, compared in constant time) only on a preview host (`*-<name>.yverse.workers.dev`), never
-  on the live host, and answers 404 when the secret is unset. The same value lives as a claude-setup
-  Actions secret, set together with the Worker secret by a workflow, never in chat, logs or files.
-  The runner sees the token but runs only the default branch's specs; the PR's Worker (the preview)
+  on the live host, and answers 404 when the secret is unset. Not wired into the project workflow yet: no project
+  holds a GitHub secret, so a journey behind a login needs a decision first (open). The runner would run only the default branch's specs; the PR's Worker (the preview)
   receives it in the request, so it opens only the preview's test data, and a PR from a fork never gets it
-  (`journey.mjs` refuses). A short-lived token minted per run is a later hardening. Creating or rotating it waits
+  (`journey-gate.mjs` refuses). A short-lived token minted per run is a later hardening. Creating or rotating it waits
   for yskills' tap (`CLAUDE.md`, Ask first). [advisory]
 - **Builds run one at a time** on Workers Builds: every `claude/*` push queues in front of `main`'s
   deploy. Push once per finished round, at most three branches building at once; a stuck build is

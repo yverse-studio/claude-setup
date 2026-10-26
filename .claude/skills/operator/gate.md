@@ -70,15 +70,13 @@ output or a live check.
 Roblox projects have no preview URL: play the test place through the Studio MCP server and
 `screen_capture` it (`toolbox/catalog/roblox.md`, The loop).
 
-**The `journey` status (every project PR).** It is posted only by claude-setup's `journey.yml` (the Tester
-runs it per PR, `name` + `pr`): `n/a` when the PR changes only docs, tests or `.github/` files, else green
+**The `journey` status (every project PR).** It is posted only by the project's own `journey.yml` (it runs
+on every PR by itself, `pull_request_target`, built-in `GITHUB_TOKEN`): `n/a` when the PR changes only docs, tests or `.github/` files, else green
 after the PR's preview served its head and the default branch's `npm run journey` passed there on a phone
 profile (`publish` skill, Preview journey). Anything else, Nuxt `app/`, `server/`, configs, `package.json`,
-runs the journey. A PR branch can post a `journey` status with its own token (and overwrite a red), so a
-green tick in the UI proves nothing. **Check 1 runs `verify`:** put the head's statuses
-(`commits/<sha>/statuses`, newest first) on stdin of `node scripts/journey.mjs verify`. It passes only when
-the newest `journey` status is a success created by `yskills-claude` that links to a claude-setup `journey`
-run; a missing, pending, red or forged one is not 5/5. Until a branch ruleset requires the status on the
+runs the journey. A PR workflow can post a `journey` status with the same token (and overwrite a red), so a
+green tick in the UI proves nothing. **Check 1 runs `verify`:** put `{"statuses": <the head's commits/<sha>/statuses>, "run": <actions_get get_workflow_run of the run its newest journey status links to>}` on stdin of `node scripts/journey.mjs verify`. It passes only when
+the newest `journey` status is a success created by `github-actions[bot]` that links to a run of `.github/workflows/journey.yml` from `pull_request_target` in the same repo; a missing, pending, red or forged one is not 5/5. Until a branch ruleset requires the status on the
 project repos, `verify` is the gate. When the description says the PR changes journey files, the Tester
 reads them (they run only after the merge) and runs the new journey by hand in check 2 (incident
 2026-10-26: three gated PRs passed on local `verify` while the preview was broken).

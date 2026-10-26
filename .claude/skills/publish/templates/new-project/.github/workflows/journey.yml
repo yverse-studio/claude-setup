@@ -1,0 +1,108 @@
+name: journey
+
+# The gate's preview journey for every PR of this repo (claude-setup gate.md; incident 2026-10-26:
+# UI PRs passed on local tests while the preview was broken). No keys: the built-in GITHUB_TOKEN reads
+# the PR and posts the `journey` commit status. `pull_request_target` runs this file from the default
+# branch, so a PR cannot change it, and nothing of the PR is checked out: the specs are the default
+# branch's `npm run journey`, run against the PR's Worker Preview on a phone profile. A PR without
+# app files gets `n/a`. The status is posted by github-actions[bot] and links to a run of this
+# workflow from `pull_request_target`; claude-setup's `journey.mjs verify` checks both.
+on:
+  pull_request_target:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: journey-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      pull-requests: read
+      statuses: write
+      checks: read
+    outputs:
+      ui: ${{ steps.wait.outputs.ui }}
+      specs_changed: ${{ steps.wait.outputs.specs_changed }}
+      sha: ${{ steps.wait.outputs.sha }}
+      url: ${{ steps.wait.outputs.url }}
+      preview: ${{ steps.wait.outputs.preview }}
+    steps:
+      - uses: actions/checkout@v5 # the default branch (base), never the PR
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - id: wait
+        run: node scripts/journey-gate.mjs wait
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          NAME: __NAME__
+          PR: ${{ github.event.pull_request.number }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+  run:
+    needs: preview
+    if: needs.preview.outputs.ui == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
+      - name: needs a journey script
+        run: |
+          npm pkg get scripts.journey | grep -qv '^{}$' || { echo "::error::package.json has no \"journey\" script: no journey, no pass (claude-setup publish skill, Preview journey)"; exit 1; }
+      - run: npm ci || npm install
+      - run: npx playwright install --with-deps chromium
+      - run: npm run journey
+        env:
+          BASE_URL: ${{ needs.preview.outputs.url }}
+          JOURNEY_DEVICE: 'iPhone 13'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: journey-${{ github.event.pull_request.number }}
+          path: |
+            test-results/
+            playwright-report/
+          if-no-files-found: ignore
+
+  report:
+    needs: [preview, run]
+    if: always() && needs.preview.outputs.ui == 'true' && needs.preview.outputs.sha != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      statuses: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - run: node scripts/journey-gate.mjs report
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SPECS_CHANGED: ${{ needs.preview.outputs.specs_changed }}
+          SHA: ${{ needs.preview.outputs.sha }}
+          RESULT: ${{ needs.preview.outputs.preview == 'missing' && 'no-preview' || needs.run.result }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
