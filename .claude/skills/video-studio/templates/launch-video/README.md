@@ -38,3 +38,11 @@ If the bundled music stays in, the post description carries this line: `Music: S
 6. **People:** real names or handles only where the project allows it. Y-Land allows them (`yskills-taste` memory).
 
 After that comes the normal delivery: `final.mp4` plus `final-nomusic.mp4` go to the `social-team` queue, and nothing is uploaded until yskills says "upload".
+
+## What the first run taught (2026-10-26)
+
+- **Loudness:** HyperFrames renders at about -24 LUFS. Run `loudnorm=I=-13:TP=-1.5:LRA=9` on the audio after the render (landed at -14.3 LUFS, peak -1.2 dBFS), or the video sounds dead in the feed.
+- **Safe band:** the generated layout put cards and captions under the TikTok bottom bar (y>1520) and the headline at the top edge. Tell the subagent the band (top 250 px, bottom 400 px of 1920) in the brief; fixing it afterwards means editing a dozen absolute positions.
+- **Scene fades:** the generated scenes overlap their neighbours by about 0.4 s, so text collides (hearts over the shop card, old bubbles under the new title). Start each scene's fade-out before the next scene's start and keep fades at 0.25 s; hide anything static (`opacity: 0` until its cue).
+- **Critic rounds:** 3/5, then 3.5/5, then 3.5/5 after two fix passes. Each pass costs about 10 minutes, so brief the safe band and the fades first; the empty lower half while staggered cards arrive stays a MEDIUM.
+- **Hosting for Metricool:** moved to `social-team` `SKILL.md`, Tools (Media URL); the orphan-branch trick is retired.
