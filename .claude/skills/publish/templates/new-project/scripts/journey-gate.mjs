@@ -3,7 +3,7 @@
 // `wait` reads the PR, posts `n/a` when it changes only docs, tests or CI files, else posts pending,
 // waits until the PR's Worker Preview serves its head (`/api/config` `commit`) and writes ui, sha and
 // url to GITHUB_OUTPUT; a preview that never serves it fails. `report` posts the result.
-// The workflow is `pull_request_target`, so it always comes from the default branch and a PR cannot
+// The workflow is `pull_request_target`: it comes from the PR base branch (the gate accepts only runs on the default branch), not the PR, so a PR cannot
 // edit it; no PR code runs on a runner (incident 2026-10-26, claude-setup gate.md).
 // Reads GH_TOKEN, REPO, NAME (the Worker name), PR; `report` also SHA, RESULT, RUN_URL.
 import { appendFileSync } from 'node:fs'
