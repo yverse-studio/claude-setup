@@ -6,7 +6,7 @@ and how it would really run until posting"; the first full run was the Y-Land br
 rows 4 and 6-10 here call, `docs/TEAMS.md` (Social, Film) the model of every role. The Lead briefs a
 `Producer · <video>` thread, which runs the film rows (4, 6-8, 10) with its own agents and runs
 `ready.py`; the Lead writes, edits and grades nothing. `video-studio` step 2 (three concepts, his
-pick on a card) stays for a full-studio video; for an idea he wrote himself he has already chosen. Every role reads
+pick on a card) stays for a full-studio video; for an idea he wrote himself he has already chosen. After row 8 the Producer hands the cut to the Lead, who runs row 9 and the Hook Checker pass of row 10 and returns `post-copy.md` and `hook.md`; the Producer then starts the Critic and runs `ready.py`. Every role reads
 [`learnings.md`](learnings.md) and [`xyskillsx-style.md`](xyskillsx-style.md) (international
 audience) before its step, because both arrived late in the first run and forced rework.
 

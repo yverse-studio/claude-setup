@@ -34,7 +34,7 @@ yskills in the project chat (CLAUDE.md, Cards); yskills does not read threads.
 | Community | comments and DMs: reply drafts, comment-to-DM flows, follower-only gifts, leads | [`roles/community.md`](roles/community.md) | the `social` Worker's webhook plus a daily subagent review |
 | Partnerships | brand deals and sponsors: media kit, brand list, outreach drafts, offers, contract check, delivery, invoice line | [`roles/deals.md`](roles/deals.md) | subagent of the Lead; a thread `Deal · <brand> · <partner>` per real offer |
 | Hook Checker | pre-film and cover hook gate: first 2 s, share trigger, burned hooks | [`roles/hook-check.md`](roles/hook-check.md) | fresh subagent of the Lead |
-| Caption Writer | on-screen caption options, description, hashtags, pinned question, in his voice | [`roles/copy.md`](roles/copy.md) | subagent of the Lead |
+| Caption Writer | post text only: description, hashtags, pinned question, cover text, credit line, in his voice (on-screen caption options are the Writer's) | [`roles/copy.md`](roles/copy.md) | subagent of the Lead |
 | Publisher | preflight, schedule, read-back, the `posts.md` row | [`roles/publisher.md`](roles/publisher.md) | subagent of the Lead |
 | Analyst | numbers per post, what to repeat or drop, new lessons | [`roles/analyst.md`](roles/analyst.md) | subagent of the Lead in the daily sweep and the weekly routine |
 
@@ -58,7 +58,7 @@ the ideas-to-posts app for every brand: `https://social.yverse.workers.dev`, Wor
 
 - Login: a passkey on his phone (Face ID); the first passkey registered after the deploy is the owner, registration closes after it. No password, no secret anywhere.
 - Claude reads `GET /api/feed` (ideas, statuses, his taps; nothing private in it) and writes drafts by committing `content/drafts/<id>/` (script, caption, `final.mp4`) to the repo; the merge deploys them. Posted state goes back the same way. No API key for Claude.
-- The daily routine (a cloud trigger at 07:00 Berlin, the Social Lead's daily step): read the feed, script new ideas, make drafts through the daily lane (below), queue approved ones (or, with auto-post on, Critic-passed ones) into today's slots through Metricool, write the one-line summary to the coordinator.
+- The daily routine (a cloud trigger at 07:00 Berlin, the Social Lead's daily step): read the feed, script new ideas, make drafts through the daily lane (below), the Publisher queues approved ones (or, with auto-post on, Critic-passed ones) into today's slots through Metricool, write the one-line summary to the coordinator.
 - HQ (Company XY) gets one row with the link and today's count (`docs/hq-rows.md`), not a copy of the app.
 - Until a slice of the app is live, ideas land in `/mnt/project-files/<project>/social/ideas.md` and finished videos are attached in the thread reply. Videos of a product's own campaign stay in its `video/<slug>/` (`video-studio`).
 
@@ -96,7 +96,7 @@ our projects you get full decision power, it's just my personal now, i want to b
     post cannot add a trending sound.
 - **Project accounts** (one he hands over, or one made for a project): the social team has full
   decision power over content, schedule, profile and strategy. That message is yskills' standing ok
-  for posts on them; no switch needed. The Lead posts what the Critic passed and sends a daily
+  for posts on them; no switch needed. The Lead decides, the Publisher posts what the Critic passed, and the Lead sends a daily
   one-line summary to the coordinator.
 - **Slots and language** for his English-speaking international audience: [`xyskillsx-style.md`](xyskillsx-style.md), International audience (the one home).
 - **On every account:** never ads, prices or crypto promotion without yskills' ok; money, brand deals
@@ -118,7 +118,7 @@ our projects you get full decision power, it's just my personal now, i want to b
 | Job | Pick | Notes |
 |---|---|---|
 | Schedule and post | **Metricool** (picked 2026-10-18; its claude.ai connector `createScheduledPost`, `getScheduledPosts`, `getBestTimeToPostByNetwork`) | setup below; fallback upload-post (free tier) or Ayrshare if the free plan's monthly cap is below 2 a day; a paid plan is a card |
-| Media URL for a scheduled post | the `social` Worker serves the draft's `final.mp4` from its D1 clip store at a short-lived URL (free, no card; build as a small slice of the app, not yet built); until then the Publisher asks the coordinator for yskills' phone upload | `createScheduledPost` needs a public URL and copies the file on create. Never a branch on a public repo: cloud pushes cannot delete it again (the first run left `media-brag-2026-10-26`; delete it with a workflow using the org token) |
+| Media URL for a scheduled post | the `social` Worker serves the draft's `final.mp4` from its D1 clip store at a short-lived URL (free, no card; build as a small slice of the app, not yet built); until then the Publisher asks the coordinator for yskills' phone upload | `createScheduledPost` needs a public URL and copies the file on create. Never a branch on a public repo: cloud pushes cannot delete it again (the first run left `media-brag-2026-10-26`; delete it with the `branch-cleanup` workflow, which archives it as a tag first) |
 | Instagram comments and DMs | Instagram Messaging API from the `social` Worker | private reply to a comment (one per comment, within 7 days), sent on its own only for keywords and gift texts yskills approved per brand in `social/brands.md`; replies only inside the 24-hour window; `is_user_follow_business` in the user profile gates follower-only gifts; needs a Business or Creator account and Meta app review, else ManyChat (Meta partner) by card |
 | TikTok comments and DMs | no general DM API: Community drafts replies for yskills | partner tools that automate TikTok DMs only where TikTok allows it, by card |
 | Hooks, captions, humanizer | `sergebulaev/tiktok-skills` references (MIT) | read first (CLAUDE.md install rule) |
