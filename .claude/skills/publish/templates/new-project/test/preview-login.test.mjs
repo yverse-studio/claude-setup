@@ -85,3 +85,16 @@ test('the live host and other methods never answer, even with a valid token', as
   assert.deepEqual(live.log, [])
   assert.equal((await call(HOST, { bearer: await token(), method: 'GET' })).res, null)
 })
+
+test('an unknown key id refetches GitHub keys, but at most once a minute', async () => {
+  let fetches = 0
+  const counting = async () => (fetches++, fetchJwks())
+  const later = NOW + 3 * 3600e3
+  const unknown = await token({}, { header: { alg: 'RS256', kid: 'rotated' } })
+  assert.equal(await verify(unknown, { fetchJwks: counting, now: later }), false)
+  assert.equal(fetches, 1)
+  assert.equal(await verify(unknown, { fetchJwks: counting, now: later + 5000 }), false)
+  assert.equal(fetches, 1, 'a flood of bad key ids cannot make the Worker refetch every time')
+  assert.equal(await verify(unknown, { fetchJwks: counting, now: later + 61000 }), false)
+  assert.equal(fetches, 2)
+})
