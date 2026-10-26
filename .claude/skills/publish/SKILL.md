@@ -201,8 +201,9 @@ and sat behind the owner's passkey, so nobody clicked the real app.
   (`journey.mjs` refuses). A short-lived token minted per run is a later hardening. Creating or rotating it waits
   for yskills' tap (`CLAUDE.md`, Ask first). [advisory]
 - **Builds run one at a time** on Workers Builds: every `claude/*` push queues in front of `main`'s
-  deploy. Push once per finished round, at most three branches building at once; a stuck build is
-  cancelled with `build-logs` (`cancel`). `deploy-watch.yml` catches what still slips. [advisory]
+  deploy. Push once per finished round. The limit is three branch builds queued, not three pushes: never
+  skip a push for it; with more than three queued, cancel the stale or stuck ones with `build-logs`
+  (`cancel`) first, then push. `deploy-watch.yml` catches what still slips. [advisory]
 
 ## Two routes to Cloudflare, and what the deploy tests taught
 
