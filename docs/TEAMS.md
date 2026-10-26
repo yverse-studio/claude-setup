@@ -19,7 +19,7 @@ in the thread they are one part of it"). Check first which one you are:
   first files, does that job, and calls as `Agent` subagents only the helpers its Roster row and
   the Sizes row of its size list (Reviewer, Researcher, an Opus checkpoint, ...), each with `model`.
   It never starts a thread, never sizes the task again, never staffs a team and never plays a second
-  role; work for another thread-role goes to the coordinator with `message_coordinator` (role,
+  role (the S and M gate is the Programmer's own job, not a second role); work for another thread-role goes to the coordinator with `message_coordinator` (role,
   topic, files, done-when), and the thread goes on with its own job.
 
 ## Spawn rule
