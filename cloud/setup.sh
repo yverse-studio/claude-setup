@@ -21,8 +21,9 @@ for id in code-review chrome-devtools-mcp code-simplifier feature-dev claude-md-
   claude plugin uninstall "$id@claude-plugins-official" --scope user >/dev/null 2>&1 || true
 done
 
-# Built-in subagents (Explore, general-purpose) default to Sonnet instead of inheriting Opus;
-# agents with their own `model:` keep it. Same key as global/settings.json.
+# Meant to give built-in subagents Sonnet instead of the parent's model; in a claude.ai project
+# thread it did not (tested 2026-10-26), so the team guard below makes every Agent call name its
+# `model`. Kept for plain sessions. Same key as global/settings.json.
 node -e '
 const fs = require("fs"), p = require("os").homedir() + "/.claude/settings.json"
 let s = {}; if (fs.existsSync(p)) s = JSON.parse(fs.readFileSync(p, "utf8"))
@@ -194,44 +195,62 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
 }
 ATTEMPT
 
-# Team brief: the same file as global/team-brief.mjs (scripts/check.mjs keeps them equal); prints
-# docs/TEAMS.md's Spawn rule at every session start, so every thread knows one role per thread and
-# the model per role.
-cat > "$HOME/.claude/claude-setup/team-brief.mjs" <<'TEAM'
+# Team guard: the same file as global/team-guard.mjs (scripts/check.mjs keeps them equal): a
+# pointer to docs/TEAMS.md at session start, and a block on Agent calls and thread starts without
+# `model` (a subagent of an Opus thread inherits Opus; CLAUDE_CODE_SUBAGENT_MODEL did not stop it
+# in a project thread, tested 2026-10-26).
+cat > "$HOME/.claude/claude-setup/team-guard.mjs" <<'TEAM'
 #!/usr/bin/env node
-// SessionStart hook: prints the Spawn rule of claude-setup's docs/TEAMS.md into every new session,
-// so no coordinator or thread starts work without it (yskills, 2026-10-26: threads played several
-// roles and all ran on the default model). Reads the file live, so the text never drifts, but only
-// from a checkout whose git remote is yverse-studio/claude-setup: another repo's docs/TEAMS.md must
-// not put its text into the session. No such checkout: it prints a pointer. Never blocks.
+// Team guard. Usage: team-guard.mjs start|pre (hook entries SessionStart and PreToolUse).
+// start: puts a one-line pointer to claude-setup's docs/TEAMS.md into every new session.
+// pre: refuses (exit 2) an Agent call or a thread start without `model`, because without it a
+// thread gets the project default and a subagent inherits its parent (yskills, 2026-10-26: every
+// thread and subagent ran on Opus). An Agent call whose subagent_type has an agent file with its own
+// `model:` passes. CLAUDE_SETUP_TEAM_GUARD=off turns it off. It never breaks a tool call on its own
+// errors.
 import { existsSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { dirname, join } from 'node:path'
+import { join } from 'node:path'
 
-const POINTER = 'Before starting or asking for any thread, add_repo yverse-studio/claude-setup and read docs/TEAMS.md (Spawn rule): one role per thread titled "<Role> · <topic>", only the coordinator starts threads, every start and subagent names its model from the role\'s row.'
+export const POINTER = 'Team rule (claude-setup docs/TEAMS.md): size the task S/M/L, call only the roles it needs, as thread or subagent as the roster says, and pass `model` from the role\'s row on every thread start and Agent call.'
 
-function isClaudeSetup(dir) {
-  const git = join(dir, '.git', 'config')
-  return existsSync(git) && /url\s*=\s*\S*[/:]yverse-studio\/claude-setup(?:\.git)?\s*$/m.test(readFileSync(git, 'utf8'))
+const THREAD_START = /^mcp__.*(start_thread|create_session)/
+const AGENT = /^(Agent|Task)$/
+
+export function hasOwnModel(type, dirs) {
+  if (!type || !/^[\w.-]+$/.test(type)) return false
+  return dirs.some((d) => {
+    const file = join(d, `${type}.md`)
+    return existsSync(file) && /^model:\s*\S+/m.test(readFileSync(file, 'utf8').split(/^---\s*$/m)[1] ?? '')
+  })
 }
 
-function spawnRule() {
-  const cwd = process.cwd()
-  const dirs = [process.env.CLAUDE_PROJECT_DIR, cwd, join(cwd, 'claude-setup'), join(dirname(cwd), 'claude-setup'),
-    '/home/user/claude-setup', join(homedir(), 'claude-setup'), join(homedir(), 'Documents', 'GitHub', 'claude-setup')]
-  for (const d of dirs) {
-    const f = d && join(d, 'docs', 'TEAMS.md')
-    if (!f || !existsSync(f) || !isClaudeSetup(d)) continue
-    const section = readFileSync(f, 'utf8').match(/^## Spawn rule\r?\n([\s\S]*?)(?=^## )/m)?.[1]?.trim()
-    if (section) return `claude-setup team rule (docs/TEAMS.md, Spawn rule; the team tables there give each role's model):\n${section}`
+export function decide(tool, input = {}, dirs = []) {
+  const kind = AGENT.test(tool) ? 'Agent' : THREAD_START.test(tool) ? 'thread' : null
+  if (!kind || String(input.model ?? '').trim()) return {}
+  if (kind === 'Agent' && hasOwnModel(input.subagent_type, dirs)) return {}
+  return { block: `team-guard: this ${kind === 'Agent' ? 'Agent call' : 'thread start'} has no \`model\`. Pass the model of the role's row in claude-setup docs/TEAMS.md (Roster; Agent: haiku, sonnet or opus; thread: the full id from the Models line), then retry.` }
+}
+
+if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/').split('/').pop())) {
+  const mode = process.argv[2]
+  if (mode === 'start') {
+    process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: POINTER } }))
+  } else {
+    let raw = ''
+    process.stdin.setEncoding('utf8')
+    process.stdin.on('data', (c) => { raw += c })
+    process.stdin.on('end', () => {
+      try {
+        if (process.env.CLAUDE_SETUP_TEAM_GUARD === 'off') return
+        const { tool_name: tool = '', tool_input: input, cwd = process.cwd() } = JSON.parse(raw || '{}')
+        const out = decide(tool, input, [join(cwd, '.claude', 'agents'), join(homedir(), '.claude', 'agents')])
+        if (out.block) { process.stderr.write(out.block); process.exitCode = 2 }
+      } catch {
+        // A guard must never break a tool call.
+      }
+    })
   }
-  return POINTER
-}
-
-try {
-  process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: spawnRule() } }))
-} catch {
-  // A hook must never break a session start.
 }
 TEAM
 
@@ -246,7 +265,10 @@ for (const [event, mode] of [["PreToolUse", "pre"], ["PostToolUse", "ok"], ["Pos
   s.hooks[event] = (s.hooks[event] || []).filter((h) => !JSON.stringify(h).includes("attempt-guard.mjs"))
   s.hooks[event].push({ matcher: "Bash|mcp__.*", hooks: [{ type: "command", command: `node "${require("os").homedir()}/.claude/claude-setup/attempt-guard.mjs" ${mode}`, timeout: 5 }] })
 }
-s.hooks.SessionStart = (s.hooks.SessionStart || []).filter((h) => !JSON.stringify(h).includes("team-brief.mjs"))
-s.hooks.SessionStart.push({ matcher: "startup|clear|compact", hooks: [{ type: "command", command: `node "${require("os").homedir()}/.claude/claude-setup/team-brief.mjs"`, timeout: 5 }] })
+const team = (mode) => ({ type: "command", command: `node "${require("os").homedir()}/.claude/claude-setup/team-guard.mjs" ${mode}`, timeout: 5 })
+for (const [event, matcher, mode] of [["SessionStart", "startup|clear|compact", "start"], ["PreToolUse", "Agent|Task|mcp__.*start_thread.*|mcp__.*create_session", "pre"]]) {
+  s.hooks[event] = (s.hooks[event] || []).filter((h) => !JSON.stringify(h).includes("team-brief.mjs") && !JSON.stringify(h).includes("team-guard.mjs"))
+  s.hooks[event].push({ matcher, hooks: [team(mode)] })
+}
 fs.writeFileSync(p, JSON.stringify(s, null, 2))
-' || echo "claude-setup: could not add the context, attempt guard and team brief hooks"
+' || echo "claude-setup: could not add the context, attempt guard and team guard hooks"

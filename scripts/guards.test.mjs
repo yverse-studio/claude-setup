@@ -176,7 +176,7 @@ test('check.mjs fails when a Kits row is removed or a Read-first link is dead', 
     cpSync(root, copy, { recursive: true, filter: (p) => !p.includes(`${join(root, '.git')}`) })
     const run = () => spawnSync(process.execPath, [join(copy, 'scripts', 'check.mjs')], { encoding: 'utf8' })
     assert.equal(run().status, 0)
-    const map = join(copy, 'docs/MAP.md')
+    const map = join(copy, 'docs/TEAMS.md')
     const original = readFileSync(map, 'utf8')
     writeFileSync(map, original.split('\n').filter((l) => !l.startsWith('| `video`')).join('\n'))
     const missingRow = run()
@@ -204,3 +204,45 @@ test('check.mjs fails when a lessons file is not linked from docs/MAP.md or the 
   } finally { rmSync(copy, { recursive: true, force: true }) }
 })
 
+
+// Team guard: an Agent call or thread start without `model` is refused; an agent file with its own
+// `model:` passes; SessionStart prints the TEAMS.md pointer.
+const teamFile = join(root, 'global/team-guard.mjs')
+const runTeam = (mode, payload, env = {}) => spawnSync(process.execPath, [teamFile, mode], {
+  input: JSON.stringify(payload), encoding: 'utf8', timeout: 5000, env: { ...process.env, ...env },
+})
+
+test('team guard: blocks Agent and thread starts without model, passes with one', () => {
+  const cwd = mkdtempSync(join(tmpdir(), 'team-'))
+  try {
+    const agent = (input) => runTeam('pre', { cwd, tool_name: 'Agent', tool_input: input })
+    assert.equal(agent({ subagent_type: 'general-purpose', prompt: 'x' }).status, 2)
+    assert.match(agent({ prompt: 'x', model: ' ' }).stderr, /docs\/TEAMS\.md/)
+    assert.equal(agent({ subagent_type: 'general-purpose', prompt: 'x', model: 'haiku' }).status, 0)
+    const start = (tool, input) => runTeam('pre', { cwd, tool_name: tool, tool_input: input }).status
+    assert.equal(start('mcp__hearthbot__start_thread_session', { brief: 'x' }), 2)
+    assert.equal(start('mcp__claude-code-remote__create_session', { prompt: 'x' }), 2)
+    assert.equal(start('mcp__hearthbot__start_thread_session', { brief: 'x', model: 'claude-x-1' }), 0)
+    assert.equal(start('Bash', { command: 'ls' }), 0)
+    assert.equal(start('mcp__hearthbot__post_message', { text: 'x' }), 0)
+    assert.equal(runTeam('pre', { cwd, tool_name: 'Agent', tool_input: { prompt: 'x' } }, { CLAUDE_SETUP_TEAM_GUARD: 'off' }).status, 0)
+  } finally { rmSync(cwd, { recursive: true, force: true }) }
+})
+
+test('team guard: an agent file with its own model passes, one without does not', () => {
+  const cwd = mkdtempSync(join(tmpdir(), 'team-'))
+  try {
+    cpSync(join(root, '.claude/agents/code-reviewer.md'), join(cwd, '.claude/agents/code-reviewer.md'), { recursive: true })
+    writeFileSync(join(cwd, '.claude/agents/plain.md'), '---\nname: plain\ndescription: x\n---\nbody model: opus\n')
+    const agent = (type) => runTeam('pre', { cwd, tool_name: 'Agent', tool_input: { subagent_type: type, prompt: 'x' } }).status
+    assert.equal(agent('code-reviewer'), 0)
+    assert.equal(agent('plain'), 2)
+    assert.equal(agent('../code-reviewer'), 2)
+  } finally { rmSync(cwd, { recursive: true, force: true }) }
+})
+
+test('team guard: SessionStart prints the TEAMS.md pointer', () => {
+  const out = JSON.parse(runTeam('start', {}).stdout)
+  assert.equal(out.hookSpecificOutput.hookEventName, 'SessionStart')
+  assert.match(out.hookSpecificOutput.additionalContext, /docs\/TEAMS\.md/)
+})

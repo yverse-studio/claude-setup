@@ -75,7 +75,7 @@ if (plugins) {
   const attempt = sh.match(/<<'ATTEMPT'\r?\n([\s\S]*?)\r?\nATTEMPT\r?\n/)?.[1]
   if (attempt?.replace(/\r/g, '').trim() !== readFileSync(join(root, 'global/attempt-guard.mjs'), 'utf8').replace(/\r/g, '').trim()) errors.push('cloud/setup.sh attempt guard differs from global/attempt-guard.mjs')
   const team = sh.match(/<<'TEAM'\r?\n([\s\S]*?)\r?\nTEAM\r?\n/)?.[1]
-  if (team?.replace(/\r/g, '').trim() !== readFileSync(join(root, 'global/team-brief.mjs'), 'utf8').replace(/\r/g, '').trim()) errors.push('cloud/setup.sh team brief differs from global/team-brief.mjs')
+  if (team?.replace(/\r/g, '').trim() !== readFileSync(join(root, 'global/team-guard.mjs'), 'utf8').replace(/\r/g, '').trim()) errors.push('cloud/setup.sh team guard differs from global/team-guard.mjs')
 }
 
 // Own skills and agents (the ECC subset is vendored and never hand-edited). A long description gets
@@ -180,7 +180,7 @@ for (const f of anyText('.')) {
 // section the SessionStart hook prints exists.
 {
   const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
-  if (!/^## Spawn rule$/m.test(teams)) errors.push('docs/TEAMS.md: the "## Spawn rule" section is missing (global/team-brief.mjs prints it)')
+  for (const h of ['Spawn rule', 'Sizes', 'Pipeline', 'Roster', 'Kits']) if (!new RegExp(`^## ${h}$`, 'm').test(teams)) errors.push(`docs/TEAMS.md: the "## ${h}" section is missing`)
   for (const d of ['.claude/skills/operator/roles', '.claude/skills/video-studio/roles', '.claude/skills/social-team/roles']) {
     for (const n of readdirSync(join(root, d)).filter((n) => n.endsWith('.md'))) {
       const row = teams.split('\n').find((l) => l.startsWith('|') && l.includes(`](../${d}/${n})`))
@@ -355,17 +355,17 @@ for (const t of ['project-memory', 'lessons']) {
 const memoryTemplate = join(root, '.claude/skills/operator/templates/project-memory.md')
 if (existsSync(memoryTemplate) && statSync(memoryTemplate).size >= 3072) errors.push('templates/project-memory.md: 3 KB or more; the template must stay under 3072 bytes so a MEMORY.md in its shape does too, shorten the examples')
 
-// Kits: docs/MAP.md (Kits) has one row per project kind, and every "Read first" path resolves.
+// Kits: docs/TEAMS.md (Kits) has one row per project kind, and every "Read first" path resolves.
 const KINDS = ['site', 'app', 'game', 'video', 'social', 'story', 'setup', 'repo']
-const kitsBlock = mapText.split(/^## Kits\s*$/m)[1]?.split(/^## /m)[0]
-if (!kitsBlock) errors.push('docs/MAP.md: lacks a "## Kits" section')
+const kitsBlock = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8').split(/^## Kits\s*$/m)[1]?.split(/^## /m)[0]
+if (!kitsBlock) errors.push('docs/TEAMS.md: lacks a "## Kits" section')
 else {
   const rows = kitsBlock.split('\n').filter((l) => l.startsWith('| `'))
   for (const kind of KINDS) {
     const row = rows.find((l) => l.startsWith(`| \`${kind}\``))
-    if (!row) { errors.push(`docs/MAP.md (Kits): no row for kind "${kind}"`); continue }
+    if (!row) { errors.push(`docs/TEAMS.md (Kits): no row for kind "${kind}"`); continue }
     for (const [, target] of (row.split('|')[2] ?? '').matchAll(/\]\(([^)#]+)/g)) {
-      if (!existsSync(join(root, 'docs', target))) errors.push(`docs/MAP.md (Kits): ${kind} reads ${target}, which does not exist`)
+      if (!existsSync(join(root, 'docs', target))) errors.push(`docs/TEAMS.md (Kits): ${kind} reads ${target}, which does not exist`)
     }
   }
 }

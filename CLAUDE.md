@@ -5,20 +5,12 @@ idea to a merged, verified, live result. yskills writes the idea; everything aft
 Claude's job. `docs/MAP.md` says where every part lives and the one home of each rule: a rule
 goes in its home only, everywhere else links it.
 
-## Teams: one role, one thread, its own model (read before starting any thread)
+## Teams (read docs/TEAMS.md before starting any thread or subagent)
 
-yskills 2026-10-26: threads played several roles, skipped the design workflow and all ran on the
-default model. The rule, with the map of every team and role, is `docs/TEAMS.md`; read its Spawn
-rule before starting or asking for any thread.
-
-- Every new idea or change runs the new-idea workflow (`docs/TEAMS.md`): Librarian (find),
-  Researcher, Planner, Critic, the design roles, Programmer, the gate, Librarian (keep), each its
-  own thread titled `<Role> · <topic>`. A thread never plays a second role. Only a bug fix, a small
-  tweak or a question is one thread of the role it needs. [advisory]
-- Only the coordinator starts threads; a thread that needs another role asks it with
-  `message_coordinator` and does not do that role itself. [advisory]
-- Every thread start and every subagent names its `model` from the role's row in `docs/TEAMS.md`
-  (Haiku reads, Sonnet builds and reviews, Opus plans and judges), never the project default. [advisory]
+- Size the task (S, M, L), call only the roles that size and kit need, each in the place
+  `docs/TEAMS.md` gives it (a thread or a subagent), never a second role in your own thread. [advisory]
+- Every thread start and every `Agent` call passes `model` from the role's row; the
+  `team-guard` hook blocks a call without it. [guard: hook team-guard.mjs]
 
 ## The world (2026-10-08)
 
@@ -88,7 +80,7 @@ rule before starting or asking for any thread.
 - Replies: short and informal like yskills' messages, in the language they wrote in. Lead with
   the result, then what they need to do, if anything.
 - New app idea, an idea or change for a live project (feature, fix, art, video) or "continue the
-  project": the `operator` skill (live project: its "Idea for a live project"), never one
+  project": `docs/TEAMS.md` sizes and staffs it (the `operator` skill runs it), never one
   catch-all thread. One thread per plan or PR, closed when done (`docs/WORKFLOW.md`). [advisory]
 - Videos (yskills 2026-10-26, every chat everywhere): an Instagram, TikTok or YouTube link or a video
   file is a request to watch it, whatever else the message says, with no "watch this" needed and no
@@ -98,7 +90,7 @@ rule before starting or asking for any thread.
   Script or Later; five lines in chat, the table in `docs/research/<date>-video-batch.md`), put a
   Take in its home and a lasting lesson as a line there. A safety-check block is reported once, never
   worked around (`watch` SKILL.md, step 1). [advisory]
-- Models: the Models line and the model per role in `docs/TEAMS.md`. A model yskills names is used as named.
+- Models: the Models line and the roster in `docs/TEAMS.md`. A model yskills names is used as named.
 - Lessons stick: every ask of yskills becomes, the same turn, an open thread until delivered or a line in its home in claude-setup (`operator` roles/project-manager.md, Asks ledger); a correction becomes a line in its home, or a test, lint rule or hook. Friction
   with this setup becomes a `loop:setup` issue (`operator` skill, Setup loop). Where a lesson goes:
   `docs/MAP.md` (Start here); memory holds state only (`operator` `templates/project-memory.md`).

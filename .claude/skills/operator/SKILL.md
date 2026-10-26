@@ -45,16 +45,11 @@ brainstorm. No repo, scaffold or builder thread exists before the plan is posted
 `new-project` workflow makes the repo and the live site (`docs/USING.md`, Deploy a page in one shot).
 The brainstorm ends with a stress test (from a video, yskills 2026-10-24): write 3 to 10 different versions of the idea, let three hostile voices attack each (a customer: would I pay? a competitor: how do I crush it? an investor: does it make money?), drop the weakest, merge the best three, and put the scoreboard and the survivor into `PLAN.md`. Prompt text only, no tool.
 
-**Teams, roles and the new-idea workflow** (yskills 2026-10-12 "where are my teams?", 2026-10-26
-"each role its own thread"): their one home is [`docs/TEAMS.md`](../../../docs/TEAMS.md). Read its
-Spawn rule before starting or asking for any thread. In short: a new idea or change, for a new app
-or a live project alike, runs the new-idea workflow there (Librarian find, Researcher, Planner,
-Critic, the design roles, Programmer, the gate, Librarian keep), each role its own thread titled
-`<Role> · <topic>`, never one catch-all thread; every start passes the `model` of the role's row. [advisory]
-Several ideas in one message become one chain each; chains that share no file run at once, never [advisory]
-more than three Programmer threads; the rest queue in `PROGRESS.md`. The `Done:` line ends with one
-short line per role saying what it found or checked. Each role reads its playbook (linked in its
-row) before it starts, and its brief names it. [advisory]
+**Teams, sizes and roles** (yskills 2026-10-12 "where are my teams?", 2026-10-26): their one home
+is [`docs/TEAMS.md`](../../../docs/TEAMS.md). Size the task there (S, M, L), call only the roles the
+size and kit need, as a thread or a subagent as its roster says, with the role's `model`. A live
+project's idea runs the same pipeline as a new app, never one catch-all thread. [advisory] Each role reads its
+playbook before it starts, and its brief names it.
 
 **Starting threads.** In a Claude Project the project conversation starts threads itself (`start_thread_session`, with
 `model` always set: the role's row in `docs/TEAMS.md`); each [advisory]
@@ -67,7 +62,7 @@ effort** medium, and `templates/project-instructions.md` pasted into Project ins
 
 ## 1. Size the job
 
-Which roles start for a kind, and which are skipped: [`docs/MAP.md`](../../../docs/MAP.md) (Kits).
+Which roles start for a size and kind, and which are skipped: [`docs/TEAMS.md`](../../../docs/TEAMS.md) (Sizes, Kits).
 
 | Idea | Shape |
 |---|---|

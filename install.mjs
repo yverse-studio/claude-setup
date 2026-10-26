@@ -135,7 +135,7 @@ items.push(['global/statusline.mjs', join('claude-setup', 'statusline.mjs')])
 items.push(['global/context-guard.mjs', join('claude-setup', 'context-guard.mjs')])
 items.push(['global/attempt-guard.mjs', join('claude-setup', 'attempt-guard.mjs')])
 items.push(['global/live-hook.mjs', join('claude-setup', 'live-hook.mjs')])
-items.push(['global/team-brief.mjs', join('claude-setup', 'team-brief.mjs')])
+items.push(['global/team-guard.mjs', join('claude-setup', 'team-guard.mjs')])
 items.push(['global/live-shot.ps1', join('claude-setup', 'live-shot.ps1')])
 
 const now = new Set(items.map(([, dest]) => dest))
@@ -199,9 +199,12 @@ for (const [event, mode, matcher] of [['PreToolUse', 'pre', 'Bash|mcp__.*'], ['P
   settings.hooks[event] = (settings.hooks[event] ?? []).filter((h) => !JSON.stringify(h).includes('attempt-guard.mjs'))
   settings.hooks[event].push({ matcher, hooks: [{ type: 'command', command: attempt(mode), timeout: 5 }] })
 }
-// Team brief (global/team-brief.mjs): prints docs/TEAMS.md's Spawn rule at every session start; one entry, replaced on every install.
-settings.hooks.SessionStart = (settings.hooks.SessionStart ?? []).filter((h) => !JSON.stringify(h).includes('team-brief.mjs'))
-settings.hooks.SessionStart.push({ matcher: 'startup|clear|compact', hooks: [{ type: 'command', command: `node "${join(CLAUDE_DIR, 'claude-setup', 'team-brief.mjs')}"`, timeout: 5 }] })
+// Team guard (global/team-guard.mjs): a docs/TEAMS.md pointer at session start and a block on Agent calls and thread starts without `model`; one entry each, replaced on every install.
+const team = (mode) => ({ type: 'command', command: `node "${join(CLAUDE_DIR, 'claude-setup', 'team-guard.mjs')}" ${mode}`, timeout: 5 })
+for (const [event, matcher, mode] of [['SessionStart', 'startup|clear|compact', 'start'], ['PreToolUse', 'Agent|Task|mcp__.*start_thread.*|mcp__.*create_session', 'pre']]) {
+  settings.hooks[event] = (settings.hooks[event] ?? []).filter((h) => !/team-(brief|guard)\.mjs/.test(JSON.stringify(h)))
+  settings.hooks[event].push({ matcher, hooks: [team(mode)] })
+}
 // Live frames of Roblox Studio and Blender for HQ (global/live-hook.mjs, studio skill): one entry, replaced on every install.
 settings.hooks.PostToolUse = settings.hooks.PostToolUse.filter((h) => !JSON.stringify(h).includes('live-hook.mjs'))
 settings.hooks.PostToolUse.push({ matcher: 'mcp__Roblox_Studio__.*|mcp__Blender__.*', hooks: [{ type: 'command', command: `node "${join(CLAUDE_DIR, 'claude-setup', 'live-hook.mjs')}"`, timeout: 5 }] })
