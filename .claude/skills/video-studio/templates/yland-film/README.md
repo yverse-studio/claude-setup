@@ -1,6 +1,6 @@
 # Y-Land film rig (2026-10-26)
 
-Films the real Y-Land game frame by frame in the cloud and cuts it with a face clip into a 9:16 video in yskills' style (`/mnt/project-files/social/style/xyskillsx-style.md`). First used for the "my followers live here" test video.
+Needs Playwright with Chromium (preinstalled in cloud threads; elsewhere `npm i -D playwright && npx playwright install chromium`) and ffmpeg. Films the real Y-Land game frame by frame in the cloud and cuts it with a face clip into a 9:16 video in yskills' style (`/mnt/project-files/social/style/xyskillsx-style.md`). First used for the "my followers live here" test video.
 
 1. Real followers: download `https://yland.yverse.workers.dev/api/island` on the laptop (the cloud can't reach workers.dev), stage it, then run the Y-Land dev server against it: `FILM_ISLAND=<island.json> npm run dev` (yland `server/utils/island-store.ts`; without the variable, dev uses made-up followers).
 2. `node film.cjs <out> dry` grabs only each shot's first and last frame (about 6 min); look at them, then `node film.cjs <out>` films all 210 frames (about 7 s per frame, so 25 min).

@@ -8,12 +8,6 @@ const easeIO = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 const lerp = (a, b, t) => a + (b - a) * t;
 const logz = (a, b, t) => Math.exp(lerp(Math.log(a), Math.log(b), t));
 const ISLAND = { x: 3600, y: 2500, z: 0.135 };
-// pick: preference list of predicates run in the page; returns follower key
-const PICK = {
-  hero: `f => f.emoji === '👋'`, ride: `f => f.spot && f.spot.activity === 'ride'`,
-  fish: `f => f.spot && f.spot.activity === 'fish'`, talk: `f => ['💬','🥰','😄','❤️'].includes(f.emoji)`,
-  seated: `f => f.isSeated`,
-};
 const SHOTS = [
   { from: 0, to: 45, pick: 'hero', cam: (s, t) => ({ ...s, z: lerp(9.5, 10.5, t) }) },
   { from: 45, to: 75, keep: 0, cam: (s, t) => { const e = ease(Math.min(1, t * 1.25)); return { x: lerp(s.x, ISLAND.x, e), y: lerp(s.y, ISLAND.y, e), z: logz(10.5, ISLAND.z, e) }; } },
@@ -34,7 +28,6 @@ const SHOTS = [
     const shot = SHOTS[si];
     let key;
     if (shot.keep !== undefined) key = picked[shot.keep];
-    else if (shot.keys) key = shot.keys;
     else {
       key = await p.evaluate(({ kind, used }) => {
         const F = window.__island.simulation.followers.filter(f => f.key !== 'xyskillsx' && !used.includes(f.key));
