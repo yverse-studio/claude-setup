@@ -180,7 +180,7 @@ Claude:
 Incident 2026-10-26 (social): the gates judged UI PRs on local tests, because the preview was broken
 and sat behind the owner's passkey, so nobody clicked the real app.
 
-- **Journey script:** every site, app or game needs `npm run journey` (the new-project template does not scaffold it yet: until a project adds it, its UI PRs fail the journey): Playwright against `BASE_URL`
+- **Journey script:** every site, app or game needs `npm run journey` (the new-project template scaffolds a day-zero one; an older project adds it or its UI PRs fail the journey): Playwright against `BASE_URL`
   with the device named in `JOURNEY_DEVICE` (`devices[...]`, touch on), walking the main journeys
   end to end, the destructive-action list (`operator/roles/programmer.md`) included. Results go to
   `test-results/`. No script means `journey.yml` fails, and a UI PR cannot pass (`gate.md`, UI PRs).
@@ -195,14 +195,26 @@ and sat behind the owner's passkey, so nobody clicked the real app.
   fresh job. The template CI has no status permission, but a PR workflow could post one with the same
   token, so the gate runs `journey.mjs verify`: creator `github-actions[bot]`, linked run of `journey.yml`
   from `pull_request_target` in the same repo.
-- **Preview login:** a journey behind a login signs in with a seeded test owner that exists only in
-  the preview database. The app accepts `POST /api/test-login` with `PREVIEW_LOGIN_TOKEN` (a Worker
-  secret, compared in constant time) only on a preview host (`*-<name>.yverse.workers.dev`), never
-  on the live host, and answers 404 when the secret is unset. Not wired into the project workflow yet: no project
-  holds a GitHub secret, so a journey behind a login needs a decision first (open). The runner would run only the default branch's specs; the PR's Worker (the preview)
-  receives it in the request, so it opens only the preview's test data, and a PR from a fork never gets it
-  (`journey-gate.mjs` refuses). A short-lived token minted per run is a later hardening. Creating or rotating it waits
-  for yskills' tap (`CLAUDE.md`, Ask first). [advisory]
+- **Preview login (standard test environment, yskills 2026-10-26: he never does a step):** a journey behind a
+  login signs in with a seeded test owner that exists only in the preview database. The app answers
+  `POST /api/test-login` with `Authorization: Bearer <PREVIEW_LOGIN_TOKEN>` only on a preview host
+  (`<alias>-<name>.<sub>.workers.dev`), resets the preview's test data to the seed and signs in as the test owner. The
+  template has it as `src/preview-login.js` (host check, constant-time token compare, 404 where the token is unset) with
+  a day-zero `seed` and `signIn`; a project with a login replaces both callbacks with its own seed rows and session.
+  `scripts/journey.mjs` is the day-zero spec and grows into the real journeys.
+  **No hands:** `new-project` makes one random token per new site and puts it in the Worker's previews env
+  (`previews_base_config`, never the live Worker: live has no token, so the route is a 404 there) and as the repo's
+  Environment secret `PREVIEW_LOGIN_TOKEN` (environment `preview-login`, default branch only, so a workflow on any other branch cannot read it); only `journey.yml`'s `run` job names that environment and reads it, running the default branch's specs, and
+  the PR's own preview receives it, so it opens only the preview's test data (separate D1, `wrangler.jsonc` test).
+  A project that predates it, or a run that warned "preview login not wired": the `preview-login` workflow
+  (`name` input) does the same; re-running rotates the token, which waits for yskills' tap. The one thing that can need
+  his hands: `PROJECTS_GITHUB_TOKEN` lacking the repository permissions Administration (read and write: creates the
+  environment and its default-branch policy) and Environments (read and write: its secret), a one-time permission edit; the
+  step then fails with exactly that message. A short-lived token per run is a later hardening: the preview Worker
+  holds the master anyway, so it would not stop malicious PR code, only a leaked log line. Known and accepted: every
+  branch preview of the project holds the token and shares the preview D1 (worst case: someone resets another branch's
+  test data, never live); the journey starts only after the preview serves the PR head's commit, so a lookalike host of
+  another Worker never receives it; never enable Playwright tracing in the specs (a trace stores the Authorization header). [advisory]
 - **Builds run one at a time** on Workers Builds: every `claude/*` push queues in front of `main`'s
   deploy. Push once per finished round, at most three branches building at once; a stuck build is
   cancelled with `build-logs` (`cancel`). `deploy-watch.yml` catches what still slips. [advisory]

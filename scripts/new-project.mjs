@@ -125,12 +125,13 @@ export function packageJson({ name, d1, kind }) {
       check: 'npm test',
       build: 'node scripts/build.mjs',
       verify: 'npm run check && npm run build',
+      journey: 'node scripts/journey.mjs',
       deploy,
       'deploy:preview': deployPreview,
       ...game.scripts,
     },
     ...(game.dependencies && { dependencies: game.dependencies }),
-    devDependencies: { wrangler: '^4.147.0', ...game.devDependencies },
+    devDependencies: { wrangler: '^4.147.0', playwright: '^1.64.1', ...game.devDependencies },
   }
 }
 
@@ -238,7 +239,46 @@ async function ensureKv(cf, name, binding) {
   return created.json.result.id
 }
 
-async function ensureWorker(cf, name, previewSecret, { adopt }) {
+export const PREVIEW_LOGIN = 'PREVIEW_LOGIN_TOKEN'
+const secretText = (text) => ({ type: 'secret_text', text })
+
+// The Worker's previews env. A site with a login gets PREVIEW_LOGIN_TOKEN here and never on the live Worker, so the
+// app's preview-only `POST /api/test-login` answers 404 on live (publish skill, Preview login). Cloudflare returns no
+// secret values, so a variable we cannot resend would be dropped: refuse instead of breaking a preview.
+export function previewEnv(existing, authSecret, loginToken) {
+  const foreign = Object.keys(existing || {}).filter((k) => !['BETTER_AUTH_SECRET', PREVIEW_LOGIN].includes(k))
+  if (foreign.length) throw new Error(`previews_base_config.env also holds ${foreign.join(', ')}; resending it is not possible, so add it to previewEnv before rotating`)
+  return { BETTER_AUTH_SECRET: secretText(authSecret), ...(loginToken ? { [PREVIEW_LOGIN]: secretText(loginToken) } : {}) }
+}
+
+// libsodium sealed box, the format GitHub wants for an Actions secret; the dependency loads only when this runs.
+export async function sealWithSodium(publicKey, text) {
+  const { default: sodium } = await import('libsodium-wrappers')
+  await sodium.ready
+  const key = sodium.from_base64(publicKey, sodium.base64_variants.ORIGINAL)
+  return sodium.to_base64(sodium.crypto_box_seal(sodium.from_string(text), key), sodium.base64_variants.ORIGINAL)
+}
+
+// The token as an Environment secret, not a repo secret: any workflow a branch adds can read a repo secret, but an
+// environment limited to the default branch hands it only to jobs that name it and run from there (journey.yml's `run`
+// job, `pull_request_target` runs on the base branch). Never logs the value.
+export const PREVIEW_ENV = 'preview-login'
+export async function setRepoSecret(gh, { org, repo, value, seal = sealWithSodium }) {
+  const fail = (what, r) => new Error(`${org}/${repo}: ${what} answered ${r.status}; PROJECTS_GITHUB_TOKEN needs repository permissions Administration (read and write, for the environment and its branch policy) and Environments (read and write, for its secret)`)
+  const info = await gh(`/repos/${org}/${repo}`)
+  if (!info.ok || !info.json?.default_branch) throw fail('reading the repo', info)
+  const envPath = `/repos/${org}/${repo}/environments/${PREVIEW_ENV}`
+  const made = await gh(envPath, { method: 'PUT', body: { deployment_branch_policy: { protected_branches: false, custom_branch_policies: true } } })
+  if (!made.ok) throw fail(`creating the ${PREVIEW_ENV} environment`, made)
+  const policy = await gh(`${envPath}/deployment-branch-policies`, { method: 'POST', body: { name: info.json.default_branch, type: 'branch' } })
+  if (!policy.ok && policy.status !== 422) throw fail('limiting the environment to the default branch', policy) // 422: the policy exists
+  const key = await gh(`${envPath}/secrets/public-key`)
+  if (!key.ok || !key.json?.key || !key.json?.key_id) throw fail('reading the environment public key', key)
+  const put = await gh(`${envPath}/secrets/${PREVIEW_LOGIN}`, { method: 'PUT', body: { encrypted_value: await seal(key.json.key, value), key_id: key.json.key_id } })
+  if (![201, 204].includes(put.status)) throw fail(`setting ${PREVIEW_LOGIN}`, put)
+}
+
+async function ensureWorker(cf, name, previewSecret, { adopt, loginToken }) {
   let page = 1
   for (;;) {
     const r = await cf(`/workers/workers?per_page=100&page=${page}`)
@@ -254,7 +294,7 @@ async function ensureWorker(cf, name, previewSecret, { adopt }) {
       name,
       observability: { enabled: true },
       subdomain: { enabled: true, previews_enabled: true },
-      previews_base_config: { env: { BETTER_AUTH_SECRET: { type: 'secret_text', text: previewSecret } } },
+      previews_base_config: { env: previewEnv({}, previewSecret, loginToken) },
     },
   })
   log('worker', `created ${name} ${created.json.result.id}`)
@@ -529,7 +569,16 @@ export async function main() {
     log('repo', 'has commits, nothing pushed')
   }
 
-  const worker = await ensureWorker(cf, name, randomBytes(32).toString('base64url'), { adopt })
+  const loginToken = secret && !adopt ? randomBytes(32).toString('base64url') : undefined // a re-run adopting a Worker never rotates it
+  if (loginToken) console.log(`::add-mask::${loginToken}`)
+  const worker = await ensureWorker(cf, name, randomBytes(32).toString('base64url'), { adopt, loginToken })
+  if (loginToken) {
+    // Not fatal: the project works without it, only the journey behind the login waits. The `preview-login` workflow retries.
+    await setRepoSecret(gh, { org, repo: repoName, value: loginToken }).then(
+      () => log('preview-login', `${PREVIEW_LOGIN} set on ${org}/${repoName}`),
+      (e) => console.log(`::warning::preview login not wired: ${redact(e.message)}; run the preview-login workflow for ${name} once that is fixed`),
+    )
+  }
   const buildTokenUuid = await pickBuildToken(cf, process.env.BUILD_TOKEN_NAME, process.env.CLOUDFLARE_BUILD_TOKEN)
   const git = await connectRepo(cf, { repo, org, name: repoName })
   await ensureBuilds(cf, { tag: worker.id, git, org, name: repoName, branch, d1, buildTokenUuid, commands })
