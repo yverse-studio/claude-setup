@@ -87,3 +87,4 @@ way around so it never stalls work. Never reword, split or retry a refused call.
 - 2026-10-26: the first edit of `global/settings.json` for this page was refused as
   Self-Modification although yskills had asked for it in general words. The classifier wants the
   permission change itself named by him; a card with that exact question is the route.
+- 2026-10-26 (no-prompt proof): a session can start from a cached environment built before a merge. The one that ran the proof was built at 21:56 UTC, PR 302 merged at 22:08, so it had no `permissions` or `autoMode` and no sync hook. A `# rebuild:` line in the Setup script only helps sessions started after the rebuild: judge the proof from a session whose `~/.claude/claude-setup/permissions-sync.sh` exists.
