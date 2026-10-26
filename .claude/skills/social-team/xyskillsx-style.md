@@ -28,9 +28,13 @@ words that day: "thats lowk the style i wanted but everything lacks quality caus
 | "bro only has 30 followers" deadpan | 69k, 406 comments | self-roast that invites replies |
 | "18h flight, expect to be famous" | 23.7k | face close-up, ironic promise |
 
-The recipe behind every hit: **his face in frame, one ironic caption from frame 1, 7-9 s, 0-5 cuts,
-a trending sound, a loop.** Faceless travel and food clips stay at 250-1.1k; the one exception (KBBQ,
-5.7k) asks a question people answer in the comments. One-take talking heads are authentic but sit
+The recipe behind his self-irony hits: **his face in frame, one ironic caption from frame 1, 7-9 s, 0-5 cuts,
+a trending sound, a loop.** Plain scenery stays at 250-1.1k. **Food is his second hit lane** when
+it carries a joke or a real recipe (Metricool, May-Oct 2026: sushi bake 21.6k with the recipe in the
+caption, "10 secs to cook… summer body (for 2027)" 9.8k, Spätzle 6.1k, "struggle meal" 5.1k, KBBQ
+5.7k): 6 of his top 15. Outliers come from shares (the 73k height joke: 3,550 shares, 4.9% of views,
+against his usual 0-5), so write captions people send to a friend; comments come from a take
+("the UK is so expensive", 104). One-take talking heads are authentic but sit
 at about 340. The Y-Land card video (284 views) looked clean but read like an app ad, not like him.
 
 ## Keep (this is the authentic part)
@@ -38,6 +42,7 @@ at about 340. The Y-Land card video (284 views) looked clean but read like an ap
 - The caption meme: one short line, his voice, on screen from the first frame.
 - His face or his body in the shot, and the joke on himself.
 - Short (6-13 s) and loopable; the trending sound added by him in the app.
+- Cooking with a joke or a real recipe in the caption (his Cooking Mama roots).
 - Real moments from his phone, never stock, never a generated person or place.
 - Replying to friends' comments with jokes; captions that make people tag someone or answer.
 
