@@ -6,6 +6,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { styleErrors } from './styles-check.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const errors = []
@@ -302,23 +303,8 @@ for (const h of AUDIO_HEADINGS) {
   if (!new RegExp(`^## ${h}\\s*$`, 'm').test(audioTemplate)) errors.push(`templates/audio.md: lacks "## ${h}"`)
 }
 
-// Style library: every styles/<name>/ carries a STYLE.md with the template sections, a refs/ image, and an index row.
-const stylesDir = join(root, '.claude/skills/ui-review/styles')
-const stylesIndex = readFileSync(join(stylesDir, 'README.md'), 'utf8')
-for (const name of readdirSync(stylesDir, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name)) {
-  const stylePath = join(stylesDir, name, 'STYLE.md')
-  if (!existsSync(stylePath)) {
-    errors.push(`styles/${name}: no STYLE.md`)
-    continue
-  }
-  const style = readFileSync(stylePath, 'utf8')
-  for (const h of ['Tokens', 'Do', "Don't", 'How to use it']) {
-    if (!new RegExp(`^## ${h}\\s*$`, 'm').test(style)) errors.push(`styles/${name}/STYLE.md: lacks "## ${h}"`)
-  }
-  const refsDir = join(stylesDir, name, 'refs')
-  if (!existsSync(refsDir) || !readdirSync(refsDir).some((f) => /\.(png|jpe?g|webp)$/i.test(f))) errors.push(`styles/${name}/refs: no image`)
-  if (!stylesIndex.includes(`](${name}/STYLE.md)`)) errors.push(`styles/README.md: no row for ${name}`)
-}
+// Style library: scripts/styles-check.mjs.
+errors.push(...styleErrors(join(root, '.claude/skills/ui-review/styles')))
 
 // Copy deck: one home (roles/content-designer.md); the template must carry every heading copy-check.mjs requires.
 const { REQUIRED_HEADINGS: COPY_HEADINGS } = await import('../.claude/skills/ui-review/scripts/copy-check.mjs')

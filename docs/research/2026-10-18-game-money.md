@@ -1,7 +1,7 @@
 # Game money: the verdict (2026-10-18)
 
 Asked by yskills 2026-10-18 00:31 ("did you research right ... sota way to earn money with a game ... google what is actually the way").
-Updates [2026-10-17-game-route.md](2026-10-17-game-route.md). **[V]** = vendor/SEO blog, not audited or official. No solo-dev postmortem with disclosed numbers turned up in six searches, so every euro figure below is an estimate.
+Updates [the game-route research](../archive/claude-setup-memory-2026-10-25/game-route-research.md). **[V]** = vendor/SEO blog, not audited or official. No solo-dev postmortem with disclosed numbers turned up in six searches, so every euro figure below is an estimate.
 
 ## Route (one)
 
