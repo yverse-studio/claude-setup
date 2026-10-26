@@ -1,10 +1,10 @@
 // The journey check's specs (claude-setup journey.yml runs `npm run journey` against BASE_URL on a phone profile).
 // Day zero: the page renders and the preview test login works (an OIDC token from the journey job; no stored secret). A project grows
 // this file with its real journeys (sign in with the test login, then click through); it must never run against live.
-// Never turn on Playwright tracing here: a trace stores the test login's Authorization header (an OIDC token, valid for minutes).
+// Never turn on Playwright tracing here: a trace stores the test login's request body (an OIDC token, valid for minutes).
 import { chromium, devices } from 'playwright'
 import { mkdirSync } from 'node:fs'
-import { previewLoginHeaders } from './journey-login.mjs'
+import { previewLoginRequest } from './journey-login.mjs'
 
 const base = process.env.BASE_URL
 if (!base) throw new Error('BASE_URL is not set')
@@ -18,7 +18,7 @@ try {
   const page = await context.newPage()
   await page.goto('/')
   await page.locator('h1, canvas').first().waitFor({ timeout: 15000 })
-  const login = await context.request.post('/api/test-login', { headers: await previewLoginHeaders(base) })
+  const login = await context.request.post('/api/test-login', await previewLoginRequest(base))
   if (login.status() === 404) console.log('journey: this app has no /api/test-login, login steps skipped') // an app without a login
   else if (!login.ok()) throw new Error(`test login answered ${login.status()}`)
   else console.log('journey: preview test login ok')

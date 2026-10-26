@@ -1,10 +1,12 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { previewLogin, isPreviewHost, verifyJourneyToken } from '../src/preview-login.js'
+import { previewLoginRequest } from '../scripts/journey-login.mjs'
 
 const NAME = 'demo'
 const REPO = 'yverse-studio/demo'
 const HOST = 'abc-demo.me.workers.dev'
+const ORIGIN = `https://${HOST}`
 const NOW = Date.parse('2026-10-26T12:00:00Z')
 const ALGO = { name: 'RSASSA-PKCS1-v1_5', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' }
 const b64u = (buf) => Buffer.from(buf).toString('base64url')
@@ -16,7 +18,7 @@ const jwk = { ...(await crypto.subtle.exportKey('jwk', good.publicKey)), kid: 'k
 const fetchJwks = async () => Response.json({ keys: [jwk] })
 
 const claims = (over = {}) => ({
-  iss: 'https://token.actions.githubusercontent.com', aud: HOST, exp: NOW / 1000 + 300, iat: NOW / 1000 - 5,
+  iss: 'https://token.actions.githubusercontent.com', aud: ORIGIN, exp: NOW / 1000 + 300, iat: NOW / 1000 - 5,
   repository: REPO, repository_owner: 'yverse-studio', job_workflow_ref: `${REPO}/.github/workflows/journey.yml@refs/heads/main`,
   ref: 'refs/heads/main', event_name: 'pull_request_target', runner_environment: 'github-hosted', ...over,
 })
@@ -24,11 +26,11 @@ async function token(over = {}, { key = good.privateKey, header = { alg: 'RS256'
   const body = `${text(header)}.${text(claims(over))}`
   return `${body}.${b64u(await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, new TextEncoder().encode(body)))}`
 }
-const verify = (t, over = {}) => verifyJourneyToken(t, { audience: HOST, repo: REPO, branch: 'main', fetchJwks, now: NOW, ...over })
+const verify = (t, over = {}) => verifyJourneyToken(t, { audience: ORIGIN, repo: REPO, branch: 'main', fetchJwks, now: NOW, ...over })
 
-async function call(host, { bearer, method = 'POST' } = {}) {
+async function call(host, { bearer, body = bearer === undefined ? undefined : JSON.stringify({ token: bearer }), method = 'POST' } = {}) {
   const log = []
-  const req = new Request(`https://${host}/api/test-login`, { method, headers: bearer ? { authorization: `Bearer ${bearer}` } : {} })
+  const req = new Request(`https://${host}/api/test-login`, { method, ...(method === 'POST' && { body }) })
   const res = await previewLogin(req, {}, { name: NAME, repo: REPO, fetchJwks, now: NOW, seed: async () => log.push('seed'), signIn: async () => (log.push('in'), Response.json({ ok: true })) })
   return { res, log }
 }
@@ -48,7 +50,7 @@ test('the journey job of this repo on the default branch is accepted', async () 
 
 test('every claim that pins the job is enforced', async () => {
   for (const over of [
-    { aud: 'xyz-demo.me.workers.dev' }, { aud: [HOST] }, { exp: NOW / 1000 - 1 }, { iat: NOW / 1000 + 3600 }, { nbf: NOW / 1000 + 3600 },
+    { aud: 'https://xyz-demo.me.workers.dev' }, { aud: HOST }, { aud: [ORIGIN] }, { exp: NOW / 1000 - 1 }, { iat: NOW / 1000 + 3600 }, { nbf: NOW / 1000 + 3600 },
     { iss: 'https://evil.example' }, { repository: 'yverse-studio/other' }, { repository_owner: 'someone' },
     { job_workflow_ref: `${REPO}/.github/workflows/other.yml@refs/heads/main` },
     { job_workflow_ref: `${REPO}/.github/workflows/journey.yml@refs/heads/feature` }, { ref: 'refs/heads/feature' },
@@ -78,8 +80,25 @@ test('a missing or wrong token is refused and seeds nothing', async () => {
   }
 })
 
+test('a missing, non-JSON, oversized or wrong-shaped body is refused and seeds nothing', async () => {
+  const valid = await token()
+  for (const body of [undefined, '', 'not json', 'null', '[]', '{}', JSON.stringify({ token: 42 }), JSON.stringify({ token: valid, pad: 'x'.repeat(9000) })]) {
+    const { res, log } = await call(HOST, { body })
+    assert.equal(res.status, 403, String(body).slice(0, 30))
+    assert.deepEqual(log, [])
+  }
+})
+
+test('the token must be in the JSON body: an Authorization header alone is refused', async () => {
+  const req = new Request(`${ORIGIN}/api/test-login`, { method: 'POST', headers: { authorization: `Bearer ${await token()}` } })
+  const log = []
+  const res = await previewLogin(req, {}, { name: NAME, repo: REPO, fetchJwks, now: NOW, seed: async () => log.push('seed'), signIn: async () => Response.json({}) })
+  assert.equal(res.status, 403)
+  assert.deepEqual(log, [])
+})
+
 test('the live host and other methods never answer, even with a valid token', async () => {
-  const bearer = await token({ aud: 'demo.me.workers.dev' })
+  const bearer = await token({ aud: 'https://demo.me.workers.dev' })
   const live = await call('demo.me.workers.dev', { bearer })
   assert.equal(live.res, null)
   assert.deepEqual(live.log, [])
@@ -111,6 +130,32 @@ test('a failing or malformed key fetch fails closed and does not poison later lo
 test('HS256, a missing exp or iat, and a custom domain are refused or ignored', async () => {
   assert.equal(await verify(await token({}, { header: { alg: 'HS256', kid: 'k1' } })), false)
   for (const field of ['exp', 'iat']) assert.equal(await verify(await token({ [field]: undefined })), false, field)
-  const bearer = await token({ aud: 'demo.example.com' })
+  const bearer = await token({ aud: 'https://demo.example.com' })
   assert.equal((await call('demo.example.com', { bearer })).res, null)
+})
+
+test('the journey client sends {token} with the origin as audience, and JOURNEY_LOGIN_TOKEN wins for local runs', async () => {
+  const env = { ...process.env }
+  const realFetch = globalThis.fetch
+  const quiet = console.log
+  console.log = () => {}
+  try {
+    process.env.ACTIONS_ID_TOKEN_REQUEST_URL = 'https://runner.example/token?x=1'
+    process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN = 'rt'
+    delete process.env.JOURNEY_LOGIN_TOKEN
+    let asked
+    globalThis.fetch = async (u) => ((asked = u), Response.json({ value: 'minted.jwt.value' }))
+    assert.deepEqual(await previewLoginRequest(`${ORIGIN}/x`), { data: { token: 'minted.jwt.value' }, headers: { origin: ORIGIN } })
+    assert.match(asked, new RegExp(`audience=${encodeURIComponent(ORIGIN)}$`))
+    process.env.JOURNEY_LOGIN_TOKEN = 'local.jwt.value'
+    globalThis.fetch = async () => { throw new Error('must not ask the runner') }
+    assert.equal((await previewLoginRequest(ORIGIN)).data.token, 'local.jwt.value')
+    delete process.env.ACTIONS_ID_TOKEN_REQUEST_URL
+    delete process.env.JOURNEY_LOGIN_TOKEN
+    await assert.rejects(previewLoginRequest(ORIGIN), /journey\.yml/)
+  } finally {
+    globalThis.fetch = realFetch
+    console.log = quiet
+    for (const k of ['ACTIONS_ID_TOKEN_REQUEST_URL', 'ACTIONS_ID_TOKEN_REQUEST_TOKEN', 'JOURNEY_LOGIN_TOKEN']) env[k] === undefined ? delete process.env[k] : (process.env[k] = env[k])
+  }
 })

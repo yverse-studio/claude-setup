@@ -197,11 +197,13 @@ and sat behind the owner's passkey, so nobody clicked the real app.
   from `pull_request_target` in the same repo.
 - **Preview login (standard test environment, yskills 2026-10-26: he never does a step, and no secret exists at all):** a journey
   behind a login signs in with a seeded test owner that exists only in the preview database. `journey.yml`'s `run` job
-  (default branch's specs, no PR code, `id-token: write`) asks GitHub for an OIDC token whose audience is the preview's host
-  (`scripts/journey-login.mjs`) and sends it as `POST /api/test-login` with `Authorization: Bearer <jwt>`. The Worker
+  (default branch's specs, no PR code, `id-token: write`) asks GitHub for an OIDC token whose audience is the preview's origin
+  (`https://<host>`, `scripts/journey-login.mjs`) and sends it as `POST /api/test-login` with the JSON body `{"token": "<jwt>"}`
+  (the wire format of social#41; a header-only or malformed body gets 403). A local run against a preview sets
+  `JOURNEY_LOGIN_TOKEN` to a token minted for that origin. The Worker
   (`src/preview-login.js`) answers only on a preview host (`<alias>-<name>.<sub>.workers.dev`; the live host
   `<name>.<sub>.workers.dev` and custom domains get nothing) and only when the token is signed by GitHub's keys (JWKS,
-  cached), has `iss` GitHub, `aud` = that host, a live `exp`, and claims `repository` = this repo, `job_workflow_ref` =
+  cached), has `iss` GitHub, `aud` = that origin, a live `exp`, and claims `repository` = this repo (and its owner), `iat` within a minute of now, `job_workflow_ref` =
   `<repo>/.github/workflows/journey.yml@refs/heads/<default>`, `ref` the default branch, `event_name` `pull_request_target`,
   GitHub-hosted runner. Then it resets the preview's test data to the seed and signs in as the test owner (`seed` and
   `signIn` are the project's callbacks; the day-zero ones are in the template, a project with a login replaces both). Nothing
@@ -209,7 +211,7 @@ and sat behind the owner's passkey, so nobody clicked the real app.
   from its first deploy; `new-project` needs no key for it. A workflow on another branch, a fork or a push cannot mint a
   token with those claims. Accepted: PR code in a preview sees a token valid for minutes and only for its own host, so the
   worst case is someone resetting that preview's test data (separate D1, `wrangler.jsonc` test), never live. Never enable
-  Playwright tracing in the specs (a trace stores the Authorization header). Claude cannot mint the token outside
+  Playwright tracing in the specs (a trace stores the request body with the token). Claude cannot mint the token outside
   `journey.yml`: to test a login by hand, push the PR and read the journey run. [advisory]
 - **Builds run one at a time** on Workers Builds: every `claude/*` push queues in front of `main`'s
   deploy. Push once per finished round, at most three branches building at once; a stuck build is
