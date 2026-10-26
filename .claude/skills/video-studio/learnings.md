@@ -34,4 +34,5 @@ Y-Land notes and scripts live in that project's files (`promo/LEARNINGS.md`, `pr
 - 2026-10-12 (Y-Land): ffmpeg's looped-still overlays land one frame late; start fades a frame early and check the switch frames.
 - 2026-10-12 (Y-Land): a caption-only change needs no re-film: overlay the new card on the old MP4 from the card's first frame; anything the app draws needs a re-film.
 - 2026-10-07 (Y-Land): always check frame pacing before delivering (`mpdecimate` or a mean frame diff); zero difference during motion is stutter.
+- 2026-10-26 (Y-Land /brag): the brag render measured -24.4 LUFS (no loudness pass, no ducking), about 10 LU quieter than the feed; every master goes through `sound.py mix` or `loud` at -14 LUFS (`sound-kit.md`).
 - 2026-10-07 (Y-Land): everything was free (Playwright, Chromium, ffmpeg); about 1.5 s of render per frame on the cloud CPU, so a 24 s video takes about 20 minutes.

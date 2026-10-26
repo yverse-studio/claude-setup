@@ -69,7 +69,8 @@ The comments and DMs webhook and the `posts.md`, `brands.md`, `deals.md` notes j
 - **Daily lane** (the slots): one of three templates, filled from a Writer script: real-photo or
   screenshot slideshow (the Larry format), screen-capture devlog (Playwright capture of the real
   product), explainer (`video-studio` `templates/explainer/`, new look per art direction). Then one
-  fresh Critic pass on the cut. Minutes, not hours. A template is used only after its first video passed the Critic.
+  fresh Critic pass on the cut. Minutes, not hours. Sound and cuts per preset (real_talk, explainer,
+  big): [`../video-studio/sound-kit.md`](../video-studio/sound-kit.md). A template is used only after its first video passed the Critic.
 - **Full studio** (`video-studio` pipeline): 1-2 flagship videos a week, ads, launches.
 - **Empty slot:** when no idea of his is ready, the Lead fills it from a `Done:` line of any project
   (devlog or learning pillar only, real footage); never a bait, ad or crypto topic (yskills, 2026-10-26).

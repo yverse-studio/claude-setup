@@ -1,0 +1,85 @@
+import json
+import tempfile
+import unittest
+from pathlib import Path
+
+from sound_library import pick, problems
+
+SHIPPED = Path(__file__).resolve().parent.parent / "sound"
+
+CLEAN = {
+    "id": "thud-soft-01", "kind": "sfx", "category": "thud", "licence": "CC0-1.0",
+    "url": "https://kenney.nl/assets/impact-sounds", "proof": "licences/kenney/License.txt",
+    "file": "sfx/thud/thud-soft-01.wav", "presets": ["explainer"], "tags": ["warm"], "lufs": -20.0,
+}
+
+
+def library(entries, files=("licences/kenney/License.txt", "sfx/thud/thud-soft-01.wav")):
+    root = Path(tempfile.mkdtemp())
+    for name in files:
+        (root / name).parent.mkdir(parents=True, exist_ok=True)
+        (root / name).write_text("x")
+    (root / "manifest.json").write_text(json.dumps({"entries": entries}))
+    return root
+
+
+class Check(unittest.TestCase):
+    def test_clean_entry_passes(self):
+        self.assertEqual(problems(library([CLEAN])), [])
+
+    def test_cc_by_is_rejected(self):
+        found = problems(library([{**CLEAN, "licence": "CC-BY-4.0"}]))
+        self.assertTrue(any("licence" in line for line in found))
+
+    def test_missing_proof_is_rejected(self):
+        found = problems(library([CLEAN], files=("sfx/thud/thud-soft-01.wav",)))
+        self.assertTrue(any("proof" in line for line in found))
+
+    def test_music_needs_bpm_and_known_mood(self):
+        music = {**CLEAN, "kind": "music", "mood": "elevator", "file": CLEAN["file"]}
+        found = problems(library([music]))
+        self.assertTrue(any("bpm" in line for line in found))
+        self.assertTrue(any("group" in line for line in found))
+
+    def test_unknown_preset_and_duplicate_id(self):
+        found = problems(library([{**CLEAN, "presets": ["vlog"]}, CLEAN]))
+        self.assertTrue(any("presets" in line for line in found))
+        self.assertTrue(any("duplicate" in line for line in found))
+
+
+class Paths(unittest.TestCase):
+    def test_absolute_and_parent_paths_are_not_proof(self):
+        for proof in ("/etc/passwd", "../manifest.json", "sfx/thud/thud-soft-01.wav"):
+            found = problems(library([{**CLEAN, "proof": proof}]))
+            self.assertTrue(any("proof" in line for line in found), proof)
+
+    def test_absolute_file_is_rejected(self):
+        found = problems(library([{**CLEAN, "file": "/etc/passwd"}]))
+        self.assertTrue(any("outside the library" in line for line in found))
+
+    def test_bad_bpm_and_malformed_entry_are_reported_not_raised(self):
+        music = {**CLEAN, "kind": "music", "mood": "chill", "bpm": "fast"}
+        self.assertTrue(any("bpm" in line for line in problems(library([music, "oops", {}]))))
+
+
+class Shipped(unittest.TestCase):
+    def test_shipped_library_is_clean(self):
+        self.assertEqual(problems(SHIPPED), [])
+
+    def test_real_talk_has_no_whoosh_bell_or_glitch(self):
+        for category in ("whoosh", "bell", "glitch", "riser"):
+            with self.assertRaises(ValueError):
+                pick(SHIPPED, category, "real_talk")
+
+    def test_glitch_needs_the_opt_in_tag(self):
+        with self.assertRaises(ValueError):
+            pick(SHIPPED, "glitch", "big")
+        self.assertIn("glitch", pick(SHIPPED, "glitch", "big", tag="opt-in").name)
+
+    def test_pick_never_repeats_the_last_file(self):
+        first = pick(SHIPPED, "thud", "real_talk")
+        self.assertNotEqual(pick(SHIPPED, "thud", "real_talk", last=first.relative_to(SHIPPED).as_posix()), first)
+
+
+if __name__ == "__main__":
+    unittest.main()
