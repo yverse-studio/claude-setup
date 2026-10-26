@@ -56,10 +56,11 @@ function fakeGitHub({ head = B, headAt = '2026-10-26T09:00:00Z', dropLabels = fa
   const gh = async (path, method = 'GET', body) => {
     if (method !== 'GET') writes.push(`${method} ${path}`)
     if (path.startsWith('repos/yverse-studio/claude-setup/issues?')) return issues.filter((i) => i.state === 'open')
+    if (path === 'plant') { issues.push({ number: issues.length + 1, title: body, state: 'open', user: { login: 'someone' } }); return {} }
     if (path === 'repos/yverse-studio/social') return { default_branch: 'main' }
     if (path === 'repos/yverse-studio/social/commits/main') return { sha: head, commit: { committer: { date: headAt } } }
     if (path === 'repos/yverse-studio/claude-setup/issues' && method === 'POST') {
-      const i = { number: issues.length + 1, title: body.title, state: 'open', labels: dropLabels ? [] : body.labels }
+      const i = { number: issues.length + 1, title: body.title, state: 'open', user: { login: 'github-actions[bot]' }, labels: dropLabels ? [] : body.labels }
       issues.push(i)
       return i
     }
@@ -95,4 +96,11 @@ test('watch fails loudly when every project errors (an expired token must not lo
   const f = fakeGitHub()
   const broken = async (path, ...rest) => { if (path.startsWith('repos/yverse-studio/social')) throw new Error('401'); return f.gh(path, ...rest) }
   await assert.rejects(watch({ gh: broken, live: serving(A), projects: social, self: 'yverse-studio/claude-setup', now: NOW, log: () => {} }), /every project failed/)
+})
+
+test('an issue with the same title from someone else does not mute the alert', async () => {
+  const f = fakeGitHub()
+  await f.gh('plant', 'GET', 'deploy-drift: social')
+  await run(f, serving(A))
+  assert.equal(f.writes.filter((w) => w === 'POST repos/yverse-studio/claude-setup/issues').length, 1)
 })

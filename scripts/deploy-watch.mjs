@@ -61,10 +61,13 @@ export function issueBody(p, { live, head, headAt }) {
 }
 
 // One pass over the projects. gh(path, method?, body?) is the GitHub API, `live(url)` answers
-// { reached, body }. Open issues are matched by title, not by label: a label can be missing or
-// dropped on create, and then every run would open another issue.
+// { reached, body }. Open issues are matched by title, not by label (a label can be missing or
+// dropped on create, and then every run would open another issue), and only the ones this
+// workflow opened: in a public repo anyone can open an issue with that title to mute the alert.
+export const BOT = 'github-actions[bot]'
 export async function watch({ gh, live, projects, self, now = Date.now(), log = console.log }) {
-  const open = (await gh(`repos/${self}/issues?state=open&per_page=100`)).filter((i) => !i.pull_request)
+  const open = (await gh(`repos/${self}/issues?state=open&creator=${encodeURIComponent(BOT)}&per_page=100`))
+    .filter((i) => !i.pull_request && i.user?.login === BOT)
   let errors = 0
   for (const p of projects) {
     try {
