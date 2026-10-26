@@ -45,11 +45,13 @@ function glb(spheres) {
   }
   const meshes = []
   const materials = []
-  const nodes = spheres.map(({ name, radius }, i) => {
+  const nodes = spheres.map(({ name, radius, scale, badIndex, nan }, i) => {
     const s = sphere(radius)
+    if (badIndex) s.idx[3] = 99999
+    if (nan) s.pos[3] = NaN
     materials.push({ name })
     meshes.push({ primitives: [{ attributes: { POSITION: add(s.pos, Float32Array, 'VEC3', 34962) }, indices: add(s.idx, Uint32Array, 'SCALAR', 34963), material: i }] })
-    return { name: `n${i}`, mesh: i }
+    return { name: `n${i}`, mesh: i, ...(scale && { scale }) }
   })
   const bin = Buffer.concat(bins)
   const json = Buffer.from(JSON.stringify({ asset: { version: '2.0' }, scene: 0, scenes: [{ nodes: nodes.map((_, i) => i) }], nodes, meshes, materials, accessors, bufferViews: views, buffers: [{ byteLength: bin.length }] }))
@@ -93,6 +95,35 @@ test('CLI: exit 0 on pass, 1 on a clip, 2 without parts; writes the JSON', () =>
   assert.equal(JSON.parse(readFileSync(out, 'utf8')).parts[0].insidePct, 0)
   assert.equal(spawnSync('node', [script, bad], { encoding: 'utf8' }).status, 1)
   assert.equal(spawnSync('node', [script, good, '--parts', 'NOPE'], { encoding: 'utf8' }).status, 2)
+})
+
+const status = (spheres, extra = []) => {
+  const f = join(mkdtempSync(join(tmpdir(), 'clip-')), 'm.glb')
+  writeFileSync(f, glb(spheres))
+  return spawnSync('node', [script, f, ...extra], { encoding: 'utf8' })
+}
+
+test('broken input exits 2 instead of a false PASS', () => {
+  assert.equal(status([{ name: 'SKIN', radius: 1 }, { name: 'CLOTH', radius: 1.003, badIndex: true }]).status, 2)
+  assert.equal(status([{ name: 'SKIN', radius: 1 }, { name: 'CLOTH', radius: 1.003, nan: true }]).status, 2)
+})
+
+test('a piece with no measurable vertices fails loudly', () => {
+  const pieces = loadPieces(glb([{ name: 'SKIN', radius: 1 }]))
+  assert.throws(() => measure(pieces, pieces), /no measurable vertices/)
+})
+
+test('a mirrored body node (scale -1) still tells inside from outside', () => {
+  const run = (cloth) => status([{ name: 'SKIN', radius: 1, scale: [-1, 1, 1] }, { name: 'CLOTH', radius: cloth, scale: [-1, 1, 1] }])
+  assert.equal(run(1.003).status, 0)
+  assert.equal(run(0.9).status, 1)
+})
+
+test('a flat body does not blow up the grid; --limit-mm must be a number', () => {
+  const flat = [{ name: 'SKIN', radius: 1, scale: [1, 0.001, 1] }, { name: 'CLOTH', radius: 1.003, scale: [1, 0.001, 1] }]
+  assert.ok([0, 1].includes(status(flat).status))
+  assert.equal(status([{ name: 'SKIN', radius: 1 }, { name: 'CLOTH', radius: 1.003 }], ['--limit-mm', 'abc']).status, 2)
+  assert.equal(status([{ name: 'SKIN', radius: 1 }, { name: 'CLOTH', radius: 1.003 }], ['--limit-mm', '5']).status, 1)
 })
 
 test('parses flags', () => {

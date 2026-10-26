@@ -6,13 +6,14 @@
 // Pieces are mesh primitives named "<node>/<material>". Body = pieces matching --body, parts =
 // pieces matching --parts, in one file (VRoid bakes both into one mesh) or two (--body-file).
 // Run: node scripts/clipping.mjs model.vrm [--body SKIN] [--parts CLOTH] [--body-file b.glb]
-//      [--parts-file c.glb] [--label rest] [--out result.json]
+//      [--parts-file c.glb] [--limit-mm 0] [--label rest] [--out result.json]
 import { readFileSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
 const COMPONENTS = { 5120: Int8Array, 5121: Uint8Array, 5122: Int16Array, 5123: Uint16Array, 5125: Uint32Array, 5126: Float32Array }
 const TYPE_SIZE = { SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4 }
 const WELD = 1e6
+const EPS_M = 1e-9 // float noise: 0.000001 mm
 const IDENTITY = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]
 
 export function readGlb(buf) {
@@ -51,6 +52,7 @@ function accessor({ json, bin }, index) {
   return out
 }
 
+const det3 = (m) => m[0] * (m[5] * m[10] - m[9] * m[6]) - m[4] * (m[1] * m[10] - m[9] * m[2]) + m[8] * (m[1] * m[6] - m[5] * m[2])
 const mul = (a, b) => {
   const o = new Array(16).fill(0)
   for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) for (let k = 0; k < 4; k++) o[c * 4 + r] += a[k * 4 + r] * b[c * 4 + k]
@@ -111,6 +113,12 @@ export function loadPieces(buf) {
       const indices = p.indices === undefined
         ? Uint32Array.from({ length: cache.get(key).length / 3 }, (_, i) => i)
         : Uint32Array.from(accessor(glb, p.indices))
+      const positions = cache.get(key)
+      const count = positions.length / 3
+      if (indices.length % 3 !== 0) throw new Error(`${node.name}: index count ${indices.length} is not a multiple of 3`)
+      if (indices.some((i) => i >= count)) throw new Error(`${node.name}: an index points past the ${count} vertices`)
+      if (positions.some((v) => !Number.isFinite(v))) throw new Error(`${node.name}: a vertex position is not finite`)
+      if (det3(m) < 0) for (let t = 0; t < indices.length; t += 3) [indices[t + 1], indices[t + 2]] = [indices[t + 2], indices[t + 1]] // mirrored node flips the winding
       const mat = json.materials?.[p.material]?.name ?? `material${p.material ?? ''}`
       pieces.push({ name: `${node.name ?? `node${ni}`}/${mat}`, primitive: pi, positions: cache.get(key), indices })
     })
@@ -200,7 +208,10 @@ export function buildBody(pieces) {
   const lo = [Infinity, Infinity, Infinity]
   const hi = [-Infinity, -Infinity, -Infinity]
   for (const v of verts) for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], v[k]); hi[k] = Math.max(hi[k], v[k]) }
-  const cell = Math.max(Math.cbrt(((hi[0] - lo[0]) * (hi[1] - lo[1]) * (hi[2] - lo[2])) / tris.length) * 2, 1e-4)
+  const extent = [0, 1, 2].map((k) => hi[k] - lo[k])
+  const longest = Math.max(...extent)
+  const flat = extent.map((e) => Math.max(e, longest * 0.01)) // a flat body must not shrink the cells
+  const cell = Math.max(Math.cbrt((flat[0] * flat[1] * flat[2]) / tris.length) * 2, longest / 256, 1e-4)
   const dim = lo.map((l, k) => Math.max(1, Math.ceil((hi[k] - l) / cell)))
   const cells = new Map()
   const ci = (v, k) => Math.max(0, Math.min(dim[k] - 1, Math.floor((v - lo[k]) / cell)))
@@ -224,11 +235,14 @@ export function signedDistance(body, p) {
   let best = Infinity
   let hit = null
   const seen = new Set()
-  const maxR = Math.max(...dim)
+  const maxR = Math.max(...[0, 1, 2].map((k) => Math.max(c0[k], dim[k] - 1 - c0[k])))
+  const clip = (k, r) => [Math.max(0, c0[k] - r), Math.min(dim[k] - 1, c0[k] + r)]
   for (let r = 0; r <= maxR && !(best <= r * cell); r++) {
-    for (let x = c0[0] - r; x <= c0[0] + r; x++) for (let y = c0[1] - r; y <= c0[1] + r; y++) for (let z = c0[2] - r; z <= c0[2] + r; z++) {
+    const [x0, x1] = clip(0, r)
+    const [y0, y1] = clip(1, r)
+    const [z0, z1] = clip(2, r)
+    for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++) for (let z = z0; z <= z1; z++) {
       if (Math.max(Math.abs(x - c0[0]), Math.abs(y - c0[1]), Math.abs(z - c0[2])) !== r) continue
-      if (x < 0 || y < 0 || z < 0 || x >= dim[0] || y >= dim[1] || z >= dim[2]) continue
       for (const f of cells.get((x * dim[1] + y) * dim[2] + z) ?? []) {
         if (seen.has(f)) continue
         seen.add(f)
@@ -258,14 +272,15 @@ export function measure(bodyPieces, partPieces, { label = 'rest', limitMm = 0 } 
     for (const i of used) {
       const d = signedDistance(body, [piece.positions[i * 3], piece.positions[i * 3 + 1], piece.positions[i * 3 + 2]])
       if (d < min) { min = d; worst = i }
-      if (d < 0) inside++
+      if (d < -EPS_M) inside++
     }
+    if (!used.length || !Number.isFinite(min)) throw new Error(`${piece.name}: no measurable vertices (all shared with the body, or no body surface near)`)
     const minMm = Math.round(min * 1e5) / 100
-    const insidePct = used.length ? Math.round((inside / used.length) * 1e4) / 100 : 0
+    const insidePct = Math.round((inside / used.length) * 1e4) / 100
     return {
       name: piece.name, vertices: used.length, minMm, insidePct, insideVertices: inside,
       worstVertex: worst, worstPositionM: worst < 0 ? null : [0, 1, 2].map((k) => piece.positions[worst * 3 + k]),
-      pass: minMm >= limitMm && insidePct === 0,
+      pass: min * 1000 >= limitMm - EPS_M * 1000 && inside === 0,
     }
   })
   return { label, limit: { minMm: limitMm, insidePct: 0 }, bodyTriangles: body.tris.length, parts, pass: parts.length > 0 && parts.every((p) => p.pass) }
@@ -293,12 +308,13 @@ export function parseArgs(argv) {
     } else files.push(argv[i])
   }
   opt.file = files[0]
+  if (opt.limitMm !== undefined && !Number.isFinite(Number(opt.limitMm))) throw new Error(`--limit-mm needs a number, got "${opt.limitMm}"`)
   return opt
 }
 
 export function run(argv) {
   const opt = parseArgs(argv)
-  if (!opt.file && !(opt.bodyFile && opt.partsFile)) throw new Error('usage: clipping.mjs <file.vrm|glb> [--body SKIN] [--parts CLOTH] [--body-file f] [--parts-file f] [--label rest] [--out result.json]')
+  if (!opt.file && !(opt.bodyFile && opt.partsFile)) throw new Error('usage: clipping.mjs <file.vrm|glb> [--body SKIN] [--parts CLOTH] [--body-file f] [--parts-file f] [--limit-mm 0] [--label rest] [--out result.json]')
   const load = (f) => loadPieces(readFileSync(f))
   const bodyPieces = select(load(opt.bodyFile ?? opt.file), opt.body)
   const partPieces = select(load(opt.partsFile ?? opt.file), opt.parts).filter((p) => !bodyPieces.some((b) => b.positions === p.positions && b.primitive === p.primitive && b.name === p.name))
