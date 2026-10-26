@@ -212,7 +212,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 
-export const POINTER = 'Team rule (claude-setup docs/TEAMS.md): size the task S/M/L, call only the roles it needs, as thread or subagent as the roster says, and pass `model` from the role\'s row on every thread start and Agent call.'
+export const POINTER = 'Team rule (claude-setup docs/TEAMS.md): route every task on its own (task picks the kit, not the project; then size S/M/L), call only the roles it needs, as thread or subagent as the roster says, and pass `model` from the role\'s row on every thread start and Agent call.'
 
 const THREAD_START = /^mcp__.*(start_thread|create_session)/
 const AGENT = /^(Agent|Task)$/

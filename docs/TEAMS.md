@@ -8,27 +8,33 @@ the roster). Every other file links here.
 
 ## Spawn rule
 
-1. **Size first.** The task's size (below) decides the team. It is the gate's size
+1. **Task first, then kit, then size.** Every task is routed on its own, never by the project it
+   comes from: what it makes picks the kit (a post or reel: `social`; a video: `video`; an app,
+   even inside the social project: `app`; a page: `site`; a game: `game`; claude-setup itself:
+   `setup`), the kit's row names the roles, the size (below) says how many of them start. The
+   project's own kind is only the default when the task names nothing else. The coordinator does
+   this lookup for every task without being asked and names kit and size in the brief.
+2. **Size.** The task's size (below) decides how much of the kit's team starts. It is the gate's size
    ([`gate.md`](../.claude/skills/operator/gate.md), Gate size): one size per task, picked by the
    table, never by the author.
-2. **Threads only for roles that own a long job or talk to yskills:** Planner, Designer, Game
+3. **Threads only for roles that own a long job or talk to yskills:** Planner, Designer, Game
    Designer, Programmer, Tester (size L), Producer, Editor, Social Lead, Marketer. Every other role
    is an `Agent` subagent of the thread that needs it, fresh for each job. A thread never plays a
    second thread-role; it asks the coordinator with `message_coordinator` (role, topic, files,
    done-when) and goes on with its own job.
-3. **Every start names its model.** `start_thread_session` and `create_session` pass `model` (the
+4. **Every start names its model.** `start_thread_session` and `create_session` pass `model` (the
    full id from the Models line); every `Agent` call passes `model` (`haiku`, `sonnet`, `opus`). A
    brief's `Model:` line is text only and sets nothing; without the parameter a thread gets the
    project default and a subagent inherits its parent (tested 2026-10-26: a subagent of an Opus
    thread ran on Opus although `CLAUDE_CODE_SUBAGENT_MODEL` was sonnet; with `model: haiku` it ran
    on Haiku). The `team-guard` hook (`global/team-guard.mjs`) blocks an `Agent` call or thread
    start without `model`.
-4. **Agent files load only on the laptop.** A cloud project thread offers only the built-in agent
+5. **Agent files load only on the laptop.** A cloud project thread offers only the built-in agent
    types (`general-purpose`, `Explore`, `Plan`; tested 2026-10-26: `code-reviewer` was "not found").
    There, a named agent such as `code-reviewer` or `design-critic` runs as `general-purpose` with
    its `model` and the prompt "Read `.claude/agents/<name>.md` of claude-setup and act as it on:
    ...".
-5. **The brief** starts with the block in `operator/briefs.md` and names the role's playbook and
+6. **The brief** starts with the block in `operator/briefs.md` and names the role's playbook and
    what the step before handed over.
 
 Models: best fitting model per task, cheapest that fits. Fable (claude-fable-5-1) is rare, drawn from yskills' Max plan: only the architecture or plan of a new product, a problem still stuck after a Sonnet round and an Opus checkpoint, or what yskills names; plus the project chat (coordinator), which yskills sets by hand; if Fable is out of credits or unavailable, Opus takes it without asking. Opus (claude-opus-5-5), the one Opus rule: the Planner, taste (Designer, Game Designer, a pick between variants, the video Critic), the size L gate verdict, a full audit, and one checkpoint subagent per S or M task (before committing to an approach, or before "done", or when stuck twice); nothing else. Sonnet (claude-sonnet-5-5) for builds, fixes, research, reviews and the S and M gates. Haiku (claude-haiku-5-5) for a simple reading job, a lookup, a watch, a CI poll. A thread never picks Fable itself. Effort medium unless yskills asks for more. When a newer model ships, use the newest of each tier. A model yskills names is used as named.
@@ -118,8 +124,9 @@ attack the plan; the Tester grades the work), Architect (the Planner, or its Opu
 
 ## Kits
 
-A project loads only what its kind needs. Read the row for the kind; load nothing else until a job
-names it. The team list is for size L; S and M take the Sizes table.
+One row per kind of task (Spawn rule 1: the task picks the row, the project's kind is only the
+default). Read that row; load nothing else until a job names it. The team list is for size L; S and
+M take the Sizes table.
 
 | Kind | Read first | Team at size L, in order | Skipped | Steps |
 |---|---|---|---|---|

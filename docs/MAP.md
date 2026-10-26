@@ -27,7 +27,7 @@ What every session does at start:
 
 The thread board is read at every coordinator start and wins over memory.
 
-Who reads what: the coordinator reads Start here and its project's Kits row in [`TEAMS.md`](TEAMS.md) only (its Haiku worker fetches them); every thread reads the Read-first files of its own role from that row, nothing more. A brand-new project with no memory skips the move step of the memory check, writes `MEMORY.md` from the template and says so in one line.
+Who reads what: the coordinator reads Start here and the Kits row of the task at hand in [`TEAMS.md`](TEAMS.md) only (the task picks the row, not the project) (its Haiku worker fetches them); every thread reads the Read-first files of its own role from that row, nothing more. A brand-new project with no memory skips the move step of the memory check, writes `MEMORY.md` from the template and says so in one line.
 
 ### Where a lesson goes
 
@@ -117,7 +117,7 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 | Rule | Home | Others only link |
 |---|---|---|
 | Org, accounts, where secrets live | `CLAUDE.md` (The world) | `publish` skill, `docs/WORKFLOW.md` (PC work) |
-| Teams, roles, sizes, the pipeline, the Kits, the model per role | `docs/TEAMS.md` | `CLAUDE.md` (Teams), `operator/SKILL.md`, `operator/run.md`, `roles/project-manager.md`; `global/team-guard.mjs` enforces `model` |
+| Teams, roles, sizes, the pipeline, the Kits (routed per task), the model per role | `docs/TEAMS.md` | `CLAUDE.md` (Teams), `operator/SKILL.md`, `operator/run.md`, `roles/project-manager.md`; `global/team-guard.mjs` enforces `model` |
 | Deploy or delete a page (the steps) | `docs/USING.md` | operator `run.md`, `briefs.md`; detail in `publish` |
 | Where a lesson goes (the decision tree) | `docs/MAP.md` (Start here) | `CLAUDE.md` (Lessons stick), `docs/WORKFLOW.md` (Learning) |
 | Project memory holds state only (its shape) | `operator/templates/project-memory.md` | `operator/roles/project-manager.md`, `docs/WORKFLOW.md` |
