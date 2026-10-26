@@ -1,6 +1,6 @@
 # Prompt and script library (research 2026-10-25)
 
-Source report: `/mnt/project-files/claude-setup/research/2026-10-25-creator-video-styles.md`. No public primary source exists for @sinaboto, @jeremyfindsai or @pokecenterstaff, so these are rebuilt from public tools that do the same job; fill `{PLACEHOLDERS}`. Check commands on the repo or docs page before use.
+Source report: `docs/research/2026-10-25-creator-video-styles.md`. No public primary source exists for @sinaboto, @jeremyfindsai or @pokecenterstaff, so these are rebuilt from public tools that do the same job; fill `{PLACEHOLDERS}`. Check commands on the repo or docs page before use.
 
 ## Free routes (kept sources)
 | Route | What it is | Licence | Source |

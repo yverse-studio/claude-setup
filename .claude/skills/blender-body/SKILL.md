@@ -14,18 +14,18 @@ The per-round lists live in [`checklists.md`](checklists.md): builder checklist,
 hand-in sheet contract.
 How a professional game avatar is built (mesh split, naming, rig and physics bones, clothes,
 face keys, Unity and Mixamo mapping), and **rule 0: test every built-in shape key at 0 and 1
-before building**: [`booth-avatars.md`](booth-avatars.md).
+before building**: [`pro-avatars.md`](pro-avatars.md).
 
-**Where the know-how lives:** this skill (method, rules, technique), [`booth-avatars.md`](booth-avatars.md)
+**Where the know-how lives:** this skill (method, rules, technique), [`pro-avatars.md`](pro-avatars.md)
 (how pro avatars are laid out), [`checklists.md`](checklists.md), and `docs/game-pipeline.md` (laptop paths,
 characters, animation, scenes, Ren'Py and the latest lessons). Project specifics (file paths, slider values,
 scene slots) live in the private game repo and the laptop `GameAssetLibrary\README.md`.
 
-## Order of attack: buy, generate, then model (2026-10-24)
+## Order of attack: pick the best source, then model (2026-10-24)
 
-Hand-modelling a body round after round caused the 22-round loop of 2026-10-23. Try in this order and say which step you are on:
-1. An existing asset or a BOOTH/VRoid base ([`booth-avatars.md`](booth-avatars.md)). Props and rooms: free CC0 libraries first (Poly Haven; list in [`game-3d/starter/models.md`](../game-3d/starter/models.md)).
-2. A generator (image-to-3D, or the Blender connector's asset tools), then clean up. Order (3d-route, 2026-10-18): TRELLIS.2 (MIT; free Hugging Face Space or a laptop GPU such as an RTX 4060) first, then Blender cleanup (decimate, UV, scale) through the `studio` skill; test Meshy's free tier only if TRELLIS quality is too low; Autodesk Fusion makes no game bases. Not Hunyuan3D 2.1: Tencent's community licence excludes the EU, UK and South Korea. Open-source AI 3D output (TRELLIS, Hunyuan) needs retopology and UV cleanup and has weak hands and faces: concept props and background clutter only, never hero or rigged characters (low-poly-and-sources, 2026-10-24).
+Hand-modelling a body round after round caused the 22-round loop of 2026-10-23. Pick the best source for the job with the criteria and table in [`game-3d/refs/asset-sources.md`](../game-3d/refs/asset-sources.md) (licence first, free first), and say which step you are on:
+1. An existing base from the best source: a free CC0 or VRM base, or a paid pro base after yskills' word ([`pro-avatars.md`](pro-avatars.md)). Props and rooms: free CC0 libraries first (Poly Haven; list in [`game-3d/starter/models.md`](../game-3d/starter/models.md)).
+2. A generator (open-weight image-to-3D, licence read for our country, or the Blender connector's asset tools), then clean up. Order (3d-route, 2026-10-18): TRELLIS.2 (MIT; free Hugging Face Space or a laptop GPU such as an RTX 4060) first, then Blender cleanup (decimate, UV, scale) through the `studio` skill; test Meshy's free tier only if TRELLIS quality is too low; Autodesk Fusion makes no game bases. Not Hunyuan3D 2.1: Tencent's community licence excludes the EU, UK and South Korea. Open-source AI 3D output (TRELLIS, Hunyuan) needs retopology and UV cleanup and has weak hands and faces: concept props and background clutter only, never hero or rigged characters (low-poly-and-sources, 2026-10-24).
    Cleaning a generated or downloaded mesh: merge by distance, fill holes, recalculate normals outward, cut in half and mirror for true symmetry, then scale to real size. Paid or API-key options (only listed, never signed up for without yskills' OK): Tripo, Meshy paid, Hyper3D Rodin and Sketchfab (the community Blender MCP has Rodin and Sketchfab toggles, both need a key).
 3. bpy modelling, only for edits to what steps 1 and 2 gave. The `attempt-guard` hook blocks a command that fails 5 times without a `## Diagnosis` in `PROGRESS.md`.
 

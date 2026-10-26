@@ -21,7 +21,7 @@ Claude builds a rough scene and camera in Blender through the Blender connector,
 Cautions (low-poly-and-sources, 2026-10-24): plausible but untested end to end. Test one 5 s shot first; identity and props drift; keep the blockout render in simple flat colours; check the tool's licence for commercial use.
 
 ## What free tools reach, per style (research 2026-10-25)
-Report: `/mnt/project-files/claude-setup/research/2026-10-25-creator-video-styles.md`; prompts: [`prompts.md`](prompts.md); people and POV: [`people-video.md`](people-video.md).
+Report: `docs/research/2026-10-25-creator-video-styles.md`; prompts: [`prompts.md`](prompts.md); people and POV: [`people-video.md`](people-video.md).
 
 | Style | Free route | Ceiling | Paid or GPU part |
 |---|---|---|---|

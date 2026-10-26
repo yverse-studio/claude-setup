@@ -36,8 +36,8 @@ in each section.
   armature, Mask modifiers for clipping ([figures.md](figures.md)).
 - **Moves are shared files** (VRMA, Quaternius UAL CC0); Mixamo only with yskills' Adobe account.
 - **Library outside git** (635 MB) with a pinned, hashed index; binaries never in the repo.
-- If quality must jump later, the step up is one paid pro base with a fitted-outfit market (BOOTH
-  VRChat bases, about 60 to 120 € for a figure plus outfits): yskills buys, everything else stays.
+- If quality must jump later, the step up is one paid pro base with a fitted-outfit market (a marketplace
+  base, about 60 to 120 € for a figure plus outfits; pick by `refs/asset-sources.md`): yskills buys, everything else stays.
 - 2026-10-07 (research/characters-formats): formats and when each wins: VRM for anime humans you swap freely; GLB for furniture, animals and props; FBX only when a store or Roblox needs it; an engine-native format works only in its own engine. That is why VRM stays the one character format (the old link `research/characters-formats.md` is not in the repo).
 - 2026-10-07 (research/characters-formats): per engine: three-vrm loads VRM and VRMA directly; Godot via godot-vrm (MIT); Unity via UniVRM (most mature); Unreal via VRM4U (works, heavy); Roblox has no VRM, it needs FBX or glTF rigged as R15 and imported in Studio, and VRM to R15 is work per character. Pick browser or Godot, not Roblox, when characters matter.
 - 2026-10-07 (hq-characters HANDOFF, research/characters-formats): Honey Select 2 works as one base body with hundreds of morph sliders, swappable hair and clothes, a character saved as a PNG card that holds the slider numbers, and moves and scenes inside the game; VRoid Studio is the free equivalent. An in-game slider creator is a big project, only worth it if the game is about creating characters. The in-HQ creator plan, in slices: body dials = a saved remix displacement, hair/eye/skin/outfit colours, outfit swaps by extra .vrm. Faces stay VRoid's; a true parts creator is weeks of work and needs an asset library. Honey Select 2 cards never (PNG with embedded Unity data, proprietary 18+).
