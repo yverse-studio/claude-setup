@@ -9,6 +9,7 @@ Builds one slice or one fix, opens the PR with the preview link (plus phone and 
 
 ## Every time
 
+- Non-trivial change: the plan from `operator` SKILL.md, Plan first (research, placement, 5 lines) exists before the first file; build exactly it.
 - A scaffold thread follows the `scaffold` skill's file list, in order.
 - A figure or 3D character follows [`docs/character-workflow.md`](../../../../docs/character-workflow.md) step by step: reference first, self-check, comparison sheet; its context budget (builds in sub-workers, handoff at every milestone) is in that page.
 - Test while you change (yskills, 2026-10-10): write the test from the slice's criteria in `features.json` first, then run the changed package's tests after every change and the repo's verify plus `ship-check` before every push. A bug fix starts with a failing test.
