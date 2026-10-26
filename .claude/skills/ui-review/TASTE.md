@@ -16,5 +16,5 @@ differ. Every time yskills likes, rejects or comments on a design, the lasting p
 - 2026-10-07: characters like booth.pm/en/items/4511536 with real spring physics (three-vrm SpringBone); cozy pastel, golden hour, round soft 3D.
 
 ## References
-- 2026-10-26: TikTok "GAME OVER SCREEN???" (young, cool, dynamic): pile of loose pixel tiles with the Retry button inside it, hard offset shadows, white-on-black caption type. Optional direction, not the default: [STYLE-YOUNG-COOL.md](STYLE-YOUNG-COOL.md).
+- 2026-10-26: TikTok "GAME OVER SCREEN???" (young, cool, dynamic): pile of loose pixel tiles with the Retry button inside it, hard offset shadows, white-on-black caption type. Optional direction, not the default: [styles/young-cool](styles/young-cool/STYLE.md).
 - (apps and sites yskills pointed at, with one line on what to take from each)
