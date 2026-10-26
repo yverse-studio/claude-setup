@@ -2,25 +2,30 @@
 // Runs one long laptop job (render, bake, batch) under a watchdog. Home of the rule: docs/pc-claude-user.md (Long laptop jobs).
 // Runs the command directly (no shell): wrap a .cmd or .bat as `cmd /c x.bat`.
 // node scripts/laptop-job.mjs [--name n] [--timeout-min 60] [--idle-min 15] [--gpu-max-used-mb 1500] [--no-gpu] -- <command> [args]
+// Blender limits (yskills 2026-10-26): at most 2 jobs run at once and at most 3 Blender instances exist; extra jobs wait (--queue-min, default 180), yskills' own Blender is counted but never blocked.
 // Always ends with ONE line on stdout: `JOB OK|FAIL|HANG|TIMEOUT|BLOCKED <name>: <why>`; exit 0 only for OK.
 import { spawn, spawnSync } from 'node:child_process'
 import { appendFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
+import { MAX_BLENDER, MAX_RENDERS, acquireSlot, blenderCount, releaseSlot, slotsHeld } from './laptop-slots.mjs'
 
 const KILL_GRACE_MS = 5000
+let heldSlot = null
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 const KEEP_AWAKE_PS = `Add-Type -MemberDefinition '[DllImport("kernel32.dll")] public static extern uint SetThreadExecutionState(uint f);' -Name P -Namespace W; while ($true) { [W.P]::SetThreadExecutionState(0x80000001) | Out-Null; Start-Sleep 30 }`
 
 export function parseArgs(argv) {
   const cut = argv.indexOf('--')
   const flags = cut < 0 ? argv : argv.slice(0, cut)
   const cmd = cut < 0 ? [] : argv.slice(cut + 1)
-  const opt = { name: 'job', timeoutMin: 60, idleMin: 15, gpuMaxUsedMb: 1500, gpu: true }
+  const opt = { name: 'job', timeoutMin: 60, idleMin: 15, gpuMaxUsedMb: 1500, gpu: true, queueMin: 180 }
   for (let i = 0; i < flags.length; i++) {
     const f = flags[i]
     if (f === '--no-gpu') opt.gpu = false
     else if (f === '--name') opt.name = flags[++i]
     else if (f === '--timeout-min') opt.timeoutMin = Number(flags[++i])
     else if (f === '--idle-min') opt.idleMin = Number(flags[++i])
+    else if (f === '--queue-min') opt.queueMin = Number(flags[++i])
     else if (f === '--gpu-max-used-mb') opt.gpuMaxUsedMb = Number(flags[++i])
   }
   return { opt, cmd }
@@ -52,13 +57,33 @@ export function gpuProblem(maxUsedMb, run = (cmd, args) => spawnSync(cmd, args, 
 const statusLine = (state, name, why) => `JOB ${state} ${name}: ${why}`
 
 function finish(line, code) {
+  releaseSlot(heldSlot)
   console.log(line)
   const log = process.env.LAPTOP_JOB_LOG ?? 'laptop-job.log'
   try { appendFileSync(log, `${new Date().toISOString()} ${line}\n`) } catch (e) { console.error(`WARN could not write ${log}: ${e.message}`) }
   process.exit(code)
 }
 
-function main() {
+// Waits for a render slot (and a free Blender instance when the command is Blender); null when queueMin ran out.
+async function waitForSlot(opt, cmd) {
+  const isBlender = /blender/i.test(cmd[0])
+  const pollMs = Number(process.env.LAPTOP_JOB_POLL_MS ?? 5000)
+  const maxBlender = Number(process.env.LAPTOP_MAX_BLENDER ?? MAX_BLENDER)
+  const deadline = Date.now() + opt.queueMin * 60000
+  let told = false
+  for (;;) {
+    const count = isBlender ? blenderCount() : null
+    if (!(count !== null && count >= maxBlender)) {
+      const slot = acquireSlot({ max: Number(process.env.LAPTOP_MAX_RENDERS ?? MAX_RENDERS) })
+      if (slot) return slot
+    }
+    if (Date.now() > deadline) return null
+    if (!told) { console.log(`QUEUED ${opt.name}: waiting for a free render slot (max ${MAX_RENDERS} renders, ${maxBlender} Blender instances)`); told = true }
+    await sleep(pollMs)
+  }
+}
+
+async function main() {
   const { opt, cmd } = parseArgs(process.argv.slice(2))
   if (!cmd.length) finish(statusLine('FAIL', opt.name, 'no command after --'), 2)
   const win = process.platform === 'win32'
@@ -66,7 +91,10 @@ function main() {
     const power = powerProblems()
     if (power.length) console.log(`WARN ${opt.name}: ${power.join('; ')}; run once as admin: powercfg /change standby-timeout-ac 0 and powercfg /change hibernate-timeout-ac 0`)
   }
-  if (opt.gpu) {
+  heldSlot = await waitForSlot(opt, cmd)
+  if (!heldSlot) finish(statusLine('BLOCKED', opt.name, `no render slot free for ${opt.queueMin} min`), 3)
+  // The first running job's own GPU memory must not block the second (2 renders are allowed).
+  if (opt.gpu && slotsHeld() <= 1) {
     const busy = gpuProblem(opt.gpuMaxUsedMb)
     if (busy) finish(statusLine('BLOCKED', opt.name, `${busy}; close the app or pass --gpu-max-used-mb`), 3)
   }
@@ -104,4 +132,5 @@ function main() {
   child.on('exit', (code) => { if (verdict) done(code) })
 }
 
+for (const sig of ['SIGINT', 'SIGTERM']) process.on(sig, () => { releaseSlot(heldSlot); process.exit(130) })
 if (process.argv[1] === fileURLToPath(import.meta.url)) main()
