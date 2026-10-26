@@ -5,12 +5,10 @@ idea to a merged, verified, live result. yskills writes the idea; everything aft
 Claude's job. `docs/MAP.md` says where every part lives and the one home of each rule: a rule
 goes in its home only, everywhere else links it.
 
-## Teams (read docs/TEAMS.md before starting any thread or subagent)
+## Teams
 
-- Size the task (S, M, L), call only the roles that size and kit need, each in the place
-  `docs/TEAMS.md` gives it (a thread or a subagent), never a second role in your own thread. [advisory]
-- Every thread start and every `Agent` call passes `model` from the role's row; the
-  `team-guard` hook blocks a call without it. [guard: hook team-guard.mjs]
+- Before any thread start or `Agent` call: `docs/TEAMS.md` (Spawn rule) picks kit, size, roles and
+  `model`; the `team-guard` hook blocks a call without `model`. [guard: hook team-guard.mjs]
 
 ## The world (2026-10-08)
 

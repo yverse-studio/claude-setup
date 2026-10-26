@@ -246,3 +246,27 @@ test('team guard: SessionStart prints the TEAMS.md pointer', () => {
   assert.equal(out.hookSpecificOutput.hookEventName, 'SessionStart')
   assert.match(out.hookSpecificOutput.additionalContext, /docs\/TEAMS\.md/)
 })
+
+test('check.mjs fails on a dead TEAMS.md section ref or a MAP.md Kits ref', () => {
+  const copy = mkdtempSync(join(tmpdir(), 'guards-repo-'))
+  try {
+    cpSync(root, copy, { recursive: true, filter: (p) => !p.includes(`${join(root, '.git')}`) })
+    const run = () => spawnSync(process.execPath, [join(copy, 'scripts', 'check.mjs')], { encoding: 'utf8' })
+    assert.equal(run().status, 0)
+    const briefs = join(copy, '.claude/skills/operator/briefs.md')
+    writeFileSync(briefs, readFileSync(briefs, 'utf8') + '\nSee `docs/TEAMS.md` (The teams) and `docs/MAP.md` (Kits).\n')
+    const r = run()
+    assert.equal(r.status, 1)
+    for (const want of ['docs/TEAMS.md (The teams), which has no such section', 'points to the Kits in docs/MAP.md']) assert.ok(r.stderr.includes(want), `missing: ${want}\n${r.stderr}`)
+  } finally { rmSync(copy, { recursive: true, force: true }) }
+})
+
+test('team guard: the registered matchers catch Agent and the thread-start tools only', () => {
+  for (const f of ['install.mjs', 'cloud/setup.sh']) {
+    const m = readFileSync(join(root, f), 'utf8').match(/\['?"?PreToolUse'?"?, ['"]([^'"]+)['"], ['"]pre['"]\]/)?.[1]
+    assert.ok(m, `${f}: no team-guard PreToolUse matcher`)
+    const re = new RegExp(`^(?:${m})$`)
+    for (const t of ['Agent', 'Task', 'mcp__hearthbot__start_thread', 'mcp__hearthbot__start_thread_session', 'mcp__claude-code-remote__create_session']) assert.ok(re.test(t), `${f}: ${t}`)
+    for (const t of ['Bash', 'mcp__hearthbot__message_thread', 'mcp__hearthbot__start_remote_control']) assert.ok(!re.test(t), `${f}: ${t}`)
+  }
+})

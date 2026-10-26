@@ -22,7 +22,7 @@ the roster). Every other file links here.
    is an `Agent` subagent of the thread that needs it, fresh for each job. A thread never plays a
    second thread-role; it asks the coordinator with `message_coordinator` (role, topic, files,
    done-when) and goes on with its own job.
-4. **Every start names its model.** `start_thread_session` and `create_session` pass `model` (the
+4. **Every start names its model.** The coordinator's thread start (`mcp__hearthbot__start_thread`, older `start_thread_session`) and `create_session` pass `model` (the
    full id from the Models line); every `Agent` call passes `model` (`haiku`, `sonnet`, `opus`). A
    brief's `Model:` line is text only and sets nothing; without the parameter a thread gets the
    project default and a subagent inherits its parent (tested 2026-10-26: a subagent of an Opus
@@ -37,7 +37,7 @@ the roster). Every other file links here.
 6. **The brief** starts with the block in `operator/briefs.md` and names the role's playbook and
    what the step before handed over.
 
-Models: best fitting model per task, cheapest that fits. Fable (claude-fable-5-1) is rare, drawn from yskills' Max plan: only the architecture or plan of a new product, a problem still stuck after a Sonnet round and an Opus checkpoint, or what yskills names; plus the project chat (coordinator), which yskills sets by hand; if Fable is out of credits or unavailable, Opus takes it without asking. Opus (claude-opus-5-5), the one Opus rule: the Planner, taste (Designer, Game Designer, a pick between variants, the video Critic), the size L gate verdict, a full audit, and one checkpoint subagent per S or M task (before committing to an approach, or before "done", or when stuck twice); nothing else. Sonnet (claude-sonnet-5-5) for builds, fixes, research, reviews and the S and M gates. Haiku (claude-haiku-5-5) for a simple reading job, a lookup, a watch, a CI poll. A thread never picks Fable itself. Effort medium unless yskills asks for more. When a newer model ships, use the newest of each tier. A model yskills names is used as named.
+Models: best fitting model per task, cheapest that fits. Fable (claude-fable-5-1) is rare, drawn from yskills' Max plan: only the architecture or plan of a new product, a problem still stuck after a Sonnet round and an Opus checkpoint, or what yskills names; plus the project chat (coordinator), which yskills sets by hand; if Fable is out of credits or unavailable, Opus takes it without asking. Opus (claude-opus-5-5), the one Opus rule: the Planner; taste (Designer, Game Designer, a pick between variants, the video Critic, the story team's taste roles); the size L gate verdict; a full audit; one checkpoint subagent per S or M task (before committing to an approach, or before "done", or when stuck twice); and the one escalation a roster row names (conflicting findings, a disputed security finding, a contract, a concept or weekly-plan pick, one diagnosis); nothing else. Sonnet (claude-sonnet-5-5) for builds, fixes, research, reviews and the S and M gates. Haiku (claude-haiku-5-5) for a simple reading job, a lookup, a watch, a CI poll. A thread never picks Fable itself. Effort medium unless yskills asks for more. When a newer model ships, use the newest of each tier. A model yskills names is used as named.
 
 ## Sizes
 
@@ -118,9 +118,15 @@ Runs yskills' accounts; the loop and posting rules: [`social-team`](../.claude/s
 | Partnerships ([`deals.md`](../.claude/skills/social-team/roles/deals.md)) | brand deals: media kit, outreach drafts, offers | a brand message, "find deals" | subagent; a thread `Deal · <brand> · <partner>` per real offer | Sonnet; Opus reads a contract |
 | Analyst ([`analyst.md`](../.claude/skills/social-team/roles/analyst.md)) | numbers per post, what to repeat or drop | the weekly routine | subagent of the Lead | Sonnet |
 
+### Story (`storyteller`)
+
+The Story team (Director, Planner, Writers, Editor, Continuity, Narrative Designer, Copywriter,
+Localiser) and its models: [`07-story-team.md`](../.claude/skills/storyteller/references/07-story-team.md).
+Its Opus rows are the story's taste roles under the Opus rule; everything else follows the tiers here.
+
 Merged on 2026-10-26, so nobody looks for them: Librarian (finding what exists is the Researcher's
 step 2; keeping lessons is the gate's lessons step), a plan Critic (the grill and the stress test
-attack the plan; the Tester grades the work), Architect (the Planner, or its Opus checkpoint).
+attack the plan; the Tester grades the work), Architect as a role (the Planner owns architecture; the `architect` agent stays as its optional Fable helper on the laptop).
 
 ## Kits
 

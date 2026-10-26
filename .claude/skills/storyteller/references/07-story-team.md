@@ -21,7 +21,7 @@ Game narrative (AAA and VN studios, Being a DIK is a two-person team doing all o
 | **Localiser** | en from de, voice kept per cast sheet; `i18n-sync` | Haiku, Sonnet for dialogue | `story-writer.md` (Localisation) |
 | Tester / gate | as every PR: `check.mjs`, lint, screenshots of the chapter in the game, 5/5 | Sonnet | existing `tester.md`, `gate.md` |
 
-Rules carried over: one thread per PR, closed when done; Fable never for drafting or review; the Director is the one voice to yskills; Designer threads vote galleries stay for visuals (a scene storyboard is a Designer job, not Story).
+Models follow the one Opus rule in [`docs/TEAMS.md`](../../../../docs/TEAMS.md) (Models line); the Opus rows above are its story taste roles. Rules carried over: one thread per PR, closed when done; Fable never for drafting or review; the Director is the one voice to yskills; Designer threads vote galleries stay for visuals (a scene storyboard is a Designer job, not Story).
 
 ## How the team plugs into the game and the ads later
 

@@ -35,7 +35,7 @@ repo; then the next one starts.
 2. A line in the table below.
 3. The next test project starts only after that PR is merged.
 
-A run's playbook lives in the skill or role file of that kind (`docs/MAP.md`, Kits and Expertise), not in a `toolbox/playbooks/` folder: that folder does not exist (2026-10-25).
+A run's playbook lives in the skill or role file of that kind (`docs/TEAMS.md` Kits, `docs/MAP.md` Expertise), not in a `toolbox/playbooks/` folder: that folder does not exist (2026-10-25).
 
 | # | Date | Touches outside briefs | Gate rounds | Cost (USD) | Lessons PR |
 |---|---|---|---|---|---|

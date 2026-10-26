@@ -26,7 +26,7 @@ Remote Control (2026-10-07): yskills allows Claude Code on their PC. Anything th
 ## Models
 
 The Models line, the model of every role and of every other task live in [`TEAMS.md`](TEAMS.md)
-(Spawn rule, The teams); `scripts/check.mjs` fails on a model id anywhere else. Every thread start
+(Models line, Roster); `scripts/check.mjs` fails on a model id anywhere else. Every thread start
 and every subagent names its model from there; the project's default is never relied on.
 
 ## Token budget

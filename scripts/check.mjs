@@ -190,6 +190,20 @@ for (const f of anyText('.')) {
   }
 }
 
+// Section refs to TEAMS.md (yskills 2026-10-26 gate: links to a renamed "The teams" survived the
+// rewrite). "TEAMS.md (A, B)" must name headings TEAMS.md has, and the Kits live in TEAMS.md, not MAP.md.
+{
+  const heads = new Set(readFileSync(join(root, 'docs/TEAMS.md'), 'utf8').match(/^#{2,3} .+$/gm).map((h) => h.replace(/^#+ /, '').replace(/ \(.*$/, '').toLowerCase()))
+  heads.add('models line')
+  for (const f of anyText('.').filter((f) => /\.(md|mjs)$/.test(f) && !f.startsWith('docs/archive/') && !f.startsWith('docs/proposals/') && !f.startsWith('docs/research/') && f !== 'scripts/check.mjs' && !f.endsWith('.test.mjs'))) {
+    const text = readFileSync(join(root, f), 'utf8')
+    for (const [, list] of text.matchAll(/TEAMS\.md`?\)?,? \(([A-Z][\w ]*(?:, [A-Z][\w ]*)*)\)/g)) {
+      for (const name of list.split(', ')) if (!heads.has(name.toLowerCase())) errors.push(`${f}: points to docs/TEAMS.md (${name}), which has no such section`)
+    }
+    if (/MAP\.md`?\)? \(?Kits\b/.test(text)) errors.push(`${f}: points to the Kits in docs/MAP.md; they live in docs/TEAMS.md (Kits)`)
+  }
+}
+
 // Token budget (docs/WORKFLOW.md, Token budget; yskills, 2026-10-18): the Budget line exists and no
 // gate or role file asks for an Opus verdict on an S or M PR.
 const budgetLine = readFileSync(join(root, 'docs/WORKFLOW.md'), 'utf8').match(/^Budget: .*$/m)?.[0]
