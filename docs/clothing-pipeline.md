@@ -85,3 +85,12 @@ Rule that follows: **fit per base, never per character.** Characters differ only
   separate garment mesh on the rig.
 - Fit after the body is final: every later body key needs a new follow key on every garment, so
   add body keys in batches and re-run the fit for all garments in one go.
+- Moving embedded garments into the library (first done 2026-10-26, Rika/Saki, 64 pieces): the dress script
+  replaces objects of the same name and keeps their names, collections, visibility, materials and the values
+  of the garment's own keys (corrections like `Fit`); looks, wear scripts and scenes then stay exactly as before.
+- Compute a garment's `CH_<name>` key at that character's slider values: her fit minus the base fit, plus
+  value x (her key delta - base key delta) for every active slider. Otherwise a scaled character sits mm off.
+- Patterns on "Generated" texture coordinates move when the garment's rest size changes (a `CH_` key does
+  that): put patterns on UVs or object coordinates.
+- Prove a move with evaluated vertex positions (rest, a pose, sliders at 1) before vs after, plus one render
+  per look; zero difference is reachable for the character the garment was fitted on.
