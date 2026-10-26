@@ -83,6 +83,14 @@ Playwright (gate check 5) and `design-critic` judges the look.
   deletes with a 10 s Undo toast; an item that is scheduled, queued or already handed to another
   service (a planned post, a Metricool slot, a sent order) asks first, says what else it removes
   (Plan, Metricool) and removes it there too, or refuses.
+- **Lists** (yskills 2026-10-26: "if I have 10 videos I don't want to scroll, lean UX/UI"): a list
+  shows 10 or more rows without scrolling on a 390 x 844 phone (12 at 1440 x 900), seeded with 12 items
+  in the shots. A row shows what the item is, not what you can do with it: one-line title with ellipsis,
+  one muted meta, icons for what it has; 44-64 px on a phone, 40-52 px on a laptop; hairline rows in one
+  sheet, never floating cards. Actions go in swipe (trailing Remove with a 10 s Undo), laptop hover,
+  long press for select, and always as a visible button in the opened item. Capture boxes collapse to one
+  line until focused. Models: Linear, Things, Gmail, iOS Mail. First use: social
+  `/mnt/project-files/social/2026-10-26-lean-lists/SPEC.md`.
 - **Layout:** 390 and 1440 px shots, no sideways scroll at 320 px, the main action in thumb reach
   on a phone.
 - **Accessibility (WCAG 2.2 AA):** text contrast 4.5:1, a visible focus ring, targets at least
