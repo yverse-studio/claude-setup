@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import functools
 import json
+import os
 import re
 import subprocess
 import sys
@@ -42,6 +43,11 @@ def auth_args(cookies_file=None, cookies_from_browser=None) -> list[str]:
 def impersonation_args() -> tuple[str, ...]:
     # TikTok answers plain yt-dlp requests with an unusable page (cloud test 2026-10-24); with
     # curl_cffi installed, a browser impersonation target gets the video. Absent: no flag.
+    # Cloud (2026-10-26): Claude Code's safety check flags browser impersonation as bot-check
+    # circumvention, so a cloud thread always runs plain yt-dlp, whatever the env says; the laptop
+    # route (Remote Control) does the impersonation. WATCH_IMPERSONATE=0 turns it off there too.
+    if os.environ.get('CLAUDE_CODE_REMOTE') == 'true' or os.environ.get('WATCH_IMPERSONATE') == '0':
+        return ()
     try:
         # Same isolation as _run: a fresh directory, so no yt-dlp.conf in the working directory applies.
         with tempfile.TemporaryDirectory(prefix='watch-cwd-') as cwd:
