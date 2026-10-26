@@ -77,7 +77,11 @@ async function gh(path, method = 'GET', body) {
     headers: { authorization: `Bearer ${process.env.PROJECTS_GITHUB_TOKEN}`, accept: 'application/vnd.github+json', 'x-github-api-version': '2022-11-28' },
     body: body && JSON.stringify(body),
   })
-  if (!res.ok) throw new Error(`${method} ${path}: ${res.status}`)
+  if (!res.ok) {
+    const h = (k) => res.headers.get(k) ?? '-'
+    const detail = (await res.text().catch(() => '')).slice(0, 300)
+    throw new Error(`${method} ${path}: ${res.status} (needs: ${h('x-accepted-github-permissions')}; token scopes: ${h('x-oauth-scopes')}; ${detail})`)
+  }
   return res.json()
 }
 
