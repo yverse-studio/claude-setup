@@ -3,7 +3,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from sound_library import problems
+from sound_library import pick, problems
+
+SHIPPED = Path(__file__).resolve().parent.parent / "sound"
 
 CLEAN = {
     "id": "thud-soft-01", "kind": "sfx", "category": "thud", "licence": "CC0-1.0",
@@ -43,6 +45,20 @@ class Check(unittest.TestCase):
         found = problems(library([{**CLEAN, "presets": ["vlog"]}, CLEAN]))
         self.assertTrue(any("presets" in line for line in found))
         self.assertTrue(any("duplicate" in line for line in found))
+
+
+class Shipped(unittest.TestCase):
+    def test_shipped_library_is_clean(self):
+        self.assertEqual(problems(SHIPPED), [])
+
+    def test_real_talk_has_no_whoosh_bell_or_glitch(self):
+        for category in ("whoosh", "bell", "glitch", "riser"):
+            with self.assertRaises(ValueError):
+                pick(SHIPPED, category, "real_talk")
+
+    def test_pick_never_repeats_the_last_file(self):
+        first = pick(SHIPPED, "thud", "real_talk")
+        self.assertNotEqual(pick(SHIPPED, "thud", "real_talk", last=first.relative_to(SHIPPED).as_posix()), first)
 
 
 if __name__ == "__main__":

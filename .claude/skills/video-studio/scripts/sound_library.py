@@ -3,6 +3,7 @@
 Usage:
   python sound_library.py add <library> <curation.json>   import, convert, measure, tag
   python sound_library.py check <library>                  exit 0 only when every entry is clean
+  from sound_library import pick                           pick(library, category, preset, last) for `mix`
 
 <library> holds manifest.json, sfx/<category>/, music/<mood>/ and licences/<source>/.
 <curation.json> is a list of picks: {"src", "id", "kind": "sfx"|"music", "category" or "mood",
@@ -70,6 +71,21 @@ def problems(library):
         if entry.get("lufs") is None and entry.get("rms") is None:
             found.append(f"{name}: not loudness-measured")
     return found
+
+
+def pick(library, category, preset, last=None, tag=None):
+    """Next file path for a cue of this category in this preset, never the one used last.
+
+    Raises when the preset has nothing in the category (real_talk has no whoosh, bell or glitch).
+    """
+    library = Path(library)
+    options = [e for e in load(library)["entries"]
+               if e["kind"] == "sfx" and e["category"] == category and preset in e["presets"]
+               and (tag is None or tag in e["tags"])]
+    if not options:
+        raise ValueError(f"no {category!r} sound for preset {preset!r}")
+    fresh = [e for e in options if e["file"] != last] or options
+    return library / fresh[0]["file"]
 
 
 def run(*args):

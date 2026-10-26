@@ -19,3 +19,10 @@ Free-licence sounds for the video studio (yskills 2026-10-26: "free licence soun
 
 Known gaps: no scratch, no real riser, and no chill/funky/cinematic beds yet. FreePD closed in 2026, so beds need another CC0 source; the synth in `sound.py sfx` covers riser and sub boom.
 Getting new files: the cloud proxy blocks kenney.nl, freesound, opengameart and similar, so download on the laptop (Remote Control, `GameAssetLibrary/sound-inbox-*`) and import from there.
+
+## Preset fit (Critic, 2026-10-26)
+
+- `real_talk` gets only thuds and the two soft pop/drops, for the one punchline sound. No whoosh, bell, riser or glitch: his friends must not notice an edit. Glitch and error stings carry the tag `opt-in`: only when he asks for the gag.
+- `explainer` and `big` take everything except the retro phaser and riser sweeps, which are `big` only.
+- `mix` picks through `sound_library.pick(library, category, preset, last)`: the preset's files only, never the file used last.
+- Music: the chiptunes are Y-Land promo material (`big`), never on his face posts. Only Level 1 (123 BPM) sits in the 110-140 BPM range; Level 3 (108) and Stage 1 (144) are borderline, Title Screen is 15 s, Boss Fight (172) is too tense for the cozy game. Until real beds land, real_talk and explainer ideas ship SFX-only and the music-free master is the one to post.
