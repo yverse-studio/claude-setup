@@ -95,6 +95,7 @@ our projects you get full decision power, it's just my personal now, i want to b
   decision power over content, schedule, profile and strategy. That message is yskills' standing ok
   for posts on them; no switch needed. The Lead posts what the Critic passed and sends a daily
   one-line summary to the coordinator.
+- **Slots and language** for his English-speaking international audience: [`xyskillsx-style.md`](xyskillsx-style.md), International audience (the one home).
 - **On every account:** never ads, prices or crypto promotion without yskills' ok; money, brand deals
   and signatures stay ask-first (`roles/deals.md`). At most 2 posts a day per account. An account
   younger than 30 days or with fewer than 20 posts gets drafts only (new accounts that direct-posted
