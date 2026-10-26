@@ -149,7 +149,7 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 | How a research report is made (primary sources, describe before judging, numbers as read, `Not checked:`) | `operator/roles/researcher.md` (Method), checked by `scripts/research-check.mjs` | `templates/research.md`, `run.md` |
 | Character workflow (reference, sheet, likeness gate) | `docs/character-workflow.md` | `roles/programmer.md`, `roles/tester.md`, `roles/designer.md`, `briefs.md` |
 | Deploys, the workflows' detail, the two Cloudflare routes, deploy lessons | `publish` skill | `CLAUDE.md`, `docs/USING.md` |
-| Live == main (deploy watch every 15 min, `deploy-drift` issues), the preview journey (`journey` status) and preview login | `publish` skill (live smoke test; Preview journey and preview login), `scripts/deploy-watch.mjs`, `scripts/journey.mjs` | `gate.md` (UI PRs, Live check after the merge), `roles/tester.md`, `docs/TEAMS.md` (Sizes) |
+| Live == main (deploy watch every 15 min, `deploy-drift` issues), the preview journey (`journey` status) and preview login | `publish` skill (live smoke test; Preview journey and preview login), `scripts/deploy-watch.mjs`, `scripts/journey.mjs` (verify), template `scripts/journey-gate.mjs` + `.github/workflows/journey.yml` | `gate.md` (UI PRs, Live check after the merge), `roles/tester.md`, `docs/TEAMS.md` (Sizes) |
 | Money and shop law | `sell` skill | `docs/WORKFLOW.md` (Selling) |
 | Project instructions text (a pointer to this repo) | `operator/templates/project-instructions.md` | the live text in each project's settings |
 | An idea or change for a live project | `docs/TEAMS.md` (Sizes, Pipeline) | `CLAUDE.md`, `roles/project-manager.md` |
