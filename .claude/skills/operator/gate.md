@@ -22,7 +22,7 @@ Security never drops: any PR touching user input, auth, money or secrets runs ch
 | Size | PR | Checks |
 |---|---|---|
 | S | docs, skills, templates, config | 1 and one fresh `code-reviewer` (3); 2, 4, 5 n/a |
-| M | code without UI; a garment move or refit (Asset PRs) | 1, 2, 3; 4 when user input, auth, money or secrets are touched |
+| M | code without UI; a garment move or refit with no new look (Asset PRs) | 1, 2, 3; 4 when user input, auth, money or secrets are touched |
 | L | UI, auth, payments, data, migrations, launch | the full table |
 
 Who runs it (yskills, 2026-10-18: a gate thread starts at ~114k tokens and every call re-reads it, `docs/WORKFLOW.md` Token budget): S and M run in the author thread: CI, one fresh `code-reviewer` subagent (never the author's own pass) and the merge, with the table headline in the PR. The author does not pick the size: the table does, and anything touching user input, auth, money, data or UI is L. The reviewer gets the diff itself (`git diff <base>...<head>`), never the author's summary of it, and the author posts its report unedited; a finding the author disputes goes to the coordinator, not to a second reviewer. L keeps a fresh gate thread, because it runs the preview, security and design checks. A reviewer subagent still sees only the diff, the criteria and the previous round's table.
@@ -32,14 +32,16 @@ Who runs it (yskills, 2026-10-18: a gate thread starts at ~114k tokens and every
 Asset work (a garment fit or move, a body, a figure, a posed scene) has no preview URL; the evidence
 replaces check 2, the rest of the table and the sizes stay as they are (clothes moved with no measurements clipped through the body, 2026-10-26). No new system.
 
-- **Evidence:** the PR carries the raw measurement output (one row per piece: mm and % at rest, in the big pose, per slider at 1; limits in
-  `docs/clothing-pipeline.md`, Done report; scenes: `character-workflow.md` step 4) and the render sheet (contact sheet,
-  4 angles, 390 px and 1440 px) as files in the PR or under `/mnt/project-files/`. A missing row, a missing piece or a number over the limit fails the PR.
-  A sheet alone, "looks the same" or "no visual change" is no evidence.
-- **Reviewer:** gets the diff, the measurement file and the sheet. It checks that every piece, pose and slider has a row, that no row is over the limit,
-  and looks at the sheet (a human-eye pass). A row within 25 % of the limit, or a sheet that shows clipping the numbers do not, is re-measured on the laptop
-  (`docs/pc-claude-user.md`, Remote Control) before a pass; no laptop means no pass.
-- **Size:** a garment move or refit with no new look = M. A figure, body, character or scene PR is L (`character-workflow.md`, step 6).
+- **Evidence:** the PR carries the Programmer's measurement file (the Done report rows of
+  `docs/clothing-pipeline.md`; scenes: `character-workflow.md` step 4) and the render sheet (contact sheet, 4 angles,
+  390 px and 1440 px), as files in the PR or under `/mnt/project-files/`. A missing piece or row, or a row over the
+  limit, fails the PR. A sheet alone, "looks the same" or "no visual change" is no evidence.
+- **Reviewer:** the one exception to "only the diff" (check 3, Who runs it): it also gets the measurement file and the
+  sheet, because a `.blend` has no diff. It checks that every piece, pose and slider extreme has a row, that no row is over the
+  limit, and looks at the sheet. A sheet that shows clipping the numbers do not is a fail; the Programmer re-measures
+  on the laptop (`docs/WORKFLOW.md`, PC work) and attaches the new file.
+- **Check 2** is shown as `evidence` in the table (the file and the sheet), not n/a.
+- **Size:** a garment move or refit with no new look = M; one that changes the look, and any figure, body, character or scene PR, is L (`character-workflow.md`, step 6).
 - No picture of a posed scene or a figure reaches yskills without a gate row in `gate/` that names
   its head SHA (yskills, 2026-10-11: bed shots with the duvet cutting through the body, no check
   had run). The criteria for a scene come from the plan that introduced it, machine checks first,

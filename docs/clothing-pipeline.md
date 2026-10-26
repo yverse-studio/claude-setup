@@ -37,7 +37,7 @@ Rule that follows: **fit per base, never per character.** Characters differ only
    - **cloth set** (only for loose pieces: skirt, dress hem, open shirt): pin group from the
      weights, cloth and collision settings saved, nothing baked.
    - Check: every follow key at 0 and at 1, each slider at its extremes, a frame strip of the
-     idle and one big pose; poke-through test (garment never inside the body by more than the offset).
+     idle and one big pose; poke-through test with the numbers of the Done report below.
 4. **Dress** a character with `_tools\dress.py <character> CL_<item>`: brings the fitted garment
    from `fitted\<base>.blend` into the character file, points its armature at the character rig and
    adds drivers so each follow key copies the character body's key of the same name. Re-running
@@ -57,16 +57,17 @@ run in full, including the poke-through check of step 3.
   proves only that the old fit was copied; if the old fit clipped, identical is still broken.
   The before/after proof ("Prove a move", Lessons) comes after the clipping numbers below, never instead.
 - A brief that says otherwise does not change this rule (`briefs.md`, Every thread brief starts with).
-- Read this page from current `main` at the start of the job, not from a copy or a draft.
 
 ## Done report (required numbers)
 
-The done report of every garment, fit or move lists, **per piece**: deepest penetration in mm and
-the share of its vertices inside the body in %, measured with the evaluated mesh at rest, in the
-one big pose, and with each slider at 1. Limit: every vertex at least the fit's offset (step 3) outside the body surface at rest,
-and at least 0 mm outside in the big pose and with each slider at 1, one slider at a time; 0 % inside at rest. A piece without its numbers is not done, and a number above the limit fails the report;
-the render sheet (idle, big pose, back, close-up of each hem, seam and the body parts under the garment) goes beside it. The gate
-checks both (`gate.md`, Asset PRs).
+The done report of every garment fit or move lists, **per piece**, the **clearance**: the signed
+distance from each garment vertex to the body surface (positive = outside), as the smallest value in
+mm and the share of vertices below 0 in %. Measured on the evaluated mesh at rest, in the one big
+pose, and with each slider at each of its extremes, one at a time. Limit, everywhere: smallest
+clearance 0 mm or more and 0 % of vertices inside (the 2-4 mm fit offset of step 3 is the margin).
+A piece without its row is not done, a row over the limit fails the report. The render sheet (idle,
+big pose, back, close-up of each hem, seam and the body parts under the garment) goes beside it.
+The gate checks both (`gate.md`, Asset PRs).
 
 ## Characters from a base
 

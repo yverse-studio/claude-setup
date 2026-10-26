@@ -62,7 +62,7 @@ Models: best fitting model per task, cheapest that fits. Fable (claude-fable-5-1
 | Size | The task | Threads | Subagents it calls | Opus |
 |---|---|---|---|---|
 | S | a bug fix, a small tweak, docs, skills, config, a question | one, of the role it needs (usually `Programmer · fix <what>`); it runs its own S gate | Reviewer; a Researcher only for an open fact | one checkpoint subagent |
-| M | a feature or change of code with no new look, no user input, auth, money or data; a garment move or refit (`gate.md`, Asset PRs) | `Planner · <topic>` (grill, short plan), then `Programmer · <slice>`; the M gate runs in the Programmer's thread | Researcher, Reviewer | the Planner, plus one checkpoint in the Programmer |
+| M | a feature or change of code with no new look, no user input, auth, money or data; a garment move or refit with no new look (`gate.md`, Asset PRs) | `Planner · <topic>` (grill, short plan), then `Programmer · <slice>`; the M gate runs in the Programmer's thread | Researcher, Reviewer | the Planner, plus one checkpoint in the Programmer |
 | L | a new product, anything a user sees, user input, auth, money, data, a launch | the kit's team (Kits below), a fresh `Tester · PR <n>` per PR | all the kit lists | the Planner, the Designer, the Game Designer, the gate verdict |
 
 A video is the `video` kit and a post the `social` kit at any size; their own pipelines size them.
