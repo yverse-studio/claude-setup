@@ -48,7 +48,7 @@ def setup_state():
     for o in heavy: o.hide_viewport = True
     for fc in body.animation_data.drivers:
         if MASK in fc.data_path: fc.mute = True
-    body.modifiers[MASK].show_viewport = False
+    if MASK in body.modifiers: body.modifiers[MASK].show_viewport = False
     for o in cos: o.hide_render = True
     for o in pieces: o.hide_render = False; o.hide_viewport = False   # a hidden object is not evaluated: no pose, no keys, no modifiers (Pencil was measured unposed until 2026-10-26)
     for n in A.get('also', 'King_Legs' if LOOK == 'king' else 'Shoes,Pumps').split(','):   # pieces that stay visible while measuring (they hide skin or move the feet)
@@ -116,6 +116,11 @@ def measure():
             sd[i] = -dist if ins else dist; loc_a[i] = loc; nrm_a[i] = no
             if ins and EXEMPT and (p - loc).dot(no) > 0.0005:   # outside the nearest skin face yet inside the body: another body part cuts through here
                 sd[i] = 1.0; SELFCOL[o.name] = SELFCOL.get(o.name, 0) + 1; continue
+            if ins and not EXEMPT and (p - loc).dot(no) > 0.0005:   # outside the nearest face but parity says inside (body not watertight / self-crossing in this key state): walk out along the normal until parity agrees
+                for dd in (0.004, 0.008, 0.014, 0.022, 0.032):
+                    if exits_ok(tree, p + no * dd): loc_a[i] = p + no * dd - no * EXIT; nrm_a[i] = no; break
+                else: loc_a[i] = p - no * EXIT; nrm_a[i] = no
+                continue
             if ins:   # nearest-normal exit can lead into the other thigh / cheek: try the axis exits too, keep the shortest valid one
                 best = (loc + no * EXIT - p, (loc + no * EXIT - p).length)
                 if not exits_ok(tree, loc + no * EXIT): best = (None, 1e9)
@@ -160,9 +165,24 @@ def shift(o, d, only=None):
     me.update()
 
 
-def to_target(sd, co, loc, nrm, lo, to):
+def fold(o, a):
+    """With `faces` the measure has extra points (triangle centres, edge midpoints): hand each one's value to its vertices (largest wins), so the fix moves real vertices."""
+    nv = len(o.data.vertices)
+    if len(a) == nv: return a
+    out = a[:nv].copy(); mag = np.linalg.norm(a, axis=1) if a.ndim == 2 else np.abs(a); cur = mag[:nv].copy()
+    for j, (_kind, vs) in enumerate(FACE_SRC[o.name]):
+        i = nv + j
+        if mag[i] <= 0: continue
+        for v in vs:
+            if mag[i] > cur[v]: out[v] = a[i]; cur[v] = mag[i]
+    return out
+
+
+def to_target(sd, co, loc, nrm, lo, to, o=None):
     flag = sd < lo
-    return np.where(flag[:, None], loc + nrm * to - co, 0.0), flag
+    d = np.where(flag[:, None], loc + nrm * to - co, 0.0)
+    if o is not None: d = fold(o, d); flag = np.linalg.norm(d, axis=1) > 0
+    return d, flag
 
 
 def summarize(res, tag, worst=0):
@@ -224,14 +244,14 @@ def reweight(res):
     bpy.context.view_layer.update()
 
 
-def snap_weights(res, gap=0.012):
+def snap_weights(res, gap=float(A.get('snapgap', 0.012))):
     """Tight pieces: where a vertex hugs the skin (rest gap < `gap`) it takes the body's weights at the nearest skin point
     (all bone groups), so it moves exactly like the skin there instead of lagging in folds (waist in a forward bend)."""
     me = body.data; bvh_co = [v.co.copy() for v in me.vertices]
     tree = BVHTree.FromPolygons(bvh_co, [p.vertices[:] for p in me.polygons])
     bgi = {g.index: g.name for g in body.vertex_groups}; bones = set(arm.data.bones.keys())
     for o in pieces:
-        if o.get('clr_snapped'): continue
+        if o.get('clr_snapped') and 'resnap' not in ARGV: continue
         sd = res[o.name][0]; co = res[o.name][1]; n = 0
         for v in o.data.vertices:
             if abs(sd[v.index]) >= gap: continue
@@ -357,20 +377,26 @@ def fix_rest(max_it=8):
         res = measure(); summarize(res, f'REST{it}')
         if all(sd.min() >= REST_LO for sd, *_r in res.values()): break
         for o in pieces:
-            sd, co, loc, nrm = res[o.name]; d, flag = to_target(sd, co, loc, nrm, REST_LO, REST_TO)
+            sd, co, loc, nrm = res[o.name]; d, flag = to_target(sd, co, loc, nrm, REST_LO, REST_TO, o)
             if flag.any(): shift(o, spread(edges(o), d, flag, iters=2))
         bpy.context.view_layer.update()
 
 
-def fix_keys():
+def fix_keys(iters=int(A.get('keyit', 4))):
+    """Each follow key is corrected up to `iters` times at its own state (measure, push, measure again) until it clears."""
     kb = body.data.shape_keys.key_blocks
     for k, per in sorted(follow_keys().items()):
-        old = kb[k].value; kb[k].value = 1.0; bpy.context.view_layer.update(); res = measure()
-        for pn, gk in per.items():
-            o = bpy.data.objects[pn]; sd, co, loc, nrm = res[pn]; d, flag = to_target(sd, co, loc, nrm, KEY_LO, KEY_TO)
-            if flag.any():
-                shift(o, spread(edges(o), d, flag), only=o.data.shape_keys.key_blocks[gk])
-                print('KEYFIX', k, pn.split('_Cos_')[-1], int(flag.sum()), 'min', round(1000 * sd.min(), 1), flush=True)
+        old = kb[k].value; kb[k].value = 1.0; bpy.context.view_layer.update()
+        for it in range(iters):
+            res = measure(); left = 0
+            for pn, gk in per.items():
+                o = bpy.data.objects[pn]; sd, co, loc, nrm = res[pn]; d, flag = to_target(sd, co, loc, nrm, KEY_LO, KEY_TO, o)
+                if flag.any():
+                    left += 1
+                    shift(o, spread(edges(o), d, flag), only=o.data.shape_keys.key_blocks[gk])
+                    print('KEYFIX', k, pn.split('_Cos_')[-1], it, int(flag.sum()), 'min', round(1000 * sd.min(), 1), flush=True)
+            if not left: break
+            bpy.context.view_layer.update()
         kb[k].value = old
     bpy.context.view_layer.update()
 
@@ -398,7 +424,7 @@ def fix_poses():
         res = measure()
         for o in pieces:
             sd = res[o.name][0]; amt = np.minimum(np.where(sd < POSE_LO, POSE_TO - sd, 0.0), POSE_CAP); amt[sd >= 1.0] = 0
-            need[o.name] = np.maximum(need[o.name], amt)
+            need[o.name] = np.maximum(need[o.name], fold(o, amt))
         print('pose', case, {k.split('_Cos_')[-1]: round(1000 * float(v.max()), 1) for k, v in need.items()}, flush=True)
     if 'diag' in ARGV:
         for o in pieces:
@@ -476,6 +502,25 @@ def case_debug(spec):
 
 t0 = time.time()
 setup_state()
+if A.get('keycase'):   # keycase=<body key>: list the worst points with that key at 1 (vertex or face point, position, bone weights)
+    rest_state(); kb = body.data.shape_keys.key_blocks; kb[A['keycase']].value = 1.0; bpy.context.view_layer.update(); res = measure()
+    for o in pieces:
+        sd, co, loc, nrm = res[o.name]; nv = len(o.data.vertices); gi = {g.index: g.name for g in o.vertex_groups}
+        for i in np.argsort(sd)[:12]:
+            if sd[i] >= 0: break
+            vs = [i] if i < nv else FACE_SRC[o.name][i - nv][1]
+            print('KEYPT', o.name.split('_Cos_')[-1], 'face' if i >= nv else 'vert', int(i), round(1000 * sd[i], 1), np.round(co[i], 3).tolist(), 'verts', vs[:3],
+                  [(gi[g.group], round(g.weight, 2)) for g in o.data.vertices[vs[0]].groups][:3])
+    if 'probe' in ARGV:
+        dg = bpy.context.evaluated_depsgraph_get(); e = body.evaluated_get(dg); me = e.to_mesh()
+        tr = BVHTree.FromPolygons([v.co.copy() for v in me.vertices], [p.vertices[:] for p in me.polygons])
+        for o in pieces:
+            sd, co, loc, nrm = res[o.name]
+            for i in np.argsort(sd)[:6]:
+                p = Vector(co[i]); l, nn, fi, dd = tr.find_nearest(p)
+                print('PROBE', int(i), round(1000 * sd[i], 1), 'dist', round(1000 * dd, 1), 'par', [par(tr, p, d) for d in DIRS], 'p-loc.n', round(1000 * (p - l).dot(nn), 1),
+                      'axhits', [round(1000 * tr.ray_cast(p, ax)[3], 1) if tr.ray_cast(p, ax)[0] else None for ax in AXES])
+    restore_state(); sys.exit(0)
 if A.get('case'):
     case_debug(A['case']); restore_state(); sys.exit(0)
 try:
@@ -483,11 +528,9 @@ try:
         tgt = proxy()
         for o in pieces: shrinkwrap(o, tgt)
         sw_set(True); free_verts('poses' in ARGV)
-    elif REPORT:
-        tgt = proxy()
-        for o in pieces:
-            shrinkwrap(o, tgt)
-        sw_set('raw' not in ARGV); report()
+    elif REPORT:   # measures the FILE state (stacks as saved, viewport as saved); `raw` switches the Clearance* stacks off to see the bare corrections
+        if 'raw' in ARGV: sw_set(False)
+        report()
     else:
         tgt = proxy()
         for o in pieces:
@@ -501,6 +544,7 @@ try:
             fix_keys(); fix_rest()
             if 'poses' in ARGV: fix_poses(); fix_rest()
         for o in pieces: shrinkwrap(o, tgt)
+        sw_set(True)   # the fix switched the stacks off while correcting: leave them ON in the saved file
         rest_state(); summarize(measure(), 'FINAL REST', 6)
         if 'dbg' in ARGV:
             o = bpy.data.objects['Caesar_Cos_King_Legs']; sd, co, loc, nrm = measure()[o.name]; i = int(np.argmin(sd))
