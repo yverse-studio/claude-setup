@@ -231,7 +231,7 @@ class Library(unittest.TestCase):
         self.assertIn("sound_library.py is missing", str(err.exception))
 
 
-REAL_LIBRARY = Path(os.environ.get("VIDEO_STUDIO_WITH_LIBRARY", "/nonexistent"))  # a copy of video-studio from the #265 branch
+REAL_LIBRARY = Path(os.environ.get("VIDEO_STUDIO_WITH_LIBRARY", "/nonexistent"))  # a video-studio folder with the sound library
 
 
 @unittest.skipUnless((REAL_LIBRARY / "sound" / "manifest.json").is_file(), "real library copy not set (VIDEO_STUDIO_WITH_LIBRARY)")

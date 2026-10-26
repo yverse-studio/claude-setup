@@ -312,7 +312,7 @@ def cmd_mix(a):
     duration, has_voice = probe(a.video)
     feats = music_features(a.video) if has_voice else None
     if has_voice and feats is None:
-        print("warning: music-in-source check skipped (numpy missing or clip under 3 s)", file=sys.stderr)
+        print("warning: music-in-source check skipped (numpy missing, no usable audio or clip under 3 s)", file=sys.stderr)
     if has_voice and looks_like_music(feats):
         note = "source already carries music (the bed would clash): use the raw clip without music (and without SFX baked in)"
         if a.music and not a.force_music:
