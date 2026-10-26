@@ -8,7 +8,9 @@ the one home of how that is set up. The ask rule itself (what needs yskills) is 
 
 Real money (live key, purchase, ads, paid plan), a new paid service, deleting data or a repo
 (a project needs his "delete <name>"), force-pushing `main` (denied outright), rotating a production
-secret, and sending mail or posts publicly. Everything else runs, and a card for any other choice
+secret, sending mail or posts publicly, and merging a PR that widens permissions (allow or autoMode
+in `global/settings.json`, the sync in `cloud/setup.sh`, `install.mjs`): every thread loads those
+from main, so a widening needs his explicit yes on a card first. Everything else runs, and a card for any other choice
 goes on with its recommendation (`CLAUDE.md`, Cards).
 
 ## Layer 1: our own rules
@@ -29,7 +31,10 @@ What the file holds and why (docs: code.claude.com permissions, permission-modes
 read 2026-10-26):
 
 - **allow**: narrow rules for routine work (git, gh, npm scripts, node checks, the GitHub and remote
-  MCP tools incl. merge, workflow dispatch, `add_repo`). An allow rule resolves at once, without the
+  MCP tools incl. merge, workflow dispatch, `add_repo`). No generic file commands (`cat`, `grep`,
+  `find`, `cp`, `mv`): a Bash allow would read past the `Read(**/.env)` deny, and `find -exec` runs
+  anything; auto mode passes them by itself. No `npm install` (install scripts), only `npm ci`; no
+  `push_files` / `create_or_update_file` (they can write `main`); `git push` to `main` is denied. An allow rule resolves at once, without the
   auto-mode classifier. Broad rules (`Bash(*)`, `Bash(node *)`, `Bash(npm run *)`) are dropped by
   auto mode, so the list names commands one by one. A compound command needs every part allowed.
 - **ask**: always prompts, even in auto mode, so it holds only the list above (publish to npm,

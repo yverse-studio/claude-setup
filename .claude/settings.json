@@ -57,7 +57,11 @@
       "Bash(npm run deploy *)",
       "Bash(npm run ship *)",
       "Bash(firebase deploy *)",
-      "Bash(vercel --prod *)"
+      "Bash(vercel --prod *)",
+      "Bash(git push* origin main*)",
+      "Bash(git push* origin master*)",
+      "Bash(git push*:main*)",
+      "Bash(git push*:master*)"
     ]
   }
 }
