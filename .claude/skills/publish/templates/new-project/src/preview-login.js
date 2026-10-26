@@ -53,11 +53,24 @@ export async function verifyJourneyToken(token, { audience, repo, branch, fetchJ
   }
 }
 
+// The body as text, read as a stream and dropped at the first byte over MAX_BODY, so a huge upload is never buffered; null when too big.
+async function boundedText(request) {
+  if (Number(request.headers.get('content-length')) > MAX_BODY || !request.body) return request.body ? null : ''
+  const chunks = []
+  let size = 0
+  for await (const chunk of request.body) {
+    size += chunk.byteLength
+    if (size > MAX_BODY) return null
+    chunks.push(chunk)
+  }
+  return new TextDecoder().decode(await new Blob(chunks).arrayBuffer())
+}
+
 // The `token` string of a JSON body `{token}`, or '' for a missing, oversized, non-JSON or wrong-shaped body.
 async function bodyToken(request) {
   try {
-    const raw = await request.text()
-    const token = raw.length <= MAX_BODY ? JSON.parse(raw)?.token : ''
+    const raw = await boundedText(request)
+    const token = raw ? JSON.parse(raw)?.token : ''
     return typeof token === 'string' ? token : ''
   } catch {
     return ''
