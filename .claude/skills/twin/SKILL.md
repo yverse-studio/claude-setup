@@ -5,7 +5,7 @@ description: "Use when a video needs yskills to say lines he did not record: his
 
 # Twin
 
-yskills, 2026-10-12: train on his face and voice, build our own HeyGen. 2026-10-26: free only, no paid or rented tools. 2026-10-26: "it
+yskills, 2026-10-12: train on his face and voice, build our own HeyGen. Later the same day he said free only, with no paid or rented tools. Also 2026-10-26: "it
 should never look ai, my videos always high quality and not slop". The twin is his **real** face
 clip with only the mouth re-synced, plus his cloned voice. Nothing about him is generated from
 scratch: that is what keeps it from looking AI.
@@ -47,8 +47,8 @@ The exact ask, the drop folder and the reading script: [`record.md`](record.md).
 | Tools present | `python twin.py doctor` | ok or MISS per tool and the GPU line |
 
 - Moods: `talk` (free-talk voice, talking clip), `calm`, `hyped`, `think`. `--voice-only` skips the face.
-- `--engine musetalk` (default, MuseTalk 1.5) or `latentsync` (LatentSync 1.5 on 8 GB; 1.6 needs a
-  rented GPU, a card first).
+- `--engine musetalk` (default, MuseTalk 1.5) or `latentsync` (LatentSync 1.5 on 8 GB; 1.6
+  needs ~18 GB and is not used).
 - Voice: Chatterbox reads each sentence, faster-whisper listens back, a sentence with more than 8 %
   wrong words is made again (twice), then the run fails. No wrong word ships.
 - A face shot over 8 s, or longer than the mood's face clip, stops with "real footage" (the hard rule); split the script or use `--voice-only`.
