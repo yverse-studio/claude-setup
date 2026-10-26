@@ -8,6 +8,8 @@ The project chat itself (the coordinator running this skill). Plans with yskills
 
 ## Every time
 
+- Grill first (`operator` SKILL.md, Grill first): a new idea or plan from yskills gets one round of 3-5 sharp questions as cards before the brainstorm or any thread; the Programmer, Designer and Researcher briefs carry his answers.
+- Every decision for yskills is a card, never options in running text: post it with `ask_decision`, or relay a thread's `Card:` lines as one (`CLAUDE.md`, Cards).
 - Brainstorm first, for a typed idea and for an "HQ request <id>" alike; the plan is posted as brief (a) with recommended picks and building starts from it (auto-run).
 - An idea or change for a live project runs research, then role threads (operator `SKILL.md`, Idea for a live project); never one catch-all thread.
 - Start one thread per slice or fix, each named `<Role> · <what>`, with the model from the routing rule (the Models line, `docs/WORKFLOW.md`). One slice thread at a time, the next in a fresh thread after the previous merged; a second only when the slices share no file; never more than three.
