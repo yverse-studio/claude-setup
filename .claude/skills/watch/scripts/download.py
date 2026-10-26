@@ -12,6 +12,7 @@ import tempfile
 from pathlib import Path
 from urllib.parse import urlparse
 
+import tiktok
 from runtime import configure_stdio, diagnostic, run_text
 
 VIDEO_EXTS = {'.mp4', '.mkv', '.webm', '.mov', '.m4v', '.avi', '.flv', '.wmv'}
@@ -170,6 +171,13 @@ def fetch_captions(url: str, out_dir: Path, *, sub_lang='auto', cookies_file=Non
     info_path = run / 'video.info.json'
     result = {'video_path': None, 'subtitle_path': None, 'info': {'url': url}, 'downloaded': False,
               'run_dir': str(run), 'info_path': None, 'caption_track': None, 'errors': []}
+    if tiktok.is_tiktok(url):
+        # TikTok refuses plain yt-dlp from the cloud: its public page data comes first (no captions there).
+        try:
+            result['info'] = tiktok.summary(tiktok.fetch_item(url)[0], url)
+            return result
+        except tiktok.TikTokUnavailable as exc:
+            print(f'[watch] TikTok page route failed, trying yt-dlp: {exc}', file=sys.stderr)
     try:
         _run([*_common(run, auth), '--skip-download', '--write-info-json', '--no-write-subs', '--no-write-auto-subs', '--', url])
         info = _read_metadata(info_path)
@@ -202,6 +210,13 @@ def download_url(url: str, out_dir: Path, audio_only: bool = False, *, context=N
     run = Path(context['run_dir']) if context.get('run_dir') else _new_run(out_dir)
     record = run / 'final-path.jsonl'
     record.unlink(missing_ok=True)
+    if tiktok.is_tiktok(url) and not audio_only:
+        try:
+            media = tiktok.download(url, run)
+            return {**context, **media, 'subtitle_path': context.get('subtitle_path'), 'downloaded': True,
+                    'run_dir': str(run)}
+        except tiktok.TikTokUnavailable as exc:
+            print(f'[watch] TikTok page route failed, trying yt-dlp: {exc}', file=sys.stderr)
     fmt = 'ba/bestaudio' if audio_only else 'bv*[height<=720]+ba/b[height<=720]/bv+ba/b'
     cmd = [*_common(run, auth), '-N', '8', '-f', fmt, '--merge-output-format', 'mp4',
            '--no-ignore-errors', '--no-write-subs', '--no-write-auto-subs', '--write-info-json',
