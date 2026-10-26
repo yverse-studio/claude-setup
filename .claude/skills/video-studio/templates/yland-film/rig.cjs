@@ -6,7 +6,6 @@ async function open({ url = 'http://localhost:3000/', start = Date.parse('2026-1
   await ctx.addInitScript(() => {
     const W = window.Worker;
     window.Worker = function (u, o) { if (/simulation.worker|villager-atlas/.test(String(u))) throw new Error('film: page sim'); return new W(u, o); };
-    try { localStorage.setItem('film', '1'); } catch {}
     let a = 20261026; Math.random = () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
   });
   const p = await ctx.newPage();
