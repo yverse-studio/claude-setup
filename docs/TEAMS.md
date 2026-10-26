@@ -173,8 +173,9 @@ M take the Sizes table.
 | `setup` (claude-setup) | [`CLAUDE.md`](../CLAUDE.md), [`MAP.md`](MAP.md), this file, [`WORKFLOW.md`](WORKFLOW.md) | Planner (size M and L), Programmer, the gate with its Reviewer | Designer, Marketer, Legal, `sell`, launch, grow | 1 to 3 by size, 5, 6, 9 |
 | `repo` (private, no Worker) | the row of the kind its content says; default `site` | that kind's team | that kind's list | that kind's steps |
 
-A new site or app, even small, still gets the Designer pass before the build styles anything. A kind
-not in the table is sized as `site`. Several ideas in one message become one chain each; chains that
+A new site or app, even small, still gets the Designer pass before the build styles anything. Every
+non-trivial change in any kit, `setup` included, starts with research, a placement check and a short plan
+(`operator` SKILL.md, Plan first). A kind not in the table is sized as `site`. Several ideas in one message become one chain each; chains that
 share no file run at once, the rest queue in `PROGRESS.md`. The `Done:` line ends with one short
 line per role saying what it found or checked.
 
