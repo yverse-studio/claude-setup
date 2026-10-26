@@ -1,0 +1,38 @@
+name: preview-login
+
+# Gives a project's journey check its preview test login: a fresh random token on the Worker's previews env
+# (never the live Worker) and as the repo's Actions secret PREVIEW_LOGIN_TOKEN. new-project does this for every
+# new site by itself; run this for a project that predates it, or when that step warned. The token is masked,
+# never printed or written. Re-running rotates it, which waits for yskills' tap (CLAUDE.md, Ask first).
+# Keys: CLOUDFLARE_API_TOKEN, PROJECTS_GITHUB_TOKEN (Secrets read and write on the repo), variable CLOUDFLARE_ACCOUNT_ID.
+on:
+  workflow_dispatch:
+    inputs:
+      name:
+        description: 'Project name (a registered projects/<name>.json)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  set:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - run: node --test scripts/preview-login.test.mjs
+      - run: npm install --no-save --ignore-scripts --no-audit --no-fund libsodium-wrappers@0.7.15
+      - run: node scripts/preview-login.mjs
+        env:
+          NAME: ${{ inputs.name }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          PROJECTS_GITHUB_TOKEN: ${{ secrets.PROJECTS_GITHUB_TOKEN }}
