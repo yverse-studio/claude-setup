@@ -77,6 +77,7 @@ Models line in [`docs/WORKFLOW.md`](../../../docs/WORKFLOW.md).
 | Same in a React project | **Remotion** with its official skills (`npx skills add remotion-dev/skills`) | licence: free for teams of up to 3 people |
 | Watch a reference video yskills shares | `watch` skill | frames, transcript and edit timeline (cuts, beats, silences), free; a Take about look goes to `ui-review/TASTE.md` (one dated line), a video-format Take to `learnings.md` |
 | After Effects itself | only on yskills' PC, only if they already own it | community MCP servers exist (e.g. `Dakkshin/after-effects-mcp`), not tried: read it first (CLAUDE.md install rule) and ask by card |
+| yskills saying lines he did not record | `twin` skill (his voice clone + his real face, mouth re-synced, on the laptop) | a failed twin shot means real footage; its Critic lines are in the `twin` SKILL.md |
 | AI clips, AI voice, stock music | fal.ai, ElevenLabs | money and a new service: card first; AI people or voices need the AI label (`market` §4) |
 
 Sold "Claude skill packs" from Instagram or Gumroad are prompt lists, not workflows: never bought.
