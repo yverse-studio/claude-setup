@@ -7,8 +7,9 @@ goes in its home only, everywhere else links it.
 
 ## Teams
 
-- Before any thread start or `Agent` call: `docs/TEAMS.md` (Spawn rule) picks kit, size, roles and
-  `model`; the `team-guard` hook blocks a call without `model`. [guard: hook team-guard.mjs]
+- Only the coordinator builds teams: `docs/TEAMS.md` (Spawn rule) picks kit, size, roles and `model`.
+  A thread is one role and calls only its role's subagents (`docs/TEAMS.md`, Coordinator or thread).
+  Every `Agent` call passes `model`; the `team-guard` hook blocks one without. [guard: hook team-guard.mjs]
 
 ## The world (2026-10-08)
 

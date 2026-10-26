@@ -6,7 +6,25 @@ over five files). Step detail lives in [`run.md`](../.claude/skills/operator/run
 [`gate.md`](../.claude/skills/operator/gate.md), each role's checklist in its playbook (linked in
 the roster). Every other file links here.
 
+## Coordinator or thread
+
+Building a team is the coordinator's job only (yskills 2026-10-26: "they dont need to make a team
+in the thread they are one part of it"). Check first which one you are:
+
+- **You are a thread if** your first message is a coordinator brief (a `Model:` and a
+  `Role:` line), or your tools have `message_coordinator` but no thread start. Otherwise (the
+  project chat, a plain chat, the laptop) you are the coordinator and the Spawn rule below is yours.
+- **A thread** is one role, the one its `Role:` line names (no `Role:` line: the role its title
+  `<Role> · <what>` names). It reads that role's Roster row and playbook and its kit row's Read
+  first files, does that job, and calls as `Agent` subagents only the helpers its Roster row and
+  the Sizes row of its size list (Reviewer, Researcher, an Opus checkpoint, ...), each with `model`.
+  It never starts a thread, never sizes the task again, never staffs a team and never plays a second
+  role; work for another thread-role goes to the coordinator with `message_coordinator` (role,
+  topic, files, done-when), and the thread goes on with its own job.
+
 ## Spawn rule
+
+Coordinator only (a thread: Coordinator or thread, above).
 
 1. **Task first, then kit, then size.** Every task is routed on its own, never by the project it
    comes from: what it makes picks the kit (a post or reel: `social`; a video: `video`; an app,
