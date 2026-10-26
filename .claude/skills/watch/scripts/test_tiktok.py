@@ -22,6 +22,7 @@ def fake_opener(body):
     resp = mock.MagicMock()
     resp.__enter__.return_value = resp
     resp.read.return_value = body
+    resp.geturl.return_value = 'https://www.tiktok.com/x'
     opener = mock.MagicMock()
     opener.open.return_value = resp
     return opener
@@ -45,6 +46,12 @@ class Page(unittest.TestCase):
         for bad in ('file:///etc/passwd', 'http://v.tiktok.com/a.mp4', 'https://evil.example/a.mp4'):
             with self.assertRaises(tiktok.TikTokUnavailable):
                 tiktok.fetch_item('https://www.tiktok.com/x', fake_opener(page({**ITEM, 'video': {'playAddr': bad}})))
+
+    def test_redirect_off_tiktok_is_refused(self):
+        opener = fake_opener(page(ITEM))
+        opener.open.return_value.geturl.return_value = 'https://evil.example/x'
+        with self.assertRaises(tiktok.TikTokUnavailable):
+            tiktok.fetch_item('https://www.tiktok.com/x', opener)
 
     def test_private_post_without_video(self):
         with self.assertRaises(tiktok.TikTokUnavailable):

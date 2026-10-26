@@ -11,6 +11,7 @@ from __future__ import annotations
 import http.cookiejar
 import json
 import re
+import time
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -22,7 +23,9 @@ DATA_RE = re.compile(r'<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__"[^>]*>(.*?
 
 
 # The page is untrusted data: only https URLs on TikTok's own domains are ever followed.
-ALLOWED_DOMAINS = ('tiktok.com', 'tiktokcdn.com', 'tiktokcdn-us.com')
+ALLOWED_DOMAINS = ('tiktok.com', 'tiktokcdn.com', 'tiktokcdn-us.com', 'tiktokv.com')
+DEADLINE_SECONDS = 300
+_pages: dict[str, tuple[dict, urllib.request.OpenerDirector]] = {}  # one page fetch per link per run
 
 
 def _allowed(url: str) -> bool:
@@ -58,11 +61,15 @@ def _opener() -> urllib.request.OpenerDirector:
 
 def fetch_item(url: str, opener=None) -> tuple[dict, urllib.request.OpenerDirector]:
     """Return the video's itemStruct from the watch page (short vm./vt. links are followed)."""
+    if url in _pages and opener is None:
+        return _pages[url]
     opener = opener or _opener()
     if not _allowed(url):
         raise TikTokUnavailable('not an https TikTok link')
     try:
         with opener.open(urllib.request.Request(url, headers={'User-Agent': UA}), timeout=30) as resp:
+            if not _allowed(resp.geturl()):
+                raise TikTokUnavailable('TikTok link redirected off TikTok, refused')
             html = resp.read(5_000_000).decode('utf-8', 'replace')
     except OSError as exc:
         raise TikTokUnavailable(f'TikTok page not reachable: {exc}') from None
@@ -78,6 +85,7 @@ def fetch_item(url: str, opener=None) -> tuple[dict, urllib.request.OpenerDirect
         raise TikTokUnavailable('TikTok post has no public video file')
     if not _allowed(item['video']['playAddr']):
         raise TikTokUnavailable('TikTok video file is on an unexpected host, refused')
+    _pages[url] = (item, opener)
     return item, opener
 
 
@@ -96,11 +104,16 @@ def download(url: str, run_dir: Path) -> dict:
     item, opener = fetch_item(url)
     target = Path(run_dir) / 'video.mp4'
     size = 0
+    deadline = time.monotonic() + DEADLINE_SECONDS
     request = urllib.request.Request(item['video']['playAddr'], headers={'User-Agent': UA, 'Referer': 'https://www.tiktok.com/'})
     try:
         with opener.open(request, timeout=60) as resp, open(target, 'wb') as out:
+            if not _allowed(resp.geturl()):
+                raise TikTokUnavailable('TikTok video redirected off TikTok, refused')
             while chunk := resp.read(1 << 20):
                 size += len(chunk)
+                if time.monotonic() > deadline:
+                    raise TikTokUnavailable(f'TikTok download took longer than {DEADLINE_SECONDS} s, skipped')
                 if size > MAX_BYTES:
                     raise TikTokUnavailable('TikTok video larger than 200 MB, skipped')
                 out.write(chunk)
