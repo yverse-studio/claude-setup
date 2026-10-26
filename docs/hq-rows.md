@@ -23,7 +23,7 @@ paused or done, `progress` 0-100, `note, live, order, revenueMonth, revenueTotal
 (EUR numbers, from the project's public stats route, e.g. duo-test's `/api/stats` in cents divided by
 100; Artifact pages cannot fetch other sites, so the manager copies them at every milestone),
 `revenueMode` (`test` while Stripe is in test mode, HQ then says "Testgeld"), `revenueAt` (ISO time of
-that read), `working` (count), `at` (ISO time, **every row any thread writes carries `at`; HQ greys a row after 6 hours and counts its `working` as 0**), `visitors7d, signups, paying, firstEuroBy` (traction: what real people did and the date of the first real euro; HQ shows these instead of a build percent; each is copied under the rules of the weekly numbers line in `operator/roles/analytics.md`), `you[{what, link, firstSeen}]` (a to-do lives only in its project row; loop items (`docs/LOOP.md`) go into `note` as one state line ("2 Fehler offen, 1 Thread läuft") and into `you[]` only when a feedback needs yskills' taste or money call; `pm/now.you` is only Claude Setup's own and the fallback; the same text or link in two lists shows once; keep `firstSeen` when rewriting) (every `what` here and in `pm/now` is one plain German sentence with a verb, because HQ shows it as-is in Heute für dich); a project's `dashboard` link, if the project has no
+that read), `working` (count), `at` (ISO time, **every row any thread writes carries `at`; HQ greys a row after 6 hours (a team board after 12) and counts its `working` as 0**), `visitors7d, signups, paying, firstEuroBy` (traction: what real people did and the date of the first real euro; HQ shows these instead of a build percent; each is copied under the rules of the weekly numbers line in `operator/roles/analytics.md`), `you[{what, link, firstSeen}]` (a to-do lives only in its project row; loop items (`docs/LOOP.md`) go into `note` as one state line ("2 Fehler offen, 1 Thread läuft") and into `you[]` only when a feedback needs yskills' taste or money call; `pm/now.you` is only Claude Setup's own and the fallback; the same text or link in two lists shows once; keep `firstSeen` when rewriting) (every `what` here and in `pm/now` is one plain German sentence with a verb, because HQ shows it as-is in Heute für dich); a project's `dashboard` link, if the project has no
 Artifact of its own, is its project chat thread), and keeps it current with every `pm/now` write. **A revenue source is verified against real data before any UI reads it:** call
 the route or query the table and check that the known payments show up (duo-test's `/api/stats`
 went live summing rows that were never stored and showed 0 € for 28 € of payments); a source
@@ -46,7 +46,7 @@ Cards) and, in the same turn, writes one row `decisions/<id>` with `ArtifactData
 screenshot)}] (2-4), recommended? (index), status: 'open', at}`. HQ makes that role's desk wave and shows the question, the picture
 options, Neu machen and a free line on its card; his answer lands on the row (`status: 'answered'`, `answer {pick, redo, note,
 text}`) and arrives in the thread as `HQ decision <id>: ...` (company-xy `hq-decide.js`). Whichever comes first, the card tap or the
-HQ answer, counts; the thread then closes the other (`close_decision`, or set the row `answered`). This is the only HQ row a
+HQ answer, counts; the thread then closes the other (`close_decision`, or set the row `answered`). Besides `boards/<project>` (Team boards), this is the only HQ row a
 thread writes; status, task and work rows come from the refresher.
 
 **New project tap:** HQ's yellow notepad saves `requests/<id>` (`{text, at, status}`: `new` saved,
@@ -64,7 +64,7 @@ id already runs (a resend repeats it); that thread sets the row to `started` wit
 **Projects come from ydeas-world (yskills 2026-10-08):** yskills' one project list is ydeas-world's `content/ideas/<slug>.md`.
 An entry is an idea until it has `repo:`; then it is a project, and only those are on HQ's Company page. A project that should
 show in HQ gets an entry there first (the operator's day one does it, slug = project id); a `projects/<id>` row no entry names
-is stale and the HQ refresher (company-xy `hq-refresh.md`) deletes it with its `phases`, `team` and `events` (a renamed repo keeps
+is stale and the HQ refresher (company-xy `hq-refresh.md`) deletes it with its `phases`, `team`, `events` and `boards` (a renamed repo keeps
 its row; no deletes on an empty or broken ydeas-world read or when over half would go; `finance` only on yskills' delete tap). The
 refresher owns `state` (from the file: `archived: true` = archived, `parked: true` = paused, else active), `stateAt`,
 `mirror` (repo, last commit, open PRs, PROGRESS.md, status by ydeas-world's own rules) and `working` (this project's working
@@ -123,6 +123,16 @@ numbers played), `flags` (answers that change later lines), `facts[{kind promise
 live `euro` 3); a chapter's `favour` waits for its event kind (`pr_merged`, `launched`, and once a source writes them
 `ci_failed`, `ci_green`, `pr_stale`, ids `ci-<repo>-<sha>` / `stale-<repo>-<number>`, 0 XP) since the last chapter.
 The chapters themselves are content in company-xy `content/story/<roster id>/`, not rows.
+**Team boards (yskills 2026-10-26: "connect it to my companyxy dashboard, so my social media team has a board"):** a
+project whose team works from its own app (social's ideas app first) gets one read-only board in HQ: `boards/<project>`
+(`{project, title, app (https link into the app for editing), refreshedAt, at, sections: [{id, kind, title, items}]}`). Kinds,
+so HQ renders every project's board the same way: `schedule` (items `{day, time, title, status, source app|outside, link,
+thumb?}`, 7 days), `list` (items `{title, status, at, link, thumb?}`, newest 8, plus `counts {<status>: n}`), `stats` (items
+`{title, at, views?, shares?, link}`). The app stays the only source of truth: the row is a snapshot, every item links back into
+the app, and HQ never edits it. Writer: the project's own status routine or daily round, in the run that already reads the app's
+public feed (social: `GET /api/feed` plus Metricool `getScheduledPosts`, 3 times a day), one `ArtifactData set` per run, only
+when something changed; free, no key, no extra session. HQ shows it on the project's card and the team's desk (company-xy,
+`HQ.board`); a board older than 12 hours greys.
 **Derived rows:** in the Company XY project the threads write none of this themselves; the HQ refresher derives them from
 `list_thread_sessions` (every thread, finished ones included) on every run (company-xy `hq-refresh.md`): `work/session_<id>` per open thread (the thread list spells
 the same session `cse_<id>`) with `by: 'refresher'`, `state` (running in a turn, waiting between turns, done once finished or
