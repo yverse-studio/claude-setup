@@ -69,7 +69,7 @@ at about 340. The Y-Land card video (284 views) looked clean but read like an ap
 
 yskills: "NOT a German audience but international, everything English; goal an authentic, nice
 community, money someday." His account is all-English already (his captions in the 2026-08 to
-2026-10 Metricool export), so the German signal is not the text: it is who follows him, where he
+2026-10 Metricool export), so any German signal is not the text: it is who follows him, where he
 posts from and when. Hold the rules below on every post; the personal account stays him.
 
 **What the data says (Metricool, 2026-09-26 to 10-26, Europe/Berlin):**
@@ -90,7 +90,7 @@ posts from and when. Hold the rules below on every post; the personal account st
 **The two slots (Europe/Berlin).** Route per `SKILL.md` Posting: Metricool sends the video to his
 phone at the slot and he taps post, so slot B at 01:00 only runs while his auto-post switch is on
 (devlog and learning pillars, music bed instead of a trending sound); with it off, B is 21:00 (UK
-20:00, US East 15:00) and he taps it.
+20:00, US East 15:00, 16:00 until Nov 1) and he taps it.
 
 | Slot | Berlin | UK | US East | US West | Why |
 |---|---|---|---|---|---|
@@ -101,7 +101,7 @@ US columns hold from Nov 1; until then add 1 h (A: ET 13:00, PT 10:00; B: ET 20:
 
 This is a hypothesis for 14 days, not a fact: every post logs slot, views at 24 h, shares and
 saves; after 14 days the slot with the higher median 24 h views keeps both, or B moves to 03:00 or
-the second slot to 21:00 (UK evening). Weekends keep the same two. Comments on B posts are answered
+the second slot to 21:00 (UK evening). Weekends keep the same two. Comments on 01:00 posts are answered
 by him the next morning; his replies stay his.
 
 **Language and caption rules (all posts):**
@@ -113,7 +113,7 @@ by him the next morning; his replies stay his.
 - Dates "Oct 26", times "6 PM", money in $ or no number, miles or "km" with the number, Fahrenheit
   and Celsius both or neither.
 - Hashtags: 3-5, English, one broad (#fyp is fine), two for the topic (#friedrice #hanoi), none
-  German (#fyp is fine; never #fürdich, #deutschland, #germany unless the video is in Germany). No other
+  German (never #fürdich, #deutschland, #germany unless the video is in Germany). No other
   language's hashtag walls.
 - Trends: only sounds and formats that run in English-speaking feeds; check the sound page shows
   global use before he adds it; no Germany-only meme or challenge.
