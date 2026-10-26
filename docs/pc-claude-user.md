@@ -17,7 +17,7 @@ in `install.mjs` works as on yskills' own user (`C:\Users\Ich`); this page lists
 | pwsh 7 | Microsoft Store package via `winget install --id 9MZ1SNWT0N5D --source msstore` | the MSI needs admin; `live-shot.ps1` needs pwsh |
 | Blender | 5.1, machine-wide (`C:\Program Files\Blender Foundation`); Blender Lab MCP add-on 1.0.3 with Auto Start, server `Blender` in `~/.claude.json` (`studio` skill) | shared with yskills' user; add-on and server are per user |
 | GitHub | `gh` logged in as `yskills-claude`; commits are authored as `Claude <339700673+yskills-claude@users.noreply.github.com>` | Claude's own account; Write on claude-setup (tested 2026-10-08), the other repos once yskills adds it |
-| Claude in Chrome | extension installed in this user's Chrome profile | untested: a session only has the tools it started with, so the first fresh session there tests it with a screenshot |
+| Claude in Chrome | extension installed in this user's Chrome profile | works (2026-10-26): `list_connected_browsers` shows it while yskills' Chrome is open |
 | Roblox Studio | not installed | installs per user and needs a Roblox login Claude does not have yet |
 | Environment variables | always set for the user, never machine-wide; no admin | standard user |
 
@@ -27,6 +27,15 @@ PATH of the process that hosts them. After installs, restart that host (not just
 ## Fresh main first
 
 yskills (2026-10-26): a laptop thread read claude-setup from an old branch and missed the current rules. The first step of every laptop or Remote Control thread, before it reads anything: `git -C <claude-setup clone> fetch origin && git -C <clone> checkout main && git -C <clone> pull --ff-only` (clone: `C:\Users\Claude\claude-setup`, or the one under `Documents\GitHub`); run `node install.mjs` too when the pull changed `global/` or `config/`. Only then read `CLAUDE.md`, `docs/MAP.md` and the brief's guides. A dirty tree or a failed pull is reported in one line, not read around.
+
+## Logins: use yskills' open Chrome
+
+yskills (2026-10-26): anything that needs a login (TikTok, Google, a dashboard) runs in his
+already-open, logged-in Chrome on this user through Claude in Chrome (`list_connected_browsers`,
+then a tab of your own). Never a fresh Playwright or headless profile that asks him to log in
+again, and never Playwright on Chrome's main profile (Chrome 136+ blocks remote debugging there;
+the run just hangs). Chrome closed: ask him to open it, then go on. Headless Playwright stays for
+pages without a login.
 
 ## What still needs yskills' hands
 
