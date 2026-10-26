@@ -58,6 +58,8 @@ Callers: `video-studio`'s Editor (a twin shot in a cut), the `social` app's dail
 daily routine (a script from the feed, `say` on the laptop over Remote Control, the cut goes back
 as a draft). The cloud has no GPU, so every call runs on the laptop.
 
+Language: the word check in `voice.py` runs faster-whisper `small.en`, so it fits English scripts only; a German script needs another model first (`doctor` does not catch this).
+
 ## Critic (fresh agent, every twin shot)
 
 The `video-studio` Critic ([`roles/critic.md`](../video-studio/roles/critic.md)) adds these lines; any fail means real footage:
