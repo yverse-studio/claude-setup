@@ -38,7 +38,7 @@ files, tools or models.
 You read only the project chat: the coordinator posts every result, `Done:` line and card there
 (rule in `CLAUDE.md`, How to work); PR links and gate talk stay in the threads, and you open a
 thread only when something is wrong. Plus the HQ rows (`docs/hq-rows.md`). Cards show options
-with one recommended; work continues on it unless it is money, a new service or a deletion.
+with one recommended; work continues on it unless it is money, a new service or deleting something live.
 
 ## Deploy a page in one shot
 
@@ -97,7 +97,9 @@ What you do: drop ideas, say two words, set one switch. The `social-team` skill 
 
 ## Delete a page
 
-What you do: say "delete <name>". Deleting is the one step Claude asks for first.
+Claude deletes a test page when the task needs it, without asking, and tells you in one line.
+A live project (yland, anime-filter, tellmey, ideaworld, mypage, duo-test, social) is refused by
+the workflow until you say "delete <name>" and a PR takes it off the protected list.
 
 1. Run `delete-project.yml` (`actions_run_trigger` `run_workflow`, ref `main`) with `name`,
    `confirm` = the name again, `dry_run` true. Read the plan in the log.
@@ -120,7 +122,7 @@ A session's own safety check blocks raw `git push --delete`; this is the route.
 
 ## When Claude asks you
 
-Only for real money, a new paid service, deleting data or a repo, force-pushing `main`, rotating a
+Only for real money, a new paid service, force-pushing `main`, rotating a
 production secret, or sending mail or posts publicly. The full list: `CLAUDE.md` (How to work);
 prompts and safety checks: `docs/permissions.md`. Everything else it just does and tells you.
 

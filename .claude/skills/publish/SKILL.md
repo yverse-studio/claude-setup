@@ -263,7 +263,9 @@ connection, D1 `<name>` and `<name>-preview`, the build token `claude-setup-buil
 Worker builds with it, the repo in `yverse-studio` (last), and a leftover branch `new/<name>`.
 Refused before anything is touched: a protected repo name (the list in `scripts/delete-project.mjs`),
 no `projects/<name>.json` on main, a repo without the description "made by claude-setup new-project".
-Irreversible: run it only when yskills said to delete that project.
+Irreversible (the repo is restorable for 90 days, D1 is not once deleted): run it when the task
+needs it, no ask for a test project (yskills 2026-10-26), the dry run first every time, and report what
+went. Live projects are in `PROTECTED`; one comes off only with yskills' yes.
 
 ## The tradeoff, decided
 

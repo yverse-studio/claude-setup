@@ -45,14 +45,17 @@ for (const file of ['global/settings.json', '.claude/settings.json']) {
 test('no ask-first command is allowed', () => {
   const { allow, ask } = read('global/settings.json').permissions
   for (const c of [
-    'gh workflow run delete-project -f name=x -f confirm=x -f dry_run=false', 'gh issue delete 5', 'gh run delete 9',
-    'gh repo delete yverse-studio/x', 'wrangler secret put KEY', 'npx wrangler d1 delete db', 'npm publish',
+    'gh repo delete yverse-studio/x', 'wrangler delete --name yland', 'wrangler secret put KEY', 'npx wrangler d1 delete db', 'npm publish',
   ]) {
     assert.ok(!allow.some((r) => matches(r, c)), `${c} must match no allow rule`)
     assert.ok(ask.some((r) => matches(r, c)), `${c} must match an ask rule`)
   }
-  for (const t of ['mcp__github__actions_run_trigger', 'mcp__github__delete_file', 'mcp__github__create_repository']) assert.ok(!allow.includes(t), `${t} must not be allowed`)
-  assert.ok(allow.some((r) => matches(r, 'gh workflow run new-project -f name=x')), 'new-project dispatch stays allowed')
+  for (const t of ['mcp__github__actions_run_trigger', 'mcp__github__create_repository']) assert.ok(!allow.includes(t), `${t} must not be allowed`)
+  // Test projects come and go unasked (yskills 2026-10-26); delete-project itself refuses live ones (PROTECTED).
+  for (const c of ['gh workflow run new-project -f name=x', 'gh workflow run delete-project -f name=x -f confirm=x -f dry_run=false', 'gh issue delete 5', 'gh run delete 9']) {
+    assert.ok(allow.some((r) => matches(r, c)), `${c} must be allowed`)
+    assert.ok(!ask.some((r) => matches(r, c)), `${c} must not ask`)
+  }
 })
 
 test('the two deny lists are the same', () => {
