@@ -12,6 +12,7 @@ differ. Every time yskills likes, rejects or comments on a design, the lasting p
 - 2026-10-18: Igelgarten v2 "holy ai slop": neon glow on every sprite on near-black, a dark SaaS menu with stripe rows in a garden game.
 
 ## Liked
+- 2026-10-26 (social app v4 vote): picked **Night Studio** (black studio UI like Instagram Edits and CapCut, his bright videos as the only colour, one yellow sticky-note idea box, one Edits magenta, TikTok Sans) over a light Things/TikTok Studio notebook (the critic's pick) and a Buffer-pastel sticker desk. Rejected the round before: costumes of film objects (cork storyboard wall, stripboard, light table). Copy real apps he uses, not props. Ref: social `design/DESIGN.md`.
 - 2026-10-06: plush look (long fur, button eyes, head seam, felt clothes) over villager and chibi proportions; every character visibly dressed for its job; Animal Crossing villager cuteness is the bar.
 - 2026-10-07: characters like booth.pm/en/items/4511536 with real spring physics (three-vrm SpringBone); cozy pastel, golden hour, round soft 3D.
 
