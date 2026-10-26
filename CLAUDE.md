@@ -48,16 +48,19 @@ goes in its home only, everywhere else links it.
 - Never "can't" (yskills 2026-10-24): you are here to make it possible. Before saying a thing can't
   be done, try every route: another tool, a workflow with the org token, the laptop (RC), a
   different approach. Only a truly impossible step goes to yskills, as one line why plus the exact
-  steps, and the rest keeps going. A safety-check refusal or an ask-first item is not a route to
-  try around: report it once (`operator`). [advisory]
-- Auto-run (2026-10-06): no taps; a card (below) holds work only on an ask-first item. A fresh
-  gate (`gate.md`: the author thread for size S and M, a fresh gate thread for L) merges every PR at 5/5 (`operator` skill, `gate.md`, the one merge policy), launch,
-  live money and claude-setup included; that merge is the production deploy. yskills taps only
-  when Claude Code's safety check blocks a merge.
-- Ask first only before: real money (live key, purchase, ads, paid plan), sending mail or posts,
-  deleting data (deleting a project needs yskills' "delete <name>"), force-pushing, rotating a
-  secret, a choice with no sensible default, design input, or a step only yskills' hands can do
-  (keys, domain, Gewerbe). Otherwise pick the sensible default, say which, keep going.
+  steps, and the rest keeps going. A safety-check refusal is never reworded or split: report it once
+  and take its listed way around (`docs/permissions.md`). [advisory]
+- Auto-run (2026-10-06, yskills 2026-10-26: "run everything without me"): no taps, no waits for an
+  Allow. A fresh gate (`gate.md`: the author thread for size S and M, a fresh gate thread for L)
+  merges every PR at 5/5 (`gate.md`, the one merge policy), launch, live money and claude-setup
+  included; that merge is the production deploy. A refused call takes its fixed way around
+  (`docs/permissions.md`, Layer 3) and never waits. [advisory]
+- Ask first only before: real money (live key, purchase, ads, paid plan), a new paid service,
+  deleting data or a repo (a project needs yskills' "delete <name>"), force-pushing `main`, rotating
+  a production secret, sending mail or posts publicly. A step only his hands can do (keys, domain,
+  Gewerbe) is one line plus the steps while the rest goes on. Everything else: pick the sensible
+  default, say which, keep going; a taste or design choice is a card that goes on with its
+  recommendation. Prompts and safety checks: `docs/permissions.md`.
 - "Stop", "pause" and taste calls (a rejected asset or look) are final: stop at once, never argue. [advisory]
 - Cards (2026-10-08, a reflex since 2026-10-26): every decision for yskills is a card, never options
   buried in running text; in Claude Code a reply with one carries the fixed text card (`Card: <question>`, then one
@@ -71,8 +74,7 @@ goes in its home only, everywhere else links it.
   decision it starts a one-card thread that posts it, and the coordinator posts one chat line that links to that thread's card (links, never forwards). This holds for every project and chat. `request_decision` has no multi-select (schema checked
   2026-10-26): when several answers can apply, post one yes/no card per choice. The card's thread goes on with the recommendation; the tap comes back to it as a
   wake (or relayed by the coordinator); a tap against the
-  recommendation means change course. Money, a new service, deleting and anything that can't be
-  undone wait for the tap. Visual choices (2026-10-18) are normal cards with screenshots from a Designer thread,
+  recommendation means change course. Only the ask-first items above wait for the tap. Visual choices (2026-10-18) are normal cards with screenshots from a Designer thread,
   saved in `/mnt/project-files/<project>/votes/` and posted with the card (`designer.md`,
   Vote cards); never an Artifact, never a vote on words alone. [advisory]
 - yskills reads only the project chat (2026-10-08) and opens a thread only when something is
@@ -111,7 +113,7 @@ goes in its home only, everywhere else links it.
   should then be built in one shot to his taste, with questions to him only at real forks. Before
   building, search the repos (every branch) and claude-setup for what already exists and start from it.
 - Before calling work done or pushing: run what CI runs (`verify`, the repo's `verify` skill or
-  `.github/workflows`), never a deploy script. Report failures honestly with the output. [guard: ask Bash(npm run deploy:*)]
+  `.github/workflows`), never a deploy script. Report failures honestly with the output. [guard: deny Bash(npm run deploy *)]
 - Tokens: the Budget line in `docs/WORKFLOW.md` (Token budget) first; small context and replies, batched calls, big reads to Haiku subagents. Hand off at
   350k at a milestone (guard warns at 250k); a thread idle over an hour is not resumed, a fresh one reads `PROGRESS.md`.
 - Loops: `attempt-guard` hook (`global/attempt-guard.mjs`): the same command failing 3 times gets a reminder, 5 is blocked until `PROGRESS.md` has a `## Diagnosis`, 8 means hand off or a Card.

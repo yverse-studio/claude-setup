@@ -16,6 +16,7 @@ const matches = (rule, command) => {
   const body = rule.match(/^Bash\((.*)\)$/)?.[1]
   if (body === undefined) return false
   if (body.endsWith(':*')) return command.startsWith(body.slice(0, -2))
+  if (body.endsWith(' *') && command === body.slice(0, -2)) return true // a trailing " *" also matches the bare command
   return new RegExp(`^${body.split('*').map((s) => s.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('.*')}$`).test(command)
 }
 const denied = (command, deny) => deny.some((r) => matches(r, command))
@@ -28,13 +29,31 @@ for (const file of ['global/settings.json', '.claude/settings.json']) {
       'git push --force origin main', 'git push -f origin main', 'git push origin main --force', 'git push --force-with-lease origin main',
       'git push origin +main', 'git push -u --force origin HEAD:main', 'git push origin --delete main', 'git push origin :main', 'git push --mirror',
       'git -C /repo push --force origin main', 'git -c x=y push -f origin main', 'git push -fu origin main', 'git push --force origin master',
+      // main changes only through a gated merge, and deploys only through Workers Builds (docs/permissions.md)
+      'git push origin main', 'git push -u origin HEAD:main', 'git -C /repo push upstream main', 'git -C /repo push origin refs/heads/main', 'git -C /repo push origin +main', 'git -C /repo push origin --delete main', 'wrangler deploy', 'npx wrangler deploy', 'npm run deploy',
     ]) assert.ok(denied(c, deny), `${c} must be denied`)
     for (const c of [
-      'git push -u origin claude/project-thread-vxq6m9', 'git push --force origin claude/feature', 'git push origin main',
-      'wrangler deploy', 'wrangler whoami', 'git push -u origin fix/domain-cleanup', 'git push -u origin claude/fix-thing',
+      'git push -u origin claude/project-thread-vxq6m9', 'git push --force origin claude/feature',
+      'wrangler whoami', 'npm run deploy:preview',
+      'git -C /repo push -u origin fix/domain-cleanup', 'git push -u origin claude/fix-main-menu', 'git -C /repo push origin claude/fix-main-menu', 'git push -u origin fix/domain-cleanup', 'git push -u origin claude/fix-thing',
     ]) assert.ok(!denied(c, deny), `${c} must not be denied by these rules`)
   })
 }
+
+// An allow rule is decided before the autoMode classifier: no ask-first command may match one
+// (gate round 1, PR 302: `gh workflow *` let delete-project run unasked).
+test('no ask-first command is allowed', () => {
+  const { allow, ask } = read('global/settings.json').permissions
+  for (const c of [
+    'gh workflow run delete-project -f name=x -f confirm=x -f dry_run=false', 'gh issue delete 5', 'gh run delete 9',
+    'gh repo delete yverse-studio/x', 'wrangler secret put KEY', 'npx wrangler d1 delete db', 'npm publish',
+  ]) {
+    assert.ok(!allow.some((r) => matches(r, c)), `${c} must match no allow rule`)
+    assert.ok(ask.some((r) => matches(r, c)), `${c} must match an ask rule`)
+  }
+  for (const t of ['mcp__github__actions_run_trigger', 'mcp__github__delete_file', 'mcp__github__create_repository']) assert.ok(!allow.includes(t), `${t} must not be allowed`)
+  assert.ok(allow.some((r) => matches(r, 'gh workflow run new-project -f name=x')), 'new-project dispatch stays allowed')
+})
 
 test('the two deny lists are the same', () => {
   assert.deepEqual(read('global/settings.json').permissions.deny, read('.claude/settings.json').permissions.deny)

@@ -265,6 +265,25 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
 }
 TEAM
 
+# Permissions sync (docs/permissions.md): copies permissions (minus defaultMode, the thread keeps
+# its own) and autoMode from main's global/settings.json into ~/.claude/settings.json. Run now and
+# at every session start, so a merged change needs no environment rebuild. Never blocks.
+cat > "$HOME/.claude/claude-setup/permissions-sync.sh" <<'SYNC'
+#!/usr/bin/env bash
+f="$(mktemp)" && curl -fsSL --max-time 8 -o "$f" https://raw.githubusercontent.com/yverse-studio/claude-setup/main/global/settings.json && node -e '
+const fs = require("fs"), p = require("os").homedir() + "/.claude/settings.json"
+const ours = JSON.parse(fs.readFileSync(process.argv[1], "utf8"))
+const s = fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, "utf8")) : {}
+const { defaultMode, ...perms } = ours.permissions || {}
+s.permissions = { ...(s.permissions || {}), ...perms }
+if (ours.autoMode) s.autoMode = ours.autoMode
+fs.writeFileSync(p, JSON.stringify(s, null, 2))
+' "$f"
+rm -f "$f"
+exit 0
+SYNC
+bash "$HOME/.claude/claude-setup/permissions-sync.sh" || echo "claude-setup: could not sync permissions"
+
 node -e '
 const fs = require("fs"), p = require("os").homedir() + "/.claude/settings.json"
 const s = fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, "utf8")) : {}
@@ -281,5 +300,7 @@ for (const [event, matcher, mode] of [["SessionStart", "startup|clear|compact", 
   s.hooks[event] = (s.hooks[event] || []).filter((h) => !JSON.stringify(h).includes("team-brief.mjs") && !JSON.stringify(h).includes("team-guard.mjs"))
   s.hooks[event].push({ matcher, hooks: [team(mode)] })
 }
+s.hooks.SessionStart = s.hooks.SessionStart.filter((h) => !JSON.stringify(h).includes("permissions-sync.sh"))
+s.hooks.SessionStart.push({ matcher: "startup|clear|compact", hooks: [{ type: "command", command: `bash "${require("os").homedir()}/.claude/claude-setup/permissions-sync.sh"`, timeout: 10 }] })
 fs.writeFileSync(p, JSON.stringify(s, null, 2))
-' || echo "claude-setup: could not add the context, attempt guard and team guard hooks"
+' || echo "claude-setup: could not add the context, attempt guard, team guard and permissions sync hooks"

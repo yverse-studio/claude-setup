@@ -59,7 +59,7 @@ rotate only on yskills' word (rotating a secret is an ask-first item).
    so the recommended answer is public. Put it in your reply as `Card:` "Make `<name>` repo public so
    the APK can be downloaded?" (recommend yes) and wait for the tap (outward-facing).
    Private repo instead: a Worker route that streams the release asset with a read-only token
-   secret [U]; ask first, it is one more secret.
+   secret [U]; no tap needed, it is a new secret, not a rotation.
 3. **Wrap.** In the app repo: `npm i @capacitor/core @capacitor/android` and `npm i -D @capacitor/cli`,
    add `capacitor.config.json` (see `templates/game/`: `appId`, `appName`, `webDir`), run
    `npx cap add android` and commit the `android/` folder (not its `build` folders; `.gitignore` in

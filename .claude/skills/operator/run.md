@@ -125,7 +125,7 @@ thread resolves, its `HANDOFF.md` lists every artifact, not only code: notes, pl
 reference pictures, screenshots, generated assets (or the script that rebuilds them), artifact
 links and open asks, each with its path. All of it lands in the target repo in one PR (big or
 paid assets go where that repo's README says, never git if the licence forbids it). If a safety
-check refuses the copy, the thread asks yskills for the Allow in that thread once and does not
+check refuses the copy, the thread follows `docs/permissions.md` (Layer 3) and does not
 split or reword it (the heroine pictures were missed on 2026-10-07).
 
 **Waiting on yskills:** write the state to `PROGRESS.md` before each brief. A project

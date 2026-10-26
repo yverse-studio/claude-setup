@@ -120,9 +120,9 @@ A session's own safety check blocks raw `git push --delete`; this is the route.
 
 ## When Claude asks you
 
-Only for real money, mail or posts, deleting data, force-push, rotating a secret, a choice with
-no clear default, design input, or a step only you can do. The full list: `CLAUDE.md` (How to
-work). Everything else it just does and tells you.
+Only for real money, a new paid service, deleting data or a repo, force-pushing `main`, rotating a
+production secret, or sending mail or posts publicly. The full list: `CLAUDE.md` (How to work);
+prompts and safety checks: `docs/permissions.md`. Everything else it just does and tells you.
 
 You get a notification only when needed, plus big milestones.
 Say "stop" or "pause" and everything stops; a look you reject stays rejected.
@@ -131,7 +131,6 @@ Say "stop" or "pause" and everything stops; a look you reject stays rejected.
 
 | Step | Why Claude can't |
 |---|---|
-| Delete a branch, re-run Actions, CLAUDE.md edits | Cloud threads get a 403 on branch deletes and Actions re-runs, and the safety check may refuse edits to policy files (CLAUDE.md, gate.md) and refuses secret reads; a PC session deletes branches; a refused policy edit needs your Allow in that thread |
 | Keys and tokens | They live in claude-setup's GitHub Actions and the Worker, never in chat |
 | Real money: Stripe live, ads, Gewerbe, domain | Legal and money steps need your name and hands |
 | Owner settings of your accounts (who gets access, app installs, billing) and passwords | Claude never types a password or solves a CAPTCHA; it works in Cloudflare and GitHub through its own member logins (`docs/pc-claude-user.md`, decided 2026-10-08) |
