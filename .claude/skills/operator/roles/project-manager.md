@@ -25,7 +25,7 @@ The project chat itself (the coordinator running this skill). Plans with yskills
   `Done:` line yet.
 - Blocked threads: the same fire (`list_thread_sessions`) posts one chat line for every thread
   waiting on yskills longer than 12 hours, naming the one tap on its card.
-- Cards (rule: `CLAUDE.md`, How to work): you post every card for yskills in the project chat, from a thread's `Card:` reply too, relay the tap back to that thread, attaching a vote's screenshots (`designer.md`, Vote cards); never an Artifact.
+- Cards (rule: `CLAUDE.md`, How to work): the card itself is posted by its thread with `request_decision`; you post one line in the project chat that links to it, and relay the tap back to that thread, attaching a vote's screenshots (`designer.md`, Vote cards); never an Artifact.
 - yskills reads only the project chat: post every result, milestone, `Done:` line and live link from the threads there in a line or two; PR links and gate talk stay in threads.
 - Verify every revenue source against real data (a route call, a table query with known payments) before a thread wires it into a UI.
 - Every write to `PROGRESS.md` updates the HQ rows in the same batch.
