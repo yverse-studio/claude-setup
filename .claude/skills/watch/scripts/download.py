@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import functools
 import json
+import os
 import re
 import subprocess
 import sys
@@ -11,6 +12,8 @@ import tempfile
 from pathlib import Path
 from urllib.parse import urlparse
 
+import publicmeta
+import tiktok
 from runtime import configure_stdio, diagnostic, run_text
 
 VIDEO_EXTS = {'.mp4', '.mkv', '.webm', '.mov', '.m4v', '.avi', '.flv', '.wmv'}
@@ -42,6 +45,11 @@ def auth_args(cookies_file=None, cookies_from_browser=None) -> list[str]:
 def impersonation_args() -> tuple[str, ...]:
     # TikTok answers plain yt-dlp requests with an unusable page (cloud test 2026-10-24); with
     # curl_cffi installed, a browser impersonation target gets the video. Absent: no flag.
+    # Cloud (2026-10-26): Claude Code's safety check flags browser impersonation as bot-check
+    # circumvention, so a cloud thread always runs plain yt-dlp, whatever the env says; the laptop
+    # route (Remote Control) does the impersonation. WATCH_IMPERSONATE=0 turns it off there too.
+    if os.environ.get('CLAUDE_CODE_REMOTE') == 'true' or os.environ.get('WATCH_IMPERSONATE') == '0':
+        return ()
     try:
         # Same isolation as _run: a fresh directory, so no yt-dlp.conf in the working directory applies.
         with tempfile.TemporaryDirectory(prefix='watch-cwd-') as cwd:
@@ -84,6 +92,10 @@ def network_diagnostic(stderr: str) -> str:
         hint = 'Check your trusted CA configuration; keep TLS verification enabled.'
     else:
         hint = 'Check the original error and update the owning yt-dlp package if needed.'
+    if os.environ.get('CLAUDE_CODE_REMOTE') == 'true' and re.search(
+            r"sign in|not a bot|login required|\b(403|429)\b|too many requests|forbidden|not granting access|empty media|network policy|egress denied|allowlist",
+            lower):
+        hint += ' NEXT: the cloud is refused here, start the laptop route (Remote Control, SKILL.md step 1.2); do not work around the check.'
     return f'{detail}\n{hint}'
 
 
@@ -164,6 +176,13 @@ def fetch_captions(url: str, out_dir: Path, *, sub_lang='auto', cookies_file=Non
     info_path = run / 'video.info.json'
     result = {'video_path': None, 'subtitle_path': None, 'info': {'url': url}, 'downloaded': False,
               'run_dir': str(run), 'info_path': None, 'caption_track': None, 'errors': []}
+    if tiktok.is_tiktok(url):
+        # TikTok refuses plain yt-dlp from the cloud: its public page data comes first (no captions there).
+        try:
+            result['info'] = tiktok.summary(tiktok.fetch_item(url)[0], url)
+            return result
+        except tiktok.TikTokUnavailable as exc:
+            print(f'[watch] TikTok page route failed, trying yt-dlp: {exc}', file=sys.stderr)
     try:
         _run([*_common(run, auth), '--skip-download', '--write-info-json', '--no-write-subs', '--no-write-auto-subs', '--', url])
         info = _read_metadata(info_path)
@@ -184,6 +203,10 @@ def fetch_captions(url: str, out_dir: Path, *, sub_lang='auto', cookies_file=Non
             raise SystemExit('yt-dlp did not produce the selected caption track.')
         result['subtitle_path'] = str(subtitle)
     except SystemExit as exc:
+        meta = None if result['info_path'] else publicmeta.fetch(url)  # yt-dlp's own metadata wins
+        if meta:
+            result['info'] = meta
+            print(f"[watch] yt-dlp refused; using the platform's public {meta['source']} for the scan", file=sys.stderr)
         result['errors'].append(str(exc))
         print(f'[watch] captions unavailable: {exc}', file=sys.stderr)
     return result
@@ -196,6 +219,13 @@ def download_url(url: str, out_dir: Path, audio_only: bool = False, *, context=N
     run = Path(context['run_dir']) if context.get('run_dir') else _new_run(out_dir)
     record = run / 'final-path.jsonl'
     record.unlink(missing_ok=True)
+    if tiktok.is_tiktok(url) and not audio_only:
+        try:
+            media = tiktok.download(url, run)
+            return {**context, **media, 'subtitle_path': context.get('subtitle_path'), 'downloaded': True,
+                    'run_dir': str(run)}
+        except tiktok.TikTokUnavailable as exc:
+            print(f'[watch] TikTok page route failed, trying yt-dlp: {exc}', file=sys.stderr)
     fmt = 'ba/bestaudio' if audio_only else 'bv*[height<=720]+ba/b[height<=720]/bv+ba/b'
     cmd = [*_common(run, auth), '-N', '8', '-f', fmt, '--merge-output-format', 'mp4',
            '--no-ignore-errors', '--no-write-subs', '--no-write-auto-subs', '--write-info-json',

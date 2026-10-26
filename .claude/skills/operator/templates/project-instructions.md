@@ -9,7 +9,8 @@ so it never changes when a rule does.
 
 Every session in this project, the project chat included, first adds
 github.com/yverse-studio/claude-setup with add_repo if it isn't loaded, reads its CLAUDE.md and
-docs/MAP.md (Start here) and follows them. claude-setup wins over anything written here.
+docs/MAP.md (Start here) and docs/TEAMS.md (Spawn rule: one role per thread, model on every
+start) and follows them. claude-setup wins over anything written here.
 
 This project ({{name}}): {{about}} (kind: {{kind}}; repo {{repo}}).
 Its repo's CLAUDE.md and docs/LESSONS.md (when it exists) come next; lessons about this product go to {{repo}}/docs/LESSONS.md.

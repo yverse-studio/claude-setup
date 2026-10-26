@@ -35,7 +35,7 @@ rules file, the owner's message) override them.
 written by a scheduled script that reads the source; a model retyping them cost $3.72 a run and
 the board was hours stale (2026-10-11 audit). A row without a source is marked unknown.
 
-**Grill first** (yskills 2026-10-26; rule: `CLAUDE.md`, Grill first). Before the brainstorm, one grill round on every new idea or plan: 3-5 short, sharp questions or challenges (who pays, what is the smallest version, what already exists, what breaks it, what it costs), each with its reason and your recommended answer, posted as cards. A thread sends them as `Card:` lines in its reply. Not a list of open questions: a question you can answer from the repo, research or a sensible default you answer yourself. His answers go into `PLAN.md`; no second round unless an answer contradicts the plan. Skipped for a bug fix, a small tweak, "stop" and "just do it".
+**Grill first** (yskills 2026-10-26; rule: `CLAUDE.md`, Grill first). Before the brainstorm, one grill round on every new idea or plan: 3-5 short, sharp questions or challenges (who pays, what is the smallest version, what already exists, what breaks it, what it costs), each with its reason and your recommended answer, posted as cards. A thread posts them itself with `request_decision`, one card per question. Not a list of open questions: a question you can answer from the repo, research or a sensible default you answer yourself. His answers go into `PLAN.md`; no second round unless an answer contradicts the plan. Skipped for a bug fix, a small tweak, "stop" and "just do it".
 
 **Brainstorm first, for every new project**, whether the idea comes as a message or as an "HQ
 request <id>" from the Neues Projekt notepad: the brainstorm is a real discussion, not a list of questions: Claude says what it would build instead, challenges the idea and its price with reasons, proposes options of its own and asks yskills what excites them (co-founder rule in CLAUDE.md); the open questions still reach yskills as cards. It and the research (`research/RESEARCH.md`) turn into `PLAN.md`
@@ -45,61 +45,24 @@ brainstorm. No repo, scaffold or builder thread exists before the plan is posted
 `new-project` workflow makes the repo and the live site (`docs/USING.md`, Deploy a page in one shot).
 The brainstorm ends with a stress test (from a video, yskills 2026-10-24): write 3 to 10 different versions of the idea, let three hostile voices attack each (a customer: would I pay? a competitor: how do I crush it? an investor: does it make money?), drop the weakest, merge the best three, and put the scoreboard and the survivor into `PLAN.md`. Prompt text only, no tool.
 
-**Idea for a live project** (yskills, 2026-10-12: "where are my teams?"). When yskills posts an
-idea or change for a project that already runs (feature, fix, art, video, a tutorial), the Project
-Manager runs the same roles as for a new app, never one catch-all thread. In that turn: [advisory]
-
-1. **Research first:** a `Researcher` subagent (a thread when big) on best practice and the state
-   of the art for this idea, one WebSearch per open fact, one page back. A plain bug fix skips it.
-2. **Split by role:** threads titled `<Role> · <what>`: Designer when the look changes (drafts and
-   the vote, `roles/designer.md`), one Programmer per PR, then a gate per PR (size S and M in the author thread, L a fresh Tester) running
-   `gate.md` with Reviewer and Security inside. Each brief names its playbook and the research.
-3. **Parallel:** several ideas in one message become one chain each; chains that share no file
-   run at once (the slice rule below), never more than three Programmer threads; the rest queue
-   in `PROGRESS.md`. [advisory]
-4. **Deliver:** the `Done:` line in the project chat ends with one short line per role saying what
-   it found or checked.
-
-**One role per thread, named by it.** Thread titles and dashboard rows read `<Role> · <what>`,
-so yskills sees at a glance who does what. Roles (the shape Anthropic recommends for long-running
-agents: one planner, workers with a fresh context per job, an evaluator that never built what it [advisory]
-grades):
-
-| Role | Does | Runs as | Example title |
-|---|---|---|---|
-| Project Manager | the operator: plans with yskills, starts the others, keeps PROGRESS.md and its HQ rows | the project chat | Project Manager · duo-test |
-| Researcher | competitors, prices, tools and skills, proof people pay (step 2) | subagents; a thread when big | Researcher · competitors |
-| Designer | art direction (references, palette, type) before any screen, then every UI screenshot (`roles/designer.md`) | a thread at project start and for a redesign; `design-critic` subagent per UI PR | Designer · art direction |
-| Game Designer | how a game plays before the first build: core loop, run length, difficulty, feedback, ad hooks, three researched references (`roles/game-designer.md`) | a thread at project start of a game and before a PR that changes play | Game Designer · design doc |
-| Audio | how a game sounds before the build touches sound: sound palette per feedback moment, music plan, mix bar, mute, autoplay, KB budget, licence-clean sources (`roles/audio.md`) | a thread after the Game Designer's doc, and before a PR that adds a sound moment | Audio · sound doc |
-| Content Designer | the words before the first screen: voice, terms, German and English strings, errors and empty states (`roles/content-designer.md`) | a thread at project start of a site or app and before a PR that adds a flow or an error state | Content Designer · copy deck |
-| Analytics owner | what is measured before launch: events with the question each answers, the money metric, the legal basis, and the weekly numbers line for HQ (`roles/analytics.md`) | a thread at project start of a site, app or game and before a PR that adds a user action | Analytics · tracking plan |
-| Programmer | one slice or fix, the PR, green CI | a thread each: one at a time, a second only when the slices share no file, never more than three | Programmer · subscription |
-| Tester | the gate: grades the preview against the criteria | a fresh thread per PR | Tester · PR 23 |
-| Reviewer | reads the diff | subagent the Tester starts | Reviewer · PR 23 |
-| Security | `security-reviewer` on the diff, `red-team` on the preview | subagents the Tester starts | Security · PR 23 |
-| Legal | the law must-haves, then pass/fail on the preview | subagent; a thread to write legal texts | Legal · launch |
-| Marketer | probe, launch posts, weekly growth | a thread for the launch, then the weekly routine | Marketer · launch |
-| Video studio | a video or ad: Producer, Writer, Director, Sound, Editor, Motion, Critic (`video-studio` skill) | a `Producer` thread per video; the rest per that skill | Producer · walking video |
-| Social team | the brand accounts: idea backlog, weekly plan, posting, comments and DMs, brand deals, numbers (`social-team` skill: Lead, Scout, Community, Partnerships, Analyst) | the weekly routine plus a `Social` thread per brand and week | Social · Y-Land week 3 |
-
-Any role becomes its own thread when its job is big (the kit in `docs/MAP.md` decides which roles exist for a kind); short checks stay subagents because every
-thread re-reads its context. **Each role has a playbook in `roles/`** (what it does, what it
-uses, its checklist and its lessons from earlier projects); a role reads its playbook before it
-starts, and its thread or subagent prompt names it.
+**Teams, sizes and roles** (yskills 2026-10-12 "where are my teams?", 2026-10-26): their one home
+is [`docs/TEAMS.md`](../../../docs/TEAMS.md). Size the task there (S, M, L), call only the roles the
+size and kit need, as a thread or a subagent as its roster says, with the role's `model`. A live
+project's idea runs the same pipeline as a new app, never one catch-all thread. [advisory] Each role reads its
+playbook before it starts, and its brief names it.
 
 **Starting threads.** In a Claude Project the project conversation starts threads itself (`start_thread_session`, with
-`model` from the Models line in `docs/WORKFLOW.md`); each
+`model` always set: the role's row in `docs/TEAMS.md`); each [advisory]
 reports back when it finishes and keeps fixing CI and review comments on its PR. From inside a
-thread, ask the coordinator (`get_channel_session_id`, then `send_message` with the task). In a
-plain claude.ai/code chat use `create_session` (`model` from the Models line, `outcome_branch` = the
+thread, ask the coordinator (`message_coordinator`: role, topic, model, files, done-when; older tools: `get_channel_session_id`, then `send_message`). In a
+plain claude.ai/code chat use `create_session` (`model` from the role's row in `docs/TEAMS.md`, `outcome_branch` = the
 task's branch) and check back with `send_later` plus `subscribe_pr_activity`. Project setup once:
-**Thread model** Sonnet (the default; the coordinator passes the model per thread), **Thread
+**Thread model** Sonnet (only the fallback when a start forgot its `model`; on 2026-10-26 it was Opus and every thread ran on Opus), **Thread
 effort** medium, and `templates/project-instructions.md` pasted into Project instructions.
 
 ## 1. Size the job
 
-Which roles start for a kind, and which are skipped: [`docs/MAP.md`](../../../docs/MAP.md) (Kits).
+Which roles start for a size and kind, and which are skipped: [`docs/TEAMS.md`](../../../docs/TEAMS.md) (Sizes, Kits).
 
 | Idea | Shape |
 |---|---|
@@ -119,7 +82,7 @@ Every extra thread re-reads its context, so take the simplest shape that works.
 
 Name and concept first: settle them with one card, push `new/<name>` after the tap; a changed
 concept later means a second repo, Worker and D1 that only "delete <name>" removes. A thread
-without `ask_decision` writes `Card:` in its reply and carries on (`CLAUDE.md`, How to work).
+posts the card itself with `request_decision`; only one without a card tool writes `Card:` in its reply and carries on (`CLAUDE.md`, How to work).
 
 ## 2. The teams
 
@@ -180,7 +143,7 @@ Claude Code's safety checks are not friction to fix: only yskills' allow rules o
 
 ## 5. Spend little
 
-- **Models:** the one line in claude-setup `docs/WORKFLOW.md` (Models). Thread effort medium.
+- **Models:** the role's row in claude-setup `docs/TEAMS.md`, passed on every thread start and subagent. Thread effort medium.
 - Hand off at a milestone, never mid-step: at the context guard's warning (`global/context-guard.mjs` holds the numbers) finish the current step, write the handoff, stop; never start a new unit past it (two long threads were 77% of usage on 2026-10-04). The planner sizes every unit to one thread (about 90k working room); a unit that cannot fit is split in the plan. Haiku readers stay under 100k of prompt. A template over 2000 lines is split before the next change. [advisory]
 - Where 2026-10-07 burned tokens, and the rule that stops each: hand-offs at 270k (write the
   hand-off at the guard's first warning); `dashboard.html` read whole again and again (grep the

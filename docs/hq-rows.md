@@ -40,6 +40,15 @@ each, **and `mode: 'live'`; without it the amount is Testgeld and scores nothing
 source, at, link}], sources[{name, ok, note}]}`), filled from live sources by the refresher thread
 (`hq-refresh.md` in company-xy): HQ asks it on open when the list is over 150 minutes old; no routine of its own.
 Rule: `HQ.todayFor`, `HQ.refreshDue`.
+**Decisions at the desk (yskills 2026-10-26):** a thread that needs yskills posts its real card (`request_decision`, `CLAUDE.md`
+Cards) and, in the same turn, writes one row `decisions/<id>` with `ArtifactData` `set`: `{thread (its link), session (its own
+`get_session` id), role (Designer, Programmer, ...), question, context?, options [{label, consequence?, image? (https, e.g. a vote
+screenshot)}] (2-4), recommended? (index), status: 'open', at}`. HQ makes that role's desk wave and shows the question, the picture
+options, Neu machen and a free line on its card; his answer lands on the row (`status: 'answered'`, `answer {pick, redo, note,
+text}`) and arrives in the thread as `HQ decision <id>: ...` (company-xy `hq-decide.js`). Whichever comes first, the card tap or the
+HQ answer, counts; the thread then closes the other (`close_decision`, or set the row `answered`). This is the only HQ row a
+thread writes; status, task and work rows come from the refresher.
+
 **New project tap:** HQ's yellow notepad saves `requests/<id>` (`{text, at, status}`: `new` saved,
 `sent` the page reached the coordinator, `relayed` the refresher passed it on, `started` the brainstorm
 thread runs, with `link`) and messages the coordinator with the Claude Code Remote connector's

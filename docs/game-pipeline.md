@@ -73,6 +73,10 @@ Full steps and the clip table: `GameAssetLibrary\animations\retarget\ANIMATIONEN
    (`Dance_Tease` is the example).
 7. Add the row to the clip table in `ANIMATIONEN.md`.
 
+Hand-keyed motion goes on a control rig (Rigify or IK/FK controls) that drives the deform bones,
+never keys on the deform (skin) bones directly; retarget bakes above are the exception. Before a new
+kind of task (rig, cloth, physics), look up how artists do it without AI and follow that method.
+
 Two people (kiss, bed scenes): templates name roles, not bones. Give each character one bone map
 in `rigs\interaction\kiss\bone_maps\<name>.json` (copy `rika.json`), then
 `blender -b --factory-startup --python rigs\interaction\kiss\apply_interaction.py -- <scene>.json <charA.blend> <charB.blend> out.blend`.

@@ -9,10 +9,10 @@ The project chat itself (the coordinator running this skill). Plans with yskills
 ## Every time
 
 - Grill first (`operator` SKILL.md, Grill first): a new idea or plan from yskills gets one round of 3-5 sharp questions as cards before the brainstorm or any thread; the Programmer, Designer and Researcher briefs carry his answers.
-- Every decision for yskills is a card, never options in running text: post it with `ask_decision`, or relay a thread's `Card:` lines as one (`CLAUDE.md`, Cards).
+- Every decision for yskills is a card, never options in running text: post it with `ask_decision`/`request_decision`; threads post their own real cards, so relay a thread's `Card:` text as a card only when it had no card tool. You have none (tap-tested 2026-10-26): a decision of your own goes to a one-card thread that posts it with `request_decision` (`CLAUDE.md`, Cards).
 - Brainstorm first, for a typed idea and for an "HQ request <id>" alike; the plan is posted as brief (a) with recommended picks and building starts from it (auto-run).
-- An idea or change for a live project runs research, then role threads (operator `SKILL.md`, Idea for a live project); never one catch-all thread.
-- Start one thread per slice or fix, each named `<Role> · <what>`, with the model from the routing rule (the Models line, `docs/WORKFLOW.md`). One slice thread at a time, the next in a fresh thread after the previous merged; a second only when the slices share no file; never more than three.
+- An idea or change, for a new app or a live project, is routed per task by `docs/TEAMS.md` (Spawn rule 1: task, kit, size; an app built in the social project is the `app` kit) and staffed by its Roster: threads only for the roles it lists as threads, never one catch-all thread and never a thread that plays two roles.
+- Start one thread per slice or fix, each named `<Role> · <what>`, titled and modelled by `docs/TEAMS.md` (Spawn rule): `model` is passed on every start, never left to the project default. One slice thread at a time, the next in a fresh thread after the previous merged; a second only when the slices share no file; never more than three.
 - Every brief names what is final: yskills' pauses and rejected assets or looks. Relay a "stop" to every running thread at once.
 - Report results and real blockers only; a card never stalls work: the thread goes on with the recommendation, except money, a new service, deleting and anything irreversible, which wait for the tap.
 - Close threads (yskills, 2026-10-10: threads stayed open after merge): the builder sleeps once its PR is up and the gate merges, so nobody else will close it. In the turn you post a `Done:` line for a merged PR, resolve the Programmer thread (for S and M it is the gate, after its merge, lessons step and `Done:` line) and the Tester thread (size L only) with `set_thread_resolved` (thread_id), unless their last reply still asks yskills something. Also sweep `list_thread_sessions` at every `Done:` and on the daily loop: resolve every thread whose PR `list_project_prs` shows merged or closed, or whose report was delivered. Resolve it yourself, never wait for the thread to do it.
@@ -25,7 +25,7 @@ The project chat itself (the coordinator running this skill). Plans with yskills
   `Done:` line yet.
 - Blocked threads: the same fire (`list_thread_sessions`) posts one chat line for every thread
   waiting on yskills longer than 12 hours, naming the one tap on its card.
-- Cards (rule: `CLAUDE.md`, How to work): you post every card for yskills in the project chat, from a thread's `Card:` reply too, relay the tap back to that thread, attaching a vote's screenshots (`designer.md`, Vote cards); never an Artifact.
+- Cards (rule: `CLAUDE.md`, How to work): the card itself is posted by its thread with `request_decision`; you post one line in the project chat that links to it, and relay the tap back to that thread, attaching a vote's screenshots (`designer.md`, Vote cards); never an Artifact.
 - yskills reads only the project chat: post every result, milestone, `Done:` line and live link from the threads there in a line or two; PR links and gate talk stay in threads.
 - Verify every revenue source against real data (a route call, a table query with known payments) before a thread wires it into a UI.
 - Every write to `PROGRESS.md` updates the HQ rows in the same batch.
@@ -44,7 +44,7 @@ The one home of the coordinator's start protocol. Every new coordinator session,
 
 1. Read `MEMORY.md`: the state, in the shape of `templates/project-memory.md`.
 2. `list_thread_sessions`: the board.
-3. `add_repo` claude-setup if it is not loaded; read `CLAUDE.md` and `docs/MAP.md` (Start here).
+3. `add_repo` claude-setup if it is not loaded; read `CLAUDE.md`, `docs/MAP.md` (Start here) and `docs/TEAMS.md` (Spawn rule and the team tables: the role and model of every thread you start).
 4. Reconcile. Every working or blocked thread on the board has a line under `## Threads` in `MEMORY.md`, and every Threads line has a live thread. The board wins: correct memory in the same turn. Every ask of yskills in the last day of chat has a thread, a PR or a `Done:` line (the asks ledger above).
 5. Cheap memory check: `MEMORY.md` has only the template's five sections and no rule line. A line that is a rule becomes a `loop:setup` issue (`docs/WORKFLOW.md`, Learning).
 6. Post nothing unless something is wrong.
@@ -53,7 +53,7 @@ The one home of the coordinator's start protocol. Every new coordinator session,
 
 yskills (2026-10-18): "does every thread know what model to use and how much context makes sense before handoff?" Two threads ran past their limit, so the rule is in every brief, not in memory.
 
-- Every `start_thread_session` brief starts with the block in `briefs.md` ("Every thread brief starts with"), its two filled lines included: `Model:` the id from the Models line (`docs/WORKFLOW.md`) and `Handoff:` at <N>k. N is 350 by default (its home is `global/context-guard.mjs`: warn 250k, hand off 350k); you raise it in the brief for a big task, per thread (yskills, 2026-10-18), and the thread then watches that number.
+- Every `start_thread_session` brief starts with the block in `briefs.md` ("Every thread brief starts with"), its two filled lines included: `Model:` the id for the role's row in `docs/TEAMS.md` and `Handoff:` at <N>k. N is 350 by default (its home is `global/context-guard.mjs`: warn 250k, hand off 350k); you raise it in the brief for a big task, per thread (yskills, 2026-10-18), and the thread then watches that number.
 - A thread writes its handoff file at its `Handoff:` number, at a milestone, never mid-step: `/mnt/project-files/<project>/handoff/<date>-<topic>.md` (what is done, what is next, branch, PR, open asks), replies with its path and stops. Haiku readers stay under 100k.
 - You start the fresh thread on that file and never resume a thread over its limit or idle over an hour.
 - The context guard (`global/context-guard.mjs`) warns at 250k only where `cloud/setup.sh` ran as the environment's setup script; a thread does not count on it and watches its own context.

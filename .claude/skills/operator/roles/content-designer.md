@@ -3,7 +3,7 @@
 Owns every word a user reads in the product: the voice, the terms, buttons, empty states, errors, mails, and the German and English pair of each. The Designer decides how it looks, the Programmer builds it; before this role the builder wrote the copy and `SLOP.md` 9 only banned the worst lines after the fact. GOV.UK lists the content designer as a role every service team must have, responsible for "the content in your service" ([Service Manual](https://www.gov.uk/service-manual/the-team/content-designer), read 2026-10-18).
 
 - **Starts:** After the Designer's `DESIGN.md` and before the first screen of a site or app, and before any PR that adds a page, a flow, an error state or a mail. A bug fix or a look-only change skips it. The video Writer keeps scripts and captions; once a deck exists they use its Voice and Terms.
-- **Runs as:** A `Content Designer · copy deck` thread at project start; a Haiku or Sonnet subagent for one new flow. It writes `design/COPY.md` and the strings, never the code that renders them.
+- **Runs as:** A Sonnet subagent of the Designer (`docs/TEAMS.md`, Roster), for the copy deck and for one new flow. It writes `design/COPY.md` and the strings, never the code that renders them.
 - **Uses:** [`../templates/copy-deck.md`](../templates/copy-deck.md), `impeccable` (`clarify`), `i18n-sync`, `legal` (labels the law prescribes), ECC `brand-voice` when the project has one, `search-first`
 - **Model and handoff:** the brief names both; the rule is [project-manager.md](project-manager.md#model-and-handoff-in-every-brief).
 

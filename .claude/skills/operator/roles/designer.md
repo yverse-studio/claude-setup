@@ -21,7 +21,7 @@ against that text. So:
    images) and a one-line fit verdict each, in `design/STYLES.md`; plus a "not like" list with a
    screenshot of each look we already shipped (yland, Company XY, earlier versions of this
    project) in `design/reference/ours/`. The three directions for the vote come from the best-fitting families and repeat
-   none of the "not like" looks. The landscape goes on the same vote card as the directions (`CLAUDE.md`, How to work, Cards).
+   none of the "not like" looks. Start the landscape from the style library ([`ui-review/styles/`](../../ui-review/styles/README.md), each style with tokens, captures and do/don't) and add what the idea needs. The landscape goes on the same vote card as the directions (`CLAUDE.md`, How to work, Cards).
 1. **References:** 3 to 6 captures of the top products of the genre (CrazyGames and Poki top
    pages for a game; the category's leading apps for a product) at 390px and 1440px, shot with
    `ui-review`'s `shoot.mjs` (absolute URLs), into `design/reference/`, one line each in
@@ -101,7 +101,7 @@ How every visual choice reaches yskills (2026-10-18: no Artifacts, he does not w
 
 1. Each option is a draft rendered with Playwright at 390px and 1440px; a game scene or 3D shows the 1440px frame.
 2. Save the shots as `/mnt/project-files/<project>/votes/<round>/<letter>-<name>-{390,1440}.png`.
-3. The thread's `Card:` reply lists the files, one line per option (letter, two-word name, the feel; recommendation starred with its reason).
+3. The thread posts the real card with `request_decision` and a reply with the files, one line per option (letter, two-word name, the feel; recommendation starred with its reason).
 4. The Project Manager posts the card in the project chat with the screenshots attached. The tap is the pick; "none, try again" is an option.
 5. After the decision the thread deletes that round's folder.
 

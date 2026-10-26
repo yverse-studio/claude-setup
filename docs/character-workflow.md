@@ -18,6 +18,9 @@ and yskills had to say it twice. This page is the fix.
    `/mnt/project-files/<project>/references/named/<slug>.png`, listed in `references/README.md`
    (character, series, original file). "Basis" always means the character in that picture, never
    a model file. No reference picture, no build.
+   For a 3D build add a turnaround: front, side and back, orthographic, same scale, lined up
+   (an image generator may make it; check the views line up before using it). The builder
+   measures against it instead of guessing from one perspective picture.
 2. **Brief.** One thread per figure (`Programmer · <Name> figure`). The brief names the reference
    file and lists what is off, biggest first (eyes, hair, face, skin, body, outfits), from a
    diagnosis sheet: reference beside the current render.
@@ -77,7 +80,7 @@ the deliverables of step 5, and a pointer to this page.
 ## Context budget (2026-10-08)
 
 Why figure threads fill up after about 35 minutes of Blender work and need a handoff. Facts: a thread
-(model per [`docs/WORKFLOW.md`](WORKFLOW.md), Models) has a 1M-token window, the largest there is; the effort level does not
+(model per [`docs/TEAMS.md`](TEAMS.md), Models line) has a 1M-token window, the largest there is; the effort level does not
 change it. More tokens for one thread cannot be bought, so the spending is what goes down. (The
 three consumers below are read off the handoffs of Hinata, Rangiku, Mitsuri, Rias and Mira in the
 game; the sessions' own token logs are not visible from the project.)

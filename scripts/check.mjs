@@ -27,7 +27,7 @@ function frontmatter(file) {
 const dirs = (p) => (existsSync(join(root, p)) ? readdirSync(join(root, p)).filter((n) => statSync(join(root, p, n)).isDirectory()) : [])
 const mds = (p) => (existsSync(join(root, p)) ? readdirSync(join(root, p)).filter((n) => n.endsWith('.md')) : [])
 const seen = { skill: new Map(), agent: new Map() }
-// Agent `model:` aliases Claude Code accepts (docs/WORKFLOW.md, Models); a typo here silently falls back to inherit.
+// Agent `model:` aliases Claude Code accepts (docs/TEAMS.md, Models line); a typo here silently falls back to inherit.
 const MODELS = new Set(['fable', 'opus', 'sonnet', 'haiku', 'inherit'])
 function check(kind, file, expected) {
   const fm = frontmatter(join(root, file))
@@ -74,6 +74,8 @@ if (plugins) {
   if (inlined?.replace(/\r/g, '').trim() !== readFileSync(join(root, 'global/context-guard.mjs'), 'utf8').replace(/\r/g, '').trim()) errors.push('cloud/setup.sh context guard differs from global/context-guard.mjs')
   const attempt = sh.match(/<<'ATTEMPT'\r?\n([\s\S]*?)\r?\nATTEMPT\r?\n/)?.[1]
   if (attempt?.replace(/\r/g, '').trim() !== readFileSync(join(root, 'global/attempt-guard.mjs'), 'utf8').replace(/\r/g, '').trim()) errors.push('cloud/setup.sh attempt guard differs from global/attempt-guard.mjs')
+  const team = sh.match(/<<'TEAM'\r?\n([\s\S]*?)\r?\nTEAM\r?\n/)?.[1]
+  if (team?.replace(/\r/g, '').trim() !== readFileSync(join(root, 'global/team-guard.mjs'), 'utf8').replace(/\r/g, '').trim()) errors.push('cloud/setup.sh team guard differs from global/team-guard.mjs')
 }
 
 // Own skills and agents (the ECC subset is vendored and never hand-edited). A long description gets
@@ -151,10 +153,10 @@ for (const f of [...own, ...walk('.claude/rules'), ...walk('.claude/skills').fil
   }
 }
 
-// One model line (docs/WORKFLOW.md, Models); no other file names a model id. A second table or
+// One model line (docs/TEAMS.md, Spawn rule); no other file names a model id. A second table or
 // wording drifts (yskills, 2026-10-07: threads kept following an outdated copy).
-const modelLine = readFileSync(join(root, 'docs/WORKFLOW.md'), 'utf8').match(/^Models: .*$/m)?.[0]
-if (!modelLine) errors.push('docs/WORKFLOW.md: the Models line is missing')
+const modelLine = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8').match(/^Models: .*$/m)?.[0]
+if (!modelLine) errors.push('docs/TEAMS.md: the Models line is missing')
 const lineIds = new Set(modelLine?.match(/claude-[a-z]+-[\d-]+/g) ?? [])
 const anyText = (d) => readdirSync(join(root, d)).flatMap((n) => {
   const rel = d === '.' ? n : `${d}/${n}`
@@ -168,8 +170,37 @@ for (const f of anyText('.')) {
   for (const id of new Set(text.match(/claude-(?:fable|opus|sonnet|haiku)-[\d-]+/g) ?? [])) {
     const why = lineIds.has(id) ? 'a second copy of a model id' : 'a model id the Models line does not name'
     // CLAUDE.md is a policy file only yskills changes; warn until the paste lands instead of blocking every PR.
-    if (f === 'CLAUDE.md') console.warn(`! ${f}: ${why} (${id}); paste the Models line from docs/WORKFLOW.md`)
-    else errors.push(`${f}: ${why} (${id}); link the Models line in docs/WORKFLOW.md instead`)
+    if (f === 'CLAUDE.md') console.warn(`! ${f}: ${why} (${id}); paste the Models line from docs/TEAMS.md`)
+    else errors.push(`${f}: ${why} (${id}); link the Models line in docs/TEAMS.md instead`)
+  }
+}
+
+// Team map (docs/TEAMS.md; yskills, 2026-10-26: threads played several roles and ran on the default
+// model). Every role playbook is a row there, every row names a model tier, and the Spawn rule
+// section the SessionStart hook prints exists.
+{
+  const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
+  for (const h of ['Spawn rule', 'Sizes', 'Pipeline', 'Roster', 'Kits']) if (!new RegExp(`^## ${h}$`, 'm').test(teams)) errors.push(`docs/TEAMS.md: the "## ${h}" section is missing`)
+  for (const d of ['.claude/skills/operator/roles', '.claude/skills/video-studio/roles', '.claude/skills/social-team/roles']) {
+    for (const n of readdirSync(join(root, d)).filter((n) => n.endsWith('.md'))) {
+      const row = teams.split('\n').find((l) => l.startsWith('|') && l.includes(`](../${d}/${n})`))
+      if (!row) errors.push(`docs/TEAMS.md: no team row links ${d}/${n}`)
+      else if (!/\b(Haiku|Sonnet|Opus|Fable|as yskills sets it)\b[^|]*\|\s*$/.test(row)) errors.push(`docs/TEAMS.md: the row of ${d}/${n} names no model in its last column`)
+    }
+  }
+}
+
+// Section refs to TEAMS.md (yskills 2026-10-26 gate: links to a renamed "The teams" survived the
+// rewrite). "TEAMS.md (A, B)" must name headings TEAMS.md has, and the Kits live in TEAMS.md, not MAP.md.
+{
+  const heads = new Set(readFileSync(join(root, 'docs/TEAMS.md'), 'utf8').match(/^#{2,3} .+$/gm).map((h) => h.replace(/^#+ /, '').replace(/ \(.*$/, '').toLowerCase()))
+  heads.add('models line')
+  for (const f of anyText('.').filter((f) => /\.(md|mjs)$/.test(f) && !f.startsWith('docs/archive/') && !f.startsWith('docs/proposals/') && !f.startsWith('docs/research/') && f !== 'scripts/check.mjs' && !f.endsWith('.test.mjs'))) {
+    const text = readFileSync(join(root, f), 'utf8')
+    for (const [, list] of text.matchAll(/TEAMS\.md`?\)?,? \(([A-Z][\w ]*(?:, [A-Z][\w ]*)*)\)/g)) {
+      for (const name of list.split(', ')) if (!heads.has(name.toLowerCase())) errors.push(`${f}: points to docs/TEAMS.md (${name}), which has no such section`)
+    }
+    if (/MAP\.md`?\)? \(?Kits\b/.test(text)) errors.push(`${f}: points to the Kits in docs/MAP.md; they live in docs/TEAMS.md (Kits)`)
   }
 }
 
@@ -271,6 +302,24 @@ for (const h of AUDIO_HEADINGS) {
   if (!new RegExp(`^## ${h}\\s*$`, 'm').test(audioTemplate)) errors.push(`templates/audio.md: lacks "## ${h}"`)
 }
 
+// Style library: every styles/<name>/ carries a STYLE.md with the template sections, a refs/ image, and an index row.
+const stylesDir = join(root, '.claude/skills/ui-review/styles')
+const stylesIndex = readFileSync(join(stylesDir, 'README.md'), 'utf8')
+for (const name of readdirSync(stylesDir, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name)) {
+  const stylePath = join(stylesDir, name, 'STYLE.md')
+  if (!existsSync(stylePath)) {
+    errors.push(`styles/${name}: no STYLE.md`)
+    continue
+  }
+  const style = readFileSync(stylePath, 'utf8')
+  for (const h of ['Tokens', 'Do', "Don't", 'How to use it']) {
+    if (!new RegExp(`^## ${h}\\s*$`, 'm').test(style)) errors.push(`styles/${name}/STYLE.md: lacks "## ${h}"`)
+  }
+  const refsDir = join(stylesDir, name, 'refs')
+  if (!existsSync(refsDir) || !readdirSync(refsDir).some((f) => /\.(png|jpe?g|webp)$/i.test(f))) errors.push(`styles/${name}/refs: no image`)
+  if (!stylesIndex.includes(`](${name}/STYLE.md)`)) errors.push(`styles/README.md: no row for ${name}`)
+}
+
 // Copy deck: one home (roles/content-designer.md); the template must carry every heading copy-check.mjs requires.
 const { REQUIRED_HEADINGS: COPY_HEADINGS } = await import('../.claude/skills/ui-review/scripts/copy-check.mjs')
 const contentRole = readFileSync(join(root, '.claude/skills/operator/roles/content-designer.md'), 'utf8')
@@ -320,17 +369,17 @@ for (const t of ['project-memory', 'lessons']) {
 const memoryTemplate = join(root, '.claude/skills/operator/templates/project-memory.md')
 if (existsSync(memoryTemplate) && statSync(memoryTemplate).size >= 3072) errors.push('templates/project-memory.md: 3 KB or more; the template must stay under 3072 bytes so a MEMORY.md in its shape does too, shorten the examples')
 
-// Kits: docs/MAP.md (Kits) has one row per project kind, and every "Read first" path resolves.
+// Kits: docs/TEAMS.md (Kits) has one row per project kind, and every "Read first" path resolves.
 const KINDS = ['site', 'app', 'game', 'video', 'social', 'story', 'setup', 'repo']
-const kitsBlock = mapText.split(/^## Kits\s*$/m)[1]?.split(/^## /m)[0]
-if (!kitsBlock) errors.push('docs/MAP.md: lacks a "## Kits" section')
+const kitsBlock = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8').split(/^## Kits\s*$/m)[1]?.split(/^## /m)[0]
+if (!kitsBlock) errors.push('docs/TEAMS.md: lacks a "## Kits" section')
 else {
   const rows = kitsBlock.split('\n').filter((l) => l.startsWith('| `'))
   for (const kind of KINDS) {
     const row = rows.find((l) => l.startsWith(`| \`${kind}\``))
-    if (!row) { errors.push(`docs/MAP.md (Kits): no row for kind "${kind}"`); continue }
+    if (!row) { errors.push(`docs/TEAMS.md (Kits): no row for kind "${kind}"`); continue }
     for (const [, target] of (row.split('|')[2] ?? '').matchAll(/\]\(([^)#]+)/g)) {
-      if (!existsSync(join(root, 'docs', target))) errors.push(`docs/MAP.md (Kits): ${kind} reads ${target}, which does not exist`)
+      if (!existsSync(join(root, 'docs', target))) errors.push(`docs/TEAMS.md (Kits): ${kind} reads ${target}, which does not exist`)
     }
   }
 }
