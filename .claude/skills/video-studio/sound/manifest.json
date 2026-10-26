@@ -1,0 +1,1843 @@
+{
+ "schema": 1,
+ "rules": "claude-setup .claude/skills/video-studio/sound-kit.md",
+ "entries": [
+  {
+   "id": "junkala-level-1",
+   "kind": "music",
+   "mood": "drive",
+   "source": "Juhani Junkala, Level 1",
+   "url": "https://opengameart.org/content/5-chiptunes-action",
+   "licence": "CC0-1.0",
+   "proof": "licences/opengameart/LICENCE-proof-5-chiptunes-action.html",
+   "tags": [
+    "chiptune",
+    "driving",
+    "game",
+    "energetic"
+   ],
+   "presets": [
+    "big"
+   ],
+   "file": "music/drive/junkala-level-1.mp3",
+   "lufs": -7.6,
+   "rms": -9.056461,
+   "peak": 2.1,
+   "seconds": 80.405,
+   "bpm": 123.0
+  },
+  {
+   "id": "junkala-level-3",
+   "kind": "music",
+   "mood": "drive",
+   "source": "Juhani Junkala, Level 3",
+   "url": "https://opengameart.org/content/5-chiptunes-action",
+   "licence": "CC0-1.0",
+   "proof": "licences/opengameart/LICENCE-proof-5-chiptunes-action.html",
+   "tags": [
+    "chiptune",
+    "driving",
+    "game",
+    "tense"
+   ],
+   "presets": [
+    "big"
+   ],
+   "file": "music/drive/junkala-level-3.mp3",
+   "lufs": -7.6,
+   "rms": -9.352467,
+   "peak": 1.6,
+   "seconds": 91.141,
+   "bpm": 107.7
+  },
+  {
+   "id": "junkala-stage-1",
+   "kind": "music",
+   "mood": "playful",
+   "source": "Juhani Junkala, Stage 1",
+   "url": "https://opengameart.org/content/4-chiptunes-adventure",
+   "licence": "CC0-1.0",
+   "proof": "licences/opengameart/LICENCE-proof-4-chiptunes-adventure.html",
+   "tags": [
+    "chiptune",
+    "adventure",
+    "game",
+    "playful"
+   ],
+   "presets": [
+    "big"
+   ],
+   "file": "music/playful/junkala-stage-1.ogg",
+   "lufs": -11.8,
+   "rms": -13.379426,
+   "peak": -0.0,
+   "seconds": 41.143,
+   "bpm": 143.6
+  },
+  {
+   "id": "junkala-title-screen",
+   "kind": "music",
+   "mood": "retro",
+   "source": "Juhani Junkala, Title Screen",
+   "url": "https://opengameart.org/content/5-chiptunes-action",
+   "licence": "CC0-1.0",
+   "proof": "licences/opengameart/LICENCE-proof-5-chiptunes-action.html",
+   "tags": [
+    "chiptune",
+    "upbeat",
+    "game",
+    "bright"
+   ],
+   "presets": [
+    "big"
+   ],
+   "file": "music/retro/junkala-title-screen.mp3",
+   "lufs": -9.0,
+   "rms": -10.498013,
+   "peak": 1.6,
+   "seconds": 14.707,
+   "bpm": 112.3
+  },
+  {
+   "id": "junkala-boss-fight",
+   "kind": "music",
+   "mood": "tense",
+   "source": "Juhani Junkala, Boss Fight",
+   "url": "https://opengameart.org/content/4-chiptunes-adventure",
+   "licence": "CC0-1.0",
+   "proof": "licences/opengameart/LICENCE-proof-4-chiptunes-adventure.html",
+   "tags": [
+    "chiptune",
+    "intense",
+    "game",
+    "boss"
+   ],
+   "presets": [
+    "big"
+   ],
+   "file": "music/tense/junkala-boss-fight.ogg",
+   "lufs": -11.4,
+   "rms": -13.433675,
+   "peak": -0.1,
+   "seconds": 71.724,
+   "bpm": 172.3
+  },
+  {
+   "id": "kenney-bell-bong-01",
+   "kind": "sfx",
+   "category": "bell",
+   "source": "Kenney, Interface Sounds",
+   "url": "https://kenney.nl/assets/interface-sounds",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/interface-sounds/License.txt",
+   "original": "bong_001.ogg",
+   "tags": [
+    "warm",
+    "soft",
+    "reveal",
+    "punchline"
+   ],
+   "presets": [
+    "real_talk",
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/bell/kenney-bell-bong-01.wav",
+   "lufs": null,
+   "rms": -18.302062,
+   "peak": -3.0,
+   "seconds": 0.12
+  },
+  {
+   "id": "kenney-bell-heavy-01",
+   "kind": "sfx",
+   "category": "bell",
+   "source": "Kenney, Impact Sounds",
+   "url": "https://kenney.nl/assets/impact-sounds",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/impact-sounds/License.txt",
+   "original": "impactBell_heavy_000.ogg",
+   "tags": [
+    "ring",
+    "success",
+    "logo-payoff"
+   ],
+   "presets": [
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/bell/kenney-bell-heavy-01.wav",
+   "lufs": -26.5,
+   "rms": -28.163035,
+   "peak": -3.0,
+   "seconds": 1.48
+  },
+  {
+   "id": "kenney-bell-heavy-02",
+   "kind": "sfx",
+   "category": "bell",
+   "source": "Kenney, Impact Sounds",
+   "url": "https://kenney.nl/assets/impact-sounds",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/impact-sounds/License.txt",
+   "original": "impactBell_heavy_003.ogg",
+   "tags": [
+    "ring",
+    "success",
+    "logo-payoff"
+   ],
+   "presets": [
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/bell/kenney-bell-heavy-02.wav",
+   "lufs": -25.1,
+   "rms": -26.567502,
+   "peak": -3.0,
+   "seconds": 0.654
+  },
+  {
+   "id": "kenney-bell-heavy-03",
+   "kind": "sfx",
+   "category": "bell",
+   "source": "Kenney, Impact Sounds",
+   "url": "https://kenney.nl/assets/impact-sounds",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/impact-sounds/License.txt",
+   "original": "impactBell_heavy_004.ogg",
+   "tags": [
+    "ring",
+    "success",
+    "logo-payoff"
+   ],
+   "presets": [
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/bell/kenney-bell-heavy-03.wav",
+   "lufs": null,
+   "rms": -24.148036,
+   "peak": -3.0,
+   "seconds": 0.299
+  },
+  {
+   "id": "kenney-glitch-01",
+   "kind": "sfx",
+   "category": "glitch",
+   "source": "Kenney, Interface Sounds",
+   "url": "https://kenney.nl/assets/interface-sounds",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/interface-sounds/License.txt",
+   "original": "glitch_002.ogg",
+   "tags": [
+    "digital",
+    "tiny",
+    "comedic",
+    "interruption"
+   ],
+   "presets": [
+    "real_talk",
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/glitch/kenney-glitch-01.wav",
+   "lufs": null,
+   "rms": -15.468255,
+   "peak": -2.8,
+   "seconds": 0.027
+  },
+  {
+   "id": "kenney-glitch-02",
+   "kind": "sfx",
+   "category": "glitch",
+   "source": "Kenney, Interface Sounds",
+   "url": "https://kenney.nl/assets/interface-sounds",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/interface-sounds/License.txt",
+   "original": "glitch_004.ogg",
+   "tags": [
+    "digital",
+    "tiny",
+    "comedic"
+   ],
+   "presets": [
+    "real_talk",
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/glitch/kenney-glitch-02.wav",
+   "lufs": null,
+   "rms": -17.682538,
+   "peak": -2.7,
+   "seconds": 0.02
+  },
+  {
+   "id": "kenney-glitch-error-01",
+   "kind": "sfx",
+   "category": "glitch",
+   "source": "Kenney, Interface Sounds",
+   "url": "https://kenney.nl/assets/interface-sounds",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/interface-sounds/License.txt",
+   "original": "error_005.ogg",
+   "tags": [
+    "error",
+    "fail",
+    "comedic",
+    "punchline"
+   ],
+   "presets": [
+    "real_talk",
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/glitch/kenney-glitch-error-01.wav",
+   "lufs": -22.9,
+   "rms": -20.713127,
+   "peak": -3.0,
+   "seconds": 0.497
+  },
+  {
+   "id": "kenney-glitch-error-02",
+   "kind": "sfx",
+   "category": "glitch",
+   "source": "Kenney, Interface Sounds",
+   "url": "https://kenney.nl/assets/interface-sounds",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/interface-sounds/License.txt",
+   "original": "error_006.ogg",
+   "tags": [
+    "error",
+    "fail",
+    "comedic"
+   ],
+   "presets": [
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/glitch/kenney-glitch-error-02.wav",
+   "lufs": -22.0,
+   "rms": -20.203968,
+   "peak": -3.0,
+   "seconds": 0.5
+  },
+  {
+   "id": "kenney-hit-metal-01",
+   "kind": "sfx",
+   "category": "hit",
+   "source": "Kenney, Impact Sounds",
+   "url": "https://kenney.nl/assets/impact-sounds",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/impact-sounds/License.txt",
+   "original": "impactMetal_heavy_000.ogg",
+   "tags": [
+    "metallic",
+    "short",
+    "tight"
+   ],
+   "presets": [
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/hit/kenney-hit-metal-01.wav",
+   "lufs": null,
+   "rms": -22.528882,
+   "peak": -3.0,
+   "seconds": 0.165
+  },
+  {
+   "id": "kenney-hit-metal-02",
+   "kind": "sfx",
+   "category": "hit",
+   "source": "Kenney, Impact Sounds",
+   "url": "https://kenney.nl/assets/impact-sounds",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/impact-sounds/License.txt",
+   "original": "impactMetal_heavy_004.ogg",
+   "tags": [
+    "metallic",
+    "short",
+    "tight"
+   ],
+   "presets": [
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/hit/kenney-hit-metal-02.wav",
+   "lufs": null,
+   "rms": -21.115669,
+   "peak": -3.0,
+   "seconds": 0.131
+  },
+  {
+   "id": "kenney-hit-plate-01",
+   "kind": "sfx",
+   "category": "hit",
+   "source": "Kenney, Impact Sounds",
+   "url": "https://kenney.nl/assets/impact-sounds",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/impact-sounds/License.txt",
+   "original": "impactPlate_heavy_001.ogg",
+   "tags": [
+    "metallic",
+    "clang",
+    "comedic"
+   ],
+   "presets": [
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/hit/kenney-hit-plate-01.wav",
+   "lufs": null,
+   "rms": -19.480465,
+   "peak": -3.0,
+   "seconds": 0.349
+  },
+  {
+   "id": "kenney-hit-plate-02",
+   "kind": "sfx",
+   "category": "hit",
+   "source": "Kenney, Impact Sounds",
+   "url": "https://kenney.nl/assets/impact-sounds",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/impact-sounds/License.txt",
+   "original": "impactPlate_heavy_003.ogg",
+   "tags": [
+    "metallic",
+    "clang",
+    "comedic"
+   ],
+   "presets": [
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/hit/kenney-hit-plate-02.wav",
+   "lufs": null,
+   "rms": -19.615665,
+   "peak": -2.9,
+   "seconds": 0.344
+  },
+  {
+   "id": "kenney-hit-punch-01",
+   "kind": "sfx",
+   "category": "hit",
+   "source": "Kenney, Impact Sounds",
+   "url": "https://kenney.nl/assets/impact-sounds",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/impact-sounds/License.txt",
+   "original": "impactPunch_medium_000.ogg",
+   "tags": [
+    "punchy",
+    "short",
+    "beat-hit"
+   ],
+   "presets": [
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/hit/kenney-hit-punch-01.wav",
+   "lufs": -18.5,
+   "rms": -19.078977,
+   "peak": -3.0,
+   "seconds": 0.431
+  },
+  {
+   "id": "kenney-hit-punch-02",
+   "kind": "sfx",
+   "category": "hit",
+   "source": "Kenney, Impact Sounds",
+   "url": "https://kenney.nl/assets/impact-sounds",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/impact-sounds/License.txt",
+   "original": "impactPunch_medium_001.ogg",
+   "tags": [
+    "punchy",
+    "short",
+    "beat-hit"
+   ],
+   "presets": [
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/hit/kenney-hit-punch-02.wav",
+   "lufs": -18.4,
+   "rms": -18.765124,
+   "peak": -3.0,
+   "seconds": 0.402
+  },
+  {
+   "id": "kenney-hit-punch-03",
+   "kind": "sfx",
+   "category": "hit",
+   "source": "Kenney, Impact Sounds",
+   "url": "https://kenney.nl/assets/impact-sounds",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/impact-sounds/License.txt",
+   "original": "impactPunch_medium_004.ogg",
+   "tags": [
+    "punchy",
+    "short",
+    "beat-hit"
+   ],
+   "presets": [
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/hit/kenney-hit-punch-03.wav",
+   "lufs": -18.1,
+   "rms": -20.570924,
+   "peak": -3.0,
+   "seconds": 0.543
+  },
+  {
+   "id": "kenney-hit-punch-heavy-01",
+   "kind": "sfx",
+   "category": "hit",
+   "source": "Kenney, Impact Sounds",
+   "url": "https://kenney.nl/assets/impact-sounds",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/impact-sounds/License.txt",
+   "original": "impactPunch_heavy_000.ogg",
+   "tags": [
+    "punchy",
+    "body",
+    "payoff",
+    "punchline"
+   ],
+   "presets": [
+    "real_talk",
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/hit/kenney-hit-punch-heavy-01.wav",
+   "lufs": -19.9,
+   "rms": -19.983281,
+   "peak": -3.0,
+   "seconds": 0.649
+  },
+  {
+   "id": "kenney-hit-punch-heavy-02",
+   "kind": "sfx",
+   "category": "hit",
+   "source": "Kenney, Impact Sounds",
+   "url": "https://kenney.nl/assets/impact-sounds",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/impact-sounds/License.txt",
+   "original": "impactPunch_heavy_002.ogg",
+   "tags": [
+    "punchy",
+    "body",
+    "payoff",
+    "punchline"
+   ],
+   "presets": [
+    "real_talk",
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/hit/kenney-hit-punch-heavy-02.wav",
+   "lufs": -17.1,
+   "rms": -18.594494,
+   "peak": -3.0,
+   "seconds": 0.458
+  },
+  {
+   "id": "kenney-hit-punch-heavy-03",
+   "kind": "sfx",
+   "category": "hit",
+   "source": "Kenney, Impact Sounds",
+   "url": "https://kenney.nl/assets/impact-sounds",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/impact-sounds/License.txt",
+   "original": "impactPunch_heavy_004.ogg",
+   "tags": [
+    "punchy",
+    "body",
+    "payoff",
+    "punchline"
+   ],
+   "presets": [
+    "real_talk",
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/hit/kenney-hit-punch-heavy-03.wav",
+   "lufs": -19.9,
+   "rms": -19.366373,
+   "peak": -3.0,
+   "seconds": 0.536
+  },
+  {
+   "id": "kenney-pop-drop-01",
+   "kind": "sfx",
+   "category": "pop",
+   "source": "Kenney, Interface Sounds",
+   "url": "https://kenney.nl/assets/interface-sounds",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/interface-sounds/License.txt",
+   "original": "drop_002.ogg",
+   "tags": [
+    "warm",
+    "soft",
+    "caption-pop",
+    "item-in"
+   ],
+   "presets": [
+    "real_talk",
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/pop/kenney-pop-drop-01.wav",
+   "lufs": null,
+   "rms": -21.659597,
+   "peak": -3.0,
+   "seconds": 0.188
+  },
+  {
+   "id": "kenney-pop-drop-02",
+   "kind": "sfx",
+   "category": "pop",
+   "source": "Kenney, Interface Sounds",
+   "url": "https://kenney.nl/assets/interface-sounds",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/interface-sounds/License.txt",
+   "original": "drop_003.ogg",
+   "tags": [
+    "warm",
+    "soft",
+    "caption-pop",
+    "item-in"
+   ],
+   "presets": [
+    "real_talk",
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/pop/kenney-pop-drop-02.wav",
+   "lufs": null,
+   "rms": -21.501144,
+   "peak": -3.0,
+   "seconds": 0.188
+  },
+  {
+   "id": "kenney-pop-drop-03",
+   "kind": "sfx",
+   "category": "pop",
+   "source": "Kenney, Interface Sounds",
+   "url": "https://kenney.nl/assets/interface-sounds",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/interface-sounds/License.txt",
+   "original": "drop_001.ogg",
+   "tags": [
+    "bright",
+    "tiny",
+    "caption-pop"
+   ],
+   "presets": [
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/pop/kenney-pop-drop-03.wav",
+   "lufs": null,
+   "rms": -23.278246,
+   "peak": -3.0,
+   "seconds": 0.132
+  },
+  {
+   "id": "kenney-pop-soft-01",
+   "kind": "sfx",
+   "category": "pop",
+   "source": "Kenney, UI Audio",
+   "url": "https://kenney.nl/assets/ui-audio",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/ui-audio/License.txt",
+   "original": "rollover5.ogg",
+   "tags": [
+    "soft",
+    "ui",
+    "hover"
+   ],
+   "presets": [
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/pop/kenney-pop-soft-01.wav",
+   "lufs": null,
+   "rms": -25.22748,
+   "peak": -3.0,
+   "seconds": 0.109
+  },
+  {
+   "id": "kenney-pop-soft-02",
+   "kind": "sfx",
+   "category": "pop",
+   "source": "Kenney, UI Audio",
+   "url": "https://kenney.nl/assets/ui-audio",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/ui-audio/License.txt",
+   "original": "rollover2.ogg",
+   "tags": [
+    "soft",
+    "ui",
+    "hover"
+   ],
+   "presets": [
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/pop/kenney-pop-soft-02.wav",
+   "lufs": null,
+   "rms": -25.672711,
+   "peak": -2.9,
+   "seconds": 0.054
+  },
+  {
+   "id": "kenney-pop-tap-01",
+   "kind": "sfx",
+   "category": "pop",
+   "source": "Kenney, Impact Sounds",
+   "url": "https://kenney.nl/assets/impact-sounds",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/impact-sounds/License.txt",
+   "original": "impactGeneric_light_000.ogg",
+   "tags": [
+    "warm",
+    "tap",
+    "list-item"
+   ],
+   "presets": [
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/pop/kenney-pop-tap-01.wav",
+   "lufs": null,
+   "rms": -22.777489,
+   "peak": -3.0,
+   "seconds": 0.161
+  },
+  {
+   "id": "kenney-pop-tap-02",
+   "kind": "sfx",
+   "category": "pop",
+   "source": "Kenney, Impact Sounds",
+   "url": "https://kenney.nl/assets/impact-sounds",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/impact-sounds/License.txt",
+   "original": "impactGeneric_light_003.ogg",
+   "tags": [
+    "warm",
+    "tap",
+    "list-item"
+   ],
+   "presets": [
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/pop/kenney-pop-tap-02.wav",
+   "lufs": null,
+   "rms": -22.523879,
+   "peak": -3.0,
+   "seconds": 0.135
+  },
+  {
+   "id": "kenney-pop-wood-01",
+   "kind": "sfx",
+   "category": "pop",
+   "source": "Kenney, Impact Sounds",
+   "url": "https://kenney.nl/assets/impact-sounds",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/impact-sounds/License.txt",
+   "original": "impactWood_light_001.ogg",
+   "tags": [
+    "wood",
+    "tap",
+    "list-item"
+   ],
+   "presets": [
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/pop/kenney-pop-wood-01.wav",
+   "lufs": null,
+   "rms": -26.110762,
+   "peak": -3.0,
+   "seconds": 0.263
+  },
+  {
+   "id": "kenney-pop-wood-02",
+   "kind": "sfx",
+   "category": "pop",
+   "source": "Kenney, Impact Sounds",
+   "url": "https://kenney.nl/assets/impact-sounds",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/impact-sounds/License.txt",
+   "original": "impactWood_light_003.ogg",
+   "tags": [
+    "wood",
+    "tap",
+    "list-item"
+   ],
+   "presets": [
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/pop/kenney-pop-wood-02.wav",
+   "lufs": null,
+   "rms": -25.806607,
+   "peak": -3.0,
+   "seconds": 0.263
+  },
+  {
+   "id": "kenney-riser-high-up-01",
+   "kind": "sfx",
+   "category": "riser",
+   "source": "Kenney, Digital Audio",
+   "url": "https://kenney.nl/assets/digital-audio",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/digital-audio/License.txt",
+   "original": "highUp.ogg",
+   "tags": [
+    "retro",
+    "up",
+    "short",
+    "build"
+   ],
+   "presets": [
+    "big"
+   ],
+   "file": "sfx/riser/kenney-riser-high-up-01.wav",
+   "lufs": -13.5,
+   "rms": -14.643461,
+   "peak": -3.0,
+   "seconds": 0.546
+  },
+  {
+   "id": "kenney-riser-power-up-01",
+   "kind": "sfx",
+   "category": "riser",
+   "source": "Kenney, Digital Audio",
+   "url": "https://kenney.nl/assets/digital-audio",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/digital-audio/License.txt",
+   "original": "powerUp3.ogg",
+   "tags": [
+    "retro",
+    "up",
+    "success",
+    "game"
+   ],
+   "presets": [
+    "big"
+   ],
+   "file": "sfx/riser/kenney-riser-power-up-01.wav",
+   "lufs": -15.4,
+   "rms": -17.890441,
+   "peak": -3.0,
+   "seconds": 1.149
+  },
+  {
+   "id": "kenney-thud-soft-01",
+   "kind": "sfx",
+   "category": "thud",
+   "source": "Kenney, Impact Sounds",
+   "url": "https://kenney.nl/assets/impact-sounds",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/impact-sounds/License.txt",
+   "original": "impactSoft_medium_000.ogg",
+   "tags": [
+    "warm",
+    "short",
+    "cut",
+    "caption-land"
+   ],
+   "presets": [
+    "real_talk",
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/thud/kenney-thud-soft-01.wav",
+   "lufs": null,
+   "rms": -16.227577,
+   "peak": -3.0,
+   "seconds": 0.115
+  },
+  {
+   "id": "kenney-thud-soft-02",
+   "kind": "sfx",
+   "category": "thud",
+   "source": "Kenney, Impact Sounds",
+   "url": "https://kenney.nl/assets/impact-sounds",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/impact-sounds/License.txt",
+   "original": "impactSoft_medium_001.ogg",
+   "tags": [
+    "warm",
+    "short",
+    "cut",
+    "caption-land"
+   ],
+   "presets": [
+    "real_talk",
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/thud/kenney-thud-soft-02.wav",
+   "lufs": null,
+   "rms": -16.947805,
+   "peak": -3.0,
+   "seconds": 0.18
+  },
+  {
+   "id": "kenney-thud-soft-03",
+   "kind": "sfx",
+   "category": "thud",
+   "source": "Kenney, Impact Sounds",
+   "url": "https://kenney.nl/assets/impact-sounds",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/impact-sounds/License.txt",
+   "original": "impactSoft_medium_002.ogg",
+   "tags": [
+    "warm",
+    "short",
+    "cut",
+    "caption-land"
+   ],
+   "presets": [
+    "real_talk",
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/thud/kenney-thud-soft-03.wav",
+   "lufs": null,
+   "rms": -16.114452,
+   "peak": -3.0,
+   "seconds": 0.132
+  },
+  {
+   "id": "kenney-thud-soft-04",
+   "kind": "sfx",
+   "category": "thud",
+   "source": "Kenney, Impact Sounds",
+   "url": "https://kenney.nl/assets/impact-sounds",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/impact-sounds/License.txt",
+   "original": "impactSoft_medium_003.ogg",
+   "tags": [
+    "warm",
+    "short",
+    "cut",
+    "caption-land"
+   ],
+   "presets": [
+    "real_talk",
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/thud/kenney-thud-soft-04.wav",
+   "lufs": null,
+   "rms": -16.34018,
+   "peak": -3.0,
+   "seconds": 0.137
+  },
+  {
+   "id": "kenney-thud-soft-05",
+   "kind": "sfx",
+   "category": "thud",
+   "source": "Kenney, Impact Sounds",
+   "url": "https://kenney.nl/assets/impact-sounds",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/impact-sounds/License.txt",
+   "original": "impactSoft_medium_004.ogg",
+   "tags": [
+    "warm",
+    "short",
+    "cut",
+    "caption-land"
+   ],
+   "presets": [
+    "real_talk",
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/thud/kenney-thud-soft-05.wav",
+   "lufs": null,
+   "rms": -16.430692,
+   "peak": -3.0,
+   "seconds": 0.144
+  },
+  {
+   "id": "kenney-thud-soft-heavy-01",
+   "kind": "sfx",
+   "category": "thud",
+   "source": "Kenney, Impact Sounds",
+   "url": "https://kenney.nl/assets/impact-sounds",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/impact-sounds/License.txt",
+   "original": "impactSoft_heavy_000.ogg",
+   "tags": [
+    "warm",
+    "low",
+    "deep",
+    "reveal",
+    "punchline"
+   ],
+   "presets": [
+    "real_talk",
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/thud/kenney-thud-soft-heavy-01.wav",
+   "lufs": -17.9,
+   "rms": -19.514087,
+   "peak": -3.0,
+   "seconds": 0.527
+  },
+  {
+   "id": "kenney-thud-soft-heavy-02",
+   "kind": "sfx",
+   "category": "thud",
+   "source": "Kenney, Impact Sounds",
+   "url": "https://kenney.nl/assets/impact-sounds",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/impact-sounds/License.txt",
+   "original": "impactSoft_heavy_001.ogg",
+   "tags": [
+    "warm",
+    "low",
+    "deep",
+    "reveal",
+    "punchline"
+   ],
+   "presets": [
+    "real_talk",
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/thud/kenney-thud-soft-heavy-02.wav",
+   "lufs": -20.4,
+   "rms": -19.431941,
+   "peak": -3.0,
+   "seconds": 0.569
+  },
+  {
+   "id": "kenney-thud-soft-heavy-03",
+   "kind": "sfx",
+   "category": "thud",
+   "source": "Kenney, Impact Sounds",
+   "url": "https://kenney.nl/assets/impact-sounds",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/impact-sounds/License.txt",
+   "original": "impactSoft_heavy_002.ogg",
+   "tags": [
+    "warm",
+    "low",
+    "deep",
+    "reveal",
+    "punchline"
+   ],
+   "presets": [
+    "real_talk",
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/thud/kenney-thud-soft-heavy-03.wav",
+   "lufs": -20.2,
+   "rms": -19.239915,
+   "peak": -3.0,
+   "seconds": 0.569
+  },
+  {
+   "id": "kenney-thud-soft-heavy-04",
+   "kind": "sfx",
+   "category": "thud",
+   "source": "Kenney, Impact Sounds",
+   "url": "https://kenney.nl/assets/impact-sounds",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/impact-sounds/License.txt",
+   "original": "impactSoft_heavy_003.ogg",
+   "tags": [
+    "warm",
+    "low",
+    "deep",
+    "reveal",
+    "punchline"
+   ],
+   "presets": [
+    "real_talk",
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/thud/kenney-thud-soft-heavy-04.wav",
+   "lufs": -20.7,
+   "rms": -18.556858,
+   "peak": -3.0,
+   "seconds": 0.541
+  },
+  {
+   "id": "kenney-thud-soft-heavy-05",
+   "kind": "sfx",
+   "category": "thud",
+   "source": "Kenney, Impact Sounds",
+   "url": "https://kenney.nl/assets/impact-sounds",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/impact-sounds/License.txt",
+   "original": "impactSoft_heavy_004.ogg",
+   "tags": [
+    "warm",
+    "low",
+    "deep",
+    "reveal",
+    "punchline"
+   ],
+   "presets": [
+    "real_talk",
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/thud/kenney-thud-soft-heavy-05.wav",
+   "lufs": -17.8,
+   "rms": -18.813258,
+   "peak": -3.0,
+   "seconds": 0.498
+  },
+  {
+   "id": "kenney-thud-wood-01",
+   "kind": "sfx",
+   "category": "thud",
+   "source": "Kenney, Impact Sounds",
+   "url": "https://kenney.nl/assets/impact-sounds",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/impact-sounds/License.txt",
+   "original": "impactWood_heavy_000.ogg",
+   "tags": [
+    "warm",
+    "wood",
+    "knock",
+    "cut"
+   ],
+   "presets": [
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/thud/kenney-thud-wood-01.wav",
+   "lufs": null,
+   "rms": -21.700366,
+   "peak": -3.0,
+   "seconds": 0.31
+  },
+  {
+   "id": "kenney-thud-wood-02",
+   "kind": "sfx",
+   "category": "thud",
+   "source": "Kenney, Impact Sounds",
+   "url": "https://kenney.nl/assets/impact-sounds",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/impact-sounds/License.txt",
+   "original": "impactWood_heavy_002.ogg",
+   "tags": [
+    "warm",
+    "wood",
+    "knock",
+    "cut"
+   ],
+   "presets": [
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/thud/kenney-thud-wood-02.wav",
+   "lufs": null,
+   "rms": -20.908611,
+   "peak": -3.0,
+   "seconds": 0.31
+  },
+  {
+   "id": "kenney-thud-wood-03",
+   "kind": "sfx",
+   "category": "thud",
+   "source": "Kenney, Impact Sounds",
+   "url": "https://kenney.nl/assets/impact-sounds",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/impact-sounds/License.txt",
+   "original": "impactWood_heavy_004.ogg",
+   "tags": [
+    "warm",
+    "wood",
+    "knock",
+    "cut"
+   ],
+   "presets": [
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/thud/kenney-thud-wood-03.wav",
+   "lufs": null,
+   "rms": -22.108765,
+   "peak": -3.0,
+   "seconds": 0.31
+  },
+  {
+   "id": "kenney-tick-click-01",
+   "kind": "sfx",
+   "category": "tick",
+   "source": "Kenney, Interface Sounds",
+   "url": "https://kenney.nl/assets/interface-sounds",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/interface-sounds/License.txt",
+   "original": "click_002.ogg",
+   "tags": [
+    "tiny",
+    "ui",
+    "tap",
+    "selection"
+   ],
+   "presets": [
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/tick/kenney-tick-click-01.wav",
+   "lufs": null,
+   "rms": -18.264895,
+   "peak": -2.9,
+   "seconds": 0.012
+  },
+  {
+   "id": "kenney-tick-click-02",
+   "kind": "sfx",
+   "category": "tick",
+   "source": "Kenney, Interface Sounds",
+   "url": "https://kenney.nl/assets/interface-sounds",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/interface-sounds/License.txt",
+   "original": "click_003.ogg",
+   "tags": [
+    "tiny",
+    "ui",
+    "tap",
+    "selection"
+   ],
+   "presets": [
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/tick/kenney-tick-click-02.wav",
+   "lufs": null,
+   "rms": -16.184269,
+   "peak": -3.0,
+   "seconds": 0.007
+  },
+  {
+   "id": "kenney-tick-click-03",
+   "kind": "sfx",
+   "category": "tick",
+   "source": "Kenney, Interface Sounds",
+   "url": "https://kenney.nl/assets/interface-sounds",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/interface-sounds/License.txt",
+   "original": "click_005.ogg",
+   "tags": [
+    "tiny",
+    "ui",
+    "tap",
+    "selection"
+   ],
+   "presets": [
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/tick/kenney-tick-click-03.wav",
+   "lufs": null,
+   "rms": -13.356998,
+   "peak": -2.4,
+   "seconds": 0.007
+  },
+  {
+   "id": "kenney-tick-click-04",
+   "kind": "sfx",
+   "category": "tick",
+   "source": "Kenney, UI Audio",
+   "url": "https://kenney.nl/assets/ui-audio",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/ui-audio/License.txt",
+   "original": "click1.ogg",
+   "tags": [
+    "ui",
+    "button"
+   ],
+   "presets": [
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/tick/kenney-tick-click-04.wav",
+   "lufs": null,
+   "rms": -25.490726,
+   "peak": -2.9,
+   "seconds": 0.091
+  },
+  {
+   "id": "kenney-tick-click-05",
+   "kind": "sfx",
+   "category": "tick",
+   "source": "Kenney, UI Audio",
+   "url": "https://kenney.nl/assets/ui-audio",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/ui-audio/License.txt",
+   "original": "click2.ogg",
+   "tags": [
+    "ui",
+    "button",
+    "soft"
+   ],
+   "presets": [
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/tick/kenney-tick-click-05.wav",
+   "lufs": null,
+   "rms": -18.661834,
+   "peak": -3.1,
+   "seconds": 0.053
+  },
+  {
+   "id": "kenney-tick-switch-01",
+   "kind": "sfx",
+   "category": "tick",
+   "source": "Kenney, Interface Sounds",
+   "url": "https://kenney.nl/assets/interface-sounds",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/interface-sounds/License.txt",
+   "original": "switch_005.ogg",
+   "tags": [
+    "low",
+    "toggle"
+   ],
+   "presets": [
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/tick/kenney-tick-switch-01.wav",
+   "lufs": -24.7,
+   "rms": -24.710258,
+   "peak": -3.1,
+   "seconds": 0.609
+  },
+  {
+   "id": "kenney-tick-switch-02",
+   "kind": "sfx",
+   "category": "tick",
+   "source": "Kenney, Interface Sounds",
+   "url": "https://kenney.nl/assets/interface-sounds",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/interface-sounds/License.txt",
+   "original": "switch_007.ogg",
+   "tags": [
+    "low",
+    "toggle"
+   ],
+   "presets": [
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/tick/kenney-tick-switch-02.wav",
+   "lufs": -23.3,
+   "rms": -27.003047,
+   "peak": -3.0,
+   "seconds": 0.611
+  },
+  {
+   "id": "kenney-tick-switch-03",
+   "kind": "sfx",
+   "category": "tick",
+   "source": "Kenney, UI Audio",
+   "url": "https://kenney.nl/assets/ui-audio",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/ui-audio/License.txt",
+   "original": "switch28.ogg",
+   "tags": [
+    "toggle",
+    "ui"
+   ],
+   "presets": [
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/tick/kenney-tick-switch-03.wav",
+   "lufs": null,
+   "rms": -27.283682,
+   "peak": -3.2,
+   "seconds": 0.202
+  },
+  {
+   "id": "kenney-tick-switch-04",
+   "kind": "sfx",
+   "category": "tick",
+   "source": "Kenney, UI Audio",
+   "url": "https://kenney.nl/assets/ui-audio",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/ui-audio/License.txt",
+   "original": "switch11.ogg",
+   "tags": [
+    "toggle",
+    "ui"
+   ],
+   "presets": [
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/tick/kenney-tick-switch-04.wav",
+   "lufs": null,
+   "rms": -29.121803,
+   "peak": -3.0,
+   "seconds": 0.294
+  },
+  {
+   "id": "kenney-whoosh-cloth-01",
+   "kind": "sfx",
+   "category": "whoosh",
+   "source": "Kenney, RPG Audio",
+   "url": "https://kenney.nl/assets/rpg-audio",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/rpg-audio/License.txt",
+   "original": "cloth1.ogg",
+   "tags": [
+    "cloth",
+    "swish",
+    "soft",
+    "move"
+   ],
+   "presets": [
+    "real_talk",
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/whoosh/kenney-whoosh-cloth-01.wav",
+   "lufs": -22.4,
+   "rms": -24.06072,
+   "peak": -3.0,
+   "seconds": 0.661
+  },
+  {
+   "id": "kenney-whoosh-cloth-02",
+   "kind": "sfx",
+   "category": "whoosh",
+   "source": "Kenney, RPG Audio",
+   "url": "https://kenney.nl/assets/rpg-audio",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/rpg-audio/License.txt",
+   "original": "cloth2.ogg",
+   "tags": [
+    "cloth",
+    "swish",
+    "soft",
+    "move"
+   ],
+   "presets": [
+    "real_talk",
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/whoosh/kenney-whoosh-cloth-02.wav",
+   "lufs": -21.7,
+   "rms": -23.813595,
+   "peak": -3.0,
+   "seconds": 0.415
+  },
+  {
+   "id": "kenney-whoosh-cloth-03",
+   "kind": "sfx",
+   "category": "whoosh",
+   "source": "Kenney, RPG Audio",
+   "url": "https://kenney.nl/assets/rpg-audio",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/rpg-audio/License.txt",
+   "original": "cloth3.ogg",
+   "tags": [
+    "cloth",
+    "swish",
+    "soft",
+    "move"
+   ],
+   "presets": [
+    "real_talk",
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/whoosh/kenney-whoosh-cloth-03.wav",
+   "lufs": -20.7,
+   "rms": -22.175375,
+   "peak": -3.0,
+   "seconds": 0.477
+  },
+  {
+   "id": "kenney-whoosh-cloth-04",
+   "kind": "sfx",
+   "category": "whoosh",
+   "source": "Kenney, RPG Audio",
+   "url": "https://kenney.nl/assets/rpg-audio",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/rpg-audio/License.txt",
+   "original": "cloth4.ogg",
+   "tags": [
+    "cloth",
+    "swish",
+    "soft",
+    "move"
+   ],
+   "presets": [
+    "real_talk",
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/whoosh/kenney-whoosh-cloth-04.wav",
+   "lufs": null,
+   "rms": -23.002194,
+   "peak": -3.0,
+   "seconds": 0.384
+  },
+  {
+   "id": "kenney-whoosh-fan-01",
+   "kind": "sfx",
+   "category": "whoosh",
+   "source": "Kenney, Casino Audio",
+   "url": "https://kenney.nl/assets/casino-audio",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/casino-audio/License.txt",
+   "original": "card-fan-1.ogg",
+   "tags": [
+    "paper",
+    "flutter",
+    "list-reveal"
+   ],
+   "presets": [
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/whoosh/kenney-whoosh-fan-01.wav",
+   "lufs": -21.2,
+   "rms": -24.038715,
+   "peak": -3.0,
+   "seconds": 0.721
+  },
+  {
+   "id": "kenney-whoosh-flip-01",
+   "kind": "sfx",
+   "category": "whoosh",
+   "source": "Kenney, RPG Audio",
+   "url": "https://kenney.nl/assets/rpg-audio",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/rpg-audio/License.txt",
+   "original": "bookFlip1.ogg",
+   "tags": [
+    "paper",
+    "flip",
+    "page-turn",
+    "list-reveal"
+   ],
+   "presets": [
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/whoosh/kenney-whoosh-flip-01.wav",
+   "lufs": -24.5,
+   "rms": -33.293414,
+   "peak": -3.0,
+   "seconds": 0.769
+  },
+  {
+   "id": "kenney-whoosh-flip-02",
+   "kind": "sfx",
+   "category": "whoosh",
+   "source": "Kenney, RPG Audio",
+   "url": "https://kenney.nl/assets/rpg-audio",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/rpg-audio/License.txt",
+   "original": "bookFlip2.ogg",
+   "tags": [
+    "paper",
+    "flip",
+    "page-turn",
+    "list-reveal"
+   ],
+   "presets": [
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/whoosh/kenney-whoosh-flip-02.wav",
+   "lufs": -25.5,
+   "rms": -31.709049,
+   "peak": -3.0,
+   "seconds": 0.43
+  },
+  {
+   "id": "kenney-whoosh-flip-03",
+   "kind": "sfx",
+   "category": "whoosh",
+   "source": "Kenney, RPG Audio",
+   "url": "https://kenney.nl/assets/rpg-audio",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/rpg-audio/License.txt",
+   "original": "bookFlip3.ogg",
+   "tags": [
+    "paper",
+    "flip",
+    "page-turn",
+    "list-reveal"
+   ],
+   "presets": [
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/whoosh/kenney-whoosh-flip-03.wav",
+   "lufs": null,
+   "rms": -30.526459,
+   "peak": -3.0,
+   "seconds": 0.231
+  },
+  {
+   "id": "kenney-whoosh-phaser-down-01",
+   "kind": "sfx",
+   "category": "whoosh",
+   "source": "Kenney, Digital Audio",
+   "url": "https://kenney.nl/assets/digital-audio",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/digital-audio/License.txt",
+   "original": "phaserDown1.ogg",
+   "tags": [
+    "retro",
+    "sweep",
+    "down",
+    "game"
+   ],
+   "presets": [
+    "big"
+   ],
+   "file": "sfx/whoosh/kenney-whoosh-phaser-down-01.wav",
+   "lufs": -13.4,
+   "rms": -16.96835,
+   "peak": -3.1,
+   "seconds": 0.467
+  },
+  {
+   "id": "kenney-whoosh-phaser-up-01",
+   "kind": "sfx",
+   "category": "whoosh",
+   "source": "Kenney, Digital Audio",
+   "url": "https://kenney.nl/assets/digital-audio",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/digital-audio/License.txt",
+   "original": "phaserUp1.ogg",
+   "tags": [
+    "retro",
+    "sweep",
+    "up",
+    "game"
+   ],
+   "presets": [
+    "big"
+   ],
+   "file": "sfx/whoosh/kenney-whoosh-phaser-up-01.wav",
+   "lufs": -15.8,
+   "rms": -19.160013,
+   "peak": -3.0,
+   "seconds": 0.518
+  },
+  {
+   "id": "kenney-whoosh-place-01",
+   "kind": "sfx",
+   "category": "whoosh",
+   "source": "Kenney, Casino Audio",
+   "url": "https://kenney.nl/assets/casino-audio",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/casino-audio/License.txt",
+   "original": "card-place-1.ogg",
+   "tags": [
+    "paper",
+    "slap",
+    "card-land"
+   ],
+   "presets": [
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/whoosh/kenney-whoosh-place-01.wav",
+   "lufs": -23.8,
+   "rms": -29.014326,
+   "peak": -3.1,
+   "seconds": 0.689
+  },
+  {
+   "id": "kenney-whoosh-slice-01",
+   "kind": "sfx",
+   "category": "whoosh",
+   "source": "Kenney, RPG Audio",
+   "url": "https://kenney.nl/assets/rpg-audio",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/rpg-audio/License.txt",
+   "original": "knifeSlice.ogg",
+   "tags": [
+    "slice",
+    "fast",
+    "cut",
+    "swipe"
+   ],
+   "presets": [
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/whoosh/kenney-whoosh-slice-01.wav",
+   "lufs": -15.4,
+   "rms": -23.212382,
+   "peak": -3.0,
+   "seconds": 0.6
+  },
+  {
+   "id": "kenney-whoosh-slice-02",
+   "kind": "sfx",
+   "category": "whoosh",
+   "source": "Kenney, RPG Audio",
+   "url": "https://kenney.nl/assets/rpg-audio",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/rpg-audio/License.txt",
+   "original": "knifeSlice2.ogg",
+   "tags": [
+    "slice",
+    "fast",
+    "cut",
+    "swipe"
+   ],
+   "presets": [
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/whoosh/kenney-whoosh-slice-02.wav",
+   "lufs": -15.3,
+   "rms": -22.667824,
+   "peak": -3.0,
+   "seconds": 0.569
+  },
+  {
+   "id": "kenney-whoosh-swish-01",
+   "kind": "sfx",
+   "category": "whoosh",
+   "source": "Kenney, Casino Audio",
+   "url": "https://kenney.nl/assets/casino-audio",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/casino-audio/License.txt",
+   "original": "card-slide-1.ogg",
+   "tags": [
+    "small",
+    "swish",
+    "swipe",
+    "paper"
+   ],
+   "presets": [
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/whoosh/kenney-whoosh-swish-01.wav",
+   "lufs": -24.5,
+   "rms": -29.116339,
+   "peak": -3.0,
+   "seconds": 0.601
+  },
+  {
+   "id": "kenney-whoosh-swish-02",
+   "kind": "sfx",
+   "category": "whoosh",
+   "source": "Kenney, Casino Audio",
+   "url": "https://kenney.nl/assets/casino-audio",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/casino-audio/License.txt",
+   "original": "card-slide-2.ogg",
+   "tags": [
+    "small",
+    "swish",
+    "swipe",
+    "paper"
+   ],
+   "presets": [
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/whoosh/kenney-whoosh-swish-02.wav",
+   "lufs": -24.5,
+   "rms": -27.491214,
+   "peak": -3.3,
+   "seconds": 0.584
+  },
+  {
+   "id": "kenney-whoosh-swish-03",
+   "kind": "sfx",
+   "category": "whoosh",
+   "source": "Kenney, Casino Audio",
+   "url": "https://kenney.nl/assets/casino-audio",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/casino-audio/License.txt",
+   "original": "card-slide-3.ogg",
+   "tags": [
+    "small",
+    "swish",
+    "swipe",
+    "paper"
+   ],
+   "presets": [
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/whoosh/kenney-whoosh-swish-03.wav",
+   "lufs": -23.7,
+   "rms": -28.494596,
+   "peak": -3.0,
+   "seconds": 0.598
+  },
+  {
+   "id": "kenney-whoosh-swish-04",
+   "kind": "sfx",
+   "category": "whoosh",
+   "source": "Kenney, Casino Audio",
+   "url": "https://kenney.nl/assets/casino-audio",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/casino-audio/License.txt",
+   "original": "card-slide-5.ogg",
+   "tags": [
+    "small",
+    "swish",
+    "swipe",
+    "paper"
+   ],
+   "presets": [
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/whoosh/kenney-whoosh-swish-04.wav",
+   "lufs": -27.4,
+   "rms": -31.765899,
+   "peak": -3.2,
+   "seconds": 0.601
+  },
+  {
+   "id": "kenney-whoosh-swish-05",
+   "kind": "sfx",
+   "category": "whoosh",
+   "source": "Kenney, Casino Audio",
+   "url": "https://kenney.nl/assets/casino-audio",
+   "licence": "CC0-1.0",
+   "proof": "licences/kenney/casino-audio/License.txt",
+   "original": "card-slide-8.ogg",
+   "tags": [
+    "small",
+    "swish",
+    "swipe",
+    "paper"
+   ],
+   "presets": [
+    "explainer",
+    "big"
+   ],
+   "file": "sfx/whoosh/kenney-whoosh-swish-05.wav",
+   "lufs": -25.7,
+   "rms": -30.720114,
+   "peak": -3.0,
+   "seconds": 0.671
+  }
+ ]
+}

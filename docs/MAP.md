@@ -164,6 +164,7 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 | Project instructions text (a pointer to this repo) | `operator/templates/project-instructions.md` | the live text in each project's settings |
 | An idea or change for a live project | operator `SKILL.md` (Idea for a live project) | `CLAUDE.md`, `roles/project-manager.md` |
 | How a video or ad is made (roles, pipeline, video lessons) | `video-studio` skill | operator `SKILL.md`, `roles/marketer.md`, `market` |
+| Free sound library (CC0 SFX and music, manifest with licence proof, BPM, loudness) | `video-studio/sound/README.md`, checked by `video-studio/scripts/sound_library.py` | `video-studio/roles/sound.md`, `sound-kit.md` |
 | How posts go out, auto-post guardrails, comments and DMs, brand accounts | `social-team` skill | operator `SKILL.md`, `video-studio`, `market` §6, `docs/USING.md` |
 
 ## Keeping it clean
