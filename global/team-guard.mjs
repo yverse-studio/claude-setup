@@ -4,7 +4,9 @@
 // pre: refuses (exit 2) an Agent call or a thread start without `model`, because without it a
 // thread gets the project default and a subagent inherits its parent (yskills, 2026-10-26: every
 // thread and subagent ran on Opus). An Agent call whose subagent_type has an agent file with its own
-// `model:` passes. CLAUDE_SETUP_TEAM_GUARD=off turns it off. It never breaks a tool call on its own
+// `model:` passes. It also refuses a thread start whose brief is a size L Programmer with no
+// `Tester:` line (incident 2026-10-26: an L app ran without a Tester, docs/TEAMS.md Sizes: the
+// Tester thread starts first and the Programmer brief names it). CLAUDE_SETUP_TEAM_GUARD=off turns it off. It never breaks a tool call on its own
 // errors.
 import { existsSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
@@ -23,8 +25,14 @@ export function hasOwnModel(type, dirs) {
   })
 }
 
+const briefText = (input) => Object.values(input).filter((v) => typeof v === 'string').join('\n')
+export function needsTester(text) {
+  return /^Role:[^\n]*\bProgrammer\b[^\n]*\bSize:\s*L\b/m.test(text) && !/^Tester:[ \t]*\S/m.test(text)
+}
+
 export function decide(tool, input = {}, dirs = []) {
   const kind = AGENT.test(tool) ? 'Agent' : THREAD_START.test(tool) ? 'thread' : null
+  if (kind === 'thread' && needsTester(briefText(input))) return { block: 'team-guard: a size L Programmer thread starts only after its Tester thread (claude-setup docs/TEAMS.md, Sizes). Start `Tester · <app>` first, then put a line `Tester: <its thread id or title>` in this brief and retry.' }
   if (!kind || String(input.model ?? '').trim()) return {}
   if (kind === 'Agent' && hasOwnModel(input.subagent_type, dirs)) return {}
   return { block: `team-guard: this ${kind === 'Agent' ? 'Agent call' : 'thread start'} has no \`model\`. Pass the model of the role's row in claude-setup docs/TEAMS.md (Roster; Agent: haiku, sonnet or opus; thread: the full id from the Models line), then retry.` }

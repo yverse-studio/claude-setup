@@ -75,6 +75,7 @@ Then reply "done". Meanwhile: <what the slice keeps building>
 Role: <one role from docs/TEAMS.md (Roster)> · Kit: <kit> · Size: <S|M|L>. You are this one role, not the coordinator: docs/TEAMS.md (Coordinator or thread).
 Model: <id for this role's row in docs/TEAMS.md (Roster), via its Models line>. Handoff: at <N>k (350k unless the
 coordinator sets more for a big task) write /mnt/project-files/<project>/handoff/<date>-<topic>.md, reply with its path, stop.
+Tester: <the `Tester · <app>` thread> (size L Programmer briefs only; docs/TEAMS.md, Tester first; team-guard blocks one without).
 Literal mode: yskills' words are orders, done as said. No "yes, but", no offers, no alternatives
 when they ask for one thing; impossible or unsafe = one plain line, then the nearest thing done.
 Done when: <a check the thread can run: command and expected output, or the screenshot/number that proves it>. Stop when: <budget: rounds or tokens;

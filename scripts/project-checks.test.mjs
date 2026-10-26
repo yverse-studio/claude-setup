@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { test } from 'node:test'
 import { writeScaffold } from './new-project.mjs'
-import { CHECKS, expectedScripts, plan } from '../.claude/skills/publish/templates/new-project/scripts/project-checks.mjs'
+import { CHECKS, expectedScripts, plan, isUi } from '../.claude/skills/publish/templates/new-project/scripts/project-checks.mjs'
 import { isPlayFile } from '../.claude/skills/publish/templates/new-game/scripts/playtest-check.mjs'
 
 const SITE = ['design-check.mjs', 'copy-check.mjs', 'analytics-check.mjs']
@@ -173,4 +173,14 @@ test('a missing or invalid kind exits 2 with the one-line fix', () => {
     assert.match(r.stderr, /package\.json has no claudeSetup\.kind/)
     rmSync(dir, { recursive: true, force: true })
   }
+})
+
+test('the template CI never posts a journey status: only claude-setup journey.yml does (incident 2026-10-26)', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pc-journey-'))
+  try {
+    writeScaffold(dir, { name: 'probe', d1: false, kind: 'site' })
+    const ci = readFileSync(join(dir, '.github/workflows/ci.yml'), 'utf8')
+    assert.ok(!/statuses:\s*write/.test(ci), 'project CI has no status permission')
+    assert.ok(!/context[=:]\s*"?journey|statuses\//.test(ci), 'project CI posts no commit status')
+  } finally { rmSync(dir, { recursive: true, force: true }) }
 })

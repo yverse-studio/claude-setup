@@ -175,6 +175,34 @@ Claude:
   `check_run.head_sha` (`github.sha` on the weekly run). A green Workers Builds check and a 200 prove neither: on 2026-10-05
   duo-test's main builds passed for hours while a day-old version stayed live.
 
+### Preview journey and preview login
+
+Incident 2026-10-26 (social): the gates judged UI PRs on local tests, because the preview was broken
+and sat behind the owner's passkey, so nobody clicked the real app.
+
+- **Journey script:** every site, app or game has `npm run journey`: Playwright against `BASE_URL`
+  with the device named in `JOURNEY_DEVICE` (`devices[...]`, touch on), walking the main journeys
+  end to end, the destructive-action list (`operator/roles/programmer.md`) included. Results go to
+  `test-results/`. No script means `journey.yml` fails, and a UI PR cannot pass (`gate.md`, UI PRs).
+- **Run:** claude-setup's `journey.yml` (`name`, `pr`; `actions_run_trigger` `run_workflow`, ref
+  `main`) for every project PR. It posts `n/a: no UI change` for a PR without UI files; otherwise it
+  waits up to 20 minutes for the PR's preview to serve the head (the URL from the branch alias, refused
+  if the Workers Builds check names another), fetches the project's default branch as an artifact, runs
+  the specs from it in a job with no org token and no PR code, and posts the `journey` status from a
+  fresh job. Only this workflow posts `journey`; the template CI has no status permission.
+- **Preview login:** a journey behind a login signs in with a seeded test owner that exists only in
+  the preview database. The app accepts `POST /api/test-login` with `PREVIEW_LOGIN_TOKEN` (a Worker
+  secret, compared in constant time) only on a preview host (`*-<name>.yverse.workers.dev`), never
+  on the live host, and answers 404 when the secret is unset. The same value lives as a claude-setup
+  Actions secret, set together with the Worker secret by a workflow, never in chat, logs or files.
+  The runner sees the token but runs only the default branch's specs; the PR's Worker (the preview)
+  receives it in the request, so it opens only the preview's test data, and a PR from a fork never gets it
+  (`journey.mjs` refuses). A short-lived token minted per run is a later hardening. Creating or rotating it waits
+  for yskills' tap (`CLAUDE.md`, Ask first). [advisory]
+- **Builds run one at a time** on Workers Builds: every `claude/*` push queues in front of `main`'s
+  deploy. Push once per finished round, at most three branches building at once; a stuck build is
+  cancelled with `build-logs` (`cancel`). `deploy-watch.yml` catches what still slips. [advisory]
+
 ## Two routes to Cloudflare, and what the deploy tests taught
 
 Decided 2026-10-11. Read this before touching anything Cloudflare; a thread that is unsure

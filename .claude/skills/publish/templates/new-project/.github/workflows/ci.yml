@@ -32,3 +32,7 @@ jobs:
       - name: playtest check # games only: scripts/playtest-check.mjs ships with kind "game"
         if: github.event_name == 'pull_request' && hashFiles('scripts/playtest-check.mjs') != ''
         run: node scripts/playtest-check.mjs --base origin/${{ github.base_ref }}
+
+  # No `journey` status here: only claude-setup's journey.yml posts it (org token, specs from this
+  # repo's default branch), the n/a for a PR without UI files too. This workflow has no `statuses`
+  # permission, so a PR cannot post its own pass (incident 2026-10-26; gate.md, UI PRs).
