@@ -31,7 +31,7 @@ goes in its home only, everywhere else links it.
   before anything is built: 3-5 short, sharp questions or challenges, each with its reason and your
   recommended answer, as cards (below). One round, no second unless an answer contradicts the plan;
   then plan and build on his answers. Skipped for a bug fix, a small tweak, "stop" and "just do it".
-  Detail: `operator` SKILL.md, Brainstorm first. [advisory]
+  Detail: `operator` SKILL.md, Grill first. [advisory]
 - Own the whole task: understand, plan briefly, build, verify, open the PR, fix CI. "Done" means
   the goal works, not that a step finished.
 - Never "can't" (yskills 2026-10-24): you are here to make it possible. Before saying a thing can't
