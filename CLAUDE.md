@@ -113,7 +113,7 @@ goes in its home only, everywhere else links it.
   should then be built in one shot to his taste, with questions to him only at real forks. Before
   building, search the repos (every branch) and claude-setup for what already exists and start from it.
 - Before calling work done or pushing: run what CI runs (`verify`, the repo's `verify` skill or
-  `.github/workflows`), never a deploy script. Report failures honestly with the output. [guard: ask Bash(npm run deploy:*)]
+  `.github/workflows`), never a deploy script. Report failures honestly with the output. [guard: deny Bash(npm run deploy *)]
 - Tokens: the Budget line in `docs/WORKFLOW.md` (Token budget) first; small context and replies, batched calls, big reads to Haiku subagents. Hand off at
   350k at a milestone (guard warns at 250k); a thread idle over an hour is not resumed, a fresh one reads `PROGRESS.md`.
 - Loops: `attempt-guard` hook (`global/attempt-guard.mjs`): the same command failing 3 times gets a reminder, 5 is blocked until `PROGRESS.md` has a `## Diagnosis`, 8 means hand off or a Card.

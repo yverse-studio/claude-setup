@@ -2,7 +2,9 @@
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "$comment": "These deny rules apply only in a one-repository session. A project thread with claude-setup plus the app repo ignores them (per the Projects docs); that is fine because the thread's own rules come from the cloud environment.",
   "permissions": {
-    "allow": ["mcp__claude-code-remote__add_repo"],
+    "allow": [
+      "mcp__claude-code-remote__add_repo"
+    ],
     "deny": [
       "Read(**/.env)",
       "Read(**/.env.local)",
@@ -49,7 +51,13 @@
       "Bash(git -c* push*--force*main*)",
       "Bash(git -c* push*-f *main*)",
       "Bash(git push* -fu *main*)",
-      "Bash(git push* -uf *main*)"
+      "Bash(git push* -uf *main*)",
+      "Bash(wrangler deploy *)",
+      "Bash(npx wrangler deploy *)",
+      "Bash(npm run deploy *)",
+      "Bash(npm run ship *)",
+      "Bash(firebase deploy *)",
+      "Bash(vercel --prod *)"
     ]
   }
 }

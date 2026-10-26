@@ -22,7 +22,7 @@ One source, `global/settings.json`, applied in two places:
 
 | Where | How it gets there | Mode |
 |---|---|---|
-| Laptop | `install.mjs` merges it into `~/.claude/settings.json` (`allow` and `deny` add up; `ask` and `autoMode` are replaced, so a dropped ask rule really goes) | `auto` |
+| Laptop | `install.mjs` merges it into `~/.claude/settings.json` (`allow` and `deny` add up; `ask` and `autoMode` are replaced, so a dropped ask rule really goes; the machine's own `defaultMode` stays) | `acceptEdits` (yskills 2026-10-26): allow rules still apply, so the listed commands don't prompt; anything else does |
 | Cloud threads | `cloud/setup.sh` writes `permissions` and `autoMode` from main's `global/settings.json` into `~/.claude/settings.json`, and a SessionStart hook re-syncs them from main at every session start, so a merged change needs no environment rebuild | `auto` (the thread's own mode) |
 
 What the file holds and why (docs: code.claude.com permissions, permission-modes, auto-mode-config,
@@ -64,6 +64,7 @@ way around so it never stalls work. Never reword, split or retry a refused call.
 
 ## Lessons
 
+- 2026-10-26: running `install.mjs` in a cloud thread without `--skip-hooks` writes the ECC hooks into the thread's real `~/.claude` (the ECC installer ignores `CLAUDE_CONFIG_DIR`); test it with `--skip-plugins --skip-hooks`.
 - 2026-10-26: the first edit of `global/settings.json` for this page was refused as
   Self-Modification although yskills had asked for it in general words. The classifier wants the
   permission change itself named by him; a card with that exact question is the route.

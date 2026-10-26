@@ -188,8 +188,11 @@ function merge(dst, src) {
 const ownMode = settings.permissions?.defaultMode
 merge(settings, ours)
 if (ownMode) settings.permissions.defaultMode = ownMode
-// A rule we deny must not also be allowed by an older entry.
-settings.permissions.allow = settings.permissions.allow.filter((r) => !settings.permissions.deny.includes(r))
+// ask and autoMode are ours alone, so a dropped ask rule really goes (docs/permissions.md).
+settings.permissions.ask = ours.permissions.ask
+settings.autoMode = ours.autoMode
+// A rule we deny or ask must not also be allowed by an older entry.
+settings.permissions.allow = settings.permissions.allow.filter((r) => !settings.permissions.deny.includes(r) && !settings.permissions.ask.includes(r))
 settings.statusLine = { type: 'command', command: `node "${join(CLAUDE_DIR, 'claude-setup', 'statusline.mjs')}"`, padding: 0 }
 // Context guard (global/context-guard.mjs): one entry, replaced on every install.
 settings.hooks ??= {}
