@@ -13,7 +13,7 @@ for (const [label, { text, repo }] of Object.entries(cases)) {
   test(`${label}: short, filled, points at the right places`, () => {
     assert.ok(text.split('\n').filter((l) => l.trim()).length < 15)
     assert.doesNotMatch(text, /\{\{/)
-    for (const s of ['add_repo', 'docs/MAP.md', 'project-memory.md', 'LESSONS.md', repo]) assert.ok(text.includes(s), s)
+    for (const s of ['add_repo', 'docs/MAP.md', 'docs/TEAMS.md', 'project-memory.md', 'LESSONS.md', repo]) assert.ok(text.includes(s), s)
   })
   test(`${label}: no rule words`, () => {
     for (const w of ['Models:', 'never ', 'always ', 'merge']) assert.ok(!text.toLowerCase().includes(w.toLowerCase()), w)
