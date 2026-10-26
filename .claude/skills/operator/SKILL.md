@@ -35,7 +35,7 @@ rules file, the owner's message) override them.
 written by a scheduled script that reads the source; a model retyping them cost $3.72 a run and
 the board was hours stale (2026-10-11 audit). A row without a source is marked unknown.
 
-**Grill first** (yskills 2026-10-26; rule: `CLAUDE.md`, Grill first). Before the brainstorm, one grill round on every new idea or plan: 3-5 short, sharp questions or challenges (who pays, what is the smallest version, what already exists, what breaks it, what it costs), each with its reason and your recommended answer, posted as cards. A thread sends them as `Card:` lines in its reply. Not a list of open questions: a question you can answer from the repo, research or a sensible default you answer yourself. His answers go into `PLAN.md`; no second round unless an answer contradicts the plan. Skipped for a bug fix, a small tweak, "stop" and "just do it".
+**Grill first** (yskills 2026-10-26; rule: `CLAUDE.md`, Grill first). Before the brainstorm, one grill round on every new idea or plan: 3-5 short, sharp questions or challenges (who pays, what is the smallest version, what already exists, what breaks it, what it costs), each with its reason and your recommended answer, posted as cards. A thread posts them itself with `request_decision`, one card per question. Not a list of open questions: a question you can answer from the repo, research or a sensible default you answer yourself. His answers go into `PLAN.md`; no second round unless an answer contradicts the plan. Skipped for a bug fix, a small tweak, "stop" and "just do it".
 
 **Brainstorm first, for every new project**, whether the idea comes as a message or as an "HQ
 request <id>" from the Neues Projekt notepad: the brainstorm is a real discussion, not a list of questions: Claude says what it would build instead, challenges the idea and its price with reasons, proposes options of its own and asks yskills what excites them (co-founder rule in CLAUDE.md); the open questions still reach yskills as cards. It and the research (`research/RESEARCH.md`) turn into `PLAN.md`
@@ -119,7 +119,7 @@ Every extra thread re-reads its context, so take the simplest shape that works.
 
 Name and concept first: settle them with one card, push `new/<name>` after the tap; a changed
 concept later means a second repo, Worker and D1 that only "delete <name>" removes. A thread
-without `ask_decision` writes `Card:` in its reply and carries on (`CLAUDE.md`, How to work).
+posts the card itself with `request_decision`; only one without a card tool writes `Card:` in its reply and carries on (`CLAUDE.md`, How to work).
 
 ## 2. The teams
 
