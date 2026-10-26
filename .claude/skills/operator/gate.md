@@ -27,15 +27,24 @@ Security never drops: any PR touching user input, auth, money or secrets runs ch
 
 Who runs it (yskills, 2026-10-18: a gate thread starts at ~114k tokens and every call re-reads it, `docs/WORKFLOW.md` Token budget): S and M run in the author thread: CI, one fresh `code-reviewer` subagent (never the author's own pass) and the merge, with the table headline in the PR. The author does not pick the size: the table does, and anything touching user input, auth, money, data or UI is L. The reviewer gets the diff itself (`git diff <base>...<head>`), never the author's summary of it, and the author posts its report unedited; a finding the author disputes goes to the coordinator, not to a second reviewer. L keeps a fresh gate thread, because it runs the preview, security and design checks. A reviewer subagent still sees only the diff, the criteria and the previous round's table.
 
-## Scene shots and figure shots
+## Asset PRs (models, garments, figures, scenes)
 
-No picture of a posed scene or a figure reaches yskills without a gate row in `gate/` that names
-its head SHA (yskills, 2026-10-11, 18:56: bed shots with the duvet cutting through the body, hands
-floating, and no check had run). The Tester's criteria for a scene come from the plan that
-introduced it, are machine checks first (`character-workflow.md` step 4), and a human-eye pass
-second; a posed shot from the Programmer alone is a draft. The 4-angle contact sheet at 390 px and
-1440 px is the evidence, not a single render. A figure or scene PR that fails the same item in two
-rounds is not re-gated until the Programmer attaches the diagnosis (`character-workflow.md`, step 4).
+Asset work (a garment fit or move, a body, a figure, a posed scene) has no preview URL; the evidence
+replaces check 2, the rest of the table and the sizes stay as they are (yskills, 2026-10-26: clothes
+moved with no gate on measurements clipped through the body). No new system.
+
+- **Evidence:** the done report with its numbers (clipping per part in mm and %, `docs/clothing-pipeline.md`, Done report;
+  scenes: `character-workflow.md` step 4 machine checks) and the render sheet (contact sheet, 4 angles,
+  390 px and 1440 px). A missing number or one over the limit (no vertex deeper than the offset, 0 % inside at rest) fails the PR; the reviewer
+  re-measures one piece itself. A sheet alone, "looks the same" or "no visual change" is no evidence.
+- **Size:** moving, refitting or re-dressing existing garments and any other asset change without a new look = M (checks 1, 2 as evidence, 3: the fresh reviewer also looks at the sheet, a human-eye pass; no UI means no L).
+  A new figure, character or scene is L (`character-workflow.md`, step 6).
+- No picture of a posed scene or a figure reaches yskills without a gate row in `gate/` that names
+  its head SHA (yskills, 2026-10-11: bed shots with the duvet cutting through the body, no check
+  had run). The criteria for a scene come from the plan that introduced it, machine checks first,
+  a human-eye pass second; a posed shot from the Programmer alone is a draft.
+- A figure or scene PR that fails the same item in two rounds is not re-gated until the Programmer
+  attaches the diagnosis (`character-workflow.md`, step 4).
 
 ## Mode: probe or product
 
