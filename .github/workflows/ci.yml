@@ -39,6 +39,8 @@ jobs:
           python-version: "3.12"
       - run: python -m unittest discover -s .claude/skills/watch/scripts -p "test_*.py"
       - run: python -m unittest discover -s .claude/skills/video-studio/scripts -p "test_*.py"
+        env:
+          VIDEO_STUDIO_WITH_LIBRARY: ${{ github.workspace }}/.claude/skills/video-studio
       - run: python .claude/skills/video-studio/scripts/sound_library.py check .claude/skills/video-studio/sound
       - run: node --test scripts/playtest-check.test.mjs
       # Runs without a login (tested with an empty HOME on 2026-10-06).

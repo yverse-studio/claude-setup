@@ -109,6 +109,11 @@ class Snap(unittest.TestCase):
         with self.assertRaises(ValueError):
             snap([{"t": 1, "kind": "wow"}])
 
+    def test_unsorted_or_duplicate_cuts_raise(self):
+        for cuts in ([2.0, 1.0], [1.0, 1.0]):
+            with self.assertRaises(ValueError):
+                snap(cuts)
+
 
 class Cues(unittest.TestCase):
     KINDS = {"pop": ["pop_1", "pop_2", "pop_3"], "hit": ["hit_1", "hit_2"], "tick": ["tick_1"]}
@@ -219,10 +224,10 @@ class Library(unittest.TestCase):
         (self.root / "manifest.json").write_text("[]")
         self.assertIsNone(sound.library_manifest(self.root))
 
-    def test_missing_module_says_merge_265(self):
+    def test_missing_module_says_restore_it(self):
         with mock.patch.dict(sys.modules, {"sound_library": None}), self.assertRaises(SystemExit) as err:
             sound.pick_from_library(self.cues(1), self.root, "big")
-        self.assertIn("merge #265", str(err.exception))
+        self.assertIn("sound_library.py is missing", str(err.exception))
 
 
 REAL_LIBRARY = Path(os.environ.get("VIDEO_STUDIO_WITH_LIBRARY", "/nonexistent"))  # a copy of video-studio from the #265 branch

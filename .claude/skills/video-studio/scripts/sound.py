@@ -47,6 +47,8 @@ def normalise_cuts(raw):
         if not isinstance(cut[0], (int, float)) or cut[1] not in ("cut", "hook", "payoff"):
             raise ValueError(f"bad cut: {item!r} (a second, or {{\"t\": 1.2, \"kind\": \"cut|hook|payoff\"}})")
         out.append((float(cut[0]), cut[1]))
+    if any(b[0] <= a[0] for a, b in zip(out, out[1:])):
+        raise ValueError("cuts must be in time order, each later than the one before")
     return out
 
 
@@ -270,7 +272,7 @@ def pick_from_library(cues, library, preset_name, salt=""):
     try:
         import sound_library
     except ImportError:
-        sys.exit("error: library module missing: merge #265 (scripts/sound_library.py) or use a folder of numbered files")
+        sys.exit("error: scripts/sound_library.py is missing: restore it or point --sfx-dir at a folder of numbered files")
     entries = sound_library.load(Path(library))["entries"]
     last, picked, offset = None, [], zlib.crc32(salt.encode())
     for i, c in enumerate(sorted(cues, key=lambda c: c["t"])):
@@ -308,7 +310,10 @@ def cmd_mix(a):
     if errors := validate_cues(cues, preset, takes):
         sys.exit("\n".join(errors))
     duration, has_voice = probe(a.video)
-    if has_voice and looks_like_music(music_features(a.video)):
+    feats = music_features(a.video) if has_voice else None
+    if has_voice and feats is None:
+        print("warning: music-in-source check skipped (numpy missing or clip under 3 s)", file=sys.stderr)
+    if has_voice and looks_like_music(feats):
         note = "source already carries music (the bed would clash): use the raw clip without music (and without SFX baked in)"
         if a.music and not a.force_music:
             sys.exit(f"error: {note}, or pass --force-music")

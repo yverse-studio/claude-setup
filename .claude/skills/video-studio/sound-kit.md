@@ -80,7 +80,10 @@ aubio (GPL), essentia (AGPL). Paid or AI music and AI voice are a card (`SKILL.m
 1. `sound.py beats bed.wav` (or the sound link's audio, fetched on the laptop with `watch`).
 2. The Editor's cut list goes through `sound.py snap beats.json cuts.json --preset <p>`; moved
    cuts are re-checked on the frame.
-3. SFX cue sheet `cues.json` (time, sound, gain) within the preset's cap.
+3. SFX cue sheet `cues.json`, within the preset's cap: a list of `{"t": seconds, "sfx": category, "gain_db": -40..6 (default 0), "opt_in": true}`.
+   `sfx` is a library category (hit, thud, pop, tick, whoosh, riser, bell, glitch); `opt_in` is
+   needed only for opt-in sounds such as glitch, which play only when yskills asks. Cuts passed to
+   `snap` must be in time order, each later than the one before.
 4. `sound.py mix draft.mp4 cues.json --preset <p> [--music bed.wav]` writes both masters at
    -14 LUFS; `sound.py loud` on each before `ready.py`. `mix` refuses a bed on a source that
    already carries music (`--force-music` only on purpose) and warns when such a source would make
