@@ -13,75 +13,22 @@
    "tags": [
     "chill",
     "mellow",
-    "background"
+    "background",
+    "vocals-unchecked"
    ],
    "presets": [
     "real_talk",
     "explainer"
    ],
    "original": "xusu-chill-music.mp3",
-   "note": "first 120 s, 128 kbps mp3, 2 s fade out",
+   "note": "60 s from 0.6 s of the original (first full-level beat), 128 kbps mp3, 2 s fade out",
+   "bpm_estimated": true,
    "file": "music/chill/chill-music.mp3",
    "lufs": -12.5,
-   "rms": -12.716783,
+   "rms": -12.803094,
    "peak": 0.1,
-   "seconds": 107.807,
+   "seconds": 60.029,
    "bpm": 99.4
-  },
-  {
-   "id": "cinematic-lofi-beat",
-   "kind": "music",
-   "mood": "chill",
-   "source": "Seth_Makes_Sounds, Cinematic Lofi Beat (Freesound)",
-   "url": "https://freesound.org/people/Seth_Makes_Sounds/sounds/687006/",
-   "licence": "CC0-1.0",
-   "proof": "licences/freesound/seth-makes-sounds-cinematic-lofi-beat.html",
-   "tags": [
-    "lofi",
-    "chill",
-    "warm",
-    "soft",
-    "hiphop"
-   ],
-   "presets": [
-    "real_talk",
-    "explainer"
-   ],
-   "original": "seth-makes-sounds-cinematic-lofi-beat.mp3",
-   "note": "first 120 s, 128 kbps mp3, 2 s fade out",
-   "file": "music/chill/cinematic-lofi-beat.mp3",
-   "lufs": -16.7,
-   "rms": -19.087265,
-   "peak": -0.5,
-   "seconds": 120.033,
-   "bpm": 117.5
-  },
-  {
-   "id": "cool-guitar-bed",
-   "kind": "music",
-   "mood": "chill",
-   "source": "Seth_Makes_Sounds, Cool Guitar Background Music Thing (Freesound)",
-   "url": "https://freesound.org/people/Seth_Makes_Sounds/sounds/684980/",
-   "licence": "CC0-1.0",
-   "proof": "licences/freesound/seth-makes-sounds-cool-guitar-background-music-thing.html",
-   "tags": [
-    "guitar",
-    "chill",
-    "relaxed",
-    "background"
-   ],
-   "presets": [
-    "real_talk",
-    "explainer"
-   ],
-   "original": "seth-makes-sounds-cool-guitar-background-music-thing.mp3",
-   "note": "first 120 s, 128 kbps mp3, 2 s fade out",
-   "file": "music/chill/cool-guitar-bed.mp3",
-   "lufs": -17.3,
-   "rms": -20.096498,
-   "peak": -0.5,
-   "seconds": 120.024,
-   "bpm": 117.5
   },
   {
    "id": "hiphop-chill-calm",
@@ -95,20 +42,22 @@
     "hiphop",
     "chill",
     "calm",
-    "beat"
+    "beat",
+    "vocals-unchecked"
    ],
    "presets": [
     "real_talk",
     "explainer"
    ],
    "original": "klaudux-hip-hop-beat-chill-calm-music.mp3",
-   "note": "first 120 s, 128 kbps mp3, 2 s fade out",
+   "note": "60 s from 0.1 s of the original (first full-level beat), 128 kbps mp3, 2 s fade out; librosa said 129 (= 86 x 1.5), the Critic measured about 87",
+   "bpm_estimated": true,
    "file": "music/chill/hiphop-chill-calm.mp3",
    "lufs": -13.5,
-   "rms": -14.291528,
-   "peak": -0.0,
-   "seconds": 120.033,
-   "bpm": 129.2
+   "rms": -14.271637,
+   "peak": 0.4,
+   "seconds": 60.029,
+   "bpm": 86.1
   },
   {
    "id": "lofi-type-beat",
@@ -122,19 +71,21 @@
     "lofi",
     "chill",
     "beat",
-    "hiphop"
+    "hiphop",
+    "vocals-unchecked"
    ],
    "presets": [
     "real_talk",
     "explainer"
    ],
    "original": "freelncr-lo-fi-type-beat-freelncr.mp3",
-   "note": "first 120 s, 128 kbps mp3, 2 s fade out",
+   "note": "60 s from 22.1 s of the original (first full-level beat), 128 kbps mp3, 2 s fade out",
+   "bpm_estimated": true,
    "file": "music/chill/lofi-type-beat.mp3",
-   "lufs": -16.0,
-   "rms": -17.768219,
-   "peak": 0.2,
-   "seconds": 120.033,
+   "lufs": -15.2,
+   "rms": -16.886607,
+   "peak": 0.4,
+   "seconds": 60.029,
    "bpm": 89.1
   },
   {
@@ -155,12 +106,13 @@
     "big"
    ],
    "original": "bertsz-epic-synth-orchestral-music.mp3",
-   "note": "first 120 s, 128 kbps mp3, 2 s fade out",
+   "note": "60 s from 0.6 s of the original (first full-level beat), 128 kbps mp3, 2 s fade out",
+   "bpm_estimated": true,
    "file": "music/cinematic/epic-synth-orchestral.mp3",
-   "lufs": -14.8,
-   "rms": -17.787607,
-   "peak": -0.5,
-   "seconds": 74.24,
+   "lufs": -14.9,
+   "rms": -17.515723,
+   "peak": -0.8,
+   "seconds": 60.029,
    "bpm": 112.3
   },
   {
@@ -182,12 +134,13 @@
     "big"
    ],
    "original": "doctor-dreamchip-circuit-synthwave.mp3",
-   "note": "first 120 s, 128 kbps mp3, 2 s fade out",
+   "note": "60 s from 0.5 s of the original (first full-level beat), 128 kbps mp3, 2 s fade out",
+   "bpm_estimated": true,
    "file": "music/drive/circuit-synthwave.mp3",
-   "lufs": -10.2,
-   "rms": -11.477631,
-   "peak": -0.0,
-   "seconds": 120.033,
+   "lufs": -10.3,
+   "rms": -11.637824,
+   "peak": 0.1,
+   "seconds": 60.029,
    "bpm": 123.0
   },
   {
@@ -260,12 +213,13 @@
     "big"
    ],
    "original": "josefpres-disco-funk-loops-001-remix-1-long-loop-with-drums-.mp3",
-   "note": "first 120 s, 128 kbps mp3, 2 s fade out",
+   "note": "60 s from 0.5 s of the original (first full-level beat), 128 kbps mp3, 2 s fade out",
+   "bpm_estimated": true,
    "file": "music/funky/disco-funk-loop.mp3",
    "lufs": -19.8,
-   "rms": -20.588104,
+   "rms": -20.629158,
    "peak": -7.3,
-   "seconds": 120.033,
+   "seconds": 60.029,
    "bpm": 117.5
   },
   {
@@ -287,12 +241,13 @@
     "big"
    ],
    "original": "warlightwolf-funky-house-music-22.mp3",
-   "note": "first 120 s, 128 kbps mp3, 2 s fade out",
+   "note": "60 s from 3.1 s of the original (first full-level beat), 128 kbps mp3, 2 s fade out",
+   "bpm_estimated": true,
    "file": "music/funky/funky-house-22.mp3",
-   "lufs": -13.2,
-   "rms": -14.529246,
-   "peak": -1.0,
-   "seconds": 103.993,
+   "lufs": -13.1,
+   "rms": -14.415036,
+   "peak": -1.4,
+   "seconds": 60.029,
    "bpm": 123.0
   },
   {
@@ -314,12 +269,13 @@
     "big"
    ],
    "original": "seth-makes-sounds-fun-music-loop.mp3",
-   "note": "first 120 s, 128 kbps mp3, 2 s fade out",
+   "note": "60 s from 10.1 s of the original (first full-level beat), 128 kbps mp3, 2 s fade out",
+   "bpm_estimated": true,
    "file": "music/playful/fun-music-loop.mp3",
-   "lufs": -14.6,
-   "rms": -17.070024,
-   "peak": 0.1,
-   "seconds": 120.033,
+   "lufs": -14.5,
+   "rms": -16.861093,
+   "peak": 0.5,
+   "seconds": 60.029,
    "bpm": 117.5
   },
   {
