@@ -16,7 +16,7 @@ import { fileURLToPath } from 'node:url'
 const here = dirname(fileURLToPath(import.meta.url))
 const ROLES = 'claude-setup operator/roles'
 
-const isUi = (f) => (/^(src|public)\//.test(f) && !/\.test\./.test(f) && f !== 'src/commit.js') || f === 'index.html'
+export const isUi = (f) => (/^(src|public)\//.test(f) && !/\.test\./.test(f) && f !== 'src/commit.js') || f === 'index.html'
 const isPlay = (f, playFile) => playFile(f) || f.startsWith('assets/')
 
 export const CHECKS = [
