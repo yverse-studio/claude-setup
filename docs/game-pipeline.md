@@ -178,10 +178,7 @@ intro 4-6 s, loop 48 frames (2 s), fast 24 frames (every 2nd frame), finish ~76 
 
 ## Sound for scene games (2026-10-26)
 
-What public sources say: nothing documents how the big render-based story games mix their sound (a 2022 player thread
-on one of them says it has no voice acting at all, and the store packs of adult voice clips are paid, not CC0).
-So this is general game-audio practice (ambience as the bed, foley synced to motion, ducking, fades) applied to
-the scene player, and it is the bar for every story game:
+Practice for the scene player, general game audio (ambience as the bed, foley synced to motion, ducking, fades):
 
 - **Layers, quiet to loud:** room bed (always on, -13 dBFS peak, 24 s seamless loop, fade 1.5-2 s) < music (0.35 in
   loops, 0.6 fast, 0.8 finish) < breath and voice (loop per phase) < contact foley (the loudest, because it carries
@@ -194,7 +191,7 @@ the scene player, and it is the bar for every story game:
 - **Duck:** the room drops to 0.55 under voice and returns after; music dips the same way in the player.
 - **No repetition tells:** a loop carries 4-6 different takes in random order, never one clip repeated every 2 s.
 - **Routes without a player** get the same layers from hooks: room from the location card text, breath and contact
-  from the looping clip's name (`szene_ton.rpy`, `route_ton_pruefen`), a test lane asserts it.
+  from the looping clip's name (the game repo's sound hook), a test lane asserts it.
 - **Own synthesis first, files second:** `scripts/make_sounds.py` in the game repo (numpy, scipy, ffmpeg) builds rooms
   (noise beds, hum, drips, crowd, waves), breath and vowels (glottal pulse through formants) and contact foley
   (slap, wet click, bubble). Licence: own work, credits file next to the audio. A found file needs CC0 or CC-BY and a
