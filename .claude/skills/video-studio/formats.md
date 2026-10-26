@@ -31,3 +31,6 @@ Report: `/mnt/project-files/claude-setup/research/2026-10-25-creator-video-style
 | POV fantasy reels | cloud tier 0 clip (blockout look); Wan 2.2 on the laptop GPU | v1 clip is not real life | tier 2 hosted model for the real look |
 | Blockout to AI video | Blender blockout free | layout and camera only | the video model step |
 | Claude drives Blender | `bpy` loop, keyframes | simple transforms | none |
+
+## Rapid Q&A, answers only (BuzzFeed "30 questions" plus yskills' own cut, 2026-10-26)
+10 answers in 35-45 s, questions cut out, part 2 reveals them; solo phone shoot (light from a window, plain wall, clip mic, jump cut per answer). Shot list and 30 questions: [`templates/rapid-qa/README.md`](templates/rapid-qa/README.md). Not shot yet.
