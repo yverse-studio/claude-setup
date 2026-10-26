@@ -26,7 +26,11 @@ jobs:
           SHA: ${{ github.event.check_run.head_sha || github.sha }}
         run: |
           if [ "$BRANCH" = "main" ]; then base="https://__NAME__.yverse.workers.dev"
-          else base="https://$(echo "$BRANCH" | tr '/_' '--' | tr 'A-Z' 'a-z')-__NAME__.yverse.workers.dev"; fi
+          else
+            slug=$(echo "$BRANCH" | tr '/_' '--' | tr 'A-Z' 'a-z')
+            echo "$slug" | grep -qE '^[a-z0-9-]+$' || { echo "::error::unexpected branch name"; exit 1; }
+            base="https://$slug-__NAME__.yverse.workers.dev"
+          fi
           echo "checking $base for $SHA"
           for i in 1 2 3 4 5 6; do
             config=$(curl -fsS "$base/api/config") && break

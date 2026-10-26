@@ -13,12 +13,14 @@ export const GRACE_MINUTES = 15
 export const LABEL = 'deploy-drift'
 export const SKIP_KINDS = new Set(['repo']) // a private repo has no Worker
 const SHA = /^[0-9a-f]{40}$/
+const NAME = /^[a-z0-9-]+$/
+const PART = /^[\w.-]+$/
 
 export const issueTitle = (name) => `${LABEL}: ${name}`
 
 export function readProjects(dir = 'projects') {
   return readdirSync(dir).filter((f) => f.endsWith('.json')).map((f) => JSON.parse(readFileSync(`${dir}/${f}`, 'utf8')))
-    .filter((p) => p.name && !SKIP_KINDS.has(p.kind))
+    .filter((p) => NAME.test(p.name ?? '') && !SKIP_KINDS.has(p.kind) && PART.test(p.org || 'x') && PART.test(p.repo || 'x'))
     .map((p) => ({ name: p.name, repo: `${p.org || 'yverse-studio'}/${p.repo || p.name}`, url: `https://${p.name}.yverse.workers.dev` }))
 }
 
@@ -32,11 +34,13 @@ export function liveCommit(body) {
   }
 }
 
-// ok | drift | building (HEAD is newer than the grace period) | unwatched (no commit served)
-export function verdict({ live, head, headAt }, now = Date.now(), grace = GRACE_MINUTES) {
+// ok | drift | building (HEAD is newer than the grace period) | unwatched (no commit served) |
+// unreachable (no answer at all). An unreadable HEAD date counts as old, so it can't hide drift.
+export function verdict({ live, head, headAt, reached = true }, now = Date.now(), grace = GRACE_MINUTES) {
+  if (!reached) return 'unreachable'
   if (!live) return 'unwatched'
   if (live === head) return 'ok'
-  return now - Date.parse(headAt) > grace * 60000 ? 'drift' : 'building'
+  return !(now - Date.parse(headAt) <= grace * 60000) ? 'drift' : 'building'
 }
 
 // What to do with this project's issue: open one, close the open one, or nothing.
@@ -56,40 +60,56 @@ export function issueBody(p, { live, head, headAt }) {
   ].join('\n')
 }
 
+// One pass over the projects. gh(path, method?, body?) is the GitHub API, `live(url)` answers
+// { reached, body }. Open issues are matched by title, not by label: a label can be missing or
+// dropped on create, and then every run would open another issue.
+export async function watch({ gh, live, projects, self, now = Date.now(), log = console.log }) {
+  const open = (await gh(`repos/${self}/issues?state=open&per_page=100`)).filter((i) => !i.pull_request)
+  let errors = 0
+  for (const p of projects) {
+    try {
+      const repo = await gh(`repos/${p.repo}`, 'GET', undefined, 'org')
+      const commit = await gh(`repos/${p.repo}/commits/${repo.default_branch}`, 'GET', undefined, 'org')
+      const answer = await live(`${p.url}/api/config`)
+      const facts = { reached: answer.reached, live: liveCommit(answer.body), head: commit.sha, headAt: commit.commit?.committer?.date }
+      const state = verdict(facts, now)
+      const issue = open.find((i) => i.title === issueTitle(p.name))
+      log(`[deploy-watch] ${p.name}: ${state} (live ${facts.live?.slice(0, 7) || '-'}, main ${String(facts.head).slice(0, 7)})`)
+      const action = issueAction(state, issue)
+      if (action === 'open') {
+        const made = await gh(`repos/${self}/issues`, 'POST', { title: issueTitle(p.name), body: issueBody(p, facts), labels: [LABEL] })
+        open.push(made)
+      }
+      if (action === 'close') {
+        await gh(`repos/${self}/issues/${issue.number}/comments`, 'POST', { body: `Live serves main HEAD \`${facts.head}\` again.` })
+        await gh(`repos/${self}/issues/${issue.number}`, 'PATCH', { state: 'closed', state_reason: 'completed' })
+      }
+    } catch (err) {
+      errors++
+      log(`[deploy-watch] ${p.name}: error ${err.message}`)
+    }
+  }
+  if (projects.length && errors === projects.length) throw new Error('every project failed: is PROJECTS_GITHUB_TOKEN still valid?')
+}
+
 async function main() {
-  const orgToken = process.env.PROJECTS_GITHUB_TOKEN
-  const repoToken = process.env.GITHUB_TOKEN
+  const tokens = { org: process.env.PROJECTS_GITHUB_TOKEN, repo: process.env.GITHUB_TOKEN }
   const self = process.env.GITHUB_REPOSITORY
-  if (!orgToken || !repoToken || !self) throw new Error('PROJECTS_GITHUB_TOKEN, GITHUB_TOKEN and GITHUB_REPOSITORY are required')
-  const gh = async (token, path, method = 'GET', body) => {
+  if (!tokens.org || !tokens.repo || !self) throw new Error('PROJECTS_GITHUB_TOKEN, GITHUB_TOKEN and GITHUB_REPOSITORY are required')
+  const gh = async (path, method = 'GET', body, token = 'repo') => {
     const res = await fetch(`https://api.github.com/${path}`, {
       method,
-      headers: { authorization: `Bearer ${token}`, accept: 'application/vnd.github+json', 'x-github-api-version': '2022-11-28' },
+      headers: { authorization: `Bearer ${tokens[token]}`, accept: 'application/vnd.github+json', 'x-github-api-version': '2022-11-28' },
       body: body && JSON.stringify(body),
     })
     if (!res.ok) throw new Error(`${method} ${path}: ${res.status}`)
     return res.json()
   }
-  const open = await gh(repoToken, `repos/${self}/issues?state=open&labels=${LABEL}&per_page=100`)
-  for (const p of readProjects()) {
-    try {
-      const repo = await gh(orgToken, `repos/${p.repo}`)
-      const commit = await gh(orgToken, `repos/${p.repo}/commits/${repo.default_branch}`)
-      const res = await fetch(`${p.url}/api/config`, { signal: AbortSignal.timeout(10000) }).catch(() => null)
-      const facts = { live: res?.ok ? liveCommit(await res.text()) : null, head: commit.sha, headAt: commit.commit.committer.date }
-      const state = verdict(facts)
-      const issue = open.find((i) => i.title === issueTitle(p.name))
-      console.log(`[deploy-watch] ${p.name}: ${state} (live ${facts.live?.slice(0, 7) || '-'}, main ${facts.head.slice(0, 7)})`)
-      const action = issueAction(state, issue)
-      if (action === 'open') await gh(repoToken, `repos/${self}/issues`, 'POST', { title: issueTitle(p.name), body: issueBody(p, facts), labels: [LABEL] })
-      if (action === 'close') {
-        await gh(repoToken, `repos/${self}/issues/${issue.number}/comments`, 'POST', { body: `Live serves main HEAD \`${facts.head}\` again.` })
-        await gh(repoToken, `repos/${self}/issues/${issue.number}`, 'PATCH', { state: 'closed', state_reason: 'completed' })
-      }
-    } catch (err) {
-      console.log(`[deploy-watch] ${p.name}: error ${err.message}`)
-    }
+  const live = async (url) => {
+    const res = await fetch(url, { signal: AbortSignal.timeout(10000) }).catch(() => null)
+    return { reached: Boolean(res), body: res?.ok ? await res.text() : '' }
   }
+  await watch({ gh, live, projects: readProjects(), self })
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) main().catch((err) => { console.error(err.message); process.exit(1) })
