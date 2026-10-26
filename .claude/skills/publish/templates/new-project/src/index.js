@@ -42,6 +42,7 @@ export default {
       // Day-zero seed: the one `meta` row a journey can read back; a project with a login replaces both callbacks.
       const out = await previewLogin(request, env, {
         name: '__NAME__',
+        repo: '__REPO__', // <org>/<repo> of this project; new-project fills it, so it also fits a repo named differently from the Worker
         seed: async (e) => { if (e.DB) await e.DB.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('seed', 'test')").run() },
         signIn: async () => Response.json({ ok: true }, { headers: { 'cache-control': 'no-store' } }),
       })

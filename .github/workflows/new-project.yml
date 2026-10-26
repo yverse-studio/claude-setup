@@ -62,7 +62,6 @@ jobs:
         with:
           node-version: 24
       - run: node --test scripts/new-project.test.mjs
-      - run: npm install --no-save --ignore-scripts --no-audit --no-fund libsodium-wrappers@0.7.15 # seals the preview login secret for the new repo
       - run: node scripts/new-project.mjs
         env:
           PROJECT_BRANCH: ${{ github.event.workflow_run.head_branch }}

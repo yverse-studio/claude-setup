@@ -55,9 +55,9 @@ jobs:
     if: needs.preview.outputs.ui == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    environment: preview-login # the token is an Environment secret limited to the default branch (new-project sets it)
     permissions:
       contents: read
+      id-token: write # the test login's proof: an OIDC token for the preview's host; this job runs the default branch's specs and no PR code
     steps:
       - uses: actions/checkout@v5
         with:
@@ -75,8 +75,6 @@ jobs:
         env:
           BASE_URL: ${{ needs.preview.outputs.url }}
           JOURNEY_DEVICE: 'iPhone 13'
-          # Set by new-project on the repo (Worker previews env too, never live): opens only the preview's own test data.
-          PREVIEW_LOGIN_TOKEN: ${{ secrets.PREVIEW_LOGIN_TOKEN }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -85,7 +83,7 @@ jobs:
             test-results/
             playwright-report/
           if-no-files-found: ignore
-          retention-days: 1 # a trace of the test login would hold the token
+          retention-days: 1
 
   report:
     needs: [preview, run]

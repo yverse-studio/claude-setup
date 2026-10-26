@@ -196,3 +196,15 @@ test('a game project is a static Vite + three.js Worker without a database or lo
   assert.ok(pkg.devDependencies['playwright-core'])
   rmSync(dir, { recursive: true, force: true })
 })
+
+test('a game scaffold has no test login, a site has it, and the repo placeholder is filled with org/repo', () => {
+  const read = (dir, f) => readFileSync(join(dir, f), 'utf8')
+  const game = mkdtempSync(join(tmpdir(), 'np-game-'))
+  writeScaffold(game, { name: 'blob', d1: false, kind: 'game' })
+  assert.ok(!read(game, 'scripts/journey.mjs').includes('test-login'), 'a game journey never posts to /api/test-login')
+  const site = mkdtempSync(join(tmpdir(), 'np-site-'))
+  writeScaffold(site, { name: 'ideaworld', d1: true, org: 'yverse-studio', repo: 'ydeas-world' })
+  assert.match(read(site, 'scripts/journey.mjs'), /previewLoginHeaders/)
+  assert.match(read(site, 'src/index.js'), /repo: 'yverse-studio\/ydeas-world'/)
+  assert.ok(!read(site, 'src/index.js').includes('__REPO__'))
+})
