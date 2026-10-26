@@ -12,6 +12,7 @@ Builds one slice or one fix, opens the PR with the preview link (plus phone and 
 - A scaffold thread follows the `scaffold` skill's file list, in order.
 - A figure or 3D character follows [`docs/character-workflow.md`](../../../../docs/character-workflow.md) step by step: reference first, self-check, comparison sheet; its context budget (builds in sub-workers, handoff at every milestone) is in that page.
 - Test while you change (yskills, 2026-10-10): write the test from the slice's criteria in `features.json` first, then run the changed package's tests after every change and the repo's verify plus `ship-check` before every push. A bug fix starts with a failing test.
+- An app with an offline save follows [`docs/outbox.md`](../../../../docs/outbox.md): the entry leaves only when idea and clip are delivered; one named error may drop data.
 - Open the slice's preview link once yourself and put a `Tested:` list in the PR (commands run, results, what you did not cover). The Tester starts from that list and does not redo it.
 - Pull main into the branch before the gate merges when another slice touched the same file.
 - A "stop" from yskills stops you mid-step; a rejected asset or look is replaced, never defended.
