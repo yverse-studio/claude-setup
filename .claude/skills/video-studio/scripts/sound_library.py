@@ -25,6 +25,7 @@ SFX_CATEGORIES = {"hit", "pop", "whoosh", "riser", "tick", "thud", "scratch", "b
 MUSIC_MOODS = {"chill", "funky", "playful", "drive", "cinematic", "retro", "tense"}
 SFX_PEAK_DBFS = -3.0
 SAMPLE_RATE = 48000
+MIN_BPM, MAX_BPM = 40, 240
 ID = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 LOUDNESS = re.compile(r"I:\s+(-?[\d.]+) LUFS.*?Peak:\s+(-?[\d.]+|-inf) dBFS", re.S)
 RMS = re.compile(r"Overall.*?RMS level dB:\s+(-?[\d.]+|-inf)", re.S)
@@ -36,52 +37,75 @@ def load(library):
     return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {"entries": []}
 
 
+def inside(library, rel, folder=""):
+    """The file `rel` names when it is a real file under library/folder, else None (no absolute or .. paths)."""
+    if not isinstance(rel, str) or not rel:
+        return None
+    root = (Path(library) / folder).resolve()
+    path = (Path(library) / rel).resolve()
+    return path if path.is_relative_to(root) and path.is_file() else None
+
+
+def entry_problems(entry, library, check_files=True):
+    """Every reason one manifest entry (or a curation pick) is not clean."""
+    if not isinstance(entry, dict):
+        return [f"{entry!r}: entry is not an object"]
+    name = entry.get("id", "?")
+    found = []
+    if not isinstance(name, str) or not ID.match(name):
+        found.append(f"{name}: id must be kebab-case")
+    kind = entry.get("kind")
+    group = entry.get("category") if kind == "sfx" else entry.get("mood")
+    allowed = SFX_CATEGORIES if kind == "sfx" else MUSIC_MOODS if kind == "music" else set()
+    if group not in allowed:
+        found.append(f"{name}: unknown {kind} group {group!r}")
+    if entry.get("licence") not in LICENCES:
+        found.append(f"{name}: licence {entry.get('licence')!r} is not CC0, public domain or own")
+    if entry.get("licence") != "own-synthesis" and not entry.get("url"):
+        found.append(f"{name}: no source url")
+    presets = entry.get("presets")
+    if not isinstance(presets, list) or not presets or not set(presets) <= PRESETS:
+        found.append(f"{name}: presets must be a non-empty subset of {sorted(PRESETS)}")
+    if not entry.get("tags"):
+        found.append(f"{name}: no tags")
+    bpm = entry.get("bpm")
+    if kind == "music" and bpm is not None and not (isinstance(bpm, (int, float)) and MIN_BPM <= bpm <= MAX_BPM):
+        found.append(f"{name}: bpm {bpm!r} outside {MIN_BPM}-{MAX_BPM}")
+    if not check_files:
+        return found
+    if not inside(library, entry.get("proof"), "licences"):
+        found.append(f"{name}: licence proof {entry.get('proof')!r} missing or outside licences/")
+    if not inside(library, entry.get("file")):
+        found.append(f"{name}: file {entry.get('file')!r} missing or outside the library")
+    if kind == "music" and bpm is None:
+        found.append(f"{name}: music without bpm")
+    if entry.get("lufs") is None and entry.get("rms") is None:
+        found.append(f"{name}: not loudness-measured")
+    return found
+
+
 def problems(library):
     """Every reason the library is not clean; empty means clean."""
-    library = Path(library)
-    entries = load(library)["entries"]
     found, seen = [], set()
-    for entry in entries:
-        name = entry.get("id", "?")
-        if not ID.match(name):
-            found.append(f"{name}: id must be kebab-case")
+    for entry in load(library)["entries"]:
+        found += entry_problems(entry, library)
+        name = entry.get("id") if isinstance(entry, dict) else None
         if name in seen:
             found.append(f"{name}: duplicate id")
         seen.add(name)
-        kind = entry.get("kind")
-        group = entry.get("category") if kind == "sfx" else entry.get("mood")
-        allowed = SFX_CATEGORIES if kind == "sfx" else MUSIC_MOODS if kind == "music" else set()
-        if group not in allowed:
-            found.append(f"{name}: unknown {kind} group {group!r}")
-        if entry.get("licence") not in LICENCES:
-            found.append(f"{name}: licence {entry.get('licence')!r} is not CC0, public domain or own")
-        if entry.get("licence") != "own-synthesis" and not entry.get("url"):
-            found.append(f"{name}: no source url")
-        proof = entry.get("proof")
-        if not proof or not (library / proof).is_file():
-            found.append(f"{name}: licence proof {proof!r} missing")
-        if not entry.get("file") or not (library / entry["file"]).is_file():
-            found.append(f"{name}: file {entry.get('file')!r} missing")
-        if not set(entry.get("presets") or []) <= PRESETS or not entry.get("presets"):
-            found.append(f"{name}: presets must be a non-empty subset of {sorted(PRESETS)}")
-        if not entry.get("tags"):
-            found.append(f"{name}: no tags")
-        if kind == "music" and not entry.get("bpm"):
-            found.append(f"{name}: music without bpm")
-        if entry.get("lufs") is None and entry.get("rms") is None:
-            found.append(f"{name}: not loudness-measured")
     return found
 
 
 def pick(library, category, preset, last=None, tag=None):
     """Next file path for a cue of this category in this preset, never the one used last.
 
+    Entries tagged opt-in (glitch stings) are skipped unless tag="opt-in" is passed.
     Raises when the preset has nothing in the category (real_talk has no whoosh, bell or glitch).
     """
     library = Path(library)
     options = [e for e in load(library)["entries"]
                if e["kind"] == "sfx" and e["category"] == category and preset in e["presets"]
-               and (tag is None or tag in e["tags"])]
+               and (tag in e["tags"] if tag else "opt-in" not in e["tags"])]
     if not options:
         raise ValueError(f"no {category!r} sound for preset {preset!r}")
     fresh = [e for e in options if e["file"] != last] or options
@@ -113,6 +137,15 @@ def tempo(path):
     return round(float(bpm[0] if hasattr(bpm, "__len__") else bpm), 1)
 
 
+def pick_problems(pick):
+    if not isinstance(pick, dict):
+        return [f"{pick!r}: pick is not an object"]
+    found = entry_problems(pick, "", check_files=False)
+    if not Path(str(pick.get("src", ""))).is_file():
+        found.append(f"{pick.get('id', '?')}: src {pick.get('src')!r} is not a file")
+    return found
+
+
 def add_one(library, pick):
     kind = pick["kind"]
     group = pick["category"] if kind == "sfx" else pick["mood"]
@@ -140,6 +173,9 @@ def add(library, curation):
     library = Path(library)
     picks = json.loads(Path(curation).read_text(encoding="utf-8"))
     by_id = {e["id"]: e for e in load(library)["entries"]}
+    bad = [line for pick in picks for line in pick_problems(pick)]
+    if bad:
+        sys.exit("\n".join(bad) + "\nnothing imported")
     for pick in picks:
         by_id[pick["id"]] = add_one(library, pick)
         print(f"added {pick['id']}")

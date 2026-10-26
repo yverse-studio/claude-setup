@@ -47,6 +47,21 @@ class Check(unittest.TestCase):
         self.assertTrue(any("duplicate" in line for line in found))
 
 
+class Paths(unittest.TestCase):
+    def test_absolute_and_parent_paths_are_not_proof(self):
+        for proof in ("/etc/passwd", "../manifest.json", "sfx/thud/thud-soft-01.wav"):
+            found = problems(library([{**CLEAN, "proof": proof}]))
+            self.assertTrue(any("proof" in line for line in found), proof)
+
+    def test_absolute_file_is_rejected(self):
+        found = problems(library([{**CLEAN, "file": "/etc/passwd"}]))
+        self.assertTrue(any("outside the library" in line for line in found))
+
+    def test_bad_bpm_and_malformed_entry_are_reported_not_raised(self):
+        music = {**CLEAN, "kind": "music", "mood": "chill", "bpm": "fast"}
+        self.assertTrue(any("bpm" in line for line in problems(library([music, "oops", {}]))))
+
+
 class Shipped(unittest.TestCase):
     def test_shipped_library_is_clean(self):
         self.assertEqual(problems(SHIPPED), [])
@@ -55,6 +70,11 @@ class Shipped(unittest.TestCase):
         for category in ("whoosh", "bell", "glitch", "riser"):
             with self.assertRaises(ValueError):
                 pick(SHIPPED, category, "real_talk")
+
+    def test_glitch_needs_the_opt_in_tag(self):
+        with self.assertRaises(ValueError):
+            pick(SHIPPED, "glitch", "big")
+        self.assertIn("glitch", pick(SHIPPED, "glitch", "big", tag="opt-in").name)
 
     def test_pick_never_repeats_the_last_file(self):
         first = pick(SHIPPED, "thud", "real_talk")
