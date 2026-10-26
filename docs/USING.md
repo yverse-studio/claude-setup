@@ -114,6 +114,10 @@ Run `branch-cleanup.yml` (`actions_run_trigger` `run_workflow`, ref `main`) with
 true, read the plan, then again with `dry_run` false. Every branch without an open PR gets a tag
 `archive/<branch>` and is deleted; `git checkout archive/<branch>` brings one back.
 
+One throwaway helper branch (`media-*`): run `delete-helper-branch.yml` with `repo` and `branch`. It tags
+`archive/<branch>` first and refuses any other name, the default branch and a branch with an open PR.
+A session's own safety check blocks raw `git push --delete`; this is the route.
+
 ## When Claude asks you
 
 Only for real money, mail or posts, deleting data, force-push, rotating a secret, a choice with
