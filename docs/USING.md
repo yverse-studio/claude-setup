@@ -8,12 +8,12 @@ Once per new claude.ai project, before the first message. The text is a short po
 session, the project chat included, loads this repo with `add_repo` and follows its `CLAUDE.md`,
 so the rules live here only.
 
-1. Open [`operator/templates/project-instructions.md`](../.claude/skills/operator/templates/project-instructions.md)
-   and copy everything below the `---` line.
-2. In the project: **Project settings > Memory > Project instructions**, paste, replace `<app>`
-   with one line on what the project is, save.
-3. **Project settings > Repositories**: add `yverse-studio/claude-setup` (threads load the
-   details from it).
+1. Run `node scripts/project-instructions.mjs <name> --about "<one line>"` (or ask a thread to
+   print it) and copy the text. Add `--kind` when `projects/<name>.json` doesn't say it,
+   `--repo none` for a project with no repo (a social or video team), `--repo new` before the
+   repo exists; the flags: the script's header.
+2. In the project: **Project settings > Memory > Project instructions**, paste, save.
+3. **Project settings > Repositories**: add `yverse-studio/claude-setup` and the project's repo.
 
 A rule change needs no new paste: sessions read the rules from this repo.
 
@@ -48,7 +48,7 @@ What you do: write the idea. A thread does the rest.
 2. Start it: push branch `new/<name>` **in one push, with the file in it** (git, or `push_files` to
    a new branch; `create_branch` then `create_or_update_file` is two pushes and the first, empty
    one makes a site), file `projects/<name>.json`:
-   `{ "name": "<name>", "d1": true, "org": "yverse-studio" }`, plus `"kind": "game"` for a game, `"kind": "repo"` for a private repo with no Worker (e.g. a Ren'Py game).
+   `{ "name": "<name>", "d1": true, "org": "yverse-studio" }`, plus `"kind": "game"` for a game, `"kind": "repo"` for a private repo with no Worker (e.g. a Ren'Py game). A game writes `"d1": false` unless it stores data.
    Or start `new-project.yml` in `yverse-studio/claude-setup`: GitHub MCP `actions_run_trigger`
    `run_workflow`, ref `main`, inputs `name`, `d1` (false when the page stores no data), `kind`
    (`site`, `game` or `repo`).
@@ -85,11 +85,11 @@ and whether claude-setup should adopt it. Private or login-only posts don't work
 
 What you do: drop ideas, say two words, set one switch. The `social-team` skill runs the rest.
 
-1. Any idea, any time, one line in the project chat: Claude files it and reacts 👍.
-2. "work them out": the studio makes the videos; you get them in HQ's Content view.
+1. Any idea, any time, one line in the `social` app (https://social.yverse.workers.dev, Ideen) or the project chat: Claude files it and reacts 👍.
+2. "work them out", or the daily routine: Claude writes the script and makes the draft; you see it under Entwürfe and tap Freigeben, Ändern or Verwerfen (`social-team`, Where things live).
 3. Your personal account: "upload" sends them to your drafts or the schedule; you decide what goes
-   up. Leaving for a while: switch auto-post on in HQ (build and learning videos only, never ads or
-   crypto, at most 2 a day, a daily summary).
+   up. Auto-post runs only while you flip its switch in the `social` app (`social-team`, Posting): build and learning videos only, never ads or
+   crypto, at most 2 a day, a daily summary.
 4. A project account (one per brand or project): you sign up and connect it once, about 5 minutes
    (`social-team` `templates/account-setup.md`); Claude decides and posts on it from then on.
 5. Brand deals: Claude keeps the media kit and a partner list and drafts the offers; you get

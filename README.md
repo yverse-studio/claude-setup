@@ -99,6 +99,9 @@ don't get these settings (the setup script installs plugins and one env key, not
 list), so there a link nobody posted in the chat still asks before it opens; whether adding the
 list to the setup script would stop that is untested. Threads research with WebSearch instead.
 
+- **Settings screens:** Claude cannot see the claude.ai settings screens, only the docs page (yskills, 2026-10-04: "how do you not know your own ui"): say so up front, name the exact field (gear next to the cloud environment > Edit > Environment variables) and ask for a screenshot when it is not there. An environment variable reaches every process (wrangler needs `CLOUDFLARE_API_TOKEN` as one); an API credential is added by the proxy for one host and the process never sees it, so it only fits keys called over HTTP.
+- **Cloud limits** (autonomy research, 2026-10-10): cloud threads ignore `defaultMode` bypassPermissions and dontAsk; `permissions.allow` in a repo's `.claude/settings.json` applies in cloud only in a project with exactly one repository; `autoMode` rules are read from user or managed settings, never from project files; writes to protected paths (`.git/`, `.claude/`, policy files) are never auto-approved, so such a refusal is not a bug and not tunable. Never use bypass anywhere that holds keys.
+
 ## Using it
 
 - **New idea:** just describe it. The `operator` skill sizes it, researches, plans and builds it, and sends you three ok/no briefs, and the gate merges every PR at 5/5; `toolbox` adds the tools to that project only.
@@ -122,3 +125,5 @@ list to the setup script would stop that is untested. Threads research with WebS
 Research notes and sources behind these choices: [docs/RESEARCH.md](docs/RESEARCH.md).
 The roadmap every new project follows: [docs/WORKFLOW.md](docs/WORKFLOW.md). The practice runs
 before the first real one: [docs/TEST-PROJECTS.md](docs/TEST-PROJECTS.md).
+
+Licence: [MIT](LICENSE). Vendored third-party parts keep their own licences: [THIRD_PARTY.md](THIRD_PARTY.md).

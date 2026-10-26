@@ -10,6 +10,7 @@ project needs. Then follow `../SKILL.md` for engine, layout, tests and Steam.
 | [figures.md](figures.md) | the full-size figure pipeline (layers, faces, physics, dance, look) and its quality bar |
 | [models.md](models.md) | every standard model and asset pack: licence, path, ship or study only |
 | [learnings.md](learnings.md) | the decisions, settings and pitfalls worth keeping; the noise is dropped |
+| [walkable-room.md](walkable-room.md) | camera, controller, collision and light numbers for a third-person cozy room, and its kit modules |
 
 ## Where the real files live
 

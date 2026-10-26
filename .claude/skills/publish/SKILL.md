@@ -71,9 +71,10 @@ from a pushed branch; private repo, no outside collaborators, `yskills-claude` i
 
 ### Per project, Claude
 
-1. Start the workflow from the thread: dispatch `new-project.yml` on `main` with inputs `name`,
-   `d1`, `kind` (`site`, `game` or `repo`), `org` (GitHub MCP `actions_run_trigger` `run_workflow`;
-   threads can, checked 2026-10-08 19:50), or push a branch: in claude-setup, branch
+1. Start the workflow from the thread by pushing a branch, the route that works from a thread
+   (dispatching `new-project.yml` with GitHub MCP `actions_run_trigger` `run_workflow`, inputs `name`,
+   `d1`, `kind` (`site`, `game` or `repo`), `org`, is the second route: it answered 403 in one thread
+   at 2026-10-08 17:31 and worked at 19:50; `docs/USING.md` names both): in claude-setup, branch
    `new/<name>` off `main` with one file `projects/<name>.json`, **in one push** (git, or
    `push_files`; `create_branch` then `create_or_update_file` is two pushes, and the first, empty
    one builds a plain site that a later `kind: game` run never converts, 2026-10-18), `{ "name": "<name>", "d1": true, "org": "yverse-studio" }` (`name`:
@@ -175,9 +176,11 @@ Decided 2026-10-11. Read this before touching anything Cloudflare; a thread that
 starts here, not with yskills.
 
 **Route 1, cloud threads: the claude-setup workflows.** `new-project` (also the existing-repo
-path), `delete-project`, `build-logs`, run with the Actions token. That token has Workers
+path), `delete-project`, `build-logs`, run with the Actions token. The Actions token has Workers
 Scripts, D1, Builds Configuration and Account Settings, and nothing else: no KV, no token
-management. Cloud threads never run wrangler (the proxy breaks asset uploads and there is no [advisory]
+management. `branch-cleanup.yml` also holds a key (`PROJECTS_GITHUB_TOKEN`, the org GitHub
+token, not a Cloudflare one). These and kleingarten's Roblox publish are the only workflows
+allowed to hold keys. Cloud threads never run wrangler (the proxy breaks asset uploads and there is no [advisory]
 safe login) and never ask yskills for `wrangler login`, a token edit or a dashboard click. [advisory]
 
 **Route 2, everything that token cannot do:** KV namespaces, a dashboard-only setting, token or
@@ -202,6 +205,7 @@ Lessons from the deploy tests (10-08, runs 1 to 9) and the move to Claude's acco
   regenerate it, never hand-edit. [advisory]
 - `projects/<name>.json` goes in first, through a size-S gate; delete and later runs need it.
 - Old copies in yskills' own Cloudflare stay until yskills says "delete <name>".
+- A lockfile written by npm 11 needs `npx -y npm@11.17.0 ci` in the cloud container (MyPage, 2026-10-04); a default-branch name other than `main` (MyPage's was `origin`) breaks every doc that says main.
 
 ## Delete a project
 

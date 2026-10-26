@@ -38,6 +38,9 @@ in each section.
 - **Library outside git** (635 MB) with a pinned, hashed index; binaries never in the repo.
 - If quality must jump later, the step up is one paid pro base with a fitted-outfit market (a marketplace
   base, about 60 to 120 € for a figure plus outfits; pick by `refs/asset-sources.md`): yskills buys, everything else stays.
+- 2026-10-07 (research/characters-formats): formats and when each wins: VRM for anime humans you swap freely; GLB for furniture, animals and props; FBX only when a store or Roblox needs it; an engine-native format works only in its own engine. That is why VRM stays the one character format (the old link `research/characters-formats.md` is not in the repo).
+- 2026-10-07 (research/characters-formats): per engine: three-vrm loads VRM and VRMA directly; Godot via godot-vrm (MIT); Unity via UniVRM (most mature); Unreal via VRM4U (works, heavy); Roblox has no VRM, it needs FBX or glTF rigged as R15 and imported in Studio, and VRM to R15 is work per character. Pick browser or Godot, not Roblox, when characters matter.
+- 2026-10-07 (hq-characters HANDOFF, research/characters-formats): Honey Select 2 works as one base body with hundreds of morph sliders, swappable hair and clothes, a character saved as a PNG card that holds the slider numbers, and moves and scenes inside the game; VRoid Studio is the free equivalent. An in-game slider creator is a big project, only worth it if the game is about creating characters. The in-HQ creator plan, in slices: body dials = a saved remix displacement, hair/eye/skin/outfit colours, outfit swaps by extra .vrm. Faces stay VRoid's; a true parts creator is weeks of work and needs an asset library. Honey Select 2 cards never (PNG with embedded Unity data, proprietary 18+).
 
 ## Settings that worked
 
@@ -52,6 +55,8 @@ in each section.
   `CARRY` 0.6 and `unsag`; finger curl 0.35 in the dance.
 - Walkers: A* over a floor grid from the furniture boxes, give way instead of overlap, stride
   follows distance walked, ease in and out at about 1 m/s.
+- 2026-10-06 (hq-cozy HANDOFF): cozy pastel render recipe: toon gradient softened to 4 steps, brown outlines, pastel planks and brick, golden sun by day, lamp shades plus pendant glow and a lavender ceiling at dusk and night, a darker night ambient, the kit repainted by material name from one COZY_KIT map.
+- 2026-10-18 (igelgarten DESIGN, designer-handoff): flat diorama look in three.js (Igelgarten v3): flat toon materials, depth as flat value layers separated by translucent fog bands, a three-step hard-edged lantern pool, no bloom, blur or gradient, the hero the only light thing.
 
 ## Pitfalls (each one cost a round)
 
@@ -75,3 +80,6 @@ in each section.
   auto-allow run-code.
 - Load every model in a real browser scene with a sample file before review; Blender stills
   don't show three-vrm's outline, spring or shading bugs.
+- 2026-10-07 (hq-characters HANDOFF): VRoid clothing presets (.vroidcustomitem) only apply inside the VRoid Studio desktop GUI; headless routes are a full VRM whose outfit fits, or a texture repaint of the existing meshes.
+- 2026-10-07 (hq-characters remix REPORT): upload sizes: a VRoid sample is 14.2 MB (textures 5.9 MB, geometry with 41 face blendshapes 3.7 MB); the in-browser shrink rebuilds the GLB with every texture over 1024 px scaled to 1024 (canvas PNG, 4-byte-aligned views) and lands at 9.6 MB.
+- 2026-10-07 (hq-characters HANDOFF): a loader test that waits 14 s is too short for a 14 MB VRM; wait 25 s or load the shrunk file.

@@ -35,6 +35,21 @@ Dropping the real file in replaces the placeholder with no code change. Keep art
 auto-images there would clash with the slot names. Ship an `ASSETS.txt` that lists every slot. Template: `docs/renpy-template/slots.rpy`; playthrough
 example: `docs/renpy-template/testcases.example.rpy`.
 
+## Animated scenes (intro, loops, finish)
+
+One player label per game, never per-scene code: clips register by name (`<slot>_intro`, `_loop`, `_B_loop`,
+`_fast`, `_finish` in `game/art/loops/`), missing parts drop out, and the label plays intro → A/B loops (hard cut
+every 4-8 s) → fast → finish → still, with short auto lines in a small screen at the bottom and the stage buttons in
+a corner. Reference: companyxy-spiel `game/szene.rpy`. Lessons that cost a round:
+
+- All clips `Movie(..., channel="szene", group="szene")`: the group keeps the last frame until the next clip has
+  one, so cuts never flash black. Tempo comes from separate clips, never from playback speed.
+- The first clip of a scene is shown over the old image (no `scene` clear): a Movie is transparent until its first
+  frame decodes, so the old image covers that instead of 3 black frames.
+- Drive the loop phase from one Python loop with `renpy.pause(t)` (click returns True, a screen button returns its
+  `Return` value) and count the requested time, not the wall clock, so rollback and skip cannot hang it.
+- Test with the real clips: record Xvfb with `ffmpeg -f x11grab`, then `signalstats` YAVG per frame finds black frames.
+
 ## Check before shipping
 
 - `./renpy.sh <proj> lint`

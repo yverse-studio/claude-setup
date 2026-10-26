@@ -18,6 +18,8 @@ Source: videos yskills shared; tool names marked (unverified) came from captions
 ## Blockout to AI video (from @aisavvy, @comfyorg)
 Claude builds a rough scene and camera in Blender through the Blender connector, renders a cheap clip, and the AI video tool uses it as the motion reference with the character references. Camera and timing are planned for free before any paid credits. The tool name/version in the source (Seedance 2.5) is unverified; fal.ai models are in `toolbox/catalog/video-audio.md`.
 
+Cautions (low-poly-and-sources, 2026-10-24): plausible but untested end to end. Test one 5 s shot first; identity and props drift; keep the blockout render in simple flat colours; check the tool's licence for commercial use.
+
 ## What free tools reach, per style (research 2026-10-25)
 Report: `docs/research/2026-10-25-creator-video-styles.md`; prompts: [`prompts.md`](prompts.md); people and POV: [`people-video.md`](people-video.md).
 
@@ -29,3 +31,6 @@ Report: `docs/research/2026-10-25-creator-video-styles.md`; prompts: [`prompts.m
 | POV fantasy reels | cloud tier 0 clip (blockout look); Wan 2.2 on the laptop GPU | v1 clip is not real life | tier 2 hosted model for the real look |
 | Blockout to AI video | Blender blockout free | layout and camera only | the video model step |
 | Claude drives Blender | `bpy` loop, keyframes | simple transforms | none |
+
+## Rapid Q&A, answers only (BuzzFeed "30 questions" plus yskills' own cut, 2026-10-26)
+10 answers in 35-45 s, questions cut out, part 2 reveals them; solo phone shoot (light from a window, plain wall, clip mic, jump cut per answer). Shot list and 30 questions: [`templates/rapid-qa/README.md`](templates/rapid-qa/README.md). Not shot yet. Lesson: the BuzzFeed polish comes from light, backdrop, mic, trimmed silence and a fixed rhythm, not from effects; answers-only is yskills' own twist, keep it.

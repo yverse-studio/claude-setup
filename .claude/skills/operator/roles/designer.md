@@ -2,7 +2,7 @@
 
 Sets the look before the first screen and checks every UI change so nothing looks AI-made.
 
-- **Starts:** After brief (a), before any screen is built, for every project kind (site, app, game): art direction (below), then 2-3 directions as screenshots on a vote card; then on every PR that changes UI.
+- **Starts:** At project start for every project kind (site, app, game), before any screen is built; the order is in [run.md](../run.md) step 3. Art direction (below), then 2-3 directions as screenshots on a vote card; then on every PR that changes UI.
 - **Runs as:** A `Designer · art direction` thread at project start and for a redesign; `design-critic` as a quick subagent on every UI PR.
 - **Uses:** `frontend-design`, `impeccable`, `ui-review`, `design-critic`; Figma plugin or Canva only when the plan uses them
 - **Model and handoff:** the brief names both; the rule is [project-manager.md](project-manager.md#model-and-handoff-in-every-brief).
@@ -21,7 +21,7 @@ against that text. So:
    images) and a one-line fit verdict each, in `design/STYLES.md`; plus a "not like" list with a
    screenshot of each look we already shipped (yland, Company XY, earlier versions of this
    project) in `design/reference/ours/`. The three directions for the vote come from the best-fitting families and repeat
-   none of the "not like" looks. The landscape goes on the same vote card as the directions (`CLAUDE.md`, How to work, Cards).
+   none of the "not like" looks. Start the landscape from the style library ([`ui-review/styles/`](../../ui-review/styles/README.md), each style with tokens, captures and do/don't) and add what the idea needs. The landscape goes on the same vote card as the directions (`CLAUDE.md`, How to work, Cards).
 1. **References:** 3 to 6 captures of the top products of the genre (CrazyGames and Poki top
    pages for a game; the category's leading apps for a product) at 390px and 1440px, shot with
    `ui-review`'s `shoot.mjs` (absolute URLs), into `design/reference/`, one line each in
@@ -61,6 +61,7 @@ against that text. So:
 - Every view gets its own camera per screen shape: a tall phone looks down the room's long side and fills
   the height; check with screenshots at a real 390 css px (`isMobile` without a viewport meta lays the page
   out at 980 px and every phone finding is wrong).
+- Phone framing in unit terms (Igelgarten, 2026-10-18): u = shorter screen side / 10; the hero is at least 2.9 u wide on a phone; the camera pulls back on narrow screens (a phone fits 17 units of garden); the title hero is about 340 px at 1440.
 
 ## UI/UX bar
 
@@ -100,7 +101,7 @@ How every visual choice reaches yskills (2026-10-18: no Artifacts, he does not w
 
 1. Each option is a draft rendered with Playwright at 390px and 1440px; a game scene or 3D shows the 1440px frame.
 2. Save the shots as `/mnt/project-files/<project>/votes/<round>/<letter>-<name>-{390,1440}.png`.
-3. The thread's `Card:` reply lists the files, one line per option (letter, two-word name, the feel; recommendation starred with its reason).
+3. The thread posts the real card with `request_decision` and a reply with the files, one line per option (letter, two-word name, the feel; recommendation starred with its reason).
 4. The Project Manager posts the card in the project chat with the screenshots attached. The tap is the pick; "none, try again" is an option.
 5. After the decision the thread deletes that round's folder.
 
@@ -127,3 +128,7 @@ Added at the end of each project (operator step 9): date, project and its type, 
 - 2026-10-07 (Claude Setup HQ, second character skin): models loaded from files must be tested in a browser with a real sample file before review: the untested build had every VRM 0 model's arms flipped (VRM 0 is turned round to face +z, so its bones' x and z rotations mirror), flat T-pose fingers and a wave that pointed. A dialogue scene frames the speaker as the subject: the card stands beside her on wide screens, never over her, the room's labels hide while she is there, replies are full-width rows of 44 px in a fresh order with no answer pre-focused. A file stored as base64 text grows by a third, so its upload cap sits a third under the store's limit.
 - 2026-10-07 (Claude Setup HQ, Kassenbuch round 2): yskills found the money view unclear and missed the cents. Every amount anywhere on a page shows two decimals (one formatter, `de-DE`, 28,80 €), and every place that shows the same money (wall chart, laptop, Company, cash book) reads it from the same source, or one of them says a rounded 30 € next to a 28,80 €. Say the result in plain words ("Bleibt dir", "Kunden haben bezahlt", "Stripe-Gebühr"), not Netto/Brutto, and fold parts with no data yet into one quiet line instead of a heading each.
 - 2026-10-18 (Igelgarten, game): yskills called the live game "holy ai slop" after four 5/5 gates: neon glow on every sprite, a SaaS-dark menu with stripe rows in a garden game, no palette or type decision. Fix: art direction first, `design-check.mjs` and `SLOP.md` in check 5.
+- 2026-10-24 (MEMORY, TASTE): yskills rejected Igelgarten v1, Nachtwache, Bilderbuch, Pixel-Abend and Mondnacht as AI slop; a new look must not start from those names.
+- 2026-10-06 (hq-cozy HANDOFF): a pixel check showed the "milky veil" on phones was the pastel palette itself, not an overlay: diagnose a washed look by sampling pixels before adding fixes.
+- 2026-10-18 (Igelgarten designer-handoff-4): a clay or plasticine look can be faked with SVG lighting filters now; the real version wants Blender-baked sprites and is the heaviest to produce.
+- 2026-10-18 (Mondgarten DESIGN, mondgarten-build): a woodblock look is cheap as vector plus one grain filter, with no baked sprites; the grain filter must stay under 2 ms a frame on a mid phone, chalk (Kreide) is the fallback. The build switched from a three.js world to a 2D canvas view (three removed, 0.1 MB flat build).

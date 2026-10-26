@@ -169,3 +169,104 @@ test('attempt guard: chained commands count by their non-read-only part, long co
     assert.equal(runGuard('pre', 'long', cwd, `${long}b"`).status, 0, 'a different long command is a different command')
   } finally { rmSync(cwd, { recursive: true, force: true }) }
 })
+
+test('check.mjs fails when a Kits row is removed or a Read-first link is dead', () => {
+  const copy = mkdtempSync(join(tmpdir(), 'guards-repo-'))
+  try {
+    cpSync(root, copy, { recursive: true, filter: (p) => !p.includes(`${join(root, '.git')}`) })
+    const run = () => spawnSync(process.execPath, [join(copy, 'scripts', 'check.mjs')], { encoding: 'utf8' })
+    assert.equal(run().status, 0)
+    const map = join(copy, 'docs/TEAMS.md')
+    const original = readFileSync(map, 'utf8')
+    writeFileSync(map, original.split('\n').filter((l) => !l.startsWith('| `video`')).join('\n'))
+    const missingRow = run()
+    assert.equal(missingRow.status, 1)
+    assert.ok(missingRow.stderr.includes('no row for kind "video"'), missingRow.stderr)
+    writeFileSync(map, original.replace('(renpy.md)', '(no-such-file.md)'))
+    const deadLink = run()
+    assert.equal(deadLink.status, 1)
+    assert.ok(deadLink.stderr.includes('story reads no-such-file.md'), deadLink.stderr)
+  } finally { rmSync(copy, { recursive: true, force: true }) }
+})
+
+test('check.mjs fails when a lessons file is not linked from docs/MAP.md or the memory template grows past 3 KB', () => {
+  const copy = mkdtempSync(join(tmpdir(), 'guards-repo-'))
+  try {
+    cpSync(root, copy, { recursive: true, filter: (p) => !p.includes(`${join(root, '.git')}`) })
+    const run = () => spawnSync(process.execPath, [join(copy, 'scripts', 'check.mjs')], { encoding: 'utf8' })
+    assert.equal(run().status, 0)
+    writeFileSync(join(copy, 'docs/new-lessons.md'), '# New\n\n## Lessons\n\n- 2026-10-25: a lesson nobody indexed\n')
+    const memory = join(copy, '.claude/skills/operator/templates/project-memory.md')
+    writeFileSync(memory, readFileSync(memory, 'utf8') + 'x'.repeat(3072))
+    const r = run()
+    assert.equal(r.status, 1)
+    for (const want of ['docs/new-lessons.md: holds lessons but docs/MAP.md does not link it', 'project-memory.md: 3 KB or more']) assert.ok(r.stderr.includes(want), `missing: ${want}\n${r.stderr}`)
+  } finally { rmSync(copy, { recursive: true, force: true }) }
+})
+
+
+// Team guard: an Agent call or thread start without `model` is refused; an agent file with its own
+// `model:` passes; SessionStart prints the TEAMS.md pointer.
+const teamFile = join(root, 'global/team-guard.mjs')
+const runTeam = (mode, payload, env = {}) => spawnSync(process.execPath, [teamFile, mode], {
+  input: JSON.stringify(payload), encoding: 'utf8', timeout: 5000, env: { ...process.env, ...env },
+})
+
+test('team guard: blocks Agent and thread starts without model, passes with one', () => {
+  const cwd = mkdtempSync(join(tmpdir(), 'team-'))
+  try {
+    const agent = (input) => runTeam('pre', { cwd, tool_name: 'Agent', tool_input: input })
+    assert.equal(agent({ subagent_type: 'general-purpose', prompt: 'x' }).status, 2)
+    assert.match(agent({ prompt: 'x', model: ' ' }).stderr, /docs\/TEAMS\.md/)
+    assert.equal(agent({ subagent_type: 'general-purpose', prompt: 'x', model: 'haiku' }).status, 0)
+    const start = (tool, input) => runTeam('pre', { cwd, tool_name: tool, tool_input: input }).status
+    assert.equal(start('mcp__hearthbot__start_thread_session', { brief: 'x' }), 2)
+    assert.equal(start('mcp__claude-code-remote__create_session', { prompt: 'x' }), 2)
+    assert.equal(start('mcp__hearthbot__start_thread_session', { brief: 'x', model: 'claude-x-1' }), 0)
+    assert.equal(start('Bash', { command: 'ls' }), 0)
+    assert.equal(start('mcp__hearthbot__post_message', { text: 'x' }), 0)
+    assert.equal(runTeam('pre', { cwd, tool_name: 'Agent', tool_input: { prompt: 'x' } }, { CLAUDE_SETUP_TEAM_GUARD: 'off' }).status, 0)
+  } finally { rmSync(cwd, { recursive: true, force: true }) }
+})
+
+test('team guard: an agent file with its own model passes, one without does not', () => {
+  const cwd = mkdtempSync(join(tmpdir(), 'team-'))
+  try {
+    cpSync(join(root, '.claude/agents/code-reviewer.md'), join(cwd, '.claude/agents/code-reviewer.md'), { recursive: true })
+    writeFileSync(join(cwd, '.claude/agents/plain.md'), '---\nname: plain\ndescription: x\n---\nbody model: opus\n')
+    const agent = (type) => runTeam('pre', { cwd, tool_name: 'Agent', tool_input: { subagent_type: type, prompt: 'x' } }).status
+    assert.equal(agent('code-reviewer'), 0)
+    assert.equal(agent('plain'), 2)
+    assert.equal(agent('../code-reviewer'), 2)
+  } finally { rmSync(cwd, { recursive: true, force: true }) }
+})
+
+test('team guard: SessionStart prints the TEAMS.md pointer', () => {
+  const out = JSON.parse(runTeam('start', {}).stdout)
+  assert.equal(out.hookSpecificOutput.hookEventName, 'SessionStart')
+  assert.match(out.hookSpecificOutput.additionalContext, /docs\/TEAMS\.md/)
+})
+
+test('check.mjs fails on a dead TEAMS.md section ref or a MAP.md Kits ref', () => {
+  const copy = mkdtempSync(join(tmpdir(), 'guards-repo-'))
+  try {
+    cpSync(root, copy, { recursive: true, filter: (p) => !p.includes(`${join(root, '.git')}`) })
+    const run = () => spawnSync(process.execPath, [join(copy, 'scripts', 'check.mjs')], { encoding: 'utf8' })
+    assert.equal(run().status, 0)
+    const briefs = join(copy, '.claude/skills/operator/briefs.md')
+    writeFileSync(briefs, readFileSync(briefs, 'utf8') + '\nSee `docs/TEAMS.md` (The teams) and `docs/MAP.md` (Kits).\n')
+    const r = run()
+    assert.equal(r.status, 1)
+    for (const want of ['docs/TEAMS.md (The teams), which has no such section', 'points to the Kits in docs/MAP.md']) assert.ok(r.stderr.includes(want), `missing: ${want}\n${r.stderr}`)
+  } finally { rmSync(copy, { recursive: true, force: true }) }
+})
+
+test('team guard: the registered matchers catch Agent and the thread-start tools only', () => {
+  for (const f of ['install.mjs', 'cloud/setup.sh']) {
+    const m = readFileSync(join(root, f), 'utf8').match(/\['?"?PreToolUse'?"?, ['"]([^'"]+)['"], ['"]pre['"]\]/)?.[1]
+    assert.ok(m, `${f}: no team-guard PreToolUse matcher`)
+    const re = new RegExp(`^(?:${m})$`)
+    for (const t of ['Agent', 'Task', 'mcp__hearthbot__start_thread', 'mcp__hearthbot__start_thread_session', 'mcp__claude-code-remote__create_session']) assert.ok(re.test(t), `${f}: ${t}`)
+    for (const t of ['Bash', 'mcp__hearthbot__message_thread', 'mcp__hearthbot__start_remote_control']) assert.ok(!re.test(t), `${f}: ${t}`)
+  }
+})

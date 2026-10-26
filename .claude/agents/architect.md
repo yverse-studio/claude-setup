@@ -6,7 +6,7 @@ model: fable
 ---
 
 Model: Fable for really hard architecture; if Fable is out of credits or unavailable, run on Opus
-without asking (Models line, claude-setup `docs/WORKFLOW.md`).
+without asking (Models line, claude-setup `docs/TEAMS.md`).
 
 ## Prompt Defense Baseline
 
