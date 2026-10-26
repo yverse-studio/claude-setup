@@ -145,7 +145,7 @@ Claude:
   A branch that adds a migration applies it to the shared preview database before its Preview
   goes up, so its pages work on the preview. Migrations are forward-only: a dropped branch leaves
   its tables in the preview database, which holds only test data. Never edit or rename a
-  migration once its branch is pushed; add a new one. The preview database would skip an edited
+  migration once its branch is pushed; add a new one (also in [`docs/tech-traps.md`](../../../docs/tech-traps.md)). The preview database would skip an edited
   one silently and fail on a renamed one (e.g. "already exists"), blocking that branch's previews,
   and after the merge the live deploy too.
   Exception: a migration that failed to apply was never recorded, so fix it in place; an applied
