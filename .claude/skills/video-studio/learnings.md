@@ -25,6 +25,7 @@ Y-Land notes and scripts live in that project's files (`promo/LEARNINGS.md`, `pr
 - 2026-10-12 (Y-Land): injected overlays must be `pointer-events:none` and removed when hidden, or the next real tap lands on them.
 - 2026-10-26 (Y-Land): the Storybook villagers paint their atlas in a worker; fail that worker too while filming, or villagers are invisible (only name tags and feet). Hide the weather layer and remove the `clamp-zoom` plugin for close-ups; the rig is `templates/yland-film/`.
 - 2026-10-26 (Y-Land): villagers only get emojis and moods near the camera, and the sim still drifts between runs even with a seeded `Math.random`: pick each shot's subject by what it is doing at the shot's first frame, never by a name from a dry run.
+- 2026-10-26 (Y-Land): the first cut juddered on the carousel and yskills saw it before we did: frame steps of [33,33,34] ms skip or double 30 Hz sim steps (use [34,33,33]), a camera locked to a spinning rider shakes (film rides from the hub), and the 2026-10-07 pacing check was skipped. Run it on every cut before showing it.
 - 2026-10-12 (Y-Land): serve the page under the live origin (routes rewritten to the local build) so shared links and pictures show the real address.
 
 ## Captions, overlays and encode
