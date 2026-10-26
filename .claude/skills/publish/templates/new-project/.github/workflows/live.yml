@@ -1,0 +1,37 @@
+name: live
+
+# The live site (main) or a branch preview must serve the commit just built (claude-setup publish
+# skill, live smoke test). Runs after each Workers Builds success and every 6 hours, so a queued or
+# stuck build cannot go silent (incident 2026-10-26). claude-setup's deploy-watch.yml is the net
+# across all projects. No keys.
+on:
+  check_run:
+    types: [completed]
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    if: "${{ github.event_name != 'check_run' || (github.event.check_run.name == 'Workers Builds: __NAME__' && github.event.check_run.conclusion == 'success') }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: check
+        env:
+          BRANCH: ${{ github.event.check_run.check_suite.head_branch || 'main' }}
+          SHA: ${{ github.event.check_run.head_sha || github.sha }}
+        run: |
+          if [ "$BRANCH" = "main" ]; then base="https://__NAME__.yverse.workers.dev"
+          else base="https://$(echo "$BRANCH" | tr '/_' '--' | tr 'A-Z' 'a-z')-__NAME__.yverse.workers.dev"; fi
+          echo "checking $base for $SHA"
+          for i in 1 2 3 4 5 6; do
+            config=$(curl -fsS "$base/api/config") && break
+            sleep 10
+          done
+          echo "config: $config"
+          echo "$config" | grep -q "\"commit\":\"$SHA\"" || { echo "::error::$base serves another commit than $SHA"; exit 1; }
+          curl -fsS -o /dev/null -w "index %{http_code}\n" "$base/"

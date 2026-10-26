@@ -120,6 +120,12 @@ How to undo a merge, by kind of change (write the line into the PR's "undo" line
     Claude's auto mode refuses, it doesn't try another way: it asks yskills for the tap.
   - **claude-setup PRs:** the gate merges them too; only when Claude Code's safety check
     blocks the merge does yskills tap **Merge it** on the card or GitHub's Merge button.
+  - **Live check after the merge** (incident 2026-10-26: ~3 h of social merges never deployed):
+    the merge is not done until live serves it. Within 15 minutes, read live `/api/config`; its
+    `commit` must equal the merge commit on `main` (`send_later` for the wait, never a sleep). Not
+    there: run the `build-logs` workflow (`cancel` for builds stuck over 10 min), say so in the
+    thread and to the coordinator, and post no `Done:` line. `deploy-watch.yml` checks every
+    project every 15 minutes as the net behind this and opens a `deploy-drift` issue.
   - **After the merge:** one lessons step (`docs/WORKFLOW.md`, Learning): save a lesson only if
     the next thread would repeat the mistake, mechanical ones as a check, prune what a check covers.
 - **Last PR before launch:** the operator posts brief (c) with the table; the gate merges at 5/5
