@@ -10,6 +10,7 @@ The sound designer. Picks the music bed, maps its beats, places the SFX on the c
 
 - `sound.md` before the cut: the music bed with its source link and `Licence:` line, its BPM and a beat map (the beat times the cuts land on).
 - SFX cue sheet: one row per cut point and on-screen action (time, sound, source, licence): whooshes on moves, pops on captions, a hit on the payoff. Pick order and licences: [`../sound-kit.md`](../sound-kit.md), Library.
+- Whoosh cues start 0.12-0.15 s before the cut so the sweep lands on it (`mix` starts a file exactly on its cue time). The glitch sound only when yskills asks for it.
 - Cut to the beat: the Editor cuts on the beat map; the hook's first cut and the payoff land on a downbeat.
 - Mix: voice on top, music ducked under it, SFX felt not heard; both masters at -14 LUFS integrated, true peak -1.5 dBTP through `sound.py mix` (two-pass loudnorm); the preset's SFX cap and bed level are in [`../sound-kit.md`](../sound-kit.md).
 - Two masters: `final.mp4` with the music, and `final-nomusic.mp4` (SFX and voice only) so yskills can lay a trending sound in the app.
