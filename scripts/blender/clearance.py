@@ -98,8 +98,8 @@ def measure():
         eo = o.evaluated_get(dg); m = eo.to_mesh(); n0 = len(m.vertices)
         co = np.empty(n0 * 3); m.vertices.foreach_get('co', co); co = co.reshape(-1, 3)
         vm = VMASK.get(o.name); ref = np.arange(n0)
-        if FACES:   # faces, not only vertices: polygon centres and edge midpoints are measured too (skin can show between vertices)
-            pl = [list(pg.vertices) for pg in m.polygons]; ed = np.array([list(e.vertices) for e in m.edges]).reshape(-1, 2)
+        if FACES:   # faces, not only vertices: triangle centres and edge midpoints are measured too (triangles: the centre of a big ring-shaped n-gon is not on the cloth) (skin can show between vertices)
+            m.calc_loop_triangles(); pl = [list(t.vertices) for t in m.loop_triangles]; ed = np.array([list(e.vertices) for e in m.edges]).reshape(-1, 2)
             cen = np.array([co[v].mean(0) for v in pl]); mid = (co[ed[:, 0]] + co[ed[:, 1]]) / 2
             keepc = [i for i, v in enumerate(pl) if vm is None or all(x in vm for x in v)]
             keepm = [i for i in range(len(ed)) if vm is None or (ed[i, 0] in vm and ed[i, 1] in vm)]
@@ -111,7 +111,7 @@ def measure():
             if vm is not None and ref[i] not in vm: continue
             p = Vector(co[i]); loc, no, fi, dist = tree.find_nearest(p)
             if loc is None or dist > 0.03: continue
-            if np.linalg.norm(bco[pv0[fi]] - gco[ref[i]]) > SELF_R: continue   # skin of another limb (arm through torso): the pose's own self-collision
+            if ref[i] < len(gco) and np.linalg.norm(bco[pv0[fi]] - gco[ref[i]]) > SELF_R: continue   # skin of another limb (arm through torso): the pose's own self-collision
             ins = dist < 1e-9 or sum(par(tree, p, d) for d in DIRS) >= 2
             sd[i] = -dist if ins else dist; loc_a[i] = loc; nrm_a[i] = no
             if ins and EXEMPT and (p - loc).dot(no) > 0.0005:   # outside the nearest skin face yet inside the body: another body part cuts through here
@@ -448,6 +448,7 @@ def case_debug(spec):
     nm, f = spec.split('@'); a = bpy.data.actions[nm]; rest_state(); r0 = measure(); add_dqs(r0); reweight(r0) if 'rw' in ARGV else None
     arm.data.pose_position = 'POSE'; arm.animation_data_create(); arm.animation_data.action = a; bpy.context.scene.frame_set(int(f))
     if 'nodqs' in ARGV:
+        if 'dqs_twist' in arm: arm['dqs_twist'] = 0.0   # Treiber am Modifier (2026-10-26)
         body.modifiers['Armature_DQS'].show_viewport = False
         for o in pieces:
             if 'Armature_DQS' in o.modifiers: o.modifiers['Armature_DQS'].show_viewport = False
