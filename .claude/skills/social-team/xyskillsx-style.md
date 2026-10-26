@@ -53,7 +53,7 @@ at about 340. The Y-Land card video (284 views) looked clean but read like an ap
 | Monitor filmed with the phone (moiré, glare) | real screen recording, his face as a small cut-in or reaction |
 | Dim light, shaky handheld | face a window, phone braced or on a ledge; stabilise and grade lightly in the edit (exposure, white balance, a touch of contrast, no filter look) |
 | Caption over his face or under the TikTok UI | caption in the safe zone (top band, clear of the right rail and bottom bar), never over eyes or mouth |
-| TikTok's default text, typos | the same plain white bold look he uses, set cleanly with a thin shadow, spell-checked; no fancy fonts, no emoji spam |
+| TikTok's default text, typos | the same plain white bold look he uses, set cleanly with a thin shadow; spell-check only copy we write, his own odd spellings and cut-offs stay (see Never); no fancy fonts, no emoji spam |
 | "hold for 2x" or other burned-in reposts, filler "streak" photo posts | replace them with a real clip; every slot of his cadence (his call, `SKILL.md` Posting) gets a joke or a reveal |
 | Talking head as one raw take | cut pauses and fillers, punch-in on the key word, captions in his words, under 20 s |
 | Builder content as a polished ad (Y-Land cards) | builder content as a meme: his reaction plus the real thing working, ironic caption ("me after 6 h of coding a game nobody asked for") |
@@ -136,6 +136,7 @@ the account's territory split decides which affiliate and brand lanes fit.
   clip on a good day, not like an edit.
 - Critic: score against the 5 hits above, not against an agency reel. "Would his friends notice it
   was edited by someone else?" must be no.
+- Editor and Critic: an odd spelling or cut-off in his captions goes to yskills as a question, never as a defect.
 - Sound and cuts: preset real_talk in [`../video-studio/sound-kit.md`](../video-studio/sound-kit.md) (no music, at most 2 SFX on the punchline, -14 LUFS).
 - Delivery: `SKILL.md`, Posting.
 - Re-check this profile after 30 new posts or when a video beats 50k; add the reason as a dated line
