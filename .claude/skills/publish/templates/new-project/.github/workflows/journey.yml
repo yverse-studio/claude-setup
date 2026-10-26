@@ -56,6 +56,7 @@ jobs:
     if: needs.preview.outputs.ui == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    environment: preview-login # the token is an Environment secret limited to the default branch (new-project sets it)
     permissions:
       contents: read
     steps:
@@ -85,6 +86,7 @@ jobs:
             test-results/
             playwright-report/
           if-no-files-found: ignore
+          retention-days: 1 # a trace of the test login would hold the token
 
   report:
     needs: [preview, run]

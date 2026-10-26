@@ -259,12 +259,23 @@ export async function sealWithSodium(publicKey, text) {
   return sodium.to_base64(sodium.crypto_box_seal(sodium.from_string(text), key), sodium.base64_variants.ORIGINAL)
 }
 
-// The repo's PREVIEW_LOGIN_TOKEN Actions secret: only the journey `run` job reads it. Never logs the value.
+// The token as an Environment secret, not a repo secret: any workflow a branch adds can read a repo secret, but an
+// environment limited to the default branch hands it only to jobs that name it and run from there (journey.yml's `run`
+// job, `pull_request_target` runs on the base branch). Never logs the value.
+export const PREVIEW_ENV = 'preview-login'
 export async function setRepoSecret(gh, { org, repo, value, seal = sealWithSodium }) {
-  const key = await gh(`/repos/${org}/${repo}/actions/secrets/public-key`)
-  if (!key.ok || !key.json?.key || !key.json?.key_id) throw new Error(`${org}/${repo}: no Actions public key (${key.status}); PROJECTS_GITHUB_TOKEN needs Secrets read and write on the repo`)
-  const put = await gh(`/repos/${org}/${repo}/actions/secrets/${PREVIEW_LOGIN}`, { method: 'PUT', body: { encrypted_value: await seal(key.json.key, value), key_id: key.json.key_id } })
-  if (![201, 204].includes(put.status)) throw new Error(`${org}/${repo}: setting ${PREVIEW_LOGIN} answered ${put.status}`)
+  const fail = (what, r) => new Error(`${org}/${repo}: ${what} answered ${r.status}; PROJECTS_GITHUB_TOKEN needs Environments and Secrets read and write on the repo`)
+  const info = await gh(`/repos/${org}/${repo}`)
+  if (!info.ok || !info.json?.default_branch) throw fail('reading the repo', info)
+  const envPath = `/repos/${org}/${repo}/environments/${PREVIEW_ENV}`
+  const made = await gh(envPath, { method: 'PUT', body: { deployment_branch_policy: { protected_branches: false, custom_branch_policies: true } } })
+  if (!made.ok) throw fail(`creating the ${PREVIEW_ENV} environment`, made)
+  const policy = await gh(`${envPath}/deployment-branch-policies`, { method: 'POST', body: { name: info.json.default_branch, type: 'branch' } })
+  if (!policy.ok && policy.status !== 422) throw fail('limiting the environment to the default branch', policy) // 422: the policy exists
+  const key = await gh(`${envPath}/secrets/public-key`)
+  if (!key.ok || !key.json?.key || !key.json?.key_id) throw fail('reading the environment public key', key)
+  const put = await gh(`${envPath}/secrets/${PREVIEW_LOGIN}`, { method: 'PUT', body: { encrypted_value: await seal(key.json.key, value), key_id: key.json.key_id } })
+  if (![201, 204].includes(put.status)) throw fail(`setting ${PREVIEW_LOGIN}`, put)
 }
 
 async function ensureWorker(cf, name, previewSecret, { adopt, loginToken }) {

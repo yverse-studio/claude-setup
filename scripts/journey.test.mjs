@@ -123,6 +123,7 @@ test('the project workflow comes from the default branch and never checks the PR
   const run = yml.slice(yml.indexOf('\n  run:'), yml.indexOf('\n  report:'))
   assert.match(run, /permissions:\n      contents: read\n/)
   assert.ok(!/statuses: write/.test(run), 'the job that runs the specs can post no status')
+  assert.match(run, /\n    environment: preview-login /, 'the token is an Environment secret limited to the default branch')
   assert.deepEqual(run.match(/secrets\.\w+/g), ['secrets.PREVIEW_LOGIN_TOKEN'], 'the job that runs the specs holds only the preview test login')
   assert.match(yml, /\n  report:\n    needs: \[preview, run\]/)
   assert.deepEqual(yml.match(/secrets\.\w+/g), ['secrets.PREVIEW_LOGIN_TOKEN'], 'the one secret in a project repo, read by the run job only')

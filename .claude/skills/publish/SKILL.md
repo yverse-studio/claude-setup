@@ -203,14 +203,17 @@ and sat behind the owner's passkey, so nobody clicked the real app.
   a day-zero `seed` and `signIn`; a project with a login replaces both callbacks with its own seed rows and session.
   `scripts/journey.mjs` is the day-zero spec and grows into the real journeys.
   **No hands:** `new-project` makes one random token per new site and puts it in the Worker's previews env
-  (`previews_base_config`, never the live Worker: live has no token, so the route is a 404 there) and in the repo's
-  Actions secret `PREVIEW_LOGIN_TOKEN`; only `journey.yml`'s `run` job reads it, from the default branch's specs, and
+  (`previews_base_config`, never the live Worker: live has no token, so the route is a 404 there) and as the repo's
+  Environment secret `PREVIEW_LOGIN_TOKEN` (environment `preview-login`, default branch only, so a workflow on any other branch cannot read it); only `journey.yml`'s `run` job names that environment and reads it, running the default branch's specs, and
   the PR's own preview receives it, so it opens only the preview's test data (separate D1, `wrangler.jsonc` test).
   A project that predates it, or a run that warned "preview login not wired": the `preview-login` workflow
   (`name` input) does the same; re-running rotates the token, which waits for yskills' tap. The one thing that can need
   his hands: `PROJECTS_GITHUB_TOKEN` lacking Secrets read and write on the org's repos (a one-time permission edit; the
   step then fails with exactly that message). A short-lived token per run is a later hardening: the preview Worker
-  holds the master anyway, so it would not stop malicious PR code, only a leaked log line.
+  holds the master anyway, so it would not stop malicious PR code, only a leaked log line. Known and accepted: every
+  branch preview of the project holds the token and shares the preview D1 (worst case: someone resets another branch's
+  test data, never live); the journey starts only after the preview serves the PR head's commit, so a lookalike host of
+  another Worker never receives it; never enable Playwright tracing in the specs (a trace stores the Authorization header). [advisory]
 - **Builds run one at a time** on Workers Builds: every `claude/*` push queues in front of `main`'s
   deploy. Push once per finished round, at most three branches building at once; a stuck build is
   cancelled with `build-logs` (`cancel`). `deploy-watch.yml` catches what still slips. [advisory]

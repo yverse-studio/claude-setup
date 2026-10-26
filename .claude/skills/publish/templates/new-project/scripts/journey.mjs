@@ -1,6 +1,6 @@
 // The journey check's specs (claude-setup journey.yml runs `npm run journey` against BASE_URL on a phone profile).
 // Day zero: the page renders and, when PREVIEW_LOGIN_TOKEN is set, the preview test login works. A project grows
-// this file with its real journeys (sign in with the test login, then click through); it must never run against live.
+// this file with its real journeys (never turn on Playwright tracing: a trace stores the test login's Authorization header) (sign in with the test login, then click through); it must never run against live.
 import { chromium, devices } from 'playwright'
 import { mkdirSync } from 'node:fs'
 

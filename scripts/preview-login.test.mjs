@@ -12,19 +12,27 @@ test('previewEnv carries the login token only when asked, and refuses to drop ot
   assert.throws(() => previewEnv({ STRIPE_KEY: {} }, 'a', 'b'), /STRIPE_KEY/)
 })
 
-test('setRepoSecret seals the value and never sends it in clear', async () => {
+test('setRepoSecret puts the sealed value in a default-branch-only environment, never in clear', async () => {
   const calls = []
-  const gh = async (path, init) => { calls.push({ path, init }); return path.endsWith('public-key') ? ok({ key: 'PK', key_id: 'K1' }) : ok({}, 201) }
+  const gh = async (path, init) => {
+    calls.push({ path, init })
+    if (path === '/repos/o/r') return ok({ default_branch: 'main' })
+    if (path.endsWith('public-key')) return ok({ key: 'PK', key_id: 'K1' })
+    return ok({}, init?.method === 'PUT' && path.includes('/secrets/') ? 201 : 200)
+  }
   await setRepoSecret(gh, { org: 'o', repo: 'r', value: TOKEN, seal: async (k, v) => `sealed(${k},${v.length})` })
-  assert.equal(calls[1].path, '/repos/o/r/actions/secrets/PREVIEW_LOGIN_TOKEN')
-  assert.equal(calls[1].init.method, 'PUT')
-  assert.deepEqual(calls[1].init.body, { encrypted_value: 'sealed(PK,27)', key_id: 'K1' })
+  const env = calls.find((c) => c.path === '/repos/o/r/environments/preview-login')
+  assert.deepEqual(env.init.body, { deployment_branch_policy: { protected_branches: false, custom_branch_policies: true } })
+  const policy = calls.find((c) => c.path.endsWith('/deployment-branch-policies'))
+  assert.deepEqual(policy.init.body, { name: 'main', type: 'branch' })
+  const put = calls.find((c) => c.path === '/repos/o/r/environments/preview-login/secrets/PREVIEW_LOGIN_TOKEN')
+  assert.deepEqual(put.init.body, { encrypted_value: 'sealed(PK,27)', key_id: 'K1' })
   assert.ok(!JSON.stringify(calls).includes(TOKEN))
 })
 
 test('setRepoSecret says what is missing when the key lacks the permission', async () => {
-  const gh = async () => ({ ok: false, status: 403, json: null, text: '' })
-  await assert.rejects(setRepoSecret(gh, { org: 'o', repo: 'r', value: TOKEN }), /Secrets read and write/)
+  const gh = async (path) => (path === '/repos/o/r' ? ok({ default_branch: 'main' }) : { ok: false, status: 403, json: null, text: '' })
+  await assert.rejects(setRepoSecret(gh, { org: 'o', repo: 'r', value: TOKEN }), /Environments and Secrets read and write/)
 })
 
 test('run patches the previews env of the named Worker, sets the repo secret and prints no token', async () => {
@@ -34,12 +42,13 @@ test('run patches the previews env of the named Worker, sets the repo secret and
     if (path.startsWith('/workers/workers?')) return ok({ result: [{ id: 'w1', name: 'social' }, { id: 'w2', name: 'other' }] })
     return ok({ result: { previews_base_config: { env: { BETTER_AUTH_SECRET: { type: 'secret_text' } } } } })
   }
-  const gh = async (path) => (path.endsWith('public-key') ? ok({ key: 'PK', key_id: 'K1' }) : ok({}, 204))
+  const gh = async (path) => (path === '/repos/yverse-studio/social' ? ok({ default_branch: 'main' }) : path.endsWith('public-key') ? ok({ key: 'PK', key_id: 'K1' }) : ok({}, 204))
   const lines = []
   await run({ cf, gh, seal: async () => 'sealed', org: 'yverse-studio', repo: 'social', name: 'social', token: TOKEN, authSecret: 'auth-secret-xyz', log: (l) => lines.push(l) })
   const patch = cfCalls.find((c) => c.init?.method === 'PATCH')
   assert.equal(patch.path, '/workers/workers/w1')
   assert.equal(patch.init.body.previews_base_config.env.PREVIEW_LOGIN_TOKEN.text, TOKEN)
+  assert.ok(Object.keys(patch.init.body.previews_base_config).length >= 1)
   assert.ok(!lines.join('\n').includes(TOKEN))
 })
 

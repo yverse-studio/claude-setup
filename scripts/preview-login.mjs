@@ -20,10 +20,10 @@ export async function run({ cf, gh, seal, org, repo, name, token = randomBytes(3
   if (!worker) throw new Error(`no Worker named ${name} in this account`)
   const current = (await cf(`/workers/workers/${worker.id}`)).json?.result
   const env = previewEnv(current?.previews_base_config?.env, authSecret, token)
-  await cf(`/workers/workers/${worker.id}`, { method: 'PATCH', body: { previews_base_config: { env } } })
+  await cf(`/workers/workers/${worker.id}`, { method: 'PATCH', body: { previews_base_config: { ...current?.previews_base_config, env } } })
   log(`[preview-login] ${name}: previews env set (live Worker untouched)`)
   await setRepoSecret(gh, { org, repo, value: token, seal })
-  log(`[preview-login] ${org}/${repo}: Actions secret ${PREVIEW_LOGIN} set`)
+  log(`[preview-login] ${org}/${repo}: environment secret ${PREVIEW_LOGIN} set`)
   return { name, repo: `${org}/${repo}` }
 }
 
@@ -62,7 +62,7 @@ async function main() {
     return r
   })
   const out = await run({ cf, gh, seal: sealWithSodium, org: project.org, repo: project.repo, name, token })
-  if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, `## preview-login ${name}\n\n- Worker previews env and ${out.repo} Actions secret ${PREVIEW_LOGIN} set (value never shown)\n`)
+  if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, `## preview-login ${name}\n\n- Worker previews env and ${out.repo} environment secret ${PREVIEW_LOGIN} set (value never shown)\n`)
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) main().catch((e) => { console.error(`[preview-login] ${e.message}`); process.exit(1) })
