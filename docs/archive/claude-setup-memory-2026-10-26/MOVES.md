@@ -4,7 +4,7 @@ Raw `MEMORY.md` of the Claude Setup project, archived before the rewrite from th
 
 | Old line | Went to |
 |---|---|
-| Coordinator: always pass `model`, Agent types don't load in cloud, briefs start Role · Kit · Size, S gates in the working thread, M/L fresh Tester | covered: `CLAUDE.md` Teams, `docs/TEAMS.md` (Spawn rule), `operator/gate.md` Gate size |
+| Coordinator: always pass `model`, Agent types don't load in cloud, briefs start Role · Kit · Size, S gates in the working thread, M/L fresh Tester | covered: `CLAUDE.md` Teams, `docs/TEAMS.md` (Spawn rule), `operator/briefs.md`, `operator/gate.md` Gate size (only L gets a fresh gate thread now) |
 | Close every thread right after Done | covered: `CLAUDE.md` (one thread per plan or PR, closed when done) |
 | yskills wants NO GitHub mails | moved: `CLAUDE.md` How to work (No GitHub mails) |
 | Model guard hook, deploy watcher, journey gate, style library, clipping check | state, kept in Live |
