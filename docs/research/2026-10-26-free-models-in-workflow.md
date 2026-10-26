@@ -19,8 +19,8 @@ Question from yskills (inferred from his messages): put Qwen and other free mode
 2. Phase 1, Claude: point `yskills/worker` at the Ollama endpoint, roles scout, story, code, each with a code check (JSON schema, link resolves, tests run); log every job, Claude grades it, hit rate per role (inferred from the 2026-10-07 design).
 3. Phase 2 (inferred): once a role has about 300 checked traces, one Colab LoRA run on Qwen3.5 4B, GGUF back to Ollama, A/B against the base on a sealed test set.
 4. A role runs unchecked only after it holds its bar over two measurements; research with sources keeps a hard link check (inferred).
-5. Inferred: one base model with one small adapter per role; not many models loaded at once.
-6. Inferred: no third-party MCP server is installed before its code is read (CLAUDE.md, Code).
+5. One base model with one small adapter per role, not many models at once (inferred).
+6. No third-party MCP server is installed before its code is read (inferred from `CLAUDE.md:75`).
 
 ## 3. Sources
 - Unsloth Qwen3.5 fine-tune guide, read as search result 2026-10-26: https://unsloth.ai/docs/models/qwen3.5/fine-tune
