@@ -48,14 +48,14 @@ Rule that follows: **fit per base, never per character.** Characters differ only
 
 ## Moving or re-dressing existing garments
 
-Yskills 2026-10-26: clothes moved onto a model clipped through the body, because the brief said "no
+Clothes moved onto a model clipped through the body, because the brief said "no
 visual change" and this page only described new garments. Moving, re-dressing or refitting a
 garment that already exists (to a new base, character, rig or file) is **a new fit**: steps 3 and 4
 run in full, including the poke-through check of step 3.
 
 - "No visual change" or "compare before and after" never waives clipping. A pixel-identical result
   proves only that the old fit was copied; if the old fit clipped, identical is still broken.
-  The before/after proof (last Lessons line) comes after the clipping numbers below, never instead.
+  The before/after proof ("Prove a move", Lessons) comes after the clipping numbers below, never instead.
 - A brief that says otherwise does not change this rule (`briefs.md`, Every thread brief starts with).
 - Read this page from current `main` at the start of the job, not from a copy or a draft.
 
@@ -63,9 +63,9 @@ run in full, including the poke-through check of step 3.
 
 The done report of every garment, fit or move lists, **per piece**: deepest penetration in mm and
 the share of its vertices inside the body in %, measured with the evaluated mesh at rest, in the
-one big pose, and with each slider at 1. Limit: no vertex deeper than the offset (2 mm), 0 % inside
-at rest. A piece without its numbers is not done, and a number above the limit fails the report;
-the render sheet (idle, big pose, back, close-up of each hem and seam) goes beside it. The gate
+one big pose, and with each slider at 1. Limit: every vertex at least the fit's offset (step 3) outside the body surface at rest,
+and at least 0 mm outside in the big pose and with each slider at 1, one slider at a time; 0 % inside at rest. A piece without its numbers is not done, and a number above the limit fails the report;
+the render sheet (idle, big pose, back, close-up of each hem, seam and the body parts under the garment) goes beside it. The gate
 checks both (`gate.md`, Asset PRs).
 
 ## Characters from a base
@@ -115,6 +115,5 @@ checks both (`gate.md`, Asset PRs).
 - Patterns on "Generated" texture coordinates move when the garment's rest size changes (a `CH_` key does
   that): put patterns on UVs or object coordinates.
 - Prove a move with evaluated vertex positions (rest, a pose, sliders at 1) before vs after, plus one render
-  per look; zero difference is reachable for the character the garment was fitted on. It proves only that the
-  old fit was copied, never that it does not clip: a move whose result was pixel-identical still
-  clipped (2026-10-26), so the clipping numbers of the Done report come first.
+  per look; zero difference is reachable for the character the garment was fitted on. It never replaces the
+  clipping numbers (Moving or re-dressing, above).
