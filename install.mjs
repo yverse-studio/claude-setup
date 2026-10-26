@@ -184,7 +184,10 @@ function merge(dst, src) {
   }
   return dst
 }
+// A permission mode already chosen on this machine wins (the laptop runs acceptEdits, docs/pc-claude-user.md).
+const ownMode = settings.permissions?.defaultMode
 merge(settings, ours)
+if (ownMode) settings.permissions.defaultMode = ownMode
 // A rule we deny must not also be allowed by an older entry.
 settings.permissions.allow = settings.permissions.allow.filter((r) => !settings.permissions.deny.includes(r))
 settings.statusLine = { type: 'command', command: `node "${join(CLAUDE_DIR, 'claude-setup', 'statusline.mjs')}"`, padding: 0 }
