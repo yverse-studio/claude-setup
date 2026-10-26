@@ -119,7 +119,7 @@ Runs yskills' accounts; the loop and posting rules: [`social-team`](../.claude/s
 | Hook Checker ([`hook-check.md`](../.claude/skills/social-team/roles/hook-check.md)) | gate on the hook before filming and on the cut's first seconds | after the script, and on the cut before the Critic | fresh subagent of the Lead | Sonnet |
 | Caption Writer ([`copy.md`](../.claude/skills/social-team/roles/copy.md)) | description, hashtags, pinned question, cover text in his voice | on the final cut, before the Critic | subagent of the Lead | Sonnet |
 | Publisher ([`publisher.md`](../.claude/skills/social-team/roles/publisher.md)) | preflight, scheduling, read-back, `posts.md` row | "upload", the switch, a project account | subagent of the Lead | Sonnet |
-| Analyst ([`analyst.md`](../.claude/skills/social-team/roles/analyst.md)) | numbers per post at 24 h and 7 d, what to repeat or drop | after each post, the weekly routine | subagent of the Lead | Sonnet |
+| Analyst ([`analyst.md`](../.claude/skills/social-team/roles/analyst.md)) | numbers per post at 24 h and 7 d, what to repeat or drop | the daily sweep (24 h and 7 d due), the weekly routine | subagent of the Lead | Sonnet |
 
 ### Story (`storyteller`)
 
