@@ -49,8 +49,7 @@ at about 340. The Y-Land card video (284 views) looked clean but read like an ap
 | Dim light, shaky handheld | face a window, phone braced or on a ledge; stabilise and grade lightly in the edit (exposure, white balance, a touch of contrast, no filter look) |
 | Caption over his face or under the TikTok UI | caption in the safe zone (top band, clear of the right rail and bottom bar), never over eyes or mouth |
 | TikTok's default text, typos | the same plain white bold look he uses, set cleanly with a thin shadow, spell-checked; no fancy fonts, no emoji spam |
-| "hold for 2x" or other burned-in reposts, filler "streak" photo posts | skip them; a day without a post beats a filler post |
-| One post a day just for the streak | fewer, better: 3-5 a week that each have a joke or a reveal |
+| "hold for 2x" or other burned-in reposts, filler "streak" photo posts | replace them with a real clip; every slot of his cadence (his call, `SKILL.md` Posting) gets a joke or a reveal |
 | Talking head as one raw take | cut pauses and fillers, punch-in on the key word, captions in his words, under 20 s |
 | Builder content as a polished ad (Y-Land cards) | builder content as a meme: his reaction plus the real thing working, ironic caption ("me after 6 h of coding a game nobody asked for") |
 
@@ -68,8 +67,6 @@ at about 340. The Y-Land card video (284 views) looked clean but read like an ap
   clip on a good day, not like an edit.
 - Critic: score against the 5 hits above, not against an agency reel. "Would his friends notice it
   was edited by someone else?" must be no.
-- Delivery: a music-free master through Metricool's phone notification (autoPublish off), so he adds
-  the trending sound and posts (`SKILL.md`, Posting). Not by a browser bot into TikTok Studio's
-  drafts: browser uploaders get accounts flagged (`learnings.md`).
+- Delivery: `SKILL.md`, Posting.
 - Re-check this profile after 30 new posts or when a video beats 50k; add the reason as a dated line
   in `learnings.md`.
