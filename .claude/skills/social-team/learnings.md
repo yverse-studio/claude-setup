@@ -22,3 +22,4 @@ named; newest last; merge duplicates.
 - 2026-10-26 (@xyskillsx): a caption that asks the viewer something (KBBQ, 5.7k) or roasts himself ("only 30 followers", 406 comments) earns the comments; plain scenery earns none.
 - 2026-10-26 (@xyskillsx): builder content in designed cards read as an app ad (Y-Land, 284 views); the tech flex told as a meme (hand-tracking filter, 277k) is his best non-face lane.
 - 2026-10-26 (Metricool): the connector has no saves and no history before the connect date; saves and older follower numbers come from TikTok Studio.
+- 2026-10-26 (@xyskillsx, Metricool May-Oct): food with a joke or a real recipe is his second hit lane (6 of the top 15, 5-22k); outliers are driven by shares (3,550 on the 73k video vs his usual 0-5); a personal TikTok account returns no watch time, completion or traffic source through the API, only a Business account does.
