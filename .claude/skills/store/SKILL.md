@@ -28,6 +28,18 @@ Play, then iOS. Add iOS when Play shows people starting trials, not only after m
 download to paid, iOS converts 2.6% and Android 0.9%
 ([RevenueCat](https://www.revenuecat.com/blog/engineering/android-paywall-gap)) [S].
 
+**A phone app for yskills himself, free (2026-10-26, social app):** "a phone app I can download" with
+"free only" means the PWA, never the €99 Apple account. For a Worker with static `public/` (no Nuxt),
+copy `templates/pwa/` (`manifest.webmanifest`, `sw.js`, `offline.html`, `icons.mjs`): draw
+`design/icon.svg`, run `node scripts/icons.mjs` (192, 512, maskable, 180 apple-touch), link the
+manifest and `apple-touch-icon` in `index.html`, register `/sw.js`, and add an install card
+(Android: `beforeinstallprompt` button; iPhone: "Teilen, dann Zum Home-Bildschirm"; hidden when
+`display-mode: standalone`; never redraw while an input has focus). Two traps found in review:
+Workers assets redirect `/offline.html` to `/offline`, so cache and serve `/offline` (a redirected
+response cannot answer a navigation); never cache `/api/` or media. Passkeys work inside the
+installed app (they live in the phone's keychain), but iOS keeps the installed app's cookies apart
+from Safari, so he logs in once more there. Reference build: yverse-studio/social PR 3.
+
 **Installable from the website first (PWA, not an APK).** `@vite-pwa/nuxt` makes the web app
 installable: Chrome on Android shows an install prompt; on iPhone it is Share → Add to Home
 Screen, which needs a short "how to install" sheet with two screenshots. An e2e test asserts
