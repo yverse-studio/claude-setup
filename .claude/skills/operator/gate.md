@@ -70,16 +70,18 @@ output or a live check.
 Roblox projects have no preview URL: play the test place through the Studio MCP server and
 `screen_capture` it (`toolbox/catalog/roblox.md`, The loop).
 
-**UI PRs: the `journey` status.** Every project PR needs a `journey` status on its head, posted only by
-claude-setup's `journey.yml` (the Tester runs it per PR, `name` + `pr`): `n/a: no UI change` when the PR
-touches no UI file, else green after the PR's preview served its head and the project's
-`npm run journey` passed there on a phone profile, with the specs taken from the project's default
-branch (`publish` skill, Preview journey). Check 1 includes that status: missing, pending or red is not
-5/5, whatever the local tests say. It counts only when its creator is `yskills-claude` (the org token;
-the project's own CI posts as `github-actions[bot]` and has no status permission) and its link points to
-a claude-setup `journey` run; check both in `commits/<sha>/statuses`. When the description says the PR
-changes journey files, the Tester reads them (they run only after the merge) and runs the new journey by
-hand in check 2 (incident 2026-10-26: three gated PRs passed on local `verify` while the preview was broken).
+**The `journey` status (every project PR).** It is posted only by claude-setup's `journey.yml` (the Tester
+runs it per PR, `name` + `pr`): `n/a` when the PR changes only docs, tests or `.github/` files, else green
+after the PR's preview served its head and the default branch's `npm run journey` passed there on a phone
+profile (`publish` skill, Preview journey). Anything else, Nuxt `app/`, `server/`, configs, `package.json`,
+runs the journey. A PR branch can post a `journey` status with its own token (and overwrite a red), so a
+green tick in the UI proves nothing. **Check 1 runs `verify`:** put the head's statuses
+(`commits/<sha>/statuses`, newest first) on stdin of `node scripts/journey.mjs verify`. It passes only when
+the newest `journey` status is a success created by `yskills-claude` that links to a claude-setup `journey`
+run; a missing, pending, red or forged one is not 5/5. Until a branch ruleset requires the status on the
+project repos, `verify` is the gate. When the description says the PR changes journey files, the Tester
+reads them (they run only after the merge) and runs the new journey by hand in check 2 (incident
+2026-10-26: three gated PRs passed on local `verify` while the preview was broken).
 
 **No preview URL is not a pass.** Check 2 runs on the branch's Worker Preview. A PR without one
 (the Deploy or Preview command isn't set up, `publish` §A new project) is not 5/5: the gate stops

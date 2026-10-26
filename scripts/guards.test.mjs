@@ -241,6 +241,10 @@ test('team guard: a size L Programmer brief needs a Tester line first', () => {
     assert.equal(start('Role: Programmer · Kit: app · Size: M').status, 0)
     assert.equal(start('Role: Tester · Kit: app · Size: L').status, 0)
     assert.equal(start('Role: Programmer · Kit: app · Size: L\nTester:   ').status, 2, 'an empty Tester line does not count')
+    assert.equal(start('**Role:** Programmer · Kit: app · size: l').status, 2, 'markdown and lowercase do not hide an L Programmer')
+    assert.equal(start('Size: L\nRole: Programmer · Kit: app').status, 2, 'Size before Role does not hide it')
+    assert.equal(start('Role: Programmer · Kit: app · Size: L\nTester: <its thread id or title>').status, 2, 'the unfilled placeholder does not count')
+    assert.equal(start('Role: Programmer · Kit: app · Size: L\nTester: none').status, 2)
   } finally { rmSync(cwd, { recursive: true, force: true }) }
 })
 

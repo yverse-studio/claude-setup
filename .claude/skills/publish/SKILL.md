@@ -180,16 +180,17 @@ Claude:
 Incident 2026-10-26 (social): the gates judged UI PRs on local tests, because the preview was broken
 and sat behind the owner's passkey, so nobody clicked the real app.
 
-- **Journey script:** every site, app or game has `npm run journey`: Playwright against `BASE_URL`
+- **Journey script:** every site, app or game needs `npm run journey` (the new-project template does not scaffold it yet: until a project adds it, its UI PRs fail the journey): Playwright against `BASE_URL`
   with the device named in `JOURNEY_DEVICE` (`devices[...]`, touch on), walking the main journeys
   end to end, the destructive-action list (`operator/roles/programmer.md`) included. Results go to
   `test-results/`. No script means `journey.yml` fails, and a UI PR cannot pass (`gate.md`, UI PRs).
 - **Run:** claude-setup's `journey.yml` (`name`, `pr`; `actions_run_trigger` `run_workflow`, ref
-  `main`) for every project PR. It posts `n/a: no UI change` for a PR without UI files; otherwise it
+  `main`) for every project PR. It posts `n/a` for a PR that changes only docs, tests or `.github/` files; otherwise it
   waits up to 20 minutes for the PR's preview to serve the head (the URL from the branch alias, refused
   if the Workers Builds check names another), fetches the project's default branch as an artifact, runs
   the specs from it in a job with no org token and no PR code, and posts the `journey` status from a
-  fresh job. Only this workflow posts `journey`; the template CI has no status permission.
+  fresh job. Only this workflow posts `journey`; the template CI has no status permission, and a PR
+  branch could still post one with its own token, so the gate runs `journey.mjs verify` (creator and link).
 - **Preview login:** a journey behind a login signs in with a seeded test owner that exists only in
   the preview database. The app accepts `POST /api/test-login` with `PREVIEW_LOGIN_TOKEN` (a Worker
   secret, compared in constant time) only on a preview host (`*-<name>.yverse.workers.dev`), never

@@ -27,7 +27,10 @@ export function hasOwnModel(type, dirs) {
 
 const briefText = (input) => Object.values(input).filter((v) => typeof v === 'string').join('\n')
 export function needsTester(text) {
-  return /^Role:[^\n]*\bProgrammer\b[^\n]*\bSize:\s*L\b/m.test(text) && !/^Tester:[ \t]*\S/m.test(text)
+  const plain = text.replace(/[*_`]/g, '')
+  const isL = /^[ \t]*role:[^\n]*\bprogrammer\b/im.test(plain) && /\bsize:[ \t]*L\b/i.test(plain)
+  const named = plain.match(/^[ \t]*tester:[ \t]*(\S[^\n]*)$/im)?.[1].trim()
+  return isL && !(named && !/^(<.*>|none|n\/a|-+|tbd)$/i.test(named))
 }
 
 export function decide(tool, input = {}, dirs = []) {
