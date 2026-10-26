@@ -19,15 +19,15 @@ What every session does at start:
 
 | Surface | Reads first | Then |
 |---|---|---|
-| Coordinator (project chat) | `MEMORY.md`, the thread board | `add_repo` claude-setup, `CLAUDE.md`, this section, `roles/project-manager.md` Session start; reconciles board and state |
-| Thread | its brief, `MEMORY.md` | `add_repo` claude-setup, `CLAUDE.md`, this section, its role file; for a product also that repo's `CLAUDE.md` and `docs/LESSONS.md` |
+| Coordinator (project chat) | `MEMORY.md`, the thread board | `add_repo` claude-setup, `CLAUDE.md`, this section, [`TEAMS.md`](TEAMS.md) (before starting any thread), `roles/project-manager.md` Session start; reconciles board and state |
+| Thread | its brief, `MEMORY.md` | `add_repo` claude-setup, `CLAUDE.md`, this section, [`TEAMS.md`](TEAMS.md) (Coordinator or thread) and its own Roster row, its role file, never the Spawn rule; for a product also that repo's `CLAUDE.md` and `docs/LESSONS.md` |
 | Claude Code on the laptop | `~/.claude/CLAUDE.md` | the project's `CLAUDE.md`; auto-memory is a scratchpad |
 | New claude.ai project | the generated boot text | as a coordinator; its first session sweeps old memory into the repo |
 | Plain chat (no project) | yskills' user preferences | this section; the `operator` skill sizes the job; no memory |
 
 The thread board is read at every coordinator start and wins over memory.
 
-Who reads what: the coordinator reads Start here and its project's Kits row only (its Haiku worker fetches them); every thread reads the Read-first files of its own role from that row, nothing more. A brand-new project with no memory skips the move step of the memory check, writes `MEMORY.md` from the template and says so in one line.
+Who reads what: the coordinator reads Start here and the Kits row of the task at hand in [`TEAMS.md`](TEAMS.md) only (the task picks the row, not the project) (its Haiku worker fetches them); every thread reads the Read-first files of its own role from that row, nothing more. A brand-new project with no memory skips the move step of the memory check, writes `MEMORY.md` from the template and says so in one line.
 
 ### Where a lesson goes
 
@@ -36,23 +36,6 @@ Who reads what: the coordinator reads Start here and its project's Kits row only
 3. True for one product only: `<product repo>/docs/LESSONS.md` (template `.claude/skills/operator/templates/lessons.md`), dated, newest last.
 4. State (what is open, who owes what): the `MEMORY.md` section it belongs to.
 5. Everything else (how the day went, a dead end, a report): `/mnt/project-files/<project>/`; nothing to do.
-
-## Kits
-
-A project loads only what its kind needs. Read the row for the kind; load nothing else until a job names it.
-
-| Kind | Read first | Team that starts, in order | Skipped | Run steps ([`run.md`](../.claude/skills/operator/run.md)) |
-|---|---|---|---|---|
-| `site` | [`scaffold`](../.claude/skills/scaffold/SKILL.md), [`publish`](../.claude/skills/publish/SKILL.md), [`roles/designer.md`](../.claude/skills/operator/roles/designer.md), [`roles/content-designer.md`](../.claude/skills/operator/roles/content-designer.md), [`legal`](../.claude/skills/legal/SKILL.md), [`sell`](../.claude/skills/sell/SKILL.md) (money path), [`roles/analytics.md`](../.claude/skills/operator/roles/analytics.md), [`USING.md`](USING.md) | Researcher (step 2), Designer, Content Designer, Programmer, Analytics, Tester; Legal at launch | Game Designer, Audio, Playtester | 1 to 9 |
-| `app` | the `site` files, [`sell`](../.claude/skills/sell/SKILL.md), [`roles/analytics.md`](../.claude/skills/operator/roles/analytics.md), [`security-review`](../.claude/skills/security-review/SKILL.md) | Researcher (step 2), Designer, Content Designer, Programmer, Analytics, Security, Tester; Legal at launch | Game Designer, Audio, Playtester | 1 to 9 |
-| `game` | [`game-pipeline.md`](game-pipeline.md) (only story games with renders: Ren'Py, laptop assets), [`game-3d`](../.claude/skills/game-3d/SKILL.md), [`roles/designer.md`](../.claude/skills/operator/roles/designer.md) (Art direction first, portal references), [`roles/analytics.md`](../.claude/skills/operator/roles/analytics.md), [`roles/game-designer.md`](../.claude/skills/operator/roles/game-designer.md), [`roles/audio.md`](../.claude/skills/operator/roles/audio.md), [`roles/playtester.md`](../.claude/skills/operator/roles/playtester.md), [`store-publish`](../.claude/skills/store-publish/SKILL.md) (only Android/Google Play; the CrazyGames checklist is `game-3d` section 5a) | Researcher (step 2), Game Designer, Designer (art direction), Audio, Programmer, Analytics, Playtester, Tester; Security (`red-team` on the last PR, step 7) and Legal (the game's legal page, portal package) at launch | Content Designer (unless the game has a lot of text), Marketer before the first playable | 1 to 9 |
-| `video` | [`video-studio`](../.claude/skills/video-studio/SKILL.md), its [`learnings.md`](../.claude/skills/video-studio/learnings.md) and [`formats.md`](../.claude/skills/video-studio/formats.md), [`media-editing`](../.claude/skills/media-editing/SKILL.md) | Researcher (step 2), then the video-studio roles: Producer, Writer, Director, Sound, Editor, Motion, Critic | Programmer, scaffold, launch, grow (Researcher only at step 2) | 1, 2, 9, then the `video-studio` pipeline with its own Critic gate |
-| `social` | [`social-team`](../.claude/skills/social-team/SKILL.md), its [`learnings.md`](../.claude/skills/social-team/learnings.md), [`market`](../.claude/skills/market/SKILL.md) §4 and §6, [`watch`](../.claude/skills/watch/SKILL.md) (a video link: lines 12-35, scan, Use/Skip/Script/Later; the rule is in CLAUDE.md, Videos) | "work them out" starts the Social Lead (`social-team/SKILL.md`), a Scout only when a posting service must be picked | Programmer, scaffold, launch, Researcher (a Scout picks the service) | 1, 9, then the `social-team` pipeline (yskills approves posts; its weekly routine replaces grow) |
-| `story` (Ren'Py visual novel) | [`renpy.md`](renpy.md), [`game-pipeline.md`](game-pipeline.md), [`two-figure-scenes.md`](two-figure-scenes.md), [`character-workflow.md`](character-workflow.md), [`storyteller`](../.claude/skills/storyteller/SKILL.md) | Researcher (step 2), Storyteller (`storyteller` skill), Designer for renders, Programmer for Ren'Py, Tester; Legal at release | Game Designer, Audio (the `storyteller` skill covers pacing and sound), Analytics, Security, Marketer | 1 to 7 and 9; step 7 at release (`store-publish` or a Windows build) |
-| `setup` (claude-setup itself) | [`CLAUDE.md`](../CLAUDE.md), this file, [`WORKFLOW.md`](WORKFLOW.md) | Programmer, Reviewer | Designer, Researcher (no step 2), Marketer, Legal, `sell`, launch, grow | 1, 5, 6, 9 |
-| `repo` (private repo, no Worker) | the row of the kind its content says; default `site` | that kind's team | that kind's skipped list | that kind's steps |
-
-A fix, a small change to an existing product or a question is one thread of the role it needs; no Researcher, Designer or research step. A new site or app, even small, still gets the Designer pass before the build thread styles anything (`operator/SKILL.md`, Size the job). A new product starts the kit's team in the kit's order; the Project Manager posts the team list in brief (a). A kind not in the table is sized as `site`. Every kit starts a new idea with the grill round (`operator` SKILL.md, Grill first), before its team.
 
 ## What loads when
 
@@ -74,8 +57,9 @@ lives outside this repo.
 | Working rules | `CLAUDE.md` | The world (org, accounts, secrets, the one deploy path), how Claude works for yskills (ask rule, co-founder, auto-run), code, UI, stack. Short; detail lives in the homes below |
 | Front door | `README.md` | Install, what you get, cloud setup, how to change the repo |
 | This map | `docs/MAP.md` | Where things live, one home per rule |
-| Run a project | `.claude/skills/operator/` | `SKILL.md` size, roles, files, setup loop, cost; `run.md` the nine steps (Project Manager only); `gate.md` the 5/5 gate and the one merge policy; `briefs.md` the three briefs, key cards and the block every thread brief starts with; `roles/<role>.md` one playbook per role; `templates/` files copied into a project (`loop/` the feedback inbox, `mailbox/` Claude's own e-mail inbox Worker) |
-| Roadmap for yskills | `docs/WORKFLOW.md` | The phases in plain words, the models table, learning and memory check |
+| Teams | `docs/TEAMS.md` | The Spawn rule, the Models line, sizes S/M/L, the one pipeline, the roster (every role's job, when it is called, thread or subagent, model) and the Kits |
+| Run a project | `.claude/skills/operator/` | `SKILL.md` size, roles, files, setup loop, cost; `run.md` the detail of the nine pipeline steps (Project Manager only); `gate.md` the 5/5 gate and the one merge policy; `briefs.md` the three briefs, key cards and the block every thread brief starts with; `roles/<role>.md` one playbook per role; `templates/` files copied into a project (`loop/` the feedback inbox, `mailbox/` Claude's own e-mail inbox Worker) |
+| Roadmap for yskills | `docs/WORKFLOW.md` | The roadmap in plain words, the token budget, learning and memory check (models: `docs/TEAMS.md`) |
 | Other own skills | `.claude/skills/<name>/` | `legal`, `sell`, `market`, `store`, `store-publish`, `publish`, `scaffold`, `onboard-project`, `ship-check`, `ui-review`, `toolbox`, `game-3d`, `roblox`, `studio`, `blender-body`, `storyteller`, `watch`, `media-editing`, `video-studio`, `social-team`, `twin` |
 | Vendored skills, agents, rules | `.claude/skills`, `.claude/agents`, `.claude/rules/ecc` | ECC subset (`config/ecc.json`, refreshed by `scripts/sync-ecc.mjs`), impeccable, web-interface-guidelines, ponytail, claude-video (`THIRD_PARTY.md`); never hand-edited |
 | Own agents | `.claude/agents/` | `design-critic`, `evaluator`, `legal-reviewer`, `red-team` |
@@ -83,6 +67,7 @@ lives outside this repo.
 | Claude's PC user | `docs/pc-claude-user.md` | What differs on the `Claude` Windows user (portable Git, env var, paths) and what still needs hands |
 | Cloud threads | `cloud/bootstrap.sh` (paste once), runs `cloud/setup.sh` | Plugins and the guards in a cloud environment (Project settings > Cloud environment) |
 | HQ rows | `docs/hq-rows.md` | What each Project Manager writes into HQ (the page itself lives in yverse-studio/company-xy) |
+| Clothing pipeline | `docs/clothing-pipeline.md` | How garments are stored, fitted once per base and inherited by every character (follow keys, masks, dress script, naming, backups), moving existing garments, the clipping numbers of the done report |
 | Game pipeline | `docs/game-pipeline.md` | Where every game file lives (laptop GameAssetLibrary, game folder, project files), how to put an animation on a character, build a scene, write a chapter, plus the lessons |
 | Characters | `docs/character-workflow.md` | The one way to make a 3D character and show it to yskills: reference, build, self-check, comparison sheet, gate, library |
 | Using it (for yskills) | `docs/USING.md` | One phone page: how to start an app, deploy or delete a page in one shot, what you see, what it costs |
@@ -92,7 +77,7 @@ lives outside this repo.
 | Test runs | `docs/TEST-PROJECTS.md` | How the setup is tested end to end, and what each run taught |
 | Why it is built this way | `docs/RESEARCH.md`, `docs/research/` | Dated research notes; history, not rules |
 | Lessons per project | `docs/LESSONS-2026-10-11.md` | Company XY: liked, not liked, quality problems with the fix in force, the next game |
-| Lessons homes | [.claude/skills/game-3d/starter/learnings.md](../.claude/skills/game-3d/starter/learnings.md), [.claude/skills/operator/roles/analytics.md](../.claude/skills/operator/roles/analytics.md), [.claude/skills/operator/roles/audio.md](../.claude/skills/operator/roles/audio.md), [.claude/skills/operator/roles/content-designer.md](../.claude/skills/operator/roles/content-designer.md), [.claude/skills/operator/roles/designer.md](../.claude/skills/operator/roles/designer.md), [.claude/skills/operator/roles/game-designer.md](../.claude/skills/operator/roles/game-designer.md), [.claude/skills/operator/roles/legal.md](../.claude/skills/operator/roles/legal.md), [.claude/skills/operator/roles/marketer.md](../.claude/skills/operator/roles/marketer.md), [.claude/skills/operator/roles/playtester.md](../.claude/skills/operator/roles/playtester.md), [.claude/skills/operator/roles/programmer.md](../.claude/skills/operator/roles/programmer.md), [.claude/skills/operator/roles/project-manager.md](../.claude/skills/operator/roles/project-manager.md), [.claude/skills/operator/roles/researcher.md](../.claude/skills/operator/roles/researcher.md), [.claude/skills/operator/roles/reviewer.md](../.claude/skills/operator/roles/reviewer.md), [.claude/skills/operator/roles/security.md](../.claude/skills/operator/roles/security.md), [.claude/skills/operator/roles/tester.md](../.claude/skills/operator/roles/tester.md), [.claude/skills/social-team/learnings.md](../.claude/skills/social-team/learnings.md), [.claude/skills/store-publish/SKILL.md](../.claude/skills/store-publish/SKILL.md), [.claude/skills/video-studio/learnings.md](../.claude/skills/video-studio/learnings.md), [.claude/skills/video-studio/roles/director.md](../.claude/skills/video-studio/roles/director.md), [.claude/skills/video-studio/roles/writer.md](../.claude/skills/video-studio/roles/writer.md), [docs/game-pipeline.md](game-pipeline.md) | Every file with a `## Lessons` or `## Learnings` heading, or named `learnings.md`; `node scripts/check.mjs` fails when one is not linked here |
+| Lessons homes | [.claude/skills/game-3d/starter/learnings.md](../.claude/skills/game-3d/starter/learnings.md), [.claude/skills/operator/roles/analytics.md](../.claude/skills/operator/roles/analytics.md), [.claude/skills/operator/roles/audio.md](../.claude/skills/operator/roles/audio.md), [.claude/skills/operator/roles/content-designer.md](../.claude/skills/operator/roles/content-designer.md), [.claude/skills/operator/roles/designer.md](../.claude/skills/operator/roles/designer.md), [.claude/skills/operator/roles/game-designer.md](../.claude/skills/operator/roles/game-designer.md), [.claude/skills/operator/roles/legal.md](../.claude/skills/operator/roles/legal.md), [.claude/skills/operator/roles/marketer.md](../.claude/skills/operator/roles/marketer.md), [.claude/skills/operator/roles/playtester.md](../.claude/skills/operator/roles/playtester.md), [.claude/skills/operator/roles/programmer.md](../.claude/skills/operator/roles/programmer.md), [.claude/skills/operator/roles/project-manager.md](../.claude/skills/operator/roles/project-manager.md), [.claude/skills/operator/roles/researcher.md](../.claude/skills/operator/roles/researcher.md), [.claude/skills/operator/roles/reviewer.md](../.claude/skills/operator/roles/reviewer.md), [.claude/skills/operator/roles/security.md](../.claude/skills/operator/roles/security.md), [.claude/skills/operator/roles/tester.md](../.claude/skills/operator/roles/tester.md), [.claude/skills/social-team/learnings.md](../.claude/skills/social-team/learnings.md), [.claude/skills/store-publish/SKILL.md](../.claude/skills/store-publish/SKILL.md), [.claude/skills/video-studio/learnings.md](../.claude/skills/video-studio/learnings.md), [.claude/skills/video-studio/roles/director.md](../.claude/skills/video-studio/roles/director.md), [.claude/skills/video-studio/roles/writer.md](../.claude/skills/video-studio/roles/writer.md), [docs/game-pipeline.md](game-pipeline.md), [docs/clothing-pipeline.md](clothing-pipeline.md) | Every file with a `## Lessons` or `## Learnings` heading, or named `learnings.md`; `node scripts/check.mjs` fails when one is not linked here |
 | State template | `.claude/skills/operator/templates/project-memory.md` | The shape of a project's `MEMORY.md`: five sections, under 3 KB |
 | Product lessons template | `.claude/skills/operator/templates/lessons.md` | The `docs/LESSONS.md` of a product repo |
 | Archive | `docs/archive/` | Raw copies of retired memory and reports; history only, never a rule |
@@ -116,14 +101,14 @@ added as a second repo, or a plain chat), read that file by path, then the files
 | Design, UI/UX | `operator/roles/designer.md` (Art direction first), `ui-review/SLOP.md`, the project's `DESIGN.md` | `impeccable`, `make-interfaces-feel-better`, `web-interface-guidelines`, `design-system`, `ui-review`, `design-critic` agent |
 | 3D games, Steam | `game-3d` (three.js + Electron, decided 2026-10-07) | `game-3d/refs/` (camera, game feel, levels, glTF, lighting, perf, Steam, `vfx-nodes.md`) |
 | 2D and web games | `toolbox/catalog/data-web.md` (Phaser, PixiJS, Poki, CrazyGames) | `toolbox/catalog/money.md` (H5 game ads) |
-| Visual novels and story games (Ren'Py: setup, art slots, playthrough test, Windows build, laptop delivery) | `docs/game-pipeline.md` (all files, animation, scenes, scene briefs), `docs/two-figure-scenes.md`, `docs/renpy.md`, `storyteller` skill | `docs/renpy-template/`, `docs/character-workflow.md` (renders) |
+| Visual novels and story games (Ren'Py: setup, art slots, playthrough test, Windows build, laptop delivery) | `docs/game-pipeline.md` (all files, animation, scenes, scene briefs), `docs/two-figure-scenes.md`, `docs/renpy.md`, `storyteller` skill | `docs/renpy-template/`, `docs/character-workflow.md` (renders), `docs/clothing-pipeline.md` (garments per base) |
 | Roblox | `roblox` | `toolbox/catalog/roblox.md` (run and see), `studio` (PC) |
 | 3D models, characters | `docs/character-workflow.md` | `blender-body` (rigged body: base, shape keys, pose tests, reviewing; pro avatar anatomy in `booth-avatars.md`), `game-3d` (VRM pipeline), `studio` (Blender on the PC) |
-| Videos and ads (the studio: Producer, Writer, Director, Sound, Editor, Motion, Critic) | `video-studio` | `video-studio/learnings.md`, `video-studio/formats.md` (mascot-explainer, POV magic, blockout to AI video), `market` §4 (ads law) |
-| Social media: posting, comments, DMs, idea backlog, brand accounts, brand deals | `social-team` | `social-team/learnings.md`, `social-team/xyskillsx-style.md` (his personal style: keep, raise, never), `market` §4 and §6, `docs/research/2026-10-26-claude-video-autopost.md` (what people use, ideas-to-posts app) |
+| Videos and ads (the studio: Producer, Writer, Director, Sound, Editor, Motion, Critic) | `video-studio` | `video-studio/learnings.md`, `video-studio/formats.md` (mascot-explainer, POV magic, blockout to AI video), `video-studio/templates/launch-video/` (15 s launch promo from any repo, free), `market` §4 (ads law) |
+| Social media: posting, comments, DMs, idea backlog, brand accounts, brand deals | `social-team` | `social-team/pipeline.md` (idea to post to numbers, every role), `social-team/learnings.md`, `social-team/xyskillsx-style.md` (his personal style: keep, raise, never), `market` §4 and §6, `docs/research/2026-10-26-claude-video-autopost.md` (what people use, ideas-to-posts app) |
 | His digital twin (voice clone, real face with the mouth re-synced; recording ask, laptop tool, Critic lines) | `twin` | `twin/record.md`, `twin/laptop-setup.md`, `social-team/xyskillsx-style.md`, `video-studio/roles/critic.md` |
 | Video and photo edits | `media-editing` | `watch` (understand a video), `toolbox/catalog/video-audio.md` (AI video, voice, music), `docs/research/2026-10-24-video-batch.md` (29 shared videos, verdicts) |
-| AI features, local models | `toolbox/catalog/ai.md` | the built-in `claude-api` skill; `docs/research/2026-10-07-own-local-model.md` |
+| AI features, local models | `toolbox/catalog/ai.md` | the built-in `claude-api` skill; `docs/research/2026-10-07-own-local-model.md`, `docs/research/2026-10-26-free-models-in-workflow.md` (Ollama plan, 8 GB limits) |
 | Marketing, SEO | `market` | `seo`, `market-research`, `product-lens`, `toolbox/catalog/growth.md` |
 | Anything else | `toolbox` (pick a plugin, MCP, API or library) | `search-first` |
 
@@ -134,7 +119,7 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 | Rule | Home | Others only link |
 |---|---|---|
 | Org, accounts, where secrets live | `CLAUDE.md` (The world) | `publish` skill, `docs/WORKFLOW.md` (PC work) |
-| Which team a project kind starts (Kits) | `docs/MAP.md` (Kits) | `operator/SKILL.md` (Size the job), `operator/run.md` |
+| Teams, roles, sizes, the pipeline, the Kits (routed per task), the model per role | `docs/TEAMS.md` | `CLAUDE.md` (Teams), `operator/SKILL.md`, `operator/run.md`, `roles/project-manager.md`; `global/team-guard.mjs` enforces `model` |
 | Deploy or delete a page (the steps) | `docs/USING.md` | operator `run.md`, `briefs.md`; detail in `publish` |
 | Where a lesson goes (the decision tree) | `docs/MAP.md` (Start here) | `CLAUDE.md` (Lessons stick), `docs/WORKFLOW.md` (Learning) |
 | Project memory holds state only (its shape) | `operator/templates/project-memory.md` | `operator/roles/project-manager.md`, `docs/WORKFLOW.md` |
@@ -149,12 +134,15 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 | Co-founder | `CLAUDE.md` (How to work) | `roles/*.md` (one role-specific line each) |
 | Literal mode and cost | the brief block in `briefs.md` | `roles/*.md` (one pointer each) |
 | Merge policy, 5/5 gate | `gate.md` (Merge policy) | `CLAUDE.md`, `docs/WORKFLOW.md`, `roles/tester.md` |
-| Models | the one line in `docs/WORKFLOW.md` (Models) | everything else links it; CI fails on a model id outside that line |
+| Gate for models and garments (measurements + render sheet) | `gate.md` (Asset PRs) | `docs/clothing-pipeline.md`, `character-workflow.md`, `roles/tester.md` |
+| Briefs point to guide checks, never weaken them; threads read guides fresh from main | `briefs.md` (Every thread brief starts with, Guides) | `roles/project-manager.md` |
+| Models (the line, the model per role and per task) | `docs/TEAMS.md` (Models line, Roster) | everything else links it; CI fails on a model id outside that line |
 | Context guard numbers (warn 250k, hand off 350k) | `global/context-guard.mjs` | `CLAUDE.md`, `README.md` |
 | Remote Control on the PC | `docs/WORKFLOW.md` (PC work) | operator `SKILL.md` |
 | UI rules | `CLAUDE.md` (UI) | `roles/designer.md`, `ui-review` (screenshots, the load-once check, run videos via `desktop.sh`) |
 | What looks AI-made (the slop list) | `.claude/skills/ui-review/SLOP.md` | `CLAUDE.md` (UI), `design-critic`, `roles/designer.md`, `gate.md` check 5 |
 | Art direction before any screen (references, palette, type) | `operator/roles/designer.md` (Art direction first), checked by `ui-review/scripts/design-check.mjs` | `gate.md` check 5, `game-3d`, the game template |
+| Style library (reusable style directions: tokens, captures, do/don't; first: young-cool) | [`ui-review/styles/README.md`](../.claude/skills/ui-review/styles/README.md) | `operator/roles/designer.md` (step 0), `ui-review/TASTE.md` |
 | How a game plays before it is built (core loop, run length, difficulty, feedback, ad hooks, references) | `operator/roles/game-designer.md`, template `operator/templates/game-design.md`, checked by `game-3d/scripts/gdd-check.mjs` | `game-3d` (§1b), `roles/tester.md` |
 | How a game sounds before it is built (sound palette per feedback moment, music plan, mix bar, mute, autoplay, KB budget, licences) | `operator/roles/audio.md`, template `operator/templates/audio.md`, checked by `game-3d/scripts/audio-check.mjs` | `game-3d`, `roles/game-designer.md`, `roles/tester.md` |
 | How a research report is made (primary sources, describe before judging, numbers as read, `Not checked:`) | `operator/roles/researcher.md` (Method), checked by `scripts/research-check.mjs` | `templates/research.md`, `run.md` |
@@ -162,8 +150,9 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 | Deploys, the workflows' detail, the two Cloudflare routes, deploy lessons | `publish` skill | `CLAUDE.md`, `docs/USING.md` |
 | Money and shop law | `sell` skill | `docs/WORKFLOW.md` (Selling) |
 | Project instructions text (a pointer to this repo) | `operator/templates/project-instructions.md` | the live text in each project's settings |
-| An idea or change for a live project | operator `SKILL.md` (Idea for a live project) | `CLAUDE.md`, `roles/project-manager.md` |
+| An idea or change for a live project | `docs/TEAMS.md` (Sizes, Pipeline) | `CLAUDE.md`, `roles/project-manager.md` |
 | How a video or ad is made (roles, pipeline, video lessons) | `video-studio` skill | operator `SKILL.md`, `roles/marketer.md`, `market` |
+| Free sound library (CC0 SFX and music, manifest with licence proof, BPM, loudness) | `video-studio/sound/README.md`, checked by `video-studio/scripts/sound_library.py` | `video-studio/roles/sound.md`, `sound-kit.md` |
 | How posts go out, auto-post guardrails, comments and DMs, brand accounts | `social-team` skill | operator `SKILL.md`, `video-studio`, `market` §6, `docs/USING.md` |
 
 ## Keeping it clean

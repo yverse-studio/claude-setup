@@ -1,6 +1,6 @@
 # The three briefs
 
-Besides the gate's summaries (2 failed rounds) and a probe that
+Besides the gate's summaries (`gate.md`, Rounds) and a probe that
 misses its go number, yskills reads three
 messages per project. Each is posted with its recommended pick and work continues at once
 (auto-run, CLAUDE.md); nothing waits for yskills except the steps only their hands can do (keys, domain). Fixed templates, so they read the same every time. Short lines, no prose. German
@@ -72,15 +72,17 @@ Then reply "done". Meanwhile: <what the slice keeps building>
 ## Every thread brief starts with
 
 ```
-Model: <id from the Models line in docs/WORKFLOW.md for this role>. Handoff: at <N>k (350k unless the
+Role: <one role from docs/TEAMS.md (Roster)> · Kit: <kit> · Size: <S|M|L>. You are this one role, not the coordinator: docs/TEAMS.md (Coordinator or thread).
+Model: <id for this role's row in docs/TEAMS.md (Roster), via its Models line>. Handoff: at <N>k (350k unless the
 coordinator sets more for a big task) write /mnt/project-files/<project>/handoff/<date>-<topic>.md, reply with its path, stop.
 Literal mode: yskills' words are orders, done as said. No "yes, but", no offers, no alternatives
 when they ask for one thing; impossible or unsafe = one plain line, then the nearest thing done.
 Done when: <a check the thread can run: command and expected output, or the screenshot/number that proves it>. Stop when: <budget: rounds or tokens;
-default 3 fix rounds per defect and the `Handoff:` number; the `attempt-guard` hook enforces the rounds>.
+default the `Handoff:` number; gate rounds as `gate.md` (Rounds); the `attempt-guard` hook only counts a command failing again>.
 Start: read MEMORY.md, then claude-setup CLAUDE.md and docs/MAP.md (Start here); for a product, its repo's CLAUDE.md and docs/LESSONS.md. Lessons: at the end, say where each lesson went (docs/MAP.md, Where a lesson goes) or `none, because ...`.
+Guides: a brief only points to the guide's checks (`docs/clothing-pipeline.md`, `character-workflow.md`) and never weakens them (no exception, no skipped step, no lower limit); wording like "no visual change" or "just compare" does not override a check, and the thread follows the guide. The thread reads each named guide fresh from current `main` at start (`git fetch origin main`, then `git show origin/main:<path>` or check out main on a laptop), never an earlier draft or a remembered copy.
 Shortest reply. No extra subagents, research, screenshots or re-reads. Models as in
-docs/WORKFLOW.md (Models). Never repeat an answer another thread already gave.
+docs/TEAMS.md (Roster); subagents name theirs too. Never repeat an answer another thread already gave.
 Context (long threads: builds, test runs, renders, fetches; 1M tokens is the most a thread gets):
 1. Heavy steps run in `Agent` sub-workers that return a short summary and file paths.
 2. Logs are tailed (`tail -n 30`, `grep` for errors), never printed whole.
