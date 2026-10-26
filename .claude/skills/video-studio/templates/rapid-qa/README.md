@@ -31,12 +31,14 @@ the frame changes, no rhythm structure (it is one flat run), answers start befor
 
 | Part | What | Time |
 |---|---|---|
-| Hook | Caption from frame 1: "Q&A without the Q. It gets harder to guess the question." The first answer is already running. | 0-2 s |
-| Answers 1-3 | Easy, funny alone, 2 s each | 2-8 s |
+| Hook | Caption from frame 1: "Q&A without the Q. It gets harder to guess the question." Answer 1 starts in frame 1 and runs under the caption | 0-3 s |
+| Answers 2-3 | Easy, funny alone, 2-3 s each | 3-8 s |
 | Answers 4-8 | Rising weirdness, 2-4 s each; one 6-8 s story as the peak | 8-30 s |
 | Answers 9-10 | The hardest to guess; the last one is the blunt one | 30-40 s |
 | Loop | Cut ends on a word that works as the start of answer 1 | last 1 s |
 
+- **Departure from the style recipe** (7-9 s, 0-5 cuts): this runs 35-45 s with a jump cut per answer, because the payoff is the comment loop (people guess the questions, then the reveal), which a 9 s clip cannot carry. Safe test first: an 8-10 s cut-down of the 3 best answers with the same hook caption; post the long one if it holds.
+- Question overlays in part 2 are plain white bold text in the same caption look, not designed cards.
 - Total 35-45 s, 10 answers. Stretch 20 answers (60 s, TikTok minimum for rewards) only if the answers are all good.
 - Post 2 (next day, pinned in a comment of post 1): same clips, questions on screen, "you guessed X, the real question was...".
   Guess-the-question comments plus the reveal give the share and comment loop his best posts have.
@@ -70,15 +72,14 @@ anything important (captions go there). Stay in one spot; do not lean in and out
 3. Captions: his plain white bold look, one short line at a time in the top band, spell-checked; the key word of each answer, not the whole sentence. No
    emoji, no cards.
 4. At most 2 real-photo gags (his own photos or clips, never stock or AI): one in the middle, one on the last answer.
-5. Sound: no music bed; real_talk preset, at most 2 SFX on the punchline, -14 LUFS; two masters (final.mp4 with music optional, final-nomusic.mp4) per the
-   sound kit; he adds the trending sound in the app.
+5. Sound: no bed by default (final.mp4 may carry one); preset real_talk from [`../../sound-kit.md`](../../sound-kit.md), at most 2 SFX on the punchline, -14 LUFS; two masters (final.mp4, final-nomusic.mp4); he adds the trending sound in the app.
 6. Caption options (3, he picks), all one line: "Q&A without the Q", "Guess the questions, I'll wait", "My therapist said keep it short".
 
 ## Question list (30; the first 10 are the short cut)
 
 Fit: self-irony and food. Marked **V** = visual gag for an own photo or clip.
 
-1. What did you eat today before filming? 2. How tall are you and in what unit? 3. Worst thing you ever cooked? 4. Your most useless talent (try it on camera, fail).
+1. What did you eat today before filming? 2. What is the one thing you always lie about on a form? 3. Worst thing you ever cooked? 4. Your most useless talent (try it on camera, fail).
 5. What would you eat as your last meal? 6. The last thing you ranted about to your friends. 7. How many followers did you tell your mom you have? **V** 8. Most embarrassing thing you've bought for a trip. 9. What is the weirdest
 thing you've learned at an airport? 10. Your most unhinged hot take about food. 
 11. Best and worst street food in Vietnam. 12. Describe your life in three words. 13. Who is the last person you sent a meme to? 14. What would you take to a desert island besides a laptop? **V** 15. Your favourite emoji and why that is a lie.

@@ -82,7 +82,7 @@ role rows in [`docs/TEAMS.md`](../../../docs/TEAMS.md) (Film).
 Sold "Claude skill packs" from Instagram or Gumroad are prompt lists, not workflows: never bought.
 Skim a free one only if it names something this table lacks.
 
-Shot lists and scripts for the mascot-explainer, POV-magic and blockout-to-AI-video formats: [`formats.md`](formats.md). Prompt and script library: [`prompts.md`](prompts.md). People and POV video (free, cheap, paid tiers): [`people-video.md`](people-video.md). Cloud Blender POV scripts: [`templates/blender-pov/`](templates/blender-pov/README.md). Real Y-Land footage with real followers, plus a face cut-in in yskills' style: [`templates/yland-film/`](templates/yland-film/README.md). Fast, free launch or update promo from any repo in the product's own look (/brag + HyperFrames), not for his face-first posts: [`templates/launch-video/`](templates/launch-video/README.md).
+Shot lists and scripts for the mascot-explainer, POV-magic and blockout-to-AI-video formats: [`formats.md`](formats.md). Prompt and script library: [`prompts.md`](prompts.md). People and POV video (free, cheap, paid tiers): [`people-video.md`](people-video.md). Cloud Blender POV scripts: [`templates/blender-pov/`](templates/blender-pov/README.md). Real Y-Land footage with real followers, plus a face cut-in in yskills' style: [`templates/yland-film/`](templates/yland-film/README.md). Fast, free launch or update promo from any repo in the product's own look (/brag + HyperFrames), not for his face-first posts: [`templates/launch-video/`](templates/launch-video/README.md). Answers-only rapid Q&A, solo phone shoot: [`templates/rapid-qa/`](templates/rapid-qa/README.md).
 
 ## Every video
 

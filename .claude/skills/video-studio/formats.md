@@ -33,4 +33,4 @@ Report: `/mnt/project-files/claude-setup/research/2026-10-25-creator-video-style
 | Claude drives Blender | `bpy` loop, keyframes | simple transforms | none |
 
 ## Rapid Q&A, answers only (BuzzFeed "30 questions" plus yskills' own cut, 2026-10-26)
-10 answers in 35-45 s, questions cut out, part 2 reveals them; solo phone shoot (light from a window, plain wall, clip mic, jump cut per answer). Shot list and 30 questions: [`templates/rapid-qa/README.md`](templates/rapid-qa/README.md). Not shot yet.
+10 answers in 35-45 s, questions cut out, part 2 reveals them; solo phone shoot (light from a window, plain wall, clip mic, jump cut per answer). Shot list and 30 questions: [`templates/rapid-qa/README.md`](templates/rapid-qa/README.md). Not shot yet. Lesson: the BuzzFeed polish comes from light, backdrop, mic, trimmed silence and a fixed rhythm, not from effects; answers-only is yskills' own twist, keep it.
