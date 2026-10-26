@@ -22,7 +22,7 @@ The preset is the one the idea carries in the `social` app (real_talk, explainer
 also carries his sound switch (yskills 2026-10-26: "ich wähle aus ob du sound wählst oder ich"):
 
 - **Claude wählt** (default): the Sound role picks bed and SFX; the music master is the one to post.
-- **Ich wähle**: the music-free master is the one to post, he lays his sound on in TikTok; when he
+- **Ich wähle**: the music-free master is the one he lays his sound on; the Publisher posts it only when he asks for that video (`social-team` `SKILL.md`, Posting), otherwise the music master goes out; when he
   pastes a sound link, its audio (fetched on the laptop with `watch`) is the beat grid the cuts snap to.
 
 | | real_talk | explainer | big |
@@ -35,9 +35,11 @@ also carries his sound switch (yskills 2026-10-26: "ich wähle aus ob du sound w
 | SFX | 0-2, only on the punchline | at most 4 | at most 8 |
 | Loudness, both masters | -14 LUFS integrated, -1.5 dBTP, LRA 11 | same | same |
 
-Until fitting beds exist (2026-10-26: the library has only chiptunes, and only the 123 BPM one fits, for
-`big`), real_talk and explainer with "Claude wählt" ship SFX-only and the music-free master is the
-one to post; a bed appears in `final.mp4` there only when the Sound role found one that fits.
+Beds (2026-10-26, `sound/README.md`): explainer takes a chill or funky bed on its music master; big takes
+the synthwave, funk, playful or cinematic ones (or the one chiptune that fits, Level 1, 123 BPM). real_talk
+keeps the music-free master for his own sound-add (same rule as above), because a baked-in bed competes with the trending sound
+he adds in the app; its music master is the optional one, with `disco-funk-loop` for now ("manchmal haben
+wir nur Hintergrundmusik"); the chill beds join real_talk after the laptop ear check for vocal chops.
 Both masters ship with every video and he picks: the music master is ready to post as is, the
 music-free one takes a trending sound in the app (a TikTok sound can never be burned in). API and
 auto-posts, ads and project accounts use the music master or the platform's commercial library

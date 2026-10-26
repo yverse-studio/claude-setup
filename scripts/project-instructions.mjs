@@ -15,7 +15,7 @@ const PRODUCT_LINE = /^Its repo's CLAUDE\.md.*$/m
 const SETUP_LINE = 'The repo is claude-setup itself, so there is no product lessons file (docs/LESSONS.md).'
 // --repo none: a project with no repo of its own (a social or video team); --repo new: the
 // new-project workflow makes the repo at the first idea (docs/USING.md), so until then it has none.
-const NONE_LINE = 'This project has no repo of its own: its lessons go to claude-setup (the skill of its kind, e.g. social-team or video-studio learnings.md; docs/MAP.md Kits names it).'
+const NONE_LINE = 'This project has no repo of its own: its lessons go to claude-setup (the skill of its kind, e.g. social-team or video-studio learnings.md; docs/TEAMS.md Kits names it).'
 const NEW_LINE = 'Its repo does not exist yet: the new-project workflow makes it at the first idea (claude-setup docs/USING.md, Deploy a page in one shot); from then on its CLAUDE.md and docs/LESSONS.md come next and product lessons go there.'
 const USAGE = 'usage: node scripts/project-instructions.mjs <name> [--about "<one line>"] [--kind site|game|repo|video|social|story] [--repo <org/repo>|none|new]'
 
