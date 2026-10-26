@@ -265,7 +265,7 @@ Refused before anything is touched: a protected repo name (the list in `scripts/
 no `projects/<name>.json` on main, a repo without the description "made by claude-setup new-project".
 Irreversible (the repo is restorable for 90 days, D1 is not once deleted): run it when the task
 needs it, no ask for a test project (yskills 2026-10-26), the dry run first every time, and report what
-went. Live projects are in `PROTECTED`; one comes off only with yskills' yes.
+went. Live projects are in `PROTECTED`; one comes off only with yskills' yes, and a project's launch PR adds it there. It runs only from `main` (`--ref` is denied, the job checks the ref).
 
 ## The tradeoff, decided
 

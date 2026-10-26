@@ -31,7 +31,7 @@ concurrency:
 
 jobs:
   delete:
-    if: inputs.confirm == inputs.name
+    if: inputs.confirm == inputs.name && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
