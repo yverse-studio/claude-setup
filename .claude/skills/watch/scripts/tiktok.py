@@ -53,7 +53,7 @@ class _SameFamilyRedirects(urllib.request.HTTPRedirectHandler):
 def _opener() -> urllib.request.OpenerDirector:
     # Built from scratch: https and cookies only, no file:, ftp: or data: handlers.
     opener = urllib.request.OpenerDirector()
-    for handler in (urllib.request.HTTPSHandler(), _SameFamilyRedirects(), urllib.request.HTTPErrorProcessor(),
+    for handler in (urllib.request.HTTPSHandler(), _SameFamilyRedirects(), urllib.request.HTTPErrorProcessor(), urllib.request.HTTPDefaultErrorHandler(),
                     urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar())):
         opener.add_handler(handler)
     return opener

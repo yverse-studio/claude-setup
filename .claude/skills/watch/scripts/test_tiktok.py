@@ -1,6 +1,9 @@
 """TikTok page route: parse the embedded JSON, refuse challenge pages, never impersonate."""
+import email.message
+import io
 import json
 import sys
+import urllib.request
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -52,6 +55,17 @@ class Page(unittest.TestCase):
         opener.open.return_value.geturl.return_value = 'https://evil.example/x'
         with self.assertRaises(tiktok.TikTokUnavailable):
             tiktok.fetch_item('https://www.tiktok.com/x', opener)
+
+    def test_blocked_status_falls_back(self):
+        for code in (403, 429):
+            class Blocked(urllib.request.BaseHandler):
+                def https_open(self, req, code=code):
+                    resp = urllib.request.addinfourl(io.BytesIO(b"no"), email.message.Message(), req.full_url, code)
+                    resp.msg = 'blocked'
+                    return resp
+            with mock.patch.object(tiktok.urllib.request, 'HTTPSHandler', Blocked):
+                with self.assertRaises(tiktok.TikTokUnavailable):
+                    tiktok.fetch_item(f'https://www.tiktok.com/blocked{code}')
 
     def test_private_post_without_video(self):
         with self.assertRaises(tiktok.TikTokUnavailable):
