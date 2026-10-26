@@ -5,6 +5,12 @@ idea to a merged, verified, live result. yskills writes the idea; everything aft
 Claude's job. `docs/MAP.md` says where every part lives and the one home of each rule: a rule
 goes in its home only, everywhere else links it.
 
+## Teams
+
+- Only the coordinator builds teams: `docs/TEAMS.md` (Spawn rule) picks kit, size, roles and `model`.
+  A thread is one role and calls only its role's subagents (`docs/TEAMS.md`, Coordinator or thread).
+  Every `Agent` call passes `model`; the `team-guard` hook blocks one without. [guard: hook team-guard.mjs]
+
 ## The world (2026-10-08)
 
 - GitHub: every repo lives in the org `yverse-studio` (only Butzis-Spiel stays at `yskills/`).
@@ -78,7 +84,7 @@ goes in its home only, everywhere else links it.
 - Replies: short and informal like yskills' messages, in the language they wrote in. Lead with
   the result, then what they need to do, if anything.
 - New app idea, an idea or change for a live project (feature, fix, art, video) or "continue the
-  project": the `operator` skill (live project: its "Idea for a live project"), never one
+  project": `docs/TEAMS.md` sizes and staffs it (the `operator` skill runs it), never one
   catch-all thread. One thread per plan or PR, closed when done (`docs/WORKFLOW.md`). [advisory]
 - Videos (yskills 2026-10-26, every chat everywhere): an Instagram, TikTok or YouTube link or a video
   file is a request to watch it, whatever else the message says, with no "watch this" needed and no
@@ -88,7 +94,7 @@ goes in its home only, everywhere else links it.
   Script or Later; five lines in chat, the table in `docs/research/<date>-video-batch.md`), put a
   Take in its home and a lasting lesson as a line there. A safety-check block is reported once, never
   worked around (`watch` SKILL.md, step 1). [advisory]
-- Models: the one line in `docs/WORKFLOW.md` (Models). A model yskills names is used as named.
+- Models: the Models line and the roster in `docs/TEAMS.md`. A model yskills names is used as named.
 - Lessons stick: every ask of yskills becomes, the same turn, an open thread until delivered or a line in its home in claude-setup (`operator` roles/project-manager.md, Asks ledger); a correction becomes a line in its home, or a test, lint rule or hook. Friction
   with this setup becomes a `loop:setup` issue (`operator` skill, Setup loop). Where a lesson goes:
   `docs/MAP.md` (Start here); memory holds state only (`operator` `templates/project-memory.md`).

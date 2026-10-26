@@ -35,7 +35,7 @@ repo; then the next one starts.
 2. A line in the table below.
 3. The next test project starts only after that PR is merged.
 
-A run's playbook lives in the skill or role file of that kind (`docs/MAP.md`, Kits and Expertise), not in a `toolbox/playbooks/` folder: that folder does not exist (2026-10-25).
+A run's playbook lives in the skill or role file of that kind (`docs/TEAMS.md` Kits, `docs/MAP.md` Expertise), not in a `toolbox/playbooks/` folder: that folder does not exist (2026-10-25).
 
 | # | Date | Touches outside briefs | Gate rounds | Cost (USD) | Lessons PR |
 |---|---|---|---|---|---|
@@ -69,7 +69,7 @@ rules. What it taught, and where it now lives:
   pixel taste (CLAUDE.md UI, Designer playbook).
 - Brainstorm first for every new project, a typed idea and an HQ request alike (`operator`,
   Project Manager playbook).
-- Model routing: the Models line in `docs/WORKFLOW.md`.
+- Model routing: the Models line in `docs/TEAMS.md`.
 
 duo-test stays web-only in test 1; its App Store and Google Play release (`store` skill) is a
 slice after test 1, once test 3 has proven the store path or the web version earns.

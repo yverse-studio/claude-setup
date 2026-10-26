@@ -22,20 +22,32 @@ Security never drops: any PR touching user input, auth, money or secrets runs ch
 | Size | PR | Checks |
 |---|---|---|
 | S | docs, skills, templates, config | 1 and one fresh `code-reviewer` (3); 2, 4, 5 n/a |
-| M | code without UI | 1, 2, 3; 4 when user input, auth, money or secrets are touched |
+| M | code without UI; a garment move or refit with no new look (Asset PRs) | 1, 2, 3; 4 when user input, auth, money or secrets are touched |
 | L | UI, auth, payments, data, migrations, launch | the full table |
 
 Who runs it (yskills, 2026-10-18: a gate thread starts at ~114k tokens and every call re-reads it, `docs/WORKFLOW.md` Token budget): S and M run in the author thread: CI, one fresh `code-reviewer` subagent (never the author's own pass) and the merge, with the table headline in the PR. The author does not pick the size: the table does, and anything touching user input, auth, money, data or UI is L. The reviewer gets the diff itself (`git diff <base>...<head>`), never the author's summary of it, and the author posts its report unedited; a finding the author disputes goes to the coordinator, not to a second reviewer. L keeps a fresh gate thread, because it runs the preview, security and design checks. A reviewer subagent still sees only the diff, the criteria and the previous round's table.
 
-## Scene shots and figure shots
+## Asset PRs (models, garments, figures, scenes)
 
-No picture of a posed scene or a figure reaches yskills without a gate row in `gate/` that names
-its head SHA (yskills, 2026-10-11, 18:56: bed shots with the duvet cutting through the body, hands
-floating, and no check had run). The Tester's criteria for a scene come from the plan that
-introduced it, are machine checks first (`character-workflow.md` step 4), and a human-eye pass
-second; a posed shot from the Programmer alone is a draft. The 4-angle contact sheet at 390 px and
-1440 px is the evidence, not a single render. A figure or scene PR that fails the same item in two
-rounds is not re-gated until the Programmer attaches the diagnosis (`character-workflow.md`, step 4).
+Asset work (a garment fit or move, a body, a figure, a posed scene) has no preview URL; the evidence
+replaces check 2, the rest of the table and the sizes stay as they are (clothes moved with no measurements clipped through the body, 2026-10-26). No new system.
+
+- **Evidence:** the PR carries the Programmer's measurement file (the Done report rows of
+  `docs/clothing-pipeline.md`; scenes: `character-workflow.md` step 4) and the render sheet (contact sheet, 4 angles,
+  390 px and 1440 px), as files in the PR or under `/mnt/project-files/`. A missing piece or row, or a row over the
+  limit, fails the PR. A sheet alone, "looks the same" or "no visual change" is no evidence.
+- **Reviewer:** the one exception to "only the diff" (check 3, Who runs it): it also gets the measurement file and the
+  sheet, because a `.blend` has no diff. It checks that every piece, pose and slider extreme has a row, that no row is over the
+  limit, and looks at the sheet. A sheet that shows clipping the numbers do not is a fail; the Programmer re-measures
+  on the laptop (`docs/WORKFLOW.md`, PC work) and attaches the new file.
+- **Check 2** is shown as `evidence` in the table (the file and the sheet), not n/a.
+- **Size:** a garment move or refit with no new look = M; one that changes the look, and any figure, body, character or scene PR, is L (`character-workflow.md`, step 6).
+- No picture of a posed scene or a figure reaches yskills without a gate row in `gate/` that names
+  its head SHA (yskills, 2026-10-11: bed shots with the duvet cutting through the body, no check
+  had run). The criteria for a scene come from the plan that introduced it, machine checks first,
+  a human-eye pass second; a posed shot from the Programmer alone is a draft.
+- A figure or scene PR that fails the same item in two rounds is not re-gated until the Programmer
+  attaches the diagnosis (`character-workflow.md`, step 4).
 
 ## Mode: probe or product
 
@@ -115,8 +127,13 @@ How to undo a merge, by kind of change (write the line into the PR's "undo" line
   live without them.
 - **Less:** post the blocking findings as one PR review and stop. The builder fixes them; the next
   round re-runs the failed checks with fresh agents on the new head.
-- **2 failed rounds:** send one message to yskills: what the PR does, what is wrong in plain words (from
-  the last reports), and two or three ways forward as tap options; the thread goes on with the
+- **Up to 6 rounds** (yskills 2026-10-26: "6-7 versuche", was 2; the one home of the gate's round
+  limit, every other file links here): the builder fixes and the gate re-runs until 5/5, at most six
+  rounds. A defect that fails the same check twice gets a diagnosis before the next fix
+  (`character-workflow.md`, step 4), not a blind patch.
+- **Still not 5/5 after round 6:** the Tester sends one message to yskills: what the PR does, why it
+  still fails and the problems in plain words (from the last reports), and two or three ideas to
+  solve it as tap options; the thread goes on with the
   recommended option and the card lets yskills change course; when the coordinator already
   answered, carry on with its answer instead of asking again; money, a new service, deleting and
   anything irreversible wait for the tap (`CLAUDE.md`, Cards).

@@ -3,7 +3,7 @@
 Owns what the product measures: which user actions are tracked, the question each one answers, the money number it feeds, the legal basis, and the weekly line of numbers HQ shows. Before this role `market` §5 named four events in one bullet and no file held a project's list, so every builder invented event names and nobody read the numbers. GOV.UK lists the performance analyst as a role a service team may need ([Service Manual](https://www.gov.uk/service-manual/the-team/content-designer), read 2026-10-18). The numbers are what yskills' money goal rests on, so they are copied as read from the real dashboard or table, never estimated.
 
 - **Starts:** Before launch of a site, app or game, and before any PR that adds a user action (signup, checkout, ad, share). A look-only or bug-fix PR skips it. The social Analyst keeps post metrics; this role owns what happens on the product itself.
-- **Runs as:** An `Analytics · tracking plan` thread at project start; a Haiku or Sonnet subagent for one new action. It writes `analytics/TRACKING.md` and the weekly line, never the UI.
+- **Runs as:** A Sonnet subagent of the Planner (`docs/TEAMS.md`, Roster), for the plan and for one new action. It writes `analytics/TRACKING.md` and the weekly line, never the UI.
 - **Uses:** [`../templates/tracking-plan.md`](../templates/tracking-plan.md), `market` (§5), `legal` (consent), `sell` (the money source), `search-first`
 - **Model and handoff:** the brief names both; the rule is [project-manager.md](project-manager.md#model-and-handoff-in-every-brief).
 
