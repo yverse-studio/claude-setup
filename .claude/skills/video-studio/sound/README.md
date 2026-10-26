@@ -18,3 +18,4 @@ Free-licence sounds for the video studio (yskills 2026-10-26: "free licence soun
 | music | 5 | Juhani Junkala chiptunes, OpenGameArt, CC0: `big` only, game-flavoured; Title Screen is 15 s, too short for a bed |
 
 Known gaps: no scratch, no real riser, and no chill/funky/cinematic beds yet. FreePD closed in 2026, so beds need another CC0 source; the synth in `sound.py sfx` covers riser and sub boom.
+Getting new files: the cloud proxy blocks kenney.nl, freesound, opengameart and similar, so download on the laptop (Remote Control, `GameAssetLibrary/sound-inbox-*`) and import from there.
