@@ -23,6 +23,8 @@ Y-Land notes and scripts live in that project's files (`promo/LEARNINGS.md`, `pr
 - 2026-10-11 (Y-Land): when the app runs its simulation in a Web Worker, make the worker fail during filming so the page's synchronous fallback runs on the hand-stepped clock.
 - 2026-10-12 (Y-Land): film the real UI with `preserveDrawingBuffer` patched and step every CSS animation on the film clock (`document.getAnimations()`); Playwright's `click` times out on a paused clock, so trigger with `evaluate` or synthetic `PointerEvent`s (`pointerType: 'touch'` on a touch context).
 - 2026-10-12 (Y-Land): injected overlays must be `pointer-events:none` and removed when hidden, or the next real tap lands on them.
+- 2026-10-26 (Y-Land): the Storybook villagers paint their atlas in a worker; fail that worker too while filming, or villagers are invisible (only name tags and feet). Hide the weather layer and remove the `clamp-zoom` plugin for close-ups; the rig is `templates/yland-film/`.
+- 2026-10-26 (Y-Land): villagers only get emojis and moods near the camera, and the sim still drifts between runs even with a seeded `Math.random`: pick each shot's subject by what it is doing at the shot's first frame, never by a name from a dry run.
 - 2026-10-12 (Y-Land): serve the page under the live origin (routes rewritten to the local build) so shared links and pictures show the real address.
 
 ## Captions, overlays and encode
