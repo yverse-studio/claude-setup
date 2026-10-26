@@ -118,3 +118,7 @@ The gate checks both (`gate.md`, Asset PRs).
 - Prove a move with evaluated vertex positions (rest, a pose, sliders at 1) before vs after, plus one render
   per look; zero difference is reachable for the character the garment was fitted on. It never replaces the
   clipping numbers (Moving or re-dressing, above).
+- VRoid/VRM files bake skin, cloth and hair into one mesh with one shared position buffer, split only by
+  material name: `scripts/clipping.mjs` measures them by material (`--body SKIN --parts CLOTH`), skips the
+  vertices the body itself uses, and a source `.vrm` that already clips shows in its baseline row, so run it
+  before any refit, not only after.
