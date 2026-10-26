@@ -123,6 +123,16 @@ numbers played), `flags` (answers that change later lines), `facts[{kind promise
 live `euro` 3); a chapter's `favour` waits for its event kind (`pr_merged`, `launched`, and once a source writes them
 `ci_failed`, `ci_green`, `pr_stale`, ids `ci-<repo>-<sha>` / `stale-<repo>-<number>`, 0 XP) since the last chapter.
 The chapters themselves are content in company-xy `content/story/<roster id>/`, not rows.
+**Team boards (yskills 2026-10-26: "connect it to my companyxy dashboard, so my social media team has a board"):** a
+project whose team works from its own app (social's ideas app first) gets one read-only board in HQ: `boards/<project>`
+(`{project, title, app (https link into the app for editing), refreshedAt, at, sections: [{id, kind, title, items}]}`). Kinds,
+so HQ renders every project's board the same way: `schedule` (items `{day, time, title, status, source app|outside, link,
+thumb?}`, 7 days), `list` (items `{title, status, at, link, thumb?}`, newest 8, plus `counts {<status>: n}`), `stats` (items
+`{title, at, views?, shares?, link}`). The app stays the only source of truth: the row is a snapshot, every item links back into
+the app, and HQ never edits it. Writer: the project's own status routine or daily round, in the run that already reads the app's
+public feed (social: `GET /api/feed` plus Metricool `getScheduledPosts`, 3 times a day), one `ArtifactData set` per run, only
+when something changed; free, no key, no extra session. HQ shows it on the project's card and the team's desk (company-xy,
+`HQ.board`); a board older than 12 hours greys.
 **Derived rows:** in the Company XY project the threads write none of this themselves; the HQ refresher derives them from
 `list_thread_sessions` (every thread, finished ones included) on every run (company-xy `hq-refresh.md`): `work/session_<id>` per open thread (the thread list spells
 the same session `cse_<id>`) with `by: 'refresher'`, `state` (running in a turn, waiting between turns, done once finished or
