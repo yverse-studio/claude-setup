@@ -167,7 +167,7 @@ Claude:
   with a 6-hourly schedule so a queued or stuck build cannot go silent). Without the conclusion filter it would smoke-test a failed build.
   Across all projects, claude-setup's `deploy-watch.yml` compares live `/api/config` with each
   repo's main HEAD every 15 minutes and opens a `deploy-drift` issue after 15 minutes of drift
-  (incident 2026-10-26: ~3 h of social merges never deployed). A project that serves no commit is
+  (incident 2026-10-26: ~3 h of social merges did not deploy). A project that serves no commit is
   unwatched: give it `/api/config` `commit`.
   Its first test checks that the live site runs the commit just built: the app serves the
   `WORKERS_CI_COMMIT_SHA` that Workers Builds sets at build time (duo-test: `commit` in
