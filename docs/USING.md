@@ -85,10 +85,10 @@ and whether claude-setup should adopt it. Private or login-only posts don't work
 
 What you do: drop ideas, say two words, set one switch. The `social-team` skill runs the rest.
 
-1. Any idea, any time, one line in the project chat: Claude files it and reacts 👍.
-2. "work them out": the studio makes the videos; you get them as files in the thread reply (see `social-team`, Where things live).
+1. Any idea, any time, one line in the `social` app (https://social.yverse.workers.dev, Ideen) or the project chat: Claude files it and reacts 👍.
+2. "work them out", or the daily routine: Claude writes the script and makes the draft; you see it under Entwürfe and tap Freigeben, Ändern or Verwerfen (`social-team`, Where things live).
 3. Your personal account: "upload" sends them to your drafts or the schedule; you decide what goes
-   up. Auto-post is off until HQ's Content view exists (`social-team`, Where things live); then: build and learning videos only, never ads or
+   up. Auto-post runs only while you flip its switch in the `social` app (`social-team`, Posting): build and learning videos only, never ads or
    crypto, at most 2 a day, a daily summary.
 4. A project account (one per brand or project): you sign up and connect it once, about 5 minutes
    (`social-team` `templates/account-setup.md`); Claude decides and posts on it from then on.
