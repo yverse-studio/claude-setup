@@ -108,7 +108,7 @@ Critic is the studio's QA: the first harsh viewer, so yskills never sees a faile
 
 ### Social (`social-team`)
 
-Runs yskills' accounts; the loop and posting rules: [`social-team`](../.claude/skills/social-team/SKILL.md).
+Runs yskills' accounts; the loop and posting rules: [`social-team`](../.claude/skills/social-team/SKILL.md); the order from idea to numbers, with the Film roles in it: [`pipeline.md`](../.claude/skills/social-team/pipeline.md).
 
 | Role and playbook | Job | Called when | Runs as | Model |
 |---|---|---|---|---|
@@ -116,7 +116,10 @@ Runs yskills' accounts; the loop and posting rules: [`social-team`](../.claude/s
 | Scout ([`scout.md`](../.claude/skills/social-team/roles/scout.md)) | rising sounds, formats, hooks, competitors' best posts | the weekly routine, before a brief | subagent of the Lead | Haiku to read and watch; Sonnet to sum up |
 | Community ([`community.md`](../.claude/skills/social-team/roles/community.md)) | comments and DMs, follower gifts, leads | each comment or DM, a daily review | the Worker's webhook plus a daily subagent | Sonnet |
 | Partnerships ([`deals.md`](../.claude/skills/social-team/roles/deals.md)) | brand deals: media kit, outreach drafts, offers | a brand message, "find deals" | subagent; a thread `Deal · <brand> · <partner>` per real offer | Sonnet; Opus reads a contract |
-| Analyst ([`analyst.md`](../.claude/skills/social-team/roles/analyst.md)) | numbers per post, what to repeat or drop | the weekly routine | subagent of the Lead | Sonnet |
+| Hook Checker ([`hook-check.md`](../.claude/skills/social-team/roles/hook-check.md)) | gate on the hook before filming and on the cut's first seconds | after the script, before the Critic | fresh subagent of the Lead | Sonnet |
+| Caption Writer ([`copy.md`](../.claude/skills/social-team/roles/copy.md)) | on-screen caption options, description, hashtags, pinned question in his voice | after the hook check | subagent of the Lead | Sonnet |
+| Publisher ([`publisher.md`](../.claude/skills/social-team/roles/publisher.md)) | preflight, scheduling, read-back, `posts.md` row | "upload", the switch, a project account | subagent of the Lead | Sonnet |
+| Analyst ([`analyst.md`](../.claude/skills/social-team/roles/analyst.md)) | numbers per post at 24 h and 7 d, what to repeat or drop | after each post, the weekly routine | subagent of the Lead | Sonnet |
 
 ### Story (`storyteller`)
 

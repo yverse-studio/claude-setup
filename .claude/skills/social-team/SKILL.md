@@ -12,7 +12,7 @@ follow, profile tap, visit, install, sign-up or sale. Checked 2026-10-17 and 202
 [`docs/research/2026-10-17-social-team.md`](../../../docs/research/2026-10-17-social-team.md) and
 [`docs/research/2026-10-18-brand-deals.md`](../../../docs/research/2026-10-18-brand-deals.md).
 
-Every role reads [`learnings.md`](learnings.md) first.
+Every role reads [`learnings.md`](learnings.md) first. The order of work from idea to numbers, every role's hand-over and pass bar: [`pipeline.md`](pipeline.md).
 
 ## yskills' loop
 
@@ -33,6 +33,9 @@ yskills in the project chat (CLAUDE.md, Cards); yskills does not read threads.
 | Scout | trends, rising sounds, competitors' best posts, the hook library | [`roles/scout.md`](roles/scout.md) | subagent of the Lead |
 | Community | comments and DMs: reply drafts, comment-to-DM flows, follower-only gifts, leads | [`roles/community.md`](roles/community.md) | the `social` Worker's webhook plus a daily subagent review |
 | Partnerships | brand deals and sponsors: media kit, brand list, outreach drafts, offers, contract check, delivery, invoice line | [`roles/deals.md`](roles/deals.md) | subagent of the Lead; a thread `Deal · <brand> · <partner>` per real offer |
+| Hook Checker | pre-film and cover hook gate: first 2 s, share trigger, burned hooks | [`roles/hook-check.md`](roles/hook-check.md) | fresh subagent of the Lead |
+| Caption Writer | on-screen caption options, description, hashtags, pinned question, in his voice | [`roles/copy.md`](roles/copy.md) | subagent of the Lead |
+| Publisher | preflight, schedule, read-back, the `posts.md` row | [`roles/publisher.md`](roles/publisher.md) | subagent of the Lead |
 | Analyst | numbers per post, what to repeat or drop, new lessons | [`roles/analyst.md`](roles/analyst.md) | subagent of the Lead in the weekly routine |
 
 Paid ads stay with the Marketer (`operator/roles/marketer.md`); the studio makes their creatives.

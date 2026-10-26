@@ -17,6 +17,8 @@ named; newest last; merge duplicates.
 
 ## Our accounts
 
+- 2026-10-26 (Y-Land brag, first full run): the brief changed three times because the style profile and the audience rule arrived after it; the Critic failed the /brag cut 3/5 on loudness, safe zones and a headline collision; yskills saw a jittering carousel before any motion check; "upload" fitted two files. Fixes: `pipeline.md` (read rules before the brief, pre-Critic checks, exact file in an approval).
+
 - 2026-10-12 (Y-Land): polished promos got about 300 views; film real play as a player would (`video-studio` learnings).
 - 2026-10-26 (@xyskillsx, 30 own videos watched): every hit (69k-509k) is his face plus one ironic caption from frame 1, 7-9 s, 0-5 cuts; faceless travel clips stay at 250-1.1k (food is a second lane, line below); style profile in `xyskillsx-style.md`.
 - 2026-10-26 (@xyskillsx): a caption that asks the viewer something (KBBQ, 5.7k) or roasts himself ("only 30 followers", 406 comments) earns the comments; plain scenery earns none.
