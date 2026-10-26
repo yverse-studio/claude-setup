@@ -14,6 +14,8 @@ check is a hard yes or no from someone who didn't write the code.
 
 A check that doesn't apply passes; say "n/a" in the table. A reviewer verdict in checks 3 to 5 without quoted lines, the test-gap answer and a `Not judged:` list is not a pass ([`roles/reviewer.md`](roles/reviewer.md), Report).
 
+**Until the `journey` status can be posted (2026-10-26).** claude-setup's `journey.yml` fails on every run (GitHub 403 on the project repo, PR 292 replaces it), so a missing or red `journey` status from it is a warning, not a fail, until a project's own `journey.yml` posts one. Instead, check 2 runs the default branch's `npm run journey` against the preview by hand (or, without that script, the evaluator's preview run) and quotes its output. A check that cannot pass for anyone never blocks a merge (yskills 2026-10-26).
+
 ## Gate size
 
 The PR's size decides which checks run; the headline names it: `Gate 5/5 (S, round <n>)`.
