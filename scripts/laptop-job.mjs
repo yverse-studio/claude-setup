@@ -11,6 +11,7 @@ import { MAX_BLENDER, MAX_RENDERS, acquireSlot, blenderCount, releaseSlot, slots
 
 const KILL_GRACE_MS = 5000
 let heldSlot = null
+let runningChild = null
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 const KEEP_AWAKE_PS = `Add-Type -MemberDefinition '[DllImport("kernel32.dll")] public static extern uint SetThreadExecutionState(uint f);' -Name P -Namespace W; while ($true) { [W.P]::SetThreadExecutionState(0x80000001) | Out-Null; Start-Sleep 30 }`
 
@@ -66,7 +67,7 @@ function finish(line, code) {
 
 // Waits for a render slot (and a free Blender instance when the command is Blender); null when queueMin ran out.
 async function waitForSlot(opt, cmd) {
-  const isBlender = /blender/i.test(cmd[0])
+  const isBlender = /blender/i.test(cmd.join(' '))
   const pollMs = Number(process.env.LAPTOP_JOB_POLL_MS ?? 5000)
   const maxBlender = Number(process.env.LAPTOP_MAX_BLENDER ?? MAX_BLENDER)
   const deadline = Date.now() + opt.queueMin * 60000
@@ -100,6 +101,7 @@ async function main() {
   }
   const awake = win ? spawn('powershell', ['-NoProfile', '-Command', KEEP_AWAKE_PS], { stdio: 'ignore' }) : null
   const child = spawn(cmd[0], cmd.slice(1), { stdio: ['ignore', 'pipe', 'pipe'], detached: !win })
+  runningChild = child
   const started = Date.now()
   let lastOutput = started
   const touch = (chunk) => { lastOutput = Date.now(); process.stdout.write(chunk) }
@@ -132,5 +134,11 @@ async function main() {
   child.on('exit', (code) => { if (verdict) done(code) })
 }
 
-for (const sig of ['SIGINT', 'SIGTERM']) process.on(sig, () => { releaseSlot(heldSlot); process.exit(130) })
-if (process.argv[1] === fileURLToPath(import.meta.url)) main()
+// A stopped watchdog takes its job down too, so no render keeps running without a slot.
+function killChild() {
+  if (!runningChild?.pid) return
+  if (process.platform === 'win32') spawnSync('taskkill', ['/PID', String(runningChild.pid), '/T', '/F'])
+  else { try { process.kill(-runningChild.pid, 'SIGKILL') } catch { runningChild.kill('SIGKILL') } }
+}
+for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => { killChild(); releaseSlot(heldSlot); process.exit(130) })
+if (process.argv[1] === fileURLToPath(import.meta.url)) main().catch((e) => { killChild(); finish(statusLine('FAIL', 'job', `watchdog error: ${e.message}`), 1) })

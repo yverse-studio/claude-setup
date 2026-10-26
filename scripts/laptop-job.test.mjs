@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { spawn, spawnSync } from 'node:child_process'
-import { mkdtempSync, readdirSync } from 'node:fs'
+import { mkdtempSync, readdirSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -103,4 +103,22 @@ test('a job that waits longer than --queue-min ends BLOCKED', () => {
   const r = spawnSync('node', [script, '--no-gpu', '--queue-min', '0', '--', 'node', '-e', '0'], { encoding: 'utf8', env })
   assert.equal(r.status, 3)
   assert.match(r.stdout, /JOB BLOCKED job: no render slot free/)
+})
+
+test('a half-written or vanished lock counts as held, never crashes or is stolen', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'slots-half-'))
+  writeFileSync(join(dir, 'render-1.lock'), '')
+  writeFileSync(join(dir, 'render-2.lock'), '')
+  assert.equal(acquireSlot({ dir, pid: 5, alive: () => false }), null)
+})
+
+test('stopping the watchdog kills its job and frees the slot', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'slots-kill-'))
+  const env = { ...process.env, LAPTOP_JOB_LOCK_DIR: dir, LAPTOP_JOB_LOG: '/dev/null' }
+  const c = spawn('node', [script, '--no-gpu', '--', 'node', '-e', 'setTimeout(() => {}, 30000)'], { env })
+  await new Promise((r) => setTimeout(r, 700))
+  assert.equal(readdirSync(dir).length, 1)
+  c.kill('SIGTERM')
+  await new Promise((r) => c.on('close', r))
+  assert.equal(readdirSync(dir).length, 0)
 })
