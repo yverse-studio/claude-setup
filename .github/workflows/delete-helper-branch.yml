@@ -37,6 +37,7 @@ jobs:
           set -euo pipefail
           case "$REPO_NAME" in (*[!A-Za-z0-9._-]*|'') echo "bad repo name"; exit 1;; esac
           case "$BRANCH" in (media-*[!A-Za-z0-9._-]*|media-|'') echo "branch must be media-<name> with letters, digits . _ -"; exit 1;; (media-*) ;; (*) echo "only media-* branches"; exit 1;; esac
+          case "$REPO_NAME$BRANCH" in (*..*) echo "no '..' in names"; exit 1;; esac
           R="yverse-studio/$REPO_NAME"
           [ "$BRANCH" = "$(gh api "repos/$R" --jq .default_branch)" ] && { echo "default branch"; exit 1; }
           open=$(gh api "repos/$R/pulls?state=open&head=yverse-studio:$BRANCH" --jq length)
