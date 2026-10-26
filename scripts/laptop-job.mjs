@@ -3,13 +3,18 @@
 // Runs the command directly (no shell): wrap a .cmd or .bat as `cmd /c x.bat`.
 // node scripts/laptop-job.mjs [--name n] [--timeout-min 60] [--idle-min 15] [--gpu-max-used-mb 1500] [--no-gpu] -- <command> [args]
 // Blender limits (yskills 2026-10-26): at most 2 jobs run at once and at most 3 Blender instances exist; extra jobs wait (--queue-min, default 180), yskills' own Blender is counted but never blocked.
+// A Blender job also waits for free RAM (LAPTOP_MIN_FREE_MB, default 4096, counts the animator's Blender), runs at below-normal priority and gets its own TEMP (no shared autosave or quit.blend).
 // Always ends with ONE line on stdout: `JOB OK|FAIL|HANG|TIMEOUT|BLOCKED <name>: <why>`; exit 0 only for OK.
 import { spawn, spawnSync } from 'node:child_process'
-import { appendFileSync } from 'node:fs'
+import { appendFileSync, mkdirSync } from 'node:fs'
+import { constants as osConstants, freemem, setPriority, tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { MAX_BLENDER, MAX_RENDERS, acquireSlot, blenderCount, releaseSlot, slotsHeld } from './laptop-slots.mjs'
 
 const KILL_GRACE_MS = 5000
+export const MIN_FREE_MB = 4096
+export const freeMb = () => Math.round(freemem() / 1048576)
 let heldSlot = null
 let runningChild = null
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
@@ -74,12 +79,13 @@ async function waitForSlot(opt, cmd) {
   let told = false
   for (;;) {
     const count = isBlender ? blenderCount() : null
-    if (!(count !== null && count >= maxBlender)) {
+    const lowRam = isBlender && freeMb() < Number(process.env.LAPTOP_MIN_FREE_MB ?? MIN_FREE_MB)
+    if (!lowRam && !(count !== null && count >= maxBlender)) {
       const slot = acquireSlot({ max: Number(process.env.LAPTOP_MAX_RENDERS ?? MAX_RENDERS) })
       if (slot) return slot
     }
     if (Date.now() > deadline) return null
-    if (!told) { console.log(`QUEUED ${opt.name}: waiting for a free render slot (max ${MAX_RENDERS} renders, ${maxBlender} Blender instances)`); told = true }
+    if (!told) { console.log(`QUEUED ${opt.name}: waiting for a free render slot or RAM (max ${MAX_RENDERS} renders, ${maxBlender} Blender instances, ${process.env.LAPTOP_MIN_FREE_MB ?? MIN_FREE_MB} MB free)`); told = true }
     await sleep(pollMs)
   }
 }
@@ -100,7 +106,15 @@ async function main() {
     if (busy) finish(statusLine('BLOCKED', opt.name, `${busy}; close the app or pass --gpu-max-used-mb`), 3)
   }
   const awake = win ? spawn('powershell', ['-NoProfile', '-Command', KEEP_AWAKE_PS], { stdio: 'ignore' }) : null
-  const child = spawn(cmd[0], cmd.slice(1), { stdio: ['ignore', 'pipe', 'pipe'], detached: !win })
+  const isBlender = /blender/i.test(cmd.join(' '))
+  const env = { ...process.env }
+  if (isBlender) {
+    const jobTmp = join(tmpdir(), `claude-job-${opt.name.replace(/[^\w-]/g, '_')}-${process.pid}`)
+    mkdirSync(jobTmp, { recursive: true })
+    env.TEMP = env.TMP = env.TMPDIR = jobTmp
+  }
+  const child = spawn(cmd[0], cmd.slice(1), { stdio: ['ignore', 'pipe', 'pipe'], detached: !win, env })
+  if (isBlender && child.pid) { try { setPriority(child.pid, osConstants.priority.PRIORITY_BELOW_NORMAL) } catch { /* priority is best effort */ } }
   runningChild = child
   const started = Date.now()
   let lastOutput = started

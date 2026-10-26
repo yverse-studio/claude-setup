@@ -123,3 +123,14 @@ test('stopping the watchdog kills its job and frees the slot', { skip: process.p
   await new Promise((r) => c.on('close', r))
   assert.equal(readdirSync(dir).length, 0)
 })
+
+test('a Blender job waits for free RAM and is BLOCKED when none comes', () => {
+  const r = spawnSync('node', [script, '--no-gpu', '--queue-min', '0.01', '--', 'node', '-e', '// blender'], { encoding: 'utf8', env: { ...process.env, LAPTOP_MIN_FREE_MB: '99999999', LAPTOP_JOB_POLL_MS: '50', LAPTOP_JOB_LOG: process.platform === 'win32' ? 'NUL' : '/dev/null' } })
+  assert.equal(r.status, 3)
+  assert.match(lastLine(r), /^JOB BLOCKED job:/)
+})
+test('a Blender job gets its own TEMP folder', () => {
+  const r = run([], 'node', '-e', 'console.log("T=" + process.env.TEMP); // blender')
+  assert.equal(r.status, 0)
+  assert.match(r.stdout, /T=.*claude-job-job-/)
+})
