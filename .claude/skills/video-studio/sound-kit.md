@@ -38,8 +38,8 @@ also carries his sound switch (yskills 2026-10-26: "ich wähle aus ob du sound w
 Beds (2026-10-26, `sound/README.md`): explainer takes a chill or funky bed on its music master; big takes
 the synthwave, funk, playful or cinematic ones (or the one chiptune that fits, Level 1, 123 BPM). real_talk
 keeps the music-free master as the post master, because a baked-in bed competes with the trending sound
-he adds in the app; its music master is the optional one, with `chill-music`, `hiphop-chill-calm` or
-`disco-funk-loop` ("manchmal haben wir nur Hintergrundmusik").
+he adds in the app; its music master is the optional one, with `disco-funk-loop` for now ("manchmal haben
+wir nur Hintergrundmusik"); the chill beds join real_talk after the laptop ear check for vocal chops.
 Both masters ship with every video and he picks: the music master is ready to post as is, the
 music-free one takes a trending sound in the app (a TikTok sound can never be burned in). API and
 auto-posts, ads and project accounts use the music master or the platform's commercial library

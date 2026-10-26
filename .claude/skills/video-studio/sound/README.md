@@ -30,6 +30,6 @@ Getting new files: the cloud proxy blocks kenney.nl, freesound, opengameart and 
 ## Using the beds
 
 - Every bed opens at full level (the dead intros are cut), so a 7-13 s video gets the groove from the first beat.
-- Three beds carry `vocals-unchecked`: nobody has listened for vocal chops in the hip-hop and lo-fi ones. Audition on the laptop before the first post.
+- Three beds carry `vocals-unchecked` and are not tagged `real_talk` yet: nobody has listened for vocal chops in the hip-hop and lo-fi ones. After the laptop ear check, add `real_talk` back to the clean ones (`manifest.json` presets).
 - Freesound uploads can still be claimed by TikTok's Content-ID if the same track sits on a distribution service: on the first post that uses a bed, look at the video's copyright status in the app before relying on it.
 - Two similar lo-fi beds (same author, same tempo) were dropped on purpose; add variety, not more of the same.
