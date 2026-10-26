@@ -10,7 +10,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 import tiktok
 
 ITEM = {'id': '1', 'desc': 'hi #x', 'author': {'uniqueId': 'bob'}, 'stats': {'playCount': 5},
-        'video': {'duration': 9, 'playAddr': 'https://v.example/a.mp4', 'cover': 'c'}}
+        'video': {'duration': 9, 'playAddr': 'https://v16.tiktokcdn-us.com/a.mp4', 'cover': 'c'}}
 
 
 def page(item):
@@ -40,6 +40,11 @@ class Page(unittest.TestCase):
     def test_challenge_page_is_refused(self):
         with self.assertRaises(tiktok.TikTokUnavailable):
             tiktok.fetch_item('https://www.tiktok.com/x', fake_opener(b'<html>verify you are human</html>'))
+
+    def test_media_url_must_be_tiktok_https(self):
+        for bad in ('file:///etc/passwd', 'http://v.tiktok.com/a.mp4', 'https://evil.example/a.mp4'):
+            with self.assertRaises(tiktok.TikTokUnavailable):
+                tiktok.fetch_item('https://www.tiktok.com/x', fake_opener(page({**ITEM, 'video': {'playAddr': bad}})))
 
     def test_private_post_without_video(self):
         with self.assertRaises(tiktok.TikTokUnavailable):

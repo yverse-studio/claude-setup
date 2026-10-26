@@ -11,6 +11,7 @@ from __future__ import annotations
 import http.cookiejar
 import json
 import re
+import urllib.error
 import urllib.request
 from pathlib import Path
 from urllib.parse import urlparse
@@ -18,6 +19,16 @@ from urllib.parse import urlparse
 UA = 'claude-setup-watch/1.0 (+https://github.com/yverse-studio/claude-setup)'
 MAX_BYTES = 200_000_000
 DATA_RE = re.compile(r'<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__"[^>]*>(.*?)</script>', re.S)
+
+
+# The page is untrusted data: only https URLs on TikTok's own domains are ever followed.
+ALLOWED_DOMAINS = ('tiktok.com', 'tiktokcdn.com', 'tiktokcdn-us.com')
+
+
+def _allowed(url: str) -> bool:
+    parts = urlparse(url)
+    host = (parts.hostname or '').lower()
+    return parts.scheme == 'https' and any(host == d or host.endswith('.' + d) for d in ALLOWED_DOMAINS)
 
 
 def is_tiktok(url: str) -> bool:
@@ -29,13 +40,27 @@ class TikTokUnavailable(Exception):
     pass
 
 
+class _SameFamilyRedirects(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        if not _allowed(newurl):
+            raise urllib.error.URLError(f'redirect to a non-TikTok host refused: {urlparse(newurl).hostname}')
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
 def _opener() -> urllib.request.OpenerDirector:
-    return urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
+    # Built from scratch: https and cookies only, no file:, ftp: or data: handlers.
+    opener = urllib.request.OpenerDirector()
+    for handler in (urllib.request.HTTPSHandler(), _SameFamilyRedirects(), urllib.request.HTTPErrorProcessor(),
+                    urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar())):
+        opener.add_handler(handler)
+    return opener
 
 
 def fetch_item(url: str, opener=None) -> tuple[dict, urllib.request.OpenerDirector]:
     """Return the video's itemStruct from the watch page (short vm./vt. links are followed)."""
     opener = opener or _opener()
+    if not _allowed(url):
+        raise TikTokUnavailable('not an https TikTok link')
     try:
         with opener.open(urllib.request.Request(url, headers={'User-Agent': UA}), timeout=30) as resp:
             html = resp.read(5_000_000).decode('utf-8', 'replace')
@@ -51,6 +76,8 @@ def fetch_item(url: str, opener=None) -> tuple[dict, urllib.request.OpenerDirect
         raise TikTokUnavailable('TikTok page has no readable video (removed, private or age-restricted)') from None
     if not item.get('video', {}).get('playAddr'):
         raise TikTokUnavailable('TikTok post has no public video file')
+    if not _allowed(item['video']['playAddr']):
+        raise TikTokUnavailable('TikTok video file is on an unexpected host, refused')
     return item, opener
 
 
