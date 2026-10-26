@@ -91,7 +91,7 @@ added as a second repo, or a plain chat), read that file by path, then the files
 
 | Domain | Read first | Then, when needed |
 |---|---|---|
-| Web app, stack, deploy | `scaffold`, `publish`; `docs/USING.md` (deploy or delete a page) | `nuxt4-patterns`, `vue-patterns`, `vite-patterns`, `api-design`, `database-migrations`, `e2e-testing` |
+| Web app, stack, deploy | `scaffold`, `publish`; `docs/USING.md` (deploy or delete a page); `docs/tech-traps.md` (one-line traps) | `nuxt4-patterns`, `vue-patterns`, `vite-patterns`, `api-design`, `database-migrations`, `e2e-testing` |
 | Running a project | `operator` (roles, gate, briefs) | `operator/roles/<role>.md` |
 | Payments, Stripe, shop | `sell` (Checkout, subscriptions, Stripe on Workers, shop law, go-live) | `sell/stripe-workers.md`, `keys.md`, `legal-de.md`, `physical.md`; `toolbox/catalog/money.md` (ads, in-app, VAT) |
 | App stores | `store` (Capacitor, RevenueCat, TestFlight, review) | `toolbox/catalog/app-platform.md` |

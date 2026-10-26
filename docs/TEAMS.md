@@ -177,7 +177,7 @@ A new site or app, even small, still gets the Designer pass before the build sty
 non-trivial change in any kit, `setup` included, starts with research, a placement check and a short plan
 (`operator` SKILL.md, Plan first). A kind not in the table is sized as `site`. Several ideas in one message become one chain each; chains that
 share no file run at once, the rest queue in `PROGRESS.md`. The `Done:` line ends with one short
-line per role saying what it found or checked.
+line per role saying what it found or checked, and the skills actually used (`briefs.md`, Skills).
 
 ## Models for tasks that are not a role
 

@@ -46,6 +46,7 @@ against that text. So:
 
 - Variants: any pick between variants is a vote card plus a criteria table judged by an evaluator that did not build them (Opus); one variant per unit, a rebuild replaces its branch, never a "-2" branch.
 
+- Interaction map (Social app, 2026-10-26: screens alone were no spec): `design/INTERACTIONS.md` is a required output of any app or tool with items the user can change. Per item: every state, every tap and what it does, every way back (undo, remove, move), and what reload and the back button do. Benchmark it against two real pro apps of the category (captures in `design/reference/`, one line each: what they do on the same tap). Every datum it shows names its one source (`planner.md`, Data map). Screens without it are not delivered.
 - Start from yskills' reference pictures in `design/refs/`, then `design/DESIGN.md`.
 - Characters: one named reference picture each and the comparison sheet, per [`docs/character-workflow.md`](../../../../docs/character-workflow.md).
 - Compare against the category leader at 1440px and 390px.
