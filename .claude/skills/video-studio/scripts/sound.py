@@ -2,6 +2,8 @@
   beats <audio> [-o f.json]   bpm, beats, downbeats, strong cues (librosa)
   snap <beats.json> <cuts.json> --preset P   move cuts onto beats, whole frames
   sfx <outdir>                synthesise our own SFX library (numpy)
+  detect <video>              cut times from scene detection (ffmpeg)
+  cut <video> <snapped.json>  re-cut the video to the snapped list, same length
   mix <video> <cues.json> --preset P [--music bed]   SFX + ducked bed, two-pass loudnorm (ffmpeg)
   loud <file>                 integrated LUFS, true peak, LRA
   presets                     the preset table as markdown
@@ -13,7 +15,9 @@ import random
 import re
 import subprocess
 import sys
+import tempfile
 import wave
+import zlib
 from pathlib import Path
 
 PRESETS = {
@@ -25,6 +29,7 @@ LOUDNESS = dict(lufs=-14, tp=-1.5, lra=11)
 AAC_MARGIN_DB = 0.5  # AAC encoding overshoots the limiter a little
 STRONG_TOLERANCE, STRONG_THRESHOLD, STRONG_MIN_GAP = 0.15, 0.45, 1.0
 SR, TAKES, EPS = 48000, 3, 1e-9
+DEFAULT_SFX_DIR = Path(__file__).resolve().parent.parent / "sound"  # the shared library (#265)
 MUSIC_ACTIVE, MUSIC_BEAT = 0.6, 0.12  # measured: brag 0.99/0.33, speech-like 0.5/0.07, noise 1.0/0.08
 
 
@@ -49,10 +54,10 @@ def candidates(t, kind, beats, tol):
     """(time, why) near t, nearest first: strong cues for hook/payoff, then beats or downbeats."""
     hook = kind in ("hook", "payoff")
     found = [(c["t"], "strong cue") for c in beats.get("strong_cues", []) if hook and abs(c["t"] - t) <= STRONG_TOLERANCE + EPS]
-    grid, name = (beats.get("downbeats", []), "downbeat") if hook else (beats.get("beats", []), "beat")
     found.sort(key=lambda c: abs(c[0] - t))
-    near = sorted((b for b in grid if abs(b - t) <= tol + EPS), key=lambda b: abs(b - t))
-    return found + [(b, name) for b in near]
+    near = lambda grid: sorted((b for b in grid if abs(b - t) <= tol + EPS), key=lambda b: abs(b - t))
+    downs = [(b, "downbeat") for b in near(beats.get("downbeats", []))] if hook else []
+    return found + downs + [(b, "beat") for b in near(beats.get("beats", []))]  # hook/payoff: strong cue, then downbeat, then any beat
 
 
 def to_frame(t, fps):
@@ -186,6 +191,36 @@ def render(video, inputs, graph, out, duration):
                 "-ar", str(SR), "-t", f"{duration:.3f}", "-movflags", "+faststart", str(out)])
 
 
+def merge_scene_times(times, duration, gap=0.25, edge=0.3):
+    """One cut per cluster of detections (its first frame); nothing within `edge` s of the ends."""
+    out = []
+    for t in sorted(times):
+        if edge <= t <= duration - edge and (not out or t - out[-1] >= gap):
+            out.append(t)
+    return out
+
+
+def detect_cuts(video, threshold=0.2):
+    err = run(["ffmpeg", "-hide_banner", "-nostats", "-i", str(video), "-an", "-vf", f"select='gt(scene,{threshold})',showinfo", "-f", "null", "-"])
+    return merge_scene_times([float(t) for t in re.findall(r"pts_time:([\d.]+)", err)], probe(video)[0])
+
+
+def retime_plan(src, dst):
+    """Per shot (start frame, frames kept, frames held): trim the tail of a shorter shot, hold the last frame of a longer one."""
+    return [(s0, min(s1 - s0, d1 - d0), (d1 - d0) - min(s1 - s0, d1 - d0)) for (s0, s1), (d0, d1) in zip(zip(src, src[1:]), zip(dst, dst[1:]))]
+
+
+def cmd_cut(a):
+    snapped = json.loads(Path(a.snapped).read_text())
+    total = round(probe(a.video)[0] * a.fps)
+    plan = retime_plan([0] + [round(c["from"] * a.fps) for c in snapped] + [total], [0] + [c["frame"] for c in snapped] + [total])
+    parts = [f"[0:v]trim=start_frame={s}:end_frame={s + keep},setpts=PTS-STARTPTS,tpad=stop_mode=clone:stop_duration={hold / a.fps:.5f}[v{i}]" for i, (s, keep, hold) in enumerate(plan)]
+    graph = ";".join(parts) + ";" + "".join(f"[v{i}]" for i in range(len(plan))) + f"concat=n={len(plan)}:v=1:a=0[v]"
+    run(["ffmpeg", "-hide_banner", "-nostats", "-y", "-i", str(a.video), "-filter_complex", graph, "-map", "[v]", "-map", "0:a?", "-c:v", "libx264", "-crf", "18",
+         "-pix_fmt", "yuv420p", "-r", str(a.fps), "-c:a", "copy", str(a.o)])
+    print(f"{a.o}: {len(plan)} shots re-timed, {total} frames")
+
+
 def music_features(path):
     """(active share, beat regularity) of the source audio, or None without numpy/audio: music is steady and periodic."""
     try:
@@ -209,11 +244,47 @@ def looks_like_music(feats):
 
 
 def find_takes(sfx_dir):
-    takes = {}
-    for f in sorted(Path(sfx_dir).glob("*")):
-        if f.suffix.lower() in (".wav", ".ogg", ".flac", ".mp3"):
-            takes.setdefault(re.sub(r"_\d+$", "", f.stem), []).append(f)
+    """Kind -> files, recursive: a file in a subfolder takes the folder's name (sfx/hit/x.wav is 'hit'), else its stem minus _N. music/ is skipped."""
+    root, takes = Path(sfx_dir), {}
+    for f in sorted(root.rglob("*")):
+        rel = f.relative_to(root)
+        if f.suffix.lower() in (".wav", ".ogg", ".flac", ".mp3") and "music" not in rel.parts[:-1]:
+            takes.setdefault(f.parent.name if f.parent != root else re.sub(r"_\d+$", "", f.stem), []).append(f)
     return takes
+
+
+def library_manifest(sfx_dir):
+    """The shared library's manifest (a dict with entries); our own sfx output writes a plain list, which is not one."""
+    f = Path(sfx_dir) / "manifest.json"
+    data = json.loads(f.read_text()) if f.is_file() else None
+    return data if isinstance(data, dict) else None
+
+
+def library_kinds(manifest, preset_name):
+    return {e["category"] for e in manifest["entries"] if e["kind"] == "sfx" and preset_name in e["presets"]}
+
+
+def pick_from_library(cues, library, preset_name, salt=""):
+    """Library mode: eligible files = the library's sfx of that category for the preset (what sound_library.pick filters on).
+    Rotates through them by (cue index + crc32(salt)) % n, so takes vary but the same input gives the same output; never the file used last."""
+    try:
+        import sound_library
+    except ImportError:
+        sys.exit("error: library module missing: merge #265 (scripts/sound_library.py) or use a folder of numbered files")
+    entries = sound_library.load(Path(library))["entries"]
+    last, picked, offset = None, [], zlib.crc32(salt.encode())
+    for i, c in enumerate(sorted(cues, key=lambda c: c["t"])):
+        ok = [e["file"] for e in entries if e["kind"] == "sfx" and e["category"] == c["sfx"] and preset_name in e["presets"]]
+        if not ok:
+            raise ValueError(f"no {c['sfx']!r} sound for preset {preset_name!r}")
+        n = (i + offset) % len(ok)
+        if ok[n] == last:
+            n = (n + 1) % len(ok)
+        if ok[n] == last:
+            raise ValueError(f"only one {c['sfx']!r} sound for {preset_name}: it would play twice in a row at {c['t']}")
+        last = ok[n]
+        picked.append((c, Path(library) / last))
+    return picked
 
 
 def fmt(path, m):
@@ -224,17 +295,26 @@ def cmd_mix(a):
     preset = PRESETS[a.preset]
     if a.music and not preset["music"]:
         sys.exit(f"preset {a.preset} has no music bed")
-    takes = find_takes(a.sfx_dir)
+    sfx_dir = a.sfx_dir or DEFAULT_SFX_DIR
+    if not Path(sfx_dir).is_dir():
+        if a.sfx_dir:
+            sys.exit(f"error: no such --sfx-dir {sfx_dir}")
+        sfx_dir = tempfile.mkdtemp(prefix="sfx-")
+        print(f"note: {DEFAULT_SFX_DIR} not found; synthesised the own-synthesis SFX library into {sfx_dir} ({make_sfx(sfx_dir, a.seed)} files)")
+    manifest = library_manifest(sfx_dir)
+    takes = {k: [] for k in library_kinds(manifest, a.preset)} if manifest else find_takes(sfx_dir)
     cues = json.loads(Path(a.cues).read_text())
     if errors := validate_cues(cues, preset, takes):
         sys.exit("\n".join(errors))
     duration, has_voice = probe(a.video)
     if has_voice and looks_like_music(music_features(a.video)):
-        note = "source already carries music (the bed would clash): re-export the source voice-only (--voice-only: no music, no SFX baked in)"
+        note = "source already carries music (the bed would clash): use the raw clip without music (and without SFX baked in)"
         if a.music and not a.force_music:
             sys.exit(f"error: {note}, or pass --force-music")
         print(f"warning: source already has a bed; final-nomusic is not music-free. {note}", file=sys.stderr)
-    picked = pick_takes(cues, takes, a.seed)
+    picked = pick_from_library(cues, sfx_dir, a.preset, Path(a.video).name) if manifest else pick_takes(cues, takes, a.seed)
+    for c, f in picked:
+        print(f"cue {c['t']:.3f} {c['sfx']} -> {f.relative_to(sfx_dir) if manifest else f.name} ({'library' if manifest else 'folder'} take, preset {a.preset})")
     out = Path(a.o)
     out.mkdir(parents=True, exist_ok=True)
     silent = [] if has_voice else ["-f", "lavfi", "-t", f"{duration:.3f}", "-i", f"anullsrc=r={SR}:cl=stereo"]
@@ -364,12 +444,12 @@ def write_wav(path, x, np):
         w.writeframes((np.clip(x, -1, 1) * 32767).astype("<i2").tobytes())
 
 
-def cmd_sfx(a):
+def make_sfx(outdir, seed=7):
     try:
         import numpy as np
     except ImportError:
         sys.exit("numpy missing: python3 -m pip install numpy")
-    out, rng, manifest = Path(a.outdir), np.random.default_rng(a.seed), []
+    out, rng, manifest = Path(outdir), np.random.default_rng(seed), []
     out.mkdir(parents=True, exist_ok=True)
     for kind in SECONDS:
         for take in range(1, TAKES + 1):
@@ -379,7 +459,11 @@ def cmd_sfx(a):
             manifest.append(dict(file=name, kind=kind, length_ms=round(len(x) * 1000 / SR), source="own synthesis", licence="none (own)"))
     (out / "manifest.json").write_text(json.dumps(manifest, indent=1))
     (out / "LICENCE.txt").write_text("own synthesis by sound.py, no licence needed\n")
-    print(f"{len(manifest)} files in {out}")
+    return len(manifest)
+
+
+def cmd_sfx(a):
+    print(f"{make_sfx(a.outdir, a.seed)} files in {a.outdir}")
 
 
 def parser():
@@ -391,8 +475,10 @@ def parser():
     p = sub.add_parser("sfx"); p.add_argument("outdir"); p.add_argument("--seed", type=int, default=7)
     p = sub.add_parser("mix"); p.add_argument("video"); p.add_argument("cues")
     p.add_argument("--preset", required=True, choices=PRESETS); p.add_argument("--music"); p.add_argument("--force-music", action="store_true")
-    p.add_argument("--sfx-dir", default=str(Path(__file__).resolve().parent.parent / "sound" / "sfx"))
+    p.add_argument("--sfx-dir")
     p.add_argument("-o", default="."); p.add_argument("--seed", type=int, default=7)
+    p = sub.add_parser("detect"); p.add_argument("video"); p.add_argument("-o"); p.add_argument("--threshold", type=float, default=0.2)
+    p = sub.add_parser("cut"); p.add_argument("video"); p.add_argument("snapped"); p.add_argument("-o", default="cut.mp4"); p.add_argument("--fps", type=float, default=30)
     p = sub.add_parser("loud"); p.add_argument("file")
     sub.add_parser("presets")
     return ap
@@ -400,7 +486,7 @@ def parser():
 
 def main(argv):
     a = parser().parse_args(argv)
-    run_cmd = dict(beats=cmd_beats, snap=cmd_snap, sfx=cmd_sfx, mix=cmd_mix, presets=lambda a: print(presets_table()),
+    run_cmd = dict(beats=cmd_beats, snap=cmd_snap, sfx=cmd_sfx, cut=cmd_cut, detect=lambda a: emit(a, detect_cuts(a.video, a.threshold)), mix=cmd_mix, presets=lambda a: print(presets_table()),
                    loud=lambda a: print(fmt(a.file, measure(a.file))))
     try:
         run_cmd[a.cmd](a)

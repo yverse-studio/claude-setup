@@ -27,7 +27,7 @@ also carries his sound switch (yskills 2026-10-26: "ich wähle aus ob du sound w
 
 | | real_talk | explainer | big |
 |---|---|---|---|
-| What it is | his face, one ironic caption, 7-13 s | voice and captions, 20-40 s | flagship or launch, 15-30 s, music-driven |
+| What it is | his face, one ironic caption, 7-13 s. **Unproven** until it has run on one of his own face clips and passed "would his friends notice someone else edited it?" | voice and captions, 20-40 s | flagship or launch, 15-30 s, music-driven |
 | Music-free master (`final-nomusic.mp4`) | his own sound only, for a trending sound added in TikTok | voice and SFX | voice and SFX |
 | Music master (`final.mp4`) | own or CC0 bed at -20 dB, ducked 12 dB under his voice (yskills 2026-10-26: "manchmal haben wir nur Hintergrundmusik") | own or CC0 bed at -22 dB, ducked 14 dB under the voice | own or CC0 bed at -16 dB, 110-140 BPM, ducked 10 dB |
 | Cuts | on action and on the spoken beat; on the sound's beat when the idea has a sound link | every 2-4 s, on a beat ±80 ms | every 1-2 beats, hook and payoff on a strong cue ±0.15 s |
@@ -35,6 +35,9 @@ also carries his sound switch (yskills 2026-10-26: "ich wähle aus ob du sound w
 | SFX | 0-2, only on the punchline | at most 4 | at most 8 |
 | Loudness, both masters | -14 LUFS integrated, -1.5 dBTP, LRA 11 | same | same |
 
+Until fitting beds exist (2026-10-26: the library has only chiptunes, and only the 123 BPM one fits, for
+`big`), real_talk and explainer with "Claude wählt" ship SFX-only and the music-free master is the
+one to post; a bed appears in `final.mp4` there only when the Sound role found one that fits.
 Both masters ship with every video and he picks: the music master is ready to post as is, the
 music-free one takes a trending sound in the app (a TikTok sound can never be burned in). API and
 auto-posts, ads and project accounts use the music master or the platform's commercial library
@@ -51,7 +54,9 @@ auto-posts, ads and project accounts use the music master or the platform's comm
 
 ## Library
 
-Order of pick, every file with its source and a `Licence:` line in the video's `sound.md`:
+Order of pick, every file with its source and a `Licence:` line in the video's `sound.md`. The sorted
+and tagged CC0 library itself (SFX by category, chiptune beds, licence proof per file, a CI check)
+is [`sound/README.md`](sound/README.md); `sound.py mix` reads it by default.
 
 1. **Own synthesis** (`sound.py sfx <dir>`): hit, thud, tick, whoosh up and down, riser, sub boom;
    three takes each with a pitch wobble, so repeats never machine-gun; 8 ms fades, quiet tails.

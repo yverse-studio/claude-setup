@@ -1,11 +1,15 @@
 """sound.py: snap logic, SFX cap and takes, presets, loudnorm parsing, cue validation. Stdlib only; numpy/ffmpeg tests skip."""
 import importlib
+import json
 import math
+import os
 import shutil
 import sys
 import tempfile
+import types
 import unittest
 import wave
+from unittest import mock
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -75,6 +79,10 @@ class Snap(unittest.TestCase):
         self.assertEqual(r["to"], 6.0)
         self.assertIn("downbeat", r["reason"])
 
+    def test_hook_falls_back_to_any_beat(self):
+        r = snap([{"t": 6.55, "kind": "hook"}], BIG)[0]
+        self.assertEqual((r["to"], r["reason"][:4]), (6.5, "beat"))
+
     def test_plain_cut_ignores_strong_cue(self):
         self.assertEqual(snap([4.1], BIG)[0]["to"], 4.0)
 
@@ -136,6 +144,93 @@ class Cues(unittest.TestCase):
         picked = sound.pick_takes(self.cues(2), self.KINDS)
         self.assertNotIn("sidechaincompress", sound.build_graph(picked, True, False, BIG, 10))
         self.assertIn("sidechaincompress", sound.build_graph(picked, True, True, BIG, 10))
+
+
+class FindTakes(unittest.TestCase):
+    def test_recursive_keying_merges_folders_and_numbered_files(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            for name in ("hit_1.wav", "hit_2.wav", "tick_1.wav", "sfx/hit/kenney-hit-punch-01.wav", "sfx/hit/kenney-hit-metal-01.ogg",
+                         "sfx/whoosh/kenney-whoosh-swish-01.wav", "music/drive/song.mp3", "licences/readme.txt"):
+                (root / name).parent.mkdir(parents=True, exist_ok=True)
+                (root / name).write_bytes(b"")
+            takes = sound.find_takes(root)
+            self.assertEqual(sorted(takes), ["hit", "tick", "whoosh"])
+            self.assertEqual(len(takes["hit"]), 4)  # own synthesis and library takes are one kind
+            picked = sound.pick_takes([{"t": i, "sfx": "hit"} for i in range(12)], takes)
+            files = [f for _, f in picked]
+            self.assertTrue(all(a != b for a, b in zip(files, files[1:])))
+            self.assertGreater(len({f.parent for f in files}), 1)  # both folders get used
+
+
+def fake_library(root, categories=("hit", "whoosh")):
+    entries = []
+    for cat in categories:
+        for n in range(3):
+            presets = ["big"] if cat == "whoosh" else ["real_talk", "big"]
+            entries.append(dict(id=f"{cat}{n}", kind="sfx", category=cat, tags=[], presets=presets, file=f"sfx/{cat}/{cat}{n}.wav"))
+    entries.append(dict(id="song", kind="music", mood="drive", presets=["big"], file="music/drive/song.mp3"))
+    (root / "manifest.json").write_text(json.dumps({"schema": 1, "entries": entries}))
+    return entries
+
+
+class Library(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        fake_library(self.root)
+        self.stub = types.ModuleType("sound_library")
+        self.stub.load = lambda lib: json.loads((Path(lib) / "manifest.json").read_text())
+        patcher = mock.patch.dict(sys.modules, {"sound_library": self.stub})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.addCleanup(self.tmp.cleanup)
+
+    def cues(self, n, cat="hit"):
+        return [{"t": i, "sfx": cat} for i in range(n)]
+
+    def test_same_category_rotates_and_never_repeats(self):
+        files = [f.name for _, f in sound.pick_from_library(self.cues(6), self.root, "big", "a.mp4")]
+        self.assertTrue(all(a != b for a, b in zip(files, files[1:])))
+        self.assertEqual(len(set(files)), 3)
+
+    def test_same_input_same_output_and_salt_changes_it(self):
+        pick = lambda salt: [f.name for _, f in sound.pick_from_library(self.cues(4), self.root, "big", salt)]
+        self.assertEqual(pick("a.mp4"), pick("a.mp4"))
+        self.assertTrue(any(pick("a.mp4") != pick(f"{n}.mp4") for n in range(5)))
+
+    def test_preset_filter_and_unknown_category(self):
+        self.assertEqual(sound.library_kinds(json.loads((self.root / "manifest.json").read_text()), "real_talk"), {"hit"})
+        with self.assertRaises(ValueError):
+            sound.pick_from_library(self.cues(1, "whoosh"), self.root, "real_talk")
+
+    def test_own_synthesis_manifest_is_not_a_library(self):
+        (self.root / "manifest.json").write_text("[]")
+        self.assertIsNone(sound.library_manifest(self.root))
+
+    def test_missing_module_says_merge_265(self):
+        with mock.patch.dict(sys.modules, {"sound_library": None}), self.assertRaises(SystemExit) as err:
+            sound.pick_from_library(self.cues(1), self.root, "big")
+        self.assertIn("merge #265", str(err.exception))
+
+
+REAL_LIBRARY = Path(os.environ.get("VIDEO_STUDIO_WITH_LIBRARY", "/nonexistent"))  # a copy of video-studio from the #265 branch
+
+
+@unittest.skipUnless((REAL_LIBRARY / "sound" / "manifest.json").is_file(), "real library copy not set (VIDEO_STUDIO_WITH_LIBRARY)")
+class RealLibrary(unittest.TestCase):
+    def test_cues_resolve_through_the_real_manifest(self):
+        with mock.patch.object(sys, "path", [str(REAL_LIBRARY / "scripts")] + sys.path):
+            sys.modules.pop("sound_library", None)
+            lib = REAL_LIBRARY / "sound"
+            picked = sound.pick_from_library([{"t": i, "sfx": c} for i, c in enumerate(["hit", "tick", "hit", "whoosh", "thud", "pop"])], lib, "big", "x.mp4")
+            files = [f for _, f in picked]
+            self.assertTrue(all(f.is_file() for f in files))
+            self.assertTrue(all(a != b for a, b in zip(files, files[1:])))
+            self.assertNotEqual(files[0], files[2])  # two hits, two files
+            with self.assertRaises(ValueError):
+                sound.pick_from_library([{"t": 0, "sfx": "whoosh"}], lib, "real_talk")
+            sys.modules.pop("sound_library", None)
 
 
 class DuckThreshold(unittest.TestCase):
@@ -235,6 +330,25 @@ class MixAndLoud(unittest.TestCase):
             self.assertTrue(sound.looks_like_music(sound.music_features(self.tone_file(d, bed))))
             self.assertFalse(sound.looks_like_music(sound.music_features(self.tone_file(d, speech))))
 
+    def test_mix_without_a_library_synthesises_one(self):
+        import contextlib
+        import io
+        import subprocess
+        from unittest import mock
+        with tempfile.TemporaryDirectory() as d:
+            video = Path(d) / "v.mp4"
+            subprocess.run(["ffmpeg", "-v", "error", "-f", "lavfi", "-i", "color=c=black:s=64x64:d=4", "-f", "lavfi", "-i", "sine=f=220:d=4",
+                            "-shortest", str(video)], check=True)
+            (Path(d) / "cues.json").write_text('[{"t": 1, "sfx": "hit"}]')
+            args = ["mix", str(video), f"{d}/cues.json", "--preset", "real_talk", "-o", f"{d}/out"]
+            out = io.StringIO()
+            with mock.patch.object(sound, "DEFAULT_SFX_DIR", Path(d) / "nope"), contextlib.redirect_stdout(out):
+                self.assertEqual(sound.main(args), 0)
+            self.assertIn("synthesised", out.getvalue())
+            self.assertTrue((Path(d) / "out" / "final-nomusic.mp4").is_file())
+            with self.assertRaises(SystemExit):  # an explicit missing dir is an error, not a fallback
+                sound.main(args + ["--sfx-dir", f"{d}/nope"])
+
     def test_mix_refuses_a_bed_on_a_source_with_music(self):
         import subprocess
         with tempfile.TemporaryDirectory() as d:
@@ -248,7 +362,8 @@ class MixAndLoud(unittest.TestCase):
             with self.assertRaises(SystemExit) as err:
                 sound.main(args)
             self.assertIn("--force-music", str(err.exception))
-            self.assertIn("voice-only", str(err.exception))
+            self.assertIn("without music", str(err.exception))
+            self.assertNotIn("--voice-only", str(err.exception))
 
     def test_bed_drops_about_duck_db_under_voice(self):
         import subprocess

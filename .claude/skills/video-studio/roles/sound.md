@@ -13,5 +13,5 @@ The sound designer. Picks the music bed, maps its beats, places the SFX on the c
 - Cut to the beat: the Editor cuts on the beat map; the hook's first cut and the payoff land on a downbeat.
 - Mix: voice on top, music ducked under it, SFX felt not heard; both masters at -14 LUFS integrated, true peak -1.5 dBTP through `sound.py mix` (two-pass loudnorm); the preset's SFX cap and bed level are in [`../sound-kit.md`](../sound-kit.md).
 - Two masters: `final.mp4` with the music, and `final-nomusic.mp4` (SFX and voice only) so yskills can lay a trending sound in the app.
-- Where the music comes from: ads and business-account videos take the bed from the platform's commercial music library only (`market` §4, Music). Organic posts on a personal account and our own sites may use licence-clean free music (Pixabay Music, YouTube Audio Library, Free Music Archive CC BY with credit). The SFX rules stay the same everywhere.
+- Where the music comes from: ads and business-account videos take the bed from the platform's commercial music library only (`market` §4, Music). Everything else uses CC0 or own-synthesis beds only, no CC BY, no credit lines (yskills, 2026-10-26): [`../sound-kit.md`](../sound-kit.md), Library. The SFX rules stay the same everywhere.
 - Paid music or AI voice is a new service: card first (`SKILL.md`, Tools).
