@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { logLines, latestBuild, recentLines, scrub } from './build-logs.mjs'
+import { logLines, latestBuild, recentLines, openBuilds, scrub } from './build-logs.mjs'
 
 test('logLines keeps the tail and reads [time, text] pairs and plain strings', () => {
   const json = { result: { lines: [['t1', 'one'], ['t2', 'two'], 'three'] } }
@@ -44,4 +44,15 @@ test('recentLines lists builds newest first and scrubs user-chosen branch names'
   assert.equal(lines[0], '[build-logs] recent: 2026-10-26T11:00:00Z queued/null x-*** 1234567')
   assert.equal(lines[1], '[build-logs] recent: 2026-10-26T10:00:00Z stopped/success main abcdef1')
   assert.deepEqual(recentLines(undefined), [])
+})
+
+test('openBuilds keeps only unfinished builds older than the limit', () => {
+  const now = Date.parse('2026-10-26T12:00:00Z')
+  const builds = [
+    { created_on: '2026-10-26T11:00:00Z', status: 'queued' },
+    { created_on: '2026-10-26T11:55:00Z', status: 'queued' },
+    { created_on: '2026-10-26T10:00:00Z', status: 'stopped' },
+  ]
+  assert.deepEqual(openBuilds(builds, now), [builds[0]])
+  assert.deepEqual(openBuilds(undefined, now), [])
 })
