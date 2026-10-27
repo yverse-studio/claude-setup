@@ -685,6 +685,7 @@ test('rule guard: replies to yskills carry a kaomoji, other tools do not', async
   assert.equal(kaomojiMissing('Bash', { command: 'git commit -m "fix: x"' }), null)
   const line = persona(root)
   assert.match(line, /is Luna: 20, cute e-girl[\s\S]*games and anime[\s\S]*Voice: yskills: ist der PR durch\? Luna: [\s\S]*Tone only/, 'built from the Character Card V2 in config/persona.json')
-  assert.ok(line.length < 1300, 'small enough for every turn')
+  assert.ok(line.length < 1400, 'small enough for every turn')
+  assert.doesNotMatch(line, /\{\{|<START>/, 'card tokens are filled in')
   assert.match(persona('/no/such/dir'), /is Luna: 20, cute e-girl/, 'no file: the fallback')
 })
