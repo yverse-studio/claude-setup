@@ -256,7 +256,7 @@ export function spawnPrompt(prompt, transcript) {
       const entry = JSON.parse(line)
       const content = entry.message?.content
       const text = typeof content === 'string' ? content : (content ?? []).map((c) => c?.text ?? '').join('\n')
-      if (entry.type === 'user' && /^\s*<(wake|relay|coordinator-relay)\b/.test(text) && /<(wake|relay)\b[^>]*reason="spawn/.test(text)) found.push(text)
+      if (entry.type === 'user' && /^\s*<(wake|relay)\b[^>]*reason="spawn"/.test(text)) found.push(text)
     } catch { /* not a JSON line */ }
   }
   return found.length ? found.join('\n') : prompt

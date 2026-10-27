@@ -583,6 +583,7 @@ test('rule guard: the spawn brief is checked from the transcript when the prompt
     assert.doesNotMatch(run(bad, id('bc335')), /Brief check/, 'once per session')
     assert.doesNotMatch(run([entry(wake), entry(relay(`Role: Programmer · Kit: setup · Size: S${FULL}`)), entry(mention)], id('bc335ok')), /Brief check/, 'a good brief passes, the bare spawn wake is not the brief')
     assert.doesNotMatch(run([entry('see this: <wake reason="spawn">Make a bee video.</wake>'), entry('x', 'assistant'), 'not json reason="spawn"'], id('bc335q')), /Brief check/, 'a chat that only quotes a spawn is no thread')
+    assert.doesNotMatch(run([entry(`<wake reason="mention"><message>${relay('Make a bee video.')}</message></wake>`)], id('bc335w')), /Brief check/, 'a wake that quotes another thread\'s spawn relay is no thread')
   } finally { rmSync(dir, { recursive: true, force: true }) }
 })
 
