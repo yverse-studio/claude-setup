@@ -228,6 +228,21 @@ function roleContext(prompt, cwd, session) {
   return roleCard(role, role.path ? read(join(root, role.path)) || fetchRaw(role.path) : '')
 }
 
+// The thread side of the team check (routing test 2026-10-27: a project chat may run without hooks, so a
+// bad start can reach the thread). The spawn brief is checked against docs/TEAMS.md with team-guard's own
+// rules; a bad one tells the thread to do no work and send the start back. Returns '' when it passes.
+export async function briefCheck(prompt, cwd) {
+  if (!/<(wake|relay)\b[^>]*reason=\\?"spawn/.test(prompt)) return ''
+  let guard
+  try { guard = await import(new URL('./team-guard.mjs', import.meta.url)) } catch { return '' }
+  const teams = read(join(setupRoot(cwd), 'docs', 'TEAMS.md'))
+  const brief = prompt.replace(/\\[nt]/g, '\n').replace(/<\/?(wake|message|thread|project|relay|coordinator-relay|cited|note|system-note)\b[^>]*>/g, '\n')
+  const missing = guard.missingLines(brief)
+  const why = !guard.stamped(brief) ? 'no `Role: · Kit: · Size:` stamp line'
+    : guard.badTeam(brief, teams) ?? (missing.length ? `brief lines missing: ${missing.join(', ')}` : null)
+  return why ? `Brief check (docs/TEAMS.md): this start breaks the team rules: ${why}. Do no work: send this reason and the corrected Role, Kit and Size to the coordinator (message_coordinator), then stop.` : ''
+}
+
 // A thread that posted its result (`Done:`) or its hand-off path is finished: it resolves itself before
 // it stops (yskills 2026-10-27: handed-off threads stayed open; the coordinator cannot resolve another
 // thread from its tools). Returns the reason to keep going, or null.
@@ -350,12 +365,12 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
     let raw = ''
     process.stdin.setEncoding('utf8')
     process.stdin.on('data', (c) => { raw += c })
-    process.stdin.on('end', () => {
+    process.stdin.on('end', async () => {
       try {
         if (process.env.CLAUDE_SETUP_RULE_GUARD === 'off') return
         const { tool_name: tool = '', tool_input: input = {}, prompt = '', cwd = process.cwd(), session_id: session, transcript_path: transcriptPath } = JSON.parse(raw || '{}')
         if (mode === 'prompt') {
-          const context = [roleContext(prompt, cwd, session), promptContext(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
+          const context = [await briefCheck(prompt, cwd), roleContext(prompt, cwd, session), promptContext(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
           if (context) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: context } }))
           return
         }
