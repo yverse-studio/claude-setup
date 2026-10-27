@@ -130,7 +130,7 @@ test('a Blender job waits for free RAM and is BLOCKED when none comes', () => {
   assert.match(lastLine(r), /^JOB BLOCKED job:/)
 })
 test('a Blender job gets its own TEMP folder', () => {
-  const r = run([], 'node', '-e', 'console.log("T=" + process.env.TEMP); // blender')
+  const r = spawnSync('node', [script, '--no-gpu', '--', 'node', '-e', 'console.log("T=" + process.env.TEMP); // blender'], { encoding: 'utf8', env: { ...process.env, LAPTOP_MIN_FREE_MB: '0', LAPTOP_JOB_LOG: process.platform === 'win32' ? 'NUL' : '/dev/null' } })
   assert.equal(r.status, 0)
   assert.match(r.stdout, /T=.*claude-job-job-/)
 })
