@@ -319,6 +319,9 @@ test('team guard: boot card without a checkout, thread start blocked until the r
     const line = readFileSync(join(home, '.claude/claude-setup/booted/s1.canary'), 'utf8')
     assert.match(line, /^Luna · rules #[0-9a-f]{7} · guards: on$/, 'the canary comes from the hook, not the model')
     assert.ok(teamsCard.endsWith(line))
+    assert.equal(runTeam('card', { cwd, session_id: 's1', source: 'resume' }, env).stdout, '', 'the resumed project chat gets the card once')
+    assert.match(runTeam('card', { cwd, session_id: 's9', source: 'resume' }, env).stdout, /Coordinator card/, 'the first resume after a self-install gets it')
+    for (const f of ['cloud/setup.sh', 'install.mjs']) assert.match(readFileSync(join(root, f), 'utf8'), /SessionStart["'], ["']startup\|clear\|compact\|resume["'], ["']card/, `${f}: the card hook fires on resume`)
     const rule = (text, t = '') => { writeFileSync(join(cwd, 'c.jsonl'), t); return spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'pre'], { input: JSON.stringify({ cwd, session_id: 's1', transcript_path: join(cwd, 'c.jsonl'), tool_name: 'mcp__hearthbot__post_message', tool_input: { text } }), encoding: 'utf8', env: { ...process.env, ...env } }) }
     const post = (text, result = '{"message_id":"cmsg_1"}') => [JSON.stringify({ type: 'assistant', message: { content: [{ type: 'tool_use', id: 'p1', name: 'mcp__hearthbot__post_message', input: { text } }] } }), JSON.stringify({ type: 'user', message: { content: [{ type: 'tool_result', tool_use_id: 'p1', content: result }] } })].join('\n')
     assert.match(rule('Hi, ich schaue mir das an.').stderr, /canary line/, 'the first reply without the canary is blocked')

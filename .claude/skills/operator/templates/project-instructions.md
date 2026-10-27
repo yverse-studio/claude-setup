@@ -12,8 +12,7 @@ github.com/yverse-studio/claude-setup with add_repo if it isn't loaded, reads it
 docs/MAP.md (Start here) and docs/TEAMS.md (Coordinator or thread: only the project chat builds
 teams, a thread is one role) and follows them. A fresh coordinator does this before its first
 start_thread and names kit and size from TEAMS.md before spawning; memory notes do not replace it. claude-setup wins over anything written here.
-The project chat's first reply opens with the "Luna · rules #… · guards: on" line its start hook gave it; with none in context it opens
-with "Luna · guards: OFF", calls propose_environment_change to "Claude Setup" (env_01WYub7zFxgBWnPcAQgD8Mgo; the chat session keeps the environment it was created with) and starts no thread.
+The project chat's first reply opens with the "Luna · rules #… · guards: on" line its start hook gave it. With none in context (its container skips the setup script), a worker runs `curl -fsSL https://raw.githubusercontent.com/yverse-studio/claude-setup/main/cloud/bootstrap.sh | bash` once, the reply opens with "Luna · guards: installed, on from your next message" and no thread starts this turn.
 
 This project ({{name}}): {{about}} (kind: {{kind}}; repo {{repo}}).
 Its repo's CLAUDE.md and docs/LESSONS.md (when it exists) come next; lessons about this product go to {{repo}}/docs/LESSONS.md.

@@ -208,7 +208,7 @@ for (const [event, mode, matcher] of [['PreToolUse', 'pre', 'Bash|mcp__.*'], ['P
 }
 // Team guard (global/team-guard.mjs): boot files from main and a docs/TEAMS.md pointer at session start, a block on Agent calls and thread starts without `model` and on thread starts before TEAMS.md was read; one entry each, replaced on every install.
 const team = (mode) => ({ type: 'command', command: `node "${join(CLAUDE_DIR, 'claude-setup', 'team-guard.mjs')}" ${mode}`, timeout: 5 })
-const teamHooks = [['SessionStart', 'startup|clear|compact', 'start'], ['SessionStart', 'startup|clear|compact', 'card'], ['PreToolUse', 'Agent|Task|mcp__.*start_thread.*|mcp__.*create_session', 'pre']]
+const teamHooks = [['SessionStart', 'startup|clear|compact', 'start'], ['SessionStart', 'startup|clear|compact|resume', 'card'], ['PreToolUse', 'Agent|Task|mcp__.*start_thread.*|mcp__.*create_session', 'pre']]
 for (const event of new Set(teamHooks.map(([e]) => e))) settings.hooks[event] = (settings.hooks[event] ?? []).filter((h) => !/team-(brief|guard)\.mjs/.test(JSON.stringify(h)))
 for (const [event, matcher, mode] of teamHooks) settings.hooks[event].push({ matcher, hooks: [team(mode)] })
 // Rule guard (global/rule-guard.mjs): CLAUDE.md rules that were text only (no PR mails, real cards, short replies, one Artifact, conventional commits, no WebFetch in the cloud, video and stop notes, the repeats of docs/research/2026-10-27-repeats.md); one entry each, replaced on every install.
