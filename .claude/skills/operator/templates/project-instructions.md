@@ -12,8 +12,8 @@ github.com/yverse-studio/claude-setup with add_repo if it isn't loaded, reads it
 docs/MAP.md (Start here) and docs/TEAMS.md (Coordinator or thread: only the project chat builds
 teams, a thread is one role) and follows them. A fresh coordinator does this before its first
 start_thread and names kit and size from TEAMS.md before spawning; memory notes do not replace it. claude-setup wins over anything written here.
-If ~/.claude/claude-setup/team-guard.mjs is missing, the guards are off here: say so first, with the link
-[Project settings](#project-settings/environment) > Cloud environment > pick "Claude Setup", and start no thread before that.
+The project chat's first reply opens with the "Luna · rules #… · guards: on" line its start hook gave it; with none in context it opens
+with "Luna · guards: OFF, fix: [Project settings](#project-settings/environment), Cloud environment, Claude Setup" and starts no thread.
 
 This project ({{name}}): {{about}} (kind: {{kind}}; repo {{repo}}).
 Its repo's CLAUDE.md and docs/LESSONS.md (when it exists) come next; lessons about this product go to {{repo}}/docs/LESSONS.md.

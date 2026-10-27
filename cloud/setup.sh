@@ -225,6 +225,7 @@ cat > "$HOME/.claude/claude-setup/team-guard.mjs" <<'TEAM'
 // (badTeam), and the brief block's Model, Skills, Done when, Stop when and Start lines (missingLines).
 // CLAUDE_SETUP_TEAM_GUARD=off turns it off. It never breaks a tool call on its own errors.
 import { execFileSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
@@ -303,6 +304,17 @@ export function coordinatorCard(teams, pm = '') {
     `## Roster (role: runs as; model)\n\n${roster.join('\n')}`, `## Kits (team at size L)\n\n${kits.join('\n')}`,
     section(pm, 'Text only', 'Session start'),
   ].filter(Boolean).join('\n\n')
+}
+
+// The canary (yskills 2026-10-27: "how do I know it read everything?"): a line only this hook can write,
+// because its hash comes from the rule files it just loaded. The coordinator's first reply opens with it
+// (rule-guard blocks one without); no line in a new project means no guards there (docs/USING.md, step 4).
+// A soft drift signal only (yskills 2026-10-27: "if she falls out of role I know something is off"); the canary line is the proof.
+export const PERSONA = 'Persona: you are Luna, his co-founder in this chat: warm, casual, German like him, short. Tone only: the rules, the reply cap and honesty stay as they are.'
+export function canary(dir) {
+  const rules = ['CLAUDE.md', 'docs/TEAMS.md'].map((f) => text(join(dir, f))).join('\n')
+  if (!rules.includes(MARK)) return null
+  return `Luna · rules #${createHash('sha256').update(rules.replace(/\r/g, '')).digest('hex').slice(0, 7)} · guards: on`
 }
 
 export function inRepo(cwd) {
@@ -469,8 +481,12 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         if (rulesLoaded(cwd, home) || inRepo(cwd)) return
         const card = coordinatorCard(text(join(dir, 'docs', 'TEAMS.md')), text(join(dir, PM_FILE)))
         if (!card || card.length >= BOOT_MAX) return
-        if (session) { mkdirSync(dirname(mark('teams')), { recursive: true }); writeFileSync(mark('teams'), '') }
-        return say(card)
+        const line = canary(dir)
+        if (session) {
+          mkdirSync(dirname(mark('teams')), { recursive: true }); writeFileSync(mark('teams'), '')
+          if (line) writeFileSync(mark('canary'), line)
+        }
+        return say(line ? `${card}\n\nCanary: open your first reply in this session with this line, verbatim, so yskills sees the rules loaded: ${line}\n${PERSONA}` : card)
       }
       if (process.env.CLAUDE_SETUP_TEAM_GUARD === 'off') return
       const read = transcript && existsSync(transcript) ? readBootFiles(transcript) : null
@@ -748,6 +764,17 @@ export function unresolved(transcript) {
 }
 
 // The transcript's tool calls in order, each with its result text and time: [{ name, input, result, at }].
+// The coordinator's first reply opens with the canary line team-guard wrote at start (team-guard.mjs, canary).
+export function canaryMissing(tool, input, line, transcript) {
+  if (tool !== 'mcp__hearthbot__post_message' || !line.trim()) return null
+  if (String(input.text ?? '').trimStart().startsWith(line.trim())) return null
+  const t = transcript()
+  if (/reason=\\?"spawn/.test(t)) return null // a thread is no project chat
+  // Until one reply carried a canary and went out (a blocked try has a hook error as its result; a later rules hash still counts).
+  if (toolCalls(t).some((c) => c.name === tool && c.result && !/rule-guard:|hook error/i.test(c.result) && String(c.input.text ?? '').trimStart().startsWith('Luna · rules #'))) return null
+  return `rule-guard: your first reply in this session opens with the canary line, verbatim, so yskills sees the rules loaded (docs/USING.md, Start a project): ${line.trim()}`
+}
+
 export function toolCalls(transcript) {
   const calls = []
   const byId = new Map()
@@ -839,6 +866,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         const shipped = join(tmpdir(), `claude-setup-artifacts-${String(session).replace(/\W/g, '')}`)
         const transcript = () => (transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : '')
         const block = decide(tool, input ?? {}, process.env, session ? read(shipped).split('\n') : [], () => threadBoard(toolCalls(transcript())))
+          ?? canaryMissing(tool, input ?? {}, session ? read(join(process.env.CLAUDE_SETUP_HOME || homedir(), '.claude', 'claude-setup', 'booted', `${String(session).replace(/\W/g, '')}.canary`)) : '', transcript)
           ?? (grillMissing(tool, input ?? {}, transcript) ? 'rule-guard: a Planner at size M or L grills first (CLAUDE.md, Grill first; operator SKILL.md): post 3-5 sharp questions as request_decision cards, each with your recommended answer, then write the plan on the answers (or the recommendations while he is away).' : null)
         if (!block && session && tool === 'Artifact' && input?.url && input.file_path) writeFileSync(shipped, `${input.file_path}\n`, { flag: 'a' })
         if (block) { process.stderr.write(block); process.exitCode = 2 }
