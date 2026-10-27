@@ -34,7 +34,7 @@ Coordinator only (a thread: Coordinator or thread, above).
    this lookup for every task without being asked and names kit and size in the brief.
 2. **Size.** The task's size (below) decides how much of the kit's team starts. It is the gate's size
    ([`gate.md`](../.claude/skills/operator/gate.md), Gate size): one size per task, picked by the
-   table, never by the author.
+   table, never by the author. A video or post brief's `Size:` stamp still needs a letter: one video or post is `M`, an ad batch, series or a launch video `L` (blind test 2026-10-27: a fresh coordinator wrote "Size: M (guess)").
 3. **Threads only for roles that own a long job or talk to yskills:** Planner, Designer, Game
    Designer, Programmer, Tester (size L), Producer, Editor, Social Lead, Marketer. Every other role
    is an `Agent` subagent of the thread that needs it, fresh for each job. A thread never plays a
@@ -67,7 +67,7 @@ Models: best fitting model per task, cheapest that fits. Fable (claude-fable-5-1
 | M | a feature or change of code with no new look, no user input, auth, money or data; a garment move or refit with no new look (`gate.md`, Asset PRs) | `Planner · <topic>` (grill, short plan), then `Programmer · <slice>`; the M gate runs in the Programmer's thread | Researcher, Reviewer | the Planner, plus one checkpoint in the Programmer |
 | L | a new product, anything a user sees, user input, auth, money, data, a launch | first a `Tester · <app>` thread that walks the preview and live app from day one (Tester first, below); then the kit's team (Kits below), a fresh `Tester · PR <n>` per PR | all the kit lists | the Planner, the Designer, the Game Designer, the gate verdict |
 
-A video is the `video` kit and a post the `social` kit at any size; their own pipelines size them. The brief's `Size:` stamp still needs a letter: one video or post is `M`, an ad batch, series or a launch video `L` (blind test 2026-10-27: a fresh coordinator wrote "Size: M (guess)").
+A video is the `video` kit and a post the `social` kit at any size; their own pipelines size them.
 
 **Tester first** (incident 2026-10-26: an L app shipped a Drop bug through three gated PRs because
 no Tester ever clicked the real app). For size L of a site, app, game or Ren'Py story game the coordinator starts the
