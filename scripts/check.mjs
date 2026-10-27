@@ -257,8 +257,8 @@ for (const f of RULE_FILES) {
 // put into context by team-guard; hook context over 10,000 characters is cut to a preview, so both stay under BOOT_MAX.
 {
   const { BOOT_MAX, rulesCard, coordinatorCard } = await import('../global/team-guard.mjs')
-  const rules = rulesCard(readFileSync(join(root, 'CLAUDE.md'), 'utf8')).length
-  const card = coordinatorCard(readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')).length
+  const rules = rulesCard(readFileSync(join(root, 'CLAUDE.md'), 'utf8').replace(/\r/g, '')).length // main serves LF; a Windows checkout adds CR
+  const card = coordinatorCard(readFileSync(join(root, 'docs/TEAMS.md'), 'utf8').replace(/\r/g, '')).length
   if (rules >= BOOT_MAX) errors.push(`CLAUDE.md is too long for the boot card (${rules} of ${BOOT_MAX} characters): move detail to its home (docs/MAP.md)`)
   if (!card || card >= BOOT_MAX) errors.push(`docs/TEAMS.md coordinator card is ${card ? `${card} of ${BOOT_MAX} characters` : 'empty (Spawn rule, Roster or Kits not found)'}: trim the Spawn rule or a Roster cell`)
 }

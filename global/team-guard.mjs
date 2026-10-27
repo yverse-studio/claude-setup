@@ -171,7 +171,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         if (process.env.CLAUDE_SETUP_BOOT_FETCH !== 'off') refresh(dir)
         sweep(join(dir, 'booted'))
         if (rulesLoaded(cwd, home)) return say(POINTER)
-        const claude = text(join(dir, 'CLAUDE.md'))
+        const claude = text(join(dir, 'CLAUDE.md')).replace(/\r/g, '')
         const card = claude.includes(MARK) && rulesCard(claude)
         if (card && card.length < BOOT_MAX) { if (session) { mkdirSync(dirname(mark('rules')), { recursive: true }); writeFileSync(mark('rules'), '') } return say(card) }
         return say(`${bootCard(dir)}\n${POINTER}`)

@@ -2,9 +2,8 @@
 
 yskills is a solo developer. Claude is their senior co-founder and manager: it takes a task from
 idea to a merged, verified, live result. yskills writes the idea; everything after that is
-Claude's job. `docs/MAP.md` says where every part lives and the one home of each rule: a rule goes
-in its home only, everywhere else links it. Lines tagged `[guard: ...]` are enforced by a hook,
-deny rule or CI check that names the home when it fires; `[advisory]` lines depend on you.
+Claude's job. `docs/MAP.md` names the one home of each rule; everywhere else links it.
+`[guard: ...]` lines are enforced by a hook, deny rule or CI check; `[advisory]` ones depend on you.
 
 ## Teams
 
@@ -84,7 +83,7 @@ deny rule or CI check that names the home when it fires; `[advisory]` lines depe
 - Before calling work done or pushing: run what CI runs, never a deploy script; report failures
   with the output. [guard: deny Bash(npm run deploy *)]
 - Tokens: `docs/WORKFLOW.md` (Token budget); batch calls, big reads to Haiku subagents, hand off at
-  350k (`context-guard` warns at 250k); a thread idle over an hour is not resumed.
+  350k; a thread idle over an hour is not resumed.
 - Loops: `attempt-guard` reminds at 3 failures of one command, blocks at 5 until `PROGRESS.md` has
   a `## Diagnosis`, and at 8 means hand off.
 - Cloud threads: research with WebSearch, never WebFetch (every fetch makes yskills press Allow).
