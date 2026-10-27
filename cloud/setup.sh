@@ -437,9 +437,11 @@ export function badTeam(text, teams) {
   return fits ? null : `the ${role.name} is not on the \`${kit}\` kit's team (docs/TEAMS.md, Kits: team "${row.team}", skipped "${row.skipped}"); start the role that row names`
 }
 
-// A thread's title is `<Role> · <what>` (docs/TEAMS.md, Roster "Runs as"); test project 2026-10-27: a bee video thread started untitled by role.
+// A size M or L thread's title is `<Role> · <what>` (docs/TEAMS.md, Roster "Runs as"); test project 2026-10-27: a bee video thread
+// started untitled by role. Size S needs no role title (yskills 2026-10-27).
 export function badTitle(title, text, teams) {
-  const role = teams && typeof title === 'string' && roleOf(text.replace(/[*_`]/g, ''), teams)
+  const plain = text.replace(/[*_`]/g, '')
+  const role = teams && typeof title === 'string' && /\bSize:[ \t]*[ML]\b/i.test(plain) && roleOf(plain, teams)
   if (!role?.name) return null
   return new RegExp(`^\\s*${role.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*·\\s*\\S`, 'i').test(title) ? null : role.name
 }
@@ -778,7 +780,7 @@ export async function briefCheck(prompt, cwd) {
   const why = !guard.stamped(brief) ? 'no `Role: · Kit: · Size:` stamp line'
     : guard.badTeam(brief, teams) ?? (missing.length ? `brief lines missing: ${missing.join(', ')}` : null)
   if (why) return `Brief check (docs/TEAMS.md): this start breaks the team rules: ${why}. Do no work: send this reason and the corrected Role, Kit and Size to the coordinator (message_coordinator), then stop.`
-  const role = guard.stamped(brief) && roleOf(brief, teams)?.name
+  const role = guard.stamped(brief) && /\bSize:[ \t]*[ML]\b/i.test(brief.replace(/[*_`]/g, '')) && roleOf(brief, teams)?.name
   return role ? `Title check (docs/TEAMS.md, Roster "Runs as"): this thread's title starts with \`${role} · \`; if it does not, rename_thread to \`${role} · <what>\` first.` : ''
 }
 

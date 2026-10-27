@@ -551,14 +551,15 @@ test('team guard: card refreshes first and lets a new team-guard build the card'
 test('rule guard: a thread checks its spawn brief against TEAMS.md and sends a bad start back', async () => {
   const { briefCheck } = await import('../global/rule-guard.mjs')
   const spawn = (brief) => `<wake reason="spawn"><message>${brief}</message></wake>`
-  assert.match(await briefCheck(spawn(`Role: Programmer · Kit: setup · Size: S${FULL}`), root), /^Title check[\s\S]*`Programmer · `[\s\S]*rename_thread/)
+  assert.match(await briefCheck(spawn(`Role: Programmer · Kit: setup · Size: M${FULL}`), root), /^Title check[\s\S]*`Programmer · `[\s\S]*rename_thread/)
+  assert.equal(await briefCheck(spawn(`Role: Programmer · Kit: setup · Size: S${FULL}`), root), '', 'size S needs no role title (yskills 2026-10-27)')
   assert.equal(await briefCheck(spawn(`Role: none · Kit: setup · Size: S${FULL}`), root), '', 'no role, no title rule')
   assert.match(await briefCheck(spawn(`Role: Designer · Kit: content · Size: S${FULL}`), root), /Brief check[\s\S]*Kit: content is no kit[\s\S]*message_coordinator/)
   assert.match(await briefCheck(spawn('Make a bee video.'), root), /no `Role: · Kit: · Size:` stamp/)
   assert.match(await briefCheck(spawn('Role: Programmer · Kit: setup · Size: S\nFix it.'), root), /brief lines missing: Model:/)
   assert.equal(await briefCheck('Role: Designer · Kit: content · Size: S', root), '', 'only the spawn wake')
-  assert.match(await briefCheck(JSON.stringify(spawn(`Role: Programmer (debug) · Kit: setup · Size: S${FULL}`)), root), /^Title check/, 'an escaped wake, a role with a note')
-  assert.match(await briefCheck(spawn(`Role: Programmer · Kit: setup · Size: S${FULL}\nDone when: <b>x</b> and a < b`), root), /^Title check/, 'other tags stay')
+  assert.match(await briefCheck(JSON.stringify(spawn(`Role: Programmer (debug) · Kit: setup · Size: M${FULL}`)), root), /^Title check/, 'an escaped wake, a role with a note')
+  assert.equal(await briefCheck(spawn(`Role: Programmer · Kit: setup · Size: S${FULL}\nDone when: <b>x</b> and a < b`), root), '', 'other tags stay')
   const out = spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'prompt'], { input: JSON.stringify({ prompt: spawn('Make a bee video.'), cwd: root, session_id: 'bc1' }), encoding: 'utf8' }).stdout
   assert.match(JSON.parse(out).hookSpecificOutput.additionalContext, /^Brief check/)
 })
@@ -724,6 +725,7 @@ test('team guard: kit, size, role and brief lines are checked against TEAMS.md',
   const titled = (title) => decide('mcp__hearthbot__start_thread', { title, instructions: `Role: Producer · Kit: video · Size: M${FULL}\nPrior art: video-studio -> adapt, because it is ours`, model: 'sonnet' }, [], [], teams).block ?? ''
   assert.match(titled('Bienen-Video'), /Producer thread is titled `Producer · <what>`/)
   assert.equal(titled('Producer · Bienen-Video'), '')
+  assert.equal(decide('mcp__hearthbot__start_thread', { title: 'Fix login', instructions: `Role: Programmer · Kit: app · Size: S${FULL}`, model: 'sonnet' }, [], [], teams).block, undefined, 'size S needs no role title')
   assert.equal(decide('mcp__hearthbot__start_thread', { title: 'Fix x', instructions: `Role: none · Kit: setup · Size: S${FULL}`, model: 'sonnet' }, [], [], teams).block, undefined, 'Role: none has no title rule')
   assert.equal(badTeam('Role: Programmer · Kit: app · Size: M', ''), null, 'no TEAMS.md copy, no kit check')
   assert.equal(badTeam('Role: Marketer · Kit: game · Size: L', teams), null, 'a conditional Skipped item ("before the first playable") skips nobody outright')

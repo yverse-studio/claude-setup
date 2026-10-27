@@ -233,9 +233,11 @@ export function badTeam(text, teams) {
   return fits ? null : `the ${role.name} is not on the \`${kit}\` kit's team (docs/TEAMS.md, Kits: team "${row.team}", skipped "${row.skipped}"); start the role that row names`
 }
 
-// A thread's title is `<Role> · <what>` (docs/TEAMS.md, Roster "Runs as"); test project 2026-10-27: a bee video thread started untitled by role.
+// A size M or L thread's title is `<Role> · <what>` (docs/TEAMS.md, Roster "Runs as"); test project 2026-10-27: a bee video thread
+// started untitled by role. Size S needs no role title (yskills 2026-10-27).
 export function badTitle(title, text, teams) {
-  const role = teams && typeof title === 'string' && roleOf(text.replace(/[*_`]/g, ''), teams)
+  const plain = text.replace(/[*_`]/g, '')
+  const role = teams && typeof title === 'string' && /\bSize:[ \t]*[ML]\b/i.test(plain) && roleOf(plain, teams)
   if (!role?.name) return null
   return new RegExp(`^\\s*${role.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*·\\s*\\S`, 'i').test(title) ? null : role.name
 }
