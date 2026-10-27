@@ -419,7 +419,8 @@ echo '{}' | node "$HOME/.claude/claude-setup/team-guard.mjs" start >/dev/null ||
 # rules that were text only become checks on tool calls and notes on yskills' messages.
 cat > "$HOME/.claude/claude-setup/rule-guard.mjs" <<'RULE'
 #!/usr/bin/env node
-// Rule guard. Usage: rule-guard.mjs pre|prompt|stop (hook entries PreToolUse, UserPromptSubmit, Stop).
+// Rule guard. Usage: rule-guard.mjs pre|prompt|stop (hook entries PreToolUse, UserPromptSubmit, Stop),
+// or rule-guard.mjs read <url> [max chars] to read a whole web page as text without an Allow prompt.
 // Turns CLAUDE.md rules that were text only into checks (audit 2026-10-27: 17 of 20 rules had no
 // guard and were skipped whenever CLAUDE.md did not load).
 // pre: refuses (exit 2) a review request or assignee for yskills on a PR (No GitHub mails), a
@@ -474,6 +475,20 @@ const GH_ASK = /\bgh\s+(pr|issue)\b[^\n]*(?:--(?:add-)?(?:reviewer|assignee)|\s-
 
 // published: the file paths this session already published to an existing Artifact (republishing by
 // the same file_path without `url` is how the Artifact tool updates it).
+// A reply that opens by agreeing must carry its reason (yskills 2026-10-27: "how do I enforce that you are no yes-man").
+const YES = /^[\s*_]*(du hast (völlig |total |absolut )?recht|stimmt|genau|richtig|ja,? klar|you'?re (totally |absolutely )?right|you are right|agreed|absolutely|exactly)\b/i
+const REASON = /\b(weil|denn|da ich|geprüft|getestet|laut|because|since|checked|tested|per)\b/i
+
+// Grill first (CLAUDE.md): a Planner at size M or L posts at least one grill card before it writes the plan or opens a PR.
+export function grillMissing(tool, input, transcript) {
+  const writesPlan = (/^(Write|Edit)$/.test(tool) && /(^|[\\/])PLAN\.md$/.test(String(input.file_path ?? ''))) || tool === 'mcp__github__create_pull_request'
+  if (!writesPlan || !transcript) return false
+  const brief = transcript.replace(/[*_`]|\\[nt]/g, ' ')
+  if (!/reason=\\?"spawn/.test(transcript) || !/Role:\s*Planner\b/i.test(brief) || !/Size:\s*[ML]\b/i.test(brief)) return false
+  if (/just do it|mach (es )?einfach|einfach machen|kein grill/i.test(brief)) return false
+  return !/"name":"mcp__[^"]*(request_decision|ask_decision)"/.test(transcript)
+}
+
 export function decide(tool, input = {}, env = {}, published = []) {
   if (/^mcp__github__/.test(tool) || tool === 'Bash') {
     const ask = tool === 'Bash'
@@ -488,14 +503,25 @@ export function decide(tool, input = {}, env = {}, published = []) {
   if (tool === 'mcp__hearthbot__post_message') {
     const text = String(input.text ?? '')
     if (/^[\s>*_]*Card:/m.test(text)) return 'rule-guard: a decision is a real card here (CLAUDE.md, Cards): post it with request_decision (question, 2-4 options, one recommended), not as "Card:" text.'
+    if (YES.test(text) && !REASON.test(text)) return 'rule-guard: this reply agrees without a reason (CLAUDE.md, Co-founder). Check the claim first (repo, a source, a test), then say agree, disagree or "partly, because ..." with what you checked.'
     const lines = text.split('\n').filter((l) => l.trim()).length
     if (text.length > REPLY_MAX_CHARS || lines > REPLY_MAX_LINES) return `rule-guard: this reply has ${text.length} chars and ${lines} lines; the cap is ${REPLY_MAX_CHARS} and ${REPLY_MAX_LINES} (CLAUDE.md, Replies). Lead with the result in a few lines; put the rest in a file under /mnt/project-files/ and attach it.`
   }
   const republish = input.file_path && !input.type_url && published.includes(input.file_path)
   const newArtifact = (tool === 'Artifact' && !input.url && !input.asset && !republish && [undefined, 'publish'].includes(input.action)) || tool === 'mcp__remote-devices__create_artifact'
   if (newArtifact && env.CLAUDE_SETUP_NEW_ARTIFACT !== 'yes') return 'rule-guard: the Company XY Artifact is the only Artifact there is (CLAUDE.md, Dashboard): no votes, galleries or one-off pages. Update it with its `url` (docs/hq-rows.md) or write a file under /mnt/project-files/. If yskills asked for a new one in his own words, say so in one line and retry with CLAUDE_SETUP_NEW_ARTIFACT=yes in the environment.'
-  if (tool === 'WebFetch' && env.CLAUDE_CODE_REMOTE === 'true') return 'rule-guard: in a cloud thread every WebFetch makes yskills press Allow (CLAUDE.md, Cloud threads). Use WebSearch; for a video run the watch skill.'
+  if (tool === 'WebFetch' && env.CLAUDE_CODE_REMOTE === 'true') return `rule-guard: in a cloud thread every WebFetch makes yskills press Allow (CLAUDE.md, Cloud threads). Read the whole page without a prompt: node ~/.claude/claude-setup/rule-guard.mjs read '${String(input.url ?? '<url>').replace(/'/g, '')}' (plain text, first ${PAGE_MAX} chars; add a number for more). For a video run the watch skill.`
   return null
+}
+
+// read: a whole web page as plain text through curl (it honours the cloud proxy and needs no Allow;
+// yskills 2026-10-27: "you should read whole pages without asking me").
+export const PAGE_MAX = 40000
+export function pageText(html) {
+  return html.replace(/<(script|style|noscript|svg|head)\b[\s\S]*?<\/\1>/gi, ' ')
+    .replace(/<(br|\/p|\/div|\/h\d|\/li|\/tr)\b[^>]*>/gi, '\n').replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+    .replace(/[ \t]+/g, ' ').replace(/\s*\n\s*/g, '\n').replace(/\n{3,}/g, '\n\n').trim()
 }
 
 const VIDEO = /\b(instagram\.com|tiktok\.com|youtube\.com|youtu\.be)\/\S+|\.(mp4|mov|webm)\b/i
@@ -575,32 +601,43 @@ export function unresolved(transcript) {
 
 if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/').split('/').pop())) {
   const mode = process.argv[2]
-  let raw = ''
-  process.stdin.setEncoding('utf8')
-  process.stdin.on('data', (c) => { raw += c })
-  process.stdin.on('end', () => {
+  if (mode === 'read') {
+    const [url, max = PAGE_MAX] = process.argv.slice(3)
+    if (!/^https?:\/\//.test(url ?? '')) { console.error('usage: rule-guard.mjs read <http(s) url> [max chars]'); process.exit(1) }
     try {
-      if (process.env.CLAUDE_SETUP_RULE_GUARD === 'off') return
-      const { tool_name: tool = '', tool_input: input = {}, prompt = '', cwd = process.cwd(), session_id: session, transcript_path: transcriptPath } = JSON.parse(raw || '{}')
-      if (mode === 'prompt') {
-        const context = [roleContext(prompt, cwd, session), promptContext(prompt)].filter(Boolean).join('\n')
-        if (context) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: context } }))
-        return
+      const html = execFileSync('curl', ['-fsSL', '--max-time', '20', '-A', 'Mozilla/5.0', url], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
+      process.stdout.write(`${pageText(html).slice(0, Number(max) || PAGE_MAX)}\n`, () => process.exit(0))
+    } catch (e) { console.error(`could not read ${url}: ${e.status ?? e.message}`); process.exit(1) }
+  } else {
+    let raw = ''
+    process.stdin.setEncoding('utf8')
+    process.stdin.on('data', (c) => { raw += c })
+    process.stdin.on('end', () => {
+      try {
+        if (process.env.CLAUDE_SETUP_RULE_GUARD === 'off') return
+        const { tool_name: tool = '', tool_input: input = {}, prompt = '', cwd = process.cwd(), session_id: session, transcript_path: transcriptPath } = JSON.parse(raw || '{}')
+        if (mode === 'prompt') {
+          const context = [roleContext(prompt, cwd, session), promptContext(prompt)].filter(Boolean).join('\n')
+          if (context) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: context } }))
+          return
+        }
+        if (mode === 'stop') {
+          const why = !JSON.parse(raw || '{}').stop_hook_active && transcriptPath && existsSync(transcriptPath) ? unresolved(read(transcriptPath)) : null
+          if (why) process.stdout.write(JSON.stringify({ decision: 'block', reason: why }))
+          return
+        }
+        if (mode !== 'pre') return
+        const shipped = join(tmpdir(), `claude-setup-artifacts-${String(session).replace(/\W/g, '')}`)
+        const transcript = transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : ''
+        const block = decide(tool, input ?? {}, process.env, session ? read(shipped).split('\n') : [])
+          ?? (grillMissing(tool, input ?? {}, transcript) ? 'rule-guard: a Planner at size M or L grills first (CLAUDE.md, Grill first; operator SKILL.md): post 3-5 sharp questions as request_decision cards, each with your recommended answer, then write the plan on the answers (or the recommendations while he is away).' : null)
+        if (!block && session && tool === 'Artifact' && input?.url && input.file_path) writeFileSync(shipped, `${input.file_path}\n`, { flag: 'a' })
+        if (block) { process.stderr.write(block); process.exitCode = 2 }
+      } catch {
+        // A guard must never break a tool call.
       }
-      if (mode === 'stop') {
-        const why = !JSON.parse(raw || '{}').stop_hook_active && transcriptPath && existsSync(transcriptPath) ? unresolved(read(transcriptPath)) : null
-        if (why) process.stdout.write(JSON.stringify({ decision: 'block', reason: why }))
-        return
-      }
-      if (mode !== 'pre') return
-      const shipped = join(tmpdir(), `claude-setup-artifacts-${String(session).replace(/\W/g, '')}`)
-      const block = decide(tool, input ?? {}, process.env, session ? read(shipped).split('\n') : [])
-      if (!block && session && tool === 'Artifact' && input?.url && input.file_path) writeFileSync(shipped, `${input.file_path}\n`, { flag: 'a' })
-      if (block) { process.stderr.write(block); process.exitCode = 2 }
-    } catch {
-      // A guard must never break a tool call.
-    }
-  })
+    })
+  }
 }
 RULE
 
@@ -636,7 +673,7 @@ const teamHooks = [["SessionStart", "startup|clear|compact", "start"], ["Session
 for (const event of new Set(teamHooks.map(([e]) => e))) s.hooks[event] = (s.hooks[event] || []).filter((h) => !JSON.stringify(h).includes("team-brief.mjs") && !JSON.stringify(h).includes("team-guard.mjs"))
 for (const [event, matcher, mode] of teamHooks) s.hooks[event].push({ matcher, hooks: [team(mode)] })
 const rule = (mode) => ({ type: "command", command: `node "${require("os").homedir()}/.claude/claude-setup/rule-guard.mjs" ${mode}`, timeout: 5 })
-for (const [event, matcher, mode] of [["PreToolUse", "Bash|Artifact|WebFetch|mcp__github__.*|mcp__hearthbot__post_message|mcp__remote-devices__create_artifact", "pre"], ["UserPromptSubmit", "", "prompt"], ["Stop", "", "stop"]]) {
+for (const [event, matcher, mode] of [["PreToolUse", "Bash|Write|Edit|Artifact|WebFetch|mcp__github__.*|mcp__hearthbot__post_message|mcp__remote-devices__create_artifact", "pre"], ["UserPromptSubmit", "", "prompt"], ["Stop", "", "stop"]]) {
   s.hooks[event] = (s.hooks[event] || []).filter((h) => !JSON.stringify(h).includes("rule-guard.mjs"))
   s.hooks[event].push({ ...(matcher ? { matcher } : {}), hooks: [rule(mode)] })
 }

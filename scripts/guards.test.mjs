@@ -382,7 +382,7 @@ test('rule guard: blocks the rules that were text only, passes the normal calls'
     ['mcp__remote-devices__create_artifact', { id: 'x' }],
   ]
   for (const [tool, input] of blocked) assert.match(decide(tool, input, {}) ?? '', /^rule-guard:/, `${tool} ${JSON.stringify(input)}`)
-  assert.match(decide('WebFetch', { url: 'https://x' }, { CLAUDE_CODE_REMOTE: 'true' }), /WebSearch/)
+  assert.match(decide('WebFetch', { url: 'https://x' }, { CLAUDE_CODE_REMOTE: 'true' }), /rule-guard\.mjs read 'https:\/\/x'/)
   const passed = [
     ['mcp__github__update_pull_request', { reviewers: ['someone'] }],
     ['mcp__github__create_pull_request', { title: 'x' }],
@@ -489,4 +489,31 @@ test('team guard: refresh keeps the boot files when a guard is missing on main',
     assert.match(readFileSync(join(dir, 'CLAUDE.md'), 'utf8'), /Working for yskills/)
     assert.match(readFileSync(join(dir, 'rule-guard.mjs'), 'utf8'), /\/\/ old/, 'the installed guard stays when main has none')
   } finally { process.env.PATH = old; for (const d of [dir, bin]) rmSync(d, { recursive: true, force: true }) }
+})
+
+// yskills 2026-10-27: "how do I enforce that you are no yes-man and grill me".
+test('rule guard: an agreeing reply needs its reason; a Planner M/L grills before the plan', async () => {
+  const { decide, grillMissing } = await import('../global/rule-guard.mjs')
+  const post = (text) => decide('mcp__hearthbot__post_message', { text }, {})
+  assert.match(post('Du hast recht, mach ich.') ?? '', /Co-founder/)
+  assert.match(post("You're right!") ?? '', /Co-founder/)
+  assert.equal(post('Stimmt teilweise, weil TEAMS.md Fable schon für Architektur nennt.'), null)
+  assert.equal(post('Fertig: PR 3 ist drin.'), null)
+  const use = (name, input) => JSON.stringify({ type: 'assistant', message: { content: [{ type: 'tool_use', name, input }] } })
+  const spawn = (brief) => JSON.stringify({ type: 'user', message: { content: `<wake reason="spawn">${brief}</wake>` } })
+  const planner = spawn('Role: Planner · Kit: app · Size: L')
+  assert.equal(grillMissing('Write', { file_path: '/r/PLAN.md' }, planner), true)
+  assert.equal(grillMissing('mcp__github__create_pull_request', {}, planner), true)
+  assert.equal(grillMissing('Write', { file_path: '/r/PLAN.md' }, [planner, use('mcp__hearthbot__request_decision', { question: 'x' })].join('\n')), false)
+  assert.equal(grillMissing('Write', { file_path: '/r/PLAN.md' }, spawn('Role: Planner · Kit: app · Size: S')), false, 'size S skips the grill')
+  assert.equal(grillMissing('Write', { file_path: '/r/PLAN.md' }, spawn('Role: Programmer · Kit: app · Size: L')), false, 'only the Planner grills')
+  assert.equal(grillMissing('Write', { file_path: '/r/PLAN.md' }, spawn('Role: Planner · Kit: app · Size: M. yskills: just do it')), false)
+  assert.equal(grillMissing('Write', { file_path: '/r/notes.md' }, planner), false)
+})
+
+test('rule guard: read turns a page into plain text', async () => {
+  const { pageText } = await import('../global/rule-guard.mjs')
+  assert.equal(pageText('<html><head><title>t</title></head><body><script>x()</script><h1>Hooks</h1><p>Exit 2 &amp; stderr</p></body></html>'), 'Hooks\nExit 2 & stderr')
+  const r = spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'read', 'not-a-url'], { encoding: 'utf8' })
+  assert.equal(r.status, 1)
 })
