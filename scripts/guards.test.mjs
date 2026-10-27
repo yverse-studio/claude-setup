@@ -310,7 +310,7 @@ test('team guard: boot card without a checkout, thread start blocked until the r
     assert.ok(card.length < 10_000, 'hook output over 10,000 characters is cut to a preview')
     for (const f of ['CLAUDE.md', 'docs/TEAMS.md', 'docs/MAP.md']) cpSync(join(root, f), join(home, '.claude/claude-setup', f))
     const rules = JSON.parse(runTeam('start', { cwd, session_id: 's1' }, env).stdout).hookSpecificOutput.additionalContext
-    assert.ok(rules.includes(readFileSync(join(root, 'CLAUDE.md'), 'utf8')) && rules.length < 10_000, 'CLAUDE.md itself, whole, under the cap')
+    assert.ok(rules.includes(readFileSync(join(root, 'CLAUDE.md'), 'utf8').replace(/\r/g, '')) && rules.length < 10_000, 'CLAUDE.md itself, whole, under the cap')
     const teamsCard = JSON.parse(runTeam('card', { cwd, session_id: 's1' }, env).stdout).hookSpecificOutput.additionalContext
     assert.match(teamsCard, /Coordinator card[\s\S]*## Spawn rule[\s\S]*Models: [\s\S]*- Programmer: [^\n]*Sonnet[\s\S]*- `setup` \(claude-setup\): /)
     assert.ok(teamsCard.length < 10_000)
