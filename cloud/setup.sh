@@ -528,17 +528,23 @@ export function privateHost(url) {
   return /^(localhost|.*\.local|.*\.internal|metadata(\..*)?)$/.test(host) || /^[\d.]+$/.test(host) || host.includes(':') || privateIp(host)
 }
 // An address curl actually connected to: loopback, RFC 1918, link-local, CGNAT, ULA.
-export const privateIp = (ip) => /^(127\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.|100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.|0\.)/.test(ip) || /^(::1?$|f[cd]|fe80:)/i.test(ip)
+export const privateIp = (raw) => {
+  const ip = raw.replace(/^::(ffff:(0:)?)?(?=\d+\.)/i, '') // IPv4-mapped or -compatible IPv6
+  return /^(127\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.|100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.|0\.)/.test(ip) || /^(::1?$|f[cd]|fe[89ab]|fec|fed|fee|fef|::ffff:|64:ff9b:)/i.test(ip)
+}
 
 // Follows up to 5 redirects by hand so every hop's host is checked; refuses a page served from a private address.
 function fetchPage(url) {
   for (let hop = 0; hop < 6; hop++) {
     if (privateHost(url)) throw new Error(`refused: ${url} is a local or private address; read only public pages`)
-    const out = execFileSync('curl', ['-sS', '--proto', '=http,https', '--max-time', '20', '-A', 'Mozilla/5.0', '-w', '\n%{http_code} %{remote_ip} %{redirect_url}', url], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
+    // A proxy is forced (NO_PROXY ignored) or switched off, so remote_ip is checked whenever curl went direct.
+    const proxy = /^https:/i.test(url) ? process.env.HTTPS_PROXY || process.env.https_proxy : process.env.http_proxy || process.env.HTTP_PROXY
+    const route = proxy ? ['-x', proxy, '--noproxy', ''] : ['--noproxy', '*']
+    const out = execFileSync('curl', ['-sS', '--proto', '=http,https', '--max-time', '20', '-A', 'Mozilla/5.0', ...route, '-w', '\n%{http_code} %{remote_ip} %{redirect_url}', url], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
     const cut = out.lastIndexOf('\n')
     const [code, ip, next] = out.slice(cut + 1).split(' ')
     // Through a proxy (the cloud) remote_ip is the proxy's own, and the proxy's allow list decides; without one, check it.
-    if (!(process.env.HTTPS_PROXY || process.env.https_proxy) && privateIp(ip ?? '')) throw new Error(`refused: ${url} resolved to a private address`)
+    if (!proxy && privateIp(ip ?? '')) throw new Error(`refused: ${url} resolved to a private address`)
     if (/^3/.test(code) && next) { url = next; continue }
     if (!/^2/.test(code)) throw new Error(`HTTP ${code}`)
     return out.slice(0, cut)
