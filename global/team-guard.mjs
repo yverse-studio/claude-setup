@@ -43,10 +43,9 @@ export function refresh(dir) {
   let ok = true
   try { execFileSync('curl', args, { stdio: 'ignore', timeout: 4000 }) } catch { ok = false }
   for (const f of BOOT_FILES) {
-    try {
-      if (ok && statSync(tmp(f)).size > 0 && (f !== 'CLAUDE.md' || text(tmp(f)).includes(MARK))) renameSync(tmp(f), join(dir, f))
-    } catch {} // not downloaded
-    rmSync(tmp(f), { force: true })
+    const whole = ok && existsSync(tmp(f)) && statSync(tmp(f)).size > 0 && (f !== 'CLAUDE.md' || text(tmp(f)).includes(MARK))
+    if (whole) renameSync(tmp(f), join(dir, f))
+    else rmSync(tmp(f), { force: true })
   }
 }
 
@@ -68,7 +67,7 @@ export function readBootFiles(transcript) {
         if (s.includes('TEAMS.md')) seen.add('TEAMS.md')
         if (s.includes('CLAUDE.md') && s.includes('claude-setup')) seen.add('CLAUDE.md')
       }
-    } catch {} // a line that is not JSON
+    } catch { continue } // a line that is not JSON
   }
   return seen
 }
