@@ -18,13 +18,15 @@ Project specifics (the cast, the chapter plan, explicit text) live in the game's
 2. **Bible first**: cast sheets, relations, world, the preset. No bible yet: write it before chapter 1.
 3. **Ladder** (`03`): name each chapter's rung in the plan; escalate one rung per scene, never skip one; start
    early (first teasing beat by chapter 2 or 3) and keep a steady curve to the finale.
-4. **Preset per chapter** (`04`), never mid-beat.
-5. **The run** (`05`): plan (15 lines) → draft in the game's beat format → critic rubric, fail at ≤ 3 →
+4. **Harem rule** (`01`, The harem rule): the harem dynamic starts early and every woman is fine sharing;
+   jealousy stays a playful tell, rivalry stays play, nothing blocks a route.
+5. **Preset per chapter** (`04`), never mid-beat.
+6. **The run** (`05`): plan (15 lines) → draft in the game's beat format → critic rubric, fail at ≤ 3 →
    continuity pass (who knows what, which flag is set, first kiss is first once, times and places) → lint →
    one chapter or one arc per PR.
-6. **Models** (`07`): Planner and Director Opus, Writer Sonnet (Opus for the heat scenes and finales), Editor
+7. **Models** (`07`): Planner and Director Opus, Writer Sonnet (Opus for the heat scenes and finales), Editor
    Sonnet, Continuity Haiku.
-7. **One home**: one branch per story, merged when done; never leave chapters on side branches (2026-10-21:
+8. **One home**: one branch per story, merged when done; never leave chapters on side branches (2026-10-21:
    the spicier version sat unmerged on two branches and the owner saw the old one).
 
 ## Scene list and animator brief
@@ -34,5 +36,5 @@ the animator can build from without asking. The brief template is in `docs/game-
 
 ## New story
 
-Keep 01 to 05 and 07, write the new story's map (device, lead heroine, lineup with no two tells alike, endgame,
+Space stories: take tone, crew setup and pacing from Reborn as a Space Mercenary (`sources.md`). Keep 01 to 05 and 07, write the new story's map (device, lead heroine, lineup with no two tells alike, endgame,
 heat curve, PR order), then the bible, then chapter 1.

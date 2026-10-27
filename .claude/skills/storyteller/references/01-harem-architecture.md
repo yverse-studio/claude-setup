@@ -8,7 +8,7 @@ Studied 2026-10-17: Girlfriend, Girlfriend · I Made Friends with the Second Pre
 2. **The lead heroine.** One heroine owns the spine. Her arc resolves the device's question. Everyone else orbits.
 3. **The lineup.** Three to six heroines with non-overlapping archetypes (`02-cast-archetypes.md`), each with her own entry event, her own "why him", her own scene type she owns, and her own secret.
 4. **The escalation ladder.** Small, countable intimacy steps, each a chapter beat, in roughly this order (`03-pacing-and-beats.md`).
-5. **The endgame contract.** Decided before chapter 1: chosen-one (Quintuplets, Nisekoi, Horimiya), open-but-lead (Oregairu, Saekano), or all-stay (Girlfriend Girlfriend, 100 Girlfriends). The contract decides whether rival routes close or stay warm. **The company story is all-stay** (yskills 2026-10-17): a real romance with every woman, they come to get along over time, and all end up happy together with him. All-stay needs what 100 Girlfriends does right: each woman's romance is written in full on its own before the group exists, and the women's relationships with each other get their own rungs (rival → truce → ally → the pact).
+5. **The endgame contract.** Decided before chapter 1: chosen-one (Quintuplets, Nisekoi, Horimiya), open-but-lead (Oregairu, Saekano), or all-stay (Girlfriend Girlfriend, 100 Girlfriends). The contract decides whether rival routes close or stay warm. **The company story is all-stay** (yskills 2026-10-17): a real romance with every woman, they come to get along over time, and all end up happy together with him. All-stay needs what 100 Girlfriends does right: each woman's romance is written in full on its own before the group exists, and the women's relationships with each other get their own rungs (rival → truce → ally → the pact; compressed by the harem rule below: it plays as friendly rivalry from the start).
 
 ## Act structure (serialized, 10 chapters per heroine arc)
 
@@ -34,10 +34,17 @@ Clannad, Fate and every eroge use the same shape and it fits a game better than 
 
 - **Misunderstanding** with a real cause (she saw him with her sister). Must resolve inside two chapters or readers call it stalling (the "dense protagonist" complaint is the genre's most hated flaw).
 - **Double booking** (two invitations, same evening).
-- **Jealousy spiral** that she hides badly (body language carries it, dialogue denies it).
+- **Playful jealousy** that she hides badly (body language carries it, dialogue denies it) and that resolves in the same scene; in a harem story it never blocks a route (harem rule below).
 - **Secret keeping** with a near-miss per chapter (Horimiya, Alya).
 - **Role reversal** (the composed one loses composure; the slob is competent at one thing).
 - **The pact** (Girlfriend Girlfriend): rules the characters set for themselves and then bend.
+
+## The harem rule (yskills 2026-10-27, final; every harem story, one home is this section)
+
+- **The harem dynamic starts early.** The first teasing beat by chapter 2 or 3 and the second woman on page by chapter 2 to 4. Women notice each other from the start and the lead's circle is visibly shared well before the midpoint; the shared-circle feel is a reason to read, not a payoff held back for the finale.
+- **All the women are fine with sharing.** No woman demands he choose, no woman leaves, sulks for a chapter or blocks another's route. Jealousy is allowed only as a playful tell: teasing, a competitive streak, a pout that resolves in the same scene, a bet. It never blocks a rung, never costs a friendship, and is never hurt left standing at a chapter end. Rivalry stays play (who gets him for lunch, who wins the bet), warm underneath.
+- **Sharing is said out loud, early, and means it.** The admission and the rule rungs of the second ladder (`03`) are comic and affectionate and may come in the first third; each woman's reason to be fine with it is true to her sheet, never a plot device.
+- **Her romance is still her own.** Each woman keeps her own full ladder and her own night; sharing adds scenes between the women, it removes none of hers. All characters adult, on page and on the sheet, as everywhere.
 
 ## What's dated vs still loved (2026)
 
