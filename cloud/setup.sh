@@ -219,7 +219,7 @@ cat > "$HOME/.claude/claude-setup/team-guard.mjs" <<'TEAM'
 import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync, renameSync, rmSync, statSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 
 export const POINTER = 'Team rule (claude-setup docs/TEAMS.md): route every task on its own (task picks the kit, not the project; then size S/M/L), call only the roles it needs, as thread or subagent as the roster says, and pass `model` from the role\'s row on every thread start and Agent call.'
 export const BOOT_FILES = ['CLAUDE.md', 'docs/TEAMS.md', 'docs/MAP.md']
@@ -231,19 +231,26 @@ const AGENT = /^(Agent|Task)$/
 
 const text = (file) => { try { return readFileSync(file, 'utf8') } catch { return '' } }
 
-// claude-setup's CLAUDE.md loads on its own: a checkout in cwd, or install.mjs's block in ~/.claude/CLAUDE.md (laptop).
-export const rulesLoaded = (cwd, home) => [join(cwd, 'CLAUDE.md'), join(home, '.claude', 'CLAUDE.md')].some((f) => text(f).includes(MARK))
+// claude-setup's CLAUDE.md loads on its own: a checkout at cwd or a parent of it, or install.mjs's block in ~/.claude/CLAUDE.md (laptop).
+export function rulesLoaded(cwd, home) {
+  const files = [join(home, '.claude', 'CLAUDE.md')]
+  for (let d = cwd; ; d = dirname(d)) { files.push(join(d, 'CLAUDE.md')); if (dirname(d) === d) break }
+  return files.some((f) => text(f).includes(MARK))
+}
 
-// One curl for all files (it honours HTTPS_PROXY); a file replaces the copy only when it arrived whole.
+// One curl for all files (it honours HTTPS_PROXY). A failed or cut-off run replaces nothing; a file
+// replaces the copy only when it arrived whole. The .new names carry the pid, so two starts never share one.
 export function refresh(dir) {
+  const tmp = (f) => join(dir, `${f}.${process.pid}.new`)
   const args = ['-fsSL', '--max-time', '3', '--create-dirs']
-  for (const f of BOOT_FILES) args.push('-o', join(dir, `${f}.new`), RAW + f)
-  try { execFileSync('curl', args, { stdio: 'ignore', timeout: 4000 }) } catch {}
+  for (const f of BOOT_FILES) args.push('-o', tmp(f), RAW + f)
+  let ok = true
+  try { execFileSync('curl', args, { stdio: 'ignore', timeout: 4000 }) } catch { ok = false }
   for (const f of BOOT_FILES) {
-    const tmp = join(dir, `${f}.new`)
-    if (!existsSync(tmp)) continue
-    if (statSync(tmp).size > 0 && (f !== 'CLAUDE.md' || text(tmp).includes(MARK))) renameSync(tmp, join(dir, f))
-    else rmSync(tmp, { force: true })
+    try {
+      if (ok && statSync(tmp(f)).size > 0 && (f !== 'CLAUDE.md' || text(tmp(f)).includes(MARK))) renameSync(tmp(f), join(dir, f))
+    } catch {} // not downloaded
+    rmSync(tmp(f), { force: true })
   }
 }
 

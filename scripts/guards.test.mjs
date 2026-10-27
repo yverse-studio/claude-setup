@@ -317,6 +317,7 @@ test('team guard: boot card without a checkout, thread start blocked until the r
     writeFileSync(join(cwd, 'CLAUDE.md'), readFileSync(join(root, 'CLAUDE.md'), 'utf8'))
     writeFileSync(transcript, use('Bash', { command: 'grep -n Roster docs/TEAMS.md' }))
     assert.equal(start().status, 0, 'with a checkout only TEAMS.md is needed')
+    assert.equal(runTeam('pre', { cwd: join(root, 'docs'), transcript_path: transcript, tool_name: 'mcp__hearthbot__start_thread', tool_input: { brief: 'x', model: 'claude-x-1' } }, env).status, 0, 'a subfolder of a checkout loads CLAUDE.md too')
     writeFileSync(transcript, '')
     assert.equal(start().status, 2)
     assert.equal(runTeam('pre', { cwd, tool_name: 'mcp__hearthbot__start_thread', tool_input: { brief: 'x', model: 'claude-x-1' } }, env).status, 0, 'no transcript, no read check')
