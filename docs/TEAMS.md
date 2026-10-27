@@ -34,7 +34,7 @@ Coordinator only (a thread: Coordinator or thread, above).
    this lookup for every task without being asked and names kit and size in the brief.
 2. **Size.** The task's size (below) decides how much of the kit's team starts. It is the gate's size
    ([`gate.md`](../.claude/skills/operator/gate.md), Gate size): one size per task, picked by the
-   table, never by the author.
+   table, never by the author. A video or post brief's `Size:` stamp still needs a letter: one video or post is `M`, an ad batch, series or a launch video `L` (blind test 2026-10-27: a fresh coordinator wrote "Size: M (guess)").
 3. **Threads only for roles that own a long job or talk to yskills:** Planner, Designer, Game
    Designer, Programmer, Tester (size L), Producer, Editor, Social Lead, Marketer. Every other role
    is an `Agent` subagent of the thread that needs it, fresh for each job. A thread never plays a
@@ -70,7 +70,7 @@ Models: best fitting model per task, cheapest that fits. Fable (claude-fable-5-1
 A video is the `video` kit and a post the `social` kit at any size; their own pipelines size them.
 
 **Tester first** (incident 2026-10-26: an L app shipped a Drop bug through three gated PRs because
-no Tester ever clicked the real app). For size L of a site, app or game the coordinator starts the
+no Tester ever clicked the real app). For size L of a site, app, game or Ren'Py story game the coordinator starts the
 `Tester · <app>` thread before any Programmer thread; every L Programmer brief carries a line
 `Tester: <that thread>` and the `team-guard` hook (`global/team-guard.mjs`) blocks a size L
 Programmer start without it. The `setup` kit has no app to walk: its line says
