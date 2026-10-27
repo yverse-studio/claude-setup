@@ -203,7 +203,9 @@ ATTEMPT
 # in a project thread, tested 2026-10-26).
 cat > "$HOME/.claude/claude-setup/team-guard.mjs" <<'TEAM'
 #!/usr/bin/env node
-// Team guard. Usage: team-guard.mjs start|pre (hook entries SessionStart and PreToolUse).
+// Team guard. Usage: team-guard.mjs start|card|pre (hook entries SessionStart, SessionStart, PreToolUse).
+// Without a claude-setup checkout, start puts CLAUDE.md itself and card the coordinator card (Spawn
+// rule, Models line, Sizes, Roster and Kits, one line each) into context; each counts as read.
 // start: refreshes the boot files (CLAUDE.md, docs/TEAMS.md, docs/MAP.md) from main into
 // ~/.claude/claude-setup/ and puts the TEAMS.md pointer into every new session; a session without a
 // claude-setup checkout (the project chat has none, so its CLAUDE.md never loaded; 2026-10-26 the
@@ -214,10 +216,12 @@ cat > "$HOME/.claude/claude-setup/team-guard.mjs" <<'TEAM'
 // `model:` passes. It also refuses a thread start whose brief is a size L Programmer with no
 // `Tester:` line (incident 2026-10-26: an L app ran without a Tester, docs/TEAMS.md Sizes: the
 // Tester thread starts first and the Programmer brief names it), and a thread start before this
-// session has read TEAMS.md (and CLAUDE.md, when it did not load on its own).
+// session has read TEAMS.md (and CLAUDE.md, when it did not load on its own), and one whose brief has
+// no `Role: · Kit: · Size:` stamp line (rule-guard puts the named role's playbook into the thread), and
+// a size M or L one with no `Prior art:` line (look for what exists and works first, yskills 2026-10-27).
 // CLAUDE_SETUP_TEAM_GUARD=off turns it off. It never breaks a tool call on its own errors.
 import { execFileSync } from 'node:child_process'
-import { existsSync, readFileSync, renameSync, rmSync, statSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 
@@ -240,17 +244,64 @@ export function rulesLoaded(cwd, home) {
 
 // One curl for all files (it honours HTTPS_PROXY). A failed or cut-off run replaces nothing; a file
 // replaces the copy only when it arrived whole. The .new names carry the pid, so two starts never share one.
-export function refresh(dir) {
+// The guards update themselves the same way (yskills 2026-10-27: a rule change on main must reach
+// every session without a cloud rebuild): an installed guard is replaced by main's copy when that
+// copy arrived whole and passes `node --check`. A new hook entry still needs install.mjs or a rebuild.
+export const GUARD_FILES = ['context-guard.mjs', 'attempt-guard.mjs', 'team-guard.mjs', 'rule-guard.mjs']
+const parses = (f) => { try { execFileSync(process.execPath, ['--check', f], { stdio: 'ignore', timeout: 2000 }); return true } catch { return false } }
+// Two downloads, so a guard missing on main (renamed, or not merged yet) never costs the boot files,
+// and each keeps its own time limit inside the hook's 5 s.
+function fetchAll(dir, files, url, seconds) {
   const tmp = (f) => join(dir, `${f}.${process.pid}.new`)
-  const args = ['-fsSL', '--max-time', '3', '--create-dirs']
-  for (const f of BOOT_FILES) args.push('-o', tmp(f), RAW + f)
+  if (!files.length) return []
+  const args = ['-fsSL', '--max-time', String(seconds), '--create-dirs']
+  for (const f of files) args.push('-o', tmp(f), url(f))
   let ok = true
-  try { execFileSync('curl', args, { stdio: 'ignore', timeout: 4000 }) } catch { ok = false }
-  for (const f of BOOT_FILES) {
-    const whole = ok && existsSync(tmp(f)) && statSync(tmp(f)).size > 0 && (f !== 'CLAUDE.md' || text(tmp(f)).includes(MARK))
-    if (whole) renameSync(tmp(f), join(dir, f))
-    else rmSync(tmp(f), { force: true })
+  try { execFileSync('curl', args, { stdio: 'ignore', timeout: seconds * 1000 + 500 }) } catch { ok = false }
+  // curl -f writes nothing for a missing file; a cut-off run (ok false) keeps a guard only if it still parses.
+  return files.map((f) => ({ f, tmp: tmp(f), got: existsSync(tmp(f)) && statSync(tmp(f)).size > 0, ok }))
+}
+export function refresh(dir) {
+  const guards = GUARD_FILES.filter((f) => existsSync(join(dir, f)))
+  const boot = fetchAll(dir, BOOT_FILES, (f) => RAW + f, 2.5)
+  const code = fetchAll(dir, guards, (f) => `${RAW}global/${f}`, 1.5)
+  for (const { f, tmp, got, ok } of [...boot, ...code]) {
+    const whole = got && (f.endsWith('.mjs') ? text(tmp).startsWith('#!/usr/bin/env node') && parses(tmp) : ok && (f !== 'CLAUDE.md' || text(tmp).includes(MARK)))
+    if (whole) renameSync(tmp, join(dir, f))
+    else rmSync(tmp, { force: true })
   }
+}
+
+export const BOOT_MAX = 9800 // hook context over 10,000 characters is cut to a preview; scripts/check.mjs keeps both cards under this
+const section = (t, from, to) => { const a = t.indexOf(`\n## ${from}`); const b = t.indexOf(`\n## ${to}`, a + 1); return a < 0 ? '' : t.slice(a + 1, b < 0 ? undefined : b).trim() }
+const cells = (l) => l.split('|').map((c) => c.trim())
+
+// Where no checkout loaded it, CLAUDE.md itself goes into context: nothing to remember to read (audit 2026-10-27).
+export function rulesCard(claude) {
+  return `Boot (claude-setup): no checkout loaded claude-setup's CLAUDE.md, so here it is, fresh from main. These are yskills' rules; follow them.\n\n${claude}`
+}
+
+// The coordinator's slice of docs/TEAMS.md (Spawn rule, Models line, Sizes, one line per role and kit):
+// enough to start every thread with the right role and model; the rest of TEAMS.md and MAP.md only on demand.
+export function coordinatorCard(teams) {
+  const roster = teams.split('\n').filter((l) => /^\| [A-Z][\w ]* \(\[`/.test(l)).map((l) => { const c = cells(l); return `- ${c[1].replace(/ \(\[.*$/, '')}: ${c[4]}; ${c[5]}` })
+  const kits = section(teams, 'Kits', 'Models for tasks').split('\n').filter((l) => /^\| `/.test(l)).map((l) => { const c = cells(l); return `- ${c[1]}: ${c[3]}` })
+  const sizes = section(teams, 'Sizes', 'Pipeline').split('\n').filter((l) => l.startsWith('|'))
+  if (!roster.length || !kits.length) return ''
+  return [
+    'Coordinator card (claude-setup docs/TEAMS.md, fresh from main): you are the coordinator here. Route every task with it; read the full TEAMS.md, MAP.md or a role file only when a task needs a part this card lacks, and roles/project-manager.md (Session start) at your first start.',
+    section(teams, 'Spawn rule', 'Sizes'), `## Sizes\n\n${sizes.join('\n')}`,
+    `## Roster (role: runs as; model)\n\n${roster.join('\n')}`, `## Kits (team at size L)\n\n${kits.join('\n')}`,
+  ].join('\n\n')
+}
+
+export function inRepo(cwd) {
+  for (let d = cwd; ; d = dirname(d)) { if (existsSync(join(d, '.git'))) return true; if (dirname(d) === d) return false }
+}
+// Session markers older than a week go; a session that old is never resumed (CLAUDE.md, Tokens).
+const WEEK = 7 * 24 * 3600 * 1000
+function sweep(folder) {
+  try { for (const f of readdirSync(folder)) if (Date.now() - statSync(join(folder, f)).mtimeMs > WEEK) rmSync(join(folder, f), { force: true }) } catch { /* no folder yet */ }
 }
 
 export function bootCard(dir) {
@@ -284,6 +335,17 @@ export function hasOwnModel(type, dirs) {
   })
 }
 
+// The brief block's first line (operator/briefs.md): Role, Kit and Size, so the thread knows what it is (yskills 2026-10-27).
+export function stamped(text) {
+  const plain = text.replace(/[*_`]/g, '')
+  return /^[ \t>-]*Role:[ \t]*\S/im.test(plain) && /\bKit:[ \t]*\S/i.test(plain) && /\bSize:[ \t]*[SML]\b/i.test(plain)
+}
+
+export function needsPriorArt(text) {
+  const plain = text.replace(/[*_`]/g, '')
+  return /\bSize:[ \t]*[ML]\b/i.test(plain) && !/^[ \t>-]*Prior art:[ \t]*[^<\s][^\n]{9,}$/im.test(plain)
+}
+
 const briefText = (input) => Object.values(input).filter((v) => typeof v === 'string').join('\n')
 export function needsTester(text) {
   const plain = text.replace(/[*_`]/g, '')
@@ -296,6 +358,8 @@ export function needsTester(text) {
 export function decide(tool, input = {}, dirs = [], unread = []) {
   const kind = AGENT.test(tool) ? 'Agent' : THREAD_START.test(tool) ? 'thread' : null
   if (kind === 'thread' && unread.length) return { block: `team-guard: read the rules before starting a thread: ${unread.join(' and ')} (in ~/.claude/claude-setup/ or the claude-setup repo; docs/MAP.md, Start here). 2026-10-26 a coordinator skipped them and guessed every model. Read them, then retry.` }
+  if (kind === 'thread' && !stamped(briefText(input))) return { block: 'team-guard: every thread brief starts with the stamp line `Role: <one role from docs/TEAMS.md Roster> · Kit: <kit> · Size: <S|M|L>` (operator/briefs.md); a small task with no role says `Role: none`. The thread loads its playbook from it. Add the line, then retry.' }
+  if (kind === 'thread' && needsPriorArt(briefText(input))) return { block: 'team-guard: a size M or L brief names what already exists before anything is built (CLAUDE.md, Work for the future): add a line `Prior art: <our repos, skills, plugins, public setups checked> -> copy | adapt | build, because <why>` (or `to find: <where the Researcher looks>`), then retry.' }
   if (kind === 'thread' && needsTester(briefText(input))) return { block: 'team-guard: a size L Programmer thread starts only after its Tester thread (claude-setup docs/TEAMS.md, Sizes). Start `Tester · <app>` first, then put a line `Tester: <its thread id or title>` in this brief and retry.' }
   if (!kind || String(input.model ?? '').trim()) return {}
   if (kind === 'Agent' && hasOwnModel(input.subagent_type, dirs)) return {}
@@ -311,16 +375,31 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
   process.stdin.on('data', (c) => { raw += c })
   process.stdin.on('end', () => {
     try {
-      const { tool_name: tool = '', tool_input: input, cwd = process.cwd(), transcript_path: transcript } = JSON.parse(raw || '{}')
+      const { tool_name: tool = '', tool_input: input, cwd = process.cwd(), transcript_path: transcript, session_id: session } = JSON.parse(raw || '{}')
+      const mark = (kind) => join(dir, 'booted', `${String(session).replace(/\W/g, '')}.${kind}`)
+      const say = (context) => process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: context } }))
       if (mode === 'start') {
         if (process.env.CLAUDE_SETUP_BOOT_FETCH !== 'off') refresh(dir)
-        const context = rulesLoaded(cwd, home) ? POINTER : `${bootCard(dir)}\n${POINTER}`
-        process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: context } }))
-        return
+        sweep(join(dir, 'booted'))
+        if (rulesLoaded(cwd, home)) return say(POINTER)
+        const claude = text(join(dir, 'CLAUDE.md')).replace(/\r/g, '')
+        const card = claude.includes(MARK) && rulesCard(claude)
+        if (card && card.length < BOOT_MAX) { if (session) { mkdirSync(dirname(mark('rules')), { recursive: true }); writeFileSync(mark('rules'), '') } return say(card) }
+        return say(`${bootCard(dir)}\n${POINTER}`)
+      }
+      if (mode === 'card') {
+        // The coordinator runs outside any repo (the project chat); a thread sits in a product repo and needs only its role card (rule-guard).
+        if (rulesLoaded(cwd, home) || inRepo(cwd)) return
+        const card = coordinatorCard(text(join(dir, 'docs', 'TEAMS.md')))
+        if (!card || card.length >= BOOT_MAX) return
+        if (session) { mkdirSync(dirname(mark('teams')), { recursive: true }); writeFileSync(mark('teams'), '') }
+        return say(card)
       }
       if (process.env.CLAUDE_SETUP_TEAM_GUARD === 'off') return
       const read = transcript && existsSync(transcript) ? readBootFiles(transcript) : null
-      const need = rulesLoaded(cwd, home) ? ['TEAMS.md'] : ['CLAUDE.md', 'TEAMS.md']
+      // A card this session got at start counts as read.
+      const need = (rulesLoaded(cwd, home) ? ['TEAMS.md'] : ['CLAUDE.md', 'TEAMS.md'])
+        .filter((f) => !(session && existsSync(mark(f === 'CLAUDE.md' ? 'rules' : 'teams'))))
       const unread = read ? need.filter((f) => !read.has(f)) : []
       const out = decide(tool, input, [join(cwd, '.claude', 'agents'), join(home, '.claude', 'agents')], unread)
       if (out.block) { process.stderr.write(out.block); process.exitCode = 2 }
@@ -336,6 +415,195 @@ echo '{}' | node "$HOME/.claude/claude-setup/team-guard.mjs" start >/dev/null ||
 # Permissions sync (docs/permissions.md): copies permissions (minus defaultMode, the thread keeps
 # its own) and autoMode from main's global/settings.json into ~/.claude/settings.json. Run now and
 # at every session start, so a merged change needs no environment rebuild. Never blocks.
+# Rule guard: the same file as global/rule-guard.mjs (scripts/check.mjs keeps them equal): CLAUDE.md
+# rules that were text only become checks on tool calls and notes on yskills' messages.
+cat > "$HOME/.claude/claude-setup/rule-guard.mjs" <<'RULE'
+#!/usr/bin/env node
+// Rule guard. Usage: rule-guard.mjs pre|prompt|stop (hook entries PreToolUse, UserPromptSubmit, Stop).
+// Turns CLAUDE.md rules that were text only into checks (audit 2026-10-27: 17 of 20 rules had no
+// guard and were skipped whenever CLAUDE.md did not load).
+// pre: refuses (exit 2) a review request or assignee for yskills on a PR (No GitHub mails), a
+// `Card:` text reply where the real card tool exists (Cards), a thread reply over the length cap
+// (Replies), a new Artifact besides the Company XY one (Dashboard), a commit message that is not
+// conventional (Code), and WebFetch in a cloud thread (Cloud threads: WebSearch, no Allow taps).
+// prompt: a video link or a bare "stop" gets the matching CLAUDE.md line put next to the message, and
+// the first message naming `Role: <role>` (the brief block, operator/briefs.md) gets that role's
+// Roster row and playbook put into context, so a thread always knows what it is (yskills 2026-10-27).
+// CLAUDE_SETUP_RULE_GUARD=off turns it off. It never breaks a tool call on its own errors.
+
+import { execFileSync } from 'node:child_process'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { homedir, tmpdir } from 'node:os'
+import { dirname, join } from 'node:path'
+
+const OWNER = 'yskills'
+const MARK = '# Working for yskills' // first line of claude-setup's CLAUDE.md
+const RAW = 'https://raw.githubusercontent.com/yverse-studio/claude-setup/main/'
+const CARD_MAX = 9000 // under the 10,000-char cap on hook context
+export const REPLY_MAX_CHARS = 1500
+export const REPLY_MAX_LINES = 15
+const CONVENTIONAL = /^(feat|fix|docs|chore|refactor|test|perf|ci|build|style|revert)(\([^)]*\))?!?: \S/
+
+const names = (v) => (Array.isArray(v) ? v : typeof v === 'string' ? v.split(/[\s,]+/) : []).map((s) => String(s).toLowerCase())
+
+// The subject lines of every `git commit` in a Bash command: `-m "..."`, `-am '...'`, `-m word`, or
+// `-m "$(cat <<'EOF' ...`. Only a real git commit counts: one that starts a command (after a separator),
+// never "git commit" inside an echo, a grep or `git merge --no-commit`. Empty when there is nothing to check.
+const COMMIT = /(?:^|&&|\|\||[;|(\n])\s*(?:(?:then|do|else)\s+)?(?:\w+=\S*\s+)*git(?:\s+-[Cc]\s+\S+)*\s+commit\b(?=([^\n]*))/g
+export function commitSubjects(command) {
+  const out = []
+  for (const m of command.matchAll(COMMIT)) {
+    const rest = m[1]
+    if (/--amend\b.*--no-edit|\s-[cC]\s|--reuse-message|--fixup|--squash|\s-F\s|--file\b/.test(rest)) continue
+    const here = rest.match(/(?:\s-[a-zA-Z]*m|--message)[ =]?\s*["']?\$\(cat\s*<<-?\s*'?(\w+)'?/)
+    if (here) {
+      const eol = command.indexOf('\n', m.index + m[0].length)
+      const after = eol < 0 ? '' : command.slice(eol + 1)
+      const line = after.split('\n').find((l) => l.trim())
+      if (line && line.trim() !== here[1]) out.push(line.trim())
+      continue
+    }
+    const msg = rest.match(/(?:\s-[a-zA-Z]*m|\s--message)(?:\s+|=|(?=["']))(?:(["'])([\s\S]*?)\1|([^\s"';&|]+))/)
+    if (msg) out.push((msg[2] ?? msg[3]).split('\n')[0].trim())
+  }
+  return out
+}
+
+// yskills, as a reviewer or assignee in a gh command; never the bot account yskills-claude.
+const GH_ASK = /\bgh\s+(pr|issue)\b[^\n]*(?:--(?:add-)?(?:reviewer|assignee)|\s-[ra])[ =]["']?(?:[^\s"']*,)?yskills(?=[,\s"']|$)/i
+
+// published: the file paths this session already published to an existing Artifact (republishing by
+// the same file_path without `url` is how the Artifact tool updates it).
+export function decide(tool, input = {}, env = {}, published = []) {
+  if (/^mcp__github__/.test(tool) || tool === 'Bash') {
+    const ask = tool === 'Bash'
+      ? GH_ASK.test(input.command ?? '')
+      : [...names(input.reviewers), ...names(input.assignees)].includes(OWNER)
+    if (ask) return `rule-guard: never request a review from or assign ${OWNER} (CLAUDE.md, No GitHub mails): every one sends him a mail. Keep the attribution block, drop reviewers/assignees, and go on.`
+  }
+  if (tool === 'Bash') {
+    const subject = commitSubjects(input.command ?? '').find((t) => !/^(Merge|Revert) /.test(t) && !CONVENTIONAL.test(t))
+    if (subject !== undefined) return `rule-guard: commit subject "${subject.slice(0, 60)}" is not a conventional commit (CLAUDE.md, Code): start with feat|fix|docs|chore|refactor|test|perf|ci: and say what changed for the user.`
+  }
+  if (tool === 'mcp__hearthbot__post_message') {
+    const text = String(input.text ?? '')
+    if (/^[\s>*_]*Card:/m.test(text)) return 'rule-guard: a decision is a real card here (CLAUDE.md, Cards): post it with request_decision (question, 2-4 options, one recommended), not as "Card:" text.'
+    const lines = text.split('\n').filter((l) => l.trim()).length
+    if (text.length > REPLY_MAX_CHARS || lines > REPLY_MAX_LINES) return `rule-guard: this reply has ${text.length} chars and ${lines} lines; the cap is ${REPLY_MAX_CHARS} and ${REPLY_MAX_LINES} (CLAUDE.md, Replies). Lead with the result in a few lines; put the rest in a file under /mnt/project-files/ and attach it.`
+  }
+  const republish = input.file_path && !input.type_url && published.includes(input.file_path)
+  const newArtifact = (tool === 'Artifact' && !input.url && !input.asset && !republish && [undefined, 'publish'].includes(input.action)) || tool === 'mcp__remote-devices__create_artifact'
+  if (newArtifact && env.CLAUDE_SETUP_NEW_ARTIFACT !== 'yes') return 'rule-guard: the Company XY Artifact is the only Artifact there is (CLAUDE.md, Dashboard): no votes, galleries or one-off pages. Update it with its `url` (docs/hq-rows.md) or write a file under /mnt/project-files/. If yskills asked for a new one in his own words, say so in one line and retry with CLAUDE_SETUP_NEW_ARTIFACT=yes in the environment.'
+  if (tool === 'WebFetch' && env.CLAUDE_CODE_REMOTE === 'true') return 'rule-guard: in a cloud thread every WebFetch makes yskills press Allow (CLAUDE.md, Cloud threads). Use WebSearch; for a video run the watch skill.'
+  return null
+}
+
+const VIDEO = /\b(instagram\.com|tiktok\.com|youtube\.com|youtu\.be)\/\S+|\.(mp4|mov|webm)\b/i
+export function promptContext(prompt = '') {
+  const notes = []
+  if (VIDEO.test(prompt)) notes.push('rule-guard: this message has a video. CLAUDE.md, Videos: run watch.py of the watch skill first (plain, no WebSearch in its place), then a verdict per video.')
+  const said = (prompt.match(/<message[^>]*trigger="true"[^>]*>([\s\S]*?)<\/message>/)?.[1] ?? prompt).trim()
+  if (/^\W*(stop+|stopp+|pause|halt)\W*$/i.test(said)) notes.push('rule-guard: yskills said stop. Stop at once, do not argue, say in one line what was left half done (CLAUDE.md, How to work).')
+  return notes.join('\n')
+}
+
+// The role a brief names (`Role: Programmer · Kit: setup · Size: M`) and its Roster row in TEAMS.md.
+export function roleOf(prompt, teams) {
+  const line = prompt.replace(/[*_`]/g, '').match(/^[\s>-]*Role:[ \t]*([^\n]*)/m)?.[1].trim()
+  if (!line || /^(none|n\/a|tbd|-)\b/i.test(line)) return null
+  const rows = teams.split('\n').filter((l) => /^\| [A-Z][\w ]* \(\[`/.test(l))
+  const named = (r) => r.slice(2, r.indexOf(' (')).toLowerCase()
+  const row = rows.filter((r) => line.toLowerCase().startsWith(named(r))).sort((x, y) => named(y).length - named(x).length)[0]
+  if (!row) return { name: line.split(/[·|,]/)[0].trim(), path: null, row: null }
+  // Only a playbook path of the shape every Roster link has: nothing outside .claude/skills/<skill>/roles/.
+  const link = row.match(/\]\(\.\.\/(\.claude\/skills\/[a-z0-9-]+\/roles\/[a-z0-9-]+\.md)\)/)?.[1] ?? null
+  const cells = row.split('|').map((c) => c.trim())
+  return { name: cells[1].slice(0, cells[1].indexOf(' (')), path: link, row: `Job: ${cells[2]}. Runs as: ${cells[4]}. Model: ${cells[5]}.` }
+}
+
+export function roleCard(role, playbook) {
+  if (!role.row) return `rule-guard: the brief names Role: ${role.name}, which is not in the Roster of claude-setup docs/TEAMS.md. Ask the coordinator which role you are (message_coordinator) before any work.`
+  const head = `rule-guard: you are the ${role.name} of this task, one role only (docs/TEAMS.md, Coordinator or thread). ${role.row}`
+  if (playbook && head.length + playbook.length < CARD_MAX) return `${head} Your playbook, ${role.path}, follows; work by it.\n\n${playbook}`
+  if (!role.path) return `${head} Your playbook is linked in that Roster row of claude-setup docs/TEAMS.md; Read it before any other work.`
+  return `${head} Before any other work, Read your playbook ${role.path} of claude-setup${playbook ? '' : ' (add_repo it if it is not here)'}.`
+}
+
+const read = (f) => { try { return readFileSync(f, 'utf8') } catch { return '' } }
+
+// claude-setup's root: a checkout at cwd or a parent, else the boot copy team-guard keeps in ~/.claude/claude-setup.
+function setupRoot(cwd) {
+  for (let d = cwd; ; d = dirname(d)) {
+    for (const r of [d, join(d, 'claude-setup')]) if (existsSync(join(r, 'docs', 'TEAMS.md')) && read(join(r, 'CLAUDE.md')).startsWith(MARK)) return r
+    if (dirname(d) === d) break
+  }
+  return join(homedir(), '.claude', 'claude-setup')
+}
+const fetchRaw = (path) => { try { return execFileSync('curl', ['-fsSL', '--max-time', '3', RAW + path], { encoding: 'utf8', timeout: 4000 }) } catch { return '' } }
+
+function roleContext(prompt, cwd, session) {
+  const once = join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)
+  // Only a session's brief: a project wake that is not the spawn one quotes other threads' briefs.
+  if (!session || existsSync(once) || (/<(wake|relay|coordinator-relay)\b/.test(prompt) && !/<(wake|relay)\b[^>]*reason="spawn"/.test(prompt))) return ''
+  const root = setupRoot(cwd)
+  const role = roleOf(prompt, read(join(root, 'docs', 'TEAMS.md')))
+  if (!role) return ''
+  writeFileSync(once, role.name)
+  return roleCard(role, role.path ? read(join(root, role.path)) || fetchRaw(role.path) : '')
+}
+
+// A thread that posted its result (`Done:`) or its hand-off path is finished: it resolves itself before
+// it stops (yskills 2026-10-27: handed-off threads stayed open; the coordinator cannot resolve another
+// thread from its tools). Returns the reason to keep going, or null.
+const FINISHED = /^\s*\**Done:|\/handoff\/[\w.-]+\.md/m
+export function unresolved(transcript) {
+  if (!/reason=\\?"spawn/.test(transcript)) return null // only a thread (spawned by the coordinator) resolves itself
+  let finished = false
+  for (const line of transcript.split('\n')) {
+    if (!line.includes('"tool_use"')) continue
+    try {
+      for (const c of JSON.parse(line).message?.content ?? []) {
+        if (c?.type !== 'tool_use') continue
+        if (/post_message$/.test(c.name)) finished = FINISHED.test(String(c.input?.text ?? ''))
+        // Only a result that ends the work counts: any real tool call after it means the thread went on.
+        else if (!/^mcp__hearthbot__(update_progress_checklist|react|unreact|no_reply_needed)$/.test(c.name)) finished = false
+      }
+    } catch { continue } // a line that is not JSON
+  }
+  return finished ? 'rule-guard: this thread posted its Done: line or its hand-off, so it is finished: call set_thread_resolved (resolved: true) as the last step (CLAUDE.md, one thread per plan or PR, closed when done). If yskills still owes an answer, say so in one line instead and stop.' : null
+}
+
+if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/').split('/').pop())) {
+  const mode = process.argv[2]
+  let raw = ''
+  process.stdin.setEncoding('utf8')
+  process.stdin.on('data', (c) => { raw += c })
+  process.stdin.on('end', () => {
+    try {
+      if (process.env.CLAUDE_SETUP_RULE_GUARD === 'off') return
+      const { tool_name: tool = '', tool_input: input = {}, prompt = '', cwd = process.cwd(), session_id: session, transcript_path: transcriptPath } = JSON.parse(raw || '{}')
+      if (mode === 'prompt') {
+        const context = [roleContext(prompt, cwd, session), promptContext(prompt)].filter(Boolean).join('\n')
+        if (context) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: context } }))
+        return
+      }
+      if (mode === 'stop') {
+        const why = !JSON.parse(raw || '{}').stop_hook_active && transcriptPath && existsSync(transcriptPath) ? unresolved(read(transcriptPath)) : null
+        if (why) process.stdout.write(JSON.stringify({ decision: 'block', reason: why }))
+        return
+      }
+      if (mode !== 'pre') return
+      const shipped = join(tmpdir(), `claude-setup-artifacts-${String(session).replace(/\W/g, '')}`)
+      const block = decide(tool, input ?? {}, process.env, session ? read(shipped).split('\n') : [])
+      if (!block && session && tool === 'Artifact' && input?.url && input.file_path) writeFileSync(shipped, `${input.file_path}\n`, { flag: 'a' })
+      if (block) { process.stderr.write(block); process.exitCode = 2 }
+    } catch {
+      // A guard must never break a tool call.
+    }
+  })
+}
+RULE
+
 cat > "$HOME/.claude/claude-setup/permissions-sync.sh" <<'SYNC'
 #!/usr/bin/env bash
 f="$(mktemp)" && curl -fsSL --max-time 8 -o "$f" https://raw.githubusercontent.com/yverse-studio/claude-setup/main/global/settings.json && node -e '
@@ -364,11 +632,15 @@ for (const [event, mode] of [["PreToolUse", "pre"], ["PostToolUse", "ok"], ["Pos
   s.hooks[event].push({ matcher: "Bash|mcp__.*", hooks: [{ type: "command", command: `node "${require("os").homedir()}/.claude/claude-setup/attempt-guard.mjs" ${mode}`, timeout: 5 }] })
 }
 const team = (mode) => ({ type: "command", command: `node "${require("os").homedir()}/.claude/claude-setup/team-guard.mjs" ${mode}`, timeout: 5 })
-for (const [event, matcher, mode] of [["SessionStart", "startup|clear|compact", "start"], ["PreToolUse", "Agent|Task|mcp__.*start_thread.*|mcp__.*create_session", "pre"]]) {
-  s.hooks[event] = (s.hooks[event] || []).filter((h) => !JSON.stringify(h).includes("team-brief.mjs") && !JSON.stringify(h).includes("team-guard.mjs"))
-  s.hooks[event].push({ matcher, hooks: [team(mode)] })
+const teamHooks = [["SessionStart", "startup|clear|compact", "start"], ["SessionStart", "startup|clear|compact", "card"], ["PreToolUse", "Agent|Task|mcp__.*start_thread.*|mcp__.*create_session", "pre"]]
+for (const event of new Set(teamHooks.map(([e]) => e))) s.hooks[event] = (s.hooks[event] || []).filter((h) => !JSON.stringify(h).includes("team-brief.mjs") && !JSON.stringify(h).includes("team-guard.mjs"))
+for (const [event, matcher, mode] of teamHooks) s.hooks[event].push({ matcher, hooks: [team(mode)] })
+const rule = (mode) => ({ type: "command", command: `node "${require("os").homedir()}/.claude/claude-setup/rule-guard.mjs" ${mode}`, timeout: 5 })
+for (const [event, matcher, mode] of [["PreToolUse", "Bash|Artifact|WebFetch|mcp__github__.*|mcp__hearthbot__post_message|mcp__remote-devices__create_artifact", "pre"], ["UserPromptSubmit", "", "prompt"], ["Stop", "", "stop"]]) {
+  s.hooks[event] = (s.hooks[event] || []).filter((h) => !JSON.stringify(h).includes("rule-guard.mjs"))
+  s.hooks[event].push({ ...(matcher ? { matcher } : {}), hooks: [rule(mode)] })
 }
 s.hooks.SessionStart = s.hooks.SessionStart.filter((h) => !JSON.stringify(h).includes("permissions-sync.sh"))
 s.hooks.SessionStart.push({ matcher: "startup|clear|compact", hooks: [{ type: "command", command: `bash "${require("os").homedir()}/.claude/claude-setup/permissions-sync.sh"`, timeout: 10 }] })
 fs.writeFileSync(p, JSON.stringify(s, null, 2))
-' || echo "claude-setup: could not add the context, attempt guard, team guard and permissions sync hooks"
+' || echo "claude-setup: could not add the context, attempt guard, team guard, rule guard and permissions sync hooks"
