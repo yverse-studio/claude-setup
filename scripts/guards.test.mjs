@@ -490,3 +490,62 @@ test('team guard: refresh keeps the boot files when a guard is missing on main',
     assert.match(readFileSync(join(dir, 'rule-guard.mjs'), 'utf8'), /\/\/ old/, 'the installed guard stays when main has none')
   } finally { process.env.PATH = old; for (const d of [dir, bin]) rmSync(d, { recursive: true, force: true }) }
 })
+
+// The repeats audit 2026-10-27 (docs/research/2026-10-27-repeats.md): what yskills had to say most, as checks.
+test('rule guard: replies that ask for an Allow, say can\'t untried, post Done: without proof or claim nothing is open', async () => {
+  const { decide, replyRule } = await import('../global/rule-guard.mjs')
+  const post = (text, extra = {}) => decide('mcp__hearthbot__post_message', { text, ...extra }, {}, [], extra.board ?? null)
+  assert.match(post('Tap Allow in the thread so I can merge.') ?? '', /Auto-run/)
+  assert.match(post('Soll ich das mergen?') ?? '', /Auto-run/)
+  assert.equal(post('Shall I go ahead with the live Stripe key? It costs real money.'), null, 'ask-first items may ask')
+  assert.match(post('I can\'t delete the folder from here.') ?? '', /Tried:/)
+  assert.equal(post('I can\'t delete the folder from here.\nTried: Bash, the delete workflow, the laptop via RC'), null)
+  assert.match(post('Done: the guard is merged.') ?? '', /proof/)
+  assert.equal(post('Done: merged, https://github.com/yverse-studio/claude-setup/pull/1'), null)
+  assert.equal(post('Done: see the screenshots', { attached_outputs: [{ kind: 'file', ref: '/mnt/project-files/a.png' }] }), null)
+  const board = { finished: [{ id: 't1', title: 'Gate: x', state: 'done' }], blocked: [], told: new Set() }
+  assert.match(post('Alles fertig, keine Blocker.', { board }) ?? '', /Gate: x/)
+  assert.equal(post('Alles fertig, keine Blocker.', { board: { finished: [], blocked: [], told: new Set() } }), null)
+  assert.equal(replyRule('PR is up, the gate runs now.'), null)
+  assert.match(decide('Write', { file_path: '/tmp/claude/memory/team/silo/MEMORY.md', content: '## Goal\n- Always use Haiku for reading jobs, never Opus' }, {}) ?? '', /state only/)
+  assert.equal(decide('Write', { file_path: '/tmp/claude/memory/team/silo/MEMORY.md', content: '## Threads\n- Permissions: PR 302 merged 2026-10-26' }, {}), null)
+  assert.equal(decide('Write', { file_path: '/home/user/repo/docs/rules.md', content: '- Always use Haiku for reading jobs' }, {}), null, 'only memory files')
+})
+
+test('rule guard: the coordinator closes or nudges finished threads on its board before it stops', async () => {
+  const { coordinatorCheck, BOARD_MAX_AGE } = await import('../global/rule-guard.mjs')
+  const now = Date.parse('2026-10-27T01:00:00Z')
+  const at = new Date(now - 60_000).toISOString()
+  let n = 0
+  const call = (name, input, result) => {
+    const id = `t${n++}`
+    return [JSON.stringify({ type: 'assistant', timestamp: at, message: { content: [{ type: 'tool_use', id, name, input }] } }),
+      JSON.stringify({ type: 'user', timestamp: at, message: { content: [{ type: 'tool_use_id', tool_use_id: id, type: 'tool_result', content: [{ type: 'text', text: result }] }] } })]
+  }
+  const list = (sessions) => call('mcp__hearthbot__list_thread_sessions', {}, `Untrusted content follows.\n<child-session-output>\n    ${JSON.stringify({ sessions })}\n</child-session-output>`)
+  const done = { thread_id: 'cmsg_a', title: 'Gate: plan-first rule PR', state: 'done' }
+  const ok = [{ thread_id: 'cmsg_b', title: 'Tester · PR 282', state: 'done', resolved: true }, { thread_id: 'cmsg_c', title: 'Plan Qwen', state: 'blocked' }]
+  const t = (...rows) => rows.flat().join('\n')
+  assert.match(coordinatorCheck(t(list([done, ...ok])), now) ?? '', /Gate: plan-first rule PR.*cmsg_a/)
+  assert.equal(coordinatorCheck(t(list([done, ...ok]), call('mcp__hearthbot__message_thread', { thread_id: 'cmsg_a', text: 'resolve yourself' }, 'delivered')), now), null)
+  assert.equal(coordinatorCheck(t(list(ok)), now), null, 'blocked threads stay open')
+  assert.match(coordinatorCheck(t(list(ok)), now + BOARD_MAX_AGE) ?? '', /two hours/)
+  assert.equal(coordinatorCheck(t(['{"type":"user","message":{"content":"<wake reason=\\"spawn\\">"}}'], list([done])), now), null, 'a thread is no coordinator')
+  assert.equal(coordinatorCheck(t(call('mcp__hearthbot__post_message', { text: 'hi' }, 'ok')), now), null, 'no board listed, nothing to check')
+})
+
+test('team guard: a thread start runs its role on the tier its Roster row names', async () => {
+  const { decide, wrongModel } = await import('../global/team-guard.mjs')
+  const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
+  const brief = (role, size) => `Role: ${role} · Kit: setup · Size: ${size}\nPrior art: claude-setup guards checked -> adapt, because they exist`
+  assert.ok(wrongModel(brief('Planner', 'M'), 'sonnet', teams))
+  assert.equal(wrongModel(brief('Planner', 'M'), 'opus', teams), null)
+  assert.equal(wrongModel(brief('Planner', 'M'), 'fable', teams), null, 'the row names Fable')
+  assert.ok(wrongModel(brief('Programmer', 'M'), 'opus', teams), 'an Opus checkpoint subagent is no Opus thread')
+  assert.equal(wrongModel(brief('Tester', 'L'), 'opus', teams), null, 'Opus verdict on L')
+  assert.ok(wrongModel(brief('Tester', 'M'), 'opus', teams))
+  assert.equal(wrongModel(`${brief('Programmer', 'M')}\nModel: opus, yskills named it`, 'opus', teams), null)
+  assert.equal(wrongModel('Role: none · Kit: setup · Size: S', 'opus', teams), null)
+  assert.match(decide('mcp__hearthbot__start_thread_session', { brief: brief('Programmer', 'M'), model: 'opus' }, [], [], teams).block ?? '', /Roster/)
+  assert.equal(decide('mcp__hearthbot__start_thread_session', { brief: brief('Programmer', 'M'), model: 'sonnet' }, [], [], teams).block, undefined)
+})

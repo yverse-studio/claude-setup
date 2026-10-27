@@ -218,15 +218,20 @@ cat > "$HOME/.claude/claude-setup/team-guard.mjs" <<'TEAM'
 // Tester thread starts first and the Programmer brief names it), and a thread start before this
 // session has read TEAMS.md (and CLAUDE.md, when it did not load on its own), and one whose brief has
 // no `Role: · Kit: · Size:` stamp line (rule-guard puts the named role's playbook into the thread), and
-// a size M or L one with no `Prior art:` line (look for what exists and works first, yskills 2026-10-27).
+// a size M or L one with no `Prior art:` line (look for what exists and works first, yskills 2026-10-27),
+// and one whose `model` is a tier its role's Roster row does not name (wrongModel).
 // CLAUDE_SETUP_TEAM_GUARD=off turns it off. It never breaks a tool call on its own errors.
 import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
+// rule-guard sits beside this file (GUARD_FILES); without it only the model-tier check is skipped.
+let roleOf = () => null
+try { ({ roleOf } = await import('./rule-guard.mjs')) } catch { /* no rule-guard here */ }
 
 export const POINTER = 'Team rule (claude-setup docs/TEAMS.md): route every task on its own (task picks the kit, not the project; then size S/M/L), call only the roles it needs, as thread or subagent as the roster says, and pass `model` from the role\'s row on every thread start and Agent call.'
-export const BOOT_FILES = ['CLAUDE.md', 'docs/TEAMS.md', 'docs/MAP.md']
+export const PM_FILE = '.claude/skills/operator/roles/project-manager.md'
+export const BOOT_FILES = ['CLAUDE.md', 'docs/TEAMS.md', 'docs/MAP.md', PM_FILE]
 const RAW = 'https://raw.githubusercontent.com/yverse-studio/claude-setup/main/'
 const MARK = '# Working for yskills' // first line of claude-setup's CLAUDE.md
 
@@ -283,7 +288,8 @@ export function rulesCard(claude) {
 
 // The coordinator's slice of docs/TEAMS.md (Spawn rule, Models line, Sizes, one line per role and kit):
 // enough to start every thread with the right role and model; the rest of TEAMS.md and MAP.md only on demand.
-export function coordinatorCard(teams) {
+// pm: roles/project-manager.md, whose "Text only" section (the repeats no hook can judge) closes the card.
+export function coordinatorCard(teams, pm = '') {
   const roster = teams.split('\n').filter((l) => /^\| [A-Z][\w ]* \(\[`/.test(l)).map((l) => { const c = cells(l); return `- ${c[1].replace(/ \(\[.*$/, '')}: ${c[4]}; ${c[5]}` })
   const kits = section(teams, 'Kits', 'Models for tasks').split('\n').filter((l) => /^\| `/.test(l)).map((l) => { const c = cells(l); return `- ${c[1]}: ${c[3]}` })
   const sizes = section(teams, 'Sizes', 'Pipeline').split('\n').filter((l) => l.startsWith('|'))
@@ -292,7 +298,8 @@ export function coordinatorCard(teams) {
     'Coordinator card (claude-setup docs/TEAMS.md, fresh from main): you are the coordinator here. Route every task with it; read the full TEAMS.md, MAP.md or a role file only when a task needs a part this card lacks, and roles/project-manager.md (Session start) at your first start.',
     section(teams, 'Spawn rule', 'Sizes'), `## Sizes\n\n${sizes.join('\n')}`,
     `## Roster (role: runs as; model)\n\n${roster.join('\n')}`, `## Kits (team at size L)\n\n${kits.join('\n')}`,
-  ].join('\n\n')
+    section(pm, 'Text only', 'Session start'),
+  ].filter(Boolean).join('\n\n')
 }
 
 export function inRepo(cwd) {
@@ -354,13 +361,30 @@ export function needsTester(text) {
   return isL && !(named && !/^(<.*>|none|n\/a|-+|tbd)$/i.test(named))
 }
 
+// The model tiers a brief's role may run on, from its Roster row: the first tier named, Fable where
+// the row names it, and a tier the row gives "on L" for a size L brief (`Sonnet; Opus verdict on L`). A thread start whose `model` is another tier was a guess (yskills 2026-10-27: "did you
+// pick Opus on purpose?"); a model yskills named passes when the brief says so.
+const TIERS = ['fable', 'opus', 'sonnet', 'haiku']
+export function wrongModel(text, model, teams) {
+  const role = teams && roleOf(text, teams)
+  if (!role?.row || !model || /yskills (named|asked|set|chose)/i.test(text)) return null
+  const parts = (role.row.match(/Model: ([^\n]*?)\.?$/)?.[1] ?? '').split(';').map((p) => p.toLowerCase())
+  const sizeL = /\bSize:[ \t]*L\b/i.test(text.replace(/[*_`]/g, ''))
+  // The first tier is the thread's own; a later one only for Fable or a size L exception ("Opus verdict on L"), never a subagent's.
+  const allowed = TIERS.filter((t, _i, all) => parts.some((p, i) => p.includes(t) && (i === 0 ? all.filter((x) => p.includes(x)).indexOf(t) === 0 : t === 'fable' || (sizeL && /\bon l\b/.test(p)))))
+  const tier = TIERS.find((t) => String(model).toLowerCase().includes(t))
+  return allowed.length && tier && !allowed.includes(tier) ? { role: role.name, allowed, tier } : null
+}
+
 // unread: the boot files a thread start still needs (empty when read or when no transcript was given).
-export function decide(tool, input = {}, dirs = [], unread = []) {
+export function decide(tool, input = {}, dirs = [], unread = [], teams = '') {
   const kind = AGENT.test(tool) ? 'Agent' : THREAD_START.test(tool) ? 'thread' : null
   if (kind === 'thread' && unread.length) return { block: `team-guard: read the rules before starting a thread: ${unread.join(' and ')} (in ~/.claude/claude-setup/ or the claude-setup repo; docs/MAP.md, Start here). 2026-10-26 a coordinator skipped them and guessed every model. Read them, then retry.` }
   if (kind === 'thread' && !stamped(briefText(input))) return { block: 'team-guard: every thread brief starts with the stamp line `Role: <one role from docs/TEAMS.md Roster> · Kit: <kit> · Size: <S|M|L>` (operator/briefs.md); a small task with no role says `Role: none`. The thread loads its playbook from it. Add the line, then retry.' }
   if (kind === 'thread' && needsPriorArt(briefText(input))) return { block: 'team-guard: a size M or L brief names what already exists before anything is built (CLAUDE.md, Work for the future): add a line `Prior art: <our repos, skills, plugins, public setups checked> -> copy | adapt | build, because <why>` (or `to find: <where the Researcher looks>`), then retry.' }
   if (kind === 'thread' && needsTester(briefText(input))) return { block: 'team-guard: a size L Programmer thread starts only after its Tester thread (claude-setup docs/TEAMS.md, Sizes). Start `Tester · <app>` first, then put a line `Tester: <its thread id or title>` in this brief and retry.' }
+  const wrong = kind === 'thread' && wrongModel(briefText(input), input.model, teams)
+  if (wrong) return { block: `team-guard: the ${wrong.role} runs on ${wrong.allowed.join(' or ')} (claude-setup docs/TEAMS.md, Roster), not ${wrong.tier}. Pass that model; if yskills named this one, say "yskills named <model>" in the brief and retry.` }
   if (!kind || String(input.model ?? '').trim()) return {}
   if (kind === 'Agent' && hasOwnModel(input.subagent_type, dirs)) return {}
   return { block: `team-guard: this ${kind === 'Agent' ? 'Agent call' : 'thread start'} has no \`model\`. Pass the model of the role's row in claude-setup docs/TEAMS.md (Roster; Agent: haiku, sonnet or opus; thread: the full id from the Models line), then retry.` }
@@ -390,7 +414,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
       if (mode === 'card') {
         // The coordinator runs outside any repo (the project chat); a thread sits in a product repo and needs only its role card (rule-guard).
         if (rulesLoaded(cwd, home) || inRepo(cwd)) return
-        const card = coordinatorCard(text(join(dir, 'docs', 'TEAMS.md')))
+        const card = coordinatorCard(text(join(dir, 'docs', 'TEAMS.md')), text(join(dir, PM_FILE)))
         if (!card || card.length >= BOOT_MAX) return
         if (session) { mkdirSync(dirname(mark('teams')), { recursive: true }); writeFileSync(mark('teams'), '') }
         return say(card)
@@ -401,7 +425,8 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
       const need = (rulesLoaded(cwd, home) ? ['TEAMS.md'] : ['CLAUDE.md', 'TEAMS.md'])
         .filter((f) => !(session && existsSync(mark(f === 'CLAUDE.md' ? 'rules' : 'teams'))))
       const unread = read ? need.filter((f) => !read.has(f)) : []
-      const out = decide(tool, input, [join(cwd, '.claude', 'agents'), join(home, '.claude', 'agents')], unread)
+      const teams = THREAD_START.test(tool) ? text(join(cwd, 'docs', 'TEAMS.md')) || text(join(dir, 'docs', 'TEAMS.md')) : ''
+      const out = decide(tool, input, [join(cwd, '.claude', 'agents'), join(home, '.claude', 'agents')], unread, teams)
       if (out.block) { process.stderr.write(out.block); process.exitCode = 2 }
     } catch {
       // A guard must never break a tool call.
@@ -425,7 +450,11 @@ cat > "$HOME/.claude/claude-setup/rule-guard.mjs" <<'RULE'
 // pre: refuses (exit 2) a review request or assignee for yskills on a PR (No GitHub mails), a
 // `Card:` text reply where the real card tool exists (Cards), a thread reply over the length cap
 // (Replies), a new Artifact besides the Company XY one (Dashboard), a commit message that is not
-// conventional (Code), and WebFetch in a cloud thread (Cloud threads: WebSearch, no Allow taps).
+// conventional (Code), WebFetch in a cloud thread (Cloud threads: WebSearch, no Allow taps), a memory
+// file write with a rule line (memory holds state only), and a reply that asks yskills for an Allow or a go, says "can't" with nothing tried, posts `Done:` without proof, or
+// says nothing is open while the last thread board shows open threads (replyRule).
+// stop: a thread that posted `Done:` resolves itself; a coordinator closes or nudges every finished
+// thread on its last board and lists the board again when it is over two hours old (coordinatorCheck).
 // prompt: a video link or a bare "stop" gets the matching CLAUDE.md line put next to the message, and
 // the first message naming `Role: <role>` (the brief block, operator/briefs.md) gets that role's
 // Roster row and playbook put into context, so a thread always knows what it is (yskills 2026-10-27).
@@ -472,9 +501,31 @@ export function commitSubjects(command) {
 // yskills, as a reviewer or assignee in a gh command; never the bot account yskills-claude.
 const GH_ASK = /\bgh\s+(pr|issue)\b[^\n]*(?:--(?:add-)?(?:reviewer|assignee)|\s-[ra])[ =]["']?(?:[^\s"']*,)?yskills(?=[,\s"']|$)/i
 
+// The repeats yskills had to say most (audit 2026-10-27, docs/research/2026-10-27-repeats.md), as checks on a reply:
+// asking him for an Allow or a go, "can't" with nothing tried, `Done:` with
+// no proof, and "nothing open" while the board shows open or blocked threads.
+const ASK_ALLOW = /\b(tap|press|click|hit|drück\w*|tipp\w*|klick\w*)\b[^.\n]{0,20}\b(allow|erlauben|zulassen)\b|\b(shall|should|can|may) i (go ahead|proceed|start|merge|push|continue)\b|\bwant me to\b|\b(soll|darf|kann) ich (das |es )?(jetzt )?(los|loslegen|anfangen|starten|mergen|pushen|weitermachen|machen)\b/i
+const ASK_FIRST = /\b(money|geld|€|eur|euro|live key|stripe live|purchase|kauf|paid|bezahl|kosten|force-push|rotat|rotier|mail|post(en|s)? public|öffentlich|delete (the )?live|database|datenbank)\b/i
+const CANT = /\b(i|we) (can'?t|cannot|am unable to|are unable to)\b|\b(ich kann|wir können) (das |es )?nicht\b|\b(not possible|nicht möglich|unmöglich|impossible)\b/i
+const TRIED = /^[\s>*_-]*(tried|versucht)\s*:/im
+const DONE = /^[\s>*_]*(done|fertig|erledigt):/im
+const NOTHING_OPEN = /\b(no blockers?|keine blocker|nothing (is )?(open|left|blocking|needed from you|needs you|waiting on you)|nichts (mehr )?(offen|blockiert)|nothing else needs you|alles (ist )?(fertig|erledigt))\b/i
+export const RULE_LINE = /^\s*[-*]?\s*(\*\*)?(always|never|immer|nie|niemals|rule|regel)\b[^\n]*\b(must|should|soll|muss|do|use|never|nie)\b/i
+export function replyRule(text, attached = [], board = null) {
+  if (ASK_ALLOW.test(text) && !ASK_FIRST.test(text)) return 'rule-guard: do not ask yskills for an Allow or a go (CLAUDE.md, Auto-run): pick the sensible default and do it; a refused call takes its fixed way around (docs/permissions.md, Layer 3). Only the ask-first items wait, and a choice is a request_decision card.'
+  if (CANT.test(text) && !TRIED.test(text)) return 'rule-guard: "can\'t" needs every route tried first (CLAUDE.md, Never "can\'t"): another tool, a workflow with the org token, the laptop (RC), another approach. Try them; if it is still impossible, add a line `Tried: <route, route, route>` with the one step only his hands can do.'
+  if (DONE.test(text) && !/https?:\/\//.test(text) && !(attached ?? []).length) return 'rule-guard: a `Done:` line carries its proof (CLAUDE.md, Honesty): the live link, the merged PR link or an attached screenshot or test output. Add it, then post.'
+  if (board && NOTHING_OPEN.test(text)) {
+    const open = [...board.finished, ...board.blocked]
+    if (open.length) return `rule-guard: you say nothing is open, but the board you listed shows ${open.length} open thread(s): ${open.slice(0, 5).map((t) => `"${t.title}" (${t.state})`).join(', ')}. Name what is really open, or close the finished ones first.`
+  }
+  return null
+}
+
 // published: the file paths this session already published to an existing Artifact (republishing by
 // the same file_path without `url` is how the Artifact tool updates it).
-export function decide(tool, input = {}, env = {}, published = []) {
+// board: the thread board this session last listed (threadBoard), for claims that nothing is open.
+export function decide(tool, input = {}, env = {}, published = [], board = null) {
   if (/^mcp__github__/.test(tool) || tool === 'Bash') {
     const ask = tool === 'Bash'
       ? GH_ASK.test(input.command ?? '')
@@ -490,6 +541,12 @@ export function decide(tool, input = {}, env = {}, published = []) {
     if (/^[\s>*_]*Card:/m.test(text)) return 'rule-guard: a decision is a real card here (CLAUDE.md, Cards): post it with request_decision (question, 2-4 options, one recommended), not as "Card:" text.'
     const lines = text.split('\n').filter((l) => l.trim()).length
     if (text.length > REPLY_MAX_CHARS || lines > REPLY_MAX_LINES) return `rule-guard: this reply has ${text.length} chars and ${lines} lines; the cap is ${REPLY_MAX_CHARS} and ${REPLY_MAX_LINES} (CLAUDE.md, Replies). Lead with the result in a few lines; put the rest in a file under /mnt/project-files/ and attach it.`
+    const why = replyRule(text, input.attached_outputs, board)
+    if (why) return why
+  }
+  if (/^(Write|Edit)$/.test(tool) && /[\\/]memory[\\/].*\.md$/i.test(String(input.file_path ?? ''))) {
+    const rule = String(input.content ?? input.new_string ?? '').split('\n').find((l) => RULE_LINE.test(l))
+    if (rule) return `rule-guard: memory holds state only (docs/MAP.md, Where a lesson goes): "${rule.trim().slice(0, 80)}" reads as a rule. Put it in its home in claude-setup through a PR and keep only a pointer here.`
   }
   const republish = input.file_path && !input.type_url && published.includes(input.file_path)
   const newArtifact = (tool === 'Artifact' && !input.url && !input.asset && !republish && [undefined, 'publish'].includes(input.action)) || tool === 'mcp__remote-devices__create_artifact'
@@ -573,6 +630,63 @@ export function unresolved(transcript) {
   return finished ? 'rule-guard: this thread posted its Done: line or its hand-off, so it is finished: call set_thread_resolved (resolved: true) as the last step (CLAUDE.md, one thread per plan or PR, closed when done). If yskills still owes an answer, say so in one line instead and stop.' : null
 }
 
+// The transcript's tool calls in order, each with its result text and time: [{ name, input, result, at }].
+export function toolCalls(transcript) {
+  const calls = []
+  const byId = new Map()
+  for (const line of transcript.split('\n')) {
+    if (!line.includes('"tool_')) continue
+    try {
+      const row = JSON.parse(line)
+      for (const c of row.message?.content ?? []) {
+        if (c?.type === 'tool_use') { const call = { name: c.name, input: c.input ?? {}, result: '', at: Date.parse(row.timestamp ?? '') || 0 }; calls.push(call); byId.set(c.id, call) }
+        if (c?.type === 'tool_result' && byId.has(c.tool_use_id)) byId.get(c.tool_use_id).result = typeof c.content === 'string' ? c.content : (c.content ?? []).map((x) => x?.text ?? '').join('\n')
+      }
+    } catch { continue } // a line that is not JSON
+  }
+  return calls
+}
+
+// Every object with a thread_id and a state in a listing (list_threads, list_thread_sessions), whatever the nesting.
+function threadRows(text) {
+  const rows = []
+  const walk = (v) => { if (Array.isArray(v)) v.forEach(walk); else if (v && typeof v === 'object') { if (v.thread_id && v.state) rows.push(v); Object.values(v).forEach(walk) } }
+  for (const m of text.matchAll(/\{[\s\S]*\}/g)) { try { walk(JSON.parse(m[0])) } catch { /* not JSON */ } }
+  return rows
+}
+
+// The board the session listed last: finished threads still open (done, review_ready, failed, stopped and
+// not resolved), blocked ones, when it was listed, and the threads messaged since.
+const LIST = /list_thread(_session)?s$/
+const FINISHED_STATES = new Set(['done', 'review_ready', 'failed', 'stopped', 'completed'])
+export function threadBoard(calls) {
+  const i = calls.findLastIndex((c) => LIST.test(c.name) && c.result)
+  if (i < 0) return null
+  const rows = threadRows(calls[i].result)
+  const told = new Set(calls.slice(i + 1).filter((c) => /(message_thread|set_thread_resolved)$/.test(c.name)).map((c) => c.input.thread_id ?? c.input.thread))
+  const pick = (t) => ({ id: t.thread_id, title: String(t.title ?? t.thread_id).slice(0, 60), state: t.state })
+  return {
+    at: calls[i].at,
+    finished: rows.filter((t) => FINISHED_STATES.has(t.state) && !t.resolved).map(pick),
+    blocked: rows.filter((t) => t.state === 'blocked' && !t.resolved).map(pick),
+    told,
+  }
+}
+
+// The coordinator (yskills 2026-10-27: "coordinators look after their threads"): before it stops, every
+// finished thread on its last board is resolved or told to resolve, and the board is at most two hours old.
+export const BOARD_MAX_AGE = 2 * 3600 * 1000
+export function coordinatorCheck(transcript, now = Date.now()) {
+  if (/reason=\\?"spawn/.test(transcript) || !transcript.includes('mcp__hearthbot__')) return null // a thread, or no project session
+  const calls = toolCalls(transcript)
+  const board = threadBoard(calls)
+  if (!board) return null // this session never listed its threads (no list tool)
+  const left = board.finished.filter((t) => !board.told.has(t.id))
+  if (left.length) return `rule-guard: ${left.length} finished thread(s) on your board are still open: ${left.slice(0, 6).map((t) => `"${t.title}" (${t.state}, ${t.id})`).join(', ')}. Resolve each (set_thread_resolved with its thread_id where your tool takes one) or message_thread it to resolve itself or say what it still waits on. Then stop.`
+  if (now - board.at > BOARD_MAX_AGE) return 'rule-guard: your thread board is over two hours old. List the threads again (list_thread_sessions or list_threads) and close or nudge every finished one before you stop.'
+  return null
+}
+
 if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/').split('/').pop())) {
   const mode = process.argv[2]
   let raw = ''
@@ -588,13 +702,15 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         return
       }
       if (mode === 'stop') {
-        const why = !JSON.parse(raw || '{}').stop_hook_active && transcriptPath && existsSync(transcriptPath) ? unresolved(read(transcriptPath)) : null
+        const transcript = !JSON.parse(raw || '{}').stop_hook_active && transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : ''
+        const why = transcript ? unresolved(transcript) ?? coordinatorCheck(transcript) : null
         if (why) process.stdout.write(JSON.stringify({ decision: 'block', reason: why }))
         return
       }
       if (mode !== 'pre') return
       const shipped = join(tmpdir(), `claude-setup-artifacts-${String(session).replace(/\W/g, '')}`)
-      const block = decide(tool, input ?? {}, process.env, session ? read(shipped).split('\n') : [])
+      const board = tool === 'mcp__hearthbot__post_message' && transcriptPath && existsSync(transcriptPath) ? threadBoard(toolCalls(read(transcriptPath))) : null
+      const block = decide(tool, input ?? {}, process.env, session ? read(shipped).split('\n') : [], board)
       if (!block && session && tool === 'Artifact' && input?.url && input.file_path) writeFileSync(shipped, `${input.file_path}\n`, { flag: 'a' })
       if (block) { process.stderr.write(block); process.exitCode = 2 }
     } catch {
@@ -636,7 +752,7 @@ const teamHooks = [["SessionStart", "startup|clear|compact", "start"], ["Session
 for (const event of new Set(teamHooks.map(([e]) => e))) s.hooks[event] = (s.hooks[event] || []).filter((h) => !JSON.stringify(h).includes("team-brief.mjs") && !JSON.stringify(h).includes("team-guard.mjs"))
 for (const [event, matcher, mode] of teamHooks) s.hooks[event].push({ matcher, hooks: [team(mode)] })
 const rule = (mode) => ({ type: "command", command: `node "${require("os").homedir()}/.claude/claude-setup/rule-guard.mjs" ${mode}`, timeout: 5 })
-for (const [event, matcher, mode] of [["PreToolUse", "Bash|Artifact|WebFetch|mcp__github__.*|mcp__hearthbot__post_message|mcp__remote-devices__create_artifact", "pre"], ["UserPromptSubmit", "", "prompt"], ["Stop", "", "stop"]]) {
+for (const [event, matcher, mode] of [["PreToolUse", "Bash|Write|Edit|Artifact|WebFetch|mcp__github__.*|mcp__hearthbot__post_message|mcp__remote-devices__create_artifact", "pre"], ["UserPromptSubmit", "", "prompt"], ["Stop", "", "stop"]]) {
   s.hooks[event] = (s.hooks[event] || []).filter((h) => !JSON.stringify(h).includes("rule-guard.mjs"))
   s.hooks[event].push({ ...(matcher ? { matcher } : {}), hooks: [rule(mode)] })
 }

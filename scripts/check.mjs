@@ -258,7 +258,7 @@ for (const f of RULE_FILES) {
 {
   const { BOOT_MAX, rulesCard, coordinatorCard } = await import('../global/team-guard.mjs')
   const rules = rulesCard(readFileSync(join(root, 'CLAUDE.md'), 'utf8').replace(/\r/g, '')).length // main serves LF; a Windows checkout adds CR
-  const card = coordinatorCard(readFileSync(join(root, 'docs/TEAMS.md'), 'utf8').replace(/\r/g, '')).length
+  const card = coordinatorCard(readFileSync(join(root, 'docs/TEAMS.md'), 'utf8').replace(/\r/g, ''), readFileSync(join(root, '.claude/skills/operator/roles/project-manager.md'), 'utf8').replace(/\r/g, '')).length
   if (rules >= BOOT_MAX) errors.push(`CLAUDE.md is too long for the boot card (${rules} of ${BOOT_MAX} characters): move detail to its home (docs/MAP.md)`)
   if (!card || card >= BOOT_MAX) errors.push(`docs/TEAMS.md coordinator card is ${card ? `${card} of ${BOOT_MAX} characters` : 'empty (Spawn rule, Roster or Kits not found)'}: trim the Spawn rule or a Roster cell`)
 }
@@ -381,6 +381,25 @@ else {
     }
   }
 }
+
+// One home per rule (docs/MAP.md; yskills 2026-10-27: "kein doppeln mehr"): a rule sentence of 12 or more
+// words appears in one file only; every other file links its home. A sentence that links or names a
+// `.md` file is such a pointer and may repeat; so may the fixed section intros every role file shares.
+const SHARED_INTROS = ['added at the end of each project operator step 9 date project and its type what to do differently']
+const DUP_FILES = ['CLAUDE.md', ...walk('docs').filter((f) => /\.md$/.test(f) && !/^docs\/(research|archive|proposals)\//.test(f)), ...walk('.claude/skills/operator').filter((f) => f.endsWith('.md') && !f.includes('/templates/'))]
+function duplicateRules(files) {
+  const homes = new Map()
+  for (const [f, text] of files) {
+    for (const s of text.replace(/```[\s\S]*?```/g, '').split(/(?<=[.!?])\s+|\n/)) {
+      if (/\]\(|`[^`]*\.md/.test(s)) continue
+      const n = s.toLowerCase().replace(/[^a-z0-9äöüß ]+/g, ' ').replace(/\s+/g, ' ').trim()
+      if (n.split(' ').length < 12 || SHARED_INTROS.includes(n)) continue
+      homes.set(n, [...new Set([...(homes.get(n) ?? []), f])])
+    }
+  }
+  return [...homes].filter(([, fs]) => fs.length > 1)
+}
+for (const [n, fs] of duplicateRules(DUP_FILES.map((f) => [f, readFileSync(join(root, f), 'utf8')]))) errors.push(`rule written twice (${fs.join(', ')}): "${n.slice(0, 80)}..." keep it in its home and link it from the others (docs/MAP.md)`)
 
 if (errors.length) { console.error(errors.map((e) => `x ${e}`).join('\n')); process.exit(1) }
 console.log(`ok: ${seen.skill.size} skills, ${seen.agent.size} agents, ${plugins?.global.length ?? 0}+${plugins?.project.length ?? 0} plugins`)

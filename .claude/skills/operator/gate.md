@@ -169,4 +169,4 @@ Gate 5/5 (round <n>), merging | launch: brief (c) below   [risky: auth | payment
 5 Design / legal ....... pass | n/a
 ```
 
-A gate thread reads the PR diff, PLAN.md and features.json only. Do not read: node_modules, build output, lockfiles, generated files, screenshots, other slices' code, HANDOFF files of old threads; `grep` first, read only the part you need.
+A gate thread reads the PR diff, PLAN.md and features.json only, and skips what the builder skips ([`run.md`](run.md), step 5).
