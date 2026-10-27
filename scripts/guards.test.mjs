@@ -564,6 +564,22 @@ test('rule guard: a thread checks its spawn brief against TEAMS.md and sends a b
   assert.match(JSON.parse(out).hookSpecificOutput.additionalContext, /^Brief check/)
 })
 
+// Issue #335: the relay and the first wake queue together, so the hook fires once, on the wake that has no spawn marker.
+test('rule guard: the spawn brief is checked from the transcript when the prompt that fires the hook is not the spawn one', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'rg-spawn-'))
+  try {
+    const entry = (text) => JSON.stringify({ type: 'user', message: { role: 'user', content: text } })
+    const transcript = join(dir, 'session.jsonl')
+    writeFileSync(transcript, [entry('<relay from="coordinator" reason="spawn"><note>Make a bee video.</note></relay>'), entry('<wake reason="mention"><message>hi</message></wake>')].join('\n'))
+    const run = (session) => spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'prompt'], { input: JSON.stringify({ prompt: '<wake reason="mention"><message>hi</message></wake>', cwd: root, session_id: session, transcript_path: transcript }), encoding: 'utf8' }).stdout
+    assert.match(JSON.parse(run(`bc335-${process.pid}`)).hookSpecificOutput.additionalContext, /^Brief check[\s\S]*no `Role: · Kit: · Size:` stamp/)
+    assert.doesNotMatch(run(`bc335-${process.pid}`), /Brief check/, 'once per session')
+    const coordinator = join(dir, 'chat.jsonl')
+    writeFileSync(coordinator, JSON.stringify({ type: 'assistant', message: { content: 'quotes reason="spawn" in a tool result' } }))
+    assert.doesNotMatch(spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'prompt'], { input: JSON.stringify({ prompt: 'hi', cwd: root, session_id: `bc335c-${process.pid}`, transcript_path: coordinator }), encoding: 'utf8' }).stdout, /Brief check/, 'a chat that only quotes a spawn is no thread')
+  } finally { rmSync(dir, { recursive: true, force: true }) }
+})
+
 // The repeats audit 2026-10-27 (docs/research/2026-10-27-repeats.md): what yskills had to say most, as checks.
 test('rule guard: replies that ask for an Allow, say can\'t untried, post Done: without proof or claim nothing is open', async () => {
   const { decide, replyRule } = await import('../global/rule-guard.mjs')

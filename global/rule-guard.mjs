@@ -245,6 +245,22 @@ export async function briefCheck(prompt, cwd) {
   return role ? `Title check (docs/TEAMS.md, Roster "Runs as"): this thread's title starts with \`${role} · \`; if it does not, rename_thread to \`${role} · <what>\` first.` : ''
 }
 
+// Relay and first wake queue together and the hook fires once, on the second prompt (issue #335): the
+// spawn brief is then the session's first user entry in the transcript. Only a user entry counts, so a
+// chat that merely quotes a spawn is no thread.
+export function spawnPrompt(prompt, transcript) {
+  for (const line of transcript.split('\n')) {
+    if (!/reason=\\?"spawn/.test(line)) continue
+    try {
+      const entry = JSON.parse(line)
+      const content = entry.message?.content
+      const text = typeof content === 'string' ? content : (content ?? []).map((c) => c?.text ?? '').join('\n')
+      if (entry.type === 'user' && /<(wake|relay)\b[^>]*reason="spawn/.test(text)) return text
+    } catch { /* not a JSON line */ }
+  }
+  return prompt
+}
+
 // A thread that posted its result (`Done:`) or its hand-off path is finished: it resolves itself before
 // it stops (yskills 2026-10-27: handed-off threads stayed open; the coordinator cannot resolve another
 // thread from its tools). Returns the reason to keep going, or null.
@@ -372,7 +388,12 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         if (process.env.CLAUDE_SETUP_RULE_GUARD === 'off') return
         const { tool_name: tool = '', tool_input: input = {}, prompt = '', cwd = process.cwd(), session_id: session, transcript_path: transcriptPath } = JSON.parse(raw || '{}')
         if (mode === 'prompt') {
-          const context = [await briefCheck(prompt, cwd), roleContext(prompt, cwd, session), promptContext(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
+          const briefOnce = join(tmpdir(), `claude-setup-brief-${String(session).replace(/\W/g, '')}`)
+          const spawned = /reason=\\?"spawn/.test(prompt)
+          const lookup = session && !spawned && !existsSync(briefOnce) && transcriptPath && existsSync(transcriptPath)
+          const brief = lookup ? spawnPrompt(prompt, read(transcriptPath)) : prompt
+          if (session && (lookup || spawned)) writeFileSync(briefOnce, '')
+          const context = [await briefCheck(brief, cwd), roleContext(brief, cwd, session), promptContext(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
           if (context) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: context } }))
           return
         }
