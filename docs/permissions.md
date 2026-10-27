@@ -88,3 +88,23 @@ way around so it never stalls work. Never reword, split or retry a refused call.
   Self-Modification although yskills had asked for it in general words. The classifier wants the
   permission change itself named by him; a card with that exact question is the route.
 - 2026-10-26 (no-prompt proof): a session can start from a cached environment built before a merge. The one that ran the proof was built at 21:56 UTC, PR 302 merged at 22:08, so it had no `permissions` or `autoMode` and no sync hook. A `# rebuild:` line in the Setup script only helps sessions started after the rebuild: judge the proof from a session whose `~/.claude/claude-setup/permissions-sync.sh` exists.
+
+## Layer 3: workflows with keys run from main only (inactive until the secrets move)
+
+A dispatch with `--ref <branch>` or a push runs the branch's copy of a workflow file, so a branch
+could drop a guard (`github.ref == 'refs/heads/main'`, the `PROTECTED` list) and still get the org
+keys (#311). Every job that reads a secret therefore declares `environment: production`; that
+GitHub Environment's deployment-branch policy allows `main` only, and GitHub refuses the job
+before it starts on any other ref. `schedule` and `workflow_run` always run on `main`, so
+`deploy-watch` and `new-project` keep working. `scripts/workflow-secrets.test.mjs` fails CI for a
+job with a secret and no `environment: production`. [guard: test scripts/workflow-secrets.test.mjs, once the secrets are moved]
+
+**The line protects nothing while the keys are repo or org secrets**: a branch can add a workflow or
+edit `ci.yml` and read `secrets.X` directly, without any `environment:`. Moving the secrets into the
+environment is therefore step one, and the test only keeps the environment line from being
+forgotten afterwards. The policy and the secrets are set once in the repo, not in code. Settings > Environments > New
+environment `production` > Deployment branches and tags > Selected branches and tags > add rule
+`main`; then add `CLOUDFLARE_API_TOKEN`, `PROJECTS_GITHUB_TOKEN` and `CLOUDFLARE_BUILD_TOKEN` as
+environment secrets and delete the repository and org copies (while those exist, any branch
+workflow can still read them). Never add required reviewers to it: the schedule and `workflow_run` jobs would stall. Until then the `environment:` line is harmless: GitHub creates the
+environment without a branch policy on first use.
