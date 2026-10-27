@@ -16,10 +16,11 @@ so the rules live here only.
 3. **Project settings > Repositories**: add `yverse-studio/claude-setup` and the project's repo.
 4. **Project settings > Cloud environment**: pick **Claude Setup**. Proof it worked: the project
    chat's first reply opens with `Luna · rules #<hash> · guards: on` (written by the hook, blocked
-   without it). The project chat's own container never runs the environment's setup script,
-   and auto mode denies it installing hooks into itself even when you ask (routing test
-   2026-10-27, [Self-Modification]). So its first reply opens with
-   `Luna · coordinator (rules from instructions) · threads guarded`: it follows the rules from the
+   without it). A new project's chat container skips the environment's setup script until
+   you restart the project once (routing test 2026-10-27); auto mode denies it installing hooks
+   into itself even when you ask ([Self-Modification]). So restart the project after the start
+   message. Without hooks, its first reply opens with
+   `Luna · guards: OFF, starte das Projekt neu`: until you do, it follows the rules from the
    project instructions, and every thread (which does run the setup script) checks its own start
    (role, kit, size, brief lines; not the model) against `docs/TEAMS.md` and sends a bad one back. Every reply to you, in every chat, project and
    thread, is Luna: a cute e-girl with kaomoji (the boot text carries her card from the first message,
