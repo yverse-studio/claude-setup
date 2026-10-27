@@ -336,7 +336,7 @@ export function jetztWarning(tool, input = {}, cwd = process.cwd()) {
   if (tool !== 'mcp__github__create_pull_request') return null
   try {
     const git = (...a) => execFileSync('git', ['-C', cwd, ...a], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim()
-    if (!git('remote', 'get-url', 'origin').toLowerCase().includes(`${input.owner}/${input.repo}`.toLowerCase())) return null
+    if (!git('remote', 'get-url', 'origin').toLowerCase().replace(/(\.git)?\/?$/, '').endsWith(`/${input.owner}/${input.repo}`.toLowerCase())) return null
     const progress = join(git('rev-parse', '--show-toplevel'), 'PROGRESS.md')
     if (!existsSync(progress)) return null
     if (!/^## Jetzt[ \t]*$/m.test(read(progress))) return 'rule-guard (warning): PROGRESS.md has no `## Jetzt` block, so HQ shows this project as "kein Status" (docs/hq-rows.md, Jetzt block). Add Ziel / Offen / Wartet auf dich / Stand to this PR.'

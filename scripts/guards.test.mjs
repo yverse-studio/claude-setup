@@ -803,6 +803,7 @@ test('rule guard: a PR in a repo with a PROGRESS.md warns when ## Jetzt is missi
     assert.match(jetztWarning('mcp__github__create_pull_request', pr, repo), /no `## Jetzt` block/)
     assert.equal(jetztWarning('mcp__github__update_pull_request', pr, repo), null, 'only a new PR')
     assert.equal(jetztWarning('mcp__github__create_pull_request', { ...pr, repo: 'other' }, repo), null, 'another repo than cwd')
+    assert.equal(jetztWarning('mcp__github__create_pull_request', { ...pr, repo: 'yl' }, repo), null, 'a repo whose name is only a suffix')
     writeFileSync(join(repo, 'PROGRESS.md'), '# Progress\n\n## Jetzt\nZiel: x\nOffen:\n- a\nWartet auf dich:\n- nichts\nStand: 2026-10-27\n'); commit('docs: jetzt')
     assert.equal(jetztWarning('mcp__github__create_pull_request', pr, repo), null, 'PROGRESS.md changed in the PR')
     writeFileSync(join(repo, 'a.txt'), '3'); commit('fix: b')
