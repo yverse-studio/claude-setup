@@ -126,7 +126,7 @@ the workflow until you say "delete <name>" and a PR takes it off the protected l
    `confirm` = the name again, `dry_run` true. Read the plan in the log.
 2. Run it again with `dry_run` false. It removes the Worker and its builds, D1 `<name>` and
    `<name>-preview`, the repo and a leftover `new/<name>` branch.
-3. Remove `projects/<name>.json` from `main` in a small PR, and say it is gone.
+3. Remove `projects/<name>.json` from `main` in a small PR (the workflow cannot push, and a PR it opened itself gets no CI run); say it is gone once that merges.
 
 It refuses protected names, names without `projects/<name>.json` on `main`, and repos the
 workflow did not make. Detail: `publish` skill (Delete a project).
