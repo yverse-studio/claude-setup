@@ -27,8 +27,8 @@ Claude's job. `docs/MAP.md` names the one home of each rule; everywhere else lin
 - New page or app: `projects/<name>.json` plus the `new-project` workflow (repo, Worker, D1, first
   deploy); removing one: `delete-project`. Steps: `docs/USING.md`; detail: `publish` skill.
 - Dashboard: the Company XY Artifact is the only Artifact there is (no votes, galleries or one-off
-  pages); each Project Manager writes its
-  rows there (`docs/hq-rows.md`). New apps are threads in "Company XY", never a new project. [guard: hook global/rule-guard.mjs]
+  pages). Each project keeps `## Jetzt` in `PROGRESS.md`, reads open `ceo`
+  issues first (`docs/hq-rows.md`). New apps are threads in "Company XY", never a new project. [guard: hook global/rule-guard.mjs]
 
 ## How to work
 
@@ -78,8 +78,7 @@ Claude's job. `docs/MAP.md` names the one home of each rule; everywhere else lin
   its hand-off resolves itself (`set_thread_resolved`) as the last step; the coordinator closes or
   nudges finished threads before it stops. [guard: hook global/rule-guard.mjs]
 - Videos: an Instagram, TikTok or YouTube link or a video file is a request to watch it: run
-  `watch.py` of the `watch` skill first, never WebSearch in its place, then a verdict per video
-  (`watch` SKILL.md). [guard: hook global/rule-guard.mjs]
+  `watch.py` of the `watch` skill first, never WebSearch, then a verdict per video (`watch`). [guard: hook global/rule-guard.mjs]
 - Lessons stick: every ask of yskills becomes an open thread or a line in its home the same turn
   (`roles/project-manager.md`, Asks ledger); a correction becomes a line in its home, or better a
   test, lint rule or hook; friction with this setup a `loop:setup` issue. Memory holds state only

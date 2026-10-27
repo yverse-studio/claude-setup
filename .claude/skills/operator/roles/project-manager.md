@@ -30,7 +30,7 @@ The project chat itself (the coordinator running this skill). Plans with yskills
 - Cards (rule: `CLAUDE.md`, How to work): the card itself is posted by its thread with `request_decision`; you post one line in the project chat that links to it, and relay the tap back to that thread, attaching a vote's screenshots (`designer.md`, Vote cards); never an Artifact.
 - yskills reads only the project chat: post every result, milestone, `Done:` line and live link from the threads there in a line or two; PR links and gate talk stay in threads.
 - Verify every revenue source against real data (a route call, a table query with known payments) before a thread wires it into a UI.
-- Every write to `PROGRESS.md` updates the HQ rows in the same batch.
+- Keep the `## Jetzt` block of `PROGRESS.md` true in every PR the project makes anyway (`docs/hq-rows.md`, Jetzt block); that block, not HQ rows you write, is how HQ shows the project. Only in the Company XY project does a write to `PROGRESS.md` also update the HQ rows in the same batch.
 - After launch: a "Loop <project>: ..." message from the reader routine is work (`docs/LOOP.md`): one `Programmer · fix #n` thread per error or red live check, one decision per feedback item; the state goes into `projects/<id>.note`, only taste or money calls into `you[]`.
 - At the end of the project, ask every role for its lessons (step 9).
 - A message "HQ request <id>: <idea>" is yskills' New project tap in HQ: start one brainstorm thread for it (step 1) with the id in its brief, once per id; that thread marks `requests/<id>` started with its link.
@@ -58,9 +58,10 @@ The one home of the coordinator's start protocol. Every new coordinator session,
 1. Read `MEMORY.md`: the state, in the shape of `templates/project-memory.md`.
 2. `list_thread_sessions`: the board.
 3. `add_repo` claude-setup if it is not loaded; read `CLAUDE.md`, `docs/MAP.md` (Start here) and `docs/TEAMS.md` (Spawn rule and the team tables: the role and model of every thread you start). A fresh or replaced coordinator does this before its first `start_thread_session`: project memory and notes never replace it. Name kit and size from `TEAMS.md` (L = builder + gate) before spawning.
-4. Reconcile. Every working or blocked thread on the board has a line under `## Threads` in `MEMORY.md`, and every Threads line has a live thread. The board wins: correct memory in the same turn. Every ask of yskills in the last day of chat has a thread, a PR or a `Done:` line (the asks ledger above).
-5. Cheap memory check: `MEMORY.md` has only the template's five sections and no rule line. A line that is a rule becomes a `loop:setup` issue (`docs/WORKFLOW.md`, Learning).
-6. Post nothing unless something is wrong.
+4. Orders: list the repo's open issues labelled `ceo` (`list_issues`, label `ceo`) and read them first: they are yskills' orders from HQ (`docs/hq-rows.md`, Jetzt block). Each gets a thread or PR now, the PR body says `Closes #<n>`, and the issue gets one comment with the thread's link. None open: say nothing.
+5. Reconcile. Every working or blocked thread on the board has a line under `## Threads` in `MEMORY.md`, and every Threads line has a live thread. The board wins: correct memory in the same turn. Every ask of yskills in the last day of chat has a thread, a PR or a `Done:` line (the asks ledger above).
+6. Cheap memory check: `MEMORY.md` has only the template's five sections and no rule line. A line that is a rule becomes a `loop:setup` issue (`docs/WORKFLOW.md`, Learning).
+7. Post nothing unless something is wrong.
 
 ## Model and handoff in every brief
 

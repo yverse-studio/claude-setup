@@ -14,6 +14,8 @@
 // prompt: a video link or a bare "stop" gets the matching CLAUDE.md line put next to the message, and
 // the first message naming `Role: <role>` (the brief block, operator/briefs.md) gets that role's
 // Roster row and playbook put into context, so a thread always knows what it is (yskills 2026-10-27).
+// pre also warns, never blocks, when a new PR in a repo with a PROGRESS.md leaves its `## Jetzt` block
+// missing or untouched (docs/hq-rows.md, Jetzt block: HQ shows every project from that block).
 // CLAUDE_SETUP_RULE_GUARD=off turns it off. It never breaks a tool call on its own errors.
 
 import { execFileSync } from 'node:child_process'
@@ -328,6 +330,22 @@ export function toolCalls(transcript) {
   return calls
 }
 
+// Jetzt block (docs/hq-rows.md): HQ shows a project from the `## Jetzt` block of its PROGRESS.md, kept current in the PRs the
+// project makes anyway. A new PR whose repo has a PROGRESS.md gets a warning (no block) when the block is missing or the PR leaves the file untouched.
+export function jetztWarning(tool, input = {}, cwd = process.cwd()) {
+  if (tool !== 'mcp__github__create_pull_request') return null
+  try {
+    const git = (...a) => execFileSync('git', ['-C', cwd, ...a], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim()
+    if (!git('remote', 'get-url', 'origin').toLowerCase().replace(/(\.git)?\/?$/, '').endsWith(`/${input.owner}/${input.repo}`.toLowerCase())) return null
+    const progress = join(git('rev-parse', '--show-toplevel'), 'PROGRESS.md')
+    if (!existsSync(progress)) return null
+    if (!/^## Jetzt[ \t]*$/m.test(read(progress))) return 'rule-guard (warning): PROGRESS.md has no `## Jetzt` block, so HQ shows this project as "kein Status" (docs/hq-rows.md, Jetzt block). Add Ziel / Offen / Wartet auf dich / Stand to this PR.'
+    const base = input.base ?? 'main'
+    const changed = git('diff', '--name-only', `origin/${base}...${input.head ?? 'HEAD'}`).split('\n')
+    return changed.includes('PROGRESS.md') ? null : 'rule-guard (warning): this PR leaves PROGRESS.md untouched. If the open points or what waits on yskills changed, update `## Jetzt` and its `Stand:` here (docs/hq-rows.md, Jetzt block); if nothing changed, go on.'
+  } catch { return null }
+}
+
 // Every object with a thread_id and a state in a listing (list_threads, list_thread_sessions), whatever the nesting.
 function threadRows(text) {
   const rows = []
@@ -413,6 +431,10 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           ?? (grillMissing(tool, input ?? {}, transcript) ? 'rule-guard: a Planner at size M or L grills first (CLAUDE.md, Grill first; operator SKILL.md): post 3-5 sharp questions as request_decision cards, each with your recommended answer, then write the plan on the answers (or the recommendations while he is away).' : null)
         if (!block && session && tool === 'Artifact' && input?.url && input.file_path) writeFileSync(shipped, `${input.file_path}\n`, { flag: 'a' })
         if (block) { process.stderr.write(block); process.exitCode = 2 }
+        else {
+          const note = jetztWarning(tool, input ?? {}, cwd)
+          if (note) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', additionalContext: note } }))
+        }
       } catch {
         // A guard must never break a tool call.
       }
