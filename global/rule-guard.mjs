@@ -250,6 +250,15 @@ export function unresolved(transcript) {
 }
 
 // The transcript's tool calls in order, each with its result text and time: [{ name, input, result, at }].
+// Luna (yskills 2026-10-27: "a cute e-girl with lots of kaomoji, in every chat, project and thread"): the tone of
+// every reply to him, nothing else. The canary line (team-guard.mjs) is the proof the rules loaded; the tone is a soft drift signal.
+export const PERSONA = 'Luna: every reply to yskills (post_message, or your chat text where there is none) is Luna, a cute e-girl: warm, playful, German like him, with kaomoji such as (◕‿◕) ٩(◕‿◕)۶ (｡•̀ᴗ-)✧ (つ✧ω✧)つ. Only replies to him: commits, PR bodies, code, docs, briefs and messages to other threads stay plain. Tone only: content, the reply cap and honesty stay as they are; rule-guard blocks a reply with no kaomoji.'
+const KAOMOJI = /[◕‿ω꒳ᴗ･˘ᵕ◡╹≧≦∀ヾﾉ✧♡☆✿ʕʔ•̀ﾟ°]|\^[_ω.]?\^|[;>][_ω]?[<;]|\(\s*[TＴ][_ω.]?[TＴ]\s*\)/
+export function kaomojiMissing(tool, input) {
+  if (tool !== 'mcp__hearthbot__post_message' || KAOMOJI.test(String(input.text ?? ''))) return null
+  return 'rule-guard: every reply to yskills is Luna and carries at least one kaomoji, e.g. (◕‿◕) or ٩(◕‿◕)۶ (his ask 2026-10-27; tone only, the content stays). Add one, then retry.'
+}
+
 // The coordinator's first reply opens with the canary line team-guard wrote at start (team-guard.mjs, canary).
 export function canaryMissing(tool, input, line, transcript) {
   if (tool !== 'mcp__hearthbot__post_message' || !line.trim()) return null
@@ -338,7 +347,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         if (process.env.CLAUDE_SETUP_RULE_GUARD === 'off') return
         const { tool_name: tool = '', tool_input: input = {}, prompt = '', cwd = process.cwd(), session_id: session, transcript_path: transcriptPath } = JSON.parse(raw || '{}')
         if (mode === 'prompt') {
-          const context = [roleContext(prompt, cwd, session), promptContext(prompt)].filter(Boolean).join('\n')
+          const context = [roleContext(prompt, cwd, session), promptContext(prompt), PERSONA].filter(Boolean).join('\n')
           if (context) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: context } }))
           return
         }
@@ -353,6 +362,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         const transcript = () => (transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : '')
         const block = decide(tool, input ?? {}, process.env, session ? read(shipped).split('\n') : [], () => threadBoard(toolCalls(transcript())))
           ?? canaryMissing(tool, input ?? {}, session ? read(join(process.env.CLAUDE_SETUP_HOME || homedir(), '.claude', 'claude-setup', 'booted', `${String(session).replace(/\W/g, '')}.canary`)) : '', transcript)
+          ?? kaomojiMissing(tool, input ?? {})
           ?? (grillMissing(tool, input ?? {}, transcript) ? 'rule-guard: a Planner at size M or L grills first (CLAUDE.md, Grill first; operator SKILL.md): post 3-5 sharp questions as request_decision cards, each with your recommended answer, then write the plan on the answers (or the recommendations while he is away).' : null)
         if (!block && session && tool === 'Artifact' && input?.url && input.file_path) writeFileSync(shipped, `${input.file_path}\n`, { flag: 'a' })
         if (block) { process.stderr.write(block); process.exitCode = 2 }

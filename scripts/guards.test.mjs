@@ -318,17 +318,17 @@ test('team guard: boot card without a checkout, thread start blocked until the r
     assert.ok(teamsCard.length < 10_000)
     const line = readFileSync(join(home, '.claude/claude-setup/booted/s1.canary'), 'utf8')
     assert.match(line, /^Luna · rules #[0-9a-f]{7} · guards: on$/, 'the canary comes from the hook, not the model')
-    assert.ok(teamsCard.includes(`verbatim, so yskills sees the rules loaded: ${line}\nPersona: you are Luna`))
+    assert.ok(teamsCard.endsWith(line))
     const rule = (text, t = '') => { writeFileSync(join(cwd, 'c.jsonl'), t); return spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'pre'], { input: JSON.stringify({ cwd, session_id: 's1', transcript_path: join(cwd, 'c.jsonl'), tool_name: 'mcp__hearthbot__post_message', tool_input: { text } }), encoding: 'utf8', env: { ...process.env, ...env } }) }
     const post = (text, result = '{"message_id":"cmsg_1"}') => [JSON.stringify({ type: 'assistant', message: { content: [{ type: 'tool_use', id: 'p1', name: 'mcp__hearthbot__post_message', input: { text } }] } }), JSON.stringify({ type: 'user', message: { content: [{ type: 'tool_result', tool_use_id: 'p1', content: result }] } })].join('\n')
     assert.match(rule('Hi, ich schaue mir das an.').stderr, /canary line/, 'the first reply without the canary is blocked')
-    assert.equal(rule(`${line}\nHi, ich schaue mir das an.`).status, 0)
-    assert.equal(rule('Zweite Antwort.', post(`${line}\nHi`)).status, 0, 'only the first reply carries it')
+    assert.equal(rule(`${line}\nHi, ich schaue mir das an (◕‿◕)`).status, 0)
+    assert.equal(rule('Zweite Antwort (◕‿◕)', post(`${line}\nHi`)).status, 0, 'only the first reply carries it')
     assert.equal(rule('Zweite Antwort.', post('Hi')).status, 2, 'a reply that never carried it does not count')
     assert.equal(rule('Zweite Antwort.', post(`${line}\nHi`, 'PreToolUse hook error: rule-guard: this reply has 1881 chars')).status, 2, 'a blocked reply with the canary never went out')
-    assert.equal(rule('Zweite Antwort.', post('Luna · rules #0000000 · guards: on\nHi')).status, 0, 'a canary from before a rules change still counts')
-    assert.equal(rule('Thread-Antwort.', '{"type":"user","message":{"content":"<wake reason=\\"spawn\\">"}}').status, 0, 'a thread is never blocked')
-    assert.equal(spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'pre'], { input: JSON.stringify({ cwd, session_id: 'other', tool_name: 'mcp__hearthbot__post_message', tool_input: { text: 'Hi' } }), encoding: 'utf8', env: { ...process.env, ...env } }).status, 0, 'a session without a canary file is not blocked')
+    assert.equal(rule('Zweite Antwort (◕‿◕)', post('Luna · rules #0000000 · guards: on\nHi')).status, 0, 'a canary from before a rules change still counts')
+    assert.equal(rule('Thread-Antwort ٩(◕‿◕)۶', '{"type":"user","message":{"content":"<wake reason=\\"spawn\\">"}}').status, 0, 'a thread is never blocked')
+    assert.equal(spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'pre'], { input: JSON.stringify({ cwd, session_id: 'other', tool_name: 'mcp__hearthbot__post_message', tool_input: { text: 'Hi ^^' } }), encoding: 'utf8', env: { ...process.env, ...env } }).status, 0, 'a session without a canary file is not blocked')
     assert.equal(runTeam('card', { cwd: root }, env).stdout, '', 'a checkout gets no card')
     mkdirSync(join(cwd, 'app', '.git'), { recursive: true })
     assert.equal(runTeam('card', { cwd: join(cwd, 'app') }, env).stdout, '', 'a thread in a product repo gets its role card, not the coordinator card')
@@ -443,17 +443,17 @@ test('rule guard: the spawn brief names a role, the thread gets its Roster row a
   const session = `t${process.pid}${Date.now()}`
   const run = (prompt) => spawnSync(process.execPath, [script, 'prompt'], { input: JSON.stringify({ prompt, cwd: root, session_id: session }), encoding: 'utf8' })
   const wake = (reason, body) => `<wake reason="${reason}">\n<relay>\n  <note>\n      ${body}\n  </note>\n</relay>\n</wake>`
-  assert.equal(run(wake('mention', 'Role: Tester · Kit: app · Size: L')).stdout, '', 'a later wake quoting a brief is not this thread\'s role')
+  assert.doesNotMatch(run(wake('mention', 'Role: Tester · Kit: app · Size: L')).stdout, /you are the/, 'a later wake quoting a brief is not this thread\'s role')
   const out = JSON.parse(run(wake('spawn', 'Role: Reviewer · Kit: setup · Size: S\nModel: sonnet')).stdout).hookSpecificOutput.additionalContext
   assert.match(out, /you are the Reviewer[\s\S]*Model: Sonnet[\s\S]*# Reviewer/)
   assert.ok(out.length < 10_000, 'hook output over 10,000 characters is cut to a preview')
-  assert.equal(run(wake('spawn', 'Role: Reviewer · Kit: setup · Size: S')).stdout, '', 'once per session')
+  assert.doesNotMatch(run(wake('spawn', 'Role: Reviewer · Kit: setup · Size: S')).stdout, /you are the/, 'once per session')
   const { roleOf } = await import('../global/rule-guard.mjs')
   assert.equal(roleOf('Role: Evil', '| Evil ([`x.md`](../../../etc/passwd.md)) | a | b | c | d |').path, null, 'a path outside a roles folder is never read')
   const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
   assert.equal(roleOf('Role: Programmer for the app · Kit: app', teams).name, 'Programmer', 'a Roster name followed by words')
   assert.equal(roleOf('Role: Social Lead · Kit: social', teams)?.name, 'Social Lead')
-  assert.equal(spawnSync(process.execPath, [script, 'prompt'], { input: JSON.stringify({ prompt: '<coordinator-relay>\nRole: Tester · Kit: app · Size: L\n</coordinator-relay>', cwd: root, session_id: `${session}b` }), encoding: 'utf8' }).stdout, '', 'a relay that is not the spawn one')
+  assert.doesNotMatch(spawnSync(process.execPath, [script, 'prompt'], { input: JSON.stringify({ prompt: '<coordinator-relay>\nRole: Tester · Kit: app · Size: L\n</coordinator-relay>', cwd: root, session_id: `${session}b` }), encoding: 'utf8' }).stdout, /you are the/, 'a relay that is not the spawn one')
 })
 
 // yskills 2026-10-27: a guard fix on main reaches every session at its next start, no cloud rebuild.
@@ -672,4 +672,15 @@ test('team guard: kit, size, role and brief lines are checked against TEAMS.md',
   assert.ok(!missingLines('Done when:\n  node --test passes').includes('Done when:'), 'the value may start on the next line')
   assert.deepEqual(missingLines('Role: Producer · Kit: video · Size: M\nMake a bee video.'), ['Model:', 'Skills:', 'Done when:', 'Stop when:', 'Start: (read MEMORY.md first)'])
   assert.deepEqual(missingLines('Done when: <a check>. Stop when: <budget>'), ['Model:', 'Skills:', 'Done when:', 'Stop when:', 'Start: (read MEMORY.md first)'], 'unfilled placeholders do not count')
+})
+
+// Luna (yskills 2026-10-27): every reply to him carries a kaomoji; nothing else is touched.
+test('rule guard: replies to yskills carry a kaomoji, other tools do not', async () => {
+  const { kaomojiMissing, PERSONA } = await import('../global/rule-guard.mjs')
+  const post = (text) => kaomojiMissing('mcp__hearthbot__post_message', { text })
+  assert.match(post('PR #326 ist gemerged.') ?? '', /kaomoji/)
+  for (const t of ['Fertig (◕‿◕)', 'Gemerged ٩(◕‿◕)۶', 'ok ^^', 'yay (｡•̀ᴗ-)✧', 'hmm (T_T)', 'uff >_<']) assert.equal(post(t), null, t)
+  assert.equal(kaomojiMissing('mcp__hearthbot__message_coordinator', { text: 'plain' }), null, 'messages to other threads stay plain')
+  assert.equal(kaomojiMissing('Bash', { command: 'git commit -m "fix: x"' }), null)
+  assert.match(PERSONA, /Tone only/)
 })
