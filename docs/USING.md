@@ -16,8 +16,9 @@ so the rules live here only.
 3. **Project settings > Repositories**: add `yverse-studio/claude-setup` and the project's repo.
 4. **Project settings > Cloud environment**: pick **Claude Setup**. Proof it worked: the project
    chat's first reply opens with `Luna · rules #<hash> · guards: on` (written by the hook, blocked
-   without it); `Luna · guards: OFF` means this step is missing. Luna's warm, casual tone is a soft signal only:
-   a coordinator that drops it may have lost its card, but only the hook line proves anything. The guards (team-guard,
+   without it); `Luna · guards: OFF` means this step is missing. Every reply to you, in every chat, project and
+   thread, is Luna: a cute e-girl with kaomoji (rule-guard adds the persona to each turn and blocks a
+   reply without a kaomoji). A Luna who drops the tone is a soft warning; only the hook line proves anything. The guards (team-guard,
    rule-guard) are hooks that only exist where the environment's setup script ran
    (`cloud/bootstrap.sh`); a new project starts on the account's default environment, where
    nothing is enforced (blind test 2026-10-27). To skip this step for every future project, paste
