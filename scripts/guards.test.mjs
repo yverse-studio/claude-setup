@@ -568,15 +568,21 @@ test('rule guard: a thread checks its spawn brief against TEAMS.md and sends a b
 test('rule guard: the spawn brief is checked from the transcript when the prompt that fires the hook is not the spawn one', () => {
   const dir = mkdtempSync(join(tmpdir(), 'rg-spawn-'))
   try {
-    const entry = (text) => JSON.stringify({ type: 'user', message: { role: 'user', content: text } })
-    const transcript = join(dir, 'session.jsonl')
-    writeFileSync(transcript, [entry('<relay from="coordinator" reason="spawn"><note>Make a bee video.</note></relay>'), entry('<wake reason="mention"><message>hi</message></wake>')].join('\n'))
-    const run = (session) => spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'prompt'], { input: JSON.stringify({ prompt: '<wake reason="mention"><message>hi</message></wake>', cwd: root, session_id: session, transcript_path: transcript }), encoding: 'utf8' }).stdout
-    assert.match(JSON.parse(run(`bc335-${process.pid}`)).hookSpecificOutput.additionalContext, /^Brief check[\s\S]*no `Role: · Kit: · Size:` stamp/)
-    assert.doesNotMatch(run(`bc335-${process.pid}`), /Brief check/, 'once per session')
-    const coordinator = join(dir, 'chat.jsonl')
-    writeFileSync(coordinator, JSON.stringify({ type: 'assistant', message: { content: 'quotes reason="spawn" in a tool result' } }))
-    assert.doesNotMatch(spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'prompt'], { input: JSON.stringify({ prompt: 'hi', cwd: root, session_id: `bc335c-${process.pid}`, transcript_path: coordinator }), encoding: 'utf8' }).stdout, /Brief check/, 'a chat that only quotes a spawn is no thread')
+    const entry = (text, type = 'user') => JSON.stringify({ type, message: { role: type, content: type === 'user' ? text : [{ type: 'text', text }] } })
+    const wake = '<wake reason="spawn"><message>You are a Thread Session created by this project.</message></wake>'
+    const relay = (brief) => `<relay from="coordinator" reason="spawn"><note>${brief}</note></relay>`
+    const mention = '<wake reason="mention"><message>hi</message></wake>'
+    const run = (lines, session) => {
+      const transcript = join(dir, `${session}.jsonl`)
+      writeFileSync(transcript, lines.join('\n'))
+      return spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'prompt'], { input: JSON.stringify({ prompt: mention, cwd: root, session_id: session, transcript_path: transcript }), encoding: 'utf8' }).stdout
+    }
+    const id = (name) => `${name}-${process.pid}`
+    const bad = [entry(wake), entry(relay('Make a bee video.')), entry(mention)]
+    assert.match(JSON.parse(run(bad, id('bc335'))).hookSpecificOutput.additionalContext, /^Brief check[\s\S]*no `Role: · Kit: · Size:` stamp/)
+    assert.doesNotMatch(run(bad, id('bc335')), /Brief check/, 'once per session')
+    assert.doesNotMatch(run([entry(wake), entry(relay(`Role: Programmer · Kit: setup · Size: S${FULL}`)), entry(mention)], id('bc335ok')), /Brief check/, 'a good brief passes, the bare spawn wake is not the brief')
+    assert.doesNotMatch(run([entry('see this: <wake reason="spawn">Make a bee video.</wake>'), entry('x', 'assistant'), 'not json reason="spawn"'], id('bc335q')), /Brief check/, 'a chat that only quotes a spawn is no thread')
   } finally { rmSync(dir, { recursive: true, force: true }) }
 })
 

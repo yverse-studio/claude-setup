@@ -246,19 +246,20 @@ export async function briefCheck(prompt, cwd) {
 }
 
 // Relay and first wake queue together and the hook fires once, on the second prompt (issue #335): the
-// spawn brief is then the session's first user entry in the transcript. Only a user entry counts, so a
-// chat that merely quotes a spawn is no thread.
+// spawn brief is then the session's own spawn entries in the transcript, the relay (the brief) and the
+// wake (the marker). Only a user entry that opens with the tag counts, so a chat that merely quotes a spawn is no thread.
 export function spawnPrompt(prompt, transcript) {
+  const found = []
   for (const line of transcript.split('\n')) {
     if (!/reason=\\?"spawn/.test(line)) continue
     try {
       const entry = JSON.parse(line)
       const content = entry.message?.content
       const text = typeof content === 'string' ? content : (content ?? []).map((c) => c?.text ?? '').join('\n')
-      if (entry.type === 'user' && /<(wake|relay)\b[^>]*reason="spawn/.test(text)) return text
+      if (entry.type === 'user' && /^\s*<(wake|relay|coordinator-relay)\b/.test(text) && /<(wake|relay)\b[^>]*reason="spawn/.test(text)) found.push(text)
     } catch { /* not a JSON line */ }
   }
-  return prompt
+  return found.length ? found.join('\n') : prompt
 }
 
 // A thread that posted its result (`Done:`) or its hand-off path is finished: it resolves itself before
@@ -392,7 +393,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           const spawned = /reason=\\?"spawn/.test(prompt)
           const lookup = session && !spawned && !existsSync(briefOnce) && transcriptPath && existsSync(transcriptPath)
           const brief = lookup ? spawnPrompt(prompt, read(transcriptPath)) : prompt
-          if (session && (lookup || spawned)) writeFileSync(briefOnce, '')
+          if (session && (spawned || (lookup && brief !== prompt))) writeFileSync(briefOnce, '')
           const context = [await briefCheck(brief, cwd), roleContext(brief, cwd, session), promptContext(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
           if (context) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: context } }))
           return
