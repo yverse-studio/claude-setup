@@ -386,11 +386,14 @@ test('context guard: a size S thread is told to hand off at 250k, not 350k', () 
     const m = `${id}-m`
     assert.match(run([JSON.stringify({ type: 'user', message: { content: 'Kit: setup · Size: M' } }), call(260_000)], m), /size M task at 350k/)
     const link = join(dir, 'link.mjs')
-    symlinkSync(join(root, 'global/context-guard.mjs'), link)
     const l = `${id}-l`
-    writeFileSync(t, `${JSON.stringify({ type: 'user', message: { content: 'Kit: setup · Size: M' } })}\n${call(360_000)}\n`)
-    const r = spawnSync(process.execPath, [link], { input: JSON.stringify({ session_id: l, transcript_path: t }), encoding: 'utf8' })
-    assert.match(r.stdout, /hand-off file/, 'runs through a symlink')
+    let linked = true
+    try { symlinkSync(join(root, 'global/context-guard.mjs'), link) } catch { linked = false } // Windows without symlink rights
+    if (linked) {
+      writeFileSync(t, `${JSON.stringify({ type: 'user', message: { content: 'Kit: setup · Size: M' } })}\n${call(360_000)}\n`)
+      const r = spawnSync(process.execPath, [link], { input: JSON.stringify({ session_id: l, transcript_path: t }), encoding: 'utf8' })
+      assert.match(r.stdout, /hand-off file/, 'runs through a symlink')
+    }
     for (const s of [id, m, l]) rmSync(join(tmpdir(), `claude-context-guard-${s}.json`), { force: true })
   } finally { rmSync(dir, { recursive: true, force: true }) }
 })
