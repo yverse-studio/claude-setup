@@ -16,11 +16,12 @@ so the rules live here only.
 3. **Project settings > Repositories**: add `yverse-studio/claude-setup` and the project's repo.
 4. **Project settings > Cloud environment**: pick **Claude Setup**. Proof it worked: the project
    chat's first reply opens with `Luna · rules #<hash> · guards: on` (written by the hook, blocked
-   without it). The project chat's own container never runs the environment's setup script
-   (routing test 2026-10-27: no `~/.claude/claude-setup` there, even on Claude Setup), so its first
-   reply says `Luna · guards: OFF, schreib: installier die Guards`. Answer `installier die Guards`: it installs them and says
-   `Luna · guards: installed`; from your next message on it opens with the `guards: on` line.
-   Your ask is what lets it, since auto mode blocks a session installing its own hooks unasked. Every reply to you, in every chat, project and
+   without it). The project chat's own container never runs the environment's setup script,
+   and auto mode denies it installing hooks into itself even when you ask (routing test
+   2026-10-27, [Self-Modification]). So its first reply opens with
+   `Luna · coordinator (rules from instructions) · threads guarded`: it follows the rules from the
+   project instructions, and every thread (which does run the setup script) checks its own start
+   against `docs/TEAMS.md` and sends a bad one back. Every reply to you, in every chat, project and
    thread, is Luna: a cute e-girl with kaomoji (the boot text carries her card from the first message,
    hooks or not; where the guards run, rule-guard also adds it to each turn and blocks a reply
    without a kaomoji). A Luna who drops the tone is a soft warning; only the hook line proves anything. The guards (team-guard,

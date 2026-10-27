@@ -764,7 +764,7 @@ export async function briefCheck(prompt, cwd) {
   let guard
   try { guard = await import(new URL('./team-guard.mjs', import.meta.url)) } catch { return '' }
   const teams = read(join(setupRoot(cwd), 'docs', 'TEAMS.md'))
-  const brief = prompt.replace(/<[^>]+>/g, '\n')
+  const brief = prompt.replace(/\\[nt]/g, '\n').replace(/<\/?(wake|message|thread|project|relay|coordinator-relay|cited|note|system-note)\b[^>]*>/g, '\n')
   const missing = guard.missingLines(brief)
   const why = !guard.stamped(brief) ? 'no `Role: · Kit: · Size:` stamp line'
     : guard.badTeam(brief, teams) ?? (missing.length ? `brief lines missing: ${missing.join(', ')}` : null)
