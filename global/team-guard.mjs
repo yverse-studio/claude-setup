@@ -14,15 +14,20 @@
 // Tester thread starts first and the Programmer brief names it), and a thread start before this
 // session has read TEAMS.md (and CLAUDE.md, when it did not load on its own), and one whose brief has
 // no `Role: · Kit: · Size:` stamp line (rule-guard puts the named role's playbook into the thread), and
-// a size M or L one with no `Prior art:` line (look for what exists and works first, yskills 2026-10-27).
+// a size M or L one with no `Prior art:` line (look for what exists and works first, yskills 2026-10-27),
+// and one whose `model` is a tier its role's Roster row does not name (wrongModel).
 // CLAUDE_SETUP_TEAM_GUARD=off turns it off. It never breaks a tool call on its own errors.
 import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
+// rule-guard sits beside this file (GUARD_FILES); without it only the model-tier check is skipped.
+let roleOf = () => null
+try { ({ roleOf } = await import('./rule-guard.mjs')) } catch { /* no rule-guard here */ }
 
 export const POINTER = 'Team rule (claude-setup docs/TEAMS.md): route every task on its own (task picks the kit, not the project; then size S/M/L), call only the roles it needs, as thread or subagent as the roster says, and pass `model` from the role\'s row on every thread start and Agent call.'
-export const BOOT_FILES = ['CLAUDE.md', 'docs/TEAMS.md', 'docs/MAP.md']
+export const PM_FILE = '.claude/skills/operator/roles/project-manager.md'
+export const BOOT_FILES = ['CLAUDE.md', 'docs/TEAMS.md', 'docs/MAP.md', PM_FILE]
 const RAW = 'https://raw.githubusercontent.com/yverse-studio/claude-setup/main/'
 const MARK = '# Working for yskills' // first line of claude-setup's CLAUDE.md
 
@@ -79,7 +84,8 @@ export function rulesCard(claude) {
 
 // The coordinator's slice of docs/TEAMS.md (Spawn rule, Models line, Sizes, one line per role and kit):
 // enough to start every thread with the right role and model; the rest of TEAMS.md and MAP.md only on demand.
-export function coordinatorCard(teams) {
+// pm: roles/project-manager.md, whose "Text only" section (the repeats no hook can judge) closes the card.
+export function coordinatorCard(teams, pm = '') {
   const roster = teams.split('\n').filter((l) => /^\| [A-Z][\w ]* \(\[`/.test(l)).map((l) => { const c = cells(l); return `- ${c[1].replace(/ \(\[.*$/, '')}: ${c[4]}; ${c[5]}` })
   const kits = section(teams, 'Kits', 'Models for tasks').split('\n').filter((l) => /^\| `/.test(l)).map((l) => { const c = cells(l); return `- ${c[1]}: ${c[3]}` })
   const sizes = section(teams, 'Sizes', 'Pipeline').split('\n').filter((l) => l.startsWith('|'))
@@ -88,7 +94,8 @@ export function coordinatorCard(teams) {
     'Coordinator card (claude-setup docs/TEAMS.md, fresh from main): you are the coordinator here. Route every task with it; read the full TEAMS.md, MAP.md or a role file only when a task needs a part this card lacks, and roles/project-manager.md (Session start) at your first start.',
     section(teams, 'Spawn rule', 'Sizes'), `## Sizes\n\n${sizes.join('\n')}`,
     `## Roster (role: runs as; model)\n\n${roster.join('\n')}`, `## Kits (team at size L)\n\n${kits.join('\n')}`,
-  ].join('\n\n')
+    section(pm, 'Text only', 'Session start'),
+  ].filter(Boolean).join('\n\n')
 }
 
 export function inRepo(cwd) {
@@ -150,13 +157,33 @@ export function needsTester(text) {
   return isL && !(named && !/^(<.*>|none|n\/a|-+|tbd)$/i.test(named))
 }
 
+// The model tiers a brief's role may run on, from its Roster row: the first tier named, Fable where
+// the row names it, and a tier the row gives "on L" for a size L brief (`Sonnet; Opus verdict on L`). A thread start whose `model` is another tier was a guess (yskills 2026-10-27: "did you
+// pick Opus on purpose?"); a model yskills named passes when the brief says so.
+const TIERS = ['fable', 'opus', 'sonnet', 'haiku']
+export function wrongModel(text, model, teams) {
+  const role = teams && roleOf(text, teams)
+  if (!role?.row || !model || /yskills (named|asked|set|chose)/i.test(text)) return null
+  // A row's own exception ("Opus writes the weekly plan") passes when the brief says why: `Model: opus (the weekly plan)`.
+  const why = text.replace(/[*_`]/g, '').match(/^[ \t>-]*Model:[ \t]*(\w+)[^\n]*\([^)\n]{5,}\)/im)?.[1]?.toLowerCase()
+  if (why && String(model).toLowerCase().includes(why) && new RegExp(`\\b${why}\\b`, 'i').test(role.row)) return null
+  const parts = (role.row.match(/Model: ([^\n]*?)\.?$/)?.[1] ?? '').split(';').map((p) => p.toLowerCase())
+  const sizeL = /\bSize:[ \t]*L\b/i.test(text.replace(/[*_`]/g, ''))
+  // The first tier is the thread's own; a later one only for Fable or a size L exception ("Opus verdict on L"), never a subagent's.
+  const allowed = TIERS.filter((t, _i, all) => parts.some((p, i) => p.includes(t) && (i === 0 ? all.filter((x) => p.includes(x)).indexOf(t) === 0 : t === 'fable' || (sizeL && /\bon l\b/.test(p)))))
+  const tier = TIERS.find((t) => String(model).toLowerCase().includes(t))
+  return allowed.length && tier && !allowed.includes(tier) ? { role: role.name, allowed, tier } : null
+}
+
 // unread: the boot files a thread start still needs (empty when read or when no transcript was given).
-export function decide(tool, input = {}, dirs = [], unread = []) {
+export function decide(tool, input = {}, dirs = [], unread = [], teams = '') {
   const kind = AGENT.test(tool) ? 'Agent' : THREAD_START.test(tool) ? 'thread' : null
   if (kind === 'thread' && unread.length) return { block: `team-guard: read the rules before starting a thread: ${unread.join(' and ')} (in ~/.claude/claude-setup/ or the claude-setup repo; docs/MAP.md, Start here). 2026-10-26 a coordinator skipped them and guessed every model. Read them, then retry.` }
   if (kind === 'thread' && !stamped(briefText(input))) return { block: 'team-guard: every thread brief starts with the stamp line `Role: <one role from docs/TEAMS.md Roster> · Kit: <kit> · Size: <S|M|L>` (operator/briefs.md); a small task with no role says `Role: none`. The thread loads its playbook from it. Add the line, then retry.' }
   if (kind === 'thread' && needsPriorArt(briefText(input))) return { block: 'team-guard: a size M or L brief names what already exists before anything is built (CLAUDE.md, Work for the future): add a line `Prior art: <our repos, skills, plugins, public setups checked> -> copy | adapt | build, because <why>` (or `to find: <where the Researcher looks>`), then retry.' }
   if (kind === 'thread' && needsTester(briefText(input))) return { block: 'team-guard: a size L Programmer thread starts only after its Tester thread (claude-setup docs/TEAMS.md, Sizes). Start `Tester · <app>` first, then put a line `Tester: <its thread id or title>` in this brief and retry.' }
+  const wrong = kind === 'thread' && wrongModel(briefText(input), input.model, teams)
+  if (wrong) return { block: `team-guard: the ${wrong.role} runs on ${wrong.allowed.join(' or ')} (claude-setup docs/TEAMS.md, Roster), not ${wrong.tier}. Pass that model. For an exception the row names (e.g. "Opus writes the weekly plan") add \`Model: <tier> (<why>)\` to the brief; if yskills named this model, say "yskills named <model>". Then retry.` }
   if (!kind || String(input.model ?? '').trim()) return {}
   if (kind === 'Agent' && hasOwnModel(input.subagent_type, dirs)) return {}
   return { block: `team-guard: this ${kind === 'Agent' ? 'Agent call' : 'thread start'} has no \`model\`. Pass the model of the role's row in claude-setup docs/TEAMS.md (Roster; Agent: haiku, sonnet or opus; thread: the full id from the Models line), then retry.` }
@@ -186,7 +213,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
       if (mode === 'card') {
         // The coordinator runs outside any repo (the project chat); a thread sits in a product repo and needs only its role card (rule-guard).
         if (rulesLoaded(cwd, home) || inRepo(cwd)) return
-        const card = coordinatorCard(text(join(dir, 'docs', 'TEAMS.md')))
+        const card = coordinatorCard(text(join(dir, 'docs', 'TEAMS.md')), text(join(dir, PM_FILE)))
         if (!card || card.length >= BOOT_MAX) return
         if (session) { mkdirSync(dirname(mark('teams')), { recursive: true }); writeFileSync(mark('teams'), '') }
         return say(card)
@@ -197,7 +224,8 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
       const need = (rulesLoaded(cwd, home) ? ['TEAMS.md'] : ['CLAUDE.md', 'TEAMS.md'])
         .filter((f) => !(session && existsSync(mark(f === 'CLAUDE.md' ? 'rules' : 'teams'))))
       const unread = read ? need.filter((f) => !read.has(f)) : []
-      const out = decide(tool, input, [join(cwd, '.claude', 'agents'), join(home, '.claude', 'agents')], unread)
+      const teams = THREAD_START.test(tool) ? text(join(cwd, 'docs', 'TEAMS.md')) || text(join(dir, 'docs', 'TEAMS.md')) : ''
+      const out = decide(tool, input, [join(cwd, '.claude', 'agents'), join(home, '.claude', 'agents')], unread, teams)
       if (out.block) { process.stderr.write(out.block); process.exitCode = 2 }
     } catch {
       // A guard must never break a tool call.

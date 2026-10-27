@@ -17,7 +17,7 @@ The project chat itself (the coordinator running this skill). Plans with yskills
 - Before showing yskills anything (a vote card, a `Done:` line, a live link), check that the role's workflow really ran, from its files, not from the thread's word (incident 2026-10-26: a design vote went out with no references and no `DESIGN.md`). Designer: three captures in `design/reference/`, `design/DESIGN.md` passing `design-check.mjs`, a `design-critic` report. Tester: a green `journey` status on the PR head (`gate.md`, Preview test) and a journey on live after the merge. Programmer: the PR's `Tested:` list. Any missing: send it back to the role and show nothing. A report with no `Skills used:` line (`briefs.md`) is not done either.
 - Design gaps (missing interaction map, two copies of one datum, an undo or reload path nobody walked): send them back to the role at once; when one stays open past the next `Done:` or yskills would meet it, say it in one project-chat line before he finds it.
 - Report results and real blockers only; a card never stalls work: the thread goes on with the recommendation, except the ask-first items in `CLAUDE.md` (money, a new paid service, secrets, public posts, deleting a live project or database), which wait for the tap.
-- Close threads (yskills, 2026-10-10: threads stayed open after merge): the builder sleeps once its PR is up and the gate merges, so nobody else will close it. In the turn you post a `Done:` line for a merged PR, resolve the Programmer thread (for S and M it is the gate, after its merge, lessons step and `Done:` line) and the Tester thread (size L only) with `set_thread_resolved` (thread_id), unless their last reply still asks yskills something. Also sweep `list_thread_sessions` at every `Done:` and on the daily loop: resolve every thread whose PR `list_project_prs` shows merged or closed, or whose report was delivered. Resolve it yourself, never wait for the thread to do it.
+- Close threads (yskills 2026-10-10, 10-24, 10-26, 10-27: finished threads stayed open): a thread resolves itself after its `Done:` line or hand-off, and before you stop, every finished thread on your last `list_thread_sessions` board is resolved by you (`set_thread_resolved` with its thread_id) or told with `message_thread` to resolve or say what it waits on; list the board again when it is over two hours old. `rule-guard` (stop) holds you to it. Resolve a thread whose PR `list_project_prs` shows merged or closed, unless its last reply still asks yskills something.
 - Asks ledger (yskills, 2026-10-18: "you are not working to the fullest"; an artifact delete and
   gallery-in-chat ask were acknowledged, then lost): in the turn an ask of yskills arrives, it
   becomes a thread that stays open until it delivers, or, when it is a lasting rule, a line in
@@ -39,6 +39,17 @@ The project chat itself (the coordinator running this skill). Plans with yskills
 - Process cards (gates, tooling) the coordinator decides itself; cards are for money, new services and big design (yskills, 2026-10-24).
 - Fresh coordinator (tool limits, 2026-10-24): `add_repo claude-setup` (push), a Haiku worker clones it to `/home/user/claude-setup` (depth 1, clone only), then `register_repo_root`; the coordinator has no Read, Write or Bash. `start_thread_session` with `project_post_id` takes no ack. Laptop RC sessions hit their limit fast: brief them small. `update_memory` takes at most 16384 bytes and rejects health or disability words.
 - Two relays that disagree (overhaul part 3, 2026-10-25): the later one wins; ask the coordinator when unsure which is later.
+
+## Text only (no hook can judge it)
+
+The repeats of the audit 2026-10-27 (`docs/research/2026-10-27-repeats.md`) that stay judgment; the rest is enforced.
+
+- Every ask of yskills gets a thread, a PR or a `Done:` line the same turn (this file, Asks ledger); a hook cannot tell an ask from chat.
+- "What is open?": keep `MEMORY.md` Pending and the board true, so the answer is one look, never a guess.
+- Taste: copy real life, then better, no AI look (`CLAUDE.md`, UI); the Designer and the journey gate judge it.
+- Tokens: the cheapest model that fits every subagent too; raise `Handoff:` in the brief only for a big task.
+- A `Prior art:` line is forced, its depth is not: name the public setups really checked.
+- Answer in his language, short and informal.
 
 ## Session start
 

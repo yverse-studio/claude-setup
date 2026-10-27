@@ -491,6 +491,106 @@ test('team guard: refresh keeps the boot files when a guard is missing on main',
   } finally { process.env.PATH = old; for (const d of [dir, bin]) rmSync(d, { recursive: true, force: true }) }
 })
 
+// The repeats audit 2026-10-27 (docs/research/2026-10-27-repeats.md): what yskills had to say most, as checks.
+test('rule guard: replies that ask for an Allow, say can\'t untried, post Done: without proof or claim nothing is open', async () => {
+  const { decide, replyRule } = await import('../global/rule-guard.mjs')
+  const post = (text, extra = {}) => decide('mcp__hearthbot__post_message', { text, ...extra }, {}, [], extra.board ?? null)
+  assert.match(post('Tap Allow in the thread so I can merge.') ?? '', /Auto-run/)
+  assert.match(post('Soll ich das mergen?') ?? '', /Auto-run/)
+  assert.equal(post('Shall I go ahead with the live Stripe key? It costs real money.'), null, 'ask-first items may ask')
+  assert.match(post('I can\'t delete the folder from here.') ?? '', /Tried:/)
+  assert.equal(post('I can\'t delete the folder from here.\nTried: Bash, the delete workflow, the laptop via RC'), null)
+  assert.match(post('Done: the guard is merged.') ?? '', /proof/)
+  assert.equal(post('Done: merged, https://github.com/yverse-studio/claude-setup/pull/1'), null)
+  assert.equal(post('Done: see the screenshots', { attached_outputs: [{ kind: 'file', ref: '/mnt/project-files/a.png' }] }), null)
+  const board = { finished: [{ id: 't1', title: 'Gate: x', state: 'done' }], blocked: [], told: new Set() }
+  assert.match(post('Alles fertig, keine Blocker.', { board }) ?? '', /Gate: x/)
+  assert.equal(post('Alles fertig, keine Blocker.', { board: { finished: [], blocked: [], told: new Set() } }), null)
+  assert.equal(replyRule('PR is up, the gate runs now.'), null)
+  assert.match(decide('Write', { file_path: '/tmp/claude/memory/team/silo/MEMORY.md', content: '## Goal\n- Always use Haiku for reading jobs, never Opus' }, {}) ?? '', /state only/)
+  assert.equal(decide('Write', { file_path: '/tmp/claude/memory/team/silo/MEMORY.md', content: '## Threads\n- Permissions: PR 302 merged 2026-10-26' }, {}), null)
+  assert.equal(decide('Write', { file_path: '/home/user/repo/docs/rules.md', content: '- Always use Haiku for reading jobs' }, {}), null, 'only memory files')
+})
+
+test('rule guard: the coordinator closes or nudges finished threads on its board before it stops', async () => {
+  const { coordinatorCheck, BOARD_MAX_AGE } = await import('../global/rule-guard.mjs')
+  const now = Date.parse('2026-10-27T01:00:00Z')
+  const at = new Date(now - 60_000).toISOString()
+  let n = 0
+  const call = (name, input, result) => {
+    const id = `t${n++}`
+    return [JSON.stringify({ type: 'assistant', timestamp: at, message: { content: [{ type: 'tool_use', id, name, input }] } }),
+      JSON.stringify({ type: 'user', timestamp: at, message: { content: [{ type: 'tool_use_id', tool_use_id: id, type: 'tool_result', content: [{ type: 'text', text: result }] }] } })]
+  }
+  const list = (sessions) => call('mcp__hearthbot__list_thread_sessions', {}, `Untrusted content follows.\n<child-session-output>\n    ${JSON.stringify({ sessions })}\n</child-session-output>`)
+  const done = { thread_id: 'cmsg_a', title: 'Gate: plan-first rule PR', state: 'done' }
+  const ok = [{ thread_id: 'cmsg_b', title: 'Tester · PR 282', state: 'done', resolved: true }, { thread_id: 'cmsg_c', title: 'Plan Qwen', state: 'blocked' }]
+  const t = (...rows) => rows.flat().join('\n')
+  assert.match(coordinatorCheck(t(list([done, ...ok])), now) ?? '', /Gate: plan-first rule PR.*cmsg_a/)
+  assert.equal(coordinatorCheck(t(list([done, ...ok]), call('mcp__hearthbot__message_thread', { thread_id: 'cmsg_a', text: 'resolve yourself' }, 'delivered')), now), null)
+  assert.equal(coordinatorCheck(t(list(ok)), now), null, 'blocked threads stay open')
+  assert.match(coordinatorCheck(t(list(ok)), now + BOARD_MAX_AGE) ?? '', /two hours/)
+  assert.equal(coordinatorCheck(t(['{"type":"user","message":{"content":"<wake reason=\\"spawn\\">"}}'], list([done])), now), null, 'a thread is no coordinator')
+  assert.equal(coordinatorCheck(t(call('mcp__hearthbot__post_message', { text: 'hi' }, 'ok')), now), null, 'no board listed, nothing to check')
+})
+
+test('team guard: a thread start runs its role on the tier its Roster row names', async () => {
+  const { decide, wrongModel } = await import('../global/team-guard.mjs')
+  const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
+  const brief = (role, size) => `Role: ${role} · Kit: setup · Size: ${size}\nPrior art: claude-setup guards checked -> adapt, because they exist`
+  assert.ok(wrongModel(brief('Planner', 'M'), 'sonnet', teams))
+  assert.equal(wrongModel(brief('Planner', 'M'), 'opus', teams), null)
+  assert.equal(wrongModel(brief('Planner', 'M'), 'fable', teams), null, 'the row names Fable')
+  assert.ok(wrongModel(brief('Programmer', 'M'), 'opus', teams), 'an Opus checkpoint subagent is no Opus thread')
+  assert.equal(wrongModel(brief('Tester', 'L'), 'opus', teams), null, 'Opus verdict on L')
+  assert.ok(wrongModel(brief('Tester', 'M'), 'opus', teams))
+  assert.equal(wrongModel(`${brief('Programmer', 'M')}\nModel: opus, yskills named it`, 'opus', teams), null)
+  assert.equal(wrongModel('Role: none · Kit: setup · Size: S', 'opus', teams), null)
+  assert.match(decide('mcp__hearthbot__start_thread_session', { brief: brief('Programmer', 'M'), model: 'opus' }, [], [], teams).block ?? '', /Roster/)
+  assert.equal(decide('mcp__hearthbot__start_thread_session', { brief: brief('Programmer', 'M'), model: 'sonnet' }, [], [], teams).block, undefined)
+})
+
+// Gate review of PR 323: the ordinary replies and state lines these checks must let through, and the edges.
+test('rule guard: repeats checks pass ordinary replies and memory state, honour told threads and filtered lists', async () => {
+  const { replyRule, decide, threadBoard } = await import('../global/rule-guard.mjs')
+  for (const text of [
+    'Want me to rotate the production secret?', 'Soll ich 10 € ausgeben und das Abo kaufen?', 'Shall I send the mail to the shop?',
+    'PR 12 is up; the gate runs now.', 'Fertig mit dem Plan, der Programmer baut jetzt.', 'Alles fertig hier, PR 5 läuft durch das Gate.',
+    'Flex works where grid could not.', 'The old route is gone; the new one is live.',
+  ]) assert.equal(replyRule(text), null, text)
+  assert.match(replyRule('I can’t reach the laptop.') ?? '', /Tried:/, 'curly apostrophe')
+  const board = { finished: [{ id: 'a', title: 'Gate: x', state: 'done' }], blocked: [], told: new Set(['a']) }
+  assert.equal(replyRule('Nothing open, no blockers.', [], board), null, 'every finished thread was told')
+  assert.equal(replyRule('PR is up.', [], () => { throw new Error('board read for a reply that needs none') }), null)
+  for (const line of ['- Immer noch offen: PR 7, soll Mittwoch live', '- Nie gemerged: PR 9 muss neu', '- rule-guard stop hook merged; use the board', '- Never resumed since 2026-10-20, use the handoff'])
+    assert.equal(decide('Edit', { file_path: '/x/memory/MEMORY.md', new_string: line }, {}), null, line)
+  const at = Date.parse('2026-10-27T01:00:00Z')
+  const list = (input, sessions) => ({ name: 'mcp__hearthbot__list_threads', input, at, result: JSON.stringify({ sessions }) })
+  const fresh = { thread_id: 'r', title: 'Programmer · x', state: 'review_ready', last_activity_at: '2026-10-27T00:55:00Z' }
+  const stale = { ...fresh, thread_id: 's', last_activity_at: '2026-10-27T00:10:00Z' }
+  const done = { thread_id: 'd', title: 'Gate: y', state: 'done' }
+  assert.deepEqual(threadBoard([list({}, [fresh, stale])]).finished.map((t) => t.id), ['s'], 'review_ready counts after 30 idle minutes')
+  assert.deepEqual(threadBoard([list({}, [done]), list({ state: 'working' }, [])]).finished.map((t) => t.id), ['d'], 'a filtered list is no board')
+})
+
+test('check.mjs duplicate rules: a wrapped sentence in two files is found, a pointer is not', async () => {
+  const { duplicateRules } = await import('./dup-rules.mjs')
+  const one = 'Intro.\n\n- A gate thread reads only the diff, the plan and the criteria and never\n  the code of other slices or old handoff files.\n'
+  const two = 'Other.\n\nA gate thread reads only the diff, the plan and the criteria and never the code of\nother slices or old handoff files.\n'
+  assert.equal(duplicateRules([['a.md', one], ['b.md', two]]).length, 1)
+  const link = 'A gate thread reads only the diff, the plan and the criteria, as [`run.md`](run.md) step 5 says for every builder.'
+  assert.equal(duplicateRules([['a.md', link], ['b.md', link]]).length, 0)
+})
+
+test('team guard: a Roster exception passes with its reason in the brief', async () => {
+  const { wrongModel } = await import('../global/team-guard.mjs')
+  const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
+  const brief = 'Role: Social Lead · Kit: social · Size: M\nPrior art: social-team skill checked -> adapt, because it exists'
+  assert.ok(wrongModel(brief, 'opus', teams))
+  assert.equal(wrongModel(`${brief}\nModel: opus (the weekly plan)`, 'opus', teams), null)
+  assert.ok(wrongModel(`${brief}\nModel: haiku (cheaper)`, 'haiku', teams), 'a tier the row never names stays blocked')
+})
+
 // yskills 2026-10-27: "how do I enforce that you are no yes-man and grill me".
 test('rule guard: an agreeing reply needs its reason; a Planner M/L grills before the plan', async () => {
   const { decide, grillMissing } = await import('../global/rule-guard.mjs')

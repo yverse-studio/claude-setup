@@ -6,7 +6,11 @@
 // pre: refuses (exit 2) a review request or assignee for yskills on a PR (No GitHub mails), a
 // `Card:` text reply where the real card tool exists (Cards), a thread reply over the length cap
 // (Replies), a new Artifact besides the Company XY one (Dashboard), a commit message that is not
-// conventional (Code), and WebFetch in a cloud thread (Cloud threads: WebSearch, no Allow taps).
+// conventional (Code), WebFetch in a cloud thread (Cloud threads: WebSearch, no Allow taps), a memory
+// file write with a rule line (memory holds state only), and a reply that asks yskills for an Allow or a go, says "can't" with nothing tried, posts `Done:` without proof, or
+// says nothing is open while the last thread board shows open threads (replyRule).
+// stop: a thread that posted `Done:` resolves itself; a coordinator closes or nudges every finished
+// thread on its last board and lists the board again when it is over two hours old (coordinatorCheck).
 // prompt: a video link or a bare "stop" gets the matching CLAUDE.md line put next to the message, and
 // the first message naming `Role: <role>` (the brief block, operator/briefs.md) gets that role's
 // Roster row and playbook put into context, so a thread always knows what it is (yskills 2026-10-27).
@@ -53,6 +57,31 @@ export function commitSubjects(command) {
 // yskills, as a reviewer or assignee in a gh command; never the bot account yskills-claude.
 const GH_ASK = /\bgh\s+(pr|issue)\b[^\n]*(?:--(?:add-)?(?:reviewer|assignee)|\s-[ra])[ =]["']?(?:[^\s"']*,)?yskills(?=[,\s"']|$)/i
 
+// The repeats yskills had to say most (audit 2026-10-27, docs/research/2026-10-27-repeats.md), as checks on a reply:
+// asking him for an Allow or a go, "can't" with nothing tried, `Done:` with
+// no proof, and "nothing open" while the board shows open or blocked threads.
+const ASK_ALLOW = /\b(tap|press|click|hit|drück\w*|tipp\w*|klick\w*)\b[^.\n]{0,20}\b(allow|erlauben|zulassen)\b|\b(shall|should|can|may) i (go ahead|proceed|start|merge|push|continue)\b|\bwant me to\b|\b(soll|darf|kann) ich (das |es )?(jetzt )?(los|loslegen|anfangen|starten|mergen|pushen|weitermachen|machen)\b/i
+const ASK_FIRST = /€|\b(money|geld|eur|euro|live key|stripe live|purchas\w*|kauf\w*|paid|bezahl\w*|kosten|ausgeb\w*|force-push\w*|rotat\w*|rotier\w*|e-?mail\w*|send mail|post(en|s)? public\w*|öffentlich\w*|delete (the )?live|database|datenbank\w*)\b/i
+const CANT = /\b(i|we) (can['’]?t|cannot|am unable to|are unable to)\b|\b(ich kann|wir können) (das |es )?nicht\b/i
+const TRIED = /^[\s>*_-]*(tried|versucht)\s*:/im
+const DONE = /^[\s>*_]*Done:/m
+const NOTHING_OPEN = /\b(no blockers?|keine blocker|nothing (is )?(open|left|blocking|needed from you|needs you|waiting on you)|nichts (mehr )?(ist )?(offen|blockiert)|nothing else needs you)\b/i
+// A memory line that reads as a rule: it opens with always/never/rule (not "immer noch", not "rule-guard")
+// and has a must/should/use later; a line with a PR, issue or date is state, never a rule.
+export const RULE_LINE = /^(?![^\n]*(\bPR \d|#\d|\d{4}-\d{2}))\s*[-*]?\s*(\*\*)?(always|never|immer(?! noch)|nie|niemals|rule|regel)(?=[:\s])[^\n]*\b(must|should|soll|muss|do|use|never|nie)\b/i
+// board: the thread board, or a function that builds it; read only when a reply says nothing is open.
+export function replyRule(text, attached = [], board = null) {
+  if (ASK_ALLOW.test(text) && !ASK_FIRST.test(text)) return 'rule-guard: do not ask yskills for an Allow or a go (CLAUDE.md, Auto-run): pick the sensible default and do it; a refused call takes its fixed way around (docs/permissions.md, Layer 3). Only the ask-first items wait, and a choice is a request_decision card.'
+  if (CANT.test(text) && !TRIED.test(text)) return 'rule-guard: "can\'t" needs every route tried first (CLAUDE.md, Never "can\'t"): another tool, a workflow with the org token, the laptop (RC), another approach. Try them; if it is still impossible, add a line `Tried: <route, route, route>` with the one step only his hands can do.'
+  if (DONE.test(text) && !/https?:\/\//.test(text) && !(attached ?? []).length) return 'rule-guard: a `Done:` line carries its proof (CLAUDE.md, Honesty): the live link, the merged PR link or an attached screenshot or test output. Add it, then post.'
+  const listed = NOTHING_OPEN.test(text) && (typeof board === 'function' ? board() : board)
+  if (listed) {
+    const open = [...listed.finished.filter((t) => !listed.told.has(t.id)), ...listed.blocked]
+    if (open.length) return `rule-guard: you say nothing is open, but the board you listed shows ${open.length} open thread(s): ${open.slice(0, 5).map((t) => `"${t.title}" (${t.state})`).join(', ')}. Name what is really open, or close the finished ones first.`
+  }
+  return null
+}
+
 // published: the file paths this session already published to an existing Artifact (republishing by
 // the same file_path without `url` is how the Artifact tool updates it).
 // A reply that opens by agreeing must carry its reason (yskills 2026-10-27: "how do I enforce that you are no yes-man").
@@ -73,7 +102,8 @@ export function grillMissing(tool, input, transcript) {
   return !/"name":"mcp__[^"]*(request_decision|ask_decision)"/.test(text)
 }
 
-export function decide(tool, input = {}, env = {}, published = []) {
+// board: the thread board this session last listed (threadBoard), or a function that builds it, for claims that nothing is open.
+export function decide(tool, input = {}, env = {}, published = [], board = null) {
   if (/^mcp__github__/.test(tool) || tool === 'Bash') {
     const ask = tool === 'Bash'
       ? GH_ASK.test(input.command ?? '')
@@ -90,6 +120,12 @@ export function decide(tool, input = {}, env = {}, published = []) {
     if (bareAgreement(text)) return 'rule-guard: this reply agrees without a reason (CLAUDE.md, Co-founder). Check the claim first (repo, a source, a test), then say agree, disagree or "partly, because ..." with what you checked.'
     const lines = text.split('\n').filter((l) => l.trim()).length
     if (text.length > REPLY_MAX_CHARS || lines > REPLY_MAX_LINES) return `rule-guard: this reply has ${text.length} chars and ${lines} lines; the cap is ${REPLY_MAX_CHARS} and ${REPLY_MAX_LINES} (CLAUDE.md, Replies). Lead with the result in a few lines; put the rest in a file under /mnt/project-files/ and attach it.`
+    const why = replyRule(text, input.attached_outputs, board)
+    if (why) return why
+  }
+  if (/^(Write|Edit)$/.test(tool) && /[\\/]memory[\\/].*\.md$/i.test(String(input.file_path ?? ''))) {
+    const rule = String(input.content ?? input.new_string ?? '').split('\n').find((l) => RULE_LINE.test(l))
+    if (rule) return `rule-guard: memory holds state only (docs/MAP.md, Where a lesson goes): "${rule.trim().slice(0, 80)}" reads as a rule. Put it in its home in claude-setup through a PR and keep only a pointer here.`
   }
   const republish = input.file_path && !input.type_url && published.includes(input.file_path)
   const newArtifact = (tool === 'Artifact' && !input.url && !input.asset && !republish && [undefined, 'publish'].includes(input.action)) || tool === 'mcp__remote-devices__create_artifact'
@@ -213,6 +249,66 @@ export function unresolved(transcript) {
   return finished ? 'rule-guard: this thread posted its Done: line or its hand-off, so it is finished: call set_thread_resolved (resolved: true) as the last step (CLAUDE.md, one thread per plan or PR, closed when done). If yskills still owes an answer, say so in one line instead and stop.' : null
 }
 
+// The transcript's tool calls in order, each with its result text and time: [{ name, input, result, at }].
+export function toolCalls(transcript) {
+  const calls = []
+  const byId = new Map()
+  for (const line of transcript.split('\n')) {
+    if (!line.includes('"tool_')) continue
+    try {
+      const row = JSON.parse(line)
+      for (const c of row.message?.content ?? []) {
+        if (c?.type === 'tool_use') { const call = { name: c.name, input: c.input ?? {}, result: '', at: Date.parse(row.timestamp ?? '') || 0 }; calls.push(call); byId.set(c.id, call) }
+        if (c?.type === 'tool_result' && byId.has(c.tool_use_id)) byId.get(c.tool_use_id).result = typeof c.content === 'string' ? c.content : (c.content ?? []).map((x) => x?.text ?? '').join('\n')
+      }
+    } catch { continue } // a line that is not JSON
+  }
+  return calls
+}
+
+// Every object with a thread_id and a state in a listing (list_threads, list_thread_sessions), whatever the nesting.
+function threadRows(text) {
+  const rows = []
+  const walk = (v) => { if (Array.isArray(v)) v.forEach(walk); else if (v && typeof v === 'object') { if ((v.thread_id ?? v.id) && v.state) rows.push({ ...v, thread_id: v.thread_id ?? v.id }); Object.values(v).forEach(walk) } }
+  for (const m of text.matchAll(/\{[\s\S]*\}/g)) { try { walk(JSON.parse(m[0])) } catch { /* not JSON */ } }
+  return rows
+}
+
+// The board the session listed last: finished threads still open (done, review_ready, failed, stopped and
+// not resolved), blocked ones, when it was listed, and the threads messaged since.
+const LIST = /list_thread(_session)?s$/
+// review_ready counts once it sat 30 minutes: before that the gate is still on it.
+const FINISHED_STATES = new Set(['done', 'failed', 'stopped', 'completed'])
+const REVIEW_IDLE = 30 * 60 * 1000
+export function threadBoard(calls) {
+  // A filtered listing (one state, a since) is no board; the last full one is.
+  const i = calls.findLastIndex((c) => LIST.test(c.name) && c.result && !c.input.state && !c.input.since && !c.input.cursor)
+  if (i < 0) return null
+  const rows = threadRows(calls[i].result)
+  const told = new Set(calls.slice(i + 1).filter((c) => /(message_thread|set_thread_resolved)$/.test(c.name)).map((c) => c.input.thread_id ?? c.input.thread))
+  const pick = (t) => ({ id: t.thread_id, title: String(t.title ?? t.thread_id).slice(0, 60), state: t.state })
+  return {
+    at: calls[i].at,
+    finished: rows.filter((t) => !t.resolved && (FINISHED_STATES.has(t.state) || (t.state === 'review_ready' && calls[i].at - Date.parse(t.last_activity_at ?? '') > REVIEW_IDLE))).map(pick),
+    blocked: rows.filter((t) => t.state === 'blocked' && !t.resolved).map(pick),
+    told,
+  }
+}
+
+// The coordinator (yskills 2026-10-27: "coordinators look after their threads"): before it stops, every
+// finished thread on its last board is resolved or told to resolve, and the board is at most two hours old.
+export const BOARD_MAX_AGE = 2 * 3600 * 1000
+export function coordinatorCheck(transcript, now = Date.now()) {
+  if (/reason=\\?"spawn/.test(transcript) || !transcript.includes('mcp__hearthbot__')) return null // a thread, or no project session
+  const calls = toolCalls(transcript)
+  const board = threadBoard(calls)
+  if (!board) return null // this session never listed its threads (no list tool)
+  const left = board.finished.filter((t) => !board.told.has(t.id))
+  if (left.length) return `rule-guard: ${left.length} finished thread(s) on your board are still open: ${left.slice(0, 6).map((t) => `"${t.title}" (${t.state}, ${t.id})`).join(', ')}. Resolve each (set_thread_resolved with its thread_id where your tool takes one) or message_thread it to resolve itself or say what it still waits on. Then stop.`
+  if (now - board.at > BOARD_MAX_AGE) return 'rule-guard: your thread board is over two hours old. List the threads again (list_thread_sessions or list_threads) and close or nudge every finished one before you stop.'
+  return null
+}
+
 if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/').split('/').pop())) {
   const mode = process.argv[2]
   if (mode === 'read') {
@@ -236,14 +332,15 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           return
         }
         if (mode === 'stop') {
-          const why = !JSON.parse(raw || '{}').stop_hook_active && transcriptPath && existsSync(transcriptPath) ? unresolved(read(transcriptPath)) : null
+          const transcript = !JSON.parse(raw || '{}').stop_hook_active && transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : ''
+          const why = transcript ? unresolved(transcript) ?? coordinatorCheck(transcript) : null
           if (why) process.stdout.write(JSON.stringify({ decision: 'block', reason: why }))
           return
         }
         if (mode !== 'pre') return
         const shipped = join(tmpdir(), `claude-setup-artifacts-${String(session).replace(/\W/g, '')}`)
         const transcript = () => (transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : '')
-        const block = decide(tool, input ?? {}, process.env, session ? read(shipped).split('\n') : [])
+        const block = decide(tool, input ?? {}, process.env, session ? read(shipped).split('\n') : [], () => threadBoard(toolCalls(transcript())))
           ?? (grillMissing(tool, input ?? {}, transcript) ? 'rule-guard: a Planner at size M or L grills first (CLAUDE.md, Grill first; operator SKILL.md): post 3-5 sharp questions as request_decision cards, each with your recommended answer, then write the plan on the answers (or the recommendations while he is away).' : null)
         if (!block && session && tool === 'Artifact' && input?.url && input.file_path) writeFileSync(shipped, `${input.file_path}\n`, { flag: 'a' })
         if (block) { process.stderr.write(block); process.exitCode = 2 }
