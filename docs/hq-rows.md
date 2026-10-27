@@ -4,6 +4,27 @@ HQ is Company XY: https://claude.ai/artifact/TmQ7UpL6EPjXKkpR9S4kJT (code, tests
 and refresher in the private repo yverse-studio/company-xy). This file is the row contract each
 project's Project Manager writes into HQ's db with `ArtifactData`. Every write carries `at`.
 
+**Jetzt block and `ceo` orders (yskills 2026-10-27, the one home of both):** HQ shows every project, not only this one,
+from two things in the project's own repo, so no Project Manager writes HQ rows for it. (1) `PROGRESS.md` starts with a
+`## Jetzt` block, updated in the PRs the project makes anyway (no routine, no separate status file, no AI summary):
+
+```markdown
+## Jetzt
+Ziel: <one sentence>
+Offen:
+- <point>            (3 to 5)
+Wartet auf dich:
+- <one German sentence with a verb> (or "nichts")
+Stand: 2026-10-27
+```
+
+`Wartet auf dich` is what only yskills can do; `Stand` is the day the block was last true; the refresher greys a block older
+than 14 days. A new PR in a repo with a `PROGRESS.md` gets a warning (never a block) when the block is missing or the PR leaves
+the file untouched (`jetztWarning` in `global/rule-guard.mjs`). (2) Orders from HQ are GitHub issues with the label `ceo` in
+the project's repo. At session start the project's Project Manager lists the open `ceo` issues first (`roles/project-manager.md`,
+Session start); each becomes a thread or PR the same turn (Asks ledger), the PR says `Closes #<n>`, and the issue gets one comment
+with the thread's link. A `ceo` issue waits until the project is opened; HQ cannot wake another project.
+
 **HQ is the only dashboard:** a first-person desk, a 3D office with one chibi animal per role, Plan, Team,
 To-dos and Company with every project's money). **A project never publishes its own office page.**
 The Project Manager writes the project's rows into HQ's db with `ArtifactData` (viewing costs no
@@ -17,8 +38,8 @@ done, total, link}]`, `testableAt` = when yskills can try it (ISO time, or a sho
 `team/<id>` for the operator, each thread and each reviewer agent (`name, role, state` =
 working, blocked, waiting, idle or done, `task, next, with[ids], link, linkLabel, preview,
 order`; the desk follows the role word in `role` or the name: Project Manager, Researcher,
-Designer, Programmer, Tester, Reviewer, Security, Legal, Marketer). Every write to `PROGRESS.md` updates the same rows in one batch (pin
-each with `if_version`). The new project also gets a row `projects/<id>` (`name, state` = active,
+Designer, Programmer, Tester, Reviewer, Security, Legal, Marketer). In the Company XY project every write to `PROGRESS.md` updates the same rows in one batch (pin
+each with `if_version`); every other project's status is its `## Jetzt` block above. The new project also gets a row `projects/<id>` (`name, state` = active,
 paused or done, `progress` 0-100, `note, live, order, revenueMonth, revenueTotal`
 (EUR numbers, from the project's public stats route, e.g. duo-test's `/api/stats` in cents divided by
 100; Artifact pages cannot fetch other sites, so the manager copies them at every milestone),
@@ -68,7 +89,7 @@ is stale and the HQ refresher (company-xy `hq-refresh.md`) deletes it with its `
 its row; no deletes on an empty or broken ydeas-world read or when over half would go; `finance` only on yskills' delete tap). The
 refresher owns `state` (from the file: `archived: true` = archived, `parked: true` = paused, else active), `stateAt`,
 `mirror` (repo, last commit, open PRs, PROGRESS.md, status by ydeas-world's own rules) and `working` (this project's working
-threads naming the repo); a PM keeps writing `name, note, you[], money` and never those. A repo pushed in the last 30 days
+threads naming the repo); a PM keeps writing `name, money` and never those (`note` and `you[]` only in the Company XY project; for every other project they come from its `## Jetzt` block). A repo pushed in the last 30 days
 without an entry shows in one "Unbetreute Repos" list (`unclaimed/now`) until yskills says keep (add an entry) or drop.
 **Pause, archive, delete:** the card's taps (one confirm) only write `requests/<id>` (`kind: 'lifecycle'`, `project, slug,
 act, repo`) and message the coordinator, which edits the ydeas-world file: pause = `parked: true`, archive (done or dropped) =

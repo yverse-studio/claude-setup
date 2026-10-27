@@ -783,3 +783,32 @@ test('config/persona.json is valid JSON with at least five example chats', () =>
   assert.ok(card.data.mes_example.split('<START>').length > 5, 'five or more examples')
   assert.ok(!/\b(cock|cunt|pussy|nackt)\b/i.test(card.data.mes_example), 'public file stays mild')
 })
+
+test('rule guard: a PR in a repo with a PROGRESS.md warns when ## Jetzt is missing or untouched, never blocks', async () => {
+  const { jetztWarning } = await import('../global/rule-guard.mjs')
+  const sh = (cwd, ...a) => spawnSync('git', ['-C', cwd, ...a], { encoding: 'utf8' })
+  const repo = mkdtempSync(join(tmpdir(), 'jetzt-'))
+  try {
+    sh(repo, 'init', '-q', '-b', 'main')
+    sh(repo, 'config', 'user.email', 't@t'); sh(repo, 'config', 'user.name', 't')
+    sh(repo, 'remote', 'add', 'origin', 'https://github.com/yverse-studio/yland.git')
+    const commit = (m) => { sh(repo, 'add', '-A'); sh(repo, 'commit', '-qm', m) }
+    const pr = { owner: 'yverse-studio', repo: 'yland', head: 'claude/x', base: 'main' }
+    writeFileSync(join(repo, 'a.txt'), '1'); commit('chore: a')
+    assert.equal(jetztWarning('mcp__github__create_pull_request', pr, repo), null, 'no PROGRESS.md: nothing to keep')
+    writeFileSync(join(repo, 'PROGRESS.md'), '# Progress\n'); commit('docs: progress')
+    sh(repo, 'update-ref', 'refs/remotes/origin/main', 'HEAD')
+    sh(repo, 'checkout', '-q', '-b', 'claude/x')
+    writeFileSync(join(repo, 'a.txt'), '2'); commit('fix: a')
+    assert.match(jetztWarning('mcp__github__create_pull_request', pr, repo), /no `## Jetzt` block/)
+    assert.equal(jetztWarning('mcp__github__update_pull_request', pr, repo), null, 'only a new PR')
+    assert.equal(jetztWarning('mcp__github__create_pull_request', { ...pr, repo: 'other' }, repo), null, 'another repo than cwd')
+    writeFileSync(join(repo, 'PROGRESS.md'), '# Progress\n\n## Jetzt\nZiel: x\nOffen:\n- a\nWartet auf dich:\n- nichts\nStand: 2026-10-27\n'); commit('docs: jetzt')
+    assert.equal(jetztWarning('mcp__github__create_pull_request', pr, repo), null, 'PROGRESS.md changed in the PR')
+    writeFileSync(join(repo, 'a.txt'), '3'); commit('fix: b')
+    sh(repo, 'update-ref', 'refs/remotes/origin/main', 'HEAD~2')
+    assert.equal(jetztWarning('mcp__github__create_pull_request', pr, repo), null, 'still in the diff against base')
+    sh(repo, 'update-ref', 'refs/remotes/origin/main', 'HEAD~1')
+    assert.match(jetztWarning('mcp__github__create_pull_request', pr, repo), /leaves PROGRESS.md untouched/)
+  } finally { rmSync(repo, { recursive: true, force: true }) }
+})
