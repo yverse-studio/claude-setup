@@ -46,7 +46,9 @@ Coordinator only (a thread: Coordinator or thread, above).
    project default and a subagent inherits its parent (tested 2026-10-26: a subagent of an Opus
    thread ran on Opus although `CLAUDE_CODE_SUBAGENT_MODEL` was sonnet; with `model: haiku` it ran
    on Haiku). The `team-guard` hook (`global/team-guard.mjs`) blocks an `Agent` call or thread
-   start without `model`.
+   start without `model`, and a thread start before this session read this file (and `CLAUDE.md`
+   where no checkout loaded it); a worker's summary does not count (2026-10-26: one found no copy
+   and the coordinator guessed every model).
 5. **Agent files load only on the laptop.** A cloud project thread offers only the built-in agent
    types (`general-purpose`, `Explore`, `Plan`; tested 2026-10-26: `code-reviewer` was "not found").
    There, a named agent such as `code-reviewer` or `design-critic` runs as `general-purpose` with

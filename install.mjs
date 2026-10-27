@@ -205,7 +205,7 @@ for (const [event, mode, matcher] of [['PreToolUse', 'pre', 'Bash|mcp__.*'], ['P
   settings.hooks[event] = (settings.hooks[event] ?? []).filter((h) => !JSON.stringify(h).includes('attempt-guard.mjs'))
   settings.hooks[event].push({ matcher, hooks: [{ type: 'command', command: attempt(mode), timeout: 5 }] })
 }
-// Team guard (global/team-guard.mjs): a docs/TEAMS.md pointer at session start and a block on Agent calls and thread starts without `model`; one entry each, replaced on every install.
+// Team guard (global/team-guard.mjs): boot files from main and a docs/TEAMS.md pointer at session start, a block on Agent calls and thread starts without `model` and on thread starts before TEAMS.md was read; one entry each, replaced on every install.
 const team = (mode) => ({ type: 'command', command: `node "${join(CLAUDE_DIR, 'claude-setup', 'team-guard.mjs')}" ${mode}`, timeout: 5 })
 for (const [event, matcher, mode] of [['SessionStart', 'startup|clear|compact', 'start'], ['PreToolUse', 'Agent|Task|mcp__.*start_thread.*|mcp__.*create_session', 'pre']]) {
   settings.hooks[event] = (settings.hooks[event] ?? []).filter((h) => !/team-(brief|guard)\.mjs/.test(JSON.stringify(h)))

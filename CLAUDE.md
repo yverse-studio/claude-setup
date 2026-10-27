@@ -9,7 +9,9 @@ goes in its home only, everywhere else links it.
 
 - Only the coordinator builds teams: `docs/TEAMS.md` (Spawn rule) picks kit, size, roles and `model`.
   A thread is one role and calls only its role's subagents (`docs/TEAMS.md`, Coordinator or thread).
-  Every `Agent` call passes `model`; the `team-guard` hook blocks one without. [guard: hook team-guard.mjs]
+  Every `Agent` call and thread start passes `model`, and a thread start waits until the session
+  has read `CLAUDE.md` and `docs/TEAMS.md` (the boot card names them where no checkout loaded them);
+  the `team-guard` hook blocks both. [guard: hook team-guard.mjs]
 
 ## The world (2026-10-08)
 
@@ -64,20 +66,20 @@ goes in its home only, everywhere else links it.
   recommendation. Prompts and safety checks: `docs/permissions.md`.
 - "Stop", "pause" and taste calls (a rejected asset or look) are final: stop at once, never argue. [advisory]
 - Cards (2026-10-08, a reflex since 2026-10-26): every decision for yskills is a card, never options
-  buried in running text; in Claude Code a reply with one carries the fixed text card (`Card: <question>`, then one
-  line per option `A label: consequence`, the recommended one first, starred, with its reason). The tappable card has short labels (`AskUserQuestion` in Claude Code, multi-select when several answers fit).
-  In a claude.ai project (yskills 2026-10-26: "cards are no real cards any more, fix it") every
-  session posts the real card itself, the thread too: `request_decision` (the coordinator's may be
-  named `ask_decision`): a question of about 12 words, 2-4 options with a short label and a one-line
-  consequence, one recommended with its reason; single choice, so several answers become yes/no
-  cards. Never only `Card:` text when the card tool is there; `Card:` text is the fallback for a
-  session without one. The coordinator has no card tool (tap-tested 2026-10-26): when it needs a
-  decision it starts a one-card thread that posts it, and the coordinator posts one chat line that links to that thread's card (links, never forwards). This holds for every project and chat. `request_decision` has no multi-select (schema checked
-  2026-10-26): when several answers can apply, post one yes/no card per choice. The card's thread goes on with the recommendation; the tap comes back to it as a
-  wake (or relayed by the coordinator); a tap against the
-  recommendation means change course. Only the ask-first items above wait for the tap. Visual choices (2026-10-18) are normal cards with screenshots from a Designer thread,
-  saved in `/mnt/project-files/<project>/votes/` and posted with the card (`designer.md`,
-  Vote cards); never an Artifact, never a vote on words alone. [advisory]
+  buried in running text, in every project and chat. In a claude.ai project every session posts the
+  real card itself, threads too (yskills 2026-10-26): `request_decision` (the coordinator's may be
+  named `ask_decision`), a question of about 12 words, 2-4 options with a short label and a one-line
+  consequence, one recommended with its reason. It is single choice (schema checked 2026-10-26), so
+  answers that can apply together become one yes/no card each. The coordinator has no card tool
+  (tap-tested 2026-10-26): it starts a one-card thread that posts it and posts one chat line linking
+  that card (links, never forwards). Without a card tool (Claude Code): `AskUserQuestion`
+  (multi-select when several answers fit) plus the fixed text card (`Card: <question>`, then one line
+  per option `A label: consequence`, the recommended one first, starred, with its reason). The card's
+  thread goes on with the recommendation; the tap comes back as a wake (or relayed by the
+  coordinator), and a tap against the recommendation means change course. Only the ask-first items
+  above wait for the tap. Visual choices (2026-10-18) are normal cards with screenshots from a
+  Designer thread, saved in `/mnt/project-files/<project>/votes/` and posted with the card
+  (`designer.md`, Vote cards); never an Artifact, never a vote on words alone. [advisory]
 - yskills reads only the project chat (2026-10-08) and opens a thread only when something is
   wrong: the coordinator posts one line per finished part (result, `Done:`, live link), a link to every
   card (the card itself is posted by its thread) and every blocker, no narration; PR links and gate talk stay in threads.
