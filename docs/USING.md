@@ -18,7 +18,9 @@ so the rules live here only.
    rule-guard) are hooks that only exist where the environment's setup script ran
    (`cloud/bootstrap.sh`); a new project starts on the account's default environment, where
    nothing is enforced (blind test 2026-10-27). To skip this step for every future project, paste
-   `cloud/bootstrap.sh` once into the setup script of each other environment in that menu too.
+   this one line once into the Setup script of each other environment in that menu (gear > Setup
+   script; the same as [`cloud/bootstrap.sh`](https://github.com/yverse-studio/claude-setup/blob/main/cloud/bootstrap.sh)):
+   `f="$(mktemp)" && curl -fsSL --retry 3 -o "$f" https://raw.githubusercontent.com/yverse-studio/claude-setup/main/cloud/setup.sh && bash "$f"`
 
 A rule change needs no new paste: sessions read the rules from this repo.
 
