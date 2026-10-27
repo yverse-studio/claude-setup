@@ -164,6 +164,9 @@ const TIERS = ['fable', 'opus', 'sonnet', 'haiku']
 export function wrongModel(text, model, teams) {
   const role = teams && roleOf(text, teams)
   if (!role?.row || !model || /yskills (named|asked|set|chose)/i.test(text)) return null
+  // A row's own exception ("Opus writes the weekly plan") passes when the brief says why: `Model: opus (the weekly plan)`.
+  const why = text.replace(/[*_`]/g, '').match(/^[ \t>-]*Model:[ \t]*(\w+)[^\n]*\([^)\n]{5,}\)/im)?.[1]?.toLowerCase()
+  if (why && String(model).toLowerCase().includes(why) && new RegExp(`\\b${why}\\b`, 'i').test(role.row)) return null
   const parts = (role.row.match(/Model: ([^\n]*?)\.?$/)?.[1] ?? '').split(';').map((p) => p.toLowerCase())
   const sizeL = /\bSize:[ \t]*L\b/i.test(text.replace(/[*_`]/g, ''))
   // The first tier is the thread's own; a later one only for Fable or a size L exception ("Opus verdict on L"), never a subagent's.
@@ -180,7 +183,7 @@ export function decide(tool, input = {}, dirs = [], unread = [], teams = '') {
   if (kind === 'thread' && needsPriorArt(briefText(input))) return { block: 'team-guard: a size M or L brief names what already exists before anything is built (CLAUDE.md, Work for the future): add a line `Prior art: <our repos, skills, plugins, public setups checked> -> copy | adapt | build, because <why>` (or `to find: <where the Researcher looks>`), then retry.' }
   if (kind === 'thread' && needsTester(briefText(input))) return { block: 'team-guard: a size L Programmer thread starts only after its Tester thread (claude-setup docs/TEAMS.md, Sizes). Start `Tester · <app>` first, then put a line `Tester: <its thread id or title>` in this brief and retry.' }
   const wrong = kind === 'thread' && wrongModel(briefText(input), input.model, teams)
-  if (wrong) return { block: `team-guard: the ${wrong.role} runs on ${wrong.allowed.join(' or ')} (claude-setup docs/TEAMS.md, Roster), not ${wrong.tier}. Pass that model; if yskills named this one, say "yskills named <model>" in the brief and retry.` }
+  if (wrong) return { block: `team-guard: the ${wrong.role} runs on ${wrong.allowed.join(' or ')} (claude-setup docs/TEAMS.md, Roster), not ${wrong.tier}. Pass that model. For an exception the row names (e.g. "Opus writes the weekly plan") add \`Model: <tier> (<why>)\` to the brief; if yskills named this model, say "yskills named <model>". Then retry.` }
   if (!kind || String(input.model ?? '').trim()) return {}
   if (kind === 'Agent' && hasOwnModel(input.subagent_type, dirs)) return {}
   return { block: `team-guard: this ${kind === 'Agent' ? 'Agent call' : 'thread start'} has no \`model\`. Pass the model of the role's row in claude-setup docs/TEAMS.md (Roster; Agent: haiku, sonnet or opus; thread: the full id from the Models line), then retry.` }

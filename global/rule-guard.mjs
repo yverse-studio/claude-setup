@@ -60,18 +60,22 @@ const GH_ASK = /\bgh\s+(pr|issue)\b[^\n]*(?:--(?:add-)?(?:reviewer|assignee)|\s-
 // asking him for an Allow or a go, "can't" with nothing tried, `Done:` with
 // no proof, and "nothing open" while the board shows open or blocked threads.
 const ASK_ALLOW = /\b(tap|press|click|hit|drück\w*|tipp\w*|klick\w*)\b[^.\n]{0,20}\b(allow|erlauben|zulassen)\b|\b(shall|should|can|may) i (go ahead|proceed|start|merge|push|continue)\b|\bwant me to\b|\b(soll|darf|kann) ich (das |es )?(jetzt )?(los|loslegen|anfangen|starten|mergen|pushen|weitermachen|machen)\b/i
-const ASK_FIRST = /\b(money|geld|€|eur|euro|live key|stripe live|purchase|kauf|paid|bezahl|kosten|force-push|rotat|rotier|mail|post(en|s)? public|öffentlich|delete (the )?live|database|datenbank)\b/i
-const CANT = /\b(i|we) (can'?t|cannot|am unable to|are unable to)\b|\b(ich kann|wir können) (das |es )?nicht\b|\b(not possible|nicht möglich|unmöglich|impossible)\b/i
+const ASK_FIRST = /€|\b(money|geld|eur|euro|live key|stripe live|purchas\w*|kauf\w*|paid|bezahl\w*|kosten|ausgeb\w*|force-push\w*|rotat\w*|rotier\w*|e-?mail\w*|send mail|post(en|s)? public\w*|öffentlich\w*|delete (the )?live|database|datenbank\w*)\b/i
+const CANT = /\b(i|we) (can['’]?t|cannot|am unable to|are unable to)\b|\b(ich kann|wir können) (das |es )?nicht\b|\b(it['’]?s|is|was|ist|war) (not possible|impossible|nicht möglich|unmöglich)\b/i
 const TRIED = /^[\s>*_-]*(tried|versucht)\s*:/im
 const DONE = /^[\s>*_]*(done|fertig|erledigt):/im
-const NOTHING_OPEN = /\b(no blockers?|keine blocker|nothing (is )?(open|left|blocking|needed from you|needs you|waiting on you)|nichts (mehr )?(offen|blockiert)|nothing else needs you|alles (ist )?(fertig|erledigt))\b/i
-export const RULE_LINE = /^\s*[-*]?\s*(\*\*)?(always|never|immer|nie|niemals|rule|regel)\b[^\n]*\b(must|should|soll|muss|do|use|never|nie)\b/i
+const NOTHING_OPEN = /\b(no blockers?|keine blocker|nothing (is )?(open|left|blocking|needed from you|needs you|waiting on you)|nichts (mehr )?(ist )?(offen|blockiert)|nothing else needs you)\b/i
+// A memory line that reads as a rule: it opens with always/never/rule (not "immer noch", not "rule-guard")
+// and has a must/should/use later; a line with a PR, issue or date is state, never a rule.
+export const RULE_LINE = /^(?![^\n]*(\bPR \d|#\d|\d{4}-\d{2}))\s*[-*]?\s*(\*\*)?(always|never|immer(?! noch)|nie|niemals|rule|regel)(?=[:\s])[^\n]*\b(must|should|soll|muss|do|use|never|nie)\b/i
+// board: the thread board, or a function that builds it; read only when a reply says nothing is open.
 export function replyRule(text, attached = [], board = null) {
   if (ASK_ALLOW.test(text) && !ASK_FIRST.test(text)) return 'rule-guard: do not ask yskills for an Allow or a go (CLAUDE.md, Auto-run): pick the sensible default and do it; a refused call takes its fixed way around (docs/permissions.md, Layer 3). Only the ask-first items wait, and a choice is a request_decision card.'
   if (CANT.test(text) && !TRIED.test(text)) return 'rule-guard: "can\'t" needs every route tried first (CLAUDE.md, Never "can\'t"): another tool, a workflow with the org token, the laptop (RC), another approach. Try them; if it is still impossible, add a line `Tried: <route, route, route>` with the one step only his hands can do.'
   if (DONE.test(text) && !/https?:\/\//.test(text) && !(attached ?? []).length) return 'rule-guard: a `Done:` line carries its proof (CLAUDE.md, Honesty): the live link, the merged PR link or an attached screenshot or test output. Add it, then post.'
-  if (board && NOTHING_OPEN.test(text)) {
-    const open = [...board.finished, ...board.blocked]
+  const listed = NOTHING_OPEN.test(text) && (typeof board === 'function' ? board() : board)
+  if (listed) {
+    const open = [...listed.finished.filter((t) => !listed.told.has(t.id)), ...listed.blocked]
     if (open.length) return `rule-guard: you say nothing is open, but the board you listed shows ${open.length} open thread(s): ${open.slice(0, 5).map((t) => `"${t.title}" (${t.state})`).join(', ')}. Name what is really open, or close the finished ones first.`
   }
   return null
@@ -213,16 +217,19 @@ function threadRows(text) {
 // The board the session listed last: finished threads still open (done, review_ready, failed, stopped and
 // not resolved), blocked ones, when it was listed, and the threads messaged since.
 const LIST = /list_thread(_session)?s$/
-const FINISHED_STATES = new Set(['done', 'review_ready', 'failed', 'stopped', 'completed'])
+// review_ready counts once it sat 30 minutes: before that the gate is still on it.
+const FINISHED_STATES = new Set(['done', 'failed', 'stopped', 'completed'])
+const REVIEW_IDLE = 30 * 60 * 1000
 export function threadBoard(calls) {
-  const i = calls.findLastIndex((c) => LIST.test(c.name) && c.result)
+  // A filtered listing (one state, a since) is no board; the last full one is.
+  const i = calls.findLastIndex((c) => LIST.test(c.name) && c.result && !c.input.state && !c.input.since)
   if (i < 0) return null
   const rows = threadRows(calls[i].result)
   const told = new Set(calls.slice(i + 1).filter((c) => /(message_thread|set_thread_resolved)$/.test(c.name)).map((c) => c.input.thread_id ?? c.input.thread))
   const pick = (t) => ({ id: t.thread_id, title: String(t.title ?? t.thread_id).slice(0, 60), state: t.state })
   return {
     at: calls[i].at,
-    finished: rows.filter((t) => FINISHED_STATES.has(t.state) && !t.resolved).map(pick),
+    finished: rows.filter((t) => !t.resolved && (FINISHED_STATES.has(t.state) || (t.state === 'review_ready' && calls[i].at - Date.parse(t.last_activity_at ?? '') > REVIEW_IDLE))).map(pick),
     blocked: rows.filter((t) => t.state === 'blocked' && !t.resolved).map(pick),
     told,
   }
@@ -264,7 +271,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
       }
       if (mode !== 'pre') return
       const shipped = join(tmpdir(), `claude-setup-artifacts-${String(session).replace(/\W/g, '')}`)
-      const board = tool === 'mcp__hearthbot__post_message' && transcriptPath && existsSync(transcriptPath) ? threadBoard(toolCalls(read(transcriptPath))) : null
+      const board = () => (transcriptPath && existsSync(transcriptPath) ? threadBoard(toolCalls(read(transcriptPath))) : null)
       const block = decide(tool, input ?? {}, process.env, session ? read(shipped).split('\n') : [], board)
       if (!block && session && tool === 'Artifact' && input?.url && input.file_path) writeFileSync(shipped, `${input.file_path}\n`, { flag: 'a' })
       if (block) { process.stderr.write(block); process.exitCode = 2 }

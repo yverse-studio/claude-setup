@@ -382,23 +382,9 @@ else {
   }
 }
 
-// One home per rule (docs/MAP.md; yskills 2026-10-27: "kein doppeln mehr"): a rule sentence of 12 or more
-// words appears in one file only; every other file links its home. A sentence that links or names a
-// `.md` file is such a pointer and may repeat; so may the fixed section intros every role file shares.
-const SHARED_INTROS = ['added at the end of each project operator step 9 date project and its type what to do differently']
+// One home per rule (docs/MAP.md): a rule sentence stands in one file; the others link it.
+const { duplicateRules } = await import('./dup-rules.mjs')
 const DUP_FILES = ['CLAUDE.md', ...walk('docs').filter((f) => /\.md$/.test(f) && !/^docs\/(research|archive|proposals)\//.test(f)), ...walk('.claude/skills/operator').filter((f) => f.endsWith('.md') && !f.includes('/templates/'))]
-function duplicateRules(files) {
-  const homes = new Map()
-  for (const [f, text] of files) {
-    for (const s of text.replace(/```[\s\S]*?```/g, '').split(/(?<=[.!?])\s+|\n/)) {
-      if (/\]\(|`[^`]*\.md/.test(s)) continue
-      const n = s.toLowerCase().replace(/[^a-z0-9äöüß ]+/g, ' ').replace(/\s+/g, ' ').trim()
-      if (n.split(' ').length < 12 || SHARED_INTROS.includes(n)) continue
-      homes.set(n, [...new Set([...(homes.get(n) ?? []), f])])
-    }
-  }
-  return [...homes].filter(([, fs]) => fs.length > 1)
-}
 for (const [n, fs] of duplicateRules(DUP_FILES.map((f) => [f, readFileSync(join(root, f), 'utf8')]))) errors.push(`rule written twice (${fs.join(', ')}): "${n.slice(0, 80)}..." keep it in its home and link it from the others (docs/MAP.md)`)
 
 if (errors.length) { console.error(errors.map((e) => `x ${e}`).join('\n')); process.exit(1) }

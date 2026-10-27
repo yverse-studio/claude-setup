@@ -549,3 +549,44 @@ test('team guard: a thread start runs its role on the tier its Roster row names'
   assert.match(decide('mcp__hearthbot__start_thread_session', { brief: brief('Programmer', 'M'), model: 'opus' }, [], [], teams).block ?? '', /Roster/)
   assert.equal(decide('mcp__hearthbot__start_thread_session', { brief: brief('Programmer', 'M'), model: 'sonnet' }, [], [], teams).block, undefined)
 })
+
+// Gate review of PR 323: the ordinary replies and state lines these checks must let through, and the edges.
+test('rule guard: repeats checks pass ordinary replies and memory state, honour told threads and filtered lists', async () => {
+  const { replyRule, decide, threadBoard } = await import('../global/rule-guard.mjs')
+  for (const text of [
+    'Want me to rotate the production secret?', 'Soll ich 10 € ausgeben und das Abo kaufen?', 'Shall I send the mail to the shop?',
+    'PR 12 is up; the gate runs now.', 'Fertig mit dem Plan, der Programmer baut jetzt.', 'Alles fertig hier, PR 5 läuft durch das Gate.',
+    'Flex works where grid could not.', 'The old route is gone; the new one is live.',
+  ]) assert.equal(replyRule(text), null, text)
+  assert.match(replyRule('I can’t reach the laptop.') ?? '', /Tried:/, 'curly apostrophe')
+  const board = { finished: [{ id: 'a', title: 'Gate: x', state: 'done' }], blocked: [], told: new Set(['a']) }
+  assert.equal(replyRule('Nothing open, no blockers.', [], board), null, 'every finished thread was told')
+  assert.equal(replyRule('PR is up.', [], () => { throw new Error('board read for a reply that needs none') }), null)
+  for (const line of ['- Immer noch offen: PR 7, soll Mittwoch live', '- Nie gemerged: PR 9 muss neu', '- rule-guard stop hook merged; use the board', '- Never resumed since 2026-10-20, use the handoff'])
+    assert.equal(decide('Edit', { file_path: '/x/memory/MEMORY.md', new_string: line }, {}), null, line)
+  const at = Date.parse('2026-10-27T01:00:00Z')
+  const list = (input, sessions) => ({ name: 'mcp__hearthbot__list_threads', input, at, result: JSON.stringify({ sessions }) })
+  const fresh = { thread_id: 'r', title: 'Programmer · x', state: 'review_ready', last_activity_at: '2026-10-27T00:55:00Z' }
+  const stale = { ...fresh, thread_id: 's', last_activity_at: '2026-10-27T00:10:00Z' }
+  const done = { thread_id: 'd', title: 'Gate: y', state: 'done' }
+  assert.deepEqual(threadBoard([list({}, [fresh, stale])]).finished.map((t) => t.id), ['s'], 'review_ready counts after 30 idle minutes')
+  assert.deepEqual(threadBoard([list({}, [done]), list({ state: 'working' }, [])]).finished.map((t) => t.id), ['d'], 'a filtered list is no board')
+})
+
+test('check.mjs duplicate rules: a wrapped sentence in two files is found, a pointer is not', async () => {
+  const { duplicateRules } = await import('./dup-rules.mjs')
+  const one = 'Intro.\n\n- A gate thread reads only the diff, the plan and the criteria and never\n  the code of other slices or old handoff files.\n'
+  const two = 'Other.\n\nA gate thread reads only the diff, the plan and the criteria and never the code of\nother slices or old handoff files.\n'
+  assert.equal(duplicateRules([['a.md', one], ['b.md', two]]).length, 1)
+  const link = 'A gate thread reads only the diff, the plan and the criteria, as [`run.md`](run.md) step 5 says for every builder.'
+  assert.equal(duplicateRules([['a.md', link], ['b.md', link]]).length, 0)
+})
+
+test('team guard: a Roster exception passes with its reason in the brief', async () => {
+  const { wrongModel } = await import('../global/team-guard.mjs')
+  const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
+  const brief = 'Role: Social Lead · Kit: social · Size: M\nPrior art: social-team skill checked -> adapt, because it exists'
+  assert.ok(wrongModel(brief, 'opus', teams))
+  assert.equal(wrongModel(`${brief}\nModel: opus (the weekly plan)`, 'opus', teams), null)
+  assert.ok(wrongModel(`${brief}\nModel: haiku (cheaper)`, 'haiku', teams), 'a tier the row never names stays blocked')
+})
