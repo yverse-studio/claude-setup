@@ -10,7 +10,7 @@ Four layers, each with one job. A fact lives in exactly one layer.
 
 | Layer | What | Where | Who writes | Loaded |
 |---|---|---|---|---|
-| Rules and lessons | every rule, lesson and how-to | claude-setup, one home each, indexed here; product lessons in `<product repo>/docs/LESSONS.md` | threads, through gated PRs | every session, after `add_repo` |
+| Rules and lessons | every rule, lesson and how-to | claude-setup, one home each, indexed here; product lessons in `<product repo>/docs/LESSONS.md` | threads, through gated PRs | automatically with a checkout; elsewhere the `team-guard` boot card names a fresh copy in `~/.claude/claude-setup/` |
 | State | goal, live projects, pending on yskills, open threads, products | the project's `MEMORY.md` only, shape in `.claude/skills/operator/templates/project-memory.md` | the coordinator at milestones; threads their own line | automatically, every start |
 | Boot text | how a session gets to the other layers | Project settings > Project instructions; a pointer, never a rule | yskills pastes, once | every session of that project |
 | History | research, audits, handoffs, screenshots | `/mnt/project-files/<project>/` and `docs/archive/` | threads | only when a brief names it |
@@ -19,7 +19,7 @@ What every session does at start:
 
 | Surface | Reads first | Then |
 |---|---|---|
-| Coordinator (project chat) | `MEMORY.md`, the thread board | `add_repo` claude-setup, `CLAUDE.md`, this section, [`TEAMS.md`](TEAMS.md) (before starting any thread), `roles/project-manager.md` Session start; reconciles board and state |
+| Coordinator (project chat) | `MEMORY.md`, the thread board, the boot card | itself, not a worker: `CLAUDE.md`, this section and [`TEAMS.md`](TEAMS.md) from `~/.claude/claude-setup/` (no checkout there; `team-guard` blocks a thread start until `CLAUDE.md` and `TEAMS.md` were read), `roles/project-manager.md` Session start; reconciles board and state |
 | Thread | its brief, `MEMORY.md` | `add_repo` claude-setup, `CLAUDE.md`, this section, [`TEAMS.md`](TEAMS.md) (Coordinator or thread) and its own Roster row, its role file, never the Spawn rule; for a product also that repo's `CLAUDE.md` and `docs/LESSONS.md` |
 | Claude Code on the laptop | first `git fetch && checkout main && pull` of the claude-setup clone ([`pc-claude-user.md`](pc-claude-user.md), Fresh main first), then `~/.claude/CLAUDE.md` | the project's `CLAUDE.md`; auto-memory is a scratchpad |
 | New claude.ai project | the generated boot text | as a coordinator; its first session sweeps old memory into the repo |
@@ -27,7 +27,7 @@ What every session does at start:
 
 The thread board is read at every coordinator start and wins over memory.
 
-Who reads what: the coordinator reads Start here and the Kits row of the task at hand in [`TEAMS.md`](TEAMS.md) only (the task picks the row, not the project) (its Haiku worker fetches them); every thread reads the Read-first files of its own role from that row, nothing more. A brand-new project with no memory skips the move step of the memory check, writes `MEMORY.md` from the template and says so in one line.
+Each thread reads only the Read-first files of its own role from its Kits row. A brand-new project with no memory skips the move step of the memory check, writes `MEMORY.md` from the template and says so in one line.
 
 ### Where a lesson goes
 
@@ -42,6 +42,7 @@ Who reads what: the coordinator reads Start here and the Kits row of the task at
 | Loads | What | Cost (tokens, est.) |
 |---|---|---|
 | Every session | `CLAUDE.md`, `.claude/rules/ecc/common/*`, one line per skill and agent | ~6k |
+| Every session without a checkout (project chat, product repos) | the `team-guard` boot card (~0.3k); the session then reads `CLAUDE.md`, `MAP.md`, `TEAMS.md` from `~/.claude/claude-setup/` | ~15k |
 | When a matching file is opened | `.claude/rules/ecc/{typescript,vue,nuxt,web}/*` (`paths:` frontmatter) | up to ~9k |
 | When a skill is used | its `SKILL.md`, then the files it links | 0.5k to 6k per skill |
 | When an agent is started | its `.claude/agents/<name>.md`, in its own context | 1k to 2k |

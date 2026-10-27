@@ -284,9 +284,44 @@ test('team guard: an agent file with its own model passes, one without does not'
 })
 
 test('team guard: SessionStart prints the TEAMS.md pointer', () => {
-  const out = JSON.parse(runTeam('start', {}).stdout)
+  const out = JSON.parse(runTeam('start', { cwd: root }, { CLAUDE_SETUP_BOOT_FETCH: 'off' }).stdout)
   assert.equal(out.hookSpecificOutput.hookEventName, 'SessionStart')
   assert.match(out.hookSpecificOutput.additionalContext, /docs\/TEAMS\.md/)
+  assert.doesNotMatch(out.hookSpecificOutput.additionalContext, /Boot \(claude-setup\)/, 'a checkout loads CLAUDE.md itself')
+})
+
+// Incident 2026-10-26: the project chat has no checkout, so CLAUDE.md never loaded and the
+// coordinator started threads with guessed models. Without a checkout the card names the files to
+// read, and a thread start waits until the transcript shows TEAMS.md and CLAUDE.md were read.
+test('team guard: boot card without a checkout, thread start blocked until the rules were read', () => {
+  const home = mkdtempSync(join(tmpdir(), 'team-home-'))
+  const cwd = mkdtempSync(join(tmpdir(), 'team-'))
+  const env = { CLAUDE_SETUP_HOME: home, CLAUDE_SETUP_BOOT_FETCH: 'off' }
+  try {
+    const card = JSON.parse(runTeam('start', { cwd }, env).stdout).hookSpecificOutput.additionalContext
+    assert.match(card, /Boot \(claude-setup\)[\s\S]*add_repo[\s\S]*CLAUDE\.md[\s\S]*TEAMS\.md/)
+    assert.ok(card.length < 10_000, 'hook output over 10,000 characters is cut to a preview')
+    for (const f of ['CLAUDE.md', 'docs/TEAMS.md', 'docs/MAP.md']) cpSync(join(root, f), join(home, '.claude/claude-setup', f))
+    assert.match(JSON.parse(runTeam('start', { cwd }, env).stdout).hookSpecificOutput.additionalContext, new RegExp(`Read ${join(home, '.claude/claude-setup').replace(/[\\.]/g, '\\$&')}/CLAUDE\\.md`))
+    const transcript = join(cwd, 't.jsonl')
+    const use = (name, input) => JSON.stringify({ type: 'assistant', message: { content: [{ type: 'tool_use', name, input }] } })
+    const start = () => runTeam('pre', { cwd, transcript_path: transcript, tool_name: 'mcp__hearthbot__start_thread', tool_input: { brief: 'x', model: 'claude-x-1' } }, env)
+    writeFileSync(transcript, [use('Agent', { prompt: 'read docs/TEAMS.md and CLAUDE.md of claude-setup', model: 'haiku' }), 'not json'].join('\n'))
+    const r = start()
+    assert.equal(r.status, 2, 'an Agent prompt naming the files is not a read')
+    assert.match(r.stderr, /CLAUDE\.md and TEAMS\.md/)
+    writeFileSync(transcript, use('Read', { file_path: `${home}/.claude/claude-setup/docs/TEAMS.md` }))
+    assert.match(start().stderr, /read the rules before starting a thread: CLAUDE\.md \(/)
+    writeFileSync(transcript, [use('Read', { file_path: `${home}/.claude/claude-setup/docs/TEAMS.md` }), use('mcp__github__get_file_contents', { owner: 'yverse-studio', repo: 'claude-setup', path: 'CLAUDE.md' })].join('\n'))
+    assert.equal(start().status, 0)
+    writeFileSync(join(cwd, 'CLAUDE.md'), readFileSync(join(root, 'CLAUDE.md'), 'utf8'))
+    writeFileSync(transcript, use('Bash', { command: 'grep -n Roster docs/TEAMS.md' }))
+    assert.equal(start().status, 0, 'with a checkout only TEAMS.md is needed')
+    assert.equal(runTeam('pre', { cwd: join(root, 'docs'), transcript_path: transcript, tool_name: 'mcp__hearthbot__start_thread', tool_input: { brief: 'x', model: 'claude-x-1' } }, env).status, 0, 'a subfolder of a checkout loads CLAUDE.md too')
+    writeFileSync(transcript, '')
+    assert.equal(start().status, 2)
+    assert.equal(runTeam('pre', { cwd, tool_name: 'mcp__hearthbot__start_thread', tool_input: { brief: 'x', model: 'claude-x-1' } }, env).status, 0, 'no transcript, no read check')
+  } finally { for (const d of [home, cwd]) rmSync(d, { recursive: true, force: true }) }
 })
 
 test('check.mjs fails on a dead TEAMS.md section ref or a MAP.md Kits ref', () => {
