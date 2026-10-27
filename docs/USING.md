@@ -26,7 +26,10 @@ so the rules live here only.
    script; the same as [`cloud/bootstrap.sh`](https://github.com/yverse-studio/claude-setup/blob/main/cloud/bootstrap.sh)):
    `f="$(mktemp)" && curl -fsSL --retry 3 -o "$f" https://raw.githubusercontent.com/yverse-studio/claude-setup/main/cloud/setup.sh && bash "$f"`
 
-A rule change needs no new paste: sessions read the rules from this repo.
+A rule change needs no new paste: sessions read the rules from this repo, and the guards replace
+themselves from `main` at each start. The cloud keeps a built image per setup script, so an
+environment built before that self-update worked (2026-10-27) stays old until its script text
+changes: add or bump a `# rebuild: <date>` line at its end, once.
 
 ## Start an app
 

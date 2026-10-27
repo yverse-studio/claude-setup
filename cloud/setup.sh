@@ -224,10 +224,11 @@ cat > "$HOME/.claude/claude-setup/team-guard.mjs" <<'TEAM'
 // thread start also needs a kit from the Kits table, a size that kit allows, a role on that kit's team
 // (badTeam), and the brief block's Model, Skills, Done when, Stop when and Start lines (missingLines).
 // CLAUDE_SETUP_TEAM_GUARD=off turns it off. It never breaks a tool call on its own errors.
-import { execFileSync } from 'node:child_process'
+import { execFileSync, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
+import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 // rule-guard sits beside this file (GUARD_FILES); without it only the model-tier check is skipped.
 let roleOf = () => null
@@ -261,7 +262,8 @@ const parses = (f) => { try { execFileSync(process.execPath, ['--check', f], { s
 // Two downloads, so a guard missing on main (renamed, or not merged yet) never costs the boot files,
 // and each keeps its own time limit inside the hook's 5 s.
 function fetchAll(dir, files, url, seconds) {
-  const tmp = (f) => join(dir, `${f}.${process.pid}.new`)
+  // The extension stays last, so `node --check` reads a guard as the ES module it is (a `.new` name is CommonJS).
+  const tmp = (f) => join(dir, f.replace(/(\.\w+)?$/, `.${process.pid}.new$1`))
   if (!files.length) return []
   const args = ['-fsSL', '--max-time', String(seconds), '--create-dirs']
   for (const f of files) args.push('-o', tmp(f), url(f))
@@ -270,9 +272,9 @@ function fetchAll(dir, files, url, seconds) {
   // curl -f writes nothing for a missing file; a cut-off run (ok false) keeps a guard only if it still parses.
   return files.map((f) => ({ f, tmp: tmp(f), got: existsSync(tmp(f)) && statSync(tmp(f)).size > 0, ok }))
 }
-export function refresh(dir) {
-  const guards = GUARD_FILES.filter((f) => existsSync(join(dir, f)))
-  const boot = fetchAll(dir, BOOT_FILES, (f) => RAW + f, 2.5)
+export function refresh(dir, only = null) {
+  const guards = GUARD_FILES.filter((f) => existsSync(join(dir, f)) && (!only || only.includes(f)))
+  const boot = only ? [] : fetchAll(dir, BOOT_FILES, (f) => RAW + f, 2.5)
   const code = fetchAll(dir, guards, (f) => `${RAW}global/${f}`, 1.5)
   for (const { f, tmp, got, ok } of [...boot, ...code]) {
     const whole = got && (f.endsWith('.mjs') ? text(tmp).startsWith('#!/usr/bin/env node') && parses(tmp) : ok && (f !== 'CLAUDE.md' || text(tmp).includes(MARK)))
@@ -477,6 +479,18 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
       if (mode === 'card') {
         // The coordinator runs outside any repo (the project chat); a thread sits in a product repo and needs only its role card (rule-guard).
         if (rulesLoaded(cwd, home) || inRepo(cwd)) return
+        // This hook runs beside `start`, so a cached cloud image would build the card with its old guard:
+        // fetch main's team-guard (only it, to stay inside the hook's 5 s), and when the installed copy is
+        // not the code running here, let it build the card; if it prints nothing, this one does.
+        const self = join(dir, 'team-guard.mjs')
+        if (process.env.CLAUDE_SETUP_BOOT_FETCH !== 'off' && existsSync(self)) {
+          refresh(dir, ['team-guard.mjs'])
+          if (text(self) !== text(fileURLToPath(import.meta.url))) {
+            const env = { ...process.env, CLAUDE_SETUP_BOOT_FETCH: 'off' }
+            const out = spawnSync(process.execPath, [self, 'card'], { input: raw, env, encoding: 'utf8', timeout: 2000 }).stdout
+            if (out) return process.stdout.write(out)
+          }
+        }
         const card = coordinatorCard(text(join(dir, 'docs', 'TEAMS.md')), text(join(dir, PM_FILE)))
         if (!card || card.length >= BOOT_MAX) return
         const line = canary(dir)
