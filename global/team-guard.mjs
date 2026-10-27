@@ -24,6 +24,7 @@ import { execFileSync, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
+import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 // rule-guard sits beside this file (GUARD_FILES); without it only the model-tier check is skipped.
 let roleOf = () => null
@@ -67,9 +68,9 @@ function fetchAll(dir, files, url, seconds) {
   // curl -f writes nothing for a missing file; a cut-off run (ok false) keeps a guard only if it still parses.
   return files.map((f) => ({ f, tmp: tmp(f), got: existsSync(tmp(f)) && statSync(tmp(f)).size > 0, ok }))
 }
-export function refresh(dir) {
-  const guards = GUARD_FILES.filter((f) => existsSync(join(dir, f)))
-  const boot = fetchAll(dir, BOOT_FILES, (f) => RAW + f, 2.5)
+export function refresh(dir, only = null) {
+  const guards = GUARD_FILES.filter((f) => existsSync(join(dir, f)) && (!only || only.includes(f)))
+  const boot = only ? [] : fetchAll(dir, BOOT_FILES, (f) => RAW + f, 2.5)
   const code = fetchAll(dir, guards, (f) => `${RAW}global/${f}`, 1.5)
   for (const { f, tmp, got, ok } of [...boot, ...code]) {
     const whole = got && (f.endsWith('.mjs') ? text(tmp).startsWith('#!/usr/bin/env node') && parses(tmp) : ok && (f !== 'CLAUDE.md' || text(tmp).includes(MARK)))
@@ -275,14 +276,15 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         // The coordinator runs outside any repo (the project chat); a thread sits in a product repo and needs only its role card (rule-guard).
         if (rulesLoaded(cwd, home) || inRepo(cwd)) return
         // This hook runs beside `start`, so a cached cloud image would build the card with its old guard:
-        // refresh first, and when that brought a new team-guard, let the new one build the card.
+        // fetch main's team-guard (only it, to stay inside the hook's 5 s), and when the installed copy is
+        // not the code running here, let it build the card; if it prints nothing, this one does.
         const self = join(dir, 'team-guard.mjs')
-        if (process.env.CLAUDE_SETUP_BOOT_FETCH !== 'off') {
-          const before = text(self)
-          refresh(dir)
-          if (text(self) !== before) {
+        if (process.env.CLAUDE_SETUP_BOOT_FETCH !== 'off' && existsSync(self)) {
+          refresh(dir, ['team-guard.mjs'])
+          if (text(self) !== text(fileURLToPath(import.meta.url))) {
             const env = { ...process.env, CLAUDE_SETUP_BOOT_FETCH: 'off' }
-            return process.stdout.write(spawnSync(process.execPath, [self, 'card'], { input: raw, env, encoding: 'utf8', timeout: 2000 }).stdout || '')
+            const out = spawnSync(process.execPath, [self, 'card'], { input: raw, env, encoding: 'utf8', timeout: 2000 }).stdout
+            if (out) return process.stdout.write(out)
           }
         }
         const card = coordinatorCard(text(join(dir, 'docs', 'TEAMS.md')), text(join(dir, PM_FILE)))

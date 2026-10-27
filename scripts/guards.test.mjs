@@ -537,6 +537,10 @@ test('team guard: card refreshes first and lets a new team-guard build the card'
     writeFileSync(join(bin, 'curl'), `#!/bin/sh\nwhile [ $# -gt 0 ]; do\n  if [ "$1" = "-o" ]; then out="$2"; url="$3"; shift 3\n    mkdir -p "$(dirname "$out")"\n    case "$url" in *global/team-guard.mjs) printf '#!/usr/bin/env node\\nimport "node:path"\\nprocess.stdout.write("fresh " + process.argv[2] + " " + process.env.CLAUDE_SETUP_BOOT_FETCH)\\n' > "$out" ;; *) echo doc > "$out" ;; esac\n  else shift; fi\ndone\n`, { mode: 0o755 })
     const env = { CLAUDE_SETUP_HOME: home, PATH: `${bin}:${process.env.PATH}` }
     assert.equal(runTeam('card', { cwd, session_id: 'c1' }, env).stdout, 'fresh card off')
+    writeFileSync(join(bin, 'curl'), '#!/bin/sh\nexit 7\n', { mode: 0o755 })
+    writeFileSync(join(dir, 'team-guard.mjs'), '#!/usr/bin/env node\n// prints nothing\n')
+    mkdirSync(join(dir, 'docs'), { recursive: true }); cpSync(join(root, 'docs', 'TEAMS.md'), join(dir, 'docs', 'TEAMS.md'))
+    assert.match(runTeam('card', { cwd, session_id: 'c2' }, env).stdout, /Coordinator card/, 'a new copy that prints nothing falls back to this one')
   } finally { for (const d of [home, bin, cwd]) rmSync(d, { recursive: true, force: true }) }
 })
 
