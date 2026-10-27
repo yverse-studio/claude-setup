@@ -75,6 +75,8 @@ if (plugins) {
   if (inlined?.replace(/\r/g, '').trim() !== readFileSync(join(root, 'global/context-guard.mjs'), 'utf8').replace(/\r/g, '').trim()) errors.push('cloud/setup.sh context guard differs from global/context-guard.mjs')
   const attempt = sh.match(/<<'ATTEMPT'\r?\n([\s\S]*?)\r?\nATTEMPT\r?\n/)?.[1]
   if (attempt?.replace(/\r/g, '').trim() !== readFileSync(join(root, 'global/attempt-guard.mjs'), 'utf8').replace(/\r/g, '').trim()) errors.push('cloud/setup.sh attempt guard differs from global/attempt-guard.mjs')
+  const ruleGuard = sh.match(/<<'RULE'\r?\n([\s\S]*?)\r?\nRULE\r?\n/)?.[1]
+  if (ruleGuard?.replace(/\r/g, '').trim() !== readFileSync(join(root, 'global/rule-guard.mjs'), 'utf8').replace(/\r/g, '').trim()) errors.push('cloud/setup.sh rule guard differs from global/rule-guard.mjs')
   const team = sh.match(/<<'TEAM'\r?\n([\s\S]*?)\r?\nTEAM\r?\n/)?.[1]
   if (team?.replace(/\r/g, '').trim() !== readFileSync(join(root, 'global/team-guard.mjs'), 'utf8').replace(/\r/g, '').trim()) errors.push('cloud/setup.sh team guard differs from global/team-guard.mjs')
 }
@@ -249,6 +251,16 @@ for (const f of RULE_FILES) {
           : false
     if (!ok) errors.push(`${f}:${it.line}: guard "${kind} ${target}" does not exist (deny/ask: a rule in global/settings.json; test/hook: a file)`)
   }
+}
+
+// Boot budget (audit 2026-10-27): a session without a checkout gets CLAUDE.md and the coordinator card
+// put into context by team-guard; hook context over 10,000 characters is cut to a preview, so both stay under BOOT_MAX.
+{
+  const { BOOT_MAX, rulesCard, coordinatorCard } = await import('../global/team-guard.mjs')
+  const rules = rulesCard(readFileSync(join(root, 'CLAUDE.md'), 'utf8')).length
+  const card = coordinatorCard(readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')).length
+  if (rules >= BOOT_MAX) errors.push(`CLAUDE.md is too long for the boot card (${rules} of ${BOOT_MAX} characters): move detail to its home (docs/MAP.md)`)
+  if (!card || card >= BOOT_MAX) errors.push(`docs/TEAMS.md coordinator card is ${card ? `${card} of ${BOOT_MAX} characters` : 'empty (Spawn rule, Roster or Kits not found)'}: trim the Spawn rule or a Roster cell`)
 }
 
 // The review format has one home (reviewer.md, Report); the own reviewer agents must carry its "Not judged" part.

@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { readFileSync } from 'node:fs'
-import { checkLessons } from './pr-lessons-check.mjs'
+import { checkLessons, checkPriorArt } from './pr-lessons-check.mjs'
 
 const body = (line) => `## What changes\nx\n\n${line}\n`
 
@@ -40,3 +40,11 @@ test('the unfilled PR template fails, so the hint comment never counts as the li
   assert.equal(checkLessons(readFileSync(new URL('../.github/pull_request_template.md', import.meta.url), 'utf8')), false)
 })
 
+
+test('prior art: a decision with what was checked passes, a bare or empty line fails', () => {
+  assert.ok(checkPriorArt(body('Prior art: ECC hooks and superpowers checked; adapt the hook pattern, because ours must read hearthbot tools')))
+  assert.ok(checkPriorArt(body('Prior art: none, because this is a one-line typo fix')))
+  assert.equal(checkPriorArt(body('Prior art:')), false)
+  assert.equal(checkPriorArt(body('Prior art: looked around')), false)
+  assert.equal(checkPriorArt('## What changes\nx\n'), false)
+})

@@ -10,7 +10,7 @@ Four layers, each with one job. A fact lives in exactly one layer.
 
 | Layer | What | Where | Who writes | Loaded |
 |---|---|---|---|---|
-| Rules and lessons | every rule, lesson and how-to | claude-setup, one home each, indexed here; product lessons in `<product repo>/docs/LESSONS.md` | threads, through gated PRs | automatically with a checkout; elsewhere the `team-guard` boot card names a fresh copy in `~/.claude/claude-setup/` |
+| Rules and lessons | every rule, lesson and how-to | claude-setup, one home each, indexed here; product lessons in `<product repo>/docs/LESSONS.md` | threads, through gated PRs | automatically with a checkout; elsewhere `team-guard` puts `CLAUDE.md` itself (fresh from main) into context |
 | State | goal, live projects, pending on yskills, open threads, products | the project's `MEMORY.md` only, shape in `.claude/skills/operator/templates/project-memory.md` | the coordinator at milestones; threads their own line | automatically, every start |
 | Boot text | how a session gets to the other layers | Project settings > Project instructions; a pointer, never a rule | yskills pastes, once | every session of that project |
 | History | research, audits, handoffs, screenshots | `/mnt/project-files/<project>/` and `docs/archive/` | threads | only when a brief names it |
@@ -19,8 +19,8 @@ What every session does at start:
 
 | Surface | Reads first | Then |
 |---|---|---|
-| Coordinator (project chat) | `MEMORY.md`, the thread board, the boot card | itself, not a worker: `CLAUDE.md`, this section and [`TEAMS.md`](TEAMS.md) from `~/.claude/claude-setup/` (no checkout there; `team-guard` blocks a thread start until `CLAUDE.md` and `TEAMS.md` were read), `roles/project-manager.md` Session start; reconciles board and state |
-| Thread | its brief, `MEMORY.md` | `add_repo` claude-setup, `CLAUDE.md`, this section, [`TEAMS.md`](TEAMS.md) (Coordinator or thread) and its own Roster row, its role file, never the Spawn rule; for a product also that repo's `CLAUDE.md` and `docs/LESSONS.md` |
+| Coordinator (project chat) | `MEMORY.md`, the thread board; `CLAUDE.md` and the coordinator card (Spawn rule, Models, Sizes, Roster, Kits) arrive in context by themselves (`team-guard` start and card) | `roles/project-manager.md` Session start; the full [`TEAMS.md`](TEAMS.md), this file or a role file only when a task needs a part the card lacks (copies in `~/.claude/claude-setup/`); reconciles board and state |
+| Thread | its brief (first line `Role: · Kit: · Size:`), `MEMORY.md`; its Roster row and playbook arrive in context by themselves (`rule-guard`) | `add_repo` claude-setup, `CLAUDE.md`, this section, [`TEAMS.md`](TEAMS.md) (Coordinator or thread), never the Spawn rule; for a product also that repo's `CLAUDE.md` and `docs/LESSONS.md` |
 | Claude Code on the laptop | first `git fetch && checkout main && pull` of the claude-setup clone ([`pc-claude-user.md`](pc-claude-user.md), Fresh main first), then `~/.claude/CLAUDE.md` | the project's `CLAUDE.md`; auto-memory is a scratchpad |
 | New claude.ai project | the generated boot text | as a coordinator; its first session sweeps old memory into the repo |
 | Plain chat (no project) | yskills' user preferences | this section; the `operator` skill sizes the job; no memory |
@@ -41,8 +41,8 @@ Each thread reads only the Read-first files of its own role from its Kits row. A
 
 | Loads | What | Cost (tokens, est.) |
 |---|---|---|
-| Every session | `CLAUDE.md`, `.claude/rules/ecc/common/*`, one line per skill and agent | ~6k |
-| Every session without a checkout (project chat, product repos) | the `team-guard` boot card (~0.3k); the session then reads `CLAUDE.md`, `MAP.md`, `TEAMS.md` from `~/.claude/claude-setup/` | ~15k |
+| Every session | `CLAUDE.md` (~2.4k), `.claude/rules/ecc/common/*`, one line per skill and agent | ~5k |
+| Every session without a checkout (project chat, product repos) | `CLAUDE.md` and the coordinator card, put into context by `team-guard` (`scripts/check.mjs` keeps each under 9,800 characters) | ~4.5k |
 | When a matching file is opened | `.claude/rules/ecc/{typescript,vue,nuxt,web}/*` (`paths:` frontmatter) | up to ~9k |
 | When a skill is used | its `SKILL.md`, then the files it links | 0.5k to 6k per skill |
 | When an agent is started | its `.claude/agents/<name>.md`, in its own context | 1k to 2k |
@@ -141,6 +141,8 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 | Briefs point to guide checks, never weaken them; threads read guides fresh from main | `briefs.md` (Every thread brief starts with, Guides) | `roles/project-manager.md` |
 | Models (the line, the model per role and per task) | `docs/TEAMS.md` (Models line, Roster) | everything else links it; CI fails on a model id outside that line |
 | Context guard numbers (warn 250k, hand off 350k) | `global/context-guard.mjs` | `CLAUDE.md`, `README.md` |
+| Hooks that enforce `CLAUDE.md` lines (no PR mails, real cards, reply cap, one Artifact, conventional commits, no WebFetch in the cloud, video and stop notes, the role card) | `global/rule-guard.mjs` (+ `scripts/guards.test.mjs`) | `CLAUDE.md` |
+| `Prior art:` and `Lessons:` lines in every PR body | `scripts/pr-lessons-check.mjs` | `CLAUDE.md`, `.github/pull_request_template.md`, `operator/briefs.md` |
 | Remote Control on the PC | `docs/WORKFLOW.md` (PC work) | operator `SKILL.md` |
 | UI rules | `CLAUDE.md` (UI) | `roles/designer.md`, `ui-review` (screenshots, the load-once check, run videos via `desktop.sh`) |
 | What looks AI-made (the slop list) | `.claude/skills/ui-review/SLOP.md` | `CLAUDE.md` (UI), `design-critic`, `roles/designer.md`, `gate.md` check 5 |

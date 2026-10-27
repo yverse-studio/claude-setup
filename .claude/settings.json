@@ -72,7 +72,9 @@
       "Bash(git -C* push*+main*)",
       "Bash(git -C* push*--delete*main*)",
       "Bash(gh workflow run delete-project*--ref*)",
-      "Bash(gh workflow run delete-project* -r*)"
+      "Bash(gh workflow run delete-project* -r*)",
+      "Bash(pkill *wrangler*)",
+      "Bash(killall *wrangler*)"
     ]
   }
 }

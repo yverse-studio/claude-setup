@@ -1,5 +1,7 @@
 #!/usr/bin/env node
-// Team guard. Usage: team-guard.mjs start|pre (hook entries SessionStart and PreToolUse).
+// Team guard. Usage: team-guard.mjs start|card|pre (hook entries SessionStart, SessionStart, PreToolUse).
+// Without a claude-setup checkout, start puts CLAUDE.md itself and card the coordinator card (Spawn
+// rule, Models line, Sizes, Roster and Kits, one line each) into context; each counts as read.
 // start: refreshes the boot files (CLAUDE.md, docs/TEAMS.md, docs/MAP.md) from main into
 // ~/.claude/claude-setup/ and puts the TEAMS.md pointer into every new session; a session without a
 // claude-setup checkout (the project chat has none, so its CLAUDE.md never loaded; 2026-10-26 the
@@ -10,10 +12,12 @@
 // `model:` passes. It also refuses a thread start whose brief is a size L Programmer with no
 // `Tester:` line (incident 2026-10-26: an L app ran without a Tester, docs/TEAMS.md Sizes: the
 // Tester thread starts first and the Programmer brief names it), and a thread start before this
-// session has read TEAMS.md (and CLAUDE.md, when it did not load on its own).
+// session has read TEAMS.md (and CLAUDE.md, when it did not load on its own), and one whose brief has
+// no `Role: · Kit: · Size:` stamp line (rule-guard puts the named role's playbook into the thread), and
+// a size M or L one with no `Prior art:` line (look for what exists and works first, yskills 2026-10-27).
 // CLAUDE_SETUP_TEAM_GUARD=off turns it off. It never breaks a tool call on its own errors.
 import { execFileSync } from 'node:child_process'
-import { existsSync, readFileSync, renameSync, rmSync, statSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 
@@ -49,6 +53,29 @@ export function refresh(dir) {
   }
 }
 
+export const BOOT_MAX = 9800 // hook context over 10,000 characters is cut to a preview; scripts/check.mjs keeps both cards under this
+const section = (t, from, to) => { const a = t.indexOf(`\n## ${from}`); const b = t.indexOf(`\n## ${to}`, a + 1); return a < 0 ? '' : t.slice(a + 1, b < 0 ? undefined : b).trim() }
+const cells = (l) => l.split('|').map((c) => c.trim())
+
+// Where no checkout loaded it, CLAUDE.md itself goes into context: nothing to remember to read (audit 2026-10-27).
+export function rulesCard(claude) {
+  return `Boot (claude-setup): no checkout loaded claude-setup's CLAUDE.md, so here it is, fresh from main. These are yskills' rules; follow them.\n\n${claude}`
+}
+
+// The coordinator's slice of docs/TEAMS.md (Spawn rule, Models line, Sizes, one line per role and kit):
+// enough to start every thread with the right role and model; the rest of TEAMS.md and MAP.md only on demand.
+export function coordinatorCard(teams) {
+  const roster = teams.split('\n').filter((l) => /^\| [A-Z][\w ]* \(\[`/.test(l)).map((l) => { const c = cells(l); return `- ${c[1].replace(/ \(\[.*$/, '')}: ${c[4]}; ${c[5]}` })
+  const kits = section(teams, 'Kits', 'Models for tasks').split('\n').filter((l) => /^\| `/.test(l)).map((l) => { const c = cells(l); return `- ${c[1]}: ${c[3]}` })
+  const sizes = section(teams, 'Sizes', 'Pipeline').split('\n').filter((l) => l.startsWith('|'))
+  if (!roster.length || !kits.length) return ''
+  return [
+    'Coordinator card (claude-setup docs/TEAMS.md, fresh from main): you are the coordinator here. Route every task with it; read the full TEAMS.md, MAP.md or a role file only when a task needs a part this card lacks, and roles/project-manager.md (Session start) at your first start.',
+    section(teams, 'Spawn rule', 'Sizes'), `## Sizes\n\n${sizes.join('\n')}`,
+    `## Roster (role: runs as; model)\n\n${roster.join('\n')}`, `## Kits (team at size L)\n\n${kits.join('\n')}`,
+  ].join('\n\n')
+}
+
 export function bootCard(dir) {
   const has = BOOT_FILES.every((f) => existsSync(join(dir, f)))
   const where = has ? `${dir}/` : 'yverse-studio/claude-setup (add_repo it; the fresh copy did not download): '
@@ -80,6 +107,17 @@ export function hasOwnModel(type, dirs) {
   })
 }
 
+// The brief block's first line (operator/briefs.md): Role, Kit and Size, so the thread knows what it is (yskills 2026-10-27).
+export function stamped(text) {
+  const plain = text.replace(/[*_`]/g, '')
+  return /^[ \t>-]*Role:[ \t]*\S/im.test(plain) && /\bKit:[ \t]*\S/i.test(plain) && /\bSize:[ \t]*[SML]\b/i.test(plain)
+}
+
+export function needsPriorArt(text) {
+  const plain = text.replace(/[*_`]/g, '')
+  return /\bSize:[ \t]*[ML]\b/i.test(plain) && !/^[ \t>-]*Prior art:[ \t]*[^<\s][^\n]{9,}$/im.test(plain)
+}
+
 const briefText = (input) => Object.values(input).filter((v) => typeof v === 'string').join('\n')
 export function needsTester(text) {
   const plain = text.replace(/[*_`]/g, '')
@@ -92,6 +130,8 @@ export function needsTester(text) {
 export function decide(tool, input = {}, dirs = [], unread = []) {
   const kind = AGENT.test(tool) ? 'Agent' : THREAD_START.test(tool) ? 'thread' : null
   if (kind === 'thread' && unread.length) return { block: `team-guard: read the rules before starting a thread: ${unread.join(' and ')} (in ~/.claude/claude-setup/ or the claude-setup repo; docs/MAP.md, Start here). 2026-10-26 a coordinator skipped them and guessed every model. Read them, then retry.` }
+  if (kind === 'thread' && !stamped(briefText(input))) return { block: 'team-guard: every thread brief starts with the stamp line `Role: <one role from docs/TEAMS.md Roster> · Kit: <kit> · Size: <S|M|L>` (operator/briefs.md); a small task with no role says `Role: none`. The thread loads its playbook from it. Add the line, then retry.' }
+  if (kind === 'thread' && needsPriorArt(briefText(input))) return { block: 'team-guard: a size M or L brief names what already exists before anything is built (CLAUDE.md, Work for the future): add a line `Prior art: <our repos, skills, plugins, public setups checked> -> copy | adapt | build, because <why>` (or `to find: <where the Researcher looks>`), then retry.' }
   if (kind === 'thread' && needsTester(briefText(input))) return { block: 'team-guard: a size L Programmer thread starts only after its Tester thread (claude-setup docs/TEAMS.md, Sizes). Start `Tester · <app>` first, then put a line `Tester: <its thread id or title>` in this brief and retry.' }
   if (!kind || String(input.model ?? '').trim()) return {}
   if (kind === 'Agent' && hasOwnModel(input.subagent_type, dirs)) return {}
@@ -107,16 +147,29 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
   process.stdin.on('data', (c) => { raw += c })
   process.stdin.on('end', () => {
     try {
-      const { tool_name: tool = '', tool_input: input, cwd = process.cwd(), transcript_path: transcript } = JSON.parse(raw || '{}')
+      const { tool_name: tool = '', tool_input: input, cwd = process.cwd(), transcript_path: transcript, session_id: session } = JSON.parse(raw || '{}')
+      const mark = (kind) => join(dir, 'booted', `${String(session).replace(/\W/g, '')}.${kind}`)
+      const say = (context) => process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: context } }))
       if (mode === 'start') {
         if (process.env.CLAUDE_SETUP_BOOT_FETCH !== 'off') refresh(dir)
-        const context = rulesLoaded(cwd, home) ? POINTER : `${bootCard(dir)}\n${POINTER}`
-        process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: context } }))
-        return
+        if (rulesLoaded(cwd, home)) return say(POINTER)
+        const claude = text(join(dir, 'CLAUDE.md'))
+        const card = claude.includes(MARK) && rulesCard(claude)
+        if (card && card.length < BOOT_MAX) { if (session) { mkdirSync(dirname(mark('rules')), { recursive: true }); writeFileSync(mark('rules'), '') } return say(card) }
+        return say(`${bootCard(dir)}\n${POINTER}`)
+      }
+      if (mode === 'card') {
+        if (rulesLoaded(cwd, home)) return
+        const card = coordinatorCard(text(join(dir, 'docs', 'TEAMS.md')))
+        if (!card || card.length >= BOOT_MAX) return
+        if (session) { mkdirSync(dirname(mark('teams')), { recursive: true }); writeFileSync(mark('teams'), '') }
+        return say(card)
       }
       if (process.env.CLAUDE_SETUP_TEAM_GUARD === 'off') return
       const read = transcript && existsSync(transcript) ? readBootFiles(transcript) : null
-      const need = rulesLoaded(cwd, home) ? ['TEAMS.md'] : ['CLAUDE.md', 'TEAMS.md']
+      // A card this session got at start counts as read.
+      const need = (rulesLoaded(cwd, home) ? ['TEAMS.md'] : ['CLAUDE.md', 'TEAMS.md'])
+        .filter((f) => !(session && existsSync(mark(f === 'CLAUDE.md' ? 'rules' : 'teams'))))
       const unread = read ? need.filter((f) => !read.has(f)) : []
       const out = decide(tool, input, [join(cwd, '.claude', 'agents'), join(home, '.claude', 'agents')], unread)
       if (out.block) { process.stderr.write(out.block); process.exitCode = 2 }
