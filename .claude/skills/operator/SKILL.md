@@ -145,8 +145,9 @@ Templates in `templates/`.
 - `metrics/<yyyy>-W<ww>.json`: from launch on, the week's numbers. HQ reads these (`docs/hq-rows.md`).
 - **Dashboard: HQ is the only one.** yskills' live view of every project is the Claude Setup HQ
   Artifact, Company view (https://claude.ai/artifact/TmQ7UpL6EPjXKkpR9S4kJT; code in yverse-studio/company-xy). **A project never
-  publishes its own office page.** The Project Manager writes the project's rows into HQ's db with
-  `ArtifactData`, in one batch with every `PROGRESS.md` write, exactly as `docs/hq-rows.md` says
+  publishes its own office page.** A project shows in HQ through the `## Jetzt` block at the top of its
+  `PROGRESS.md` and its `ceo` order issues (`docs/hq-rows.md`, Jetzt block); only in the Company XY project does the Project Manager write
+  HQ's db with `ArtifactData`, in one batch with every `PROGRESS.md` write, exactly as `docs/hq-rows.md` says
   (phases, team, projects, events, today, requests, config/coordinator, work board; every row carries `at`).
   **At every merge** it brings the project's `phases` rows true in that batch (merged step `done` with `link` and
   `testableAt`, next step `active` with `sessions` and `testableAt`, `project` and `at` on each): HQ's Roadmap tab

@@ -1,4 +1,4 @@
-# HQ rows: what every Project Manager writes
+# HQ rows: the Jetzt block, and what the Company XY Project Manager writes
 
 HQ is Company XY: https://claude.ai/artifact/TmQ7UpL6EPjXKkpR9S4kJT (code, tests, publish recipe
 and refresher in the private repo yverse-studio/company-xy). This file is the row contract each
@@ -27,7 +27,7 @@ with the thread's link. A `ceo` issue waits until the project is opened; HQ cann
 
 **HQ is the only dashboard:** a first-person desk, a 3D office with one chibi animal per role, Plan, Team,
 To-dos and Company with every project's money). **A project never publishes its own office page.**
-The Project Manager writes the project's rows into HQ's db with `ArtifactData` (viewing costs no
+In the Company XY project the Project Manager writes the project's rows into HQ's db with `ArtifactData` (viewing costs no
 tokens, only these writes do) and never republishes the page: that happens only from company-xy (publish recipe in its
 README, pin writes with `if_version`). At project start it plans the phases (brief (a)'s plan:
 research, plan, scaffold, one per slice or group of slices, launch, grow) and writes one batch,
