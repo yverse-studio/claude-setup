@@ -596,6 +596,7 @@ test('rule guard: an agreeing reply needs its reason; a Planner M/L grills befor
   const { decide, grillMissing } = await import('../global/rule-guard.mjs')
   const post = (text) => decide('mcp__hearthbot__post_message', { text }, {})
   assert.match(post('Du hast recht, mach ich.') ?? '', /Co-founder/)
+  for (const bare of ['Du hast recht, mache ich.', 'Du hast recht, das ist gut.']) assert.match(post(bare) ?? '', /Co-founder/, bare)
   assert.match(post("You're right!") ?? '', /Co-founder/)
   assert.equal(post('Stimmt teilweise, weil TEAMS.md Fable schon für Architektur nennt.'), null)
   assert.equal(post('Fertig: PR 3 ist drin.'), null)

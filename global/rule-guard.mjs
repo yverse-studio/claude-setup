@@ -85,7 +85,7 @@ export function replyRule(text, attached = [], board = null) {
 // published: the file paths this session already published to an existing Artifact (republishing by
 // the same file_path without `url` is how the Artifact tool updates it).
 // A reply that opens by agreeing must carry its reason (yskills 2026-10-27: "how do I enforce that you are no yes-man").
-const YES = /^(du hast (völlig |total |absolut )?recht|stimmt|genau|richtig|(ja,? )?klar|you'?re (totally |absolutely )?right|you are right|agreed|absolutely|exactly|right)(,? (mach ich|ich mach(e)? (das|es)|i'?ll do it|on it|ok(ay)?))?$/i
+const YES = /^(du hast (völlig |total |absolut )?recht|stimmt|genau|richtig|(ja,? )?klar|you'?re (totally |absolutely )?right|you are right|agreed|absolutely|exactly|right)(,.*)?$/i
 const REASON = /\b(weil|denn|da ich|geprüft|getestet|laut|because|checked|tested)\b/i
 // Only an opening sentence that is nothing but agreement counts; "Genau das ist fertig" or "Stimmt nicht" do not.
 export const bareAgreement = (text) => YES.test(text.replace(/^[\s*_>]+/, '').split(/[.!?\n]/)[0].trim()) && !REASON.test(text)
