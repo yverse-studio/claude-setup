@@ -54,7 +54,9 @@ function prompts(text) {
       const c = d.message?.content
       if (typeof c === 'string') out.push(c)
       else if (Array.isArray(c)) for (const b of c) if (b?.type === 'text') out.push(b.text)
-    } catch {}
+    } catch {
+      // the head chunk's cut-off last line
+    }
   }
   return out
 }
@@ -74,9 +76,10 @@ export function limits(head, env = process.env) {
 
 // Run as the hook; tests import limits() without reading stdin.
 // Real paths on both sides, so a symlinked ~/.claude still runs it.
-let main = false
-try { main = realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url)) } catch {}
-if (main) run()
+const isMain = () => {
+  try { return realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url)) } catch { return false }
+}
+if (isMain()) run()
 
 function run() {
   let raw = ''
