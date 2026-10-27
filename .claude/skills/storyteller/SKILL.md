@@ -18,8 +18,8 @@ Project specifics (the cast, the chapter plan, explicit text) live in the game's
 2. **Bible first**: cast sheets, relations, world, the preset. No bible yet: write it before chapter 1.
 3. **Ladder** (`03`): name each chapter's rung in the plan; escalate one rung per scene, never skip one; start
    early (first teasing beat by chapter 2 or 3) and keep a steady curve to the finale.
-4. **Harem rule** (`01`, The harem rule): the harem dynamic starts early and every woman is fine sharing;
-   jealousy stays a playful tell, rivalry stays play, nothing blocks a route.
+4. **Harem rule** (`01`, The harem rule): rivals first, the harem dynamic starts early, every woman ends fine
+   sharing; jealousy stays a playful tell, nothing blocks a route.
 5. **Preset per chapter** (`04`), never mid-beat.
 6. **The run** (`05`): plan (15 lines) → draft in the game's beat format → critic rubric, fail at ≤ 3 →
    continuity pass (who knows what, which flag is set, first kiss is first once, times and places) → lint →

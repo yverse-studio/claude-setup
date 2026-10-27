@@ -39,12 +39,15 @@ Clannad, Fate and every eroge use the same shape and it fits a game better than 
 - **Role reversal** (the composed one loses composure; the slob is competent at one thing).
 - **The pact** (Girlfriend Girlfriend): rules the characters set for themselves and then bend.
 
-## The harem rule (yskills 2026-10-27, final; every harem story, one home is this section)
+## The harem rule (yskills 2026-10-27, corrected the same day; every harem story, this section is its one home)
 
-- **The harem dynamic starts early.** The first teasing beat by chapter 2 or 3 and the second woman on page by chapter 2 to 4. Women notice each other from the start and the lead's circle is visibly shared well before the midpoint; the shared-circle feel is a reason to read, not a payoff held back for the finale.
-- **All the women are fine with sharing.** No woman demands he choose, no woman leaves, sulks for a chapter or blocks another's route. Jealousy is allowed only as a playful tell: teasing, a competitive streak, a pout that resolves in the same scene, a bet. It never blocks a rung, never costs a friendship, and is never hurt left standing at a chapter end. Rivalry stays play (who gets him for lunch, who wins the bet), warm underneath.
-- **Sharing is said out loud, early, and means it.** The admission and the rule rungs of the second ladder (`03`) are comic and affectionate and may come in the first third; each woman's reason to be fine with it is true to her sheet, never a plot device.
-- **Her romance is still her own.** Each woman keeps her own full ladder and her own night; sharing adds scenes between the women, it removes none of hers. All characters adult, on page and on the sheet, as everywhere.
+The typical Kadokawa and anime harem dynamic: rivals first, one family at the end.
+
+- **The harem dynamic starts early.** First teasing beat by chapter 2 or 3, the second woman on page by chapter 2 to 4. From then on the women are visibly competing for him in the same rooms.
+- **Not everyone is a fan of sharing at first (that would be unrealistic).** Each woman starts as a rival who wants him for herself. What she is fine with from the start is the contest: she accepts being rivals and accepts that the others try too. Nobody demands he choose, leaves, sabotages for real or blocks another woman's route.
+- **By the end it is the full harem.** Through the second ladder (`03`: notice, measure, truce, admission, rule, ally, pact, family) every woman arrives, in her own time and for a reason true to her sheet, at being fine with sharing, and the finale shows them all happy together. Nobody is talked into it by a plot device.
+- **Jealousy is a playful tell.** Teasing, a competitive streak, a pout that resolves in the same scene, a bet. Never hurt left standing at a chapter end, never a friendship cost. Rivalry stays play and warm underneath.
+- **Her romance is still her own.** Each woman keeps her full ladder and her own night; sharing adds scenes between the women and removes none of hers. All characters adult, on page and on the sheet.
 
 ## What's dated vs still loved (2026)
 
