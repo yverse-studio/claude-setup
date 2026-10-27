@@ -401,7 +401,7 @@ test('rule guard: blocks the rules that were text only, passes the normal calls'
   // Gate review 2026-10-27: only a real commit is checked, every commit in the command is.
   for (const c of [`echo "remember: git commit -m 'wip stuff' later"`, `grep -rn "git commit -m 'x'" docs/`, 'git merge --no-commit -m "stuff" topic', 'git log --grep=commit -m "x"',
     "cat > a.md <<'EOF'\n# Title\nEOF\ngit add a.md && git commit -m \"docs: add a\""]) assert.equal(decide('Bash', { command: c }, {}), null, c)
-  for (const c of ['git commit -am "wip"', 'git commit -m "feat: a" && git commit -m "bad"', 'git commit -m wip', 'cd x; git -C repo commit -m "oops"']) assert.match(decide('Bash', { command: c }, {}) ?? '', /conventional/, c)
+  for (const c of ['git commit -am "wip"', 'git commit -m "feat: a" && git commit -m "bad"', 'git commit -m wip', 'cd x; git -C repo commit -m "oops"', 'if x; then git commit -m "bad"; fi']) assert.match(decide('Bash', { command: c }, {}) ?? '', /conventional/, c)
   assert.equal(decide('Bash', { command: 'gh pr create --title x --assignee yskills-claude' }, {}), null, 'the bot account is fine')
   assert.match(decide('Bash', { command: 'gh pr create -t x -r yskills' }, {}) ?? '', /No GitHub mails/)
   assert.equal(decide('Artifact', { file_path: '/tmp/hq.html' }, {}, ['/tmp/hq.html']), null, 'republishing an Artifact this session updated by url')
@@ -466,5 +466,27 @@ test('rule guard: a finished thread that did not resolve itself is sent back onc
     assert.equal(stop(), '')
     writeFileSync(t, [spawn, use('mcp__hearthbot__post_message', { text: 'PR is up, gate runs' })].join('\n'))
     assert.equal(stop(), '', 'work still going')
+    writeFileSync(t, [spawn, use('mcp__hearthbot__post_message', { text: 'Done: part 1 live' }), use('Bash', { command: 'npm test' })].join('\n'))
+    assert.equal(stop(), '', 'a Done: line followed by more work is a part, not the end')
+    writeFileSync(t, [spawn, use('mcp__hearthbot__post_message', { text: 'Done: all live' }), use('mcp__hearthbot__update_progress_checklist', { text: 'x' })].join('\n'))
+    assert.match(JSON.parse(stop()).reason, /set_thread_resolved/, 'a checklist update after the result does not count as more work')
   } finally { rmSync(dir, { recursive: true, force: true }) }
+})
+
+// Gate review 2026-10-27: a guard missing on main must not stop the boot files from refreshing.
+test('team guard: refresh keeps the boot files when a guard is missing on main', async () => {
+  const { refresh } = await import('../global/team-guard.mjs')
+  const dir = mkdtempSync(join(tmpdir(), 'refresh-'))
+  const bin = mkdtempSync(join(tmpdir(), 'fakecurl-'))
+  const old = process.env.PATH
+  try {
+    // A fake curl: writes each -o target for docs, fails (exit 22, no file) for global/*.
+    writeFileSync(join(bin, 'curl'), `#!/bin/sh\nrc=0\nwhile [ $# -gt 0 ]; do\n  if [ "$1" = "-o" ]; then out="$2"; url="$3"; shift 3\n    case "$url" in *global/*) rc=22 ;; *CLAUDE.md) mkdir -p "$(dirname "$out")"; echo '# Working for yskills' > "$out" ;; *) mkdir -p "$(dirname "$out")"; echo doc > "$out" ;; esac\n  else shift; fi\ndone\nexit $rc\n`, { mode: 0o755 })
+    writeFileSync(join(dir, 'rule-guard.mjs'), '#!/usr/bin/env node\n// old\n')
+    process.env.PATH = `${bin}:${old}`
+    if (process.platform === 'win32') return
+    refresh(dir)
+    assert.match(readFileSync(join(dir, 'CLAUDE.md'), 'utf8'), /Working for yskills/)
+    assert.match(readFileSync(join(dir, 'rule-guard.mjs'), 'utf8'), /\/\/ old/, 'the installed guard stays when main has none')
+  } finally { process.env.PATH = old; for (const d of [dir, bin]) rmSync(d, { recursive: true, force: true }) }
 })

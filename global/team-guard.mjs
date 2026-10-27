@@ -45,19 +45,26 @@ export function rulesLoaded(cwd, home) {
 // copy arrived whole and passes `node --check`. A new hook entry still needs install.mjs or a rebuild.
 export const GUARD_FILES = ['context-guard.mjs', 'attempt-guard.mjs', 'team-guard.mjs', 'rule-guard.mjs']
 const parses = (f) => { try { execFileSync(process.execPath, ['--check', f], { stdio: 'ignore', timeout: 2000 }); return true } catch { return false } }
-export function refresh(dir) {
+// Two downloads, so a guard missing on main (renamed, or not merged yet) never costs the boot files,
+// and each keeps its own time limit inside the hook's 5 s.
+function fetchAll(dir, files, url, seconds) {
   const tmp = (f) => join(dir, `${f}.${process.pid}.new`)
-  const guards = GUARD_FILES.filter((f) => existsSync(join(dir, f)))
-  const args = ['-fsSL', '--max-time', '3', '--create-dirs']
-  for (const f of BOOT_FILES) args.push('-o', tmp(f), RAW + f)
-  for (const f of guards) args.push('-o', tmp(f), `${RAW}global/${f}`)
+  if (!files.length) return []
+  const args = ['-fsSL', '--max-time', String(seconds), '--create-dirs']
+  for (const f of files) args.push('-o', tmp(f), url(f))
   let ok = true
-  try { execFileSync('curl', args, { stdio: 'ignore', timeout: 4000 }) } catch { ok = false }
-  for (const f of [...BOOT_FILES, ...guards]) {
-    const got = ok && existsSync(tmp(f)) && statSync(tmp(f)).size > 0
-    const whole = got && (f === 'CLAUDE.md' ? text(tmp(f)).includes(MARK) : !f.endsWith('.mjs') || (text(tmp(f)).startsWith('#!/usr/bin/env node') && parses(tmp(f))))
-    if (whole) renameSync(tmp(f), join(dir, f))
-    else rmSync(tmp(f), { force: true })
+  try { execFileSync('curl', args, { stdio: 'ignore', timeout: seconds * 1000 + 500 }) } catch { ok = false }
+  // curl -f writes nothing for a missing file; a cut-off run (ok false) keeps a guard only if it still parses.
+  return files.map((f) => ({ f, tmp: tmp(f), got: existsSync(tmp(f)) && statSync(tmp(f)).size > 0, ok }))
+}
+export function refresh(dir) {
+  const guards = GUARD_FILES.filter((f) => existsSync(join(dir, f)))
+  const boot = fetchAll(dir, BOOT_FILES, (f) => RAW + f, 2.5)
+  const code = fetchAll(dir, guards, (f) => `${RAW}global/${f}`, 1.5)
+  for (const { f, tmp, got, ok } of [...boot, ...code]) {
+    const whole = got && (f.endsWith('.mjs') ? text(tmp).startsWith('#!/usr/bin/env node') && parses(tmp) : ok && (f !== 'CLAUDE.md' || text(tmp).includes(MARK)))
+    if (whole) renameSync(tmp, join(dir, f))
+    else rmSync(tmp, { force: true })
   }
 }
 

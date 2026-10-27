@@ -29,7 +29,7 @@ const names = (v) => (Array.isArray(v) ? v : typeof v === 'string' ? v.split(/[\
 // The subject lines of every `git commit` in a Bash command: `-m "..."`, `-am '...'`, `-m word`, or
 // `-m "$(cat <<'EOF' ...`. Only a real git commit counts: one that starts a command (after a separator),
 // never "git commit" inside an echo, a grep or `git merge --no-commit`. Empty when there is nothing to check.
-const COMMIT = /(?:^|&&|\|\||[;|(\n])\s*(?:\w+=\S*\s+)*git(?:\s+-[Cc]\s+\S+)*\s+commit\b(?=([^\n]*))/g
+const COMMIT = /(?:^|&&|\|\||[;|(\n])\s*(?:(?:then|do|else)\s+)?(?:\w+=\S*\s+)*git(?:\s+-[Cc]\s+\S+)*\s+commit\b(?=([^\n]*))/g
 export function commitSubjects(command) {
   const out = []
   for (const m of command.matchAll(COMMIT)) {
@@ -145,7 +145,8 @@ export function unresolved(transcript) {
       for (const c of JSON.parse(line).message?.content ?? []) {
         if (c?.type !== 'tool_use') continue
         if (/post_message$/.test(c.name)) finished = FINISHED.test(String(c.input?.text ?? ''))
-        else if (/set_thread_resolved$/.test(c.name)) finished = false
+        // Only a result that ends the work counts: any real tool call after it means the thread went on.
+        else if (!/^mcp__hearthbot__(update_progress_checklist|react|unreact|no_reply_needed)$/.test(c.name)) finished = false
       }
     } catch { continue } // a line that is not JSON
   }
