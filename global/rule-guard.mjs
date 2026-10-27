@@ -56,17 +56,21 @@ const GH_ASK = /\bgh\s+(pr|issue)\b[^\n]*(?:--(?:add-)?(?:reviewer|assignee)|\s-
 // published: the file paths this session already published to an existing Artifact (republishing by
 // the same file_path without `url` is how the Artifact tool updates it).
 // A reply that opens by agreeing must carry its reason (yskills 2026-10-27: "how do I enforce that you are no yes-man").
-const YES = /^[\s*_]*(du hast (völlig |total |absolut )?recht|stimmt|genau|richtig|ja,? klar|you'?re (totally |absolutely )?right|you are right|agreed|absolutely|exactly)\b/i
-const REASON = /\b(weil|denn|da ich|geprüft|getestet|laut|because|since|checked|tested|per)\b/i
+const YES = /^(du hast (völlig |total |absolut )?recht|stimmt|genau|richtig|(ja,? )?klar|you'?re (totally |absolutely )?right|you are right|agreed|absolutely|exactly|right)(,? (mach ich|ich mach(e)? (das|es)|i'?ll do it|on it|ok(ay)?))?$/i
+const REASON = /\b(weil|denn|da ich|geprüft|getestet|laut|because|checked|tested)\b/i
+// Only an opening sentence that is nothing but agreement counts; "Genau das ist fertig" or "Stimmt nicht" do not.
+export const bareAgreement = (text) => YES.test(text.replace(/^[\s*_>]+/, '').split(/[.!?\n]/)[0].trim()) && !REASON.test(text)
 
 // Grill first (CLAUDE.md): a Planner at size M or L posts at least one grill card before it writes the plan or opens a PR.
+// Role, size and "just do it" are read from the spawn brief only, never from files the thread read later.
 export function grillMissing(tool, input, transcript) {
   const writesPlan = (/^(Write|Edit)$/.test(tool) && /(^|[\\/])PLAN\.md$/.test(String(input.file_path ?? ''))) || tool === 'mcp__github__create_pull_request'
-  if (!writesPlan || !transcript) return false
-  const brief = transcript.replace(/[*_`]|\\[nt]/g, ' ')
-  if (!/reason=\\?"spawn/.test(transcript) || !/Role:\s*Planner\b/i.test(brief) || !/Size:\s*[ML]\b/i.test(brief)) return false
+  if (!writesPlan) return false
+  const text = transcript()
+  const brief = text.split('\n').find((l) => /reason=\\?"spawn/.test(l))?.replace(/[*_`]|\\[nt]/g, ' ')
+  if (!brief || !/Role:\s*Planner\b/i.test(brief) || !/Size:\s*[ML]\b/i.test(brief)) return false
   if (/just do it|mach (es )?einfach|einfach machen|kein grill/i.test(brief)) return false
-  return !/"name":"mcp__[^"]*(request_decision|ask_decision)"/.test(transcript)
+  return !/"name":"mcp__[^"]*(request_decision|ask_decision)"/.test(text)
 }
 
 export function decide(tool, input = {}, env = {}, published = []) {
@@ -83,7 +87,7 @@ export function decide(tool, input = {}, env = {}, published = []) {
   if (tool === 'mcp__hearthbot__post_message') {
     const text = String(input.text ?? '')
     if (/^[\s>*_]*Card:/m.test(text)) return 'rule-guard: a decision is a real card here (CLAUDE.md, Cards): post it with request_decision (question, 2-4 options, one recommended), not as "Card:" text.'
-    if (YES.test(text) && !REASON.test(text)) return 'rule-guard: this reply agrees without a reason (CLAUDE.md, Co-founder). Check the claim first (repo, a source, a test), then say agree, disagree or "partly, because ..." with what you checked.'
+    if (bareAgreement(text)) return 'rule-guard: this reply agrees without a reason (CLAUDE.md, Co-founder). Check the claim first (repo, a source, a test), then say agree, disagree or "partly, because ..." with what you checked.'
     const lines = text.split('\n').filter((l) => l.trim()).length
     if (text.length > REPLY_MAX_CHARS || lines > REPLY_MAX_LINES) return `rule-guard: this reply has ${text.length} chars and ${lines} lines; the cap is ${REPLY_MAX_CHARS} and ${REPLY_MAX_LINES} (CLAUDE.md, Replies). Lead with the result in a few lines; put the rest in a file under /mnt/project-files/ and attach it.`
   }
@@ -100,8 +104,26 @@ export const PAGE_MAX = 40000
 // Public pages only: no localhost, private, link-local (cloud metadata) or bare-IP hosts.
 export function privateHost(url) {
   let host
-  try { host = new URL(url).hostname.replace(/^\[|\]$/g, '').toLowerCase() } catch { return true }
-  return /^(localhost|.*\.local|.*\.internal|metadata(\..*)?)$/.test(host) || /^[\d.]+$/.test(host) || host.includes(':')
+  try { host = new URL(url).hostname.replace(/^\[|\]$/g, '').replace(/\.$/, '').toLowerCase() } catch { return true }
+  return /^(localhost|.*\.local|.*\.internal|metadata(\..*)?)$/.test(host) || /^[\d.]+$/.test(host) || host.includes(':') || privateIp(host)
+}
+// An address curl actually connected to: loopback, RFC 1918, link-local, CGNAT, ULA.
+export const privateIp = (ip) => /^(127\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.|100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.|0\.)/.test(ip) || /^(::1?$|f[cd]|fe80:)/i.test(ip)
+
+// Follows up to 5 redirects by hand so every hop's host is checked; refuses a page served from a private address.
+function fetchPage(url) {
+  for (let hop = 0; hop < 6; hop++) {
+    if (privateHost(url)) throw new Error(`refused: ${url} is a local or private address; read only public pages`)
+    const out = execFileSync('curl', ['-sS', '--proto', '=http,https', '--max-time', '20', '-A', 'Mozilla/5.0', '-w', '\n%{http_code} %{remote_ip} %{redirect_url}', url], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
+    const cut = out.lastIndexOf('\n')
+    const [code, ip, next] = out.slice(cut + 1).split(' ')
+    // Through a proxy (the cloud) remote_ip is the proxy's own, and the proxy's allow list decides; without one, check it.
+    if (!(process.env.HTTPS_PROXY || process.env.https_proxy) && privateIp(ip ?? '')) throw new Error(`refused: ${url} resolved to a private address`)
+    if (/^3/.test(code) && next) { url = next; continue }
+    if (!/^2/.test(code)) throw new Error(`HTTP ${code}`)
+    return out.slice(0, cut)
+  }
+  throw new Error('too many redirects')
 }
 export function pageText(html) {
   return html.replace(/<(script|style|noscript|svg|head)\b[\s\S]*?<\/\1>/gi, ' ')
@@ -190,11 +212,10 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
   if (mode === 'read') {
     const [url, max = PAGE_MAX] = process.argv.slice(3)
     if (!/^https?:\/\//.test(url ?? '')) { console.error('usage: rule-guard.mjs read <http(s) url> [max chars]'); process.exit(1) }
-    if (privateHost(url)) { console.error(`refused: ${url} is a local or private address; read only public pages`); process.exit(1) }
     try {
-      const html = execFileSync('curl', ['-fsSL', '--max-redirs', '5', '--proto', '=http,https', '--proto-redir', '=http,https', '--max-time', '20', '-A', 'Mozilla/5.0', url], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
+      const html = fetchPage(url)
       process.stdout.write(`${pageText(html).slice(0, Number(max) || PAGE_MAX)}\n`, () => process.exit(0))
-    } catch (e) { console.error(`could not read ${url}: ${e.status ?? e.message}`); process.exit(1) }
+    } catch (e) { console.error(`could not read ${url}: ${e.message}`); process.exit(1) }
   } else {
     let raw = ''
     process.stdin.setEncoding('utf8')
@@ -215,7 +236,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         }
         if (mode !== 'pre') return
         const shipped = join(tmpdir(), `claude-setup-artifacts-${String(session).replace(/\W/g, '')}`)
-        const transcript = transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : ''
+        const transcript = () => (transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : '')
         const block = decide(tool, input ?? {}, process.env, session ? read(shipped).split('\n') : [])
           ?? (grillMissing(tool, input ?? {}, transcript) ? 'rule-guard: a Planner at size M or L grills first (CLAUDE.md, Grill first; operator SKILL.md): post 3-5 sharp questions as request_decision cards, each with your recommended answer, then write the plan on the answers (or the recommendations while he is away).' : null)
         if (!block && session && tool === 'Artifact' && input?.url && input.file_path) writeFileSync(shipped, `${input.file_path}\n`, { flag: 'a' })
