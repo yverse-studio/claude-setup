@@ -316,6 +316,15 @@ test('team guard: boot card without a checkout, thread start blocked until the r
     const teamsCard = JSON.parse(runTeam('card', { cwd, session_id: 's1' }, env).stdout).hookSpecificOutput.additionalContext
     assert.match(teamsCard, /Coordinator card[\s\S]*## Spawn rule[\s\S]*Models: [\s\S]*- Programmer: [^\n]*Sonnet[\s\S]*- `setup` \(claude-setup\): /)
     assert.ok(teamsCard.length < 10_000)
+    const line = readFileSync(join(home, '.claude/claude-setup/booted/s1.canary'), 'utf8')
+    assert.match(line, /^Luna · rules #[0-9a-f]{7} · guards: on$/, 'the canary comes from the hook, not the model')
+    assert.ok(teamsCard.endsWith(line))
+    const rule = (text, t = '') => { writeFileSync(join(cwd, 'c.jsonl'), t); return spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'pre'], { input: JSON.stringify({ cwd, session_id: 's1', transcript_path: join(cwd, 'c.jsonl'), tool_name: 'mcp__hearthbot__post_message', tool_input: { text } }), encoding: 'utf8', env: { ...process.env, ...env } }) }
+    const post = (text) => JSON.stringify({ type: 'assistant', message: { content: [{ type: 'tool_use', id: 'p1', name: 'mcp__hearthbot__post_message', input: { text } }] } })
+    assert.match(rule('Hi, ich schaue mir das an.').stderr, /canary line/, 'the first reply without the canary is blocked')
+    assert.equal(rule(`${line}\nHi, ich schaue mir das an.`).status, 0)
+    assert.equal(rule('Zweite Antwort.', post(`${line}\nHi`)).status, 0, 'only the first reply carries it')
+    assert.equal(rule('Zweite Antwort.', post('Hi')).status, 2, 'a reply that never carried it does not count')
     assert.equal(runTeam('card', { cwd: root }, env).stdout, '', 'a checkout gets no card')
     mkdirSync(join(cwd, 'app', '.git'), { recursive: true })
     assert.equal(runTeam('card', { cwd: join(cwd, 'app') }, env).stdout, '', 'a thread in a product repo gets its role card, not the coordinator card')

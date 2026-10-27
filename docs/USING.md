@@ -14,7 +14,9 @@ so the rules live here only.
    repo exists; the flags: the script's header.
 2. In the project: **Project settings > Memory > Project instructions**, paste, save.
 3. **Project settings > Repositories**: add `yverse-studio/claude-setup` and the project's repo.
-4. **Project settings > Cloud environment**: pick **Claude Setup**. The guards (team-guard,
+4. **Project settings > Cloud environment**: pick **Claude Setup**. Proof it worked: the project
+   chat's first reply opens with `Luna · rules #<hash> · guards: on` (written by the hook, blocked
+   without it); `Luna · guards: OFF` means this step is missing. The guards (team-guard,
    rule-guard) are hooks that only exist where the environment's setup script ran
    (`cloud/bootstrap.sh`); a new project starts on the account's default environment, where
    nothing is enforced (blind test 2026-10-27). To skip this step for every future project, paste
