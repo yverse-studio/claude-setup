@@ -216,7 +216,7 @@ Practice for the scene player, general game audio (ambience as the bed, foley sy
 - In the base the body mesh is `*_Body`; the object called `Body` is the head.
 - Reuse first: existing models, rigs, clips, chapters and game patterns before anything new;
   research licence and tools before spending budget.
-- Builders fill context fast: hand off by 350k with a `HANDOFF.md` entry.
+- Builders fill context fast: hand off when the context guard says (L: 500k) with a `HANDOFF.md` entry.
 - Check what the body already has first: every model job starts with an inventory of existing shape keys,
   geometry, painted details, weights and materials, and improves those. Grafting new anatomy geometry over
   detail the body already had wasted a whole budget (10-21); the fix that stuck opened the existing

@@ -83,7 +83,8 @@ Claude's job. `docs/MAP.md` names the one home of each rule; everywhere else lin
 - Before calling work done or pushing: run what CI runs, never a deploy script; report failures
   with the output. [guard: deny Bash(npm run deploy *)]
 - Tokens: `docs/WORKFLOW.md` (Token budget); batch calls, big reads to Haiku subagents, hand off at
-  350k; a thread idle over an hour is not resumed.
+  a milestone when the context guard says (by Size: S 250k, M 350k, L 500k); a thread idle over an
+  hour is not resumed. [guard: hook context-guard.mjs]
 - Loops: `attempt-guard` reminds at 3 failures of one command, blocks at 5 until `PROGRESS.md` has
   a `## Diagnosis`, and at 8 means hand off.
 - Cloud threads: research with WebSearch, never WebFetch (every fetch makes yskills press Allow).
