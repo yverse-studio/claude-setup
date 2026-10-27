@@ -137,6 +137,14 @@ function sourceFiles(dir) {
 
 const rel = (root, file) => file.slice(root.length + 1).replaceAll('\\', '/'); // forward slashes on every OS
 
+// Image files under dir at any depth, as paths relative to dir with forward slashes.
+function captureFiles(dir, prefix = '') {
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
+    e.isDirectory() ? captureFiles(join(dir, e.name), `${prefix}${e.name}/`) : IMAGE.test(e.name) ? [`${prefix}${e.name}`] : [],
+  );
+}
+
 function topLevelFiles(root) {
   return readdirSync(root, { withFileTypes: true })
     .filter((e) => e.isFile() && SOURCE_FILE.test(e.name) && !NOT_UI_FILE.test(e.name))
@@ -206,7 +214,7 @@ export function checkDesign(root) {
     if (!s[name]?.trim()) fails.push(`## ${name[0].toUpperCase()}${name.slice(1)} section missing`);
   }
   const refDir = join(root, 'design', 'reference');
-  const captures = existsSync(refDir) ? readdirSync(refDir).filter((f) => IMAGE.test(f)) : [];
+  const captures = captureFiles(refDir); // subfolders count; a Direction cites a capture by its path under design/reference/
   const cited = captures.filter((f) => s.direction?.includes(f));
   if (cited.length < MIN_REFERENCES) {
     fails.push(`## Direction cites ${cited.length} reference captures in design/reference/, needs ${MIN_REFERENCES}`);

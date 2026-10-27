@@ -24,7 +24,7 @@ against that text. So:
    none of the "not like" looks. Start the landscape from the style library ([`ui-review/styles/`](../../ui-review/styles/README.md), each style with tokens, captures and do/don't) and add what the idea needs. The landscape goes on the same vote card as the directions (`CLAUDE.md`, How to work, Cards).
 1. **References:** 3 to 6 captures of the top products of the genre (CrazyGames and Poki top
    pages for a game; the category's leading apps for a product) at 390px and 1440px, shot with
-   `ui-review`'s `shoot.mjs` (absolute URLs), into `design/reference/`, one line each in
+   `ui-review`'s `shoot.mjs` (absolute URLs), into `design/reference/` (subfolders are fine; the Direction cites each capture by its path under `design/reference/`), one line each in
    `design/REFERENCES.md`: link and what to take (palette, shapes, HUD, menus, juice). Plus one
    real-life object the world copies (a storybook, a seed packet, a till receipt).
 2. **`design/DESIGN.md`**, four sections, each traceable to a capture by file name:
@@ -138,3 +138,4 @@ Added at the end of each project (operator step 9): date, project and its type, 
 - 2026-10-06 (hq-cozy HANDOFF): a pixel check showed the "milky veil" on phones was the pastel palette itself, not an overlay: diagnose a washed look by sampling pixels before adding fixes.
 - 2026-10-18 (Igelgarten designer-handoff-4): a clay or plasticine look can be faked with SVG lighting filters now; the real version wants Blender-baked sprites and is the heaviest to produce.
 - 2026-10-18 (Mondgarten DESIGN, mondgarten-build): a woodblock look is cheap as vector plus one grain filter, with no baked sprites; the grain filter must stay under 2 ms a frame on a mid phone, chalk (Kreide) is the fallback. The build switched from a three.js world to a 2D canvas view (three removed, 0.1 MB flat build).
+- 2026-10-26 (social app, art direction): the proxy now lets cloud threads reach live product sites, and the iTunes lookup API returns the real App Store screens of closed apps, so "the leaders were blocked" is no reason to fall back to GitHub stand-ins; that fallback produced the rejected v3 directions. `design-check.mjs` also counts captures in subfolders of `design/reference/` (#286).
