@@ -512,7 +512,9 @@ test('rule guard: an agreeing reply needs its reason; a Planner M/L grills befor
 })
 
 test('rule guard: read turns a page into plain text', async () => {
-  const { pageText } = await import('../global/rule-guard.mjs')
+  const { pageText, privateHost } = await import('../global/rule-guard.mjs')
+  for (const u of ['http://localhost:8787/', 'http://169.254.169.254/latest/meta-data', 'http://10.0.0.1/', 'http://[::1]/', 'http://metadata.google.internal/']) assert.ok(privateHost(u), u)
+  assert.equal(privateHost('https://docs.anthropic.com/en/docs'), false)
   assert.equal(pageText('<html><head><title>t</title></head><body><script>x()</script><h1>Hooks</h1><p>Exit 2 &amp; stderr</p></body></html>'), 'Hooks\nExit 2 & stderr')
   const r = spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'read', 'not-a-url'], { encoding: 'utf8' })
   assert.equal(r.status, 1)

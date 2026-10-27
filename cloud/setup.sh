@@ -517,6 +517,12 @@ export function decide(tool, input = {}, env = {}, published = []) {
 // read: a whole web page as plain text through curl (it honours the cloud proxy and needs no Allow;
 // yskills 2026-10-27: "you should read whole pages without asking me").
 export const PAGE_MAX = 40000
+// Public pages only: no localhost, private, link-local (cloud metadata) or bare-IP hosts.
+export function privateHost(url) {
+  let host
+  try { host = new URL(url).hostname.replace(/^\[|\]$/g, '').toLowerCase() } catch { return true }
+  return /^(localhost|.*\.local|.*\.internal|metadata(\..*)?)$/.test(host) || /^[\d.]+$/.test(host) || host.includes(':')
+}
 export function pageText(html) {
   return html.replace(/<(script|style|noscript|svg|head)\b[\s\S]*?<\/\1>/gi, ' ')
     .replace(/<(br|\/p|\/div|\/h\d|\/li|\/tr)\b[^>]*>/gi, '\n').replace(/<[^>]+>/g, ' ')
@@ -604,8 +610,9 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
   if (mode === 'read') {
     const [url, max = PAGE_MAX] = process.argv.slice(3)
     if (!/^https?:\/\//.test(url ?? '')) { console.error('usage: rule-guard.mjs read <http(s) url> [max chars]'); process.exit(1) }
+    if (privateHost(url)) { console.error(`refused: ${url} is a local or private address; read only public pages`); process.exit(1) }
     try {
-      const html = execFileSync('curl', ['-fsSL', '--max-time', '20', '-A', 'Mozilla/5.0', url], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
+      const html = execFileSync('curl', ['-fsSL', '--max-redirs', '5', '--proto', '=http,https', '--proto-redir', '=http,https', '--max-time', '20', '-A', 'Mozilla/5.0', url], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
       process.stdout.write(`${pageText(html).slice(0, Number(max) || PAGE_MAX)}\n`, () => process.exit(0))
     } catch (e) { console.error(`could not read ${url}: ${e.status ?? e.message}`); process.exit(1) }
   } else {
