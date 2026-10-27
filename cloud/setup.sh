@@ -220,6 +220,9 @@ cat > "$HOME/.claude/claude-setup/team-guard.mjs" <<'TEAM'
 // no `Role: · Kit: · Size:` stamp line (rule-guard puts the named role's playbook into the thread), and
 // a size M or L one with no `Prior art:` line (look for what exists and works first, yskills 2026-10-27),
 // and one whose `model` is a tier its role's Roster row does not name (wrongModel).
+// Blind test 2026-10-27 ("Kit: content", a video at S, a Game Designer on a story, briefs of one line): a
+// thread start also needs a kit from the Kits table, a size that kit allows, a role on that kit's team
+// (badTeam), and the brief block's Model, Skills, Done when, Stop when and Start lines (missingLines).
 // CLAUDE_SETUP_TEAM_GUARD=off turns it off. It never breaks a tool call on its own errors.
 import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
@@ -379,11 +382,55 @@ export function wrongModel(text, model, teams) {
   return allowed.length && tier && !allowed.includes(tier) ? { role: role.name, allowed, tier } : null
 }
 
+// The brief block's must-have lines (operator/briefs.md). Blind test 2026-10-27: a fresh coordinator
+// started threads with only a title and a guess, and nothing stopped it.
+const BRIEF_LINES = [
+  ['Model:', /^[ \t>-]*Model:[ \t]*\S/im],
+  ['Skills:', /^[ \t>-]*Skills:[ \t]*\S/im],
+  ['Done when:', /\bDone when:[ \t]*[^<\s]/i],
+  ['Stop when:', /\bStop when:[ \t]*[^<\s]/i],
+  ['Start: (read MEMORY.md first)', /^[ \t>-]*Start:[^\n]*MEMORY\.md/im],
+]
+export function missingLines(text) {
+  const plain = text.replace(/[*_`]/g, '')
+  return BRIEF_LINES.filter(([, re]) => !re.test(plain)).map(([name]) => name)
+}
+
+// Kit and size checked against docs/TEAMS.md, not only their format (blind test 2026-10-27: "Kit: content",
+// a video at size S, a Game Designer on a Ren'Py story, a Designer cutting a video).
+const kitRows = (teams) => section(teams, 'Kits', 'Models for tasks').split('\n').filter((l) => /^\| `/.test(l))
+  .map((l) => { const c = cells(l); return { kit: c[1].match(/`([\w-]+)`/)[1], team: c[3], skipped: c[4] } })
+const rosterOf = (teams, part) => section(teams, 'Roster', 'Kits').split(/\n### /).find((s) => s.startsWith(part)) ?? ''
+// A role named in a Kits cell: one comma, semicolon or bracket item that is the role, maybe with words after ("Designer for renders", not "Game Designer").
+const named = (cell, role) => cell.replace(/`/g, '').split(/[,;()]/).map((i) => i.trim().replace(/^(and|then|plus) /i, '').toLowerCase()).some((i) => i === role.toLowerCase() || i.startsWith(`${role.toLowerCase()} `))
+export function badTeam(text, teams) {
+  const plain = text.replace(/[*_`]/g, '')
+  const rows = teams ? kitRows(teams) : []
+  if (!rows.length) return null
+  const kit = plain.match(/\bKit:[ \t]*([\w-]+)/i)?.[1].toLowerCase()
+  const row = rows.find((r) => r.kit === kit)
+  if (!row) return `Kit: ${kit} is no kit in docs/TEAMS.md (Kits): pick one of ${rows.map((r) => r.kit).join(', ')} by what the task makes (Spawn rule 1)`
+  const size = plain.match(/\bSize:[ \t]*([SML])\b/i)?.[1].toUpperCase()
+  if (['video', 'social'].includes(kit) && size === 'S') return `a ${kit} brief is size M (one video or post) or L (a batch, series or launch video), never S (docs/TEAMS.md, Spawn rule 2)`
+  const role = roleOf(plain, teams)
+  if (!role?.row) return null
+  if (role.name === 'Planner' && size === 'S') return 'a Planner thread runs at size M or L only; size S starts the Programmer (docs/TEAMS.md, Sizes)'
+  const film = rosterOf(teams, 'Film').includes(`| ${role.name} (`)
+  const social = rosterOf(teams, 'Social').includes(`| ${role.name} (`)
+  const media = ['video', 'social'].includes(kit)
+  const fits = social ? kit === 'social' : film ? media : media ? named(row.team, role.name) : !named(row.skipped, role.name)
+  return fits ? null : `the ${role.name} is not on the \`${kit}\` kit's team (docs/TEAMS.md, Kits: team "${row.team}", skipped "${row.skipped}"); start the role that row names`
+}
+
 // unread: the boot files a thread start still needs (empty when read or when no transcript was given).
 export function decide(tool, input = {}, dirs = [], unread = [], teams = '') {
   const kind = AGENT.test(tool) ? 'Agent' : THREAD_START.test(tool) ? 'thread' : null
   if (kind === 'thread' && unread.length) return { block: `team-guard: read the rules before starting a thread: ${unread.join(' and ')} (in ~/.claude/claude-setup/ or the claude-setup repo; docs/MAP.md, Start here). 2026-10-26 a coordinator skipped them and guessed every model. Read them, then retry.` }
   if (kind === 'thread' && !stamped(briefText(input))) return { block: 'team-guard: every thread brief starts with the stamp line `Role: <one role from docs/TEAMS.md Roster> · Kit: <kit> · Size: <S|M|L>` (operator/briefs.md); a small task with no role says `Role: none`. The thread loads its playbook from it. Add the line, then retry.' }
+  const team = kind === 'thread' && badTeam(briefText(input), teams)
+  if (team) return { block: `team-guard: ${team}. Look the task up in claude-setup docs/TEAMS.md (Spawn rule, Sizes, Kits), fix the stamp line, then retry.` }
+  const lines = kind === 'thread' ? missingLines(briefText(input)) : []
+  if (lines.length) return { block: `team-guard: the brief misses ${lines.join(', ')} (claude-setup .claude/skills/operator/briefs.md, Every thread brief starts with). Copy that block, fill each line for this task, then retry.` }
   if (kind === 'thread' && needsPriorArt(briefText(input))) return { block: 'team-guard: a size M or L brief names what already exists before anything is built (CLAUDE.md, Work for the future): add a line `Prior art: <our repos, skills, plugins, public setups checked> -> copy | adapt | build, because <why>` (or `to find: <where the Researcher looks>`), then retry.' }
   if (kind === 'thread' && needsTester(briefText(input))) return { block: 'team-guard: a size L Programmer thread starts only after its Tester thread (claude-setup docs/TEAMS.md, Sizes). Start `Tester · <app>` first, then put a line `Tester: <its thread id or title>` in this brief and retry.' }
   const wrong = kind === 'thread' && wrongModel(briefText(input), input.model, teams)

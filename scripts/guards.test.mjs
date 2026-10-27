@@ -232,6 +232,8 @@ test('check.mjs fails when a lessons file is not linked from docs/MAP.md or the 
 // Team guard: an Agent call or thread start without `model` is refused; an agent file with its own
 // `model:` passes; SessionStart prints the TEAMS.md pointer.
 const teamFile = join(root, 'global/team-guard.mjs')
+// The brief block's must-have lines (operator/briefs.md); a thread start without them is blocked.
+const FULL = '\nModel: claude-x-1\nSkills: roles/programmer.md\nDone when: node --test passes. Stop when: two rounds.\nStart: read MEMORY.md, then CLAUDE.md'
 const runTeam = (mode, payload, env = {}) => spawnSync(process.execPath, [teamFile, mode], {
   input: JSON.stringify(payload), encoding: 'utf8', timeout: 5000, env: { ...process.env, ...env },
 })
@@ -246,10 +248,10 @@ test('team guard: blocks Agent and thread starts without model, passes with one'
     const start = (tool, input) => runTeam('pre', { cwd, tool_name: tool, tool_input: input }).status
     assert.equal(start('mcp__hearthbot__start_thread_session', { brief: 'x' }), 2)
     assert.equal(start('mcp__claude-code-remote__create_session', { prompt: 'x' }), 2)
-    assert.equal(start('mcp__hearthbot__start_thread_session', { brief: 'Role: Programmer · Kit: setup · Size: S', model: 'claude-x-1' }), 0)
+    assert.equal(start('mcp__hearthbot__start_thread_session', { brief: `Role: Programmer · Kit: setup · Size: S${FULL}`, model: 'claude-x-1' }), 0)
     assert.match(runTeam('pre', { cwd, tool_name: 'mcp__hearthbot__start_thread', tool_input: { brief: 'fix the login', model: 'claude-x-1' } }).stderr, /stamp line `Role:/, 'a brief without Role, Kit and Size is blocked')
-    assert.equal(start('mcp__hearthbot__start_thread', { brief: 'Role: none · Kit: setup · Size: S', model: 'claude-x-1' }), 0, 'a small task without a role passes')
-    const m = (extra) => runTeam('pre', { cwd, tool_name: 'mcp__hearthbot__start_thread', tool_input: { brief: `Role: Planner · Kit: app · Size: M${extra}`, model: 'claude-x-1' } })
+    assert.equal(start('mcp__hearthbot__start_thread', { brief: `Role: none · Kit: setup · Size: S${FULL}`, model: 'claude-x-1' }), 0, 'a small task without a role passes')
+    const m = (extra) => runTeam('pre', { cwd, tool_name: 'mcp__hearthbot__start_thread', tool_input: { brief: `Role: Planner · Kit: app · Size: M${FULL}${extra}`, model: 'claude-x-1' } })
     assert.match(m('').stderr, /Prior art:/, 'an M brief without prior art is blocked')
     assert.equal(m('\nPrior art: <what was checked>').status, 2, 'the placeholder does not count')
     assert.equal(m('\nPrior art: BMAD and our operator roles checked; adapt ours, because hearthbot threads').status, 0)
@@ -262,7 +264,7 @@ test('team guard: blocks Agent and thread starts without model, passes with one'
 test('team guard: a size L Programmer brief needs a Tester line first', () => {
   const cwd = mkdtempSync(join(tmpdir(), 'team-'))
   try {
-    const start = (brief) => runTeam('pre', { cwd, tool_name: 'mcp__hearthbot__start_thread', tool_input: { brief: `${brief}\nPrior art: checked our app template; adapt it, because it has auth`, model: 'claude-x-1' } })
+    const start = (brief) => runTeam('pre', { cwd, tool_name: 'mcp__hearthbot__start_thread', tool_input: { brief: `${brief}${FULL}\nPrior art: checked our app template; adapt it, because it has auth`, model: 'claude-x-1' } })
     const r = start('Role: Programmer · Kit: app · Size: L\nModel: x')
     assert.equal(r.status, 2)
     assert.match(r.stderr, /Tester/)
@@ -317,12 +319,12 @@ test('team guard: boot card without a checkout, thread start blocked until the r
     assert.equal(runTeam('card', { cwd: root }, env).stdout, '', 'a checkout gets no card')
     mkdirSync(join(cwd, 'app', '.git'), { recursive: true })
     assert.equal(runTeam('card', { cwd: join(cwd, 'app') }, env).stdout, '', 'a thread in a product repo gets its role card, not the coordinator card')
-    assert.equal(runTeam('pre', { cwd, session_id: 's1', transcript_path: join(cwd, 'none.jsonl'), tool_name: 'mcp__hearthbot__start_thread', tool_input: { brief: 'Role: Programmer · Kit: setup · Size: S', model: 'claude-x-1' } }, env).status, 0)
+    assert.equal(runTeam('pre', { cwd, session_id: 's1', transcript_path: join(cwd, 'none.jsonl'), tool_name: 'mcp__hearthbot__start_thread', tool_input: { brief: `Role: Programmer · Kit: setup · Size: S${FULL}`, model: 'claude-x-1' } }, env).status, 0)
     writeFileSync(join(cwd, 'empty.jsonl'), '')
-    assert.equal(runTeam('pre', { cwd, session_id: 's1', transcript_path: join(cwd, 'empty.jsonl'), tool_name: 'mcp__hearthbot__start_thread', tool_input: { brief: 'Role: Programmer · Kit: setup · Size: S', model: 'claude-x-1' } }, env).status, 0, 'both cards count as read')
+    assert.equal(runTeam('pre', { cwd, session_id: 's1', transcript_path: join(cwd, 'empty.jsonl'), tool_name: 'mcp__hearthbot__start_thread', tool_input: { brief: `Role: Programmer · Kit: setup · Size: S${FULL}`, model: 'claude-x-1' } }, env).status, 0, 'both cards count as read')
     const transcript = join(cwd, 't.jsonl')
     const use = (name, input) => JSON.stringify({ type: 'assistant', message: { content: [{ type: 'tool_use', name, input }] } })
-    const start = () => runTeam('pre', { cwd, transcript_path: transcript, tool_name: 'mcp__hearthbot__start_thread', tool_input: { brief: 'Role: Programmer · Kit: setup · Size: S', model: 'claude-x-1' } }, env)
+    const start = () => runTeam('pre', { cwd, transcript_path: transcript, tool_name: 'mcp__hearthbot__start_thread', tool_input: { brief: `Role: Programmer · Kit: setup · Size: S${FULL}`, model: 'claude-x-1' } }, env)
     writeFileSync(transcript, [use('Agent', { prompt: 'read docs/TEAMS.md and CLAUDE.md of claude-setup', model: 'haiku' }), 'not json'].join('\n'))
     const r = start()
     assert.equal(r.status, 2, 'an Agent prompt naming the files is not a read')
@@ -334,10 +336,10 @@ test('team guard: boot card without a checkout, thread start blocked until the r
     writeFileSync(join(cwd, 'CLAUDE.md'), readFileSync(join(root, 'CLAUDE.md'), 'utf8'))
     writeFileSync(transcript, use('Bash', { command: 'grep -n Roster docs/TEAMS.md' }))
     assert.equal(start().status, 0, 'with a checkout only TEAMS.md is needed')
-    assert.equal(runTeam('pre', { cwd: join(root, 'docs'), transcript_path: transcript, tool_name: 'mcp__hearthbot__start_thread', tool_input: { brief: 'Role: Programmer · Kit: setup · Size: S', model: 'claude-x-1' } }, env).status, 0, 'a subfolder of a checkout loads CLAUDE.md too')
+    assert.equal(runTeam('pre', { cwd: join(root, 'docs'), transcript_path: transcript, tool_name: 'mcp__hearthbot__start_thread', tool_input: { brief: `Role: Programmer · Kit: setup · Size: S${FULL}`, model: 'claude-x-1' } }, env).status, 0, 'a subfolder of a checkout loads CLAUDE.md too')
     writeFileSync(transcript, '')
     assert.equal(start().status, 2)
-    assert.equal(runTeam('pre', { cwd, tool_name: 'mcp__hearthbot__start_thread', tool_input: { brief: 'Role: Programmer · Kit: setup · Size: S', model: 'claude-x-1' } }, env).status, 0, 'no transcript, no read check')
+    assert.equal(runTeam('pre', { cwd, tool_name: 'mcp__hearthbot__start_thread', tool_input: { brief: `Role: Programmer · Kit: setup · Size: S${FULL}`, model: 'claude-x-1' } }, env).status, 0, 'no transcript, no read check')
   } finally { for (const d of [home, cwd]) rmSync(d, { recursive: true, force: true }) }
 })
 
@@ -537,7 +539,7 @@ test('rule guard: the coordinator closes or nudges finished threads on its board
 test('team guard: a thread start runs its role on the tier its Roster row names', async () => {
   const { decide, wrongModel } = await import('../global/team-guard.mjs')
   const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
-  const brief = (role, size) => `Role: ${role} · Kit: setup · Size: ${size}\nPrior art: claude-setup guards checked -> adapt, because they exist`
+  const brief = (role, size) => `Role: ${role} · Kit: setup · Size: ${size}${FULL}\nPrior art: claude-setup guards checked -> adapt, because they exist`
   assert.ok(wrongModel(brief('Planner', 'M'), 'sonnet', teams))
   assert.equal(wrongModel(brief('Planner', 'M'), 'opus', teams), null)
   assert.equal(wrongModel(brief('Planner', 'M'), 'fable', teams), null, 'the row names Fable')
@@ -629,4 +631,26 @@ test('rule guard: read turns a page into plain text', async () => {
   assert.equal(pageText('<html><head><title>t</title></head><body><script>x()</script><h1>Hooks</h1><p>Exit 2 &amp; stderr</p></body></html>'), 'Hooks\nExit 2 & stderr')
   const r = spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'read', 'not-a-url'], { encoding: 'utf8' })
   assert.equal(r.status, 1)
+})
+
+// Blind test 2026-10-27: a fresh coordinator started a bee video and a Ren'Py story with guessed kits,
+// sizes and roles, briefs of one line, and Opus. Each of those starts is blocked; the right one passes.
+test('team guard: kit, size, role and brief lines are checked against TEAMS.md', async () => {
+  const { decide, badTeam, missingLines } = await import('../global/team-guard.mjs')
+  const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
+  const start = (stamp, model = 'sonnet') => decide('mcp__hearthbot__start_thread', { instructions: `${stamp}${FULL}\nPrior art: video-studio and storyteller checked -> adapt, because they are ours`, model }, [], [], teams).block ?? ''
+  assert.match(start('Role: Designer · Kit: content · Size: S'), /no kit/)
+  assert.match(start('Role: Producer · Kit: video · Size: S'), /never S/)
+  assert.match(start('Role: Game Designer · Kit: story · Size: M', 'opus'), /not on the `story` kit/)
+  assert.match(start('Role: Designer · Kit: video · Size: M', 'opus'), /not on the `video` kit/)
+  assert.match(start('Role: Planner · Kit: setup · Size: S', 'opus'), /Planner thread runs at size M or L/)
+  assert.match(start('Role: Producer · Kit: video · Size: M', 'opus'), /Roster/)
+  assert.match(start('Role: Social Lead · Kit: video · Size: M'), /not on the `video` kit/)
+  assert.equal(start('Role: Producer · Kit: video · Size: M'), '')
+  assert.equal(start('Role: Editor · Kit: social · Size: M'), '', 'the Film team works for the Social team')
+  assert.equal(start('Role: Designer · Kit: story (Ren\'Py) · Size: L', 'opus'), '', 'Designer for renders; "Game Designer" in Skipped is another role')
+  assert.equal(start('Role: Programmer (debug) · Kit: setup · Size: M'), '')
+  assert.equal(badTeam('Role: Programmer · Kit: app · Size: M', ''), null, 'no TEAMS.md copy, no kit check')
+  assert.deepEqual(missingLines('Role: Producer · Kit: video · Size: M\nMake a bee video.'), ['Model:', 'Skills:', 'Done when:', 'Stop when:', 'Start: (read MEMORY.md first)'])
+  assert.deepEqual(missingLines('Done when: <a check>. Stop when: <budget>'), ['Model:', 'Skills:', 'Done when:', 'Stop when:', 'Start: (read MEMORY.md first)'], 'unfilled placeholders do not count')
 })

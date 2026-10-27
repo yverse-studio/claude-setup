@@ -71,6 +71,8 @@ Then reply "done". Meanwhile: <what the slice keeps building>
 
 ## Every thread brief starts with
 
+`team-guard` blocks a thread start whose brief lacks the `Model:`, `Skills:`, `Done when:`, `Stop when:` or `Start: ... MEMORY.md` line, names a kit that is not in `docs/TEAMS.md` (Kits), a video or post at size S, a Planner at S, or a role that is not on its kit's team (blind test 2026-10-27).
+
 ```
 Role: <one role from docs/TEAMS.md (Roster), or none for a small task> · Kit: <kit> · Size: <S|M|L>. team-guard blocks a start without this line; rule-guard puts the role's Roster row and playbook into the thread. You are this one role, not the coordinator: docs/TEAMS.md (Coordinator or thread).
 Model: <id for this role's row in docs/TEAMS.md (Roster), via its Models line>. Handoff: at <N>k (350k unless the
