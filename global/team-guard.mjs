@@ -17,7 +17,7 @@
 // a size M or L one with no `Prior art:` line (look for what exists and works first, yskills 2026-10-27).
 // CLAUDE_SETUP_TEAM_GUARD=off turns it off. It never breaks a tool call on its own errors.
 import { execFileSync } from 'node:child_process'
-import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 
@@ -82,6 +82,15 @@ export function coordinatorCard(teams) {
     section(teams, 'Spawn rule', 'Sizes'), `## Sizes\n\n${sizes.join('\n')}`,
     `## Roster (role: runs as; model)\n\n${roster.join('\n')}`, `## Kits (team at size L)\n\n${kits.join('\n')}`,
   ].join('\n\n')
+}
+
+export function inRepo(cwd) {
+  for (let d = cwd; ; d = dirname(d)) { if (existsSync(join(d, '.git'))) return true; if (dirname(d) === d) return false }
+}
+// Session markers older than a week go; a session that old is never resumed (CLAUDE.md, Tokens).
+const WEEK = 7 * 24 * 3600 * 1000
+function sweep(folder) {
+  try { for (const f of readdirSync(folder)) if (Date.now() - statSync(join(folder, f)).mtimeMs > WEEK) rmSync(join(folder, f), { force: true }) } catch { /* no folder yet */ }
 }
 
 export function bootCard(dir) {
@@ -160,6 +169,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
       const say = (context) => process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: context } }))
       if (mode === 'start') {
         if (process.env.CLAUDE_SETUP_BOOT_FETCH !== 'off') refresh(dir)
+        sweep(join(dir, 'booted'))
         if (rulesLoaded(cwd, home)) return say(POINTER)
         const claude = text(join(dir, 'CLAUDE.md'))
         const card = claude.includes(MARK) && rulesCard(claude)
@@ -167,7 +177,8 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         return say(`${bootCard(dir)}\n${POINTER}`)
       }
       if (mode === 'card') {
-        if (rulesLoaded(cwd, home)) return
+        // The coordinator runs outside any repo (the project chat); a thread sits in a product repo and needs only its role card (rule-guard).
+        if (rulesLoaded(cwd, home) || inRepo(cwd)) return
         const card = coordinatorCard(text(join(dir, 'docs', 'TEAMS.md')))
         if (!card || card.length >= BOOT_MAX) return
         if (session) { mkdirSync(dirname(mark('teams')), { recursive: true }); writeFileSync(mark('teams'), '') }

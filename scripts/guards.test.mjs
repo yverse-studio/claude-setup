@@ -2,7 +2,7 @@
 // never/always rules honest. Run: node --test scripts/guards.test.mjs
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
@@ -88,8 +88,8 @@ test('installed hooks: narrow matchers, no double firing, fast, never blocking',
     for (const e of entries) {
       assert.ok(e.timeout > 0 && e.timeout <= 5, `${e.command}: timeout must be 1 to 5 s, is ${e.timeout}`)
       // Only the context guard has to see every tool call; anything else names the tools it wants.
-      // UserPromptSubmit has no tool to match, so it carries no matcher.
-      if ((e.matcher === '*' || !e.matcher) && e.event !== 'UserPromptSubmit') assert.ok(e.command.includes('context-guard.mjs'), `${e.command}: matcher must be narrow`)
+      // UserPromptSubmit and Stop have no tool to match, so they carry no matcher.
+      if ((e.matcher === '*' || !e.matcher) && !['UserPromptSubmit', 'Stop'].includes(e.event)) assert.ok(e.command.includes('context-guard.mjs'), `${e.command}: matcher must be narrow`)
     }
     // A hook that fails must not block the tool call: exit 0 and no block decision on empty, broken or odd input.
     for (const e of entries) {
@@ -315,6 +315,8 @@ test('team guard: boot card without a checkout, thread start blocked until the r
     assert.match(teamsCard, /Coordinator card[\s\S]*## Spawn rule[\s\S]*Models: [\s\S]*- Programmer: [^\n]*Sonnet[\s\S]*- `setup` \(claude-setup\): /)
     assert.ok(teamsCard.length < 10_000)
     assert.equal(runTeam('card', { cwd: root }, env).stdout, '', 'a checkout gets no card')
+    mkdirSync(join(cwd, 'app', '.git'), { recursive: true })
+    assert.equal(runTeam('card', { cwd: join(cwd, 'app') }, env).stdout, '', 'a thread in a product repo gets its role card, not the coordinator card')
     assert.equal(runTeam('pre', { cwd, session_id: 's1', transcript_path: join(cwd, 'none.jsonl'), tool_name: 'mcp__hearthbot__start_thread', tool_input: { brief: 'Role: Programmer · Kit: setup · Size: S', model: 'claude-x-1' } }, env).status, 0)
     writeFileSync(join(cwd, 'empty.jsonl'), '')
     assert.equal(runTeam('pre', { cwd, session_id: 's1', transcript_path: join(cwd, 'empty.jsonl'), tool_name: 'mcp__hearthbot__start_thread', tool_input: { brief: 'Role: Programmer · Kit: setup · Size: S', model: 'claude-x-1' } }, env).status, 0, 'both cards count as read')
@@ -364,7 +366,7 @@ test('team guard: the registered matchers catch Agent and the thread-start tools
 })
 
 test('rule guard: blocks the rules that were text only, passes the normal calls', async () => {
-  const { decide, commitSubject, promptContext, REPLY_MAX_CHARS } = await import('../global/rule-guard.mjs')
+  const { decide, commitSubjects, promptContext, REPLY_MAX_CHARS } = await import('../global/rule-guard.mjs')
   const blocked = [
     ['mcp__github__update_pull_request', { reviewers: ['yskills'] }],
     ['mcp__github__issue_write', { method: 'update', assignees: ['YSkills'] }],
@@ -395,7 +397,15 @@ test('rule guard: blocks the rules that were text only, passes the normal calls'
   ]
   for (const [tool, input] of passed) assert.equal(decide(tool, input, {}), null, `${tool} ${JSON.stringify(input)}`)
   assert.equal(decide('Artifact', { file_path: '/tmp/x.html' }, { CLAUDE_SETUP_NEW_ARTIFACT: 'yes' }), null)
-  assert.equal(commitSubject('git log --oneline'), null)
+  assert.deepEqual(commitSubjects('git log --oneline'), [])
+  // Gate review 2026-10-27: only a real commit is checked, every commit in the command is.
+  for (const c of [`echo "remember: git commit -m 'wip stuff' later"`, `grep -rn "git commit -m 'x'" docs/`, 'git merge --no-commit -m "stuff" topic', 'git log --grep=commit -m "x"',
+    "cat > a.md <<'EOF'\n# Title\nEOF\ngit add a.md && git commit -m \"docs: add a\""]) assert.equal(decide('Bash', { command: c }, {}), null, c)
+  for (const c of ['git commit -am "wip"', 'git commit -m "feat: a" && git commit -m "bad"', 'git commit -m wip', 'cd x; git -C repo commit -m "oops"']) assert.match(decide('Bash', { command: c }, {}) ?? '', /conventional/, c)
+  assert.equal(decide('Bash', { command: 'gh pr create --title x --assignee yskills-claude' }, {}), null, 'the bot account is fine')
+  assert.match(decide('Bash', { command: 'gh pr create -t x -r yskills' }, {}) ?? '', /No GitHub mails/)
+  assert.equal(decide('Artifact', { file_path: '/tmp/hq.html' }, {}, ['/tmp/hq.html']), null, 'republishing an Artifact this session updated by url')
+  assert.match(decide('Artifact', { type_url: 'u', title: 'x', file_path: '/tmp/hq.html' }, {}, ['/tmp/hq.html']) ?? '', /only Artifact/)
   assert.match(promptContext('schau mal https://www.tiktok.com/@a/video/1'), /watch\.py/)
   assert.match(promptContext('<wake><message trigger="true" from="human">Stopp!</message></wake>'), /said stop/)
   assert.equal(promptContext('stop the server on port 8787 please'), '')
@@ -425,6 +435,9 @@ test('rule guard: the spawn brief names a role, the thread gets its Roster row a
   assert.equal(run(wake('spawn', 'Role: Reviewer · Kit: setup · Size: S')).stdout, '', 'once per session')
   const { roleOf } = await import('../global/rule-guard.mjs')
   assert.equal(roleOf('Role: Evil', '| Evil ([`x.md`](../../../etc/passwd.md)) | a | b | c | d |').path, null, 'a path outside a roles folder is never read')
+  const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
+  assert.equal(roleOf('Role: Programmer for the app · Kit: app', teams).name, 'Programmer', 'a Roster name followed by words')
+  assert.equal(roleOf('Role: Social Lead · Kit: social', teams)?.name, 'Social Lead')
   assert.equal(spawnSync(process.execPath, [script, 'prompt'], { input: JSON.stringify({ prompt: '<coordinator-relay>\nRole: Tester · Kit: app · Size: L\n</coordinator-relay>', cwd: root, session_id: `${session}b` }), encoding: 'utf8' }).stdout, '', 'a relay that is not the spawn one')
 })
 
@@ -434,4 +447,24 @@ test('team guard: refresh replaces only installed guards, and only with a whole,
   for (const f of GUARD_FILES) assert.ok(readFileSync(join(root, 'global', f), 'utf8').startsWith('#!/usr/bin/env node'), `${f} must start with the node shebang the refresh checks`)
   const sh = readFileSync(join(root, 'cloud/setup.sh'), 'utf8')
   for (const f of GUARD_FILES) assert.ok(sh.includes(`/.claude/claude-setup/${f}"`), `cloud/setup.sh installs ${f}`)
+})
+
+// yskills 2026-10-27: threads that handed off or finished stayed open.
+test('rule guard: a finished thread that did not resolve itself is sent back once', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'stop-'))
+  const t = join(dir, 't.jsonl')
+  const use = (name, input) => JSON.stringify({ type: 'assistant', message: { content: [{ type: 'tool_use', name, input }] } })
+  const stop = (extra = {}) => spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'stop'], { input: JSON.stringify({ transcript_path: t, ...extra }), encoding: 'utf8' }).stdout
+  try {
+    const spawn = JSON.stringify({ type: 'user', message: { content: '<wake reason="spawn">brief</wake>' } })
+    writeFileSync(t, use('mcp__hearthbot__post_message', { text: 'Done: PR 3 merged, live https://x' }))
+    assert.equal(stop(), '', 'the coordinator posts Done: lines too and is no thread')
+    writeFileSync(t, [spawn, use('mcp__hearthbot__post_message', { text: 'Done: PR 3 merged, live https://x' })].join('\n'))
+    assert.match(JSON.parse(stop()).reason, /set_thread_resolved/)
+    assert.equal(stop({ stop_hook_active: true }), '', 'never twice in a row')
+    writeFileSync(t, [spawn, use('mcp__hearthbot__post_message', { text: 'Handoff: /mnt/project-files/x/handoff/2026-10-27-y.md' }), use('mcp__hearthbot__set_thread_resolved', { resolved: true })].join('\n'))
+    assert.equal(stop(), '')
+    writeFileSync(t, [spawn, use('mcp__hearthbot__post_message', { text: 'PR is up, gate runs' })].join('\n'))
+    assert.equal(stop(), '', 'work still going')
+  } finally { rmSync(dir, { recursive: true, force: true }) }
 })

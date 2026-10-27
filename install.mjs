@@ -213,7 +213,7 @@ for (const event of new Set(teamHooks.map(([e]) => e))) settings.hooks[event] = 
 for (const [event, matcher, mode] of teamHooks) settings.hooks[event].push({ matcher, hooks: [team(mode)] })
 // Rule guard (global/rule-guard.mjs): CLAUDE.md rules that were text only (no PR mails, real cards, short replies, one Artifact, conventional commits, no WebFetch in the cloud, video and stop notes); one entry each, replaced on every install.
 const rule = (mode) => ({ type: 'command', command: `node "${join(CLAUDE_DIR, 'claude-setup', 'rule-guard.mjs')}" ${mode}`, timeout: 5 })
-for (const [event, matcher, mode] of [['PreToolUse', 'Bash|Artifact|WebFetch|mcp__github__.*|mcp__hearthbot__post_message|mcp__remote-devices__create_artifact', 'pre'], ['UserPromptSubmit', '', 'prompt']]) {
+for (const [event, matcher, mode] of [['PreToolUse', 'Bash|Artifact|WebFetch|mcp__github__.*|mcp__hearthbot__post_message|mcp__remote-devices__create_artifact', 'pre'], ['UserPromptSubmit', '', 'prompt'], ['Stop', '', 'stop']]) {
   settings.hooks[event] = (settings.hooks[event] ?? []).filter((h) => !JSON.stringify(h).includes('rule-guard.mjs'))
   settings.hooks[event].push({ ...(matcher ? { matcher } : {}), hooks: [rule(mode)] })
 }

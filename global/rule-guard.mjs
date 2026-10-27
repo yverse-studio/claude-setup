@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Rule guard. Usage: rule-guard.mjs pre|prompt (hook entries PreToolUse and UserPromptSubmit).
+// Rule guard. Usage: rule-guard.mjs pre|prompt|stop (hook entries PreToolUse, UserPromptSubmit, Stop).
 // Turns CLAUDE.md rules that were text only into checks (audit 2026-10-27: 17 of 20 rules had no
 // guard and were skipped whenever CLAUDE.md did not load).
 // pre: refuses (exit 2) a review request or assignee for yskills on a PR (No GitHub mails), a
@@ -26,25 +26,44 @@ const CONVENTIONAL = /^(feat|fix|docs|chore|refactor|test|perf|ci|build|style|re
 
 const names = (v) => (Array.isArray(v) ? v : typeof v === 'string' ? v.split(/[\s,]+/) : []).map((s) => String(s).toLowerCase())
 
-// The first line of the message of a `git commit -m "..."` or `-m "$(cat <<'EOF' ...`; null when there is none to check.
-export function commitSubject(command) {
-  if (!/\bgit\b[^\n|;&]*\bcommit\b/.test(command) || /--amend\b[^\n]*--no-edit|\s-C\s|--reuse-message/.test(command)) return null
-  const here = command.match(/<<-?\s*'?(\w+)'?\s*\n([\s\S]*?)\n\s*\1\b/)
-  if (here) return here[2].split('\n').find((l) => l.trim())?.trim() ?? null
-  const m = command.match(/(?:\s-m|\s--message)[ =]?\s*(["'])([\s\S]*?)\1/)
-  return m ? m[2].split('\n')[0].trim() : null
+// The subject lines of every `git commit` in a Bash command: `-m "..."`, `-am '...'`, `-m word`, or
+// `-m "$(cat <<'EOF' ...`. Only a real git commit counts: one that starts a command (after a separator),
+// never "git commit" inside an echo, a grep or `git merge --no-commit`. Empty when there is nothing to check.
+const COMMIT = /(?:^|&&|\|\||[;|(\n])\s*(?:\w+=\S*\s+)*git(?:\s+-[Cc]\s+\S+)*\s+commit\b(?=([^\n]*))/g
+export function commitSubjects(command) {
+  const out = []
+  for (const m of command.matchAll(COMMIT)) {
+    const rest = m[1]
+    if (/--amend\b.*--no-edit|\s-[cC]\s|--reuse-message|--fixup|--squash|\s-F\s|--file\b/.test(rest)) continue
+    const here = rest.match(/(?:\s-[a-zA-Z]*m|--message)[ =]?\s*["']?\$\(cat\s*<<-?\s*'?(\w+)'?/)
+    if (here) {
+      const eol = command.indexOf('\n', m.index + m[0].length)
+      const after = eol < 0 ? '' : command.slice(eol + 1)
+      const line = after.split('\n').find((l) => l.trim())
+      if (line && line.trim() !== here[1]) out.push(line.trim())
+      continue
+    }
+    const msg = rest.match(/(?:\s-[a-zA-Z]*m|\s--message)(?:\s+|=|(?=["']))(?:(["'])([\s\S]*?)\1|([^\s"';&|]+))/)
+    if (msg) out.push((msg[2] ?? msg[3]).split('\n')[0].trim())
+  }
+  return out
 }
 
-export function decide(tool, input = {}, env = {}) {
+// yskills, as a reviewer or assignee in a gh command; never the bot account yskills-claude.
+const GH_ASK = /\bgh\s+(pr|issue)\b[^\n]*(?:--(?:add-)?(?:reviewer|assignee)|\s-[ra])[ =]["']?(?:[^\s"']*,)?yskills(?=[,\s"']|$)/i
+
+// published: the file paths this session already published to an existing Artifact (republishing by
+// the same file_path without `url` is how the Artifact tool updates it).
+export function decide(tool, input = {}, env = {}, published = []) {
   if (/^mcp__github__/.test(tool) || tool === 'Bash') {
     const ask = tool === 'Bash'
-      ? /\bgh\s+(pr|issue)\b[^\n]*--(add-)?(reviewer|assignee)[ =]\S*yskills/i.test(input.command ?? '')
+      ? GH_ASK.test(input.command ?? '')
       : [...names(input.reviewers), ...names(input.assignees)].includes(OWNER)
     if (ask) return `rule-guard: never request a review from or assign ${OWNER} (CLAUDE.md, No GitHub mails): every one sends him a mail. Keep the attribution block, drop reviewers/assignees, and go on.`
   }
   if (tool === 'Bash') {
-    const subject = commitSubject(input.command ?? '')
-    if (subject !== null && !/^(Merge|Revert) /.test(subject) && !CONVENTIONAL.test(subject)) return `rule-guard: commit subject "${subject.slice(0, 60)}" is not a conventional commit (CLAUDE.md, Code): start with feat|fix|docs|chore|refactor|test|perf|ci: and say what changed for the user.`
+    const subject = commitSubjects(input.command ?? '').find((t) => !/^(Merge|Revert) /.test(t) && !CONVENTIONAL.test(t))
+    if (subject !== undefined) return `rule-guard: commit subject "${subject.slice(0, 60)}" is not a conventional commit (CLAUDE.md, Code): start with feat|fix|docs|chore|refactor|test|perf|ci: and say what changed for the user.`
   }
   if (tool === 'mcp__hearthbot__post_message') {
     const text = String(input.text ?? '')
@@ -52,8 +71,9 @@ export function decide(tool, input = {}, env = {}) {
     const lines = text.split('\n').filter((l) => l.trim()).length
     if (text.length > REPLY_MAX_CHARS || lines > REPLY_MAX_LINES) return `rule-guard: this reply has ${text.length} chars and ${lines} lines; the cap is ${REPLY_MAX_CHARS} and ${REPLY_MAX_LINES} (CLAUDE.md, Replies). Lead with the result in a few lines; put the rest in a file under /mnt/project-files/ and attach it.`
   }
-  const newArtifact = (tool === 'Artifact' && !input.url && !input.asset && [undefined, 'publish'].includes(input.action)) || tool === 'mcp__remote-devices__create_artifact'
-  if (newArtifact && env.CLAUDE_SETUP_NEW_ARTIFACT !== 'yes') return 'rule-guard: the Company XY Artifact is the only Artifact there is (CLAUDE.md, Dashboard): write the rows there (docs/hq-rows.md) or a file under /mnt/project-files/. If yskills asked for a new one in his own words, say so in one line and retry with CLAUDE_SETUP_NEW_ARTIFACT=yes in the environment.'
+  const republish = input.file_path && !input.type_url && published.includes(input.file_path)
+  const newArtifact = (tool === 'Artifact' && !input.url && !input.asset && !republish && [undefined, 'publish'].includes(input.action)) || tool === 'mcp__remote-devices__create_artifact'
+  if (newArtifact && env.CLAUDE_SETUP_NEW_ARTIFACT !== 'yes') return 'rule-guard: the Company XY Artifact is the only Artifact there is (CLAUDE.md, Dashboard): no votes, galleries or one-off pages. Update it with its `url` (docs/hq-rows.md) or write a file under /mnt/project-files/. If yskills asked for a new one in his own words, say so in one line and retry with CLAUDE_SETUP_NEW_ARTIFACT=yes in the environment.'
   if (tool === 'WebFetch' && env.CLAUDE_CODE_REMOTE === 'true') return 'rule-guard: in a cloud thread every WebFetch makes yskills press Allow (CLAUDE.md, Cloud threads). Use WebSearch; for a video run the watch skill.'
   return null
 }
@@ -69,14 +89,16 @@ export function promptContext(prompt = '') {
 
 // The role a brief names (`Role: Programmer · Kit: setup · Size: M`) and its Roster row in TEAMS.md.
 export function roleOf(prompt, teams) {
-  const name = prompt.match(/^[\s>*_`-]*Role:[*_`\s]*([A-Za-z][A-Za-z ]*?)[*_`\s]*(?:·|\||,|$)/m)?.[1]
-  if (!name || /^(none|n\/a|tbd)$/i.test(name)) return null
-  const row = teams.split('\n').find((l) => l.toLowerCase().startsWith(`| ${name.toLowerCase()} (`))
-  if (!row) return { name, path: null, row: null }
+  const line = prompt.replace(/[*_`]/g, '').match(/^[\s>-]*Role:[ \t]*([^\n]*)/m)?.[1].trim()
+  if (!line || /^(none|n\/a|tbd|-)\b/i.test(line)) return null
+  const rows = teams.split('\n').filter((l) => /^\| [A-Z][\w ]* \(\[`/.test(l))
+  const named = (r) => r.slice(2, r.indexOf(' (')).toLowerCase()
+  const row = rows.filter((r) => line.toLowerCase().startsWith(named(r))).sort((x, y) => named(y).length - named(x).length)[0]
+  if (!row) return { name: line.split(/[·|,]/)[0].trim(), path: null, row: null }
   // Only a playbook path of the shape every Roster link has: nothing outside .claude/skills/<skill>/roles/.
   const link = row.match(/\]\(\.\.\/(\.claude\/skills\/[a-z0-9-]+\/roles\/[a-z0-9-]+\.md)\)/)?.[1] ?? null
   const cells = row.split('|').map((c) => c.trim())
-  return { name, path: link, row: `Job: ${cells[2]}. Runs as: ${cells[4]}. Model: ${cells[5]}.` }
+  return { name: cells[1].slice(0, cells[1].indexOf(' (')), path: link, row: `Job: ${cells[2]}. Runs as: ${cells[4]}. Model: ${cells[5]}.` }
 }
 
 export function roleCard(role, playbook) {
@@ -110,6 +132,26 @@ function roleContext(prompt, cwd, session) {
   return roleCard(role, role.path ? read(join(root, role.path)) || fetchRaw(role.path) : '')
 }
 
+// A thread that posted its result (`Done:`) or its hand-off path is finished: it resolves itself before
+// it stops (yskills 2026-10-27: handed-off threads stayed open; the coordinator cannot resolve another
+// thread from its tools). Returns the reason to keep going, or null.
+const FINISHED = /^\s*\**Done:|\/handoff\/[\w.-]+\.md/m
+export function unresolved(transcript) {
+  if (!/reason=\\?"spawn/.test(transcript)) return null // only a thread (spawned by the coordinator) resolves itself
+  let finished = false
+  for (const line of transcript.split('\n')) {
+    if (!line.includes('"tool_use"')) continue
+    try {
+      for (const c of JSON.parse(line).message?.content ?? []) {
+        if (c?.type !== 'tool_use') continue
+        if (/post_message$/.test(c.name)) finished = FINISHED.test(String(c.input?.text ?? ''))
+        else if (/set_thread_resolved$/.test(c.name)) finished = false
+      }
+    } catch { continue } // a line that is not JSON
+  }
+  return finished ? 'rule-guard: this thread posted its Done: line or its hand-off, so it is finished: call set_thread_resolved (resolved: true) as the last step (CLAUDE.md, one thread per plan or PR, closed when done). If yskills still owes an answer, say so in one line instead and stop.' : null
+}
+
 if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/').split('/').pop())) {
   const mode = process.argv[2]
   let raw = ''
@@ -118,14 +160,21 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
   process.stdin.on('end', () => {
     try {
       if (process.env.CLAUDE_SETUP_RULE_GUARD === 'off') return
-      const { tool_name: tool = '', tool_input: input = {}, prompt = '', cwd = process.cwd(), session_id: session } = JSON.parse(raw || '{}')
+      const { tool_name: tool = '', tool_input: input = {}, prompt = '', cwd = process.cwd(), session_id: session, transcript_path: transcriptPath } = JSON.parse(raw || '{}')
       if (mode === 'prompt') {
         const context = [roleContext(prompt, cwd, session), promptContext(prompt)].filter(Boolean).join('\n')
         if (context) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: context } }))
         return
       }
+      if (mode === 'stop') {
+        const why = !JSON.parse(raw || '{}').stop_hook_active && transcriptPath && existsSync(transcriptPath) ? unresolved(read(transcriptPath)) : null
+        if (why) process.stdout.write(JSON.stringify({ decision: 'block', reason: why }))
+        return
+      }
       if (mode !== 'pre') return
-      const block = decide(tool, input ?? {}, process.env)
+      const shipped = join(tmpdir(), `claude-setup-artifacts-${String(session).replace(/\W/g, '')}`)
+      const block = decide(tool, input ?? {}, process.env, session ? read(shipped).split('\n') : [])
+      if (!block && session && tool === 'Artifact' && input?.url && input.file_path) writeFileSync(shipped, `${input.file_path}\n`, { flag: 'a' })
       if (block) { process.stderr.write(block); process.exitCode = 2 }
     } catch {
       // A guard must never break a tool call.
