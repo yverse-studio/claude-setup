@@ -727,3 +727,10 @@ test('rule guard: replies to yskills carry a kaomoji, other tools do not', async
   assert.doesNotMatch(line, /\{\{|<START>/, 'card tokens are filled in')
   assert.match(persona('/no/such/dir'), /is Luna: 20, cute e-girl/, 'no file: the fallback')
 })
+
+test('config/persona.json is valid JSON with at least five example chats', () => {
+  const card = JSON.parse(readFileSync(join(root, 'config', 'persona.json'), 'utf8'))
+  assert.equal(card.spec, 'chara_card_v2')
+  assert.ok(card.data.mes_example.split('<START>').length > 5, 'five or more examples')
+  assert.ok(!/\b(cock|cunt|pussy|nackt)\b/i.test(card.data.mes_example), 'public file stays mild')
+})
