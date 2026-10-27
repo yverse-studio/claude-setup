@@ -547,6 +547,18 @@ test('team guard: card refreshes first and lets a new team-guard build the card'
   } finally { for (const d of [home, bin, cwd]) rmSync(d, { recursive: true, force: true }) }
 })
 
+// Routing test 2026-10-27: the project chat refused bootstrap.sh, which also rewrites permissions and autoMode.
+test('cloud/coordinator-install.sh installs the same guard hooks as setup.sh and no permissions', async () => {
+  const own = readFileSync(join(root, 'cloud/coordinator-install.sh'), 'utf8')
+  const setup = readFileSync(join(root, 'cloud/setup.sh'), 'utf8')
+  const body = own.split('\n').filter((l) => !l.startsWith('#'))
+  assert.ok(!body.some((l) => /permissions|autoMode|plugin/.test(l)), 'guards only')
+  const hooks = (t) => t.split('\n').filter((l) => /Hooks = |\["PreToolUse", "Bash\|Write/.test(l)).join('\n')
+  assert.equal(hooks(own), hooks(setup), 'same hook entries as the environment setup')
+  const { BOOT_FILES } = await import('../global/team-guard.mjs')
+  for (const f of BOOT_FILES) assert.ok(own.includes(f), `installs ${f}`)
+})
+
 // The repeats audit 2026-10-27 (docs/research/2026-10-27-repeats.md): what yskills had to say most, as checks.
 test('rule guard: replies that ask for an Allow, say can\'t untried, post Done: without proof or claim nothing is open', async () => {
   const { decide, replyRule } = await import('../global/rule-guard.mjs')
