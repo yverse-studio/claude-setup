@@ -560,6 +560,19 @@ test('cloud/coordinator-install.sh installs the same guard hooks as setup.sh and
   for (const f of BOOT_FILES) assert.ok(own.includes(f), `installs ${f}`)
 })
 
+// Routing test 2026-10-27: the project chat may run without hooks, so the thread checks its own start.
+test('rule guard: a thread checks its spawn brief against TEAMS.md and sends a bad start back', async () => {
+  const { briefCheck } = await import('../global/rule-guard.mjs')
+  const spawn = (brief) => `<wake reason="spawn"><message>${brief}</message></wake>`
+  assert.equal(await briefCheck(spawn(`Role: Programmer · Kit: setup · Size: S${FULL}`), root), '')
+  assert.match(await briefCheck(spawn(`Role: Designer · Kit: content · Size: S${FULL}`), root), /Brief check[\s\S]*Kit: content is no kit[\s\S]*message_coordinator/)
+  assert.match(await briefCheck(spawn('Make a bee video.'), root), /no `Role: · Kit: · Size:` stamp/)
+  assert.match(await briefCheck(spawn('Role: Programmer · Kit: setup · Size: S\nFix it.'), root), /brief lines missing: Model:/)
+  assert.equal(await briefCheck('Role: Designer · Kit: content · Size: S', root), '', 'only the spawn wake')
+  const out = spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'prompt'], { input: JSON.stringify({ prompt: spawn('Make a bee video.'), cwd: root, session_id: 'bc1' }), encoding: 'utf8' }).stdout
+  assert.match(JSON.parse(out).hookSpecificOutput.additionalContext, /^Brief check/)
+})
+
 // The repeats audit 2026-10-27 (docs/research/2026-10-27-repeats.md): what yskills had to say most, as checks.
 test('rule guard: replies that ask for an Allow, say can\'t untried, post Done: without proof or claim nothing is open', async () => {
   const { decide, replyRule } = await import('../global/rule-guard.mjs')
