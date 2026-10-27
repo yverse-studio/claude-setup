@@ -564,6 +564,29 @@ test('rule guard: a thread checks its spawn brief against TEAMS.md and sends a b
   assert.match(JSON.parse(out).hookSpecificOutput.additionalContext, /^Brief check/)
 })
 
+// Issue #335: the relay and the first wake queue together, so the hook fires once, on the wake that has no spawn marker.
+test('rule guard: the spawn brief is checked from the transcript when the prompt that fires the hook is not the spawn one', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'rg-spawn-'))
+  try {
+    const entry = (text, type = 'user') => JSON.stringify({ type, message: { role: type, content: type === 'user' ? text : [{ type: 'text', text }] } })
+    const wake = '<wake reason="spawn"><message>You are a Thread Session created by this project.</message></wake>'
+    const relay = (brief) => `<relay from="coordinator" reason="spawn"><note>${brief}</note></relay>`
+    const mention = '<wake reason="mention"><message>hi</message></wake>'
+    const run = (lines, session) => {
+      const transcript = join(dir, `${session}.jsonl`)
+      writeFileSync(transcript, lines.join('\n'))
+      return spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'prompt'], { input: JSON.stringify({ prompt: mention, cwd: root, session_id: session, transcript_path: transcript }), encoding: 'utf8' }).stdout
+    }
+    const id = (name) => `${name}-${process.pid}`
+    const bad = [entry(wake), entry(relay('Make a bee video.')), entry(mention)]
+    assert.match(JSON.parse(run(bad, id('bc335'))).hookSpecificOutput.additionalContext, /^Brief check[\s\S]*no `Role: · Kit: · Size:` stamp/)
+    assert.doesNotMatch(run(bad, id('bc335')), /Brief check/, 'once per session')
+    assert.doesNotMatch(run([entry(wake), entry(relay(`Role: Programmer · Kit: setup · Size: S${FULL}`)), entry(mention)], id('bc335ok')), /Brief check/, 'a good brief passes, the bare spawn wake is not the brief')
+    assert.doesNotMatch(run([entry('see this: <wake reason="spawn">Make a bee video.</wake>'), entry('x', 'assistant'), 'not json reason="spawn"'], id('bc335q')), /Brief check/, 'a chat that only quotes a spawn is no thread')
+    assert.doesNotMatch(run([entry(`<wake reason="mention"><message>${relay('Make a bee video.')}</message></wake>`)], id('bc335w')), /Brief check/, 'a wake that quotes another thread\'s spawn relay is no thread')
+  } finally { rmSync(dir, { recursive: true, force: true }) }
+})
+
 // The repeats audit 2026-10-27 (docs/research/2026-10-27-repeats.md): what yskills had to say most, as checks.
 test('rule guard: replies that ask for an Allow, say can\'t untried, post Done: without proof or claim nothing is open', async () => {
   const { decide, replyRule } = await import('../global/rule-guard.mjs')
