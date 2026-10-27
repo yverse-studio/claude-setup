@@ -382,7 +382,7 @@ test('rule guard: blocks the rules that were text only, passes the normal calls'
     ['mcp__remote-devices__create_artifact', { id: 'x' }],
   ]
   for (const [tool, input] of blocked) assert.match(decide(tool, input, {}) ?? '', /^rule-guard:/, `${tool} ${JSON.stringify(input)}`)
-  assert.match(decide('WebFetch', { url: 'https://x' }, { CLAUDE_CODE_REMOTE: 'true' }), /WebSearch/)
+  assert.match(decide('WebFetch', { url: 'https://x' }, { CLAUDE_CODE_REMOTE: 'true' }), /rule-guard\.mjs read 'https:\/\/x'/)
   const passed = [
     ['mcp__github__update_pull_request', { reviewers: ['someone'] }],
     ['mcp__github__create_pull_request', { title: 'x' }],
@@ -489,4 +489,43 @@ test('team guard: refresh keeps the boot files when a guard is missing on main',
     assert.match(readFileSync(join(dir, 'CLAUDE.md'), 'utf8'), /Working for yskills/)
     assert.match(readFileSync(join(dir, 'rule-guard.mjs'), 'utf8'), /\/\/ old/, 'the installed guard stays when main has none')
   } finally { process.env.PATH = old; for (const d of [dir, bin]) rmSync(d, { recursive: true, force: true }) }
+})
+
+// yskills 2026-10-27: "how do I enforce that you are no yes-man and grill me".
+test('rule guard: an agreeing reply needs its reason; a Planner M/L grills before the plan', async () => {
+  const { decide, grillMissing } = await import('../global/rule-guard.mjs')
+  const post = (text) => decide('mcp__hearthbot__post_message', { text }, {})
+  assert.match(post('Du hast recht, mach ich.') ?? '', /Co-founder/)
+  assert.match(post("You're right!") ?? '', /Co-founder/)
+  assert.equal(post('Stimmt teilweise, weil TEAMS.md Fable schon für Architektur nennt.'), null)
+  assert.equal(post('Fertig: PR 3 ist drin.'), null)
+  for (const ok of ['Genau das ist fertig: PR 3', 'Stimmt nicht.', 'Richtig gemacht: Done: link', 'Exactly 3 files changed', 'Absolutely nothing broke']) assert.equal(post(ok), null, ok)
+  for (const bad of ['Richtig.', 'Ja klar!', 'Agreed.', 'Genau, mach ich.']) assert.match(post(bad) ?? '', /Co-founder/, bad)
+  const use = (name, input) => JSON.stringify({ type: 'assistant', message: { content: [{ type: 'tool_use', name, input }] } })
+  const spawn = (brief) => JSON.stringify({ type: 'user', message: { content: `<wake reason="spawn">${brief}</wake>` } })
+  const planner = spawn('Role: Planner · Kit: app · Size: L')
+  const t = (...lines) => () => lines.join('\n')
+  assert.equal(grillMissing('Write', { file_path: '/r/PLAN.md' }, t(planner)), true)
+  assert.equal(grillMissing('mcp__github__create_pull_request', {}, t(planner)), true)
+  assert.equal(grillMissing('Write', { file_path: '/r/PLAN.md' }, t(planner, use('mcp__hearthbot__request_decision', { question: 'x' }))), false)
+  assert.equal(grillMissing('Write', { file_path: '/r/PLAN.md' }, t(spawn('Role: Planner · Kit: app · Size: S'))), false, 'size S skips the grill')
+  assert.equal(grillMissing('Write', { file_path: '/r/PLAN.md' }, t(spawn('Role: Programmer · Kit: app · Size: L'))), false, 'only the Planner grills')
+  assert.equal(grillMissing('Write', { file_path: '/r/PLAN.md' }, t(spawn('Role: Planner · Kit: app · Size: M. yskills: just do it'))), false)
+  assert.equal(grillMissing('Write', { file_path: '/r/notes.md' }, t(planner)), false)
+  const readDocs = JSON.stringify({ type: 'user', message: { content: [{ type: 'tool_result', content: 'Role: Planner · Kit: app · Size: L ... just do it' }] } })
+  assert.equal(grillMissing('mcp__github__create_pull_request', {}, t(spawn('Role: Programmer · Kit: app · Size: M'), readDocs)), false, 'a brief quoted in a file read is not this thread')
+  assert.equal(grillMissing('Write', { file_path: '/r/PLAN.md' }, t(planner, readDocs)), true, '"just do it" in a file read does not skip the grill')
+})
+
+test('rule guard: read turns a page into plain text', async () => {
+  const { pageText, privateHost } = await import('../global/rule-guard.mjs')
+  for (const u of ['http://localhost:8787/', 'http://169.254.169.254/latest/meta-data', 'http://10.0.0.1/', 'http://[::1]/', 'http://metadata.google.internal/']) assert.ok(privateHost(u), u)
+  assert.equal(privateHost('https://docs.anthropic.com/en/docs'), false)
+  assert.ok(privateHost('http://localhost./'), 'a trailing dot does not hide localhost')
+  const { privateIp } = await import('../global/rule-guard.mjs')
+  for (const ip of ['127.0.0.1', '10.1.2.3', '172.20.0.1', '192.168.1.1', '169.254.169.254', '::1', 'fd00::1', 'fe80::1', '::ffff:127.0.0.1', '::ffff:10.0.0.1', '64:ff9b::a00:1', 'fec0::1']) assert.ok(privateIp(ip), ip)
+  for (const ip of ['104.18.0.1', '2606:4700::1', '172.32.0.1', '::ffff:8.8.8.8']) assert.equal(privateIp(ip), false, ip)
+  assert.equal(pageText('<html><head><title>t</title></head><body><script>x()</script><h1>Hooks</h1><p>Exit 2 &amp; stderr</p></body></html>'), 'Hooks\nExit 2 & stderr')
+  const r = spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'read', 'not-a-url'], { encoding: 'utf8' })
+  assert.equal(r.status, 1)
 })
