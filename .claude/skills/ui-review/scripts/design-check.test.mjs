@@ -37,6 +37,17 @@ test('a complete DESIGN.md passes', () => {
   assert.deepEqual(checkDesign(project(GOOD)), []);
 });
 
+test('captures in subfolders count when cited by their path under reference/', () => {
+  const md = GOOD.replace('reference/a.png, reference/b.png and reference/c.png', 'leaders/a.png, leaders/b.png and appstore/c.png');
+  const dir = project(md, []);
+  for (const f of ['leaders/a.png', 'leaders/b.png', 'appstore/c.png']) {
+    mkdirSync(join(dir, 'design', 'reference', f.split('/')[0]), { recursive: true });
+    writeFileSync(join(dir, 'design', 'reference', f), 'x');
+  }
+  assert.deepEqual(checkDesign(dir), []);
+  assert.match(checkDesign(project(md, [])).join(), /cites 0 reference captures/);
+});
+
 test('missing DESIGN.md fails', () => {
   assert.match(checkDesign(project(null)).join(), /DESIGN\.md missing/);
 });
