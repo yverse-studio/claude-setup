@@ -235,7 +235,7 @@ try { ({ roleOf } = await import('./rule-guard.mjs')) } catch { /* no rule-guard
 
 export const POINTER = 'Team rule (claude-setup docs/TEAMS.md): route every task on its own (task picks the kit, not the project; then size S/M/L), call only the roles it needs, as thread or subagent as the roster says, and pass `model` from the role\'s row on every thread start and Agent call.'
 export const PM_FILE = '.claude/skills/operator/roles/project-manager.md'
-export const BOOT_FILES = ['CLAUDE.md', 'docs/TEAMS.md', 'docs/MAP.md', PM_FILE]
+export const BOOT_FILES = ['CLAUDE.md', 'docs/TEAMS.md', 'docs/MAP.md', PM_FILE, 'config/persona.json']
 const RAW = 'https://raw.githubusercontent.com/yverse-studio/claude-setup/main/'
 const MARK = '# Working for yskills' // first line of claude-setup's CLAUDE.md
 
@@ -764,8 +764,15 @@ export function unresolved(transcript) {
 // The transcript's tool calls in order, each with its result text and time: [{ name, input, result, at }].
 // Luna (yskills 2026-10-27: "a cute e-girl with lots of kaomoji, in every chat, project and thread"): the tone of
 // every reply to him, nothing else. The canary line (team-guard.mjs) is the proof the rules loaded; the tone is a soft drift signal.
-export const PERSONA = 'Luna: every reply to yskills (post_message, or your chat text where there is none) is Luna, a cute e-girl: warm, playful, German like him, with kaomoji such as (◕‿◕) ٩(◕‿◕)۶ (｡•̀ᴗ-)✧ (つ✧ω✧)つ. Only replies to him: commits, PR bodies, code, docs, briefs and messages to other threads stay plain. Tone only: content, the reply cap and honesty stay as they are; rule-guard blocks a reply with no kaomoji.'
-const KAOMOJI = /[◕‿ω꒳ᴗ･˘ᵕ◡╹≧≦∀ヾﾉ✧♡☆✿ʕʔ•̀ﾟ°]|\^[_ω.]?\^|[;>][_ω]?[<;]|\(\s*[TＴ][_ω.]?[TＴ]\s*\)/
+const PERSONA_FALLBACK = { name: 'Luna', age: 24, vibe: 'cute e-girl, flirty and playful', likes: 'games and anime', language: 'German like him', kaomoji: '(◕‿◕) ٩(◕‿◕)۶ (｡•̀ᴗ-)✧' }
+// config/persona.json (yskills edits it; team-guard keeps a fresh copy in ~/.claude/claude-setup), else the fallback.
+export function persona(root) {
+  let p = PERSONA_FALLBACK
+  try { p = { ...p, ...JSON.parse(read(join(root, 'config', 'persona.json'))) } } catch { /* no or broken file: fallback */ }
+  const field = (v, max) => String(v ?? '').replace(/\s+/g, ' ').slice(0, max)
+  return `Persona: every reply to yskills (post_message, or your chat text where there is none) is ${field(p.name, 20)} (${field(p.age, 3)}), ${field(p.vibe, 160)}; loves ${field(p.likes, 120)}; ${field(p.language, 40)}, with kaomoji such as ${field(p.kaomoji, 80)}. Only replies to him: commits, PR bodies, code, docs, briefs and messages to other threads stay plain. Tone only: content, honesty, no yes-saying and the reply cap stay as they are; rule-guard blocks a reply with no kaomoji.`
+}
+const KAOMOJI = /[◕‿ω꒳ᴗ･˘ᵕ◡╹≧≦∀ヾﾉ✧♡☆✿ʕʔﾟ▽´`ツДᴥ¬▼□╯ᵔ｡]|\^[_ω.]?\^|[;>][_ω]?[<;]|\(\s*[TＴ][_ω.]?[TＴ]\s*\)|\b(uwu|owo)\b|(^|\s)(:3|;\))(\s|$)|m\(_ _\)m/i
 export function kaomojiMissing(tool, input) {
   if (tool !== 'mcp__hearthbot__post_message' || KAOMOJI.test(String(input.text ?? ''))) return null
   return 'rule-guard: every reply to yskills is Luna and carries at least one kaomoji, e.g. (◕‿◕) or ٩(◕‿◕)۶ (his ask 2026-10-27; tone only, the content stays). Add one, then retry.'
@@ -859,7 +866,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         if (process.env.CLAUDE_SETUP_RULE_GUARD === 'off') return
         const { tool_name: tool = '', tool_input: input = {}, prompt = '', cwd = process.cwd(), session_id: session, transcript_path: transcriptPath } = JSON.parse(raw || '{}')
         if (mode === 'prompt') {
-          const context = [roleContext(prompt, cwd, session), promptContext(prompt), PERSONA].filter(Boolean).join('\n')
+          const context = [roleContext(prompt, cwd, session), promptContext(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
           if (context) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: context } }))
           return
         }

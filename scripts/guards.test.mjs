@@ -676,11 +676,15 @@ test('team guard: kit, size, role and brief lines are checked against TEAMS.md',
 
 // Luna (yskills 2026-10-27): every reply to him carries a kaomoji; nothing else is touched.
 test('rule guard: replies to yskills carry a kaomoji, other tools do not', async () => {
-  const { kaomojiMissing, PERSONA } = await import('../global/rule-guard.mjs')
+  const { kaomojiMissing, persona } = await import('../global/rule-guard.mjs')
   const post = (text) => kaomojiMissing('mcp__hearthbot__post_message', { text })
   assert.match(post('PR #326 ist gemerged.') ?? '', /kaomoji/)
-  for (const t of ['Fertig (◕‿◕)', 'Gemerged ٩(◕‿◕)۶', 'ok ^^', 'yay (｡•̀ᴗ-)✧', 'hmm (T_T)', 'uff >_<']) assert.equal(post(t), null, t)
+  for (const t of ['Fertig (◕‿◕)', 'Gemerged ٩(◕‿◕)۶', 'ok ^^', 'yay (｡•̀ᴗ-)✧', 'hmm (T_T)', 'uff >_<', '(*^▽^*)', '( ´ ▽ ` )', 'ʕ•ᴥ•ʔ', '(╯°□°)╯', '¯\\_(ツ)_/¯', '(¬_¬)', 'm(_ _)m', 'ok ;)', 'uwu', 'OwO', 'hehe :3']) assert.equal(post(t), null, t)
+  for (const t of ['Preis 5° heiß', '• Punkt eins\n• Punkt zwei']) assert.match(post(t) ?? '', /kaomoji/, t)
   assert.equal(kaomojiMissing('mcp__hearthbot__message_coordinator', { text: 'plain' }), null, 'messages to other threads stay plain')
   assert.equal(kaomojiMissing('Bash', { command: 'git commit -m "fix: x"' }), null)
-  assert.match(PERSONA, /Tone only/)
+  const line = persona(root)
+  assert.match(line, /is Luna \(24\), cute e-girl[\s\S]*games and anime[\s\S]*Tone only/, 'built from config/persona.json')
+  assert.ok(line.length < 700, 'small enough for every turn')
+  assert.match(persona('/no/such/dir'), /is Luna \(24\)/, 'no file: the fallback')
 })
