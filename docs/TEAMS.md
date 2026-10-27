@@ -87,7 +87,7 @@ One order for every kind. The step numbers are `run.md`'s, so its detail matches
 | 3 Plan: stress test, slices, criteria (`PLAN.md`, `features.json`) | Planner | - | 5 lines | full |
 | 4 Design and docs: art direction, copy, play, sound, tracking | Designer thread; Game Designer thread for a game; Content Designer, Audio, Analytics as subagents | - | - | yes |
 | 5 Build | Programmer, one thread per slice | yes | yes | yes |
-| 6 Gate, with its lessons step | `gate.md` (there is no Gate role: the gate is the Tester's job, and its design-critic pass is never the author's): in the author thread (S, M), a fresh Tester (L); Reviewer, Security, Legal, Playtester as subagents | S | M | L |
+| 6 Gate, with its lessons step | `gate.md` (there is no Gate role: the Programmer runs the S and M gate, a fresh Tester the L gate): in the author thread (S, M), a fresh Tester (L); Reviewer, Security, Legal, Playtester as subagents | S | M | L |
 | 7 Launch, 8 Grow | Marketer thread, `publish`, `sell` | - | - | a new product |
 | 9 Learn | the gate's lessons step (`gate.md`, After the merge) and `docs/MAP.md` (Where a lesson goes) | yes | yes | yes |
 
