@@ -553,7 +553,8 @@ test('cloud/coordinator-install.sh installs the same guard hooks as setup.sh and
   const setup = readFileSync(join(root, 'cloud/setup.sh'), 'utf8')
   const body = own.split('\n').filter((l) => !l.startsWith('#'))
   assert.ok(!body.some((l) => /permissions|autoMode|plugin/.test(l)), 'guards only')
-  const hooks = (t) => t.split('\n').filter((l) => /Hooks = |\["PreToolUse", "Bash\|Write/.test(l)).join('\n')
+  const block = (t) => { const a = t.indexOf('const cmd = `node'); return t.slice(a, t.indexOf('fs.writeFileSync(p', a)) }
+  const hooks = (t) => block(t).split('\n').filter((l) => /hooks|Hooks|const (cmd|team|rule) /.test(l) && !l.includes('permissions-sync')).join('\n')
   assert.equal(hooks(own), hooks(setup), 'same hook entries as the environment setup')
   const { BOOT_FILES } = await import('../global/team-guard.mjs')
   for (const f of BOOT_FILES) assert.ok(own.includes(f), `installs ${f}`)
