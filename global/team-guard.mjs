@@ -181,10 +181,10 @@ export function wrongModel(text, model, teams) {
 // The brief block's must-have lines (operator/briefs.md). Blind test 2026-10-27: a fresh coordinator
 // started threads with only a title and a guess, and nothing stopped it.
 const BRIEF_LINES = [
-  ['Model:', /^[ \t>-]*Model:[ \t]*\S/im],
-  ['Skills:', /^[ \t>-]*Skills:[ \t]*\S/im],
-  ['Done when:', /\bDone when:[ \t]*[^<\s]/i],
-  ['Stop when:', /\bStop when:[ \t]*[^<\s]/i],
+  ['Model:', /^[ \t>-]*Model:[ \t]*[^<\s]/im],
+  ['Skills:', /^[ \t>-]*Skills:[ \t]*[^<\s]/im],
+  ['Done when:', /\bDone when:[ \t]*\n?[ \t]*[^<\s]/i],
+  ['Stop when:', /\bStop when:[ \t]*\n?[ \t]*[^<\s]/i],
   ['Start: (read MEMORY.md first)', /^[ \t>-]*Start:[^\n]*MEMORY\.md/im],
 ]
 export function missingLines(text) {
@@ -199,6 +199,9 @@ const kitRows = (teams) => section(teams, 'Kits', 'Models for tasks').split('\n'
 const rosterOf = (teams, part) => section(teams, 'Roster', 'Kits').split(/\n### /).find((s) => s.startsWith(part)) ?? ''
 // A role named in a Kits cell: one comma, semicolon or bracket item that is the role, maybe with words after ("Designer for renders", not "Game Designer").
 const named = (cell, role) => cell.replace(/`/g, '').split(/[,;()]/).map((i) => i.trim().replace(/^(and|then|plus) /i, '').toLowerCase()).some((i) => i === role.toLowerCase() || i.startsWith(`${role.toLowerCase()} `))
+// A Skipped item with a condition ("Marketer before the first playable", "Content Designer (unless ...)") skips nobody outright.
+const skips = (cell, role) => cell.replace(/`/g, '').split(/[,;]/).map((i) => i.trim().replace(/^(and|then|plus) /i, ''))
+  .some((i) => !/[(]|\b(before|unless|until|after)\b/i.test(i) && i.toLowerCase() === role.toLowerCase())
 export function badTeam(text, teams) {
   const plain = text.replace(/[*_`]/g, '')
   const rows = teams ? kitRows(teams) : []
@@ -214,7 +217,7 @@ export function badTeam(text, teams) {
   const film = rosterOf(teams, 'Film').includes(`| ${role.name} (`)
   const social = rosterOf(teams, 'Social').includes(`| ${role.name} (`)
   const media = ['video', 'social'].includes(kit)
-  const fits = social ? kit === 'social' : film ? media : media ? named(row.team, role.name) : !named(row.skipped, role.name)
+  const fits = social ? kit === 'social' : film ? media : media ? named(row.team, role.name) : !skips(row.skipped, role.name)
   return fits ? null : `the ${role.name} is not on the \`${kit}\` kit's team (docs/TEAMS.md, Kits: team "${row.team}", skipped "${row.skipped}"); start the role that row names`
 }
 
