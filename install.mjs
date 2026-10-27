@@ -136,6 +136,7 @@ items.push(['global/context-guard.mjs', join('claude-setup', 'context-guard.mjs'
 items.push(['global/attempt-guard.mjs', join('claude-setup', 'attempt-guard.mjs')])
 items.push(['global/live-hook.mjs', join('claude-setup', 'live-hook.mjs')])
 items.push(['global/team-guard.mjs', join('claude-setup', 'team-guard.mjs')])
+items.push(['global/rule-guard.mjs', join('claude-setup', 'rule-guard.mjs')])
 items.push(['global/live-shot.ps1', join('claude-setup', 'live-shot.ps1')])
 
 const now = new Set(items.map(([, dest]) => dest))
@@ -207,9 +208,14 @@ for (const [event, mode, matcher] of [['PreToolUse', 'pre', 'Bash|mcp__.*'], ['P
 }
 // Team guard (global/team-guard.mjs): boot files from main and a docs/TEAMS.md pointer at session start, a block on Agent calls and thread starts without `model` and on thread starts before TEAMS.md was read; one entry each, replaced on every install.
 const team = (mode) => ({ type: 'command', command: `node "${join(CLAUDE_DIR, 'claude-setup', 'team-guard.mjs')}" ${mode}`, timeout: 5 })
-for (const [event, matcher, mode] of [['SessionStart', 'startup|clear|compact', 'start'], ['PreToolUse', 'Agent|Task|mcp__.*start_thread.*|mcp__.*create_session', 'pre']]) {
-  settings.hooks[event] = (settings.hooks[event] ?? []).filter((h) => !/team-(brief|guard)\.mjs/.test(JSON.stringify(h)))
-  settings.hooks[event].push({ matcher, hooks: [team(mode)] })
+const teamHooks = [['SessionStart', 'startup|clear|compact', 'start'], ['SessionStart', 'startup|clear|compact', 'card'], ['PreToolUse', 'Agent|Task|mcp__.*start_thread.*|mcp__.*create_session', 'pre']]
+for (const event of new Set(teamHooks.map(([e]) => e))) settings.hooks[event] = (settings.hooks[event] ?? []).filter((h) => !/team-(brief|guard)\.mjs/.test(JSON.stringify(h)))
+for (const [event, matcher, mode] of teamHooks) settings.hooks[event].push({ matcher, hooks: [team(mode)] })
+// Rule guard (global/rule-guard.mjs): CLAUDE.md rules that were text only (no PR mails, real cards, short replies, one Artifact, conventional commits, no WebFetch in the cloud, video and stop notes); one entry each, replaced on every install.
+const rule = (mode) => ({ type: 'command', command: `node "${join(CLAUDE_DIR, 'claude-setup', 'rule-guard.mjs')}" ${mode}`, timeout: 5 })
+for (const [event, matcher, mode] of [['PreToolUse', 'Bash|Artifact|WebFetch|mcp__github__.*|mcp__hearthbot__post_message|mcp__remote-devices__create_artifact', 'pre'], ['UserPromptSubmit', '', 'prompt'], ['Stop', '', 'stop']]) {
+  settings.hooks[event] = (settings.hooks[event] ?? []).filter((h) => !JSON.stringify(h).includes('rule-guard.mjs'))
+  settings.hooks[event].push({ ...(matcher ? { matcher } : {}), hooks: [rule(mode)] })
 }
 // Live frames of Roblox Studio and Blender for HQ (global/live-hook.mjs, studio skill): one entry, replaced on every install.
 settings.hooks.PostToolUse = settings.hooks.PostToolUse.filter((h) => !JSON.stringify(h).includes('live-hook.mjs'))

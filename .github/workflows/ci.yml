@@ -26,7 +26,7 @@ jobs:
       - name: floor guard
         if: github.event_name == 'pull_request'
         run: node .claude/skills/publish/templates/new-project/scripts/floor-guard.mjs --base origin/${{ github.base_ref }}
-      - name: PR lessons line
+      - name: PR lessons and prior-art lines
         if: github.event_name == 'pull_request' && matrix.os == 'ubuntu-latest'
         env:
           PR_BODY: ${{ github.event.pull_request.body }}

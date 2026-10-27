@@ -55,7 +55,7 @@ The one home of the coordinator's start protocol. Every new coordinator session,
 
 yskills (2026-10-18): "does every thread know what model to use and how much context makes sense before handoff?" Two threads ran past their limit, so the rule is in every brief, not in memory.
 
-- Every `start_thread_session` brief starts with the block in `briefs.md` ("Every thread brief starts with"), its two filled lines included: `Model:` the id for the role's row in `docs/TEAMS.md` and `Handoff:` at <N>k. N is 350 by default (its home is `global/context-guard.mjs`: warn 250k, hand off 350k); you raise it in the brief for a big task, per thread (yskills, 2026-10-18), and the thread then watches that number.
+- Every `start_thread_session` brief starts with the block in `briefs.md` ("Every thread brief starts with"), its two filled lines included: `Model:` the id for the role's row in `docs/TEAMS.md` and `Handoff:` at <N>k. Leave N out by default: the context guard (`global/context-guard.mjs`) hands off by the brief's Size (S 250k, M 350k, L 500k); write N only to change that for one thread (yskills, 2026-10-18), and the guard then enforces that number.
 - A thread writes its handoff file at its `Handoff:` number, at a milestone, never mid-step: `/mnt/project-files/<project>/handoff/<date>-<topic>.md` (what is done, what is next, branch, PR, open asks), replies with its path and stops. Haiku readers stay under 100k.
 - You start the fresh thread on that file and never resume a thread over its limit or idle over an hour.
 - The context guard (`global/context-guard.mjs`) warns at 250k only where `cloud/setup.sh` ran as the environment's setup script; a thread does not count on it and watches its own context.

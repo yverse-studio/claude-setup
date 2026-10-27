@@ -69,6 +69,25 @@ task's branch) and check back with `send_later` plus `subscribe_pr_activity`. Pr
 **Thread model** Sonnet (only the fallback when a start forgot its `model`; on 2026-10-26 it was Opus and every thread ran on Opus), **Thread
 effort** medium, and `templates/project-instructions.md` pasted into Project instructions.
 
+
+## Cards
+
+- The home of the card format (rule: `CLAUDE.md`, Cards). In a claude.ai project every session posts
+  the real card itself, threads too (yskills 2026-10-26): `request_decision` (the coordinator's may be
+  named `ask_decision`), a question of about 12 words, 2-4 options with a short label and a one-line
+  consequence, one recommended with its reason. It is single choice (schema checked 2026-10-26), so
+  answers that can apply together become one yes/no card each. The coordinator has no card tool
+  (tap-tested 2026-10-26): it starts a one-card thread that posts it and posts one chat line linking
+  that card (links, never forwards). Without a card tool (Claude Code): `AskUserQuestion`
+  (multi-select when several answers fit) plus the fixed text card (`Card: <question>`, then one line
+  per option `A label: consequence`, the recommended one first, starred, with its reason); where
+  `request_decision` exists, `rule-guard` blocks a `Card:` text reply. The card's thread goes on with
+  the recommendation; the tap comes back as a wake (or relayed by the coordinator), and a tap against
+  the recommendation means change course. Only the ask-first items wait for the tap. Visual choices
+  (2026-10-18) are normal cards with screenshots from a Designer thread, saved in
+  `/mnt/project-files/<project>/votes/` and posted with the card (`designer.md`, Vote cards); never an
+  Artifact, never a vote on words alone. [advisory]
+
 ## 1. Size the job
 
 Which roles start for a size and kind, and which are skipped: [`docs/TEAMS.md`](../../../docs/TEAMS.md) (Sizes, Kits).

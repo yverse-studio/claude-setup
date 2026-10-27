@@ -72,11 +72,12 @@ Then reply "done". Meanwhile: <what the slice keeps building>
 ## Every thread brief starts with
 
 ```
-Role: <one role from docs/TEAMS.md (Roster)> · Kit: <kit> · Size: <S|M|L>. You are this one role, not the coordinator: docs/TEAMS.md (Coordinator or thread).
-Model: <id for this role's row in docs/TEAMS.md (Roster), via its Models line>. Handoff: when the context guard says so (by Size: S 250k,
-M 350k, L 500k; a line `Handoff: at <N>k` changes it) write /mnt/project-files/<project>/handoff/<date>-<topic>.md, reply with its path, stop.
+Role: <one role from docs/TEAMS.md (Roster), or none for a small task> · Kit: <kit> · Size: <S|M|L>. team-guard blocks a start without this line; rule-guard puts the role's Roster row and playbook into the thread. You are this one role, not the coordinator: docs/TEAMS.md (Coordinator or thread).
+Model: <id for this role's row in docs/TEAMS.md (Roster), via its Models line>. Handoff: at <N>k (only to change the Size default, which the
+context guard enforces: S 250k, M 350k, L 500k; else leave this clause out) write /mnt/project-files/<project>/handoff/<date>-<topic>.md, reply with its path, stop.
 Skills: load your role doc from claude-setup (`.claude/skills/operator/roles/<role>.md`) and the skills it lists before anything else. Your report ends with `Skills used:` naming the ones you actually opened; without that line it is not done.
 Claims: a claim from yskills, a lesson or another thread is checked first (repo, evidence, a test), then answered yes, no or changed with the reason, never a bare yes (`CLAUDE.md`, Co-founder).
+Prior art: <our repos and branches, skills, plugins, public setups checked> -> copy | adapt | build, because <why> (sizes M and L; team-guard blocks one without; the PR repeats it, CI checks).
 Tester: <the `Tester · <app>` thread> (size L Programmer briefs only; docs/TEAMS.md, Tester first; team-guard blocks one without).
 Literal mode: yskills' words are orders, done as said. No "yes, but", no offers, no alternatives
 when they ask for one thing; impossible or unsafe = one plain line, then the nearest thing done.
