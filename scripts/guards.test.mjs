@@ -2,7 +2,7 @@
 // never/always rules honest. Run: node --test scripts/guards.test.mjs
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { cpSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
@@ -504,6 +504,40 @@ test('team guard: refresh keeps the boot files when a guard is missing on main',
     assert.match(readFileSync(join(dir, 'CLAUDE.md'), 'utf8'), /Working for yskills/)
     assert.match(readFileSync(join(dir, 'rule-guard.mjs'), 'utf8'), /\/\/ old/, 'the installed guard stays when main has none')
   } finally { process.env.PATH = old; for (const d of [dir, bin]) rmSync(d, { recursive: true, force: true }) }
+})
+
+// Routing test 2026-10-27: the self-update never replaced a guard, because `node --check` read the
+// `.new` download as CommonJS and failed on `import`; a cached cloud image then kept its old guards.
+test('team guard: refresh replaces an installed guard with main\'s ES module copy', async () => {
+  const { refresh } = await import('../global/team-guard.mjs')
+  const dir = mkdtempSync(join(tmpdir(), 'refresh-'))
+  const bin = mkdtempSync(join(tmpdir(), 'fakecurl-'))
+  const old = process.env.PATH
+  try {
+    writeFileSync(join(bin, 'curl'), `#!/bin/sh\nwhile [ $# -gt 0 ]; do\n  if [ "$1" = "-o" ]; then out="$2"; url="$3"; shift 3\n    mkdir -p "$(dirname "$out")"\n    case "$url" in *global/*) printf '#!/usr/bin/env node\\nimport { join } from "node:path"\\n// new\\n' > "$out" ;; *CLAUDE.md) echo '# Working for yskills' > "$out" ;; *) echo doc > "$out" ;; esac\n  else shift; fi\ndone\n`, { mode: 0o755 })
+    writeFileSync(join(dir, 'rule-guard.mjs'), '#!/usr/bin/env node\n// old\n')
+    process.env.PATH = `${bin}:${old}`
+    if (process.platform === 'win32') return
+    refresh(dir)
+    assert.match(readFileSync(join(dir, 'rule-guard.mjs'), 'utf8'), /\/\/ new/)
+    assert.deepEqual(readdirSync(dir).filter((f) => f.includes('.new')), [], 'no download is left behind')
+  } finally { process.env.PATH = old; for (const d of [dir, bin]) rmSync(d, { recursive: true, force: true }) }
+})
+
+// Routing test 2026-10-27: `card` runs beside `start`, so it must not build the card with the image's old guard.
+test('team guard: card refreshes first and lets a new team-guard build the card', () => {
+  const home = mkdtempSync(join(tmpdir(), 'card-home-'))
+  const bin = mkdtempSync(join(tmpdir(), 'fakecurl-'))
+  const cwd = mkdtempSync(join(tmpdir(), 'chat-'))
+  try {
+    if (process.platform === 'win32') return
+    const dir = join(home, '.claude', 'claude-setup')
+    mkdirSync(dir, { recursive: true })
+    writeFileSync(join(dir, 'team-guard.mjs'), '#!/usr/bin/env node\n// old\n')
+    writeFileSync(join(bin, 'curl'), `#!/bin/sh\nwhile [ $# -gt 0 ]; do\n  if [ "$1" = "-o" ]; then out="$2"; url="$3"; shift 3\n    mkdir -p "$(dirname "$out")"\n    case "$url" in *global/team-guard.mjs) printf '#!/usr/bin/env node\\nimport "node:path"\\nprocess.stdout.write("fresh " + process.argv[2] + " " + process.env.CLAUDE_SETUP_BOOT_FETCH)\\n' > "$out" ;; *) echo doc > "$out" ;; esac\n  else shift; fi\ndone\n`, { mode: 0o755 })
+    const env = { CLAUDE_SETUP_HOME: home, PATH: `${bin}:${process.env.PATH}` }
+    assert.equal(runTeam('card', { cwd, session_id: 'c1' }, env).stdout, 'fresh card off')
+  } finally { for (const d of [home, bin, cwd]) rmSync(d, { recursive: true, force: true }) }
 })
 
 // The repeats audit 2026-10-27 (docs/research/2026-10-27-repeats.md): what yskills had to say most, as checks.
