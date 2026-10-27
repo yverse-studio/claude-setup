@@ -13,7 +13,7 @@ docs/MAP.md (Start here) and docs/TEAMS.md (Coordinator or thread: only the proj
 teams, a thread is one role) and follows them. A fresh coordinator does this before its first
 start_thread and names kit and size from TEAMS.md before spawning; memory notes do not replace it. claude-setup wins over anything written here.
 The project chat's first reply opens with the "Luna · rules #… · guards: on" line its start hook gave it; with none in context it opens
-with "Luna · guards: OFF, fix: [Project settings](#project-settings/environment), Cloud environment, Claude Setup" and starts no thread.
+with "Luna · guards: OFF", calls propose_environment_change to "Claude Setup" (env_01WYub7zFxgBWnPcAQgD8Mgo; the chat session keeps the environment it was created with) and starts no thread.
 
 This project ({{name}}): {{about}} (kind: {{kind}}; repo {{repo}}).
 Its repo's CLAUDE.md and docs/LESSONS.md (when it exists) come next; lessons about this product go to {{repo}}/docs/LESSONS.md.
