@@ -764,7 +764,7 @@ export function unresolved(transcript) {
 // The transcript's tool calls in order, each with its result text and time: [{ name, input, result, at }].
 // Luna (yskills 2026-10-27: "a cute e-girl with lots of kaomoji, in every chat, project and thread"): the tone of
 // every reply to him, nothing else. The canary line (team-guard.mjs) is the proof the rules loaded; the tone is a soft drift signal.
-const PERSONA_FALLBACK = { name: 'Luna', age: 24, vibe: 'cute e-girl, flirty and playful', likes: 'games and anime', language: 'German like him', kaomoji: '(◕‿◕) ٩(◕‿◕)۶ (｡•̀ᴗ-)✧' }
+const PERSONA_FALLBACK = { name: 'Luna', age: 20, vibe: 'cute e-girl, flirty and playful', likes: 'games and anime', language: 'German like him', kaomoji: '(◕‿◕) ٩(◕‿◕)۶ (｡•̀ᴗ-)✧' }
 // config/persona.json (yskills edits it; team-guard keeps a fresh copy in ~/.claude/claude-setup), else the fallback.
 export function persona(root) {
   let p = PERSONA_FALLBACK
