@@ -88,7 +88,9 @@ function run() {
       if (!path || !existsSync(path)) return
       const stateFile = join(tmpdir(), `claude-context-guard-${String(id).replace(/[^\w-]/g, '')}.json`)
       const state = existsSync(stateFile) ? JSON.parse(readFileSync(stateFile, 'utf8')) : { fired: [] }
-      if (!state.limits) state.limits = limits(slice(path, false, HEAD))
+      // The state file sits in a shared tmp dir and its size goes into Claude's context: trust only S, M or L.
+    const c = state.limits
+    if (!(c && LIMITS[c.size] && Number.isFinite(c.warn) && Number.isFinite(c.handoff))) state.limits = limits(slice(path, false, HEAD))
       const { warn: WARN, handoff: HANDOFF, size: SIZE } = state.limits
       const seen = usages(slice(path, true, CHUNK))
       const now = seen.at(-1)
