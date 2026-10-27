@@ -73,7 +73,8 @@ export function roleOf(prompt, teams) {
   if (!name || /^(none|n\/a|tbd)$/i.test(name)) return null
   const row = teams.split('\n').find((l) => l.toLowerCase().startsWith(`| ${name.toLowerCase()} (`))
   if (!row) return { name, path: null, row: null }
-  const link = row.match(/\]\(\.\.\/([^)]+\.md)\)/)?.[1] ?? null
+  // Only a playbook path of the shape every Roster link has: nothing outside .claude/skills/<skill>/roles/.
+  const link = row.match(/\]\(\.\.\/(\.claude\/skills\/[a-z0-9-]+\/roles\/[a-z0-9-]+\.md)\)/)?.[1] ?? null
   const cells = row.split('|').map((c) => c.trim())
   return { name, path: link, row: `Job: ${cells[2]}. Runs as: ${cells[4]}. Model: ${cells[5]}.` }
 }
@@ -82,6 +83,7 @@ export function roleCard(role, playbook) {
   if (!role.row) return `rule-guard: the brief names Role: ${role.name}, which is not in the Roster of claude-setup docs/TEAMS.md. Ask the coordinator which role you are (message_coordinator) before any work.`
   const head = `rule-guard: you are the ${role.name} of this task, one role only (docs/TEAMS.md, Coordinator or thread). ${role.row}`
   if (playbook && head.length + playbook.length < CARD_MAX) return `${head} Your playbook, ${role.path}, follows; work by it.\n\n${playbook}`
+  if (!role.path) return `${head} Your playbook is linked in that Roster row of claude-setup docs/TEAMS.md; Read it before any other work.`
   return `${head} Before any other work, Read your playbook ${role.path} of claude-setup${playbook ? '' : ' (add_repo it if it is not here)'}.`
 }
 

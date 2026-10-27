@@ -413,7 +413,7 @@ test('rule guard: hook entry blocks with exit 2, notes a video, and the off swit
 })
 
 // yskills 2026-10-27: every thread always knows exactly which role it has.
-test('rule guard: the spawn brief names a role, the thread gets its Roster row and playbook once', () => {
+test('rule guard: the spawn brief names a role, the thread gets its Roster row and playbook once', async () => {
   const script = join(root, 'global/rule-guard.mjs')
   const session = `t${process.pid}${Date.now()}`
   const run = (prompt) => spawnSync(process.execPath, [script, 'prompt'], { input: JSON.stringify({ prompt, cwd: root, session_id: session }), encoding: 'utf8' })
@@ -423,5 +423,15 @@ test('rule guard: the spawn brief names a role, the thread gets its Roster row a
   assert.match(out, /you are the Reviewer[\s\S]*Model: Sonnet[\s\S]*# Reviewer/)
   assert.ok(out.length < 10_000, 'hook output over 10,000 characters is cut to a preview')
   assert.equal(run(wake('spawn', 'Role: Reviewer · Kit: setup · Size: S')).stdout, '', 'once per session')
+  const { roleOf } = await import('../global/rule-guard.mjs')
+  assert.equal(roleOf('Role: Evil', '| Evil ([`x.md`](../../../etc/passwd.md)) | a | b | c | d |').path, null, 'a path outside a roles folder is never read')
   assert.equal(spawnSync(process.execPath, [script, 'prompt'], { input: JSON.stringify({ prompt: '<coordinator-relay>\nRole: Tester · Kit: app · Size: L\n</coordinator-relay>', cwd: root, session_id: `${session}b` }), encoding: 'utf8' }).stdout, '', 'a relay that is not the spawn one')
+})
+
+// yskills 2026-10-27: a guard fix on main reaches every session at its next start, no cloud rebuild.
+test('team guard: refresh replaces only installed guards, and only with a whole, parsing copy', async () => {
+  const { GUARD_FILES } = await import('../global/team-guard.mjs')
+  for (const f of GUARD_FILES) assert.ok(readFileSync(join(root, 'global', f), 'utf8').startsWith('#!/usr/bin/env node'), `${f} must start with the node shebang the refresh checks`)
+  const sh = readFileSync(join(root, 'cloud/setup.sh'), 'utf8')
+  for (const f of GUARD_FILES) assert.ok(sh.includes(`/.claude/claude-setup/${f}"`), `cloud/setup.sh installs ${f}`)
 })

@@ -244,14 +244,22 @@ export function rulesLoaded(cwd, home) {
 
 // One curl for all files (it honours HTTPS_PROXY). A failed or cut-off run replaces nothing; a file
 // replaces the copy only when it arrived whole. The .new names carry the pid, so two starts never share one.
+// The guards update themselves the same way (yskills 2026-10-27: a rule change on main must reach
+// every session without a cloud rebuild): an installed guard is replaced by main's copy when that
+// copy arrived whole and passes `node --check`. A new hook entry still needs install.mjs or a rebuild.
+export const GUARD_FILES = ['context-guard.mjs', 'attempt-guard.mjs', 'team-guard.mjs', 'rule-guard.mjs']
+const parses = (f) => { try { execFileSync(process.execPath, ['--check', f], { stdio: 'ignore', timeout: 2000 }); return true } catch { return false } }
 export function refresh(dir) {
   const tmp = (f) => join(dir, `${f}.${process.pid}.new`)
+  const guards = GUARD_FILES.filter((f) => existsSync(join(dir, f)))
   const args = ['-fsSL', '--max-time', '3', '--create-dirs']
   for (const f of BOOT_FILES) args.push('-o', tmp(f), RAW + f)
+  for (const f of guards) args.push('-o', tmp(f), `${RAW}global/${f}`)
   let ok = true
   try { execFileSync('curl', args, { stdio: 'ignore', timeout: 4000 }) } catch { ok = false }
-  for (const f of BOOT_FILES) {
-    const whole = ok && existsSync(tmp(f)) && statSync(tmp(f)).size > 0 && (f !== 'CLAUDE.md' || text(tmp(f)).includes(MARK))
+  for (const f of [...BOOT_FILES, ...guards]) {
+    const got = ok && existsSync(tmp(f)) && statSync(tmp(f)).size > 0
+    const whole = got && (f === 'CLAUDE.md' ? text(tmp(f)).includes(MARK) : !f.endsWith('.mjs') || (text(tmp(f)).startsWith('#!/usr/bin/env node') && parses(tmp(f))))
     if (whole) renameSync(tmp(f), join(dir, f))
     else rmSync(tmp(f), { force: true })
   }
@@ -467,7 +475,8 @@ export function roleOf(prompt, teams) {
   if (!name || /^(none|n\/a|tbd)$/i.test(name)) return null
   const row = teams.split('\n').find((l) => l.toLowerCase().startsWith(`| ${name.toLowerCase()} (`))
   if (!row) return { name, path: null, row: null }
-  const link = row.match(/\]\(\.\.\/([^)]+\.md)\)/)?.[1] ?? null
+  // Only a playbook path of the shape every Roster link has: nothing outside .claude/skills/<skill>/roles/.
+  const link = row.match(/\]\(\.\.\/(\.claude\/skills\/[a-z0-9-]+\/roles\/[a-z0-9-]+\.md)\)/)?.[1] ?? null
   const cells = row.split('|').map((c) => c.trim())
   return { name, path: link, row: `Job: ${cells[2]}. Runs as: ${cells[4]}. Model: ${cells[5]}.` }
 }
@@ -476,6 +485,7 @@ export function roleCard(role, playbook) {
   if (!role.row) return `rule-guard: the brief names Role: ${role.name}, which is not in the Roster of claude-setup docs/TEAMS.md. Ask the coordinator which role you are (message_coordinator) before any work.`
   const head = `rule-guard: you are the ${role.name} of this task, one role only (docs/TEAMS.md, Coordinator or thread). ${role.row}`
   if (playbook && head.length + playbook.length < CARD_MAX) return `${head} Your playbook, ${role.path}, follows; work by it.\n\n${playbook}`
+  if (!role.path) return `${head} Your playbook is linked in that Roster row of claude-setup docs/TEAMS.md; Read it before any other work.`
   return `${head} Before any other work, Read your playbook ${role.path} of claude-setup${playbook ? '' : ' (add_repo it if it is not here)'}.`
 }
 
