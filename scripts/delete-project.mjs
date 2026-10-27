@@ -119,7 +119,7 @@ export async function run({ env, fetchFn = fetch, registered = (name) => existsS
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   run({ env: process.env })
     .then(({ deleted }) => {
-      if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, `## ${process.env.NAME} ${deleted ? 'deleted' : 'dry run, nothing deleted'}\n\nThe plan is in the log.\n`)
+      if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, `## ${process.env.NAME} ${deleted ? 'deleted' : 'dry run, nothing deleted'}\n\nThe plan is in the log.${deleted ? ` Still to do: remove projects/${process.env.NAME}.json from main in a small PR.` : ''}\n`)
     })
     .catch((err) => { console.error(`[delete-project] ${err.message}`); process.exit(1) })
 }

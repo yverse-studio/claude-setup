@@ -261,6 +261,9 @@ Lessons from the deploy tests (10-08, runs 1 to 9) and the move to Claude's acco
 default dry run only logs the plan; `dry_run: false` then removes the Worker and its Builds
 connection, D1 `<name>` and `<name>-preview`, the build token `claude-setup-builds` once no other
 Worker builds with it, the repo in `yverse-studio` (last), and a leftover branch `new/<name>`.
+The workflow cannot push to `main`, and a PR it opened with its own token gets no CI run, so it
+leaves `projects/<name>.json` behind: the same thread then removes it with a size-S PR
+(`git rm projects/<name>.json`, gate merges it) and says the project is gone only after that merges.
 Refused before anything is touched: a protected repo name (the list in `scripts/delete-project.mjs`),
 no `projects/<name>.json` on main, a repo without the description "made by claude-setup new-project".
 Irreversible (the repo is restorable for 90 days, D1 is not once deleted): run it when the task
