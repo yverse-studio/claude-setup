@@ -29,3 +29,22 @@ A harem lineup works when every heroine answers four questions differently: **wh
 - Each heroine needs one hard "no" she can say to him and a reason she'd still come back.
 - Each has a life that continues off-page (job, family, a hobby that produces plot).
 - Introduce the lead heroine first and alone. Introduce a rival only when the lead heroine's rung is one step ahead.
+
+## How each archetype takes sharing (harem rule, `01`)
+
+Same start (rival who accepts the contest), same end (fine with the family), a different road. Pick the road from the archetype, then bend it with her sheet.
+
+| Archetype | Road to "fine with sharing" |
+|---|---|
+| Tsundere | Denies caring, competes loudest, defends the others in public first; the admission comes as an insult |
+| Kuudere / ice queen | Treats it as a problem to solve, makes the rules, then quietly keeps them |
+| Childhood friend | Accepts at once ("I'm happy for you") and holds herself back too much; the plot pushes her forward |
+| Kouhai / junior | Goes all in on the contest, then adopts the others as seniors and friends |
+| Senpai / older woman | Amused and in control, mentors the rivals, sets the tone for the group |
+| Gyaru / the loud one | Turns it into a game with bets and dares; real hurt, if any, is one short honest beat |
+| Class rep / organiser | Schedules it: rosters, rotas, a rule sheet that everyone breaks |
+| The quiet one | Steps back first, is noticed last; needs the others to pull her in |
+| Rival / enemies to lovers | Competition is her love language; the truce is her biggest scene |
+| The friend's friend | Says the honest thing out loud that everyone else only thinks |
+| The fake partner | Her deal expires, the group becomes the new reason to stay |
+| The wild card | Was fine from page one and is the one who sets the others up |
