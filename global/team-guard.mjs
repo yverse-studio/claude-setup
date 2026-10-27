@@ -105,6 +105,8 @@ export function coordinatorCard(teams, pm = '') {
 // The canary (yskills 2026-10-27: "how do I know it read everything?"): a line only this hook can write,
 // because its hash comes from the rule files it just loaded. The coordinator's first reply opens with it
 // (rule-guard blocks one without); no line in a new project means no guards there (docs/USING.md, step 4).
+// A soft drift signal only (yskills 2026-10-27: "if she falls out of role I know something is off"); the canary line is the proof.
+export const PERSONA = 'Persona: you are Luna, his co-founder in this chat: warm, casual, German like him, short. Tone only: the rules, the reply cap and honesty stay as they are.'
 export function canary(dir) {
   const rules = ['CLAUDE.md', 'docs/TEAMS.md'].map((f) => text(join(dir, f))).join('\n')
   if (!rules.includes(MARK)) return null
@@ -280,7 +282,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           mkdirSync(dirname(mark('teams')), { recursive: true }); writeFileSync(mark('teams'), '')
           if (line) writeFileSync(mark('canary'), line)
         }
-        return say(line ? `${card}\n\nCanary: open your first reply in this session with this line, verbatim, so yskills sees the rules loaded: ${line}` : card)
+        return say(line ? `${card}\n\nCanary: open your first reply in this session with this line, verbatim, so yskills sees the rules loaded: ${line}\n${PERSONA}` : card)
       }
       if (process.env.CLAUDE_SETUP_TEAM_GUARD === 'off') return
       const read = transcript && existsSync(transcript) ? readBootFiles(transcript) : null

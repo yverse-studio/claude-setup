@@ -254,8 +254,10 @@ export function unresolved(transcript) {
 export function canaryMissing(tool, input, line, transcript) {
   if (tool !== 'mcp__hearthbot__post_message' || !line.trim()) return null
   if (String(input.text ?? '').trimStart().startsWith(line.trim())) return null
-  // Until one reply carried it: a blocked try never did, so it never counts.
-  if (toolCalls(transcript()).some((c) => c.name === tool && String(c.input.text ?? '').trimStart().startsWith(line.trim()))) return null
+  const t = transcript()
+  if (/reason=\\?"spawn/.test(t)) return null // a thread is no project chat
+  // Until one reply carried a canary and went out (a blocked try has a hook error as its result; a later rules hash still counts).
+  if (toolCalls(t).some((c) => c.name === tool && c.result && !/rule-guard:|hook error/i.test(c.result) && String(c.input.text ?? '').trimStart().startsWith('Luna · rules #'))) return null
   return `rule-guard: your first reply in this session opens with the canary line, verbatim, so yskills sees the rules loaded (docs/USING.md, Start a project): ${line.trim()}`
 }
 
