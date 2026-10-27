@@ -2,7 +2,7 @@
 // never/always rules honest. Run: node --test scripts/guards.test.mjs
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { cpSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
@@ -346,4 +346,51 @@ test('team guard: the registered matchers catch Agent and the thread-start tools
     for (const t of ['Agent', 'Task', 'mcp__hearthbot__start_thread', 'mcp__hearthbot__start_thread_session', 'mcp__claude-code-remote__create_session']) assert.ok(re.test(t), `${f}: ${t}`)
     for (const t of ['Bash', 'mcp__hearthbot__message_thread', 'mcp__hearthbot__start_remote_control']) assert.ok(!re.test(t), `${f}: ${t}`)
   }
+})
+
+test('context guard: hand-off follows the brief size, a Handoff line overrides, tool output does not count', async () => {
+  const { limits, LIMITS } = await import('../global/context-guard.mjs')
+  const user = (content) => JSON.stringify({ type: 'user', message: { role: 'user', content } })
+  const tool = (text) => user([{ type: 'tool_result', content: text }])
+  const brief = (b) => user(`<relay><note>Role: Programmer · Kit: setup · ${b}. First add ...</note></relay>`)
+  const env = {}
+  assert.deepEqual(limits(brief('Size: S'), env), { size: 'S', warn: LIMITS.S[0], handoff: LIMITS.S[1] })
+  assert.equal(limits(brief('Size: L'), env).handoff, 500_000)
+  assert.equal(limits('', env).handoff, 350_000, 'unknown size is M')
+  assert.equal(limits(tool('Role: X · Kit: game · Size: L'), env).size, 'M', 'a brief quoted in tool output is ignored')
+  assert.equal(limits(user([{ type: 'text', text: 'Kit: game · Size: L' }]), env).size, 'L')
+  assert.equal(limits(brief('Size: <S|M|L>'), env).size, 'M', 'the template placeholder is no size')
+  assert.deepEqual(limits(brief('Size: L. Handoff: at 600k'), env), { size: 'L', warn: 360_000, handoff: 600_000 })
+  assert.deepEqual(limits(brief('Size: S. Handoff: at 150k'), env), { size: 'S', warn: 90_000, handoff: 150_000 })
+  assert.equal(limits(user('Role: Designer · Kit: game + web · Size: L'), env).size, 'L')
+  assert.equal(limits(brief('Size: L. Handoff: at 950k'), env).handoff, 800_000, 'capped below auto-compaction')
+  assert.equal(limits(brief('Size: S'), { CLAUDE_SETUP_CONTEXT_HANDOFF: '420000' }).handoff, 420_000, 'env wins')
+})
+
+test('context guard: a size S thread is told to hand off at 250k, not 350k', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'ctx-guard-'))
+  try {
+    const t = join(dir, 't.jsonl')
+    const call = (n) => JSON.stringify({ type: 'assistant', message: { usage: { input_tokens: 10, cache_read_input_tokens: n } } })
+    const run = (lines, id) => {
+      writeFileSync(t, lines.join('\n') + '\n')
+      const r = spawnSync(process.execPath, [join(root, 'global/context-guard.mjs')], { input: JSON.stringify({ session_id: id, transcript_path: t }), encoding: 'utf8', env: { ...process.env, CLAUDE_SETUP_CONTEXT_WARN: '', CLAUDE_SETUP_CONTEXT_HANDOFF: '' } })
+      assert.equal(r.status, 0, r.stderr)
+      return r.stdout ? JSON.parse(r.stdout).hookSpecificOutput.additionalContext : ''
+    }
+    const id = `test-${process.pid}-${Date.now()}`
+    const head = JSON.stringify({ type: 'user', message: { content: 'Role: Programmer · Kit: setup · Size: S. Fix it.' } })
+    assert.equal(run([head, call(150_000)], id), '')
+    assert.match(run([head, call(150_000), call(210_000)], id), /210k tokens \(hand-off for a size S task at 250k\)/)
+    assert.match(run([head, call(150_000), call(210_000), call(260_000)], id), /hand-off file/)
+    const m = `${id}-m`
+    assert.match(run([JSON.stringify({ type: 'user', message: { content: 'Kit: setup · Size: M' } }), call(260_000)], m), /size M task at 350k/)
+    const link = join(dir, 'link.mjs')
+    symlinkSync(join(root, 'global/context-guard.mjs'), link)
+    const l = `${id}-l`
+    writeFileSync(t, `${JSON.stringify({ type: 'user', message: { content: 'Kit: setup · Size: M' } })}\n${call(360_000)}\n`)
+    const r = spawnSync(process.execPath, [link], { input: JSON.stringify({ session_id: l, transcript_path: t }), encoding: 'utf8' })
+    assert.match(r.stdout, /hand-off file/, 'runs through a symlink')
+    for (const s of [id, m, l]) rmSync(join(tmpdir(), `claude-context-guard-${s}.json`), { force: true })
+  } finally { rmSync(dir, { recursive: true, force: true }) }
 })

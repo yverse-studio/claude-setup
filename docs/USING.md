@@ -146,7 +146,7 @@ Say "stop" or "pause" and everything stops; a look you reject stays rejected.
 | API calls (the laptop worker's Haiku) | billed apart from the plan; set a monthly limit | `yverse-studio/worker` PR 4 |
 | Always loaded in a session | ~6k tokens from this repo | `docs/MAP.md` (What loads when) |
 | A project thread starts at | ~110k tokens, ~104k of it harness and memory outside this repo | `docs/MAP.md` (What loads when) |
-| Hand-off | warns at 250k, hand off by 350k | `global/context-guard.mjs` |
+| Hand-off | by task size: hand off at S 250k, M 350k, L 500k (warns earlier) | `global/context-guard.mjs` |
 | Hosting, all apps together | Cloudflare 0 to 4,35 €/month, even at 10,000 users | research note, 2026-10 (project files) |
 | The daily loop check | no euros: one short turn on the plan | not measured in tokens yet |
 | Example of waste | fanning out several threads before anything was visible cost about 10 € of tokens in test run 1 | operator `SKILL.md` |
