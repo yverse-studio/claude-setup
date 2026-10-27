@@ -252,13 +252,14 @@ export function unresolved(transcript) {
 // The transcript's tool calls in order, each with its result text and time: [{ name, input, result, at }].
 // Luna (yskills 2026-10-27: "a cute e-girl with lots of kaomoji, in every chat, project and thread"): the tone of
 // every reply to him, nothing else. The canary line (team-guard.mjs) is the proof the rules loaded; the tone is a soft drift signal.
-const PERSONA_FALLBACK = { name: 'Luna', age: 20, vibe: 'cute e-girl, flirty and playful', likes: 'games and anime', language: 'German like him', kaomoji: '(◕‿◕) ٩(◕‿◕)۶ (｡•̀ᴗ-)✧' }
-// config/persona.json (yskills edits it; team-guard keeps a fresh copy in ~/.claude/claude-setup), else the fallback.
+const PERSONA_FALLBACK = { name: 'Luna', description: '20, cute e-girl', personality: 'flirty, playful, German like him, at least one kaomoji per reply, e.g. (◕‿◕)', scenario: '', mes_example: '' }
+// config/persona.json, a Character Card V2 (yskills edits it; team-guard keeps a fresh copy in ~/.claude/claude-setup), else the fallback.
 export function persona(root) {
   let p = PERSONA_FALLBACK
-  try { p = { ...p, ...JSON.parse(read(join(root, 'config', 'persona.json'))) } } catch { /* no or broken file: fallback */ }
-  const field = (v, max) => String(v ?? '').replace(/\s+/g, ' ').slice(0, max)
-  return `Persona: every reply to yskills (post_message, or your chat text where there is none) is ${field(p.name, 20)} (${field(p.age, 3)}), ${field(p.vibe, 160)}; loves ${field(p.likes, 120)}; ${field(p.language, 40)}, with kaomoji such as ${field(p.kaomoji, 80)}. Only replies to him: commits, PR bodies, code, docs, briefs and messages to other threads stay plain. Tone only: content, honesty, no yes-saying and the reply cap stay as they are; rule-guard blocks a reply with no kaomoji.`
+  try { p = { ...p, ...JSON.parse(read(join(root, 'config', 'persona.json'))).data } } catch { /* no or broken file: fallback */ }
+  const field = (v, max) => String(v ?? '').replace(/\{\{char\}\}/g, p.name).replace(/\{\{user\}\}/g, 'yskills').replace(/<START>\s*/g, '').replace(/\s+/g, ' ').trim().slice(0, max)
+  const examples = field(p.mes_example, 320)
+  return `Persona: every reply to yskills (post_message, or your chat text where there is none) is ${field(p.name, 20)}: ${field(p.description, 200)} ${field(p.personality, 240)}. ${field(p.scenario, 200)}${examples ? ` Voice: ${examples}` : ''} Only replies to him: commits, PR bodies, code, docs, briefs and messages to other threads stay plain. Tone only: content, honesty, no yes-saying and the reply cap stay as they are; rule-guard blocks a reply with no kaomoji.`
 }
 const KAOMOJI = /[◕‿ω꒳ᴗ･˘ᵕ◡╹≧≦∀ヾﾉ✧♡☆✿ʕʔﾟ▽´`ツДᴥ¬▼□╯ᵔ｡]|\^[_ω.]?\^|[;>][_ω]?[<;]|\(\s*[TＴ][_ω.]?[TＴ]\s*\)|\b(uwu|owo)\b|(^|\s)(:3|;\))(\s|$)|m\(_ _\)m/i
 export function kaomojiMissing(tool, input) {
