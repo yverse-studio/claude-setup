@@ -8,7 +8,7 @@ Source report: `docs/research/2026-10-25-creator-video-styles.md`. No public pri
 | explainroo | Claude Code writes the script; Kokoro voice, word timing, Chrome frames, ffmpeg; no API key | MIT | https://www.vincentschmalbach.com/how-to-make-videos-with-claude-code/ |
 | HyperFrames | HTML + GSAP to MP4, Three.js adapter, kokoro word timestamps | Apache-2.0 | https://www.heygen.com/research/html-to-video |
 | Remotion + `remotion-dev/skills` | React video; `@remotion/three` for 3D; animate only from `useCurrentFrame()` | company licence above 3 people, check | https://www.remotion.dev/docs/three |
-| Blender via `bpy` (cloud) or Blender MCP (laptop) | blockout, clay and toon renders, POV test (`templates/blender-pov/`) | GPL / MIT | https://github.com/ahujasid/blender-mcp |
+| Blender via `bpy` (cloud) or the official Blender Lab connector (laptop; setup in `studio`, never a community look-alike) | blockout, clay and toon renders, POV test (`templates/blender-pov/`) | GPL (Blender); connector: its repo | https://projects.blender.org/lab/blender_mcp |
 | Manim | 2D diagrams, not 3D heroines | MIT | https://claudemarket.ai/skills/affaan-m/everything-claude-code/manim-video |
 
 Skip list (funnels, paywalled prompt packs, vendor claims): see the report. Blender MCP honest limit (one blog): object keyframes work, rigging, IK and timing need human fixes.
