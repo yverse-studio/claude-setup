@@ -176,7 +176,7 @@ normal maps for fine anatomy.
 
 ### Contact deformation (hands, shafts, tight clothes; 2026-10-28)
 
-Tested on a base body with openings and breasts; numbers are examples, the lessons are general.
+Our numbers and files: the product's `docs/LESSONS.md`.
 
 - **Shape keys keep no volume.** A key that pulls tissue sideways around an object also pulls it toward the
   middle and pinches the front. Blend two size keys steeply or push the tissue forward on purpose; check the
@@ -187,10 +187,9 @@ Tested on a base body with openings and breasts; numbers are examples, the lesso
 - **Soft body and cloth fail on an open shell** (no volume: it folds and crumples whatever the pressure). Only a
   closed proxy volume with a pin to the chest wall would work; for loops, keyed contact is cheaper and stable.
 - **Openings:** a contact layer of Shrinkwrap (Outside) -> Smooth -> Shrinkwrap on a soft mask (ring group, moved
-  vertices, falloff) took skin hits from ~200 to 0-1 (max 1 mm), no pull on the body, ~4 ms per frame and
-  opening. Smooth alone pushes the skin back into the object; Outside Surface drags the whole canal. Cap depth by
-  canal length (a 7.6 cm canal is clean to ~12 cm insertion, deeper needs deeper canal keys), and tilt only a
-  little at depth.
+  vertices, falloff) removes nearly all skin hits at small cost per frame and opening, with no pull on the body.
+  Smooth alone pushes the skin back into the object; Outside Surface drags the whole canal. Cap depth by canal
+  length (deeper needs deeper canal keys) and tilt only a little at depth.
 - **Build it in the figure file, not in the scene:** modifiers added to library overrides do not survive a
   reload. Keep the layer in the base (modifiers off until a target is set) and sync it to every character.
 - **Jiggle:** Wiggle 2 does not run headless; key it (lag 3 frames, one overshoot).
