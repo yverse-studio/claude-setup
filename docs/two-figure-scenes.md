@@ -67,6 +67,7 @@ characters' key names) live in the private game repo and the laptop README.
 - Then re-grip the hands and raycast them onto the nearest surface (wrist ~2 cm above it). No guard zone around
   hand targets, or hands sink in.
 - Real pressing (chest, seat, sitting) comes from the figure's own shape keys/bones, driven by the contact.
+  How to build it (collider + Shrinkwrap/Smooth, no soft body, headless jiggle as keys): `blender-body` SKILL.md, Contact deformation.
 
 ## Motion
 
@@ -169,8 +170,8 @@ Rig conventions (finger axis, IK switches, ring groups, group names) are in
   After a room library resync check floor/walls for empty (white) material slots.
 - Hands near a surface: raycast to the skin, palm +3 mm, then turn each finger joint back until it is within 2 mm
   (`finger_clip`); targets within arm length (else `hands_snap` > 100 mm); fixed grip presets, no finger back-solve;
-  elbow pole search (24 angles) against arm penetration. A hand on a breast binds to the breast bone and drives the
-  dent key by distance (0 at 12 cm, 1 at 3 cm).
+  elbow pole search (24 angles) against arm penetration. A hand on a breast binds to the breast bone; a dent key driven
+  by distance only fits one size (2026-10-28), use the contact collider (`blender-body`, Contact deformation).
 - Loops need a seam test, an `align_tol` jump check (a threshold that spins the head 15° when crossed) and a mesh
   with inward normals counted as inside = `(p - loc)·n > 0`. A mesh with negative volume (inverted normals) makes the
   solver push the figures 25 cm apart: flip it. Never cut masks through the body (open edges shine through).
