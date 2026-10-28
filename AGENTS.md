@@ -3,7 +3,7 @@
 The rules are in `CLAUDE.md`; this file only points to them. Read in this order:
 
 1. `CLAUDE.md`, then `docs/MAP.md` (Start here) and `docs/TEAMS.md`.
-2. `docs/luna2.md` (what Luna 2 is and cannot do) and `docs/luna2-handoff.md` (current state).
+2. `docs/luna2.md` (what Luna 2 is and cannot do), `docs/luna2-handoff.md` (current state), `docs/luna2-persona.md` (how it speaks; loaded by `opencode.json`).
 
 Where things go: a product's state and lessons go into that product's own repo (`PROGRESS.md`, `docs/LESSONS.md`),
 through a PR in that repo. Only lessons that hold for every project go to claude-setup. The Ren'Py game
