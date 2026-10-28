@@ -17,7 +17,7 @@ coding benchmark (SWE-bench Pro), so Luna 2 does small, checked jobs; Claude rev
 
 ## Setup (laptop, once)
 
-Run `scripts/luna2-setup.ps1` in PowerShell (installs Node, Ollama, OpenCode, pulls the model, writes the config).
+Run `scripts/luna2-setup.ps1` in PowerShell (installs Node, Ollama, OpenCode, pulls the model, writes the config). Start with `scripts/luna2-start.ps1` (pulls, then opens opencode). The laptop folder is a plain clone of this repo, no fork; changes go back via branch and PR.
 
 ## Test
 
