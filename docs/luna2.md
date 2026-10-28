@@ -37,6 +37,12 @@ but it invented defects (a floating cup that sits on the tray, a "cut-off" arm t
 Free Zen models (`big-pickle`, `deepseek-v4.1-flash-free`, `glm-5.3-flash-free`) hung with no output, likely needing an `opencode auth` login
 (an account signup; not done). Ren'Py SDK is not installed on the laptop, so lint cannot run yet; `CompanyXY-Spiel` there is a plain folder, not a git clone.
 
+Persona check on OpenCode 2.2.0 with `qwen3:8b` (repo `opencode.json` + `docs/luna2-persona.md`): FAIL. It calls the `question` tool with
+empty arguments, or a web search, instead of answering; denying a tool only moves it to the next one. Without those tricks it read the handoff and got
+the facts right, but in English, 25 lines, no Luna voice. Free Zen now answers "Free usage limit reached" (a paid wall, nothing connected).
+Untried: `/no_think`, all tools off with the files pasted in as context. Verdict: the 8B local model is a file reader, not a coordinator;
+a better fallback needs a stronger model with reliable tool use, which is a paid or key-based service and yskills' call.
+
 ## Rules for Luna 2
 
 Same repo rules as Claude (`CLAUDE.md`). Hooks do not run in OpenCode, so every PR still goes
