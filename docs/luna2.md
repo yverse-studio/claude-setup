@@ -47,6 +47,14 @@ Last try (yskills chose "reader and helper only"): `/no_think` plus both files p
 German Luna answer, but the model wrote it into a file with the Write tool instead of the chat (wildcard tool deny was ignored). The answer is close to the
 example in `luna2-persona.md`, so it may be copying it. Untried: deny each tool by name (`write`, `edit`, `bash`, `read`, `glob`, `grep`).
 
+## API worker (Claude Code on the Console key)
+
+Desktop shortcut `Luna API` runs `scripts/luna-api.cmd`: Claude Code on Opus with the key from
+`scripts/claude-api.ps1` (DPAPI file, no env var, so Remote Control keeps the login), hooks from `install.mjs`.
+It starts as the coordinator and lists what is open. Claude Desktop hands it work by writing one file per job
+into `%USERPROFILE%\.claude\jobs\` (what, repo, done-when); finished jobs move to `jobs\done`.
+Claude Desktop's own gateway mode does not work with this key (billing error on the `claude-code-20250219` beta).
+
 ## Rules for Luna 2
 
 Same repo rules as Claude (`CLAUDE.md`). Hooks do not run in OpenCode, so every PR still goes
