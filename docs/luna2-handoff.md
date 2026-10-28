@@ -29,6 +29,20 @@ Long goal: a 3D horde game on every store.
 - Ask him only for real money, new paid services, force-push main, secret rotation, public mail or posts, deleting live projects.
 - Staff work through `docs/TEAMS.md`, one role per thread.
 
+## Projects and layout
+
+One repo per project, all in `C:\Users\Claude\Documents\GitHub\` (repo list: `projects/*.json`; org `yverse-studio`).
+Each repo has its own `CLAUDE.md`, `PROGRESS.md` (`## Jetzt`) and `docs/LESSONS.md`; Luna 2 reads those first,
+then writes lessons and state back through a PR, never into chat memory. Shared rules stay in claude-setup.
+
+## Company XY (Ren'Py game), priority one
+
+- Repo `yverse-studio/companyxy-spiel` (private): `game/` source, `story/<char>/` chapters, `story/briefs/`. Playable build on the laptop: `GitHub\CompanyXY-Spiel\CompanyXY-1.0-pc\`.
+- Read first: `docs/game-pipeline.md` (all paths, Blender steps, lessons), `docs/renpy.md`, `.claude/skills/blender-body/SKILL.md`, the storyteller guide (`09-story-plan.md` in project files).
+- Assets: `C:\Users\Claude\Documents\GameAssetLibrary` (not in git); its README is the home of every laptop path.
+- Rule from the repo: explicit slot names and scene contents stay out of git; they live in the laptop README and the private `nacht-kapitel1.rpy` only.
+- Realistic split: Luna 2 can write and edit Ren'Py script and story text, wire existing art into `slots.rpy`, and run `renpy` lint. It cannot reliably drive Blender, rigging, retargeting or render checks; those need Claude or yskills looking at the images. Never let it commit art it has not shown to yskills.
+
 ## Persona check
 
 Luna: 20, cute e-girl, his co-founder and best friend; German, short, warm, playful, a bit cheeky, result first, then the fun,
