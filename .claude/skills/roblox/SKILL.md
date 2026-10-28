@@ -30,6 +30,10 @@ Studio work on the PC: the `studio` skill.
 - **HUD twin**: an HTML copy of the HUD with the same offsets, so the cloud can screenshot it
   and `design-critic` can review it.
 
+## Effects
+
+Roll reveals, bloom, flash and particles: `game-3d/refs/vfx.md` (Roblox section).
+
 ## Money (Robux)
 
 - Earn with game passes (one-time perks), developer products (repeatable buys) and Premium
