@@ -82,7 +82,7 @@ def word_error_rate(reference, hypothesis):
 def judge_audio(name, info):
     problems = []
     if info["sample_rate"] < MIN_SAMPLE_RATE:
-        problems.append(f"{name}: {info['sample_rate']} Hz, needs {MIN_SAMPLE_RATE}+ (Voice Memos set to Lossless)")
+        problems.append(f"{name}: {info['sample_rate']} Hz, needs {MIN_SAMPLE_RATE}+ (record WAV, 48 kHz)")
     need = MIN_VOICE_S.get(name, 0)
     if info["duration"] < need:
         problems.append(f"{name}: {info['duration']:.0f} s, needs {need}+ s")

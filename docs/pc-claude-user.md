@@ -4,6 +4,9 @@ Claude's own home on yskills' laptop since 2026-10-08: a standard (non-admin) Wi
 `Claude`, home `C:\Users\Claude`. Remote Control sessions for project work run here. Everything
 in `install.mjs` works as on yskills' own user (`C:\Users\Ich`); this page lists only what differs.
 
+yskills' phone is a **Google Pixel (Android)**: every phone step (record, transfer, apps, settings) is written for
+Android, never iPhone. Files from the phone: USB cable ("File transfer"), or Google Drive upload (original file, not WhatsApp).
+
 ## What is different
 
 | Item | On this user | Why |

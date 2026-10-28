@@ -8,18 +8,18 @@ sent as it is (through the coordinator); the reading script follows it. Written 
 One session, about 35 min. Same day, same room, same look as your normal TikToks.
 
 **Before you start**
-- iPhone: Settings > Apps > Voice Memos > Audio Quality > **Lossless**.
+- Pixel (Android): a recorder app that saves **WAV** (free: ASR Voice Recorder, format WAV, 48 kHz); the stock Recorder saves compressed audio.
 - Quiet room with soft stuff (bed, curtains). Window closed, fan and music off.
 - Face a window or a lamp, light in front of you, nothing bright behind you.
 
-**1. Voice, about 20 min (Voice Memos, phone 20-30 cm from your mouth, a bit to the side)**
+**1. Voice, about 20 min (the WAV recorder app, phone 20-30 cm from your mouth, a bit to the side)**
 - `voice-calm`: read Part A below, normal TikTok voice. ~8 min.
 - `voice-hyped`: read Part B, like you just saw something crazy. ~4 min.
 - `voice-free`: 10 min free talk, no script: your day, Y-Land, a trip, a story, roast yourself. This one matters most, it is how you really talk.
 - A mistake: pause 2 s, say the line again. Don't cut anything.
 
 **2. Face, about 3 min, ONE take, no cuts**
-- The camera you normally film with (selfie cam is fine), vertical, **4K** 30 fps (1080p if 4K isn't there), no filter, no beauty mode, Cinematic mode off.
+- The camera you normally film with (selfie cam is fine), vertical, **4K** 30 fps (1080p if 4K isn't there), no filter, no beauty or face retouching, Cinematic blur and Video Boost off.
 - Phone on a ledge or stand at eye level, one arm away, head and shoulders in frame. Don't hold it.
 - Look into the lens. Hands never in front of your mouth. No cap over the eyes, no sunglasses.
 - In this order, out loud: 30 s quiet (mouth closed, blink, small head moves), 60 s read Part C, 30 s smile and laugh, 30 s "thinking" (look away, then back), 30 s hyped talking.
@@ -27,7 +27,7 @@ One session, about 35 min. Same day, same room, same look as your normal TikToks
 
 **3. Drop it**
 - Folder on the laptop: `C:\Users\Claude\Documents\GitHub\twin-raw\`
-- AirDrop or cable to the laptop, or Google Drive and download there. **Not WhatsApp** (it ruins the quality).
+- USB cable (phone: "File transfer", files in `DCIM\Camera` and the recorder's folder), or upload to Google Drive and download on the laptop; both keep the original. **Not WhatsApp** (it ruins the quality).
 - Then one line in the chat: "twin files are in".
 
 ## Reading script
