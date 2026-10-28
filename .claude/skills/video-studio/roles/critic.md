@@ -30,6 +30,7 @@ Any line below 4 fails and goes back to the step that owns it. On the animatic, 
 5. Honest: shows the real product today; ads labelled and claims true (`market` §4).
 6. Safe zones clear; the call to action is one line.
 7. A shot with his digital twin (voice clone or re-synced face): also the twin lines in [`twin`](../../twin/SKILL.md) (Critic); any fail means real footage.
+8. No dead frames: sweep the rendered frames (not only one per second) for runs where nothing moves outside a planned hold; each such run is listed with its frame times and goes back to the Editor to re-render until every shot grades 8/10 or better.
 
 ## Verdict
 
