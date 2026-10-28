@@ -5,8 +5,10 @@ real task decides whether it stays (see Test).
 
 ## Pick
 
-OpenCode is the harness. It is said to read `AGENTS.md`/`CLAUDE.md` and `.claude/skills/` itself, so
-this repo works unchanged under both tools (sources are gists, not the official docs). Models, in order:
+OpenCode is the harness. It reads `.claude/skills/` itself, but a project `CLAUDE.md` only when there is
+no `AGENTS.md` ([opencode.ai/docs/rules](https://opencode.ai/docs/rules/), Precedence); a live session of 2026-10-28 loaded
+`AGENTS.md`, the persona and `open-items.md`, no `CLAUDE.md`. So `opencode.json` lists `CLAUDE.md` first under
+`instructions`. Models, in order:
 
 1. A free OpenCode Zen model (needs no payment; the list changes, `/models` shows today's).
 2. Local Ollama `qwen3:8b` for small jobs (8 GB laptop limits: `docs/research/2026-10-26-free-models-in-workflow.md`).

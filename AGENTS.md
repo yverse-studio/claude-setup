@@ -1,8 +1,9 @@
 # Agents other than Claude Code (OpenCode, Luna 2)
 
-The rules are in `CLAUDE.md`; this file only points to them. Read in this order:
+The rules are in `CLAUDE.md`; this file only points to them. OpenCode reads `AGENTS.md` instead of
+`CLAUDE.md`, so `opencode.json` loads `CLAUDE.md` itself (`instructions`). Then read:
 
-1. `CLAUDE.md`, then `docs/MAP.md` (Start here) and `docs/TEAMS.md`.
+1. `docs/MAP.md` (Start here) and `docs/TEAMS.md`.
 2. `docs/luna2.md` (what Luna 2 is and cannot do), `docs/luna2-handoff.md` (current state), `docs/luna2-persona.md` (how it speaks; loaded by `opencode.json`).
 
 Overview "Was ist offen": `~/.claude/open-items.md` is loaded into every session (via `opencode.json`); it carries a
@@ -18,4 +19,5 @@ Blender: the rules for any Blender script are `.claude/skills/studio/blender-rec
 before writing or running one) and `scripts/blender/bpy-lint.mjs`. No Blender MCP is installed; if one is ever added it
 must be the official Blender Lab connector, never `ahujasid/blender-mcp` (opt-in telemetry can upload screenshots).
 
-Hooks and guards do not run here, so follow every `[guard: ...]` line by hand and let the PR gate decide.
+Claude Code hooks do not run here; `.opencode/plugins/guards/` enforces only the lines `docs/luna2.md` (Guards in
+OpenCode) lists, so follow every other `[guard: ...]` line by hand and let the PR gate decide.
