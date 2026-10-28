@@ -100,7 +100,7 @@ added as a second repo, or a plain chat), read that file by path, then the files
 | German law, DSGVO | `legal` | `legal-reviewer` agent; `sell/legal-de.md` for shops |
 | Security | `security-review` | `security-reviewer`, `red-team` agents |
 | Design, UI/UX | `operator/roles/designer.md` (Art direction first), `ui-review/SLOP.md`, the project's `DESIGN.md` | `impeccable`, `make-interfaces-feel-better`, `web-interface-guidelines`, `design-system`, `ui-review`, `design-critic` agent |
-| 3D games, Steam | `game-3d` (three.js + Electron, decided 2026-10-07) | `game-3d/refs/` (camera, game feel, levels, glTF, lighting, perf, Steam, `vfx-nodes.md`) |
+| 3D games, Steam | `game-3d` (three.js + Electron, decided 2026-10-07) | `game-3d/refs/` (camera, game feel, levels, glTF, lighting, perf, Steam, `vfx-nodes.md`, `vfx.md`) |
 | 2D and web games | `toolbox/catalog/data-web.md` (Phaser, PixiJS, Poki, CrazyGames) | `toolbox/catalog/money.md` (H5 game ads) |
 | Visual novels and story games (Ren'Py: setup, art slots, playthrough test, Windows build, laptop delivery) | `docs/game-pipeline.md` (all files, animation, scenes, scene briefs), `docs/two-figure-scenes.md` (gate, image language, natural motion, scripting traps, one-shot goal), `docs/renpy.md`, `storyteller` skill | `docs/renpy-template/`, `docs/character-workflow.md` (renders), `docs/clothing-pipeline.md` (garments per base) |
 | Roblox | `roblox` | `toolbox/catalog/roblox.md` (run and see), `studio` (PC) |
