@@ -1,6 +1,8 @@
 // Pure decisions of the OpenCode guards plugin (index.js). Hooks do not run in OpenCode, so the
 // [guard: ...] lines of CLAUDE.md that matter here are enforced by this plugin and by `permissions` in opencode.json.
-// Data comes from docs/TEAMS.md at runtime and the tier logic from global/team-guard.mjs; nothing is copied.
+// Data comes from docs/TEAMS.md at runtime and the tier logic from global/team-guard.mjs and global/rule-guard.mjs; nothing is copied.
+import { homedir } from 'node:os'
+import { decide as ruleGuard } from '../../../global/rule-guard.mjs'
 import { wrongModel } from '../../../global/team-guard.mjs'
 
 const PROVIDER = 'anthropic'
@@ -20,6 +22,15 @@ const ENV_FILE = /(^|[\\/])(\.env(\.[^\\/]*)?|\.dev\.vars)$/i
 export const isEnvFile = (p) => ENV_FILE.test(p) && !/\.example$/i.test(p)
 const ENV_WHY = 'guards (env rule): real .env files are never read or edited (CLAUDE.md, Code; deny Read(**/.env)). Read .env.example for the names; a value only yskills can set is a step for him.'
 
+// The other secret-file denies of global/settings.json: Read(~/.ssh/**), ~/.aws, ~/.config/gh, wrangler logins, ~/.npmrc, **/*.pem, **/*.key.
+const HOME_SECRET = /^[\\/](\.ssh|\.aws|\.config[\\/]gh|\.config[\\/]\.wrangler|\.wrangler)([\\/]|$)|^[\\/]\.npmrc$/i
+export function isSecretFile(p, home = homedir()) {
+  if (/\.(pem|key)$/i.test(p)) return true
+  const full = p.replace(/^~(?=[\\/])/, home)
+  return full.toLowerCase().startsWith(home.toLowerCase()) && HOME_SECRET.test(full.slice(home.length))
+}
+const SECRET_WHY = 'guards (secret rule): keys, logins and certificates are never read (CLAUDE.md, Code; deny Read(~/.ssh/**), Read(**/*.pem) and the rest in global/settings.json). Use the tool that holds the login (gh, wrangler) instead of its files.'
+
 // Plain shell denies of global/settings.json, kept here because a deny in opencode.json shows the model only
 // "Permission denied: shell" (tested live), while a plugin block carries the rule. [test, rule it enforces]
 const AT = '(^|[\\s"\';&|(])'
@@ -29,7 +40,15 @@ const SHELL = [
   [(c) => new RegExp(`${AT}(wrangler\\s+deploy|firebase\\s+deploy|vercel\\s[^\\n]*--prod)`, 'i').test(c), 'a direct deploy (wrangler, firebase, vercel --prod; CLAUDE.md, the merge is the deploy)'],
   [(c) => new RegExp(`${AT}(pkill|killall|taskkill|Stop-Process)\\b[^\\n]*wrangler`, 'i').test(c), 'pkill *wrangler* (CLAUDE.md, Tools: stop a dev server by port, never pkill it)'],
   [(c) => /\bgit\b[^\n]*\bpush\b/.test(c) && FORCE.test(c) && /\b(main|master)\b/.test(c), 'git push --force to main (CLAUDE.md, Ask first only before: force-pushing main; deny Bash(git push* --force*main*))'],
+  [(c) => pushesMain(c), 'git push to main (CLAUDE.md, Auto-run: the gate merges every PR, that merge is the deploy; deny Bash(git push* origin main*))'],
 ]
+
+// A push whose refspec is main or master (main, +main, HEAD:main, :main, refs/heads/main); a branch named feat/main is fine.
+function pushesMain(c) {
+  const args = c.match(/\bgit\b[^\n]*?\bpush\b([^\n]*)/)?.[1].split(/&&|\|\||[;|]/)[0].trim().split(/\s+/) ?? []
+  if (args.includes('--dry-run') || args.includes('-n')) return false
+  return args.some((a) => /^(\+|[^:\s]*:)?(refs\/heads\/)?(main|master)$/.test(a.replace(/^["']|["']$/g, '')))
+}
 
 // action and resources as the permission check sees them: a path for read and edit, command segments for shell.
 export function permissionBlock(action, resources = []) {
@@ -37,10 +56,14 @@ export function permissionBlock(action, resources = []) {
     for (const c of resources) {
       const rule = SHELL.find(([hit]) => hit(c))?.[1]
       if (rule) return `guards (shell rule): \`${c.slice(0, 80)}\` is blocked: ${rule}. Run what CI runs instead and let the PR gate merge.`
+      // The shell checks of rule-guard (conventional commits, no review request or assignee for yskills), reused as they are.
+      const why = ruleGuard('Bash', { command: c })
+      if (why) return why.replace(/^rule-guard:/, 'guards (rule-guard):')
     }
   }
   const paths = action === 'shell' ? resources.flatMap((r) => r.split(/[\s"'<>=|;&(),`]+/)) : ['read', 'edit'].includes(action) ? resources : []
-  return paths.some(isEnvFile) ? ENV_WHY : null
+  if (paths.some(isEnvFile)) return ENV_WHY
+  return paths.some((p) => isSecretFile(p)) ? SECRET_WHY : null
 }
 
 // docs/TEAMS.md, Spawn rule 4: a subagent without its own model inherits its parent's (Opus), so a call needs an agent with a model, and the role named in its prompt must allow that tier.
