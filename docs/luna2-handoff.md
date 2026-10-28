@@ -58,6 +58,15 @@ then writes lessons and state back through a PR, never into chat memory. Shared 
 Traps: PowerShell `>` writes UTF-16 (a `git show x > f.mjs` broke Node); use `cmd /c "... > f"` or `Out-File -Encoding utf8`.
 The local qwen (Ollama `llama-server`) holds 2-5 GB RAM: `ollama stop qwen3:8b` before any Blender job.
 
+## Social: mascot duo and twin (state 2026-10-27 23:55, from the Social Media Manager export)
+
+- Duo = 2D-first anime-streetwear yskills (green E jacket with zipper, no cable tail) + partner mascot **Mochi**
+  (Bit, round4 R1: original forked ears, faceted fur; v3/v4 rejected). 3D from the VRoid base rejected; duo 3D v1
+  is a 2D-to-3D projection. Next: rig, poses, 6 faces, alpha render, then the gravity explainer remake with the duo.
+- The files live only in the claude.ai project files (`social/2026-10-27-lowpoly-strategy/`, HANDOFF.md, models/duo-r1/);
+  the laptop has only the index (`Documents\ClaudeExport\Social Media Manager\`). Luna 2 needs that folder on the laptop.
+- Twin: tools installed and `doctor` ok; waits for his recordings in `GitHub\twin-raw\`. Videos are English only.
+
 ## Which open items Luna 2 can take
 
 Blender 5.1 is on the laptop, so Luna 2 can run headless scripts (`docs/game-pipeline.md`) and hook existing renders
