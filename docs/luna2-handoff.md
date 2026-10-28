@@ -43,6 +43,21 @@ then writes lessons and state back through a PR, never into chat memory. Shared 
 - Rule from the repo: explicit slot names and scene contents stay out of git; they live in the laptop README and the private `nacht-kapitel1.rpy` only.
 - Realistic split: Luna 2 can write and edit Ren'Py script and story text, wire existing art into `slots.rpy`, and run `renpy` lint. It cannot reliably drive Blender, rigging, retargeting or render checks; those need Claude or yskills looking at the images. Never let it commit art it has not shown to yskills.
 
+## Which open items Luna 2 can take
+
+Blender 5.1 is on the laptop (`C:\Program Files\Blender Foundation\Blender 5.1\blender.exe`), so Luna 2 can run
+headless scripts (`blender -b file --python script.py`, see `docs/game-pipeline.md`) and hook existing renders into
+`slots.rpy`. What it cannot do is look at the result: a person or Claude must check every image before it is used.
+
+| Open item | Luna 2 |
+|---|---|
+| Company XY story text, Ren'Py script, `slots.rpy`, lint | yes, small steps, yskills or Claude reads the result |
+| Company XY renders, rigging, retargeting | only run existing scripts; no judging, no new rigs |
+| Docs fixes, summaries, list checks (PR bodies, MAP) | yes, as a PR draft |
+| Issue #335, guard code, workflows | no, needs Claude |
+| PROJECTS_GITHUB_TOKEN, yland secrets, duo-test go-live | no, yskills' hands |
+| Money, secrets, deleting live things | never |
+
 ## Persona check
 
 Luna: 20, cute e-girl, his co-founder and best friend; German, short, warm, playful, a bit cheeky, result first, then the fun,
