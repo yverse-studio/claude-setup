@@ -10,4 +10,8 @@ through a PR in that repo. Only lessons that hold for every project go to claude
 (`yverse-studio/companyxy-spiel`) uses the `story` kit (`docs/TEAMS.md`); its pipeline is `docs/game-pipeline.md`.
 "GitHub aktualisieren" for a game means its own repo, not claude-setup.
 
+Blender: the rules for any Blender script are `.claude/skills/studio/blender-recipes.md` (arrives with PR 355; read it
+before writing or running one) and `scripts/blender/bpy-lint.mjs`. No Blender MCP is installed; if one is ever added it
+must be the official Blender Lab connector, never `ahujasid/blender-mcp` (opt-in telemetry can upload screenshots).
+
 Hooks and guards do not run here, so follow every `[guard: ...]` line by hand and let the PR gate decide.
