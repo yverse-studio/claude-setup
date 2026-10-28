@@ -49,7 +49,9 @@ example in `luna2-persona.md`, so it may be copying it. Untried: deny each tool 
 
 ## API worker (Claude Code on the Console key)
 
-Desktop shortcut `Luna API` runs `scripts/luna-api.cmd`: Claude Code on Opus with the key from
+Desktop shortcut `Luna API` runs `scripts/luna-terminal.cmd`: a Windows Terminal window `luna` with a
+Koordinator tab (`scripts/luna-api.cmd`) and an Agents tab (`claude agents`, the threads view; agent view is a
+research preview, and which key background sessions bill when both lanes run is not yet checked). The Koordinator is Claude Code on Opus with the key from
 `scripts/claude-api.ps1` (DPAPI file, no env var, so Remote Control keeps the login), hooks from `install.mjs`.
 It starts as the coordinator and lists what is open. Claude Desktop hands it work by writing one file per job
 into `%USERPROFILE%\.claude\jobs\` (what, repo, done-when); finished jobs move to `jobs\done`.
