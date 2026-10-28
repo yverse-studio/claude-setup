@@ -52,7 +52,7 @@ then writes lessons and state back through a PR, never into chat memory. Shared 
 | ffmpeg 9, uv, Python 3.13, Node 24 | on PATH (winget); ad-hoc Python packages via `uv run --no-project --with <pkg>` |
 | gh | `yskills-claude`, scopes repo, read:org, gist (no `delete_repo`) |
 | wrangler | `npx wrangler`, OAuth logged in |
-| Web | `webfetch` works; the built-in `websearch` returned nothing, use `https://html.duckduckgo.com/html/?q=...` via webfetch |
+| Web | `webfetch` works; `websearch` needs a provider: global `~/.config/opencode/opencode.json` has `"websearch": {"provider": "tinyfish"}` (free, no key; without it every search returned nothing) |
 | Subagents | haiku and sonnet tested |
 
 Traps: PowerShell `>` writes UTF-16 (a `git show x > f.mjs` broke Node); use `cmd /c "... > f"` or `Out-File -Encoding utf8`.
