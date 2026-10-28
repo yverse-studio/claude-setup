@@ -36,3 +36,38 @@ Y-Land notes and scripts live in that project's files (`promo/LEARNINGS.md`, `pr
 - 2026-10-07 (Y-Land): always check frame pacing before delivering (`mpdecimate` or a mean frame diff); zero difference during motion is stutter.
 - 2026-10-26 (Y-Land /brag): the brag render measured -24.4 LUFS (no loudness pass, no ducking), about 10 LU quieter than the feed; every master goes through `sound.py mix` or `loud` at -14 LUFS (`sound-kit.md`).
 - 2026-10-07 (Y-Land): everything was free (Playwright, Chromium, ffmpeg); about 1.5 s of render per frame on the cloud CPU, so a 24 s video takes about 20 minutes.
+
+## Motion: easing and style
+
+- 2026-10-27 (TikTok @ray_fu, lead, checked by grep: no rule existed): code-painted frames get closed-form spring easing, never CSS `ease`/`ease-in-out`/`linear`. Underdamped spring from 0 to 1, `w = sqrt(k/m)`, `z = c / (2*sqrt(k*m))`, `wd = w*sqrt(1-z*z)`: `x(t) = 1 - exp(-z*w*t) * (cos(wd*t) + (z*w/wd) * sin(wd*t))`. Start at `k=170, m=1, z=0.6` (a small overshoot), `z=1` for a camera or a fade. Evaluate it per frame from `t = frame/fps`; it is also the cheapest way to avoid the centred all-caps-on-gradient default. Give the model one reference clip or frame, not only the ban.
+- 2026-10-27 (same lead): name one motion style per video (table below) in the Designer's art direction instead of a blank prompt. Before picking, check the row against `../ui-review/SLOP.md`; a row marked SLOP needs a reference capture of a top-of-niche video that does it, cited by file name.
+
+| Style | SLOP check |
+|---|---|
+| Particles | 7 (decorative sparkles) unless the subject is particles |
+| Liquid Morph | - |
+| Holographic | 1 (gradients) |
+| Neon Glow | 2 (neon on near-black) |
+| Wireframe 3D | - |
+| Glass Morphism | 1 (glassmorphism) |
+| Kinetic Type | 6 (centred hero type) if it is all-caps, centred, on a gradient |
+| Isometric | - |
+| Clay 3D | - |
+| ASCII Art | - |
+| Gradient Mesh | 1 (gradients) |
+| Comic Book | - |
+| Split Flap Display | - |
+| Retro VHS | 7 (grain) |
+| Halftone | - |
+| Bauhaus | - |
+| Pixel Art | - |
+| Blueprint | - |
+| Art Deco | - |
+| Neo Brutalism | - |
+
+  Source: TikTok @millee.md, 28 s voice list; the transcript misheard two names, which were guessed from the sounds. The list is a vocabulary, not a recommendation.
+
+## Dead frames
+
+- 2026-10-27 (TikTok @ray_fu): a frame where nothing moves in a shot that should move is a bug, not a pause. The Critic sweeps the rendered frames for them; the Editor re-renders until none is left (`../roles/critic.md`, Floor 8).
+
