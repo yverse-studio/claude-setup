@@ -3,4 +3,5 @@
 # Luna 2 changes go back only through a branch and a PR.
 Set-Location (Split-Path $PSScriptRoot -Parent)
 git pull --ff-only
+node scripts/open-items.mjs --html | Out-Null
 opencode

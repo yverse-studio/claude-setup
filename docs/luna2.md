@@ -57,6 +57,17 @@ It starts as the coordinator and lists what is open. Claude Desktop hands it wor
 into `%USERPROFILE%\.claude\jobs\` (what, repo, done-when); finished jobs move to `jobs\done`.
 Claude Desktop's own gateway mode does not work with this key (billing error on the `claude-code-20250219` beta).
 
+## Overview "Was ist offen"
+
+`scripts/open-items.mjs` collects the `## Jetzt` block of every `PROGRESS.md` in `%USERPROFILE%\Documents\GitHub`, branch and
+uncommitted count, open PRs and `ceo` issues of `yverse-studio` (`gh`; a failure shows as "nicht geprüft"), and the job files in
+`%USERPROFILE%\.claude\jobs`. `--md` prints at most 60 lines, `--html [file]` writes a dark self-contained page (default
+`%USERPROFILE%\.claude\open-items.html`, refreshes every 5 minutes). Every run with `gh` also writes `%USERPROFILE%\.claude\open-items.md`,
+which `opencode.json` lists under `instructions` (the OpenCode v2 docs allow `~/` paths and reload them when the file changes), so each
+session starts with it. `luna2-start.ps1` and `luna-terminal.cmd` refresh it before opening OpenCode; `/offen` (`.opencode/commands/offen.md`)
+runs the script inside the prompt. Page and desktop shortcut "Luna Übersicht": `scripts/open-items.cmd`, `scripts/open-items-shortcut.ps1`.
+Test: `node --test scripts/open-items.test.mjs`.
+
 ## Rules for Luna 2
 
 Same repo rules as Claude (`CLAUDE.md`). Hooks do not run in OpenCode, so every PR still goes
