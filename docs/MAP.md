@@ -109,7 +109,7 @@ added as a second repo, or a plain chat), read that file by path, then the files
 | Social media: posting, comments, DMs, idea backlog, brand accounts, brand deals | `social-team` | `social-team/pipeline.md` (idea to post to numbers, every role), `social-team/learnings.md`, `social-team/xyskillsx-style.md` (his personal style: keep, raise, never), `market` §4 and §6, `docs/research/2026-10-26-claude-video-autopost.md` (what people use, ideas-to-posts app) |
 | His digital twin (voice clone, real face with the mouth re-synced; recording ask, laptop tool, Critic lines) | `twin` | `twin/record.md`, `twin/laptop-setup.md`, `social-team/xyskillsx-style.md`, `video-studio/roles/critic.md` |
 | Video and photo edits | `media-editing` | `watch` (understand a video), `toolbox/catalog/video-audio.md` (AI video, voice, music), `docs/research/2026-10-24-video-batch.md` (29 shared videos, verdicts) |
-| AI features, local models | `toolbox/catalog/ai.md` | the built-in `claude-api` skill; `docs/research/2026-10-07-own-local-model.md`, `docs/research/2026-10-26-free-models-in-workflow.md` (Ollama plan, 8 GB limits) |
+| AI features, local models | `toolbox/catalog/ai.md` | the built-in `claude-api` skill; `docs/research/2026-10-07-own-local-model.md`, `docs/research/2026-10-26-free-models-in-workflow.md` (Ollama plan, 8 GB limits); `docs/luna2.md` (free fallback agent when Claude usage is out), `docs/luna2-handoff.md` (state for it) |
 | Marketing, SEO | `market` | `seo`, `market-research`, `product-lens`, `toolbox/catalog/growth.md` |
 | Anything else | `toolbox` (pick a plugin, MCP, API or library) | `search-first` |
 
