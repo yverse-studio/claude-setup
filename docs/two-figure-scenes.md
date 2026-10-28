@@ -6,8 +6,8 @@ characters' key names) live in the private game repo and the laptop README.
 
 ## Setup
 
-- Blender headless: `blender.exe -b --factory-startup`. At most 2 Blender processes at once on 16 GB RAM
-  (~3.4 GB each); more and jobs die without a message.
+- Blender headless: `blender.exe -b --factory-startup`, started through `scripts/laptop-job.mjs`. How many
+  run at once and the free-RAM check: `docs/pc-claude-user.md` (Long laptop jobs); each takes ~3.4 GB.
 - Figures: one `.blend` per character (`characters\CH_<name>\Blend\<name>.blend`). Back up before any change
   (`<name>_backup_<date>.blend`). Never rename or delete bones or weights: the bone maps depend on them.
 - Bone maps: `rigs\interaction\core\bone_maps\<char>.json`, one per rig.
@@ -42,8 +42,8 @@ characters' key names) live in the private game repo and the laptop README.
   preview with a crop beside the board, fix, gate, render. At most 3-4 rounds per scene; if the side view is wrong,
   fine values in the POV never fix it.
 - Iterate live (Blender GUI + MCP), where the result is seen at once; headless only for the gate sheet and the render.
-- One render at a time on the 7-16 GB laptop (two parallel renders crashed after 2-4 h each). Never edit
-  `projects/*.json` while `run_scenes` renders: every clip re-reads it.
+- Render slots: `docs/pc-claude-user.md` (Blender limits). Never edit `projects/*.json` while `run_scenes`
+  renders: every clip re-reads it.
 - Every sheet has a close-up of each hand (one scene went out with hands turned 180° and nobody saw it) and the
   side view next to the POV (the side shows what the POV hides).
 
