@@ -24,6 +24,13 @@ Run `scripts/luna2-setup.ps1` in PowerShell (installs Node, Ollama, OpenCode, pu
 In a clone of this repo run `opencode`, ask "summarize CLAUDE.md and list the guards", then one
 small docs fix. Pass: it quotes the real rules and the fix passes `node scripts/check.mjs`.
 
+## Result (2026-10-28, laptop, Ollama 0.40.12, OpenCode 1.19.5)
+
+`opencode run -m ollama/qwen3:8b` did call `Read CLAUDE.md` and summarized it mostly right, but it
+skipped the `[guard: ...]` list and garbled one rule. So: usable for reading and light work, not for
+exact rule-following. Give it narrow prompts, or try a bigger free Zen model (not tried yet).
+The setup script failed once at `ollama pull` because winget's PATH was not live; fixed in the script.
+
 ## Rules for Luna 2
 
 Same repo rules as Claude (`CLAUDE.md`). Hooks do not run in OpenCode, so every PR still goes

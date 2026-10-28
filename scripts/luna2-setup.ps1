@@ -5,6 +5,8 @@ $ErrorActionPreference = 'Stop'
 if (-not (Get-Command node -ErrorAction SilentlyContinue)) { winget install -e --id OpenJS.NodeJS.LTS }
 if (-not (Get-Command ollama -ErrorAction SilentlyContinue)) { winget install -e --id Ollama.Ollama }
 npm i -g opencode-ai
+# winget installs are not on PATH in this shell yet
+$env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User')
 $env:OLLAMA_NUM_PARALLEL = '1'; $env:OLLAMA_MAX_LOADED_MODELS = '1'; $env:OLLAMA_CONTEXT_LENGTH = '8192'
 ollama pull qwen3:8b
 $dir = Join-Path $HOME '.config/opencode'
