@@ -31,6 +31,12 @@ skipped the `[guard: ...]` list and garbled one rule. So: usable for reading and
 exact rule-following. Give it narrow prompts, or try a bigger free Zen model (not tried yet).
 The setup script failed once at `ollama pull` because winget's PATH was not live; fixed in the script.
 
+Vision (same day, RTX 4060 8 GB, 15.7 GB RAM): `qwen2.5vl:7b` fits and sees coarse content (office, reception, characters),
+but it invented defects (a floating cup that sits on the tray, a "cut-off" arm that is plain cropping). OpenCode cannot use it:
+`does not support tools`, so it works only through the Ollama API. Treat it as "what is in the picture", never as defect hunting.
+Free Zen models (`big-pickle`, `deepseek-v4.1-flash-free`, `glm-5.3-flash-free`) hung with no output, likely needing an `opencode auth` login
+(an account signup; not done). Ren'Py SDK is not installed on the laptop, so lint cannot run yet; `CompanyXY-Spiel` there is a plain folder, not a git clone.
+
 ## Rules for Luna 2
 
 Same repo rules as Claude (`CLAUDE.md`). Hooks do not run in OpenCode, so every PR still goes
