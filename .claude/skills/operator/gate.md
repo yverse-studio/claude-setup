@@ -16,6 +16,8 @@ A check that doesn't apply passes; say "n/a" in the table. A reviewer verdict in
 
 **Until the `journey` status can be posted (2026-10-26).** claude-setup's `journey.yml` fails on every run (GitHub 403 on the project repo, PR 292 replaces it), so a missing or red `journey` status from it is a warning, not a fail, until a project's own `journey.yml` posts one (this overrides "missing, pending, red ... is not 5/5" in The `journey` status below; a green one is still run through `verify` and a forged one still fails). Instead, check 2 runs the default branch's `npm run journey` against the preview by hand (or, without that script, the evaluator's preview run) and quotes its output. A check that cannot pass for anyone never blocks a merge (yskills 2026-10-26).
 
+**While GitHub Actions cannot run (minutes or billing out, the job "was not started").** yskills' decision "lokal reicht": check 1 passes on a local run of exactly the commands the repo's `.github/workflows/ci.yml` runs, on the head SHA, plus a green `Workers Builds: <worker>`. The gate quotes the commands and their result in the merge comment ("CI not started: billing; local run green: ..."). A job that started and failed is still red. Paying for minutes is yskills' call, never a blocker.
+
 ## Gate size
 
 The PR's size decides which checks run; the headline names it: `Gate 5/5 (S, round <n>)`.
