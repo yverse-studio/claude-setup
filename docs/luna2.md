@@ -24,6 +24,18 @@ Run `scripts/luna2-setup.ps1` in PowerShell (installs Node, Ollama, OpenCode, pu
 In a clone of this repo run `opencode`, ask "summarize CLAUDE.md and list the guards", then one
 small docs fix. Pass: it quotes the real rules and the fix passes `node scripts/check.mjs`.
 
+## Guards in OpenCode (v2)
+
+Claude Code hooks do not run in OpenCode, so the project plugin `.opencode/plugins/guards/` enforces the plain
+ones (OpenCode v2 hooks `ctx.permission.hook("evaluate")` and `ctx.tool.hook("execute.before")`; the v1
+`tool.execute.before` does not run in v2): shell `npm run deploy*`, direct deploys, `pkill *wrangler*`, force push to
+`main`; reading or editing a real `.env` (`.env.example` stays open); and team-guard for the `subagent` tool.
+That tool has no `model` argument, so the tier is the agent: `.opencode/agents/{fable,opus,sonnet,haiku}.md` get their
+model from the Models line of `docs/TEAMS.md` at load, a subagent with no model of its own (`explore`, `general`) is
+blocked, and the tier must fit the `Role:` line of the prompt (Roster, via `global/team-guard.mjs`). A block carries
+the rule; a deny in `opencode.json` would show only "Permission denied: shell". Test: `node --test scripts/opencode-guards.test.mjs`.
+`CLAUDE_SETUP_TEAM_GUARD=off` turns the subagent check off. Every other `[guard: ...]` line still depends on you.
+
 ## Result (2026-10-28, laptop, Ollama 0.40.12, OpenCode 1.19.5)
 
 `opencode run -m ollama/qwen3:8b` did call `Read CLAUDE.md` and summarized it mostly right, but it
