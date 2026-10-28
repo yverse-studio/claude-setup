@@ -80,6 +80,8 @@ session starts with it. `luna2-start.ps1` and `luna-terminal.cmd` refresh it bef
 runs the script inside the prompt. Page and desktop shortcut "Luna Übersicht": `scripts/open-items.cmd`, `scripts/open-items-shortcut.ps1`.
 Test: `node --test scripts/open-items.test.mjs`.
 
+Luna HQ strip: the bottom line of every OpenCode Desktop window shows remaining credit, spend today and this week, and the open-items counts (hover for the list); `/kosten` prints the same. Anthropic has no balance API, so credit = `topup_usd` minus the cost OpenCode recorded since `since`, from `~/.config/opencode/luna-budget.json` (`{"topup_usd": 153.75, "since": "2026-10-28T23:59:00+01:00"}`, a date alone counts from midnight; missing file shows "unbekannt"); no key is read. Turn it on once per clone with `node scripts/hq-panel-install.mjs` (Desktop loads GUI plugins only from the global config); code in `.opencode/plugins/hq/`, test `node --test scripts/opencode-hq.test.mjs`.
+
 ## Rules for Luna 2
 
 Same repo rules as Claude (`CLAUDE.md`). Hooks do not run in OpenCode, so every PR still goes
