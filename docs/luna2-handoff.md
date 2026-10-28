@@ -17,6 +17,11 @@ Long goal: a 3D horde game on every store.
 
 ## Open
 
+- **2026-10-29 00:15: GitHub suspended `yskills-claude`** (`gh api user` → "Sorry. Your account was suspended"; profile 404).
+  No push, PR or merge works until GitHub reinstates it; local commits wait. Open then: PRs 356, 358, 359 (registers
+  luna2-test), then `delete-project` luna2-test (dry run first) and a PR removing `projects/luna2-test.json`.
+  Activity that night: one new repo + Worker via new-project, ~6 PRs, several workflow runs and CI reruns, many `gh api` reads.
+
 - Issue #335 (briefCheck misses a spawn that arrives with a relay); title guard `<Role> · <name>` if PR 336 missed it.
 - Open PRs: 297, 305, 316, 317, 321, and 352 (this Luna 2 work).
 - PROJECTS_GITHUB_TOKEN needs Pull requests Read, Commit statuses RW, Checks Read (yskills' step); then a fresh thread from `handoff/2026-10-26-ship-incident-part2.md`.
