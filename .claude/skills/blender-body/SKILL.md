@@ -174,6 +174,29 @@ normal maps for fine anatomy.
 | Back detail | calm geometry plus a baked normal map for blades, groove, dimples, lat edge | silhouette bands unchanged within 0.5 mm |
 | Neck | clean tapered cylinder on the neck bones, 20 mm fillets into trapezius and jaw, nothing else touches it | crop vs ref: long and slim, no ring, no shelf, plus a bent head frame (new base only; a locked neck is not touched) |
 
+### Contact deformation (hands, shafts, tight clothes; 2026-10-28)
+
+Tested on a base body with openings and breasts; numbers are examples, the lessons are general.
+
+- **Shape keys keep no volume.** A key that pulls tissue sideways around an object also pulls it toward the
+  middle and pinches the front. Blend two size keys steeply or push the tissue forward on purpose; check the
+  front view, not only the side.
+- **Contact beats distance.** A squeeze driven by the distance hand to breast point fits one size and floats
+  or sinks at the others. Use a collider (palm and fingers as probes) that pushes the skin out with a
+  Shrinkwrap (Outside, a few mm offset) and then smooths; it works at every size and from every side.
+- **Soft body and cloth fail on an open shell** (no volume: it folds and crumples whatever the pressure). Only a
+  closed proxy volume with a pin to the chest wall would work; for loops, keyed contact is cheaper and stable.
+- **Openings:** a contact layer of Shrinkwrap (Outside) -> Smooth -> Shrinkwrap on a soft mask (ring group, moved
+  vertices, falloff) took skin hits from ~200 to 0-1 (max 1 mm), no pull on the body, ~4 ms per frame and
+  opening. Smooth alone pushes the skin back into the object; Outside Surface drags the whole canal. Cap depth by
+  canal length (a 7.6 cm canal is clean to ~12 cm insertion, deeper needs deeper canal keys), and tilt only a
+  little at depth.
+- **Build it in the figure file, not in the scene:** modifiers added to library overrides do not survive a
+  reload. Keep the layer in the base (modifiers off until a target is set) and sync it to every character.
+- **Jiggle:** Wiggle 2 does not run headless; key it (lag 3 frames, one overshoot).
+- **Proofs use the real character** (head, hair, skin, her own shape values), not the bare base, and several
+  sizes (smallest, real, largest) from front, side and above.
+
 **Licence.** Ship only our CC0 MakeHuman-derived body and the output of our own scripts (plus
 Blender/GPL tool output; MB-Lab only via the official build with CC BY 4.0 and credit). Daz, VaM,
 Illusion/Koikatsu, CBBE/BodySlide, MetaHuman, Wild Life and Subverse assets are **study only**: look
