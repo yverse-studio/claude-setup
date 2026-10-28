@@ -24,9 +24,9 @@ A rung skipped reads as cheap; a rung repeated reads as stalling. The Angel Next
 
 ## The second ladder: the women with each other (all-stay stories only)
 
-Runs beside the intimacy ladder, one rung per ensemble chapter or jealousy storylet, never faster than the romance it follows.
+Runs beside the intimacy ladder, one rung per ensemble chapter or jealousy storylet, never faster than the romance it follows. **Harem rule (`01`, yskills 2026-10-27): rivals first, one family at the end.** Rungs 1 to 3 play as friendly rivalry from the first chapters (notice, measure, truce), hurt-free and blocking nothing; the women accept the contest, not yet the sharing. Rungs 4 to 6 (admission, rule, ally) carry them there over the middle; rung 7 (the pact, private side) waits for its two routes and nobody is talked into it.
 
-1. **Notice**: she sees him with the other one. Jealousy tell fires (chibi cutaway allowed).
+1. **Notice**: she sees him with the other one. A playful jealousy tell fires (chibi cutaway allowed), never hurt.
 2. **Measure**: the two women size each other up in a scene without him (the bar, the kitchen, the lift).
 3. **Truce**: a shared problem at work makes them a team for one day.
 4. **Admission**: one says out loud, to the other, what she wants from him. The other does not laugh.

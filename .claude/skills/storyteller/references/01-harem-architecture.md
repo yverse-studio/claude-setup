@@ -8,7 +8,7 @@ Studied 2026-10-17: Girlfriend, Girlfriend · I Made Friends with the Second Pre
 2. **The lead heroine.** One heroine owns the spine. Her arc resolves the device's question. Everyone else orbits.
 3. **The lineup.** Three to six heroines with non-overlapping archetypes (`02-cast-archetypes.md`), each with her own entry event, her own "why him", her own scene type she owns, and her own secret.
 4. **The escalation ladder.** Small, countable intimacy steps, each a chapter beat, in roughly this order (`03-pacing-and-beats.md`).
-5. **The endgame contract.** Decided before chapter 1: chosen-one (Quintuplets, Nisekoi, Horimiya), open-but-lead (Oregairu, Saekano), or all-stay (Girlfriend Girlfriend, 100 Girlfriends). The contract decides whether rival routes close or stay warm. **The company story is all-stay** (yskills 2026-10-17): a real romance with every woman, they come to get along over time, and all end up happy together with him. All-stay needs what 100 Girlfriends does right: each woman's romance is written in full on its own before the group exists, and the women's relationships with each other get their own rungs (rival → truce → ally → the pact).
+5. **The endgame contract.** Decided before chapter 1: chosen-one (Quintuplets, Nisekoi, Horimiya), open-but-lead (Oregairu, Saekano), or all-stay (Girlfriend Girlfriend, 100 Girlfriends). The contract decides whether rival routes close or stay warm. **The company story is all-stay** (yskills 2026-10-17): a real romance with every woman, they come to get along over time, and all end up happy together with him. All-stay needs what 100 Girlfriends does right: each woman's romance is written in full on its own before the group exists, and the women's relationships with each other get their own rungs (rival → truce → ally → the pact; compressed by the harem rule below: it plays as friendly rivalry from the start).
 
 ## Act structure (serialized, 10 chapters per heroine arc)
 
@@ -34,10 +34,22 @@ Clannad, Fate and every eroge use the same shape and it fits a game better than 
 
 - **Misunderstanding** with a real cause (she saw him with her sister). Must resolve inside two chapters or readers call it stalling (the "dense protagonist" complaint is the genre's most hated flaw).
 - **Double booking** (two invitations, same evening).
-- **Jealousy spiral** that she hides badly (body language carries it, dialogue denies it).
+- **Playful jealousy** that she hides badly (body language carries it, dialogue denies it) and that resolves in the same scene; in a harem story it never blocks a route (harem rule below).
 - **Secret keeping** with a near-miss per chapter (Horimiya, Alya).
 - **Role reversal** (the composed one loses composure; the slob is competent at one thing).
 - **The pact** (Girlfriend Girlfriend): rules the characters set for themselves and then bend.
+
+## The harem rule (yskills 2026-10-27, corrected the same day; every harem story, this section is its one home)
+
+The typical Kadokawa and anime harem dynamic: rivals first, one family at the end.
+
+- **Two openings, pick one in the story map.** *Rivals first* (above) for a slow, contested build. *Instant harem* for stories whose device puts the women under his roof from page one, e.g. Reborn as a Space Mercenary, where he rescues them and the crew is the harem: everyone is fine with the setup from the start, and the story is about learning to live with it (who sleeps where, who gets which day, small frictions that stay playful). The rest of the rule holds in both: archetype roads (`02`), playful jealousy, nobody blocked, each woman's own ladder and night.
+- **The harem dynamic starts early.** First teasing beat by chapter 2 or 3, the second woman on page by chapter 2 to 4. From then on the women are visibly competing for him in the same rooms.
+- **Not everyone is a fan of sharing at first (that would be unrealistic).** Each woman starts as a rival who wants him for herself. What she is fine with from the start is the contest: she accepts being rivals and accepts that the others try too. Nobody demands he choose, leaves, sabotages for real or blocks another woman's route.
+- **By the end it is the full harem.** Through the second ladder (`03`: notice, measure, truce, admission, rule, ally, pact, family) every woman arrives, in her own time and for a reason true to her sheet, at being fine with sharing, and the finale shows them all happy together. Nobody is talked into it by a plot device.
+- **The path to "all fine" varies, by story and by character.** In some stories circumstances make everyone fine (a shared job, a shared roof, a deal); in others each woman gets there on her own. How she reacts follows her archetype (`02`, How each archetype takes sharing): a soft one accepts at once and holds herself back too much, a proud one turns it into competition, and so on. Give each woman her own route to the same ending, never one shared speech.
+- **Jealousy is a playful tell.** Teasing, a competitive streak, a pout that resolves in the same scene, a bet. Never hurt left standing at a chapter end, never a friendship cost. Rivalry stays play and warm underneath.
+- **Her romance is still her own.** Each woman keeps her full ladder and her own night; sharing adds scenes between the women and removes none of hers. All characters adult, on page and on the sheet.
 
 ## What's dated vs still loved (2026)
 
