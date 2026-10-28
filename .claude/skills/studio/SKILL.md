@@ -16,7 +16,7 @@ thread or Claude Code there. Cloud threads write code and tests (`roblox`, `tool
 | Roblox Studio | Built in: Studio > Assistant > `…` > Manage MCP Servers > Enable Studio as MCP server > Quick connect > Claude Code ([docs](https://create.roblox.com/docs/studio/mcp)). Writes `Roblox_Studio` (`cmd /c %LOCALAPPDATA%\Roblox\mcp.bat`) into `~/.claude.json`. | `list_roblox_studios` names the open place |
 | Blender | The official Blender Lab connector ([releases](https://projects.blender.org/lab/blender_mcp/releases), Blender 5.1+). Add-on: `blender --command extension install-file -r user_default -e mcp-<ver>.zip`, then Auto Start and Online Access on in its preferences. Server: unzip the `.mcpb` to `~/.claude/mcp/blender-mcp`, then `claude mcp add --scope user Blender -- uv run --directory <that folder> blender-mcp` (the live hook matches the name `Blender`). Skip look-alike community servers. | `get_objects_summary` returns the scene |
 
-`node install.mjs` adds the live-frame hook below; nothing else to install.
+`node install.mjs` adds the live-frame hook below; nothing else to install. Before writing a `bpy` script read [`blender-recipes.md`](blender-recipes.md) (loop, Blender 5.x API traps, our past script mistakes) and run `node scripts/blender/bpy-lint.mjs <script.py>` on it.
 
 ## Build loop
 
