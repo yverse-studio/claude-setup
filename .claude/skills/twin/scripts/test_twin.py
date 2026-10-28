@@ -35,7 +35,7 @@ class Raw(unittest.TestCase):
         bad = {"sample_rate": 22050, "duration": 60, "peak_db": -0.1, "noise_floor_db": -35.0}
         problems = twin.judge_audio("voice-calm", bad)
         self.assertEqual(len(problems), 4)
-        self.assertTrue(any("Lossless" in p for p in problems))
+        self.assertTrue(any("WAV" in p for p in problems))
 
     def test_good_video_passes(self):
         self.assertEqual(twin.judge_video(self.GOOD_VIDEO), [])
