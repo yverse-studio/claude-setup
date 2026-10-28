@@ -43,11 +43,26 @@ then writes lessons and state back through a PR, never into chat memory. Shared 
 - Rule from the repo: explicit slot names and scene contents stay out of git; they live in the laptop README and the private `nacht-kapitel1.rpy` only.
 - Realistic split: Luna 2 can write and edit Ren'Py script and story text, wire existing art into `slots.rpy`, and run `renpy` lint. It cannot reliably drive Blender, rigging, retargeting or render checks; those need Claude or yskills looking at the images. Never let it commit art it has not shown to yskills.
 
+## Laptop tools (checked 2026-10-28, Claude in OpenCode)
+
+| Tool | State |
+|---|---|
+| Blender 5.1.1 | `C:\Program Files\Blender Foundation\Blender 5.1\blender.exe`, headless EEVEE render works (`--factory-startup --python x.py --python-exit-code 1`) |
+| Ren'Py SDK 8.3.7 | `C:\Users\Claude\tools\renpy-8.3.7-sdk`; lint: `lib\py3-windows-x86_64\python.exe renpy.py <repo> lint <out.txt>` |
+| ffmpeg 9, uv, Python 3.13, Node 24 | on PATH (winget); ad-hoc Python packages via `uv run --no-project --with <pkg>` |
+| gh | `yskills-claude`, scopes repo, read:org, gist (no `delete_repo`) |
+| wrangler | `npx wrangler`, OAuth logged in |
+| Web | `webfetch` works; the built-in `websearch` returned nothing, use `https://html.duckduckgo.com/html/?q=...` via webfetch |
+| Subagents | haiku and sonnet tested |
+
+Traps: PowerShell `>` writes UTF-16 (a `git show x > f.mjs` broke Node); use `cmd /c "... > f"` or `Out-File -Encoding utf8`.
+The local qwen (Ollama `llama-server`) holds 2-5 GB RAM: `ollama stop qwen3:8b` before any Blender job.
+
 ## Which open items Luna 2 can take
 
-Blender 5.1 is on the laptop (`C:\Program Files\Blender Foundation\Blender 5.1\blender.exe`), so Luna 2 can run
-headless scripts (`blender -b file --python script.py`, see `docs/game-pipeline.md`) and hook existing renders into
-`slots.rpy`. What it cannot do is look at the result: a person or Claude must check every image before it is used.
+Blender 5.1 is on the laptop, so Luna 2 can run headless scripts (`docs/game-pipeline.md`) and hook existing renders
+into `slots.rpy`. Claude in OpenCode can look at renders (read the PNG) and show them in the Review pane; the local
+qwen cannot. Either way yskills sees every image before it is committed.
 
 | Open item | Luna 2 |
 |---|---|
