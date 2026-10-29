@@ -57,7 +57,7 @@ Our female base is `characters\CH_Base\female\Blend\base_female_v4.blend`: body,
 with our adult head, straight rest pose, scaled uniformly to 1.65 m (rig and body together; bones and weights
 untouched). Face kit 447 keys + 15 emotion keys; breast and five butt sliders on the body. A new character =
 copy of the base in `characters\CH_<name>\Blend\<name>.blend` + slider values, head, hair, outfit, never a new
-body. Rika (18, adult, our first figure): `CH_rika\Blend\rika.blend`, profile `CH_rika\README.md`, rebuilt by
+body. Rika (21, adult, our first figure): `CH_rika\Blend\rika.blend`, profile `CH_rika\README.md`, rebuilt by
 `CH_Base\female\_work\build_rika.py`. Object names inside the files keep their original prefix (scripts and
 bone maps depend on them; find the body as `*_Body`); never rename them by hand. The body source and its
 licence are named only in `CH_Base\LICENCE-SOURCE.txt` (no redistribution of the model, check before any
