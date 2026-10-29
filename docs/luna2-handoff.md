@@ -101,3 +101,21 @@ money goal first (duo-test go-live), then what only he can do (token, Company XY
 First test of qwen3:8b: it read `CLAUDE.md` but skipped the guard list and garbled one rule. Treat it as a
 reader and a doer of small, checked jobs. Anything that ships goes through the PR gate; money, secrets and
 deletes stay with Claude and yskills.
+
+- 2026-10-29 lesson for the setup: in OpenCode no hook enforces the video pipeline roles (Director storyboard/animatic was skipped on the Halloween cut); team-guard only checks model tiers. Port the pipeline check (video-studio ready.py per step) to a guard.
+
+- 2026-10-29 yskills: when showing files, always give clickable links (file:///C:/... per file) in the reply; the Review pane only shows the last opened file.
+
+## Cost review 2026-10-29 (24 h: $128.84; Opus $71.94, Sonnet $56.87, Haiku $0.03)
+
+- Biggest cost: the ONE coordinator session ran all night and day; every turn re-read ~290 M cached tokens. Fix: a fresh
+  coordinator session from this handoff at each milestone (CLAUDE.md handoff limits), short replies, no re-reading big files.
+- Wasted subagent runs: the Halloween editor built a dropped concept (plan changed mid-run); the first twin clip had
+  wrong lips but self-graded "pass"; duo 3D took 3 rounds before the method problem was named; mund ran 3 gate rounds,
+  then the last round rendered without a fresh gate. Fixes: confirm the concept with yskills before launching a build;
+  storyboard/animatic (Director) before any cut; the coordinator watches the whole output (video, not one frame)
+  before showing it; a role never grades its own work; stop at 3 rounds and change the method, not the numbers.
+- Media traps: Pixel clips are 10-bit HLG HDR (bt2020, arib-std-b67): tonemap to SDR (zscale + tonemap) or ask him to
+  turn 10-bit HDR off; never a colour grade without his OK.
+- Showing files: one combined compare video/sheet per question (the Review pane shows one file), plus Start-Process.
+- Waiting is free: a render through laptop-job costs no tokens; agents should not poll in short loops.
