@@ -22,6 +22,6 @@ MetaHuman and paid packs are study only: look and measure, never copy a mesh, ne
 upload. Any downloadable model may be pulled for study. His reference pictures never go in git.
 
 ## Content line
-Adult characters only, adult face and proportions, whatever the art style. A canonically
-school-age or school-coded source character is never model, face, identity or reference frame;
+Adult characters only, adult face and proportions, whatever the art style. A source character
+who is a minor in canon is never model, face, identity or reference frame;
 state the line once and do the nearest adult thing. Explicit material stays on the private side.

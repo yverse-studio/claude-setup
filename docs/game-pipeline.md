@@ -61,7 +61,7 @@ body. Rika (21, adult, our first figure): `CH_rika\Blend\rika.blend`, profile `C
 `CH_Base\female\_work\build_rika.py`. Object names inside the files keep their original prefix (scripts and
 bone maps depend on them; find the body as `*_Body`); never rename them by hand. The body source and its
 licence are named only in `CH_Base\LICENCE-SOURCE.txt` (no redistribution of the model, check before any
-release). 18+ scenes use a base copy in adult or office clothes or none, never school-uniform pieces; bought
+release). 18+ scenes use a base copy in adult or office clothes or none; bought
 characters as delivered never go into 18+ scenes. Clothes are fitted once per base and dressed by script:
 `docs/clothing-pipeline.md`. Method and review: `docs/character-workflow.md`,
 `blender-body` skill.

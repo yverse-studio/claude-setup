@@ -32,8 +32,7 @@ and yskills had to say it twice. This page is the fix.
      built as garments (cloth sim where a garment hangs free, shrinkwrap + solidify where it fits,
      weights from the body, skin under opaque cloth masked per outfit), not painted on the body; a
      painted piece that already passes the gate may stay (yskills, 2026-10-11).
-   - Adult rule: every figure is an adult woman with her grown-up look; a schoolgirl in her series
-     is an adult no matter the look
+   - Adult rule: every figure is an adult woman (18+, age stated) with her grown-up look
    - Content line: lingerie very hot design, a smooth nude base thats high quality.
    - You can use paid assets. Dont use money try get it without. A free download that
      needs a login is registered with the email yskills provides;

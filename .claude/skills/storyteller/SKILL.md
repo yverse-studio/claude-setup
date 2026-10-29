@@ -13,7 +13,7 @@ Project specifics (the cast, the chapter plan, explicit text) live in the game's
 ## Every time
 
 1. **Content line**: every character is an adult fictional original or an adult version stated on page; no
-   minors, no school-coded explicit scenes; flashbacks to school days stay cute and non-explicit. Explicit
+   minors; explicit scenes are present-day adults only, flashbacks stay non-explicit. Explicit
    text lives only in the private game repo or behind the game's 18+ gate.
 2. **Bible first**: cast sheets, relations, world, the preset. No bible yet: write it before chapter 1.
 3. **Ladder** (`03`): name each chapter's rung in the plan; escalate one rung per scene, never skip one; start
