@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { acquireSlot, blenderCount, releaseSlot } from './laptop-slots.mjs'
-import { parseAcMinutes, parseArgs, powerProblems, gpuProblem } from './laptop-job.mjs'
+import { parseAcMinutes, parseArgs, powerProblems, gpuProblem, ramShort } from './laptop-job.mjs'
 
 const script = fileURLToPath(new URL('./laptop-job.mjs', import.meta.url))
 const run = (flags, ...cmd) => spawnSync('node', [script, '--no-gpu', ...flags, '--', ...cmd], { encoding: 'utf8', env: { ...process.env, LAPTOP_JOB_LOG: process.platform === 'win32' ? 'NUL' : '/dev/null' } })
@@ -122,4 +122,9 @@ test('stopping the watchdog kills its job and frees the slot', { skip: process.p
   c.kill('SIGTERM')
   await new Promise((r) => c.on('close', r))
   assert.equal(readdirSync(dir).length, 0)
+})
+
+test('a Blender job waits while less than the minimum RAM is free', () => {
+  assert.equal(ramShort(4, () => 3 * 2 ** 30), true)
+  assert.equal(ramShort(4, () => 5.3 * 2 ** 30), false)
 })

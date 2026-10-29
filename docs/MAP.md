@@ -70,6 +70,7 @@ lives outside this repo.
 | Clothing pipeline | `docs/clothing-pipeline.md` | How garments are stored, fitted once per base and inherited by every character (follow keys, masks, dress script, naming, backups), moving existing garments, the clipping numbers of the done report (VRM/GLB: `scripts/clipping.mjs`, + `scripts/clipping.test.mjs`; `.blend` characters: `scripts/blender/clearance.py`, mandatory) |
 | Game pipeline | `docs/game-pipeline.md` | Where every game file lives (laptop GameAssetLibrary, game folder, project files), how to put an animation on a character, build a scene, write a chapter, plus the lessons |
 | Characters | `docs/character-workflow.md` | The one way to make a 3D character and show it to yskills: reference, build, self-check, comparison sheet, gate, library |
+| Base + delta (characters) | `docs/base-delta.md` | The fixed rule (body fixes go into the base, characters only get details), scale 1, the delta file, rebuild (`scripts/blender/delta*.py`), the marker proof, topology break, scale migration, the Blender RAM check |
 | Using it (for yskills) | `docs/USING.md` | One phone page: how to start an app, deploy or delete a page in one shot, what you see, what it costs |
 | Project registry | `projects/` | One `<name>.json` per project the `new-project` workflow made; `delete-project` needs it |
 | After launch | `docs/LOOP.md` | Errors and feedback become issues and fix threads |

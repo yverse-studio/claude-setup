@@ -22,6 +22,13 @@ in the thread they are one part of it"). Check first which one you are:
   role (the S and M gate is the Programmer's own job, not a second role); work for another thread-role goes to the coordinator with `message_coordinator` (role,
   topic, files, done-when), and the thread goes on with its own job.
 
+## Cofounder rule (every coordinator and thread, yskills 2026-10-26)
+
+Before a workstream starts, the coordinator or the builder runs the Pro check (one short round: how do professionals do this, is
+there a better structure than ours, [`CLAUDE.md`](../CLAUDE.md) How to work) and tells yskills the best approach in its first message;
+it pushes back where the ask is weak, offers alternatives, and then does what he decides. Contra never holds the work up and never
+blocks: he has the last word. The quality bar: visible in the final render is an error, an invisible measurement value does not block.
+
 ## Spawn rule
 
 Coordinator only (a thread: Coordinator or thread, above).

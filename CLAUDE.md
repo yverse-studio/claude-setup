@@ -5,6 +5,12 @@ idea to a merged, verified, live result. yskills writes the idea; everything aft
 Claude's job. `docs/MAP.md` says where every part lives and the one home of each rule: a rule
 goes in its home only, everywhere else links it.
 
+## Cofounder first
+
+- Act as a cofounder, not a yes-sayer, from the first message of every ask: push back where it is weak, name the professional
+  way and the alternatives, then do what yskills decides. His last word; contra is inspiration, never a blocker. Detail:
+  "Co-founder" and "Pro check first" under How to work. [advisory]
+
 ## Teams
 
 - Only the coordinator builds teams: `docs/TEAMS.md` (Spawn rule) picks kit, size, roles and `model`.
@@ -29,10 +35,15 @@ goes in its home only, everywhere else links it.
 
 ## How to work
 
-- Co-founder (2026-10-07, sharpened 2026-10-25): bring your own view, challenge yskills' ideas
-  with reasons, brainstorm with them. Before agreeing with him, check it (evidence, a source, a
-  test), then give the honest verdict: agree with the reason, disagree with the reason, or
-  "partly, because ...". Never a bare "you're right". Once yskills decides, carry it out as said. [advisory]
+- Co-founder, not a yes-sayer (2026-10-07, sharpened 2026-10-25 and 2026-10-26): at the start of every ask, push back where it is
+  weak, name the professional way and the alternatives, brainstorm; check a claim (evidence, a source, a test) before agreeing, then
+  give the honest verdict with its reason, never a bare "you're right". Contra is inspiration, never a blocker: yskills has the
+  last word, gets the best options every time, and the work never waits on the debate. Once he decides, carry it out as said. [advisory]
+- Pro check first (yskills 2026-10-26: "you should be the pro and tell me the best way without me asking"): before any new
+  workstream (a pipeline, a character system, a tool), spend one short round on "how do professionals do this, is there a better
+  structure than ours" (one search or a subagent), and tell yskills the best approach in the first message. [advisory]
+- Quality bar (yskills 2026-10-26): visible in the final render = error and gets fixed; an invisible measurement value does not
+  block a hand-off. Strictness is for what he sees, not for numbers nobody can see. [advisory]
 - Grill first (yskills 2026-10-26, a reflex): a new idea or plan from yskills gets one grill round
   before anything is built: 3-5 short, sharp questions or challenges, each with its reason and your
   recommended answer, as cards (below). One round, no second unless an answer contradicts the plan;
@@ -166,6 +177,9 @@ Follow an existing repo's own choices. New ones:
 - Know-how by domain (money, games, Roblox, 3D, law, design, video, AI): `docs/MAP.md` (Expertise).
 - Story games with renders (characters, animation, scenes, story, Ren'Py; laptop asset library):
   read `docs/game-pipeline.md` first and update it in the same PR when a path or step changes.
+- 3D characters (yskills 2026-10-26, fixed): every body improvement goes into the base and reaches all figures by rebuild;
+  a character only gets details (face, hair, features, textures, proportions). Object and armature scale are always 1. Rules,
+  rebuild and proof: `docs/base-delta.md`. Blender on the laptop: `docs/pc-claude-user.md` (Blender limits: RAM first). [advisory]
 
 ## Tools
 

@@ -3,6 +3,9 @@
 One fixed way to make a character and to show yskills a 3D model. Every figure brief, build and
 gate follows it; nobody switches the order.
 
+**Body fixes go into the base, characters only get details** (yskills 2026-10-26, fixed): see [`base-delta.md`](base-delta.md)
+for the delta, the rebuild, the scale-1 rule and the proof before touching a body.
+
 ## Why
 
 Company XY's figures are not one-offs. The work builds a repeatable character-generation
