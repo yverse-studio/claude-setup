@@ -4,6 +4,15 @@ Claude's own home on yskills' laptop since 2026-10-08: a standard (non-admin) Wi
 `Claude`, home `C:\Users\Claude`. Remote Control sessions for project work run here. Everything
 in `install.mjs` works as on yskills' own user (`C:\Users\Ich`); this page lists only what differs.
 
+## Folders on this user (2026-10-29)
+
+- `Documents\GitHub\<repo>`: one git clone per repo, nothing else (no zips, tars, loose notes, secrets files).
+  Extra branches of a repo live as worktrees in `Documents\GitHub\_worktrees\<repo>\<name>`, never in `%TEMP%`.
+- `Documents\GameAssetLibrary`: all art sources; downloads land in `temp\` (the inbox). The game play copy stays
+  in `Documents\GitHub\CompanyXY-Spiel\` (not a repo).
+- `C:\Users\Claude\Private18`: 18+ content and its backups, never in any git remote (`docs/game-pipeline.md`).
+- `C:\Users\Claude\tools`: SDKs installed by hand (Ren'Py). Scratch work: `%TEMP%\opencode`, deleted when done.
+
 ## What is different
 
 | Item | On this user | Why |
