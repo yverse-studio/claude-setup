@@ -53,7 +53,7 @@ then writes lessons and state back through a PR, never into chat memory. Shared 
 | Tool | State |
 |---|---|
 | Blender 5.1.1 | `C:\Program Files\Blender Foundation\Blender 5.1\blender.exe`, headless EEVEE render works (`--factory-startup --python x.py --python-exit-code 1`) |
-| Ren'Py SDK 8.3.7 | `C:\Users\Claude\tools\renpy-8.3.7-sdk`; lint: `lib\py3-windows-x86_64\python.exe renpy.py <repo> lint <out.txt>` |
+| Ren'Py SDK 8.3.7 | `C:\Users\Claude\Documents\Tools\renpy-8.3.7-sdk`; lint: `lib\py3-windows-x86_64\python.exe renpy.py <repo> lint <out.txt>` |
 | ffmpeg 9, uv, Python 3.13, Node 24 | on PATH (winget); ad-hoc Python packages via `uv run --no-project --with <pkg>` |
 | gh | `yskills-claude`, scopes repo, read:org, gist (no `delete_repo`) |
 | wrangler | `npx wrangler`, OAuth logged in |

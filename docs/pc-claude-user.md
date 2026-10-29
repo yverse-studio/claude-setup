@@ -10,7 +10,7 @@ in `install.mjs` works as on yskills' own user (`C:\Users\Ich`); this page lists
   Extra branches of a repo live as worktrees in `Documents\GitHub\_worktrees\<repo>\<name>`, never in `%TEMP%`.
 - `Documents\GameAssetLibrary`: all art sources; downloads land in `temp\` (the inbox). The game play copy stays
   in `Documents\Games\CompanyXY\` (not a repo).
-- `C:\Users\Claude\Private18`: 18+ content and its backups, never in any git remote (`docs/game-pipeline.md`).
+- `C:\Users\Claude\Documents\Private18`: 18+ content and its backups, never in any git remote (`docs/game-pipeline.md`).
 - `C:\Users\Claude\tools`: SDKs installed by hand (Ren'Py). Scratch work: `%TEMP%\opencode`, deleted when done.
 
 ## What is different
