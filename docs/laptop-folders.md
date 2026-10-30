@@ -31,3 +31,8 @@ C:\Users\Claude\     only system folders, twin-tools\ (35 GB, venv, Twin on hold
   `~/.claude/settings.json`. Then check the desktop links (`Desktop\*.lnk` targets and working directories exist).
 - Move to `_trash-*`, never delete; a folder with a venv or a running tool or render job is not moved.
 - OpenCode and Luna 2 read `AGENTS.md` first, which points to `ORDNER.md`.
+
+## Where reference images go
+Art references (poses, bodies, scene look, boards, video frames) go to `GameAssetLibrary\references\` and nowhere else;
+character-bound ones to that character's `Image\ref`; 18+ ones to `Private18\ref\`; video analysis output to `References\watch\`.
+Motion data (BVH, FBX, anim) lives in `GameAssetLibrary\animations\`, rigs in `GameAssetLibrary\rigs\`.
