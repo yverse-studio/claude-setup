@@ -25,7 +25,8 @@ Poses and animates rigged figures for a game or story: key poses, loops, scene c
 
 ## Fast loop (every scene; the coordinator enforces it)
 
-Blender stays open in one persistent session; no restart per fix.
+Mandatory from the very first step, unasked: the owner must never have to ask for screenshots or a live loop. Blender stays open in one persistent session; no restart per fix.
+Context may grow as large as the scene needs; never restart yourself. Before any hand-over, write the state (files, best copy, open findings, next step) into the scene's PROGRESS.md.
 
 1. **Key pose first**, then motion, then in-betweens. Screenshot the base pose (knees, hands, props, twists show in 10 s) and post it before any bake.
 2. **Every fix:** small Workbench/EEVEE preview (about 5 s), then the contact check (signed, `docs/two-figure-scenes.md`), then adjust live; repeat until clean. Post a screenshot after each step; a thread that goes quiet without screenshots is stopped.
