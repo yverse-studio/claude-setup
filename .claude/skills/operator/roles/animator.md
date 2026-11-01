@@ -41,7 +41,20 @@ A gate round that changes only the camera still runs this. Without these numbers
 2. **Close cams on every contact at 1:1.** One close render per contact pair for its worst frame (hands: about 0.3 m from the contact, 40 mm lens) plus a 1:1 crop of the render camera around each contact. Never judge contact from a downscaled strip.
 3. **Material opacity check.** In the normal variant every body and prop is opaque: alpha 1, transmission 0, no `show_transparent`, no ghost override (a ghost mode is its own variant). A limb visible through skin fails the round.
 4. **At least one non-POV camera** (side or front) for every clip, besides the close cams.
-5. **The verdict lists the numbers:** per pair mm and frame, opacity yes or no, which cams were looked at. "Looks fine" without numbers is "not checked".
+5. **Render completeness per object.** Every object the scene needs (bodies, props, hair, clothes, effects) is visible in the render where it should be: `hide_render` off, not masked away, not floating (a prop without its body, a hand without its arm), no open mesh ends from mask cuts in frame. Check one non-POV frame with every object listed visible yes or no.
+6. **The verdict lists the numbers:** per pair mm and frame, opacity yes or no, completeness list, which cams were looked at. "Looks fine" without numbers is "not checked".
+
+## Motion quality gate (soft parts, face, timing; added 2026-11-01)
+
+Measured on the strip and the bake, compared side by side with the reference loop sheets and boards the project keeps; numbers come from earlier scenes' measurements and `docs/two-figure-scenes.md`.
+
+1. **Soft-part jiggle (bust, butt, belly bones):** swing per stroke 10-14 degrees with one overshoot, lagging the driver by 2-4 frames, settled within 6-8 frames. Under 6 degrees is dead (fail); over 20 degrees or a second big bounce is rubber (fail). Measure in degrees on the bones and compare with the last good state (revert rule).
+2. **Squash on contact:** where skin meets skin or a hand presses, a visible dent or bulge shows in the close cam and the receiving form keeps its volume (no flat spot, no tear). Where blocking is enough, no dent is needed.
+3. **Stroke timing:** slow out, fast in; loop speed even across the seam; head lead and spine wave lag 1-3 frames behind the hips.
+4. **Face:** eye contact with the lens in most frames, one blink per 3-5 s (never on the seam frame), brows and blush readable at 960x540, mouth contact without gap or clip.
+5. **Hair:** fringe and side strands follow the head with 2-3 frames of lag; the eyes stay uncovered for more than half the loop.
+6. **Light and look:** skin tone, rim light and highlights match the reference board; too pale or flat is a fail.
+7. **No dead parts:** every soft part moves with the action; fingers differ by a 10-15 degree curl between loop halves.
 
 ## External tools
 
