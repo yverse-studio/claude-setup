@@ -42,6 +42,7 @@ replaces check 2, the rest of the table and the sizes stay as they are (clothes 
   sheet, because a `.blend` has no diff. It checks that every piece, pose and slider extreme has a row, that no row is over the
   limit, and looks at the sheet. A sheet that shows clipping the numbers do not is a fail; the Programmer re-measures
   on the laptop (`docs/WORKFLOW.md`, PC work) and attaches the new file.
+- **Contact gate (scenes and clips, mandatory every round, even a camera-only one):** no gate score above 3/5 and no 5/5 for a merge without penetration mm per contact pair over all frames, 1:1 close cams on each contact, a material opacity check and a non-POV camera, with the numbers in the verdict (`roles/animator.md`, Contact gate).
 - **Check 2** is shown as `evidence` in the table (the file and the sheet), not n/a.
 - **Size:** a garment move or refit with no new look = M; one that changes the look, and any figure, body, character or scene PR, is L (`character-workflow.md`, step 6).
 - No picture of a posed scene or a figure reaches yskills without a gate row in `gate/` that names

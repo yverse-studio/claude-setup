@@ -33,6 +33,16 @@ Every item is looked at on a low-res check strip (960x540, six or more frames in
 4. **Loop seam:** last frame equals first, same speed across the seam.
 5. **Show the strip to the owner first.** Only after the owner's OK does the full-resolution render start (through `scripts/laptop-job.mjs`, one render at a time). A strip that was not looked at is reported as "not checked", never as done.
 
+## Contact gate (every gate round, mandatory; added 2026-11-01)
+
+A gate round that changes only the camera still runs this. Without these numbers in the verdict, no round scores above 3/5 (`gate.md`, Asset PRs).
+
+1. **Penetration per contact pair, measured.** A BVH measurement (`find_nearest` plus a normal sign test) on the evaluated, deformed meshes over every frame of every clip (intro, loop, fast, finish), for each pair the scene has: hands and fingers against the partner's body and one's own body, mouth against prop or partner, any prop against a body. Post the worst mm and its frame per pair. Pass: at most 2 mm, and only where the contact is meant to be.
+2. **Close cams on every contact at 1:1.** One close render per contact pair for its worst frame (hands: about 0.3 m from the contact, 40 mm lens) plus a 1:1 crop of the render camera around each contact. Never judge contact from a downscaled strip.
+3. **Material opacity check.** In the normal variant every body and prop is opaque: alpha 1, transmission 0, no `show_transparent`, no ghost override (a ghost mode is its own variant). A limb visible through skin fails the round.
+4. **At least one non-POV camera** (side or front) for every clip, besides the close cams.
+5. **The verdict lists the numbers:** per pair mm and frame, opacity yes or no, which cams were looked at. "Looks fine" without numbers is "not checked".
+
 ## External tools
 
 Checked 2026-11-01, this list is the record. Nothing is installed; every outside skill is read before installing (`CLAUDE.md`, Code).
@@ -40,6 +50,7 @@ Checked 2026-11-01, this list is the record. Nothing is installed; every outside
 - [`EL4CTEO/blender-skills`](https://github.com/EL4CTEO/blender-skills) (MIT, 22 skills, no network calls found): its `blender-animation` skill has a loop pop/hitch checker, a control-rig bake to an export skeleton and a bone-map retarget script. Adapt ideas into our own scripts; install only on yskills' OK.
 - Blender MCP servers (community `blender-mcp`, `dcc-mcp-blender`): the Blender Lab MCP add-on is already our route (`studio`); a second server adds no pose or loop capability we lack.
 - Retargeting add-ons: Rokoko (free) and Auto-Rig Pro (paid, never bought without yskills). Our own retarget script covers the CMU BVH library; revisit only for Mixamo-class clips.
+- Procedural multi-leg walks (creatures, later): the free Blender add-on Spider Walker (iltaen; [80.lv](https://80.lv/articles/free-blender-tool-for-procedural-spider-walks)) drives IK foot controllers, plants feet by raycast and bakes to a normal action. Needs Blender 5.2+, licence not checked yet: read it before installing. Not meant for biped cadence.
 
 ## Lessons
 
@@ -51,3 +62,4 @@ Added at the end of each scene (operator step 9): date, what to do differently. 
 - 2026-10-29: arms looked right from the POV camera and were folded from the front because the elbow poles sat behind the shoulders; check poles from a non-render camera.
 - 2026-10-29: a later "fix" set a physics amount to zero and lost the jiggle while the strip still looked fine at a glance; compare breast and hair swing in degrees against the last good state, and revert on loss.
 - 2026-11-01: the thread-role roster had no Animator, so a laptop scene thread was blocked by `team-guard`; this role exists so the scene work has a home.
+- 2026-11-01: a camera-only gate round scored 5/5 while both hands sat inside the partner's thighs and a body rendered semi-transparent; the owner found it. Every gate round runs the contact gate, whatever it changed.
