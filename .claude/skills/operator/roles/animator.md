@@ -23,6 +23,16 @@ Poses and animates rigged figures for a game or story: key poses, loops, scene c
 - **Reuse before you pose:** search the scene library, the position files and `docs/` for an existing position or hand preset before posing a new one; a generic fix (preset, baker step, check) goes into the scene kit and the claude-setup doc, not into one scene.
 - **Test frames small, finals once.** 960x540 with the real light first, the owner approves, then 1080p. Never overlap two renders on the laptop.
 
+## Before any render (pre-render checklist)
+
+Every item is looked at on a low-res check strip (960x540, six or more frames incl. first and last), never assumed from numbers:
+
+1. **Framing:** the whole action is in shot, knees and feet included where the pose needs them; no cut-off head, hands or feet; the camera sees face and hands, nothing blocks the action.
+2. **Clipping:** hands against body, body against body, furniture and clothes; nothing inside anything else in any frame of the strip.
+3. **Limbs and floor:** elbow and knee poles from a second camera, feet on the floor, nothing floating, no doubled or stray parts in the first frame.
+4. **Loop seam:** last frame equals first, same speed across the seam.
+5. **Show the strip to the owner first.** Only after the owner's OK does the full-resolution render start (through `scripts/laptop-job.mjs`, one render at a time). A strip that was not looked at is reported as "not checked", never as done.
+
 ## External tools
 
 Checked 2026-11-01, this list is the record. Nothing is installed; every outside skill is read before installing (`CLAUDE.md`, Code).
