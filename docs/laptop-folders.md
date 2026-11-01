@@ -34,5 +34,6 @@ C:\Users\Claude\     only system folders, twin-tools\ (35 GB, venv, Twin on hold
 
 ## Where reference images go
 Art references (poses, bodies, scene look, boards, video frames) go to `GameAssetLibrary\references\` and nowhere else;
-character-bound ones to that character's `Image\ref`; 18+ ones to `Private18\ref\`; video analysis output to `References\watch\`.
+character-bound ones to that character's `Image\ref`; 18+ ones to `Private18\ref\`; social-media references (Dandadan remake, beat maps, shotlists, post analyses) to `References\social-media\`; video analysis output to `References\watch\`.
+Whoever downloads or generates a reference saves it there in the same turn and adds one line with the source link to that folder's README. A reference that exists only in a chat, a temp folder or a tool's work dir does not exist for the next session.
 Motion data (BVH, FBX, anim) lives in `GameAssetLibrary\animations\`, rigs in `GameAssetLibrary\rigs\`.
