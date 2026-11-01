@@ -261,6 +261,16 @@ test('team guard: blocks Agent and thread starts without model, passes with one'
   } finally { rmSync(cwd, { recursive: true, force: true }) }
 })
 
+// yskills 2026-11-01: an Animator brief was blocked because the role was not in the Roster.
+test('team guard: an Animator thread starts on the game and story kits, on Sonnet, not on site or setup', async () => {
+  const { decide } = await import('../global/team-guard.mjs')
+  const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
+  const brief = (kit, size = 'M') => ({ brief: `Role: Animator · Kit: ${kit} · Size: ${size}\nPrior art: scene kit and our blender-body skill checked; adapt, because the key-pose library exists${FULL}`, title: 'Animator · fenster', model: 'claude-x-1' })
+  for (const kit of ['game', 'story']) assert.deepEqual(decide('mcp__hearthbot__start_thread', brief(kit), [], [], teams), {}, `Animator passes on ${kit}`)
+  for (const kit of ['site', 'app', 'setup']) assert.match(decide('mcp__hearthbot__start_thread', brief(kit), [], [], teams).block ?? '', /not on the `\w+` kit's team/, `Animator is skipped on ${kit}`)
+  assert.match(decide('mcp__hearthbot__start_thread', { ...brief('game'), model: 'claude-opus-x' }, [], [], teams).block ?? '', /runs on sonnet/, 'the Animator runs on Sonnet')
+})
+
 test('team guard: a size L Programmer brief needs a Tester line first', () => {
   const cwd = mkdtempSync(join(tmpdir(), 'team-'))
   try {
