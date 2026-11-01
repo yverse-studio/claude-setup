@@ -269,6 +269,9 @@ test('team guard: an Animator thread starts on the game and story kits, on Sonne
   for (const kit of ['game', 'story']) assert.deepEqual(decide('mcp__hearthbot__start_thread', brief(kit), [], [], teams), {}, `Animator passes on ${kit}`)
   for (const kit of ['site', 'app', 'setup']) assert.match(decide('mcp__hearthbot__start_thread', brief(kit), [], [], teams).block ?? '', /not on the `\w+` kit's team/, `Animator is skipped on ${kit}`)
   assert.match(decide('mcp__hearthbot__start_thread', { ...brief('game'), model: 'claude-opus-x' }, [], [], teams).block ?? '', /runs on sonnet/, 'the Animator runs on Sonnet')
+  const why = { ...brief('game'), model: 'claude-opus-x' }
+  why.brief = why.brief.replace('Prior art:', 'Model: opus (hard posing judged by the image)\nPrior art:')
+  assert.deepEqual(decide('mcp__hearthbot__start_thread', why, [], [], teams), {}, 'Opus passes for posing when the brief says why')
 })
 
 test('team guard: a size L Programmer brief needs a Tester line first', () => {

@@ -21,7 +21,18 @@ Poses and animates rigged figures for a game or story: key poses, loops, scene c
 - **Revert rule.** Keep the best state as a named copy. A change that makes the strip worse (lost jiggle, arms behind the back, a new clip) is reverted at once, not patched with a second change; two rounds without progress go to the coordinator with the strip, not into a third.
 - **Save actions with a fake user**, open the saved `.blend` fresh and test in the real scene, not only in the working file; a headless render and the GUI differ in world and view transform, so compare one frame of each before trusting either.
 - **Reuse before you pose:** search the scene library, the position files and `docs/` for an existing position or hand preset before posing a new one; a generic fix (preset, baker step, check) goes into the scene kit and the claude-setup doc, not into one scene.
-- **Test frames small, finals once.** 960x540 with the real light first, the owner approves, then 1080p. Never overlap two renders on the laptop.
+- **Test frames small, finals once.** See Fast loop; never overlap two renders on the laptop.
+
+## Fast loop (every scene; the coordinator enforces it)
+
+Blender stays open in one persistent session; no restart per fix.
+
+1. **Key pose first**, then motion, then in-betweens. Screenshot the base pose (knees, hands, props, twists show in 10 s) and post it before any bake.
+2. **Every fix:** small Workbench/EEVEE preview (about 5 s), then the contact check (signed, `docs/two-figure-scenes.md`), then adjust live; repeat until clean. Post a screenshot after each step; a thread that goes quiet without screenshots is stopped.
+3. **Precheck before any bake:** `scripts/blender/pose_precheck.py` fails on an arm crossed behind the back and on fingertips inside skin (signed, per frame). A red precheck means no bake.
+4. **Strip to the owner, then full bake or render**, only after his OK on that strip. "Strip then render" never skips the OK.
+5. **Long jobs run detached** (`scripts/laptop-job.mjs`) with a log file. The thread checks the output files itself and never relies on a "done" notification; a bake lost to a restart is a thread failure.
+6. **Who does what:** the senior (Opus) poses and judges; the junior (Sonnet) executes numbers a separate Opus gate gives (`docs/TEAMS.md`, Tiers as a team).
 
 ## Before any render (pre-render checklist)
 
@@ -76,3 +87,4 @@ Added at the end of each scene (operator step 9): date, what to do differently. 
 - 2026-10-29: a later "fix" set a physics amount to zero and lost the jiggle while the strip still looked fine at a glance; compare breast and hair swing in degrees against the last good state, and revert on loss.
 - 2026-11-01: the thread-role roster had no Animator, so a laptop scene thread was blocked by `team-guard`; this role exists so the scene work has a home.
 - 2026-11-01: a camera-only gate round scored 5/5 while both hands sat inside the partner's thighs and a body rendered semi-transparent; the owner found it. Every gate round runs the contact gate, whatever it changed.
+- 2026-11-01: an 85 mm knee error was found only after a 25-minute bake, and arms crossed behind the back came back a second time; the Fast loop (key pose screenshot, preview, precheck script) replaces long blind bakes.
