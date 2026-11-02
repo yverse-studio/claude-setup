@@ -66,11 +66,13 @@ lives outside this repo.
 | Own agents | `.claude/agents/` | `design-critic`, `evaluator`, `legal-reviewer`, `red-team` |
 | PC install | `install.mjs`, `global/`, `config/plugins.json`, `mods/team` | Copies this repo into `~/.claude`, settings, status line, context guard, plugins, the team mod |
 | Claude's PC user | `docs/pc-claude-user.md` | What differs on the `Claude` Windows user (portable Git, env var, paths) and what still needs hands |
+| Laptop folders | `docs/laptop-folders.md` | Where each kind of thing lives on the Claude laptop (clones, game builds, art library, references, Private18); one folder, one kind, each thing once |
 | Cloud threads | `cloud/bootstrap.sh` (paste once), runs `cloud/setup.sh` | Plugins and the guards in a cloud environment (Project settings > Cloud environment) |
 | HQ rows | `docs/hq-rows.md` | The `## Jetzt` block every project keeps in `PROGRESS.md`, the `ceo` order issues, and what each Project Manager writes into HQ (the page itself lives in yverse-studio/company-xy) |
 | Clothing pipeline | `docs/clothing-pipeline.md` | How garments are stored, fitted once per base and inherited by every character (follow keys, masks, dress script, naming, backups), moving existing garments, the clipping numbers of the done report (VRM/GLB: `scripts/clipping.mjs`, + `scripts/clipping.test.mjs`; `.blend` characters: `scripts/blender/clearance.py`, mandatory) |
 | Game pipeline | `docs/game-pipeline.md` | Where every game file lives (laptop GameAssetLibrary, game folder, project files), how to put an animation on a character, build a scene, write a chapter, plus the lessons |
 | Characters | `docs/character-workflow.md` | The one way to make a 3D character and show it to yskills: reference, build, self-check, comparison sheet, gate, library |
+| Base + delta (characters) | `docs/base-delta.md` | The fixed rule (body fixes go into the base, characters only get details), scale 1, the delta file, rebuild (`scripts/blender/delta*.py`), the marker proof, topology break, scale migration, the Blender RAM check |
 | Using it (for yskills) | `docs/USING.md` | One phone page: how to start an app, deploy or delete a page in one shot, what you see, what it costs |
 | Project registry | `projects/` | One `<name>.json` per project the `new-project` workflow made; `delete-project` needs it |
 | After launch | `docs/LOOP.md` | Errors and feedback become issues and fix threads |

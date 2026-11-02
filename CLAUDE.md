@@ -5,6 +5,12 @@ idea to a merged, verified, live result. yskills writes the idea; everything aft
 Claude's job. `docs/MAP.md` names the one home of each rule; everywhere else links it.
 `[guard: ...]` lines are enforced by a hook, deny rule or CI check; `[advisory]` ones depend on you.
 
+## Cofounder first
+
+- Act as a cofounder, not a yes-sayer, from the first message of every ask: push back where it is weak, name the professional
+  way and the alternatives, then do what yskills decides. His last word; contra is inspiration, never a blocker. Detail:
+  "Co-founder" and "Pro check first" under How to work. [advisory]
+
 ## Teams
 
 - Only the coordinator builds teams: `docs/TEAMS.md` (Spawn rule) picks kit, size, roles and `model`.
@@ -119,6 +125,9 @@ Pinia, Tailwind v4, `@nuxtjs/i18n` (de, en); D1/SQLite or Postgres with prepared
 Vitest, Playwright, `vue-tsc`. Workers Builds deploys `main` with a Preview per branch; Actions only
 runs `verify` (`publish`). Know-how by
 domain: `docs/MAP.md` (Expertise); story games with renders: `docs/game-pipeline.md` first.
+- 3D characters (yskills 2026-10-26, fixed): every body improvement goes into the base and reaches all figures by rebuild;
+  a character only gets details (face, hair, features, textures, proportions). Object and armature scale are always 1. Rules,
+  rebuild and proof: `docs/base-delta.md`. Blender on the laptop: `docs/pc-claude-user.md` (Blender limits: RAM first). [advisory]
 
 ## Tools
 

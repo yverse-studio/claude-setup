@@ -81,6 +81,8 @@ The gate checks both (`gate.md`, Asset PRs).
   character's body has beyond the sliders is stored as **one key on the base**, named
   `CH_<name>` (the character "morph"); garments get it as a follow key like any slider. So a new
   character never needs its own refit.
+- The `CH_<name>` key is regenerated from the base by the rebuild (`base-delta.md`), never hand-edited on one character; object and
+  armature scale stay 1.
 - A new base only when the topology or rig differs (man vs woman, a stylised or very different
   build). A second woman with another figure is a `CH_<name>` key on the female base, not a base.
 - Typical set: female base, male base; a third only for a different style or topology.
