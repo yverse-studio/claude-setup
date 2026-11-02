@@ -11,10 +11,7 @@ permissions:
 
 jobs:
   check:
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest # one runner: CI is free on this public repo, but keep it light (yskills 2026-11-02)
     steps:
       - uses: actions/checkout@v4
         with:
@@ -27,7 +24,7 @@ jobs:
         if: github.event_name == 'pull_request'
         run: node .claude/skills/publish/templates/new-project/scripts/floor-guard.mjs --base origin/${{ github.base_ref }}
       - name: PR lessons and prior-art lines
-        if: github.event_name == 'pull_request' && matrix.os == 'ubuntu-latest'
+        if: github.event_name == 'pull_request'
         env:
           PR_BODY: ${{ github.event.pull_request.body }}
         run: |
