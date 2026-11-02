@@ -69,7 +69,7 @@ A piece without its row is not done, a row over the limit fails the report. Meas
 the **mandatory measuring step** is [`scripts/blender/clearance.py`](../scripts/blender/clearance.py) (library copy: `_tools\clearance.py`,
 the same file): `blender -b <character>.blend --factory-startup -P clearance.py -- look=<look> pieces=<names> faces report=<out.json>` writes the
 smallest clearance, the vertices inside and the share inside for rest, **every follow key at 1** and 3 frames of each pose in one JSON. `faces`
-also measures polygon centres and edge midpoints, because skin shows between vertices (a vertex-only report passed a shirt whose faces cut the
+also measures triangle centres and edge midpoints, because skin shows between vertices (a vertex-only report passed a shirt whose faces cut the
 chest). Self-collision of the body (arm through torso in the pose) is counted apart as `selfcol` and named in the report as animation, not clothing.
 The same script fixes what it finds (`rounds=2`, key and weight correction, see its docstring). The render sheet (idle,
 big pose, back, close-up of each hem, seam and the body parts under the garment) goes beside it.
