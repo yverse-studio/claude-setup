@@ -76,6 +76,7 @@ lives outside this repo.
 | Base + delta (characters) | `docs/base-delta.md` | The fixed rule (body fixes go into the base, characters only get details), scale 1, the delta file, rebuild (`scripts/blender/delta*.py`), the marker proof, topology break, scale migration, the Blender RAM check |
 | Using it (for yskills) | `docs/USING.md` | One phone page: how to start an app, deploy or delete a page in one shot, what you see, what it costs |
 | Project registry | `projects/` | One `<name>.json` per project the `new-project` workflow made; `delete-project` needs it |
+| GitHub owner migration (plan B if the account stays suspended) | `docs/github-migration.md`, `scripts/migration/` | Inventory of clones and bundles, copy to a new owner, the hands steps and what points at the old owner |
 | After launch | `docs/LOOP.md` | Errors and feedback become issues and fix threads |
 | Setup loop | operator `SKILL.md` (Setup loop) | Friction with this repo becomes a `loop:setup` issue, then a fix thread through the gate |
 | Test runs | `docs/TEST-PROJECTS.md` | How the setup is tested end to end, and what each run taught |
