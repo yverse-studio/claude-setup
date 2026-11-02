@@ -17,6 +17,7 @@ No deploy keys in GitHub, in the cloud environment or in chat.
 - Previews inherit nothing from production. The `previews` block in `wrangler.jsonc` gives them
   their own resources, and the dashboard's **Previews Base** settings give them their own secrets.
   So a PR never touches live data or live keys at runtime. [advisory]
+- What GitHub forbids and what we do about it: `docs/github-rules.md` (no 18+ on GitHub at all, no bulk activity).
 - GitHub Actions runs `verify` only in a public repo (free there); a private repo has Actions off
   (`gh api -X PUT repos/yverse-studio/<repo>/actions/permissions -f enabled=false`) and its gate runs
   the same checks before the push, on the laptop or in the thread (yskills 2026-11-02: no paid
