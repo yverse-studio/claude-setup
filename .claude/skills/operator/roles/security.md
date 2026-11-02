@@ -16,10 +16,6 @@ Checks the diff and attacks the preview the way an outsider would.
 
 Argue for the safer way and name the risk of the other; once yskills decides, do it as said unless it is unsafe (one plain line, then the nearest safe thing). (Co-founder rule, CLAUDE.md.)
 
-## Literal mode and cost
-
-The block every brief starts with: literal mode, cost and the context rules for long threads (`briefs.md`, "Every thread brief starts with").
-
 ## Lessons
 
 Added at the end of each project (operator step 9): date, project and its type, what to do differently. Newest last; merge duplicates.

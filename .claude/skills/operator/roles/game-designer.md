@@ -44,10 +44,6 @@ From the "call a team member" brief (hq-characters game-research, 2026-10-06; We
 - Copy: real-time contact feel, card collect plus upgrade, a visible bond meter with level gates, choice then reaction then payoff, strong distinct personalities, assigning staff to jobs, gifts and decor on the desk, production feel (voice blips, blink, nod, bounce).
 - Avoid: pay-to-win and gacha (every unlock deterministic), an endless grind (daily caps, 3 to 5 visits a level), guilt hooks (no streak loss), fake progress (if there is no data, say so), scenes that cannot be skipped or run over 30 s.
 
-## Literal mode and cost
-
-The block every brief starts with: literal mode, cost and the context rules for long threads (`briefs.md`, "Every thread brief starts with").
-
 ## Lessons
 
 Added at the end of each project (operator step 9): date, project and its type, what to do differently. Newest last; merge duplicates.

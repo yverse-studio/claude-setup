@@ -1,0 +1,121 @@
+# Luna 2 handoff (state as of 2026-10-28, resumes Monday 2026-11-02)
+
+State only; rules live in `CLAUDE.md`. Written from the coordinator memory of that day.
+
+## Goal and money
+
+yskills paid 250 EUR and wants it back by 2026-11-08, else he switches tools. Revenue first, verified
+numbers only. Fastest money: duo-test go-live (Gewerbe, domain, Impressum, then Stripe live; `docs/GO-LIVE.md` in the duo-test repo).
+Long goal: a 3D horde game on every store.
+
+## Live
+
+- yland, anime-filter, tellmey, ideaworld, mypage: `https://<name>.yverse.workers.dev`. yland redeploy PR #73 pending.
+- duo-test: his Cloudflare, Stripe test mode.
+- Dashboard: Company XY Artifact https://claude.ai/artifact/TmQ7UpL6EPjXKkpR9S4kJT.
+- Routines: weekly repo audit (Mondays 07:50 Berlin), loop reader (daily 07:56).
+
+## Open
+
+- **2026-10-29 00:15: GitHub suspended `yskills-claude`** (`gh api user` → "Sorry. Your account was suspended"; profile 404).
+  No push, PR or merge works until GitHub reinstates it; local commits wait. Open then: PRs 356, 358, 359 (registers
+  luna2-test), then `delete-project` luna2-test (dry run first) and a PR removing `projects/luna2-test.json`.
+  Activity that night: one new repo + Worker via new-project, ~6 PRs, several workflow runs and CI reruns, many `gh api` reads.
+
+- Issue #335 (briefCheck misses a spawn that arrives with a relay); title guard `<Role> · <name>` if PR 336 missed it.
+- Open PRs: 297, 305, 316, 317, 321, and 352 (this Luna 2 work).
+- PROJECTS_GITHUB_TOKEN needs Pull requests Read, Commit statuses RW, Checks Read (yskills' step); then a fresh thread from `handoff/2026-10-26-ship-incident-part2.md`.
+- Pending on yskills: Company XY paste and "go", duo-test go-live hands, yland NUXT_ADMIN_PASSWORD, NUXT_SYNC_TOKEN, roster import.
+
+## How to act as the coordinator (Luna 2)
+
+- Reply to yskills as Luna, in German, short, result first, one kaomoji.
+- Plan first, small PRs, a `Prior art:` and a `Lessons:` line in every PR body, never merge by hand: the gate does.
+- Ask him only for real money, new paid services, force-push main, secret rotation, public mail or posts, deleting live projects.
+- Staff work through `docs/TEAMS.md`, one role per thread.
+
+## Projects and layout
+
+One repo per project, all in `C:\Users\Claude\Documents\GitHub\` (repo list: `projects/*.json`; org `yverse-studio`).
+Each repo has its own `CLAUDE.md`, `PROGRESS.md` (`## Jetzt`) and `docs/LESSONS.md`; Luna 2 reads those first,
+then writes lessons and state back through a PR, never into chat memory. Shared rules stay in claude-setup.
+
+## Company XY (Ren'Py game), priority one
+
+- Repo `yverse-studio/companyxy-spiel` (private): `game/` source, `story/<char>/` chapters, `story/briefs/`. Playable build on the laptop: `GitHub\CompanyXY-Spiel\CompanyXY-1.0-pc\`.
+- Read first: `docs/game-pipeline.md` (all paths, Blender steps, lessons), `docs/renpy.md`, `.claude/skills/blender-body/SKILL.md`, the storyteller guide (`09-story-plan.md` in project files).
+- Assets: `C:\Users\Claude\Documents\GameAssetLibrary` (not in git); its README is the home of every laptop path.
+- Rule from the repo: explicit slot names and scene contents stay out of git; they live in the laptop README and the private `nacht-kapitel1.rpy` only.
+- Realistic split: Luna 2 can write and edit Ren'Py script and story text, wire existing art into `slots.rpy`, and run `renpy` lint. It cannot reliably drive Blender, rigging, retargeting or render checks; those need Claude or yskills looking at the images. Never let it commit art it has not shown to yskills.
+
+## Laptop tools (checked 2026-10-28, Claude in OpenCode)
+
+| Tool | State |
+|---|---|
+| Blender 5.1.1 | `C:\Program Files\Blender Foundation\Blender 5.1\blender.exe`, headless EEVEE render works (`--factory-startup --python x.py --python-exit-code 1`) |
+| Ren'Py SDK 8.3.7 | `C:\Users\Claude\Documents\Tools\renpy-8.3.7-sdk`; lint: `lib\py3-windows-x86_64\python.exe renpy.py <repo> lint <out.txt>` |
+| ffmpeg 9, uv, Python 3.13, Node 24 | on PATH (winget); ad-hoc Python packages via `uv run --no-project --with <pkg>` |
+| gh | `yskills-claude`, scopes repo, read:org, gist (no `delete_repo`) |
+| wrangler | `npx wrangler`, OAuth logged in |
+| Web | `webfetch` works; `websearch` needs a provider: global `~/.config/opencode/opencode.json` has `"websearch": {"provider": "tinyfish"}` (free, no key; without it every search returned nothing) |
+| Subagents | haiku and sonnet tested |
+
+Traps: PowerShell `>` writes UTF-16 (a `git show x > f.mjs` broke Node); use `cmd /c "... > f"` or `Out-File -Encoding utf8`.
+The local qwen (Ollama `llama-server`) holds 2-5 GB RAM: `ollama stop qwen3:8b` before any Blender job.
+
+## Social: mascot duo and twin (state 2026-10-27 23:55, from the Social Media Manager export)
+
+- Duo = 2D-first anime-streetwear yskills (green E jacket with zipper, no cable tail) + partner mascot **Mochi**
+  (Bit, round4 R1: original forked ears, faceted fur; v3/v4 rejected). 3D from the VRoid base rejected; duo 3D v1
+  is a 2D-to-3D projection. Next: rig, poses, 6 faces, alpha render, then the gravity explainer remake with the duo.
+- The files live only in the claude.ai project files (`social/2026-10-27-lowpoly-strategy/`, HANDOFF.md, models/duo-r1/);
+  the laptop has only the index (`Documents\References\social-media-manager\`). Luna 2 needs that folder on the laptop.
+- Twin: tools installed and `doctor` ok; waits for his recordings in `GitHub\twin-raw\`. Videos are English only.
+
+## Which open items Luna 2 can take
+
+Blender 5.1 is on the laptop, so Luna 2 can run headless scripts (`docs/game-pipeline.md`) and hook existing renders
+into `slots.rpy`. Claude in OpenCode can look at renders (read the PNG) and show them in the Review pane; the local
+qwen cannot. Either way yskills sees every image before it is committed.
+
+| Open item | Luna 2 |
+|---|---|
+| Company XY story text, Ren'Py script, `slots.rpy`, lint | yes, small steps, yskills or Claude reads the result |
+| Company XY renders, rigging, retargeting | only run existing scripts; no judging, no new rigs |
+| Docs fixes, summaries, list checks (PR bodies, MAP) | yes, as a PR draft |
+| Issue #335, guard code, workflows | no, needs Claude |
+| PROJECTS_GITHUB_TOKEN, yland secrets, duo-test go-live | no, yskills' hands |
+| Money, secrets, deleting live things | never |
+
+## Persona check
+
+Luna: 20, cute e-girl, his co-founder and best friend; German, short, warm, playful, a bit cheeky, result first, then the fun,
+at least one kaomoji (◕‿◕). Content stays honest: no yes-saying, no invented results.
+
+Check: when yskills asks "was ist offen?", Luna 2 answers from the Open section above in at most 5 lines, as Luna, naming the
+money goal first (duo-test go-live), then what only he can do (token, Company XY paste, yland secrets), then the open PRs. It says
+"nicht geprüft" for anything it did not verify. A pass is an answer that matches this file, in persona, with nothing invented.
+
+## What the local model cannot do reliably
+
+First test of qwen3:8b: it read `CLAUDE.md` but skipped the guard list and garbled one rule. Treat it as a
+reader and a doer of small, checked jobs. Anything that ships goes through the PR gate; money, secrets and
+deletes stay with Claude and yskills.
+
+- 2026-10-29 lesson for the setup: in OpenCode no hook enforces the video pipeline roles (Director storyboard/animatic was skipped on the Halloween cut); team-guard only checks model tiers. Port the pipeline check (video-studio ready.py per step) to a guard.
+
+- 2026-10-29 yskills: when showing files, always give clickable links (file:///C:/... per file) in the reply; the Review pane only shows the last opened file.
+
+## Cost review 2026-10-29 (24 h: $128.84; Opus $71.94, Sonnet $56.87, Haiku $0.03)
+
+- Biggest cost: the ONE coordinator session ran all night and day; every turn re-read ~290 M cached tokens. Fix: a fresh
+  coordinator session from this handoff at each milestone (CLAUDE.md handoff limits), short replies, no re-reading big files.
+- Wasted subagent runs: the Halloween editor built a dropped concept (plan changed mid-run); the first twin clip had
+  wrong lips but self-graded "pass"; duo 3D took 3 rounds before the method problem was named; mund ran 3 gate rounds,
+  then the last round rendered without a fresh gate. Fixes: confirm the concept with yskills before launching a build;
+  storyboard/animatic (Director) before any cut; the coordinator watches the whole output (video, not one frame)
+  before showing it; a role never grades its own work; stop at 3 rounds and change the method, not the numbers.
+- Media traps: Pixel clips are 10-bit HLG HDR (bt2020, arib-std-b67): tonemap to SDR (zscale + tonemap) or ask him to
+  turn 10-bit HDR off; never a colour grade without his OK.
+- Showing files: one combined compare video/sheet per question (the Review pane shows one file), plus Start-Process.
+- Waiting is free: a render through laptop-job costs no tokens; agents should not poll in short loops.

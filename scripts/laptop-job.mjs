@@ -7,6 +7,7 @@
 import { spawn, spawnSync } from 'node:child_process'
 import { appendFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
+import { freemem } from 'node:os'
 import { MAX_BLENDER, MAX_RENDERS, acquireSlot, blenderCount, releaseSlot, slotsHeld } from './laptop-slots.mjs'
 
 const KILL_GRACE_MS = 5000
@@ -65,6 +66,9 @@ function finish(line, code) {
   process.exit(code)
 }
 
+// True while less than minGb of RAM is free: the animator's open Blenders count, a crash on 2026-10-26 came from RAM, not slots.
+export const ramShort = (minGb, free = freemem) => free() / 2 ** 30 < minGb
+
 // Waits for a render slot (and a free Blender instance when the command is Blender); null when queueMin ran out.
 async function waitForSlot(opt, cmd) {
   const isBlender = /blender/i.test(cmd.join(' '))
@@ -74,12 +78,13 @@ async function waitForSlot(opt, cmd) {
   let told = false
   for (;;) {
     const count = isBlender ? blenderCount() : null
-    if (!(count !== null && count >= maxBlender)) {
+    const ramLow = isBlender && ramShort(Number(process.env.LAPTOP_MIN_FREE_GB ?? 4))
+    if (!(count !== null && count >= maxBlender) && !ramLow) {
       const slot = acquireSlot({ max: Number(process.env.LAPTOP_MAX_RENDERS ?? MAX_RENDERS) })
       if (slot) return slot
     }
     if (Date.now() > deadline) return null
-    if (!told) { console.log(`QUEUED ${opt.name}: waiting for a free render slot (max ${MAX_RENDERS} renders, ${maxBlender} Blender instances)`); told = true }
+    if (!told) { console.log(`QUEUED ${opt.name}: waiting for a free render slot (max ${MAX_RENDERS} renders, ${maxBlender} Blender instances, ${ramLow ? 'RAM low' : 'RAM ok'})`); told = true }
     await sleep(pollMs)
   }
 }

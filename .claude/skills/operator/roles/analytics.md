@@ -52,10 +52,6 @@ What the Tester checks on a PR that adds a user action or on launch (the evaluat
 - The Datenschutz page names the tool and what it does (`legal`); a `consent` plan has a banner that blocks the tool until accepted.
 - The weekly line is real: each number matches the tool or table on the day it was read, and `Quelle` names it.
 
-## Literal mode and cost
-
-The block every brief starts with: literal mode, cost and the context rules for long threads (`briefs.md`, "Every thread brief starts with").
-
 ## Lessons
 
 Added at the end of each project (operator step 9): date, project and its type, what to do differently. Newest last; merge duplicates.

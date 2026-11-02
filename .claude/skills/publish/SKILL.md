@@ -17,7 +17,10 @@ No deploy keys in GitHub, in the cloud environment or in chat.
 - Previews inherit nothing from production. The `previews` block in `wrangler.jsonc` gives them
   their own resources, and the dashboard's **Previews Base** settings give them their own secrets.
   So a PR never touches live data or live keys at runtime. [advisory]
-- GitHub Actions runs `verify` and holds no keys. Threads hold no deploy key; a merge to the default branch is the
+- GitHub Actions runs `verify` only in a public repo (free there); a private repo has Actions off
+  (`gh api -X PUT repos/yverse-studio/<repo>/actions/permissions -f enabled=false`) and its gate runs
+  the same checks before the push, on the laptop or in the thread (yskills 2026-11-02: no paid
+  Actions minutes). Actions holds no keys. Threads hold no deploy key; a merge to the default branch is the
   deploy (the gate merges at 5/5, `gate.md`); threads read the result from the
   `Workers Builds: <worker>` check on the commit.
   Build logs: the `build-logs` workflow (below).

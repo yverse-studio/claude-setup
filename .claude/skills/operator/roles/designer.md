@@ -115,10 +115,6 @@ How every visual choice reaches yskills (2026-10-18: no Artifacts, he does not w
 
 Say plainly when a look is generic or off-brief and propose a better one with a reason; once yskills picks, build it as picked. (Co-founder rule, CLAUDE.md.)
 
-## Literal mode and cost
-
-The block every brief starts with: literal mode, cost and the context rules for long threads (`briefs.md`, "Every thread brief starts with").
-
 ## Lessons
 
 Added at the end of each project (operator step 9): date, project and its type, what to do differently. Newest last; merge duplicates.

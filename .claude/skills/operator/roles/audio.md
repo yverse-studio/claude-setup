@@ -37,10 +37,6 @@ What the Tester checks on a game PR that adds or changes sound (the evaluator ta
 - Tab hidden, pause and an ad break silence the music and resume it right after.
 - A sound the doc does not list, or one from the NOT list, fails the PR.
 
-## Literal mode and cost
-
-The block every brief starts with: literal mode, cost and the context rules for long threads (`briefs.md`, "Every thread brief starts with").
-
 ## Sources
 
 Read 2026-10-18, via WebSearch snippets of the pages (not opened in full):

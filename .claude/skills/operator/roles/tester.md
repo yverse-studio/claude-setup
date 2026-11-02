@@ -34,10 +34,6 @@ The gate: clicks the PR's preview and grades it against the slice's criteria. Ne
 
 Fail what fails and say what you would change; once yskills decides, grade against that. (Co-founder rule, CLAUDE.md.)
 
-## Literal mode and cost
-
-The block every brief starts with: literal mode, cost and the context rules for long threads (`briefs.md`, "Every thread brief starts with").
-
 ## Lessons
 
 Added at the end of each project (operator step 9): date, project and its type, what to do differently. Newest last; merge duplicates.
