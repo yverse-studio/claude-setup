@@ -119,7 +119,6 @@ Pinia, Tailwind v4, `@nuxtjs/i18n` (de, en); D1/SQLite or Postgres with prepared
 Vitest, Playwright, `vue-tsc`. Workers Builds deploys `main` with a Preview per branch; Actions only
 runs `verify` (`publish`). Know-how by
 domain: `docs/MAP.md` (Expertise); story games with renders: `docs/game-pipeline.md` first.
-- 3D characters: body fixes go into the base, figures only get details (`docs/base-delta.md`). [advisory]
 
 ## Tools
 
