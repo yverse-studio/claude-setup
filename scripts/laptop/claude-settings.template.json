@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "defaultMode": "acceptEdits",
+    "allow": [
+      "Bash(git *)", "Bash(gh *)", "Bash(node *)", "Bash(npm *)", "Bash(npx *)", "Bash(python *)", "Bash(python3 *)",
+      "Bash(bash *)", "Bash(powershell *)", "Bash(sleep *)", "Bash(ffmpeg *)", "Bash(ffprobe *)", "Bash(*blender.exe*)",
+      "PowerShell(Get-*)", "PowerShell(Select-String *)", "PowerShell(Test-Path *)", "PowerShell(Set-Content *)",
+      "PowerShell(Add-Content *)", "PowerShell(New-Item *)", "PowerShell(Copy-Item *)", "PowerShell(Move-Item *)",
+      "PowerShell(Start-Process *)", "PowerShell(Start-Sleep *)", "PowerShell(Start-ScheduledTask *)",
+      "PowerShell(Register-ScheduledTask *)", "PowerShell(powershell *)", "PowerShell(powercfg *)",
+      "PowerShell(python *)", "PowerShell(git *)", "PowerShell(gh *)", "PowerShell(node *)", "PowerShell(npm *)", "PowerShell(npx *)",
+      "Read(//c/Users/*/**)", "Edit(//c/Users/*/Documents/**)", "Write(//c/Users/*/Documents/**)",
+      "WebSearch", "WebFetch"
+    ],
+    "deny": [
+      "Read(**/.env)", "Read(**/.env.*)", "Read(~/.ssh/**)", "Read(~/.aws/**)", "Read(**/*.pem)", "Read(**/*.key)",
+      "PowerShell(Format-Volume *)", "PowerShell(Clear-Disk *)", "PowerShell(Remove-Item -Recurse -Force C:\\*)",
+      "PowerShell(Stop-Process -Name blender*)",
+      "Bash(rm -rf /*)", "Bash(rm -rf ~*)", "Bash(rm -rf /c/*)", "Bash(format *)",
+      "Bash(git push* --force*main*)", "Bash(git push* -f *main*)", "Bash(git push* --force*master*)",
+      "Bash(npm run deploy *)", "Bash(wrangler deploy *)", "Bash(npx wrangler deploy *)"
+    ]
+  }
+}

@@ -95,6 +95,14 @@ powercfg /change monitor-timeout-ac 0
 
 Check: `powercfg /query SCHEME_CURRENT SUB_SLEEP STANDBYIDLE` shows `Current AC Power Setting Index: 0x00000000`. Settings, System, Power also works: "Plugged in: sleep after" = Never. The script's keep-awake covers the job itself without admin, but not an idle gap between jobs.
 
+## Dropped sessions and permissions (2026-11-03)
+
+yskills (2026-11-03): Remote Control sessions on the laptop dropped mid-turn, "this happens too often". Evidence from the Windows event log, `%LOCALAPPDATA%\Claude\logs\main.log` and `remote-control.log`: the laptop had 0.6 of 15.7 GB RAM free, so the Claude app's CliGovernor evicted "idle" sessions (`governor_evict`); a session waiting 23 min on a Blender batch counts as idle and its turn dies. It was not the network, not sleep (none since the reboot) and not Surfshark. The same night the Acer Quick Access service reset the power plan after every charger blip, which put Wi-Fi power saving back to Maximum.
+
+- **Watchdog:** `scripts/laptop/rc-watchdog.ps1`, installed by `scripts/laptop/install-rc-watchdog.ps1` (user task `RC-Watchdog`, every 2 min, no admin, costs no tokens). It puts Wi-Fi power saving back to Maximum Performance, restarts the Claude app if it is gone, restarts the WLAN adapter after 3 failed network checks (needs admin, else logs it) and logs low RAM and governor evictions to `%LOCALAPPDATA%\rc-watchdog\watchdog.log`. It never kills a process. It treats the symptom: fewer parallel sessions (the app's cap is 6) is the real lever. [advisory]
+- **Overnight chains** run as one headless PowerShell script with resume markers, so a dropped session does not stop the work and Claude only reads the results (example: the game's `night_runner.ps1`). Waits for older jobs, never kills Blender, runs one Blender at a time.
+- **Permissions:** `scripts/laptop/claude-settings.template.json` plus `scripts/laptop/install-claude-settings.ps1` (merges into `~/.claude/settings.json`, keeps existing entries, writes a `.bak`): `defaultMode` acceptEdits, a broad allow list for the usual work and a short deny list (disk formatting, `rm -rf` on roots, force-push to main, deploy commands). Note: auto mode has its own classifier that blocks persistence (scheduled tasks, background processes) whatever `permissions.allow` says; acceptEdits plus this list does not. [advisory]
+
 ## Update
 
 ```
