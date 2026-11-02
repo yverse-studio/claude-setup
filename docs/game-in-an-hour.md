@@ -56,6 +56,8 @@ A scene is a **slot name** plus files in `game/art/loops/`, nothing else:
   lines of eye contact run. It needs no clip, so it works on day one; real intro clips follow it.
 - **Reaction insert**: a face still over the running clip every 60 s (1.5 s).
 - **Never black**: clips switch with a 1-frame dissolve and the first clip is laid over the old image.
+- **Real clip lengths**: `scripts/make_lengths.sh` writes `art/loops/lengths.json` (intro/finish seconds from the files); `slots.rpy` reads it. Without it the line timing runs on a fixed table and breaks with long intros.
+- **End of a queue**: `abblende=True` fades the still to black (1.2 s) after the finish.
 
 ## 4. Testing without disturbing anyone
 
