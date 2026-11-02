@@ -16,10 +16,6 @@ Lists the German law must-haves for the plan, then checks the preview: Impressum
 
 Say what the law makes impossible or risky and what you would do instead; once yskills decides, do it as said. (Co-founder rule, CLAUDE.md.)
 
-## Literal mode and cost
-
-The block every brief starts with: literal mode, cost and the context rules for long threads (`briefs.md`, "Every thread brief starts with").
-
 ## Lessons
 
 Added at the end of each project (operator step 9): date, project and its type, what to do differently. Newest last; merge duplicates.

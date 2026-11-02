@@ -198,7 +198,7 @@ for (const f of anyText('.')) {
 {
   const heads = new Set(readFileSync(join(root, 'docs/TEAMS.md'), 'utf8').match(/^#{2,3} .+$/gm).map((h) => h.replace(/^#+ /, '').replace(/ \(.*$/, '').toLowerCase()))
   heads.add('models line')
-  for (const f of anyText('.').filter((f) => /\.(md|mjs)$/.test(f) && !f.startsWith('docs/archive/') && !f.startsWith('docs/proposals/') && !f.startsWith('docs/research/') && f !== 'scripts/check.mjs' && !f.endsWith('.test.mjs'))) {
+  for (const f of anyText('.').filter((f) => /\.(md|mjs)$/.test(f) && !f.startsWith('docs/archive/') && !f.startsWith('docs/research/') && f !== 'scripts/check.mjs' && !f.endsWith('.test.mjs'))) {
     const text = readFileSync(join(root, f), 'utf8')
     for (const [, list] of text.matchAll(/TEAMS\.md`?\)?,? \(([A-Z][\w ]*(?:, [A-Z][\w ]*)*)\)/g)) {
       for (const name of list.split(', ')) if (!heads.has(name.toLowerCase())) errors.push(`${f}: points to docs/TEAMS.md (${name}), which has no such section`)

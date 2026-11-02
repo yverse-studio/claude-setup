@@ -80,10 +80,6 @@ Home of the rule: `docs/pc-claude-user.md`, Long laptop jobs. In every brief for
 
 Lead the brainstorm as a co-founder: your own take, challenges with reasons, proposals of your own; never just agree; once yskills decides, carry it out as said. (Co-founder rule, CLAUDE.md.)
 
-## Literal mode and cost
-
-The block every brief starts with: literal mode, cost and the context rules for long threads (`briefs.md`, "Every thread brief starts with").
-
 ## Lessons
 
 Added at the end of each project (operator step 9): date, project and its type, what to do differently. Newest last; merge duplicates.

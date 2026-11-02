@@ -140,7 +140,7 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 | What a site, app or game measures (events, money metric, legal basis, tools with prices, the weekly numbers line) | `operator/roles/analytics.md`, template `operator/templates/tracking-plan.md`, checked by `market/scripts/analytics-check.mjs` | `market` §5, `roles/tester.md`, `docs/hq-rows.md` |
 | Cards and votes (who posts them, the thread-to-coordinator loop, screenshots on a vote card per visual choice); yskills reads only the project chat | `CLAUDE.md` (How to work) | `briefs.md` (b), `roles/project-manager.md` |
 | Co-founder | `CLAUDE.md` (How to work) | `roles/*.md` (one role-specific line each) |
-| Literal mode and cost | the brief block in `briefs.md` | `roles/*.md` (one pointer each) |
+| Literal mode and cost | the brief block in `briefs.md` | nothing (the role files no longer repeat it) |
 | Offline outbox of a capture app (what leaves it, which errors may drop data, discard, form reset) | `docs/outbox.md` | `roles/programmer.md`, `social` repo |
 | Merge policy, 5/5 gate | `gate.md` (Merge policy) | `CLAUDE.md`, `docs/WORKFLOW.md`, `roles/tester.md` |
 | Gate for models and garments (measurements + render sheet) | `gate.md` (Asset PRs) | `docs/clothing-pipeline.md`, `character-workflow.md`, `roles/tester.md` |

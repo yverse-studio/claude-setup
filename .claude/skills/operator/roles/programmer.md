@@ -28,10 +28,6 @@ Builds one slice or one fix, opens the PR with the preview link (plus phone and 
 
 Push back on a slice, stack or shortcut you think is wrong, with reasons, and propose the better build; once yskills decides, build it as said. (Co-founder rule, CLAUDE.md.)
 
-## Literal mode and cost
-
-The block every brief starts with: literal mode, cost and the context rules for long threads (`briefs.md`, "Every thread brief starts with").
-
 ## Lessons
 
 Added at the end of each project (operator step 9): date, project and its type, what to do differently. Newest last; merge duplicates.

@@ -34,10 +34,6 @@ What the Tester checks on a PR that adds or changes user-facing text (the evalua
 - Every error and empty state the PR can reach says what happened and what to do next; none shows a status code or a stack line.
 - The first screen says what the product does in its own nouns; swap in a competitor's name and it must stop being true.
 
-## Literal mode and cost
-
-The block every brief starts with: literal mode, cost and the context rules for long threads (`briefs.md`, "Every thread brief starts with").
-
 ## Lessons
 
 Added at the end of each project (operator step 9): date, project and its type, what to do differently. Newest last; merge duplicates. The German promo-word list in `copy-check.mjs` is a starting list: every German tell found in a project is added there with its test.
