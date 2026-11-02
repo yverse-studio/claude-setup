@@ -19,3 +19,9 @@ before writing or running one) and `scripts/blender/bpy-lint.mjs`. No Blender MC
 must be the official Blender Lab connector, never `ahujasid/blender-mcp` (opt-in telemetry can upload screenshots).
 
 Hooks and guards do not run here, so follow every `[guard: ...]` line by hand and let the PR gate decide.
+
+## Where things are on the laptop
+
+Read `C:\Users\Claude\Documents\ORDNER.md` first: one map of every folder, each thing exists once. OpenCode work
+(Mochi, duo R1+ v4, Puppet-Talk, Halloween-Short, Dandadan v6) lives in `Documents\GitHub\social-handoff`; its entry point is
+`HANDOFF-OPENCODE.md` there. Git backups of everything not yet pushed: `C:\Users\Claude\_backup-bundles-2026-10-29`.

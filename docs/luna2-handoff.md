@@ -17,6 +17,11 @@ Long goal: a 3D horde game on every store.
 
 ## Open
 
+- **2026-10-29 00:15: GitHub suspended `yskills-claude`** (`gh api user` → "Sorry. Your account was suspended"; profile 404).
+  No push, PR or merge works until GitHub reinstates it; local commits wait. Open then: PRs 356, 358, 359 (registers
+  luna2-test), then `delete-project` luna2-test (dry run first) and a PR removing `projects/luna2-test.json`.
+  Activity that night: one new repo + Worker via new-project, ~6 PRs, several workflow runs and CI reruns, many `gh api` reads.
+
 - Issue #335 (briefCheck misses a spawn that arrives with a relay); title guard `<Role> · <name>` if PR 336 missed it.
 - Open PRs: 297, 305, 316, 317, 321, and 352 (this Luna 2 work).
 - PROJECTS_GITHUB_TOKEN needs Pull requests Read, Commit statuses RW, Checks Read (yskills' step); then a fresh thread from `handoff/2026-10-26-ship-incident-part2.md`.
@@ -48,7 +53,7 @@ then writes lessons and state back through a PR, never into chat memory. Shared 
 | Tool | State |
 |---|---|
 | Blender 5.1.1 | `C:\Program Files\Blender Foundation\Blender 5.1\blender.exe`, headless EEVEE render works (`--factory-startup --python x.py --python-exit-code 1`) |
-| Ren'Py SDK 8.3.7 | `C:\Users\Claude\tools\renpy-8.3.7-sdk`; lint: `lib\py3-windows-x86_64\python.exe renpy.py <repo> lint <out.txt>` |
+| Ren'Py SDK 8.3.7 | `C:\Users\Claude\Documents\Tools\renpy-8.3.7-sdk`; lint: `lib\py3-windows-x86_64\python.exe renpy.py <repo> lint <out.txt>` |
 | ffmpeg 9, uv, Python 3.13, Node 24 | on PATH (winget); ad-hoc Python packages via `uv run --no-project --with <pkg>` |
 | gh | `yskills-claude`, scopes repo, read:org, gist (no `delete_repo`) |
 | wrangler | `npx wrangler`, OAuth logged in |
@@ -64,7 +69,7 @@ The local qwen (Ollama `llama-server`) holds 2-5 GB RAM: `ollama stop qwen3:8b` 
   (Bit, round4 R1: original forked ears, faceted fur; v3/v4 rejected). 3D from the VRoid base rejected; duo 3D v1
   is a 2D-to-3D projection. Next: rig, poses, 6 faces, alpha render, then the gravity explainer remake with the duo.
 - The files live only in the claude.ai project files (`social/2026-10-27-lowpoly-strategy/`, HANDOFF.md, models/duo-r1/);
-  the laptop has only the index (`Documents\ClaudeExport\Social Media Manager\`). Luna 2 needs that folder on the laptop.
+  the laptop has only the index (`Documents\References\social-media-manager\`). Luna 2 needs that folder on the laptop.
 - Twin: tools installed and `doctor` ok; waits for his recordings in `GitHub\twin-raw\`. Videos are English only.
 
 ## Which open items Luna 2 can take
@@ -96,3 +101,21 @@ money goal first (duo-test go-live), then what only he can do (token, Company XY
 First test of qwen3:8b: it read `CLAUDE.md` but skipped the guard list and garbled one rule. Treat it as a
 reader and a doer of small, checked jobs. Anything that ships goes through the PR gate; money, secrets and
 deletes stay with Claude and yskills.
+
+- 2026-10-29 lesson for the setup: in OpenCode no hook enforces the video pipeline roles (Director storyboard/animatic was skipped on the Halloween cut); team-guard only checks model tiers. Port the pipeline check (video-studio ready.py per step) to a guard.
+
+- 2026-10-29 yskills: when showing files, always give clickable links (file:///C:/... per file) in the reply; the Review pane only shows the last opened file.
+
+## Cost review 2026-10-29 (24 h: $128.84; Opus $71.94, Sonnet $56.87, Haiku $0.03)
+
+- Biggest cost: the ONE coordinator session ran all night and day; every turn re-read ~290 M cached tokens. Fix: a fresh
+  coordinator session from this handoff at each milestone (CLAUDE.md handoff limits), short replies, no re-reading big files.
+- Wasted subagent runs: the Halloween editor built a dropped concept (plan changed mid-run); the first twin clip had
+  wrong lips but self-graded "pass"; duo 3D took 3 rounds before the method problem was named; mund ran 3 gate rounds,
+  then the last round rendered without a fresh gate. Fixes: confirm the concept with yskills before launching a build;
+  storyboard/animatic (Director) before any cut; the coordinator watches the whole output (video, not one frame)
+  before showing it; a role never grades its own work; stop at 3 rounds and change the method, not the numbers.
+- Media traps: Pixel clips are 10-bit HLG HDR (bt2020, arib-std-b67): tonemap to SDR (zscale + tonemap) or ask him to
+  turn 10-bit HDR off; never a colour grade without his OK.
+- Showing files: one combined compare video/sheet per question (the Review pane shows one file), plus Start-Process.
+- Waiting is free: a render through laptop-job costs no tokens; agents should not poll in short loops.
