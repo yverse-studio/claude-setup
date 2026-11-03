@@ -130,6 +130,7 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 | Deploy or delete a page (the steps) | `docs/USING.md` | operator `run.md`, `briefs.md`; detail in `publish` |
 | Where a lesson goes (the decision tree) | `docs/MAP.md` (Start here) | `CLAUDE.md` (Lessons stick), `docs/WORKFLOW.md` (Learning) |
 | Project memory holds state only (its shape) | `operator/templates/project-memory.md` | `operator/roles/project-manager.md`, `docs/WORKFLOW.md` |
+| Where a Blender job runs (cloud first, estimate before each job, laptop for GPU/MCP/asked/failed; measured render times) | `.claude/skills/studio/SKILL.md` (Where Blender runs) | `.claude/skills/video-studio/templates/blender-cloud/`, `operator/roles/animator.md` |
 | Long laptop jobs (watchdog, Blender limits, GPU and sleep check, one-line failure report, overnight run) | `docs/pc-claude-user.md` (Long laptop jobs) | `scripts/laptop-job.mjs`, `scripts/laptop-slots.mjs` (Blender limits: 3 instances, 2 renders), `operator/roles/project-manager.md`, `programmer.md`, `tester.md` |
 | Asks ledger (every ask of yskills becomes a thread or a rule in claude-setup; memory only points; blocked-thread sweep) | `CLAUDE.md` (Lessons stick) | `operator/roles/project-manager.md` |
 | Ask rule (what needs yskills) | `CLAUDE.md` (How to work) | operator `SKILL.md`, `docs/USING.md` |
