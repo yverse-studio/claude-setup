@@ -82,9 +82,10 @@ must exist; the old wording that a render needs 5/5 or his strip OK is banned).
    round that drops any rubric row against the PASS version is flagged in the verdict as a
    regression (row, old, new); it can still win only on a higher total with every hard check
    green.
-7. **Pick and go.** The eligible version with the highest score goes on (render, bake, merge);
-   on a tie the newer one. Nobody waits for yskills' OK: the check strip is posted to him, the
-   PASS is the go, his veto stops it at once and is final.
+7. **Pick and go.** When the fix rounds end (5/5 reached, or the second extra round scored),
+   the eligible version with the highest score goes on (render, bake, merge); on a tie the newer
+   one. Nobody waits for yskills' OK: the check strip is posted to him, the
+   pick is the go, his veto stops it at once and is final.
 8. **Under 4.5** the normal Rounds below apply (up to 6 rounds, a diagnosis after the same fail
    twice); the 2 rounds after a PASS come on top of that cap.
 
