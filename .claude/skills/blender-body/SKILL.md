@@ -107,7 +107,7 @@ Hand-modelling a body round after round caused the 22-round loop of 2026-10-23. 
      and at least 3 cm (rx 1.6 to 1.8 cm read as dark trenches, 3 cm with 3.5 to 6 mm is soft); no
      region key above 3x, 15 mm.
    - Never name a script `bisect.py` or `inspect.py` in the work folder (shadows the stdlib).
-8. **Thread hygiene.** One builder and one reviewer until the score is 5/5; a thread stays on its job
+8. **Thread hygiene.** One builder and one reviewer until the score rule picks a version (`operator/gate.md`, Scored gates); a thread stays on its job
    until done, lets its context compact and keeps its LIVE STATE block on disk (yskills: no handoff
    threads, no new thread per round). A brief names **only** the LIVE STATE block, the contract
    blocks and the top 3 items of the current plan; a builder that reads whole study libraries fills

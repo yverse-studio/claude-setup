@@ -207,7 +207,7 @@ Practice for the scene player, general game audio (ambience as the bed, foley sy
 
 ## Lessons (each one cost a round)
 
-- A clip is rendered only at 5/5 on the gate sheet, never "good enough for now" (`two-figure-scenes.md`).
+- A clip is rendered only after a gate PASS on the gate sheet (`operator/gate.md`, Scored gates), never "good enough for now".
 - Never report a clip or still as done unseen: check a frame strip (arms, hands, clipping, loop
   seam, feet planted). Idle_Flirt went out with floating arms and a drifting body.
 - Every still or clip gets an overlap check: a cardigan went through the body, a cup through a

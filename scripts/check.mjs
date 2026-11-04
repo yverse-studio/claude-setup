@@ -137,7 +137,9 @@ const pDeny = json('.claude/settings.json')?.permissions?.deny ?? []
 if (gDeny.join() !== pDeny.join()) errors.push('.claude/settings.json deny list differs from global/settings.json')
 
 // Our own docs: relative markdown links resolve, and phrases that describe a rule we dropped stay out.
-const BANNED = [/merge tap/i, /caveman voice/i]
+const BANNED = [/merge tap/i, /caveman voice/i,
+  // Score rule (operator/gate.md, Scored gates; yskills 2026-11-04): a PASS at 4.5, not 5/5, starts a render, and nobody waits for his strip OK.
+  /only 5\/5 is rendered/i, /rendered only at 5\/5/i, /only after (his|the owner's) OK/i, /never skips the OK/i, /then yskills approves, then 1080p/i]
 const walk = (d) => readdirSync(join(root, d)).flatMap((n) => {
   const rel = `${d}/${n}`
   if (statSync(join(root, rel)).isDirectory()) return walk(rel)
@@ -204,6 +206,15 @@ for (const f of anyText('.')) {
       for (const name of list.split(', ')) if (!heads.has(name.toLowerCase())) errors.push(`${f}: points to docs/TEAMS.md (${name}), which has no such section`)
     }
     if (/MAP\.md`?\)? \(?Kits\b/.test(text)) errors.push(`${f}: points to the Kits in docs/MAP.md; they live in docs/TEAMS.md (Kits)`)
+  }
+}
+
+// Score rule (yskills 2026-11-04): operator/gate.md holds the one Scored gates section with each of its parts.
+{
+  const sec = readFileSync(join(root, '.claude/skills/operator/gate.md'), 'utf8').split(/^## Scored gates \(the score rule\)$/m)[1]?.split(/^## /m)[0]
+  if (!sec) errors.push('.claude/skills/operator/gate.md: the "## Scored gates (the score rule)" section is missing')
+  else for (const [what, re] of [['the 4.5/5 PASS', /PASS = at least 4\.5\/5 and every hard check green/], ['at most 2 more fix rounds', /at most 2 more fix rounds/], ['hard K.O. checks', /\*\*Hard checks \(K\.O\.\)\.\*\*/], ['a fixed numbered rubric', /\*\*Rubric\.\*\*/], ['same cameras and frames, old \| new', /same cameras and frames[\s\S]*old \| new/], ['judge noise (both orders, median)', /both orders[\s\S]*median/], ['regression flag', /regression/], ['highest eligible version, newer on a tie', /highest score[\s\S]*on a tie the newer one/], ['no wait for his OK, veto stops it', /Nobody waits for yskills' OK[\s\S]*veto stops it/]]) {
+    if (!re.test(sec)) errors.push(`.claude/skills/operator/gate.md: Scored gates lacks ${what}`)
   }
 }
 
