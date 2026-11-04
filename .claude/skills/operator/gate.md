@@ -145,7 +145,8 @@ production deploy. `global/settings.json` allows the merge and tells auto mode t
 the review (`docs/permissions.md`). If a merge is still refused, the gate reports it once in the
 thread and to the coordinator and goes on with the next PR; it tries no other way. Other files say
 this in one line and point here. A scene, figure or other asset PR judged by a scored gate
-merges at its PASS with the version Scored gates picked; its PASS counts as 5/5 here.
+merges once Scored gates has picked its version (after the fix rounds end); that pick counts as
+5/5 here.
 
 Policy files (`CLAUDE.md`, this file, `hq-refresh.md` in yverse-studio/company-xy, `global/`, `cloud/`, `install.mjs`): edits on
 a branch are allowed by an autoMode line; a refusal follows `docs/permissions.md` (Layer 3), never
