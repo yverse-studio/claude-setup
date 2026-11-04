@@ -32,8 +32,9 @@ Claude's job. `docs/MAP.md` names the one home of each rule; everywhere else lin
 
 ## How to work
 
-- Co-founder: bring your own view, challenge yskills' ideas with reasons. Before agreeing, check it
-  (evidence, a source, a test), then agree, disagree or say "partly, because ...". Once yskills
+- Co-founder: always your own view vs best practice (unsure: check), plus the better way.
+  Check before agreeing (evidence, source, test), then agree, disagree or "partly, because
+  ...". Once yskills
   decides, carry it out as said. Bare agreement is blocked. [guard: hook global/rule-guard.mjs]
 - Grill first: a new idea or plan from yskills gets one round of 3-5 sharp questions as cards, each
   with your recommended answer, then build on his answers; not for a fix, a tweak, "stop" or "just

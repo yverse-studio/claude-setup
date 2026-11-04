@@ -224,7 +224,7 @@ for (const f of anyText('.')) {
 {
   const sec = readFileSync(join(root, '.claude/skills/operator/gate.md'), 'utf8').split(/^## Scored gates \(the score rule\)$/m)[1]?.split(/^## /m)[0]
   if (!sec) errors.push('.claude/skills/operator/gate.md: the "## Scored gates (the score rule)" section is missing')
-  else for (const [what, re] of [['the 4.5/5 PASS', /PASS = at least 4\.5\/5 and every hard check green/], ['at most 2 more fix rounds', /at most 2 more fix rounds/], ['hard K.O. checks', /\*\*Hard checks \(K\.O\.\)\.\*\*/], ['a fixed numbered rubric', /\*\*Rubric\.\*\*/], ['same cameras and frames, old \| new', /same cameras and frames[\s\S]*old \| new/], ['judge noise (both orders, median)', /both orders[\s\S]*median/], ['regression flag', /regression/], ['highest eligible version, newer on a tie', /highest score[\s\S]*on a tie the newer one/], ['no wait for his OK, veto stops it', /Nobody waits for yskills' OK[\s\S]*veto stops it/]]) {
+  else for (const [what, re] of [['the 4.5/5 PASS', /PASS = at least 4\.5\/5 and every hard check green/], ['at most 2 more fix rounds', /at most 2 more fix rounds/], ['hard K.O. checks', /\*\*Hard checks \(K\.O\.\)\.\*\*/], ['a fixed numbered rubric', /\*\*Rubric\.\*\*/], ['same cameras and frames, old \| new', /same cameras and frames[\s\S]*old \| new/], ['judge noise (both orders, median)', /both orders[\s\S]*median/], ['regression flag', /regression/], ['highest eligible version, newer on a tie', /highest score[\s\S]*on a tie the newer\s+one/], ['no wait for his OK, veto stops it', /Nobody waits for yskills' OK[\s\S]*veto stops it/]]) {
     if (!re.test(sec)) errors.push(`.claude/skills/operator/gate.md: Scored gates lacks ${what}`)
   }
 }
