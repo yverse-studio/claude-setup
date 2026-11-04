@@ -33,9 +33,10 @@ characters' key names) live in the private game repo and the laptop README.
 - Cheap agents build and measure; the coordinator is the one expensive gate. It compares each sheet with the
   reference board and the reference loop strip at original size (small strips lie) and scores a table of five stars:
   contact, body, hands, picture/readability, motion, each with its measured numbers (`_check.json`).
-  Only 5/5 is rendered at 1080p; "good enough for the test chapter" is not 5/5 (a 3.5/5 finish was rendered once
-  and had to be redone). Gate rules: `operator/gate.md`.
-- Test frames: headless 960x540 with the real light of the final render, then yskills approves, then 1080p.
+  These are the rubric rows of the score rule (`operator/gate.md`, Scored gates): 1080p starts at a PASS (4.5/5 and
+  every hard check green), after at most 2 more fix rounds with the highest eligible version; "good enough for the
+  test chapter" under 4.5 is no PASS (a 3.5/5 finish was rendered once and had to be redone).
+- Test frames: headless 960x540 with the real light of the final render, posted to yskills; the gate PASS starts 1080p, his veto stops it.
   Fake light is fine, but a night room is dark and warm, never bright. A headless render looks different from the
   GUI (world strength, lights, view transform not saved in the file): compare one frame of each before trusting either.
 - Geometry first, in the side view (stick figure): axis angles and heights are decided there, then `--pos`, one cheap
