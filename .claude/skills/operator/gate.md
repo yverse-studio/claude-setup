@@ -63,7 +63,7 @@ must exist; the old wording that a render needs 5/5 or his strip OK is banned).
 
 1. **Rubric.** The gate scores a fixed, numbered rubric written before round 1 (for scenes the
    five rows of `two-figure-scenes.md`: contact, body, hands, picture, motion), each row with its
-   measured numbers. The score is the mean of the rows; a row is never reworded between rounds.
+   measured numbers, scored 0 to 5 in half points. The score is the mean of the rows; a row is never reworded between rounds.
 2. **Hard checks (K.O.).** Some checks pass or fail whatever the score: face lines intact (the
    project's face-line check, e.g. `FACE_LINES3`), no interpenetration over the contact limit
    (Contact gate, Asset PRs above), no VRoid face stickers, no missing evidence, and every
@@ -86,7 +86,7 @@ must exist; the old wording that a render needs 5/5 or his strip OK is banned).
    on a tie the newer one. Nobody waits for yskills' OK: the check strip is posted to him, the
    PASS is the go, his veto stops it at once and is final.
 8. **Under 4.5** the normal Rounds below apply (up to 6 rounds, a diagnosis after the same fail
-   twice).
+   twice); the 2 rounds after a PASS come on top of that cap.
 
 The verdict names: round, rubric rows with numbers, hard checks, score (and the median runs, if
 any), PASS or not, regressions, the picked version and why.
@@ -143,7 +143,8 @@ claude-setup PRs included (yskills, "merge everything", 2026-10-06). That merge 
 production deploy. `global/settings.json` allows the merge and tells auto mode the gate review is
 the review (`docs/permissions.md`). If a merge is still refused, the gate reports it once in the
 thread and to the coordinator and goes on with the next PR; it tries no other way. Other files say
-this in one line and point here.
+this in one line and point here. A scene, figure or other asset PR judged by a scored gate
+merges at its PASS with the version Scored gates picked; its PASS counts as 5/5 here.
 
 Policy files (`CLAUDE.md`, this file, `hq-refresh.md` in yverse-studio/company-xy, `global/`, `cloud/`, `install.mjs`): edits on
 a branch are allowed by an autoMode line; a refusal follows `docs/permissions.md` (Layer 3), never
