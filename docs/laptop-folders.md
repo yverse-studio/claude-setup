@@ -9,7 +9,7 @@ C:\Users\Claude\Documents\
   GitHub\            only git clones (one per repo) and _worktrees\<repo>\<branch>; nothing else
   Games\<game>\      builds and release zips of a game (not a repo), store-capsules\ for store art
   GameAssetLibrary\  the one 3D and art source, incl. scenes\ (its README is the source of truth)
-  Private18\         18+ content that must never reach a git remote (renders\, ref\, backups); the 18+ game code
+  Private18\         18+ content that must never reach a git remote (renders\, ref\, teardowns\ = unpacked third-party games and rips, backups); the 18+ game code
                      and story live in their private repo, not here
   References\        reference material and inputs that are not code (watch\, social-media-manager\)
   Tools\             portable tools (Ren'Py SDK); installers do not go here
