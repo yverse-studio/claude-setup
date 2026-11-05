@@ -9,6 +9,8 @@ is done and what we learned. It needs repo access (claude-setup) and, for 3D wor
 this page in the same PR or turn (rule: `CLAUDE.md`, Work for the future). A path here that no
 longer matches the laptop is a bug: fix the page, not your memory.
 
+Standing calls for every scene and character (adult main character, base + delta, generic scripts, refs, efficient renders): [`operator/roles/project-manager.md`](../.claude/skills/operator/roles/project-manager.md), Don't make him repeat.
+
 ## Where things live
 
 The folder tree, the scene slots and the step-by-step for building a scene by hand live in **one place**:
@@ -207,7 +209,7 @@ Practice for the scene player, general game audio (ambience as the bed, foley sy
 
 ## Lessons (each one cost a round)
 
-- A clip is rendered only at 5/5 on the gate sheet, never "good enough for now" (`two-figure-scenes.md`).
+- A clip is rendered only as the score rule's pick after a gate PASS on the gate sheet (`operator/gate.md`, Scored gates), never "good enough for now".
 - Never report a clip or still as done unseen: check a frame strip (arms, hands, clipping, loop
   seam, feet planted). Idle_Flirt went out with floating arms and a drifting body.
 - Every still or clip gets an overlap check: a cardigan went through the body, a cup through a

@@ -144,6 +144,7 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 | Literal mode and cost | the brief block in `briefs.md` | nothing (the role files no longer repeat it) |
 | Offline outbox of a capture app (what leaves it, which errors may drop data, discard, form reset) | `docs/outbox.md` | `roles/programmer.md`, `social` repo |
 | Merge policy, 5/5 gate | `gate.md` (Merge policy) | `CLAUDE.md`, `docs/WORKFLOW.md`, `roles/tester.md` |
+| Score rule for scored gates (4.5 PASS, 2 more rounds, best eligible version, hard checks, judge noise) | `gate.md` (Scored gates) | `two-figure-scenes.md`, `game-pipeline.md`, `roles/animator.md`, `blender-body` |
 | Gate for models and garments (measurements + render sheet) | `gate.md` (Asset PRs) | `docs/clothing-pipeline.md`, `character-workflow.md`, `roles/tester.md` |
 | Briefs point to guide checks, never weaken them; threads read guides fresh from main | `briefs.md` (Every thread brief starts with, Guides) | `roles/project-manager.md` |
 | Models (the line, the model per role and per task) | `docs/TEAMS.md` (Models line, Roster) | everything else links it; CI fails on a model id outside that line |
