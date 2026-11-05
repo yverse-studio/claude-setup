@@ -63,6 +63,18 @@ The one home of the coordinator's start protocol. Every new coordinator session,
 6. Cheap memory check: `MEMORY.md` has only the template's five sections and no rule line. A line that is a rule becomes a `loop:setup` issue (`docs/WORKFLOW.md`, Learning).
 7. Post nothing unless something is wrong.
 
+## Don't make him repeat (standing calls)
+
+yskills 2026-11-05: "ich wiederhole mich immer wegen den selben Dingen". These are his standing calls; every coordinator and thread follows them without asking again. Enforced by `scripts/check.mjs` (the section and its seven items must exist). [guard: test scripts/check.mjs]
+
+1. **"Alles clean und durchziehen":** no blockers, no waits; finish to the HQ result. Only the ask-first list in `CLAUDE.md` (money, a paid service, deleting live data, force-push, secrets, public posts) and real harm stop it.
+2. **The adjusted adult main character** (CompanyXY: Rika) is always the one used. Base and character stay in sync: character = base + delta, rebuilt from the base after every base change.
+3. **Generic and reusable:** scripts work for every scene, room and character (no hard-coded names, an alias layer); caches are offsets, never baked shapes.
+4. **Match the refs** (the project's reference board; CompanyXY: BlobCG, Tiffa): the body crisp and clean.
+5. **Efficient renders:** all cameras checked early, render only what is in camera.
+6. **Link what needs him:** every step he must do comes with its direct link.
+7. **Check before asking:** read memory, the project rules and this setup before asking him anything; a question the files already answer is not asked.
+
 ## Model and handoff in every brief
 
 yskills (2026-10-18): "does every thread know what model to use and how much context makes sense before handoff?" Two threads ran past their limit, so the rule is in every brief, not in memory.
