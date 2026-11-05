@@ -218,6 +218,16 @@ for (const f of anyText('.')) {
   }
 }
 
+// Standing calls (roles/project-manager.md; yskills 2026-11-05): the section and its seven items must exist.
+{
+  const f = '.claude/skills/operator/roles/project-manager.md'
+  const sec = readFileSync(join(root, f), 'utf8').split(/^## Don't make him repeat \(standing calls\)$/m)[1]?.split(/^## /m)[0]
+  if (!sec) errors.push(`${f}: the "## Don't make him repeat (standing calls)" section is missing`)
+  else for (const [what, re] of [['"Alles clean und durchziehen"', /\*\*"Alles clean und durchziehen":\*\*/], ['character = base + delta', /character = base \+ delta/], ['caches are offsets', /caches are offsets/], ['match the refs', /Match the refs/], ['render only what is in camera', /render only what is in camera/], ['link what needs him', /Link what needs him/], ['check before asking', /Check before asking/]]) {
+    if (!re.test(sec)) errors.push(`${f}: Don't make him repeat lacks ${what}`)
+  }
+}
+
 // Token budget (docs/WORKFLOW.md, Token budget; yskills, 2026-10-18): the Budget line exists and no
 // gate or role file asks for an Opus verdict on an S or M PR.
 const budgetLine = readFileSync(join(root, 'docs/WORKFLOW.md'), 'utf8').match(/^Budget: .*$/m)?.[0]

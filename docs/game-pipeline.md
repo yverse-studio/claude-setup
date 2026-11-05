@@ -9,6 +9,8 @@ is done and what we learned. It needs repo access (claude-setup) and, for 3D wor
 this page in the same PR or turn (rule: `CLAUDE.md`, Work for the future). A path here that no
 longer matches the laptop is a bug: fix the page, not your memory.
 
+Standing calls for every scene and character (adult main character, base + delta, generic scripts, refs, efficient renders): [`operator/roles/project-manager.md`](../.claude/skills/operator/roles/project-manager.md), Don't make him repeat.
+
 ## Where things live
 
 The folder tree, the scene slots and the step-by-step for building a scene by hand live in **one place**:
