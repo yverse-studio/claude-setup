@@ -104,10 +104,11 @@ characters' key names) live in the private game repo and the laptop README.
 - Default close POV: the partner's eye height (head bone + ~0.09 up, + ~0.07-0.15 forward), body fills
   70-100 % of frame, face at the back, torso in front. Hide the POV figure's own head for the camera only
   (vertex group/holdout), `clip_start` small (~0.05), or the other figure turns see-through.
-- POV cameras are parented to the carrier's head bone (or chest bone for a lower view), never placed static in the
-  world: a static cam gets crossed by the carrier's own body at the stroke peak (Tisch T2, 32/97 frames blocked,
-  2026-11-06). The head-bone cam follows the stroke, is the VR-POV look of the references (Lidia VR) and feels more
-  immersive (yskills 2026-11-06).
+- POV cameras ride the carrier's body, never sit static in the world: a static cam gets crossed by his own body at
+  the stroke peak (Tisch T2, 32/97 frames blocked, 2026-11-06). Bone by shot: true eye POV on the head bone (Lidia VR,
+  looking down); the usual cheat on the chest/spine bone at chest or belly height, his knees at the frame edges, her
+  face and body filling the frame (Don't Let Her Know titfuck POV). Follow with Copy Location/Rotation at ~0.3-0.5
+  influence so the cam sways a little with the stroke but never jerks (BlobCG stays calm); hide his upper body for it.
 - Lens 24-32 mm, depth of field f/2 on her face. Camera moves: slight handheld drift plus a small push on the
   beat, seamless; optional Dutch tilt. Side view only as a second shot.
 - In the game: cut between close / medium / side every 2-4 s.
