@@ -5,9 +5,32 @@ description: "Use whenever a task touches Roblox Studio, Blender, a Roblox place
 
 # Studio and Blender
 
-Both servers run only on yskills' PC with the app open, so this work happens in a Remote Control
+## Where Blender runs: cloud first (yskills 2026-11-03)
+
+Blender runs headless in the cloud: `pip install bpy` (Blender 5.2, 4 CPU cores, no GPU). A whole
+16 s reel was built and rendered there with no laptop and no Remote Control. Starter scripts and
+numbers: [`video-studio/templates/blender-cloud/`](../video-studio/templates/blender-cloud/README.md).
+
+**Before every Blender job, estimate it** (one line in the thread): frames x seconds per frame
+(Cycles CPU at 540x960 and 12 samples: about 13 s per frame; measured), engine, and whether it needs
+a GPU or the MCP connector.
+
+| Estimate says | Where | Asks yskills? |
+|---|---|---|
+| No GPU, no MCP, no file only on the laptop, about 2 h or less | **cloud** | no, just run it |
+| Over about 2 h | cut first (resolution, samples, frames, Eevee), then cloud in chunks or laptop | no |
+| Needs GPU or MCP (live scene in the open app, `get_screenshot_of_window_as_image`, his open `.blend`) | laptop (`laptop-job.mjs`, below) | no |
+| yskills asks for the laptop | laptop | no |
+| The cloud run failed (one retry with changed settings first) | laptop | no |
+
+Test 1-3 frames before the full range. Rendering stays out of the context: report the estimate, the
+measured time and the frame strip. Add every new measurement to the template README.
+
+## Laptop setup
+
+Both MCP servers run only on yskills' PC with the app open, so MCP work happens in a Remote Control
 thread or Claude Code there. Cloud threads write code and tests (`roblox`, `toolbox` `catalog/roblox.md`,
-`game-3d`) and hand the visual part to the PC.
+`game-3d`) and run headless Blender themselves; only GPU, MCP and Roblox Studio work goes to the PC.
 
 ## Setup (once per PC)
 
