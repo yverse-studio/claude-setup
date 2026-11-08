@@ -122,6 +122,18 @@ test('check.mjs fails on an untagged never rule, a long description and an agent
   } finally { rmSync(copy, { recursive: true, force: true }) }
 })
 
+test('check.mjs fails when a doc ties a handoff to a token count (handoff only at a trigger)', () => {
+  const copy = mkdtempSync(join(tmpdir(), 'guards-repo-'))
+  try {
+    cpSync(root, copy, { recursive: true, filter: (p) => !p.includes(`${join(root, '.git')}`) })
+    const doc = join(copy, 'docs/pc-claude-user.md')
+    writeFileSync(doc, readFileSync(doc, 'utf8') + '\nA thread should hand off at 350k and stop.\n')
+    const r = spawnSync(process.execPath, [join(copy, 'scripts', 'check.mjs')], { encoding: 'utf8' })
+    assert.equal(r.status, 1)
+    assert.ok(r.stderr.includes('docs/pc-claude-user.md: banned phrase'), r.stderr)
+  } finally { rmSync(copy, { recursive: true, force: true }) }
+})
+
 test('check.mjs fails when a role file drops the model-and-handoff link or the brief block loses its lines', () => {
   const copy = mkdtempSync(join(tmpdir(), 'guards-repo-'))
   try {

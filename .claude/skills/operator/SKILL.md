@@ -174,7 +174,7 @@ A safety check that stalls routine work is friction: the fix is an allow or auto
 ## 5. Spend little
 
 - **Models:** the role's row in claude-setup `docs/TEAMS.md`, passed on every thread start and subagent. Thread effort medium.
-- Hand off only at a trigger, never mid-step (`docs/WORKFLOW.md`, Handoff triggers): finish the current step, write the handoff, stop; never start a new unit past it (two long threads were 77% of usage on 2026-10-04). The planner sizes every unit to one thread (about 90k working room); a unit that cannot fit is split in the plan. Haiku readers stay under 100k of prompt. A template over 2000 lines is split before the next change. [advisory]
+- Hand off only at a trigger, never mid-step (`docs/WORKFLOW.md`, Handoff triggers): finish the current step, write the handoff, stop; never start a new unit past it (two long threads were 77% of usage on 2026-10-04). The planner sizes every unit so one thread can finish it; a unit that cannot fit is split in the plan. Haiku readers stay under 100k of prompt. A template over 2000 lines is split before the next change. [advisory]
 - Where 2026-10-07 burned tokens, and the rule that stops each: hand-offs at 270k (write the
   hand-off at a trigger); `dashboard.html` read whole again and again (grep the
   part, read it once); the same answer in two threads (a thread checks the timeline before

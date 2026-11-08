@@ -49,7 +49,7 @@ A thread hands off only at one of three triggers (yskills 2026-11-08: a forced h
 
 At a trigger: finish the step, write `/mnt/project-files/<project>/handoff/<date>-<topic>.md` (done, next, branch, PR, open asks), reply with its path, stop. A thread only waiting makes no tool call and ends the turn.
 
-Otherwise no handoff: compaction with the PreCompact guard (`global/compact-guard.mjs`) keeps Role/Kit/Size, branch, PR, asks and decisions; after a compaction SessionStart `compact` reloads the rules (team-guard start). The numbers of `global/context-guard.mjs` are a backstop only: it warns once at 250k and asks for the trigger check at 600k.
+Otherwise no handoff: compaction with the PreCompact guard (`global/compact-guard.mjs`) keeps Role/Kit/Size, branch, PR, asks and decisions; after a compaction SessionStart `compact` reloads the rules (team-guard start). The numbers in `global/context-guard.mjs` (their only home) are a backstop: its message asks for the trigger check and never orders a handoff. No brief, guide or prompt ties a handoff to a token count or a time (`scripts/check.mjs` fails on one).
 
 ## The 5/5 gate
 

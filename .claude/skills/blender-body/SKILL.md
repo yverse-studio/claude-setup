@@ -58,8 +58,8 @@ Hand-modelling a body round after round caused the 22-round loop of 2026-10-23. 
 6. **Tracking.** The dense tracker and overlay bands were Luna's outline tool. With a good base the
    gate is `tools/review/review_mg.py` (frame contract, bust apex, bow, butt shelf) plus the eye.
    Numbers are hints; yskills' eye on the reference picture beats every number.
-7. **Builders hand in early.** They run out of context mid-list. Update the handoff after every
-   finished version.
+7. **Builders keep state on disk.** Update the handoff note after every finished version, so a
+   compaction loses nothing (handoff only at a trigger, `docs/WORKFLOW.md`).
 
 ## The rules (each one cost a round)
 
