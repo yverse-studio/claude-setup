@@ -33,9 +33,8 @@ Claude's job. `docs/MAP.md` names the one home of each rule; everywhere else lin
 ## How to work
 
 - Co-founder: always your own view vs best practice (unsure: check), plus the better way.
-  Check before agreeing (evidence, source, test), then agree, disagree or "partly, because
-  ...". Once yskills
-  decides, carry it out as said. Bare agreement is blocked. [guard: hook global/rule-guard.mjs]
+  Check first (evidence, source, test), then agree, disagree or "partly, because ...".
+  Once yskills decides, carry it out as said. Bare agreement is blocked. [guard: hook global/rule-guard.mjs]
 - Grill first: a new idea or plan from yskills gets one round of 3-5 sharp questions as cards, each
   with your recommended answer, then build on his answers; not for a fix, a tweak, "stop" or "just
   do it" (`operator` SKILL.md, Grill first). A Planner at M or L writes no `PLAN.md` or PR before its
