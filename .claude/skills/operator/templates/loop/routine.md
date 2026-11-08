@@ -24,10 +24,12 @@ Loop reader for <project> (<owner/repo>). Read-only, one turn, no code changes.
 
 ## claude-setup's own reader
 
-The routine "Loop reader claude-setup" fires into the coordinator and adds four steps after step 4
+The routine "Loop reader claude-setup" fires into the coordinator and adds six steps after step 4
 (asks ledger and blocked threads, `roles/project-manager.md`). Only for this reader, step 4's
-"end with no message" waits until steps 5 to 8 found nothing too:
+"end with no message" waits until steps 5 to 10 found nothing too:
 5. Re-read the last day of the project chat (`fetch_project_timeline`); post ONE chat line for every ask of yskills with no thread, PR or `Done:` line yet.
 6. With `list_thread_sessions`, post ONE chat line for every thread waiting on yskills over 12 hours, naming the one tap on its card.
 7. Run the Session start reconcile (`roles/project-manager.md`, Session start) and post ONE chat line for every thread that is on the board but missing from `MEMORY.md`, or the other way round.
 8. List open claude-setup issues labelled `deploy-drift` (`deploy-watch.yml`: a live site has not served its main HEAD for over 15 minutes); for each one with no "Thread:" comment, start one `Programmer · fix deploy <name>` thread (build-logs workflow first) and post ONE chat line.
+9. When it has a clone, regenerate the coordinator card: `node scripts/coordinator-card.mjs /mnt/project-files/claude-setup/COORDINATOR-CARD.md` (the coordinator has no Bash and reads only that file; write to the folder with a trailing-slash path).
+10. Audit the last 24 hours of the project chat: `list_events` on the coordinator session, kinds assistant. Report replies over 15 lines, replies without a kaomoji, `start_thread` calls without `model` and finished threads left open. Append each finding as one line to `/mnt/project-files/claude-setup/LESSONS-INBOX.md`; no findings, no line.

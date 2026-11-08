@@ -19,7 +19,7 @@ What every session does at start:
 
 | Surface | Reads first | Then |
 |---|---|---|
-| Coordinator (project chat) | `MEMORY.md`, the thread board; `CLAUDE.md` and the coordinator card (Spawn rule, Models, Sizes, Roster, Kits) arrive in context by themselves (`team-guard` start and card) | `roles/project-manager.md` Session start; the full [`TEAMS.md`](TEAMS.md), this file or a role file only when a task needs a part the card lacks (copies in `~/.claude/claude-setup/`); reconciles board and state |
+| Coordinator (project chat) | `/mnt/project-files/claude-setup/COORDINATOR-CARD.md` (Spawn rule, Models, Sizes, Roster, Kits, pre-flight; built by `scripts/coordinator-card.mjs`), then `MEMORY.md`, the thread board | `roles/project-manager.md` Session start; a part the card lacks only through a setup thread (the coordinator has no Bash and no repo); reconciles board and state |
 | Thread | its brief (first line `Role: · Kit: · Size:`), `MEMORY.md`; its Roster row and playbook arrive in context by themselves (`rule-guard`) | `add_repo` claude-setup, `CLAUDE.md`, this section, [`TEAMS.md`](TEAMS.md) (Coordinator or thread), never the Spawn rule; for a product also that repo's `CLAUDE.md` and `docs/LESSONS.md` |
 | Claude Code on the laptop | first `git fetch && checkout main && pull` of the claude-setup clone ([`pc-claude-user.md`](pc-claude-user.md), Fresh main first), then `~/.claude/CLAUDE.md` | the project's `CLAUDE.md`; auto-memory is a scratchpad |
 | New claude.ai project | the generated boot text | as a coordinator; its first session sweeps old memory into the repo |
@@ -126,6 +126,7 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 | Rule | Home | Others only link |
 |---|---|---|
 | Org, accounts, where secrets live | `CLAUDE.md` (The world) | `publish` skill, `docs/WORKFLOW.md` (PC work) |
+| Coordinator card (what the project chat reads, its pre-flight) | `scripts/coordinator-card.mjs` (output `/mnt/project-files/claude-setup/COORDINATOR-CARD.md`) | `roles/project-manager.md`, `operator/templates/project-instructions.md` |
 | Teams, roles, sizes, the pipeline, the Kits (routed per task), the model per role | `docs/TEAMS.md` | `CLAUDE.md` (Teams), `operator/SKILL.md`, `operator/run.md`, `roles/project-manager.md`; `global/team-guard.mjs` enforces `model` |
 | Deploy or delete a page (the steps) | `docs/USING.md` | operator `run.md`, `briefs.md`; detail in `publish` |
 | Where a lesson goes (the decision tree) | `docs/MAP.md` (Start here) | `CLAUDE.md` (Lessons stick), `docs/WORKFLOW.md` (Learning) |
