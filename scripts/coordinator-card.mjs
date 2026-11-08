@@ -52,19 +52,25 @@ export function compact(full) {
 }
 
 export function buildCard({ hash = 'nogit', date = new Date().toISOString().slice(0, 10) } = {}) {
-  const head = `Coordinator card (claude-setup ${hash}, ${date}).\nYou are the project chat. You have no Bash and no repo: this card and MEMORY.md are your rules.\nA rule not on this card: ask a setup thread (start one, size S) or message_thread an open one; never guess.`
+  const head = `Coordinator card (claude-setup ${hash}, ${date}).\nYou are the project chat. You have no Bash and no repo: this card and MEMORY.md are your rules.\nA rule not on this card: Read COORDINATOR-RULES-INDEX.md in this folder; still unclear: ask a setup thread (size S); never guess.`
   const full = coordinatorCard(read('docs/TEAMS.md'), '') // '' drops the "Text only" section: it does not fit
   const team = full ? compact(full) : ''
   const rows = ruleRows(read('docs/MAP.md'))
-  const tail = '… full table: docs/MAP.md One home per rule'
-  const build = (n) => [head, PREFLIGHT, team,
-    `## Where is rule X? (One home per rule)\n\n${rows.slice(0, n).map((r) => `- ${r.rule.slice(0, 60)} → ${clip(r.home.replace(/`/g, ""), 70)}`).concat(n < rows.length ? [tail] : []).join('\n')}`,
+  const tail = '… every rule: Read /mnt/project-files/claude-setup/COORDINATOR-RULES-INDEX.md (same folder as this card)'
+  const build = () => [head, PREFLIGHT, team,
+    `## Where is rule X? (One home per rule)\n\n${rows.slice(0, 6).map((r) => `- ${r.rule.slice(0, 60)} → ${clip(r.home.replace(/`/g, ""), 70)}`).concat(rows.length > 6 ? [tail] : []).join('\n')}`,
   ].join('\n\n') + '\n'
-  let n = rows.length
-  while (n > 0 && build(n).length >= CARD_MAX) n--
-  const card = build(n)
-  if (!team || n < 5 || card.length >= CARD_MAX) throw new Error(`coordinator card is ${card.length} characters (${n} index rows), limit ${CARD_MAX}: trim the Spawn rule or a Roster cell`)
+  const card = build()
+  if (!team || card.length >= CARD_MAX) throw new Error(`coordinator card is ${card.length} characters, limit ${CARD_MAX}: trim the Spawn rule or a Roster cell`)
   return card
+}
+
+export const INDEX_MAX = 20000
+export function buildIndex({ hash = 'nogit', date = new Date().toISOString().slice(0, 10) } = {}) {
+  const head = `Rules index (claude-setup ${hash}, ${date}). Read this when a rule is not on the card;\nthe home is the file to name, never a guess.`
+  const out = `${head}\n\n${ruleRows(read('docs/MAP.md')).map((r) => `- ${r.rule} → ${r.home}`).join('\n')}\n`
+  if (out.length >= INDEX_MAX) throw new Error(`rules index is ${out.length} characters, limit ${INDEX_MAX}`)
+  return out
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
@@ -73,5 +79,8 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const card = buildCard({ hash })
   const out = process.argv[2] ?? './COORDINATOR-CARD.md'
   writeFileSync(out, card)
-  console.log(`${out}: ${card.length} characters`)
+  const idx = buildIndex({ hash })
+  const idxOut = join(dirname(out), 'COORDINATOR-RULES-INDEX.md')
+  writeFileSync(idxOut, idx)
+  console.log(`${out}: ${card.length} characters; ${idxOut}: ${idx.length} characters`)
 }

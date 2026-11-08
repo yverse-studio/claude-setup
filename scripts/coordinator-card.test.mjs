@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { buildCard, ruleRows, CARD_MAX } from './coordinator-card.mjs'
+import { buildIndex, buildCard, ruleRows, CARD_MAX } from './coordinator-card.mjs'
 
 test('the card builds, stays under 6,000 characters and has its parts', () => {
   const card = buildCard({ hash: 'abc1234', date: '2026-11-08' })
@@ -18,4 +18,11 @@ test('the index lines are rule → home, cut at 60 characters', () => {
 
 test('ruleRows reads the table', () => {
   assert.deepEqual(ruleRows('x\n## One home per rule\n\n| Rule | Home | Others |\n|---|---|---|\n| A | `a.md` | b |\n'), [{ rule: 'A', home: '`a.md`' }])
+})
+
+test('the rules index holds every row, unclipped, under 20,000 characters', () => {
+  const idx = buildIndex({ hash: 'x', date: 'd' })
+  assert.ok(idx.length < 20000, String(idx.length))
+  assert.ok(idx.split('\n').filter((l) => l.startsWith('- ')).length >= 40)
+  assert.match(idx, /^Rules index \(claude-setup x, d\)/)
 })
