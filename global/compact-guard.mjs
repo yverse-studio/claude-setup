@@ -3,7 +3,7 @@
 // Tell it what to keep verbatim (the thread's Role/Kit/Size line, branch, PR, asks, decisions with
 // reasons, the last error, files changed, Done-when) and what to drop, and save the same headings as a
 // note in /mnt/project-files/<project>/handoff/ when the project is known. Never fails a compaction.
-import { closeSync, existsSync, mkdirSync, openSync, readSync, statSync, writeFileSync } from 'node:fs'
+import { closeSync, constants, existsSync, lstatSync, mkdirSync, openSync, readSync, realpathSync, statSync, writeSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import { join, resolve, sep } from 'node:path'
 
@@ -104,8 +104,12 @@ process.stdin.on('end', () => {
         '',
       ].join('\n')
       try {
-        mkdirSync(join(dir, 'handoff'), { recursive: true })
-        writeFileSync(file, note)
+        // The folder is shared with other threads: never follow a planted symlink, never overwrite.
+        const handoff = join(dir, 'handoff')
+        mkdirSync(handoff, { recursive: true })
+        if (lstatSync(handoff).isSymbolicLink() || !realpathSync(handoff).startsWith(realpathSync(BASE) + sep)) throw new Error('handoff dir is a link or outside the base')
+        const fd = openSync(file, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o644)
+        try { writeSync(fd, note) } finally { closeSync(fd) }
         out += `\nState saved at ${file}.`
       } catch {}
     }
