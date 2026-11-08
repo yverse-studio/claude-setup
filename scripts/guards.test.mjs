@@ -944,7 +944,7 @@ test('context guard: silent below 250k, warns at 250k, backstop at 700k', () => 
     }
     assert.equal(run(200_000, 'a'), '', 'below the warn point stays silent')
     assert.match(run(400_000, 'b'), /Batch independent calls/)
-    assert.equal(run(620_000, 'd'), '', 'the old hand-off point stays silent (yskills 2026-11-03)')
+    assert.doesNotMatch(run(620_000, 'd'), /handoff triggers/, 'the old hand-off point is below the backstop (yskills 2026-11-03)')
     assert.match(run(720_000, 'c'), /handoff triggers/)
   } finally { rmSync(dir, { recursive: true, force: true }) }
 })
@@ -1001,6 +1001,7 @@ test('rule guard: writes outside a folder\'s .layout.json are blocked', async ()
     writeFileSync(join(lib, '.layout.json'), '{ broken')
     assert.equal(offLayout(join(lib, 'loose.md')), null, 'a broken layout never blocks')
   } finally { rmSync(lib, { recursive: true, force: true }) }
+})
 
 test('rule guard: modelCheck compares the model the brief or yskills wants with the one running', async () => {
   const { modelCheck } = await import('../global/rule-guard.mjs')
