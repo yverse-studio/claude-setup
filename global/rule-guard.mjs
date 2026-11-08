@@ -22,6 +22,7 @@
 
 import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { isIP } from 'node:net'
 import { homedir, tmpdir } from 'node:os'
 import { dirname, join, relative } from 'node:path'
 
@@ -117,18 +118,23 @@ export const guessing = (text) => GUESS.test(text) && !REASON.test(text)
 const BUY_PATH = /\/(checkout|cart|warenkorb|kasse|purchase|buy|kaufen|bestellen|place-order)(\/|$)/i
 const BUY_HOST = /^(checkout\.stripe\.com|buy\.stripe\.com|www\.paypal\.com|pay\.google\.com)$/i
 const BROWSER_STEP = /navigate|browser_batch|tabs_create|preview_start/
+const DOCS_HOSTS = /^(docs\.(stripe|github|paypal)\.com|developers\.cloudflare\.com|nuxt\.com|create\.roblox\.com|developer\.apple\.com|developers\.google\.com)$/i
+const LOCAL_HOST = /^(localhost|.*\.(localhost|test|local))$/i
 const isPurchase = (url) => {
   try {
     const u = new URL(url)
-    // A test exemption is narrow: his own app on loopback or a .test name, or a Stripe test session on Stripe's own host (a cs_test_ in any query string would bypass the guard).
-    if (u.hostname === 'localhost' || /\.(test|localhost)$/.test(u.hostname) || privateIp(u.hostname.replace(/^\[|\]$/g, '')) || (u.hostname === 'checkout.stripe.com' && /^\/c\/pay\/cs_test_/.test(u.pathname))) return false
-    if (/^docs?\./.test(u.hostname) || /^\/docs?\//.test(u.pathname)) return false // reading about checkout is no purchase
-    return BUY_HOST.test(u.hostname) || BUY_PATH.test(u.pathname)
+    const host = u.hostname.replace(/^\[|\]$/g, '').replace(/\.$/, '').toLowerCase()
+    if (LOCAL_HOST.test(host) || (isIP(host) && privateIp(host))) return false // his own app on a loopback or private address
+    if (/(^|\.)stripe\.com$/.test(host) && /\/cs_test_/.test(u.pathname)) return false // a Stripe test session
+    if (DOCS_HOSTS.test(host)) return false // reading about checkout is no purchase
+    return BUY_HOST.test(host) || BUY_PATH.test(u.pathname)
   } catch { return false }
 }
+const URL_TOKEN = /https?:\/\/[^\s"'\\<>]+|\b(?:[a-z0-9-]+\.)+[a-z]{2,}(?::\d+)?\/[^\s"'\\<>]*/gi // with scheme, or a bare host/path
 export function purchaseUrl(tool, input = {}) {
   if (!BROWSER_STEP.test(tool) && !/^(Bash|PowerShell)$/.test(tool)) return null
-  return (JSON.stringify(input).match(/https?:\/\/[^\s"'\\<>]+/g) ?? []).find(isPurchase) ?? null
+  const tokens = JSON.stringify(input).match(URL_TOKEN) ?? []
+  return tokens.map((t) => (/^https?:\/\//i.test(t) ? t : 'https://' + t)).find(isPurchase) ?? null
 }
 
 // A clean folder structure (yskills 2026-11-04): a folder with a `.layout.json` ({ "allow": [globs], "why": "..." })
