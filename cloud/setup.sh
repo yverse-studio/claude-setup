@@ -147,7 +147,7 @@ function extract(text) {
         tools.push(b.name)
         if (/post_message$/.test(b.name) && typeof b.input?.text === 'string') lastPost = b.input.text
       }
-    } catch {} // the chunk's cut-off first line, or a blank
+    } catch { continue } // the chunk's cut-off first line, or a blank
   }
   return { tools: tools.slice(-30), lastPost }
 }
@@ -176,7 +176,7 @@ process.stdin.on('end', () => {
   try {
     const { session_id: id = 'unknown', transcript_path: path, trigger = 'auto', cwd = '' } = JSON.parse(raw || '{}')
     let text = ''
-    try { if (path && existsSync(path)) text = tail(path) } catch {}
+    try { if (path && existsSync(path)) text = tail(path) } catch (e) { out += `\n(transcript not read: ${e.message})` }
     const project = projectOf(cwd, text)
     const dir = project ? join(BASE, project) : ''
     if (dir && existsSync(dir)) {
@@ -222,7 +222,7 @@ process.stdin.on('end', () => {
         const fd = openSync(file, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o644)
         try { writeSync(fd, note) } finally { closeSync(fd) }
         out += `\nState saved at ${file}.`
-      } catch {}
+      } catch (e) { out += `\nState not saved (${e.message}); keep the headings above in the summary.` }
     }
   } catch {
     // A guard must never break a compaction.

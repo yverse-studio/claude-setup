@@ -76,7 +76,7 @@ export function buildIndex({ hash = 'nogit', date = new Date().toISOString().sli
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   let hash = 'nogit'
-  try { hash = execFileSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim() } catch {}
+  try { hash = execFileSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim() } catch { hash = 'nogit' }
   const card = buildCard({ hash })
   const out = process.argv[2] ?? './COORDINATOR-CARD.md'
   writeFileSync(out, card)
