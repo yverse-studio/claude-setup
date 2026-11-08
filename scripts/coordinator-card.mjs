@@ -1,0 +1,87 @@
+#!/usr/bin/env node
+// Writes COORDINATOR-CARD.md, the one file the project chat reads first. The project-chat coordinator has
+// no Bash, no repo and no hooks (proven 2026-11-08), so team-guard's card never reached it; threads write
+// this file to /mnt/project-files/claude-setup/ and the coordinator Reads it.
+// Usage: node scripts/coordinator-card.mjs [out-path]   (default ./COORDINATOR-CARD.md)
+import { readFileSync, writeFileSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { coordinatorCard } from '../global/team-guard.mjs'
+
+const root = join(dirname(fileURLToPath(import.meta.url)), '..')
+export const CARD_MAX = 6000
+const cells = (l) => l.split('|').map((c) => c.trim())
+const read = (f) => readFileSync(join(root, f), 'utf8').replace(/\r/g, '')
+
+const PREFLIGHT = `## Pre-flight before every reply
+
+- Reply at most 15 lines / 1,500 characters: Luna, at least one kaomoji, result first, in his language (home: CLAUDE.md, How to work, Replies; hook global/rule-guard.mjs).
+- Every start_thread passes \`model\` (a model yskills names, as named, else the Roster row below) and a brief that begins \`Role: · Kit: · Size:\` plus the block in operator/briefs.md.
+- A finished thread (done, failed, stopped, or review_ready idle 2 h with a Done: or hand-off reply) gets set_thread_resolved or a message_thread nudge before you stop; relist when your board is 2 h old (home: roles/project-manager.md, Close threads; backstop: routine step 11 sweep).
+- Every ask of yskills gets a thread, a PR or a \`Done:\` line the same turn.
+- Gate: 5/5 pass/fail checks by agents that did not build it, up to 6 rounds, a check failing twice gets a diagnosis first, after round 6 one card to yskills (operator/gate.md, Rounds). Escalation: stuck twice → one Opus checkpoint; still stuck after a Sonnet round and the Opus checkpoint → Fable (docs/TEAMS.md, Models line).
+- Hand off only at a role change, quality loss or a milestone (docs/WORKFLOW.md, Handoff triggers), not at a token number.
+- If the project instructions lack the line "Read /mnt/project-files/claude-setup/COORDINATOR-CARD.md first", call update_project_settings once: PREPEND the text of operator/templates/project-instructions.md filled for this project above the existing instructions, keep every existing line (yskills 2026-11-08: add, never remove), and say so in one line.`
+
+export function ruleRows(map) {
+  const t = map.split('\n## One home per rule')[1] ?? ''
+  return t.split('\n').filter((l) => l.startsWith('| ') && !/^\| (Rule|---)/.test(l)).map((l) => {
+    const c = l.split('|').map((x) => x.trim())
+    return { rule: c[1], home: c[2] }
+  })
+}
+
+// team-guard's coordinatorCard() is the source (Spawn rule, Models, Sizes, Roster, Kits, ~9,000 characters);
+// this squeezes it to what a start_thread needs so the whole file stays under CARD_MAX.
+const clip = (t, n) => (t.length > n ? `${t.slice(0, n - 1).trimEnd()}…` : t)
+const flat = (t) => t.replace(/\s+/g, ' ').replace(/\[`?([^\]]*?)`?\]\([^)]*\)/g, '$1').trim()
+export function compact(full) {
+  const part = (from, to) => { const a = full.indexOf(from); const b = to ? full.indexOf(to, a + 1) : full.length; return a < 0 ? '' : full.slice(a, b < 0 ? undefined : b).trim() }
+  const spawn = part('## Spawn rule', '## Sizes')
+  const steps = [...spawn.matchAll(/^\d\. ([\s\S]*?)(?=\n\d\. |\n\nModels:)/gm)].map((m) => `- ${clip(flat(m[1]).replace(/\*\*/g, ''), 170)}`)
+  const modelsLine = (spawn.match(/\nModels:.*/) ?? [''])[0]
+  const ids = [...modelsLine.matchAll(/(Fable|Opus|Sonnet|Haiku) \((claude-[\w.-]+)\)/g)].map((m) => `${m[1]} ${m[2]}`).join(', ')
+  const sizes = part('## Sizes', '## Roster').split('\n').filter((l) => /^\| [SML] \|/.test(l)).map((l) => { const c = cells(l); return `- ${c[1]}: ${clip(flat(c[2]), 95)}; threads: ${clip(flat(c[3]), 80)}` })
+  const roster = part('## Roster', '## Kits').split('\n').filter((l) => l.startsWith('- ') && /thread/.test(l)).map((l) => { const [r, ...rest] = l.slice(2).split(': '); return `- ${r}: ${clip(flat(rest.join(': ')), 85)}` })
+  const kits = part('## Kits').split('\n').filter((l) => l.startsWith('- ')).map((l) => clip(flat(l), 110))
+  return [
+    `## Spawn rule (docs/TEAMS.md)\n\n${steps.join('\n')}`,
+    `## Models\n\n${ids}. A model yskills names is used as named. A thread picks no Fable.`,
+    `## Sizes\n\n${sizes.join('\n')}`, `## Roster (thread roles: runs as; model)\n\n${roster.join('\n')}`, `## Kits (team at size L)\n\n${kits.join('\n')}`,
+  ].join('\n\n')
+}
+
+export function buildCard({ hash = 'nogit', date = new Date().toISOString().slice(0, 10) } = {}) {
+  const head = `Coordinator card (claude-setup ${hash}, ${date}).\nYou are the project chat. You have no Bash and no repo: this card and MEMORY.md are your rules.\nA rule not on this card: Read COORDINATOR-RULES-INDEX.md in this folder; still unclear: ask a setup thread (size S); never guess.`
+  const full = coordinatorCard(read('docs/TEAMS.md'), '') // '' drops the "Text only" section: it does not fit
+  const team = full ? compact(full) : ''
+  const rows = ruleRows(read('docs/MAP.md'))
+  const tail = '… every rule: Read /mnt/project-files/claude-setup/COORDINATOR-RULES-INDEX.md (same folder as this card)'
+  const build = () => [head, PREFLIGHT, team,
+    `## Where is rule X? (One home per rule)\n\n${rows.slice(0, 6).map((r) => `- ${r.rule.slice(0, 60)} → ${clip(r.home.replace(/`/g, ""), 70)}`).concat(rows.length > 6 ? [tail] : []).join('\n')}`,
+  ].join('\n\n') + '\n'
+  const card = build()
+  if (!team || card.length >= CARD_MAX) throw new Error(`coordinator card is ${card.length} characters, limit ${CARD_MAX}: trim the Spawn rule or a Roster cell`)
+  return card
+}
+
+export const INDEX_MAX = 20000
+export function buildIndex({ hash = 'nogit', date = new Date().toISOString().slice(0, 10) } = {}) {
+  const head = `Rules index (claude-setup ${hash}, ${date}). Read this when a rule is not on the card;\nthe home is the file to name, never a guess.`
+  const out = `${head}\n\n${ruleRows(read('docs/MAP.md')).map((r) => `- ${r.rule} → ${r.home}`).join('\n')}\n`
+  if (out.length >= INDEX_MAX) throw new Error(`rules index is ${out.length} characters, limit ${INDEX_MAX}`)
+  return out
+}
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  let hash = 'nogit'
+  try { hash = execFileSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim() } catch { hash = 'nogit' }
+  const card = buildCard({ hash })
+  const out = process.argv[2] ?? './COORDINATOR-CARD.md'
+  writeFileSync(out, card)
+  const idx = buildIndex({ hash })
+  const idxOut = join(dirname(out), 'COORDINATOR-RULES-INDEX.md')
+  writeFileSync(idxOut, idx)
+  console.log(`${out}: ${card.length} characters; ${idxOut}: ${idx.length} characters`)
+}

@@ -115,6 +115,38 @@ Added from these sources:
   style skills) and [VideoDB Director](https://github.com/video-db/Director) (MIT, agent
   structure; don't depend on its paid cloud).
 
+## Memory form: is ours the pro standard? (2026-11-08, yskills asks this often)
+
+Verdict: yes for the rules, with one honest gap. What we do is what Anthropic itself documents and
+recommends: rules as versioned markdown loaded per session (CLAUDE.md), state in `MEMORY.md` plus
+topic files (Claude Code memory docs: the first 200 lines / 25 KB load), and "structured notes"
+written to files outside the context window (Anthropic, Effective context engineering, 2025). On top
+we have what those docs do not give: one home per rule (`docs/MAP.md`), checks and hooks instead of
+text where a rule is mechanical, a reviewed PR per change, and the lessons inbox. Community setups in
+2026 (Obsidian-vault templates, ECC, memory plugins) converge on the same shape: a small index file
+plus markdown files, hooks for capture; none is an official standard, and no source shows a graph or
+vault store beating plain reviewed files for a team of this size.
+
+- **Obsidian:** a markdown vault with a viewer. Our repo already is a markdown vault; Obsidian adds
+  backlinks and a graph view on the laptop, nothing a cloud thread can read. Open the repo in
+  Obsidian if yskills wants the graph picture; no change to where rules live. Rejected as a store
+  (see Not worth adding above), fine as a viewer.
+- **Graphify** ([Graphify-Labs/graphify](https://github.com/Graphify-Labs/graphify), MIT, tens of
+  thousands of stars by late 2026): parses a codebase with tree-sitter into a local knowledge graph
+  (`graphify-out/graph.json`, report, HTML) and adds a `/graphify` skill plus PreToolUse hooks that
+  steer Claude to the graph before grep. It is a code map for large codebases, not a rules or
+  lessons memory; the graph is a snapshot that must be rebuilt after changes. Our repos are small
+  (claude-setup under 200 files; MAP.md is the map). Not for the setup; a product repo over roughly
+  50k lines may try it as an opt-in on the laptop (`uv tool install graphifyy`, commit
+  `graphify-out/`), reviewed like any plugin (CLAUDE.md, Code, outside-marketplace rule).
+- **Graph memory (Graphiti, mem0, Zep):** embeddings or graph databases behind an MCP server;
+  useful for chat-history recall across millions of facts, overkill and unreviewable for a few
+  hundred rules. Rejected.
+
+Sources: Anthropic, Effective context engineering for AI agents (2025); Claude Code docs, Memory;
+Anthropic, How we built our multi-agent research system (2025); Graphify README; Obsidian + Claude
+Code community templates (2026, community, not official).
+
 ## Rejected and open (from the reports, 2026-10-25)
 
 So nobody proposes them again, or loses an open gap:

@@ -19,7 +19,7 @@ What every session does at start:
 
 | Surface | Reads first | Then |
 |---|---|---|
-| Coordinator (project chat) | `MEMORY.md`, the thread board; `CLAUDE.md` and the coordinator card (Spawn rule, Models, Sizes, Roster, Kits) arrive in context by themselves (`team-guard` start and card) | `roles/project-manager.md` Session start; the full [`TEAMS.md`](TEAMS.md), this file or a role file only when a task needs a part the card lacks (copies in `~/.claude/claude-setup/`); reconciles board and state |
+| Coordinator (project chat) | `/mnt/project-files/claude-setup/COORDINATOR-CARD.md` (Spawn rule, Models, Sizes, Roster, Kits, pre-flight; built by `scripts/coordinator-card.mjs`), then `MEMORY.md`, the thread board | `roles/project-manager.md` Session start; a part the card lacks only through a setup thread (the coordinator has no Bash and no repo); reconciles board and state |
 | Thread | its brief (first line `Role: · Kit: · Size:`), `MEMORY.md`; its Roster row and playbook arrive in context by themselves (`rule-guard`) | `add_repo` claude-setup, `CLAUDE.md`, this section, [`TEAMS.md`](TEAMS.md) (Coordinator or thread), never the Spawn rule; for a product also that repo's `CLAUDE.md` and `docs/LESSONS.md` |
 | Claude Code on the laptop | first `git fetch && checkout main && pull` of the claude-setup clone ([`pc-claude-user.md`](pc-claude-user.md), Fresh main first), then `~/.claude/CLAUDE.md` | the project's `CLAUDE.md`; auto-memory is a scratchpad |
 | New claude.ai project | the generated boot text | as a coordinator; its first session sweeps old memory into the repo |
@@ -79,7 +79,7 @@ lives outside this repo.
 | GitHub owner migration (plan B if the account stays suspended) | `docs/github-migration.md`, `scripts/migration/` | Inventory of clones and bundles, copy to a new owner, the hands steps and what points at the old owner |
 | GitHub rules (what GitHub forbids, what we do: no 18+ on GitHub, no bulk activity, one account, no big binaries) | `docs/github-rules.md` | The AUP rows and our rule per row |
 | After launch | `docs/LOOP.md` | Errors and feedback become issues and fix threads |
-| Setup loop | operator `SKILL.md` (Setup loop) | Friction with this repo becomes a `loop:setup` issue, then a fix thread through the gate |
+| Setup loop | operator `SKILL.md` (Setup loop) | Friction with this repo becomes a `loop:setup` issue, then a fix thread through the gate; without the GitHub App a block in the [lessons inbox](../.claude/skills/operator/templates/lessons-inbox.md) |
 | Test runs | `docs/TEST-PROJECTS.md` | How the setup is tested end to end, and what each run taught |
 | Why it is built this way | `docs/RESEARCH.md`, `docs/research/` | Dated research notes; history, not rules |
 | Lessons per project | `docs/LESSONS-2026-10-11.md` | Company XY: liked, not liked, quality problems with the fix in force, the next game |
@@ -126,9 +126,15 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 | Rule | Home | Others only link |
 |---|---|---|
 | Org, accounts, where secrets live | `CLAUDE.md` (The world) | `publish` skill, `docs/WORKFLOW.md` (PC work) |
+| Coordinator card (what the project chat reads, its pre-flight) | `scripts/coordinator-card.mjs` (output `/mnt/project-files/claude-setup/COORDINATOR-CARD.md`) | `roles/project-manager.md`, `operator/templates/project-instructions.md` |
+| Close finished threads (resolve or nudge, the daily sweep) | `roles/project-manager.md` (Close threads) | coordinator card, `templates/loop/routine.md` (step 11), `global/rule-guard.mjs` (stop) |
 | Teams, roles, sizes, the pipeline, the Kits (routed per task), the model per role | `docs/TEAMS.md` | `CLAUDE.md` (Teams), `operator/SKILL.md`, `operator/run.md`, `roles/project-manager.md`; `global/team-guard.mjs` enforces `model` |
 | Deploy or delete a page (the steps) | `docs/USING.md` | operator `run.md`, `briefs.md`; detail in `publish` |
 | Where a lesson goes (the decision tree) | `docs/MAP.md` (Start here) | `CLAUDE.md` (Lessons stick), `docs/WORKFLOW.md` (Learning) |
+| Pre-PR check (the one command that runs what CI runs; git pre-push hook on every machine) | `scripts/pre-pr.mjs` | `CLAUDE.md` (How to work), `global/git-hooks/pre-push`, `install.mjs`, `cloud/setup.sh`, `.github/workflows/ci.yml` |
+| Fixes remove the cause (workaround only on yskills' word, labelled, deleted later) | `docs/WORKFLOW.md` (Fixes) | `CLAUDE.md` (Code), operator `gate.md` (diagnosis after two failed checks), `roles/programmer.md` |
+| Project retro (errors and good practice at ship or delete) | `docs/WORKFLOW.md` (Learning, Project retro) | `publish` skill (Delete a project), `templates/lessons.md` |
+| Memory form verdict (why files, not Obsidian, Graphify or graph memory) | `docs/RESEARCH.md` (Memory form) | `docs/WORKFLOW.md` (Learning) |
 | Project memory holds state only (its shape) | `operator/templates/project-memory.md` | `operator/roles/project-manager.md`, `docs/WORKFLOW.md` |
 | Where a Blender job runs (cloud first, estimate before each job, laptop for GPU/MCP/asked/failed; measured render times) | `.claude/skills/studio/SKILL.md` (Where Blender runs) | `.claude/skills/video-studio/templates/blender-cloud/`, `operator/roles/animator.md` |
 | Long laptop jobs (watchdog, Blender limits, GPU and sleep check, one-line failure report, overnight run) | `docs/pc-claude-user.md` (Long laptop jobs) | `scripts/laptop-job.mjs`, `scripts/laptop-slots.mjs` (Blender limits: 3 instances, 2 renders), `operator/roles/project-manager.md`, `programmer.md`, `tester.md` |
@@ -148,9 +154,11 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 | Gate for models and garments (measurements + render sheet) | `gate.md` (Asset PRs) | `docs/clothing-pipeline.md`, `character-workflow.md`, `roles/tester.md` |
 | Briefs point to guide checks, never weaken them; threads read guides fresh from main | `briefs.md` (Every thread brief starts with, Guides) | `roles/project-manager.md` |
 | Models (the line, the model per role and per task) | `docs/TEAMS.md` (Models line, Roster) | everything else links it; CI fails on a model id outside that line |
-| Context guard numbers (warn 250k, hand off 350k) | `global/context-guard.mjs` | `CLAUDE.md`, `README.md` |
+| Context guard numbers (warn 250k, backstop 600k) | `global/context-guard.mjs` | `CLAUDE.md`, `README.md` |
+| Handoff triggers | `docs/WORKFLOW.md` (Handoff triggers) | `CLAUDE.md`, `briefs.md`, `project-manager.md`, operator `SKILL.md` |
 | Hooks that enforce `CLAUDE.md` lines (no PR mails, real cards, reply cap, one Artifact, conventional commits, no WebFetch in the cloud, video and stop notes, the role card, the canary line and Luna's kaomoji) | `global/rule-guard.mjs` (+ `scripts/guards.test.mjs`) | `CLAUDE.md` |
 | `Prior art:` and `Lessons:` lines in every PR body | `scripts/pr-lessons-check.mjs` | `CLAUDE.md`, `.github/pull_request_template.md`, `operator/briefs.md` |
+| Lessons inbox (the one file, block format, Seen rule, the Monday patch) | `operator/templates/lessons-inbox.md` | operator `SKILL.md` (Setup loop), `docs/WORKFLOW.md` (Learning), `briefs.md` |
 | Remote Control on the PC | `docs/WORKFLOW.md` (PC work) | operator `SKILL.md` |
 | UI rules | `CLAUDE.md` (UI) | `roles/designer.md`, `ui-review` (screenshots, the load-once check, run videos via `desktop.sh`) |
 | What looks AI-made (the slop list) | `.claude/skills/ui-review/SLOP.md` | `CLAUDE.md` (UI), `design-critic`, `roles/designer.md`, `gate.md` check 5 |
