@@ -249,9 +249,9 @@ log(`  merged (permissions mode: ${settings.permissions.defaultMode}, ${Object.v
 step('Git pre-push hook (every repo with scripts/pre-pr.mjs runs its CI pre-check before a push)')
 // Only yverse-studio remotes run the check (the hook checks origin), and a hooksPath someone else set is left alone.
 const hooksDir = join(CLAUDE_DIR, 'claude-setup', 'git-hooks')
-const current = has('git') ? spawnSync('git', ['config', '--global', '--get', 'core.hooksPath'], { encoding: 'utf8', shell: IS_WIN }).stdout.trim() : ''
+const hooksNow = has('git') ? spawnSync('git', ['config', '--global', '--get', 'core.hooksPath'], { encoding: 'utf8', shell: IS_WIN }).stdout.trim() : ''
 if (!has('git')) warn('git not found: core.hooksPath not set, pushes skip the pre-pr check')
-else if (current && current !== hooksDir) warn(`core.hooksPath already set to ${current}: left as is; add a pre-push there that runs scripts/pre-pr.mjs`)
+else if (hooksNow && hooksNow !== hooksDir) warn(`core.hooksPath already set to ${hooksNow}: left as is; add a pre-push there that runs scripts/pre-pr.mjs`)
 else run('git', ['config', '--global', 'core.hooksPath', hooksDir], { allowFail: true })
 
 step('Command-line tools (checked, not installed)')

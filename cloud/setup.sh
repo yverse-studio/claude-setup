@@ -666,12 +666,12 @@ cat > "$HOME/.claude/claude-setup/git-hooks/pre-push" <<'PREPUSH'
 # script are untouched; a repo's own .git/hooks/pre-push still runs afterwards. Skip once with PRE_PR_SKIP=1 (say why in the PR).
 remote_url=$(git remote get-url origin 2>/dev/null)
 case "$remote_url" in
-  *github.com[:/]yverse-studio/*) ours=1 ;;
+  https://github.com/yverse-studio/*|git@github.com:yverse-studio/*|ssh://git@github.com/yverse-studio/*) ours=1 ;;
   *) ours= ;;
 esac
 if [ -n "$ours" ] && [ -z "$PRE_PR_SKIP" ] && [ -f scripts/pre-pr.mjs ]; then
-  echo "pre-push: node scripts/pre-pr.mjs --quick (what CI runs)"
-  node scripts/pre-pr.mjs --quick || { echo "pre-push: blocked, fix the failures above (PRE_PR_SKIP=1 to push anyway and say why in the PR)"; exit 1; }
+  echo "pre-push: node scripts/pre-pr.mjs (what CI runs, tests included)"
+  node scripts/pre-pr.mjs || { echo "pre-push: blocked, fix the failures above (PRE_PR_SKIP=1 to push anyway and say why in the PR)"; exit 1; }
 fi
 own="$(git rev-parse --git-common-dir 2>/dev/null)/hooks/pre-push"
 if [ -x "$own" ]; then exec "$own" "$@"; fi
