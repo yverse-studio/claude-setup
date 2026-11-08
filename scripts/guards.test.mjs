@@ -160,6 +160,11 @@ test('compact guard: instructions on stdout, a note in the project folder, never
     const text = readFileSync(note, 'utf8')
     for (const want of ['## Decisions with reasons', 'Bash', 'last words']) assert.ok(text.includes(want), `note lacks ${want}`)
     for (const input of ['', 'not json', '{}', '{"transcript_path":"/nope","cwd":"/nope"}']) assert.equal(runCompact(input, { CLAUDE_SETUP_PROJECT_FILES: base }).status, 0)
+    // Transcript text is untrusted: a project name with dots or slashes never picks the write target.
+    writeFileSync(tr, JSON.stringify({ message: { content: [{ type: 'text', text: `see ${base}/../${base.split('/').pop()}/notes.md and ${base}/.hidden/x` }] } }))
+    const r3 = runCompact(JSON.stringify({ session_id: 'abcdef123456', transcript_path: tr, cwd: '/home/user' }), { CLAUDE_SETUP_PROJECT_FILES: base })
+    assert.equal(r3.status, 0)
+    assert.ok(!r3.stdout.includes('State saved'), `traversal name must write nothing: ${r3.stdout}`)
   } finally { rmSync(base, { recursive: true, force: true }) }
 })
 

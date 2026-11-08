@@ -116,7 +116,7 @@ cat > "$HOME/.claude/claude-setup/compact-guard.mjs" <<'COMPACT'
 // note in /mnt/project-files/<project>/handoff/ when the project is known. Never fails a compaction.
 import { closeSync, existsSync, mkdirSync, openSync, readSync, statSync, writeFileSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
-import { join } from 'node:path'
+import { join, resolve, sep } from 'node:path'
 
 const BASE = process.env.CLAUDE_SETUP_PROJECT_FILES || '/mnt/project-files'
 const CHUNK = 256 * 1024
@@ -159,9 +159,13 @@ function branchOf(cwd) {
   } catch { return '' }
 }
 
+// The project folder named in cwd or in the transcript. Transcript text is untrusted (tool output, web
+// pages), so the name is a plain word (no dots, no slashes) and the folder must resolve inside BASE.
 function projectOf(cwd, text) {
-  const re = new RegExp(`${BASE.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/([\\w.-]+)/`)
-  return String(cwd).match(re)?.[1] || text.match(re)?.[1] || ''
+  const re = new RegExp(`${BASE.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/([A-Za-z0-9][\\w-]*)/`)
+  const name = String(cwd).match(re)?.[1] || text.match(re)?.[1] || ''
+  if (!name || !/^[A-Za-z0-9][\w-]*$/.test(name)) return ''
+  return resolve(BASE, name).startsWith(resolve(BASE) + sep) ? name : ''
 }
 
 let raw = ''
