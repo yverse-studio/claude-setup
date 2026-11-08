@@ -86,10 +86,10 @@ test('installed hooks: narrow matchers, no double firing, fast, never blocking',
     const keys = entries.map((e) => `${e.event}|${e.matcher}|${e.command}`)
     assert.equal(new Set(keys).size, keys.length, `duplicate hook entries:\n${keys.join('\n')}`)
     for (const e of entries) {
-      assert.ok(e.timeout > 0 && e.timeout <= 5, `${e.command}: timeout must be 1 to 5 s, is ${e.timeout}`)
+      assert.ok(e.timeout > 0 && e.timeout <= (e.event === 'PreCompact' ? 10 : 5), `${e.command}: timeout must be 1 to 5 s (10 for PreCompact), is ${e.timeout}`)
       // Only the context guard has to see every tool call; anything else names the tools it wants.
       // UserPromptSubmit and Stop have no tool to match, so they carry no matcher.
-      if ((e.matcher === '*' || !e.matcher) && !['UserPromptSubmit', 'Stop'].includes(e.event)) assert.ok(e.command.includes('context-guard.mjs'), `${e.command}: matcher must be narrow`)
+      if ((e.matcher === '*' || !e.matcher) && !['UserPromptSubmit', 'Stop', 'PreCompact'].includes(e.event)) assert.ok(e.command.includes('context-guard.mjs'), `${e.command}: matcher must be narrow`)
     }
     // A hook that fails must not block the tool call: exit 0 and no block decision on empty, broken or odd input.
     for (const e of entries) {
@@ -131,11 +131,36 @@ test('check.mjs fails when a role file drops the model-and-handoff link or the b
     const role = join(copy, '.claude/skills/operator/roles/programmer.md')
     writeFileSync(role, readFileSync(role, 'utf8').replace(/^- \*\*Model and handoff:\*\*[^\n]*\n/m, ''))
     const briefs = join(copy, '.claude/skills/operator/briefs.md')
-    writeFileSync(briefs, readFileSync(briefs, 'utf8').replace('Handoff: at <N>k', 'Handoff: later'))
+    writeFileSync(briefs, readFileSync(briefs, 'utf8').replaceAll('Handoff:', 'Hand-off:'))
     const r = run()
     assert.equal(r.status, 1)
-    for (const want of ['roles/programmer.md: lacks the link', 'thread brief block lacks "Handoff: at "']) assert.ok(r.stderr.includes(want), `missing: ${want}\n${r.stderr}`)
+    for (const want of ['roles/programmer.md: lacks the link', 'thread brief block lacks "Handoff:"']) assert.ok(r.stderr.includes(want), `missing: ${want}\n${r.stderr}`)
   } finally { rmSync(copy, { recursive: true, force: true }) }
+})
+
+// Compact guard: PreCompact instructions, plus a state note when the transcript names a project folder.
+const compactFile = join(root, 'global/compact-guard.mjs')
+const runCompact = (input, env = {}) => spawnSync(process.execPath, [compactFile], { input, encoding: 'utf8', timeout: 10000, env: { ...process.env, ...env } })
+
+test('compact guard: instructions on stdout, a note in the project folder, never fails', () => {
+  const base = mkdtempSync(join(tmpdir(), 'compact-'))
+  try {
+    const r = runCompact(JSON.stringify({ session_id: 'abcdef123456', trigger: 'auto' }), { CLAUDE_SETUP_PROJECT_FILES: base })
+    assert.equal(r.status, 0)
+    for (const want of ['Role:', 'decision', 'verbatim']) assert.ok(r.stdout.includes(want), `missing ${want}: ${r.stdout}`)
+    assert.ok(!r.stdout.includes('State saved'), 'no project, no note')
+    mkdirSync(join(base, 'demo-proj'))
+    const tr = join(base, 'transcript.jsonl')
+    const tool = (name, input) => JSON.stringify({ message: { content: [{ type: 'tool_use', name, input }] } })
+    writeFileSync(tr, [JSON.stringify({ message: { content: [{ type: 'text', text: `see ${base}/demo-proj/notes.md` }] } }), tool('Bash', {}), tool('mcp__hearthbot__post_message', { text: 'last words' })].join('\n'))
+    const r2 = runCompact(JSON.stringify({ session_id: 'abcdef123456', transcript_path: tr, trigger: 'manual', cwd: root }), { CLAUDE_SETUP_PROJECT_FILES: base })
+    assert.equal(r2.status, 0)
+    const note = join(base, 'demo-proj', 'handoff', `${new Date().toISOString().slice(0, 10)}-compact-abcdef12.md`)
+    assert.ok(r2.stdout.includes(`State saved at ${note}`), r2.stdout)
+    const text = readFileSync(note, 'utf8')
+    for (const want of ['## Decisions with reasons', 'Bash', 'last words']) assert.ok(text.includes(want), `note lacks ${want}`)
+    for (const input of ['', 'not json', '{}', '{"transcript_path":"/nope","cwd":"/nope"}']) assert.equal(runCompact(input, { CLAUDE_SETUP_PROJECT_FILES: base }).status, 0)
+  } finally { rmSync(base, { recursive: true, force: true }) }
 })
 
 // Attempt guard: a round is a failed run of the same command; success resets; PROGRESS.md unblocks.

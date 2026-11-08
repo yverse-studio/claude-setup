@@ -32,21 +32,22 @@ fs.mkdirSync(require("path").dirname(p), { recursive: true }); fs.writeFileSync(
 ' || echo "claude-setup: could not set CLAUDE_CODE_SUBAGENT_MODEL"
 
 # Context guard: the same file as global/context-guard.mjs (scripts/check.mjs keeps them equal),
-# run after every tool call so long threads get told to work leaner and then to hand off.
+# run after every tool call so long threads get told to work leaner and, at the backstop, to check the handoff triggers.
 mkdir -p "$HOME/.claude/claude-setup"
 cat > "$HOME/.claude/claude-setup/context-guard.mjs" <<'GUARD'
 #!/usr/bin/env node
 // PostToolUse hook: every tool call re-sends the whole context, so a long session pays for its
 // size again on each call (cache reads were 98% of our usage). At WARN tokens of absolute context,
-// tell Claude once to work leaner; at HANDOFF, to wrap up and leave the rest to a fresh session,
-// and again every REFIRE tokens after that. Silent otherwise; never blocks.
+// tell Claude once to work leaner; at HANDOFF (a backstop only: the real handoff triggers are in
+// docs/WORKFLOW.md, Handoff triggers), to check them, and again every REFIRE tokens after that.
+// Silent otherwise; never blocks.
 import { closeSync, existsSync, openSync, readFileSync, readSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 const WARN = Number(process.env.CLAUDE_SETUP_CONTEXT_WARN) || 250_000
-const HANDOFF = Number(process.env.CLAUDE_SETUP_CONTEXT_HANDOFF) || 350_000
-const REFIRE = 50_000 // after the hand-off, nag again every further REFIRE tokens
+const HANDOFF = Number(process.env.CLAUDE_SETUP_CONTEXT_HANDOFF) || 600_000
+const REFIRE = 100_000 // after the hand-off, nag again every further REFIRE tokens
 const CHUNK = 256 * 1024
 
 const size = (u) => (u.input_tokens || 0) + (u.cache_read_input_tokens || 0) + (u.cache_creation_input_tokens || 0)
@@ -87,11 +88,11 @@ process.stdin.on('end', () => {
     if (!now) return
     const k = (n) => `${Math.round(n / 1000)}k`
     // Absolute floors: a cold start already carries ~100k+ in project threads, so growth since the
-    // first call hides the real size. Warn once at WARN, hand off at HANDOFF, then again every REFIRE.
+    // first call hides the real size. Warn once at WARN, check the handoff triggers at HANDOFF, then again every REFIRE.
     const next = state.next ?? HANDOFF
     let msg = ''
     if (now >= next) {
-      msg = `Context guard: this session's context is ${k(now)} tokens and every tool call re-reads all of it. Finish the current step, write the state (PROGRESS.md, the PR or the thread's reply), and leave further work to a fresh session or thread instead of continuing here.`
+      msg = `Context guard: this session's context is ${k(now)}. Check the three handoff triggers (docs/WORKFLOW.md, Handoff triggers): role change, quality loss (attempt-guard fired twice, the same approach repeated, a contradiction with an earlier step) or a finished milestone. None: keep working; write 10 lines of state into the checklist or PROGRESS.md and rely on compaction (the PreCompact guard keeps the state). One: finish the step, write the handoff file, stop. If you are only waiting, make no tool call and end the turn.`
       state.next = Math.max(next, Math.floor(now / REFIRE) * REFIRE) + REFIRE
       state.fired.push('warn', 'handoff')
     } else if (now >= WARN && !state.fired.includes('warn')) {
@@ -105,6 +106,122 @@ process.stdin.on('end', () => {
   }
 })
 GUARD
+# Compact guard: the same file as global/compact-guard.mjs (scripts/check.mjs keeps them equal);
+# PreCompact: tells the compaction summary what to keep and saves a state note.
+cat > "$HOME/.claude/claude-setup/compact-guard.mjs" <<'COMPACT'
+#!/usr/bin/env node
+// PreCompact hook: what a hook prints to stdout becomes instructions for the compaction summary.
+// Tell it what to keep verbatim (the thread's Role/Kit/Size line, branch, PR, asks, decisions with
+// reasons, the last error, files changed, Done-when) and what to drop, and save the same headings as a
+// note in /mnt/project-files/<project>/handoff/ when the project is known. Never fails a compaction.
+import { closeSync, existsSync, mkdirSync, openSync, readSync, statSync, writeFileSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
+import { join } from 'node:path'
+
+const BASE = process.env.CLAUDE_SETUP_PROJECT_FILES || '/mnt/project-files'
+const CHUNK = 256 * 1024
+
+const INSTRUCTIONS = `Compaction summary: keep these verbatim, drop the rest.
+Keep verbatim: the thread's "Role: ... · Kit: ... · Size: ..." line; the branch and the PR; the open asks of yskills and their status; every decision with its reason; the last error text verbatim; the files changed; the "Done when:" line.
+Drop: logs, intermediate states, tool output.`
+
+function tail(path) {
+  const fd = openSync(path, 'r')
+  try {
+    const len = statSync(path).size
+    const n = Math.min(CHUNK, len)
+    const buf = Buffer.alloc(n)
+    readSync(fd, buf, 0, n, len - n)
+    return buf.toString('utf8')
+  } finally { closeSync(fd) }
+}
+
+function extract(text) {
+  const tools = []
+  let lastPost = ''
+  for (const line of text.split('\n')) {
+    try {
+      const content = JSON.parse(line).message?.content
+      for (const b of Array.isArray(content) ? content : []) {
+        if (b.type !== 'tool_use') continue
+        tools.push(b.name)
+        if (/post_message$/.test(b.name) && typeof b.input?.text === 'string') lastPost = b.input.text
+      }
+    } catch {} // the chunk's cut-off first line, or a blank
+  }
+  return { tools: tools.slice(-30), lastPost }
+}
+
+function branchOf(cwd) {
+  try {
+    if (!cwd || !existsSync(cwd)) return ''
+    return execFileSync('git', ['-C', cwd, 'rev-parse', '--abbrev-ref', 'HEAD'], { encoding: 'utf8', timeout: 2000, stdio: ['ignore', 'pipe', 'ignore'] }).trim()
+  } catch { return '' }
+}
+
+function projectOf(cwd, text) {
+  const re = new RegExp(`${BASE.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/([\\w.-]+)/`)
+  return String(cwd).match(re)?.[1] || text.match(re)?.[1] || ''
+}
+
+let raw = ''
+process.stdin.setEncoding('utf8')
+process.stdin.on('data', (c) => { raw += c })
+process.stdin.on('end', () => {
+  let out = INSTRUCTIONS
+  try {
+    const { session_id: id = 'unknown', transcript_path: path, trigger = 'auto', cwd = '' } = JSON.parse(raw || '{}')
+    let text = ''
+    try { if (path && existsSync(path)) text = tail(path) } catch {}
+    const project = projectOf(cwd, text)
+    const dir = project ? join(BASE, project) : ''
+    if (dir && existsSync(dir)) {
+      const { tools, lastPost } = extract(text)
+      const short = String(id).replace(/[^\w-]/g, '').slice(0, 8) || 'unknown'
+      const file = join(dir, 'handoff', `${new Date().toISOString().slice(0, 10)}-compact-${short}.md`)
+      const note = [
+        `# Compaction state (${trigger}, session ${short})`,
+        '',
+        '## Role / Kit / Size',
+        '(copy the thread\'s "Role: · Kit: · Size:" line)',
+        '',
+        '## Branch and PR',
+        branchOf(cwd) || '(branch unknown)',
+        '',
+        '## Open asks of yskills',
+        '(none extracted)',
+        '',
+        '## Decisions with reasons',
+        '(none extracted)',
+        '',
+        '## Last error',
+        '(none extracted)',
+        '',
+        '## Files changed',
+        '(see git status in the branch)',
+        '',
+        '## Done when',
+        '(copy the brief\'s Done-when line)',
+        '',
+        '## Last 30 tool calls',
+        tools.join(', ') || '(none)',
+        '',
+        '## Last post_message',
+        lastPost || '(none)',
+        '',
+      ].join('\n')
+      try {
+        mkdirSync(join(dir, 'handoff'), { recursive: true })
+        writeFileSync(file, note)
+        out += `\nState saved at ${file}.`
+      } catch {}
+    }
+  } catch {
+    // A guard must never break a compaction.
+  }
+  process.stdout.write(`${out}\n`)
+})
+COMPACT
 # Attempt guard: the same file as global/attempt-guard.mjs (scripts/check.mjs keeps them equal);
 # three failed rounds of one command get a reminder, five are blocked until PROGRESS.md has a diagnosis.
 cat > "$HOME/.claude/claude-setup/attempt-guard.mjs" <<'ATTEMPT'
@@ -257,7 +374,7 @@ export function rulesLoaded(cwd, home) {
 // The guards update themselves the same way (yskills 2026-10-27: a rule change on main must reach
 // every session without a cloud rebuild): an installed guard is replaced by main's copy when that
 // copy arrived whole and passes `node --check`. A new hook entry still needs install.mjs or a rebuild.
-export const GUARD_FILES = ['context-guard.mjs', 'attempt-guard.mjs', 'team-guard.mjs', 'rule-guard.mjs']
+export const GUARD_FILES = ['context-guard.mjs', 'compact-guard.mjs', 'attempt-guard.mjs', 'team-guard.mjs', 'rule-guard.mjs']
 const parses = (f) => { try { execFileSync(process.execPath, ['--check', f], { stdio: 'ignore', timeout: 2000 }); return true } catch { return false } }
 // Two downloads, so a guard missing on main (renamed, or not merged yet) never costs the boot files,
 // and each keeps its own time limit inside the hook's 5 s.
@@ -1005,6 +1122,8 @@ const cmd = `node "${require("os").homedir()}/.claude/claude-setup/context-guard
 s.hooks = s.hooks || {}
 s.hooks.PostToolUse = (s.hooks.PostToolUse || []).filter((h) => !JSON.stringify(h).includes("context-guard.mjs"))
 s.hooks.PostToolUse.push({ matcher: "*", hooks: [{ type: "command", command: cmd, timeout: 5 }] })
+s.hooks.PreCompact = (s.hooks.PreCompact || []).filter((h) => !JSON.stringify(h).includes("compact-guard.mjs"))
+s.hooks.PreCompact.push({ hooks: [{ type: "command", command: `node "${require("os").homedir()}/.claude/claude-setup/compact-guard.mjs"`, timeout: 10 }] })
 for (const [event, mode] of [["PreToolUse", "pre"], ["PostToolUse", "ok"], ["PostToolUseFailure", "fail"]]) {
   s.hooks[event] = (s.hooks[event] || []).filter((h) => !JSON.stringify(h).includes("attempt-guard.mjs"))
   s.hooks[event].push({ matcher: "Bash|mcp__.*", hooks: [{ type: "command", command: `node "${require("os").homedir()}/.claude/claude-setup/attempt-guard.mjs" ${mode}`, timeout: 5 }] })

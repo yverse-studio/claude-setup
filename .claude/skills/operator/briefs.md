@@ -75,8 +75,8 @@ Then reply "done". Meanwhile: <what the slice keeps building>
 
 ```
 Role: <one role from docs/TEAMS.md (Roster), or none for a small task> · Kit: <kit> · Size: <S|M|L>. team-guard blocks a start without this line; rule-guard puts the role's Roster row and playbook into the thread. You are this one role, not the coordinator: docs/TEAMS.md (Coordinator or thread).
-Model: <id for this role's row in docs/TEAMS.md (Roster), via its Models line>. Handoff: at <N>k (350k unless the
-coordinator sets more for a big task) write /mnt/project-files/<project>/handoff/<date>-<topic>.md, reply with its path, stop.
+Model: <id for this role's row in docs/TEAMS.md (Roster), via its Models line>. Handoff: at a trigger (docs/WORKFLOW.md, Handoff triggers): write
+/mnt/project-files/<project>/handoff/<date>-<topic>.md, reply with its path, stop.
 Skills: load your role doc from claude-setup (`.claude/skills/operator/roles/<role>.md`) and the skills it lists before anything else. Your report ends with `Skills used:` naming the ones you actually opened; without that line it is not done.
 Claims: a claim from yskills, a lesson or another thread is checked first (repo, evidence, a test), then answered yes, no or changed with the reason, never a bare yes (`CLAUDE.md`, Co-founder).
 Prior art: <our repos and branches, skills, plugins, public setups checked> -> copy | adapt | build, because <why> (sizes M and L; team-guard blocks one without; the PR repeats it, CI checks).
@@ -84,7 +84,7 @@ Tester: <the `Tester · <app>` thread> (size L Programmer briefs only; docs/TEAM
 Literal mode: yskills' words are orders, done as said. No "yes, but", no offers, no alternatives
 when they ask for one thing; impossible or unsafe = one plain line, then the nearest thing done.
 Done when: <a check the thread can run: command and expected output, or the screenshot/number that proves it>. Stop when: <budget: rounds or tokens;
-default the `Handoff:` number; gate rounds as `gate.md` (Rounds); the `attempt-guard` hook only counts a command failing again>.
+default the `Handoff:` triggers; gate rounds as `gate.md` (Rounds); the `attempt-guard` hook only counts a command failing again>.
 Start: read MEMORY.md, then claude-setup CLAUDE.md and docs/MAP.md (Start here); for a product, its repo's CLAUDE.md and docs/LESSONS.md. Lessons: at the end, say where each lesson went (docs/MAP.md, Where a lesson goes) or `none, because ...`.
 Guides: a brief only points to the guide's checks (`docs/clothing-pipeline.md`, `character-workflow.md`) and never weakens them (no exception, no skipped step, no lower limit); wording like "no visual change" or "just compare" does not override a check, and the thread follows the guide. The thread reads each named guide fresh from current `main` at start (`git fetch origin main`, then `git show origin/main:<path>` or check out main on a laptop), never an earlier draft or a remembered copy.
 Shortest reply. No extra subagents, research, screenshots or re-reads. Models as in
@@ -93,8 +93,8 @@ Context (long threads: builds, test runs, renders, fetches; 1M tokens is the mos
 1. Heavy steps run in `Agent` sub-workers that return a short summary and file paths.
 2. Logs are tailed (`tail -n 30`, `grep` for errors), never printed whole.
 3. Open only reduced images (about 1000 px wide), one at a time, to chase a named flaw.
-4. Hand off at a milestone, never mid-step: at the `Handoff:` number finish the step, write the handoff file, stop;
-   never start a new unit past it; the path is the `Handoff:` line above. Keep the handoff and saved artefacts
+4. Hand off only at a trigger, never mid-step (docs/WORKFLOW.md, Handoff triggers): finish the step, write the handoff file, stop;
+   the path is the `Handoff:` line above. Keep the handoff and saved artefacts
    current at every milestone so a successor thread on the same branch and PR loses nothing.
 5. One task per thread; a flaw in shared code is fixed once, by its owner, and the others merge it.
 ```
