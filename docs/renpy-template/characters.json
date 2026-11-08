@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "_comment": "Alle Figurennamen und Dateipräfixe kommen von hier. Umbenennen = diese Datei ändern, kein Skript anfassen.",
+  "characters": {
+    "rika":   {"name": "Rika",   "var": "name_rika",  "color": "#f2d36b", "sprite": "rika",   "slot_prefix": "rika_"},
+    "kanade": {"name": "Kanade", "var": "name_karla", "color": "#e0574a", "sprite": "kanade", "slot_prefix": "kanade_"}
+  }
+}
