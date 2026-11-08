@@ -41,7 +41,7 @@ Coordinator only (a thread: Coordinator or thread, above).
    this lookup for every task without being asked and names kit and size in the brief.
 2. **Size.** The task's size (below) decides how much of the kit's team starts. It is the gate's size
    ([`gate.md`](../.claude/skills/operator/gate.md), Gate size): one size per task, picked by the
-   table, never by the author. A video or post brief's `Size:` stamp still needs a letter: one video or post is `M`, an ad batch, series or a launch video `L` (blind test 2026-10-27: a fresh coordinator wrote "Size: M (guess)").
+   table, never by the author. A video or post brief's `Size:` stamp still needs a letter: one video or post is `M`, an ad batch, series or a launch video `L` (blind test 2026-10-27: a fresh coordinator guessed).
 3. **Threads only for roles that own a long job or talk to yskills:** Planner, Designer, Game
    Designer, Animator, Programmer, Tester (size L), Producer, Editor, Social Lead, Marketer. Every other role
    is an `Agent` subagent of the thread that needs it, fresh for each job. A thread never plays a
@@ -118,7 +118,7 @@ The company. Runs as: where the role lives. Model: the tier (the id is in the Mo
 | Content Designer ([`content-designer.md`](../.claude/skills/operator/roles/content-designer.md)) | every word a user reads, German and English | step 4 of a site or app; a PR with a new flow | subagent of the Designer | Sonnet |
 | Game Designer ([`game-designer.md`](../.claude/skills/operator/roles/game-designer.md)) | how a game plays: core loop, run length, difficulty, ad hooks | step 4 of a game; a PR that changes play | a thread at game start; subagent for a small play change | Opus; Fable for a new game's core loop |
 | Audio ([`audio.md`](../.claude/skills/operator/roles/audio.md)) | how a game sounds, licence-clean and small | after the Game Designer's doc; a PR with a new sound moment | subagent of the Game Designer | Sonnet |
-| Sound Designer ([`sound-designer.md`](../.claude/skills/operator/roles/sound-designer.md)) | builds and mixes all sound: games, videos, films | picture locked; new scene or cut | a thread | Sonnet |
+| Sound Designer ([`sound-designer.md`](../.claude/skills/operator/roles/sound-designer.md)) | builds and mixes all sound | picture locked; new scene or cut | a thread | Sonnet |
 | Analytics ([`analytics.md`](../.claude/skills/operator/roles/analytics.md)) | what is measured and why, the weekly numbers line | step 4 of a site, app or game; a PR with a new user action | subagent of the Planner | Sonnet |
 | Animator ([`animator.md`](../.claude/skills/operator/roles/animator.md)) | poses and animates frozen rigged figures: key poses, loops, scene clips, contact; no "done" without a looked-at frame strip | size M or L of a `game` or `story` scene or clip, after the models are frozen | a thread `Animator · <scene>` on the laptop (Blender); `animator` agent file | Sonnet for given numbers; Opus for posing, IK, scene systems |
 | Programmer ([`programmer.md`](../.claude/skills/operator/roles/programmer.md)) | one slice or fix as one PR, tests first, green CI; runs the S and M gate, its verdict from a fresh Opus reviewer | every size, step 5 | a thread per slice, never more than three at once | Sonnet; one Opus checkpoint subagent |
