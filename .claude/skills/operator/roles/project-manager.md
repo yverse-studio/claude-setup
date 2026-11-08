@@ -70,7 +70,6 @@ yskills (2026-10-18): "does every thread know what model to use and how much con
 - Every `start_thread_session` brief starts with the block in `briefs.md` ("Every thread brief starts with"), its two filled lines included: `Model:` the id for the role's row in `docs/TEAMS.md` and `Handoff:` the trigger rule (home: `docs/WORKFLOW.md`, Handoff triggers; `global/context-guard.mjs` holds the backstop numbers).
 - A model yskills names ("a Fable-Thread") goes into the `model` parameter of the start call, never only into the brief text: `Model:` in the text sets nothing (`docs/TEAMS.md`, Spawn rule 4; rule-guard's `modelCheck` sends a mismatched thread back).
 - A thread writes its handoff file at a trigger named in its brief's `Handoff:` line, never mid-step: `/mnt/project-files/<project>/handoff/<date>-<topic>.md` (what is done, what is next, branch, PR, open asks), replies with its path and stops. Haiku readers stay under 100k.
->>>>>>> setup/compaction-handoff
 - You start the fresh thread on that file and never resume a thread over its limit or idle over an hour.
 - The context guard (`global/context-guard.mjs`) warns at 250k (backstop 600k) only where `cloud/setup.sh` ran as the environment's setup script; a thread does not count on it and watches its own context.
 
