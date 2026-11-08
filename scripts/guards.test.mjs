@@ -826,3 +826,14 @@ test('rule guard: a PR in a repo with a PROGRESS.md warns when ## Jetzt is missi
     assert.match(jetztWarning('mcp__github__create_pull_request', pr, repo), /leaves PROGRESS.md untouched/)
   } finally { rmSync(repo, { recursive: true, force: true }) }
 })
+
+test('rule guard: modelCheck compares the model the brief or yskills wants with the one running', async () => {
+  const { modelCheck } = await import('../global/rule-guard.mjs')
+  const run = (model) => JSON.stringify({ type: 'assistant', message: { model, content: [] } })
+  const brief = (m, cited = '') => `<wake reason="spawn"><relay>${cited ? `<cited author="user">${cited}</cited>` : ''}Role: Programmer · Kit: setup · Size: S\nModel: ${m}\n</relay></wake>`
+  assert.match(modelCheck(brief(['claude', 'fable', '5-1'].join('-')), run(['claude', 'sonnet', '5-5'].join('-'))), /^Model check \(docs\/TEAMS.md, Spawn rule 4\):[\s\S]*fable[\s\S]*sonnet[\s\S]*message_coordinator/)
+  assert.match(modelCheck(brief('default', 'bitte ein Fable-Thread'), run(['claude', 'sonnet', '5-5'].join('-'))), /^Model check/)
+  assert.equal(modelCheck(brief('sonnet'), run(['claude', 'sonnet', '5-5'].join('-'))), '')
+  assert.equal(modelCheck(brief('default'), run(['claude', 'sonnet', '5-5'].join('-'))), '', 'no model wanted')
+  assert.equal(modelCheck(brief('fable'), ''), '', 'no running model known yet')
+})
