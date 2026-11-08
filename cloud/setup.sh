@@ -32,21 +32,22 @@ fs.mkdirSync(require("path").dirname(p), { recursive: true }); fs.writeFileSync(
 ' || echo "claude-setup: could not set CLAUDE_CODE_SUBAGENT_MODEL"
 
 # Context guard: the same file as global/context-guard.mjs (scripts/check.mjs keeps them equal),
-# run after every tool call so long threads get told to work leaner and then to hand off.
+# run after every tool call so long threads get told to work leaner and, at the backstop, to check the handoff triggers.
 mkdir -p "$HOME/.claude/claude-setup"
 cat > "$HOME/.claude/claude-setup/context-guard.mjs" <<'GUARD'
 #!/usr/bin/env node
 // PostToolUse hook: every tool call re-sends the whole context, so a long session pays for its
 // size again on each call (cache reads were 98% of our usage). At WARN tokens of absolute context,
-// tell Claude once to work leaner; at HANDOFF, to wrap up and leave the rest to a fresh session,
-// and again every REFIRE tokens after that. Silent otherwise; never blocks.
+// tell Claude once to work leaner; at HANDOFF (a backstop only: the real handoff triggers are in
+// docs/WORKFLOW.md, Handoff triggers), to check them, and again every REFIRE tokens after that.
+// Silent otherwise; never blocks.
 import { closeSync, existsSync, openSync, readFileSync, readSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 // Sized for a 1M window (yskills 2026-11-03: the Animator handed off every ~30 min at 350k). A 200k
 // window never gets here, auto-compact owns it, so these numbers only ever apply to 1M models.
-const WARN = Number(process.env.CLAUDE_SETUP_CONTEXT_WARN) || 600_000
+const WARN = Number(process.env.CLAUDE_SETUP_CONTEXT_WARN) || 250_000
 const HANDOFF = Number(process.env.CLAUDE_SETUP_CONTEXT_HANDOFF) || 700_000
 const REFIRE = 50_000 // after the hand-off, nag again every further REFIRE tokens
 const CHUNK = 256 * 1024
@@ -89,11 +90,11 @@ process.stdin.on('end', () => {
     if (!now) return
     const k = (n) => `${Math.round(n / 1000)}k`
     // Absolute floors: a cold start already carries ~100k+ in project threads, so growth since the
-    // first call hides the real size. Warn once at WARN, hand off at HANDOFF, then again every REFIRE.
+    // first call hides the real size. Warn once at WARN, check the handoff triggers at HANDOFF, then again every REFIRE.
     const next = state.next ?? HANDOFF
     let msg = ''
     if (now >= next) {
-      msg = `Context guard: this session's context is ${k(now)} tokens and every tool call re-reads all of it. Finish the current step, write the state (PROGRESS.md, the PR or the thread's reply), and leave further work to a fresh session or thread instead of continuing here.`
+      msg = `Context guard: this session's context is ${k(now)}. Check the three handoff triggers (docs/WORKFLOW.md, Handoff triggers): role change, quality loss (attempt-guard fired twice, the same approach repeated, a contradiction with an earlier step) or a finished milestone. None: keep working; write 10 lines of state into the checklist or PROGRESS.md and rely on compaction (the PreCompact guard keeps the state). One: finish the step, write the handoff file, stop. If you are only waiting, make no tool call and end the turn.`
       state.next = Math.max(next, Math.floor(now / REFIRE) * REFIRE) + REFIRE
       state.fired.push('warn', 'handoff')
     } else if (now >= WARN && !state.fired.includes('warn')) {
@@ -107,6 +108,130 @@ process.stdin.on('end', () => {
   }
 })
 GUARD
+# Compact guard: the same file as global/compact-guard.mjs (scripts/check.mjs keeps them equal);
+# PreCompact: tells the compaction summary what to keep and saves a state note.
+cat > "$HOME/.claude/claude-setup/compact-guard.mjs" <<'COMPACT'
+#!/usr/bin/env node
+// PreCompact hook: what a hook prints to stdout becomes instructions for the compaction summary.
+// Tell it what to keep verbatim (the thread's Role/Kit/Size line, branch, PR, asks, decisions with
+// reasons, the last error, files changed, Done-when) and what to drop, and save the same headings as a
+// note in /mnt/project-files/<project>/handoff/ when the project is known. Never fails a compaction.
+import { closeSync, constants, existsSync, lstatSync, mkdirSync, openSync, readSync, realpathSync, statSync, writeSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
+import { join, resolve, sep } from 'node:path'
+
+const BASE = process.env.CLAUDE_SETUP_PROJECT_FILES || '/mnt/project-files'
+const CHUNK = 256 * 1024
+
+const INSTRUCTIONS = `Compaction summary: keep these verbatim, drop the rest.
+Keep verbatim: the thread's "Role: ... · Kit: ... · Size: ..." line; the branch and the PR; the open asks of yskills and their status; every decision with its reason; the last error text verbatim; the files changed; the "Done when:" line.
+Drop: logs, intermediate states, tool output.`
+
+function tail(path) {
+  const fd = openSync(path, 'r')
+  try {
+    const len = statSync(path).size
+    const n = Math.min(CHUNK, len)
+    const buf = Buffer.alloc(n)
+    readSync(fd, buf, 0, n, len - n)
+    return buf.toString('utf8')
+  } finally { closeSync(fd) }
+}
+
+function extract(text) {
+  const tools = []
+  let lastPost = ''
+  for (const line of text.split('\n')) {
+    try {
+      const content = JSON.parse(line).message?.content
+      for (const b of Array.isArray(content) ? content : []) {
+        if (b.type !== 'tool_use') continue
+        tools.push(b.name)
+        if (/post_message$/.test(b.name) && typeof b.input?.text === 'string') lastPost = b.input.text
+      }
+    } catch { continue } // the chunk's cut-off first line, or a blank
+  }
+  return { tools: tools.slice(-30), lastPost }
+}
+
+function branchOf(cwd) {
+  try {
+    if (!cwd || !existsSync(cwd)) return ''
+    return execFileSync('git', ['-C', cwd, 'rev-parse', '--abbrev-ref', 'HEAD'], { encoding: 'utf8', timeout: 2000, stdio: ['ignore', 'pipe', 'ignore'] }).trim()
+  } catch { return '' }
+}
+
+// The project folder named in cwd or in the transcript. Transcript text is untrusted (tool output, web
+// pages), so the name is a plain word (no dots, no slashes) and the folder must resolve inside BASE.
+function projectOf(cwd, text) {
+  const re = new RegExp(`${BASE.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/([A-Za-z0-9][\\w-]*)/`)
+  const name = String(cwd).match(re)?.[1] || text.match(re)?.[1] || ''
+  if (!name || !/^[A-Za-z0-9][\w-]*$/.test(name)) return ''
+  return resolve(BASE, name).startsWith(resolve(BASE) + sep) ? name : ''
+}
+
+let raw = ''
+process.stdin.setEncoding('utf8')
+process.stdin.on('data', (c) => { raw += c })
+process.stdin.on('end', () => {
+  let out = INSTRUCTIONS
+  try {
+    const { session_id: id = 'unknown', transcript_path: path, trigger = 'auto', cwd = '' } = JSON.parse(raw || '{}')
+    let text = ''
+    try { if (path && existsSync(path)) text = tail(path) } catch (e) { out += `\n(transcript not read: ${e.message})` }
+    const project = projectOf(cwd, text)
+    const dir = project ? join(BASE, project) : ''
+    if (dir && existsSync(dir)) {
+      const { tools, lastPost } = extract(text)
+      const short = String(id).replace(/[^\w-]/g, '').slice(0, 8) || 'unknown'
+      const file = join(dir, 'handoff', `${new Date().toISOString().slice(0, 10)}-compact-${short}.md`)
+      const note = [
+        `# Compaction state (${trigger}, session ${short})`,
+        '',
+        '## Role / Kit / Size',
+        '(copy the thread\'s "Role: · Kit: · Size:" line)',
+        '',
+        '## Branch and PR',
+        branchOf(cwd) || '(branch unknown)',
+        '',
+        '## Open asks of yskills',
+        '(none extracted)',
+        '',
+        '## Decisions with reasons',
+        '(none extracted)',
+        '',
+        '## Last error',
+        '(none extracted)',
+        '',
+        '## Files changed',
+        '(see git status in the branch)',
+        '',
+        '## Done when',
+        '(copy the brief\'s Done-when line)',
+        '',
+        '## Last 30 tool calls',
+        tools.join(', ') || '(none)',
+        '',
+        '## Last post_message',
+        lastPost || '(none)',
+        '',
+      ].join('\n')
+      try {
+        // The folder is shared with other threads: never follow a planted symlink, never overwrite.
+        const handoff = join(dir, 'handoff')
+        mkdirSync(handoff, { recursive: true })
+        if (lstatSync(handoff).isSymbolicLink() || !realpathSync(handoff).startsWith(realpathSync(BASE) + sep)) throw new Error('handoff dir is a link or outside the base')
+        const fd = openSync(file, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o644)
+        try { writeSync(fd, note) } finally { closeSync(fd) }
+        out += `\nState saved at ${file}.`
+      } catch (e) { out += `\nState not saved (${e.message}); keep the headings above in the summary.` }
+    }
+  } catch {
+    // A guard must never break a compaction.
+  }
+  process.stdout.write(`${out}\n`)
+})
+COMPACT
 # Attempt guard: the same file as global/attempt-guard.mjs (scripts/check.mjs keeps them equal);
 # three failed rounds of one command get a reminder, five are blocked until PROGRESS.md has a diagnosis.
 cat > "$HOME/.claude/claude-setup/attempt-guard.mjs" <<'ATTEMPT'
@@ -259,7 +384,7 @@ export function rulesLoaded(cwd, home) {
 // The guards update themselves the same way (yskills 2026-10-27: a rule change on main must reach
 // every session without a cloud rebuild): an installed guard is replaced by main's copy when that
 // copy arrived whole and passes `node --check`. A new hook entry still needs install.mjs or a rebuild.
-export const GUARD_FILES = ['context-guard.mjs', 'attempt-guard.mjs', 'team-guard.mjs', 'rule-guard.mjs']
+export const GUARD_FILES = ['context-guard.mjs', 'compact-guard.mjs', 'attempt-guard.mjs', 'team-guard.mjs', 'rule-guard.mjs']
 const parses = (f) => { try { execFileSync(process.execPath, ['--check', f], { stdio: 'ignore', timeout: 2000 }); return true } catch { return false } }
 // Two downloads, so a guard missing on main (renamed, or not merged yet) never costs the boot files,
 // and each keeps its own time limit inside the hook's 5 s.
@@ -513,6 +638,8 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         return say(`${bootCard(dir)}\n${POINTER}`)
       }
       if (mode === 'card') {
+        // 2026-11-08: a spawned project thread runs with CLAUDE_CODE_CHILD_SESSION=1 and gets its role card from rule-guard; the coordinator (channel session) does not set it as far as its init event shows, so only the thread skips.
+        if (process.env.CLAUDE_CODE_CHILD_SESSION === '1') return
         // The coordinator runs outside any repo (the project chat); a thread sits in a product repo and needs only its role card (rule-guard).
         if (rulesLoaded(cwd, home) || inRepo(cwd)) return
         // The project chat resumes its session each turn; it needs the card once, the first time hooks exist.
@@ -553,6 +680,33 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
   })
 }
 TEAM
+# Git pre-push hook: the same file as global/git-hooks/pre-push (scripts/check.mjs keeps them equal).
+# Every repo with scripts/pre-pr.mjs runs its CI pre-check before a push, so a red CI for a known check cannot happen.
+mkdir -p "$HOME/.claude/claude-setup/git-hooks"
+cat > "$HOME/.claude/claude-setup/git-hooks/pre-push" <<'PREPUSH'
+#!/bin/sh
+# Git pre-push hook for our own repos (install.mjs on the laptop, cloud/setup.sh in the cloud set core.hooksPath to this
+# folder). A yverse-studio repo that ships scripts/pre-pr.mjs gets its CI pre-check before every push, on every machine,
+# with or without Claude hooks (yskills 2026-11-08: laptop PRs only went red in CI). Other remotes and repos without the
+# script are untouched; a repo's own .git/hooks/pre-push still runs afterwards. Skip once with PRE_PR_SKIP=1 (say why in the PR).
+remote_url=$(git remote get-url origin 2>/dev/null)
+case "$remote_url" in
+  https://github.com/yverse-studio/*|git@github.com:yverse-studio/*|ssh://git@github.com/yverse-studio/*) ours=1 ;;
+  *) ours= ;;
+esac
+if [ -n "$ours" ] && [ -z "$PRE_PR_SKIP" ] && [ -f scripts/pre-pr.mjs ]; then
+  echo "pre-push: node scripts/pre-pr.mjs (what CI runs, tests included)"
+  node scripts/pre-pr.mjs || { echo "pre-push: blocked, fix the failures above (PRE_PR_SKIP=1 to push anyway and say why in the PR)"; exit 1; }
+fi
+own="$(git rev-parse --git-common-dir 2>/dev/null)/hooks/pre-push"
+if [ -x "$own" ]; then exec "$own" "$@"; fi
+exit 0
+PREPUSH
+chmod +x "$HOME/.claude/claude-setup/git-hooks/pre-push"
+if [ -z "$(git config --global --get core.hooksPath 2>/dev/null)" ] || [ "$(git config --global --get core.hooksPath)" = "$HOME/.claude/claude-setup/git-hooks" ]; then
+  git config --global core.hooksPath "$HOME/.claude/claude-setup/git-hooks"
+fi
+
 # First copy of the boot files, so a session whose 3 s refresh fails still has them.
 echo '{}' | node "$HOME/.claude/claude-setup/team-guard.mjs" start >/dev/null || echo "claude-setup: could not fetch the boot files"
 
@@ -886,6 +1040,31 @@ export async function briefCheck(prompt, cwd, model = null) {
   return role ? `Title check (docs/TEAMS.md, Roster "Runs as"): this thread's title starts with \`${role} · \`; if it does not, rename_thread to \`${role} · <what>\` first.` : ''
 }
 
+// Spawn rule 4 (proven 2026-11-08: the hook-less coordinator started a thread with no `model` and `Model: default`
+// although yskills asked for a "Fable-Thread"; it ran on Sonnet). The thread compares the model the brief or the cited
+// yskills text names with the one it runs on (latest assistant entry of the transcript, else CLAUDE_MODEL).
+const TIER = /\b(?:claude-)?(fable|opus|sonnet|haiku)\b[\w.-]*/i
+export function modelCheck(brief, transcript, envModel = process.env.CLAUDE_MODEL) {
+  const named = brief.match(/^[ \t]*[*_`]*Model:?[*_`]*[ \t]*[*_`]*([^\n]*)/im)?.[1].match(TIER)
+  const wanted = (named ?? [...brief.matchAll(/<cited\b[^>]*author=\\?"user\\?"[^>]*>([\s\S]*?)<\/cited>/g)].map((m) => m[1].match(TIER)).find(Boolean))?.[1]?.toLowerCase()
+  let running = ''
+  for (const line of transcript.split('\n')) {
+    if (!line.includes('"assistant"')) continue
+    try { const e = JSON.parse(line); if (e.type === 'assistant' && e.message?.model) running = e.message.model } catch { /* not JSON */ }
+  }
+  running = (running || envModel || '').toLowerCase()
+  if (!wanted || !running || running.includes(wanted)) return ''
+  return `Model check (docs/TEAMS.md, Spawn rule 4): the brief or yskills asks for ${wanted}, this thread runs on ${running}. Do no work: message_coordinator with Role, Kit, Size and \`model: ${wanted}\` for a restart, then stop.`
+}
+
+function modelOnce(brief, transcriptPath, session) {
+  const once = join(tmpdir(), `claude-setup-model-${String(session).replace(/\W/g, '')}`)
+  if (!session || existsSync(once) || !/<(wake|relay)\b[^>]*reason=\\?"spawn/.test(brief)) return ''
+  const out = modelCheck(brief, transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : '')
+  if (out) writeFileSync(once, '')
+  return out
+}
+
 // Relay and first wake queue together and the hook fires once, on the second prompt (issue #335): the
 // spawn brief is then the session's own spawn entries in the transcript, the relay (the brief) and the
 // wake (the marker). Only a user entry that opens with the tag counts, so a chat that merely quotes a spawn is no thread.
@@ -1093,7 +1272,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           const brief = lookup ? spawnPrompt(prompt, read(transcriptPath)) : prompt
           if (session && (spawned || (lookup && brief !== prompt))) writeFileSync(briefOnce, '')
           const model = sessionModel(transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : '') ?? (read(join(tmpdir(), `claude-setup-model-${String(session).replace(/[^A-Za-z0-9]/g, '')}`)).trim() || null)
-          const context = [await briefCheck(brief, cwd, model), roleContext(brief, cwd, session), promptContext(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
+          const context = [await briefCheck(brief, cwd, model), modelOnce(brief, transcriptPath, session), roleContext(brief, cwd, session), promptContext(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
           if (context) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: context } }))
           return
         }
@@ -1150,6 +1329,8 @@ const cmd = `node "${require("os").homedir()}/.claude/claude-setup/context-guard
 s.hooks = s.hooks || {}
 s.hooks.PostToolUse = (s.hooks.PostToolUse || []).filter((h) => !JSON.stringify(h).includes("context-guard.mjs"))
 s.hooks.PostToolUse.push({ matcher: "*", hooks: [{ type: "command", command: cmd, timeout: 5 }] })
+s.hooks.PreCompact = (s.hooks.PreCompact || []).filter((h) => !JSON.stringify(h).includes("compact-guard.mjs"))
+s.hooks.PreCompact.push({ hooks: [{ type: "command", command: `node "${require("os").homedir()}/.claude/claude-setup/compact-guard.mjs"`, timeout: 10 }] })
 for (const [event, mode] of [["PreToolUse", "pre"], ["PostToolUse", "ok"], ["PostToolUseFailure", "fail"]]) {
   s.hooks[event] = (s.hooks[event] || []).filter((h) => !JSON.stringify(h).includes("attempt-guard.mjs"))
   s.hooks[event].push({ matcher: "Bash|mcp__.*", hooks: [{ type: "command", command: `node "${require("os").homedir()}/.claude/claude-setup/attempt-guard.mjs" ${mode}`, timeout: 5 }] })

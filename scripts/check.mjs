@@ -73,6 +73,10 @@ if (plugins) {
   for (const m of plugins.marketplaces) if (!sh.includes(`marketplace add ${m.source}`)) errors.push(`cloud/setup.sh does not add marketplace ${m.source}`)
   const inlined = sh.match(/<<'GUARD'\r?\n([\s\S]*?)\r?\nGUARD\r?\n/)?.[1]
   if (inlined?.replace(/\r/g, '').trim() !== readFileSync(join(root, 'global/context-guard.mjs'), 'utf8').replace(/\r/g, '').trim()) errors.push('cloud/setup.sh context guard differs from global/context-guard.mjs')
+  const compact = sh.match(/<<'COMPACT'\r?\n([\s\S]*?)\r?\nCOMPACT\r?\n/)?.[1]
+  if (compact?.replace(/\r/g, '').trim() !== readFileSync(join(root, 'global/compact-guard.mjs'), 'utf8').replace(/\r/g, '').trim()) errors.push('cloud/setup.sh compact guard differs from global/compact-guard.mjs')
+  const prepush = sh.match(/<<'PREPUSH'\r?\n([\s\S]*?)\r?\nPREPUSH\r?\n/)?.[1]
+  if (prepush?.replace(/\r/g, '').trim() !== readFileSync(join(root, 'global/git-hooks/pre-push'), 'utf8').replace(/\r/g, '').trim()) errors.push('cloud/setup.sh pre-push hook differs from global/git-hooks/pre-push')
   const attempt = sh.match(/<<'ATTEMPT'\r?\n([\s\S]*?)\r?\nATTEMPT\r?\n/)?.[1]
   if (attempt?.replace(/\r/g, '').trim() !== readFileSync(join(root, 'global/attempt-guard.mjs'), 'utf8').replace(/\r/g, '').trim()) errors.push('cloud/setup.sh attempt guard differs from global/attempt-guard.mjs')
   const ruleGuard = sh.match(/<<'RULE'\r?\n([\s\S]*?)\r?\nRULE\r?\n/)?.[1]
@@ -279,7 +283,7 @@ for (const f of readdirSync(roleDir).filter((n) => n.endsWith('.md') && n !== 'p
 }
 if (!readFileSync(join(roleDir, 'project-manager.md'), 'utf8').includes('## Model and handoff in every brief')) errors.push('roles/project-manager.md: lacks "Model and handoff in every brief"')
 const briefsText = readFileSync(join(root, '.claude/skills/operator/briefs.md'), 'utf8')
-for (const part of ['Model: <id', 'Handoff: at ', '/handoff/<date>-<topic>.md']) {
+for (const part of ['Model: <id', 'Handoff:', '/handoff/<date>-<topic>.md']) {
   if (!briefsText.includes(part)) errors.push(`briefs.md: thread brief block lacks "${part}"`)
 }
 

@@ -9,6 +9,7 @@ Poses and animates rigged figures for a game or story: key poses, loops, scene c
 
 ## Every time
 
+- **Docs first.** Before touching a 3D character, follow [programmer.md](programmer.md#every-time) (README, shape-key inventory, `Docs read:` line).
 - **Check the laptop first.** Pull claude-setup main; list running `blender.exe` (command lines too, including the owner's) and free RAM; start only with about 4 GB free and inside the Blender limits (`docs/pc-claude-user.md`, Long laptop jobs). Anything over ~10 minutes (bake, render) runs through `scripts/laptop-job.mjs`.
 - **Read the scene's single source of truth** (its README or handoff table) before touching anything; one scene has one folder, one position file and one handoff. Update that handoff before you stop, never leave a second copy or leftovers; delete junk only after a backup and an md5 check.
 - **Models and rigs are frozen.** Never rename bones, vertex groups or shape keys, never change topology, never scale an object or armature (a scaled armature breaks every later bake; migrate with a script the owner runs). A missing control (FK switch, hand preset, bone) goes to the modeller as a request that only adds things, logged in the rig handoff.

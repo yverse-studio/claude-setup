@@ -53,7 +53,7 @@ export function rulesLoaded(cwd, home) {
 // The guards update themselves the same way (yskills 2026-10-27: a rule change on main must reach
 // every session without a cloud rebuild): an installed guard is replaced by main's copy when that
 // copy arrived whole and passes `node --check`. A new hook entry still needs install.mjs or a rebuild.
-export const GUARD_FILES = ['context-guard.mjs', 'attempt-guard.mjs', 'team-guard.mjs', 'rule-guard.mjs']
+export const GUARD_FILES = ['context-guard.mjs', 'compact-guard.mjs', 'attempt-guard.mjs', 'team-guard.mjs', 'rule-guard.mjs']
 const parses = (f) => { try { execFileSync(process.execPath, ['--check', f], { stdio: 'ignore', timeout: 2000 }); return true } catch { return false } }
 // Two downloads, so a guard missing on main (renamed, or not merged yet) never costs the boot files,
 // and each keeps its own time limit inside the hook's 5 s.
@@ -307,6 +307,8 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         return say(`${bootCard(dir)}\n${POINTER}`)
       }
       if (mode === 'card') {
+        // 2026-11-08: a spawned project thread runs with CLAUDE_CODE_CHILD_SESSION=1 and gets its role card from rule-guard; the coordinator (channel session) does not set it as far as its init event shows, so only the thread skips.
+        if (process.env.CLAUDE_CODE_CHILD_SESSION === '1') return
         // The coordinator runs outside any repo (the project chat); a thread sits in a product repo and needs only its role card (rule-guard).
         if (rulesLoaded(cwd, home) || inRepo(cwd)) return
         // The project chat resumes its session each turn; it needs the card once, the first time hooks exist.
