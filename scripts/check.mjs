@@ -144,7 +144,9 @@ if (gDeny.join() !== pDeny.join()) errors.push('.claude/settings.json deny list 
 // Our own docs: relative markdown links resolve, and phrases that describe a rule we dropped stay out.
 const BANNED = [/merge tap/i, /caveman voice/i,
   // Score rule (operator/gate.md, Scored gates; yskills 2026-11-04): a PASS at 4.5, not 5/5, starts a render, and nobody waits for his strip OK.
-  /only 5\/5 is rendered/i, /rendered only at 5\/5/i, /only after (his|the owner's) OK/i, /never skips the OK/i, /then yskills approves, then 1080p/i]
+  /only 5\/5 is rendered/i, /rendered only at 5\/5/i, /only after (his|the owner's) OK/i, /never skips the OK/i, /then yskills approves, then 1080p/i,
+  // Handoff only at a trigger (docs/WORKFLOW.md; yskills 2026-11-08): no line may tie a handoff to a token count or a time.
+  /hand(?:s|ed)?[ -]?off (?:at|after|every) (?:about |~)?\d+ ?(?:k\b|min)/i, /Handoff: at \d/, /`Handoff:` number/, /raise `Handoff:`/]
 const walk = (d) => readdirSync(join(root, d)).flatMap((n) => {
   const rel = `${d}/${n}`
   if (statSync(join(root, rel)).isDirectory()) return walk(rel)
