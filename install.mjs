@@ -139,6 +139,7 @@ items.push(['global/live-hook.mjs', join('claude-setup', 'live-hook.mjs')])
 items.push(['global/team-guard.mjs', join('claude-setup', 'team-guard.mjs')])
 items.push(['global/rule-guard.mjs', join('claude-setup', 'rule-guard.mjs')])
 items.push(['global/live-shot.ps1', join('claude-setup', 'live-shot.ps1')])
+items.push(['global/git-hooks/pre-push', join('claude-setup', 'git-hooks', 'pre-push')]) // runs a repo's scripts/pre-pr.mjs before every push
 
 const now = new Set(items.map(([, dest]) => dest))
 for (const old of prev.files) {
@@ -245,6 +246,10 @@ write(settingsPath, JSON.stringify(settings, null, 2) + '\n')
 log(`  merged (permissions mode: ${settings.permissions.defaultMode}, ${Object.values(settings.enabledPlugins).filter(Boolean).length} plugins on)`)
 
 // ---------------------------------------------------------------- 7. tools on this machine
+step('Git pre-push hook (every repo with scripts/pre-pr.mjs runs its CI pre-check before a push)')
+if (has('git')) run('git', ['config', '--global', 'core.hooksPath', join(CLAUDE_DIR, 'claude-setup', 'git-hooks')], { allowFail: true })
+else warn('git not found: core.hooksPath not set, pushes skip the pre-pr check')
+
 step('Command-line tools (checked, not installed)')
 const TOOLS = [
   ['gh', 'GitHub CLI: PRs, CI status', { win: 'winget install GitHub.cli', mac: 'brew install gh', linux: 'see https://cli.github.com' }],

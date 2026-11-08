@@ -655,6 +655,25 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
   })
 }
 TEAM
+# Git pre-push hook: the same file as global/git-hooks/pre-push (scripts/check.mjs keeps them equal).
+# Every repo with scripts/pre-pr.mjs runs its CI pre-check before a push, so a red CI for a known check cannot happen.
+mkdir -p "$HOME/.claude/claude-setup/git-hooks"
+cat > "$HOME/.claude/claude-setup/git-hooks/pre-push" <<'PREPUSH'
+#!/bin/sh
+# Global git pre-push hook (install.mjs on the laptop, cloud/setup.sh in the cloud set core.hooksPath to this folder).
+# A repo that ships scripts/pre-pr.mjs gets its CI pre-check before every push, on every machine, with or without
+# Claude hooks (yskills 2026-11-08: laptop PRs only went red in CI). Repos without the script are untouched.
+# Skip once with PRE_PR_SKIP=1 (say why in the PR).
+if [ -n "$PRE_PR_SKIP" ]; then exit 0; fi
+if [ -f scripts/pre-pr.mjs ]; then
+  echo "pre-push: node scripts/pre-pr.mjs --quick (what CI runs)"
+  node scripts/pre-pr.mjs --quick || { echo "pre-push: blocked, fix the failures above (PRE_PR_SKIP=1 to push anyway and say why in the PR)"; exit 1; }
+fi
+exit 0
+PREPUSH
+chmod +x "$HOME/.claude/claude-setup/git-hooks/pre-push"
+git config --global core.hooksPath "$HOME/.claude/claude-setup/git-hooks"
+
 # First copy of the boot files, so a session whose 3 s refresh fails still has them.
 echo '{}' | node "$HOME/.claude/claude-setup/team-guard.mjs" start >/dev/null || echo "claude-setup: could not fetch the boot files"
 

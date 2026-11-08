@@ -131,6 +131,7 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 | Teams, roles, sizes, the pipeline, the Kits (routed per task), the model per role | `docs/TEAMS.md` | `CLAUDE.md` (Teams), `operator/SKILL.md`, `operator/run.md`, `roles/project-manager.md`; `global/team-guard.mjs` enforces `model` |
 | Deploy or delete a page (the steps) | `docs/USING.md` | operator `run.md`, `briefs.md`; detail in `publish` |
 | Where a lesson goes (the decision tree) | `docs/MAP.md` (Start here) | `CLAUDE.md` (Lessons stick), `docs/WORKFLOW.md` (Learning) |
+| Pre-PR check (the one command that runs what CI runs; git pre-push hook on every machine) | `scripts/pre-pr.mjs` | `CLAUDE.md` (How to work), `global/git-hooks/pre-push`, `install.mjs`, `cloud/setup.sh`, `.github/workflows/ci.yml` |
 | Fixes remove the cause (workaround only on yskills' word, labelled, deleted later) | `docs/WORKFLOW.md` (Fixes) | `CLAUDE.md` (Code), operator `gate.md` (diagnosis after two failed checks), `roles/programmer.md` |
 | Project retro (errors and good practice at ship or delete) | `docs/WORKFLOW.md` (Learning, Project retro) | `publish` skill (Delete a project), `templates/lessons.md` |
 | Memory form verdict (why files, not Obsidian, Graphify or graph memory) | `docs/RESEARCH.md` (Memory form) | `docs/WORKFLOW.md` (Learning) |
