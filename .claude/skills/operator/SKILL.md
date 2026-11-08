@@ -167,15 +167,16 @@ comment on a match instead of filing twice. The daily loop reader lists them wit
 items; the coordinator starts one `Programmer · setup #<n>` thread per issue, which fixes
 it, passes `gate.md` and merges. A fix to a policy file that the safety check refuses follows `docs/permissions.md` (Layer 3),
 never reworded to pass a check. [advisory]
+While the GitHub App is disconnected, a thread cannot file the issue: the friction goes as one block into the lessons inbox ([template](templates/lessons-inbox.md)) instead; when the App is connected again it is the issue, and the inbox block links it. [advisory]
 A safety check that stalls routine work is friction: the fix is an allow or autoMode line in
 `global/settings.json` (`docs/permissions.md`), never a way around the check. [advisory]
 
 ## 5. Spend little
 
 - **Models:** the role's row in claude-setup `docs/TEAMS.md`, passed on every thread start and subagent. Thread effort medium.
-- Hand off at a milestone, never mid-step: at the context guard's warning (`global/context-guard.mjs` holds the numbers) finish the current step, write the handoff, stop; never start a new unit past it (two long threads were 77% of usage on 2026-10-04). The planner sizes every unit to one thread (about 90k working room); a unit that cannot fit is split in the plan. Haiku readers stay under 100k of prompt. A template over 2000 lines is split before the next change. [advisory]
+- Hand off only at a trigger, never mid-step (`docs/WORKFLOW.md`, Handoff triggers): finish the current step, write the handoff, stop; never start a new unit past it (two long threads were 77% of usage on 2026-10-04). The planner sizes every unit to one thread (about 90k working room); a unit that cannot fit is split in the plan. Haiku readers stay under 100k of prompt. A template over 2000 lines is split before the next change. [advisory]
 - Where 2026-10-07 burned tokens, and the rule that stops each: hand-offs at 270k (write the
-  hand-off at the guard's first warning); `dashboard.html` read whole again and again (grep the
+  hand-off at a trigger); `dashboard.html` read whole again and again (grep the
   part, read it once); the same answer in two threads (a thread checks the timeline before
   answering and a hand-off thread never repeats); research with many searches (one WebSearch per
   open fact); extra screenshots and subagents (only what the ask needs; simple reading jobs go to Haiku subagents). [advisory]
@@ -186,8 +187,8 @@ A safety check that stalls routine work is friction: the fix is an allow or auto
 - PC work (a Roblox Studio run, an install, a local clone, a hardware read) goes to a Remote Control session, never to a hands list for yskills (`docs/WORKFLOW.md`, PC work). [advisory]
 - Reviewers, evaluator and red team get only the diff or the URL plus the criteria.
 - Slice and gate threads report by message (the operator subscribes to no PRs, see below). The context guard
-  (`global/context-guard.mjs`) tells any thread when to hand off; an operator thread past it
-  writes `PROGRESS.md` and asks for a fresh one.
+  (`global/context-guard.mjs`) warns at 250k; handoff only at a trigger (`docs/WORKFLOW.md`, Handoff triggers),
+  and an operator thread at one writes `PROGRESS.md` and asks for a fresh one.
 - One job per thread. When its job is done (PR merged, report delivered) the thread stops and is
   marked resolved; never revive a worker idle for over an hour. A thread resolves itself after its
   delivering reply when nobody owes a next step; a Programmer thread is asleep when the gate merges,

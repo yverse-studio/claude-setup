@@ -86,10 +86,10 @@ test('installed hooks: narrow matchers, no double firing, fast, never blocking',
     const keys = entries.map((e) => `${e.event}|${e.matcher}|${e.command}`)
     assert.equal(new Set(keys).size, keys.length, `duplicate hook entries:\n${keys.join('\n')}`)
     for (const e of entries) {
-      assert.ok(e.timeout > 0 && e.timeout <= 5, `${e.command}: timeout must be 1 to 5 s, is ${e.timeout}`)
+      assert.ok(e.timeout > 0 && e.timeout <= (e.event === 'PreCompact' ? 10 : 5), `${e.command}: timeout must be 1 to 5 s (10 for PreCompact), is ${e.timeout}`)
       // Only the context guard has to see every tool call; anything else names the tools it wants.
       // UserPromptSubmit and Stop have no tool to match, so they carry no matcher.
-      if ((e.matcher === '*' || !e.matcher) && !['UserPromptSubmit', 'Stop'].includes(e.event)) assert.ok(e.command.includes('context-guard.mjs'), `${e.command}: matcher must be narrow`)
+      if ((e.matcher === '*' || !e.matcher) && !['UserPromptSubmit', 'Stop', 'PreCompact'].includes(e.event)) assert.ok(e.command.includes('context-guard.mjs'), `${e.command}: matcher must be narrow`)
     }
     // A hook that fails must not block the tool call: exit 0 and no block decision on empty, broken or odd input.
     for (const e of entries) {
@@ -131,11 +131,41 @@ test('check.mjs fails when a role file drops the model-and-handoff link or the b
     const role = join(copy, '.claude/skills/operator/roles/programmer.md')
     writeFileSync(role, readFileSync(role, 'utf8').replace(/^- \*\*Model and handoff:\*\*[^\n]*\n/m, ''))
     const briefs = join(copy, '.claude/skills/operator/briefs.md')
-    writeFileSync(briefs, readFileSync(briefs, 'utf8').replace('Handoff: at <N>k', 'Handoff: later'))
+    writeFileSync(briefs, readFileSync(briefs, 'utf8').replaceAll('Handoff:', 'Hand-off:'))
     const r = run()
     assert.equal(r.status, 1)
-    for (const want of ['roles/programmer.md: lacks the link', 'thread brief block lacks "Handoff: at "']) assert.ok(r.stderr.includes(want), `missing: ${want}\n${r.stderr}`)
+    for (const want of ['roles/programmer.md: lacks the link', 'thread brief block lacks "Handoff:"']) assert.ok(r.stderr.includes(want), `missing: ${want}\n${r.stderr}`)
   } finally { rmSync(copy, { recursive: true, force: true }) }
+})
+
+// Compact guard: PreCompact instructions, plus a state note when the transcript names a project folder.
+const compactFile = join(root, 'global/compact-guard.mjs')
+const runCompact = (input, env = {}) => spawnSync(process.execPath, [compactFile], { input, encoding: 'utf8', timeout: 10000, env: { ...process.env, ...env } })
+
+test('compact guard: instructions on stdout, a note in the project folder, never fails', () => {
+  const base = mkdtempSync(join(tmpdir(), 'compact-'))
+  try {
+    const r = runCompact(JSON.stringify({ session_id: 'abcdef123456', trigger: 'auto' }), { CLAUDE_SETUP_PROJECT_FILES: base })
+    assert.equal(r.status, 0)
+    for (const want of ['Role:', 'decision', 'verbatim']) assert.ok(r.stdout.includes(want), `missing ${want}: ${r.stdout}`)
+    assert.ok(!r.stdout.includes('State saved'), 'no project, no note')
+    mkdirSync(join(base, 'demo-proj'))
+    const tr = join(base, 'transcript.jsonl')
+    const tool = (name, input) => JSON.stringify({ message: { content: [{ type: 'tool_use', name, input }] } })
+    writeFileSync(tr, [JSON.stringify({ message: { content: [{ type: 'text', text: `see ${base}/demo-proj/notes.md` }] } }), tool('Bash', {}), tool('mcp__hearthbot__post_message', { text: 'last words' })].join('\n'))
+    const r2 = runCompact(JSON.stringify({ session_id: 'abcdef123456', transcript_path: tr, trigger: 'manual', cwd: root }), { CLAUDE_SETUP_PROJECT_FILES: base })
+    assert.equal(r2.status, 0)
+    const note = join(base, 'demo-proj', 'handoff', `${new Date().toISOString().slice(0, 10)}-compact-abcdef12.md`)
+    assert.ok(r2.stdout.includes(`State saved at ${note}`), r2.stdout)
+    const text = readFileSync(note, 'utf8')
+    for (const want of ['## Decisions with reasons', 'Bash', 'last words']) assert.ok(text.includes(want), `note lacks ${want}`)
+    for (const input of ['', 'not json', '{}', '{"transcript_path":"/nope","cwd":"/nope"}']) assert.equal(runCompact(input, { CLAUDE_SETUP_PROJECT_FILES: base }).status, 0)
+    // Transcript text is untrusted: a project name with dots or slashes never picks the write target.
+    writeFileSync(tr, JSON.stringify({ message: { content: [{ type: 'text', text: `see ${base}/../${base.split('/').pop()}/notes.md and ${base}/.hidden/x` }] } }))
+    const r3 = runCompact(JSON.stringify({ session_id: 'abcdef123456', transcript_path: tr, cwd: '/home/user' }), { CLAUDE_SETUP_PROJECT_FILES: base })
+    assert.equal(r3.status, 0)
+    assert.ok(!r3.stdout.includes('State saved'), `traversal name must write nothing: ${r3.stdout}`)
+  } finally { rmSync(base, { recursive: true, force: true }) }
 })
 
 // Attempt guard: a round is a failed run of the same command; success resets; PROGRESS.md unblocks.
@@ -233,9 +263,9 @@ test('check.mjs fails when a lessons file is not linked from docs/MAP.md or the 
 // `model:` passes; SessionStart prints the TEAMS.md pointer.
 const teamFile = join(root, 'global/team-guard.mjs')
 // The brief block's must-have lines (operator/briefs.md); a thread start without them is blocked.
-const FULL = '\nModel: claude-x-1\nSkills: roles/programmer.md\nDone when: node --test passes. Stop when: two rounds.\nStart: read MEMORY.md, then CLAUDE.md'
+const FULL = '\nModel: claude-x-1\nSkills: roles/programmer.md\nDone when: node --test passes. Stop when: two rounds.\nStart: read MEMORY.md, then CLAUDE.md\nPrior art: none, because a test brief'
 const runTeam = (mode, payload, env = {}) => spawnSync(process.execPath, [teamFile, mode], {
-  input: JSON.stringify(payload), encoding: 'utf8', timeout: 5000, env: { ...process.env, ...env },
+  input: JSON.stringify(payload), encoding: 'utf8', timeout: 5000, env: { ...process.env, CLAUDE_CODE_CHILD_SESSION: '', ...env },
 })
 
 test('team guard: blocks Agent and thread starts without model, passes with one', () => {
@@ -251,8 +281,10 @@ test('team guard: blocks Agent and thread starts without model, passes with one'
     assert.equal(start('mcp__hearthbot__start_thread_session', { brief: `Role: Programmer · Kit: setup · Size: S${FULL}`, model: 'claude-x-1' }), 0)
     assert.match(runTeam('pre', { cwd, tool_name: 'mcp__hearthbot__start_thread', tool_input: { brief: 'fix the login', model: 'claude-x-1' } }).stderr, /stamp line `Role:/, 'a brief without Role, Kit and Size is blocked')
     assert.equal(start('mcp__hearthbot__start_thread', { brief: `Role: none · Kit: setup · Size: S${FULL}`, model: 'claude-x-1' }), 0, 'a small task without a role passes')
-    const m = (extra) => runTeam('pre', { cwd, tool_name: 'mcp__hearthbot__start_thread', tool_input: { brief: `Role: Planner · Kit: app · Size: M${FULL}${extra}`, model: 'claude-x-1' } })
+    const bare = FULL.replace(/\nPrior art:.*$/, '')
+    const m = (extra, size = 'M') => runTeam('pre', { cwd, tool_name: 'mcp__hearthbot__start_thread', tool_input: { brief: `Role: ${size === 'S' ? 'Programmer' : 'Planner'} · Kit: app · Size: ${size}${bare}${extra}`, model: 'claude-x-1' } })
     assert.match(m('').stderr, /Prior art:/, 'an M brief without prior art is blocked')
+    assert.match(m('', 'S').stderr, /Prior art:/, 'an S brief too (yskills 2026-11-03: research before guessing)')
     assert.equal(m('\nPrior art: <what was checked>').status, 2, 'the placeholder does not count')
     assert.equal(m('\nPrior art: BMAD and our operator roles checked; adapt ours, because hearthbot threads').status, 0)
     assert.equal(start('Bash', { command: 'ls' }), 0)
@@ -345,6 +377,8 @@ test('team guard: boot card without a checkout, thread start blocked until the r
     assert.equal(rule('Zweite Antwort (◕‿◕)', post('Luna · rules #0000000 · guards: on\nHi')).status, 0, 'a canary from before a rules change still counts')
     assert.equal(rule('Thread-Antwort ٩(◕‿◕)۶', '{"type":"user","message":{"content":"<wake reason=\\"spawn\\">"}}').status, 0, 'a thread is never blocked')
     assert.equal(spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'pre'], { input: JSON.stringify({ cwd, session_id: 'other', tool_name: 'mcp__hearthbot__post_message', tool_input: { text: 'Hi ^^' } }), encoding: 'utf8', env: { ...process.env, ...env } }).status, 0, 'a session without a canary file is not blocked')
+    assert.equal(runTeam('card', { cwd, session_id: 's7' }, { ...env, CLAUDE_CODE_CHILD_SESSION: '1' }).stdout, '', 'a spawned thread gets no coordinator card')
+    assert.match(runTeam('card', { cwd, session_id: 's8' }, env).stdout, /Coordinator card/, 'without the variable the card prints as before')
     assert.equal(runTeam('card', { cwd: root }, env).stdout, '', 'a checkout gets no card')
     mkdirSync(join(cwd, 'app', '.git'), { recursive: true })
     assert.equal(runTeam('card', { cwd: join(cwd, 'app') }, env).stdout, '', 'a thread in a product repo gets its role card, not the coordinator card')
@@ -461,7 +495,7 @@ test('rule guard: the spawn brief names a role, the thread gets its Roster row a
   const wake = (reason, body) => `<wake reason="${reason}">\n<relay>\n  <note>\n      ${body}\n  </note>\n</relay>\n</wake>`
   assert.doesNotMatch(run(wake('mention', 'Role: Tester · Kit: app · Size: L')).stdout, /you are the/, 'a later wake quoting a brief is not this thread\'s role')
   const out = JSON.parse(run(wake('spawn', 'Role: Reviewer · Kit: setup · Size: S\nModel: sonnet')).stdout).hookSpecificOutput.additionalContext
-  assert.match(out, /you are the Reviewer[\s\S]*Model: Sonnet[\s\S]*# Reviewer/)
+  assert.match(out, /you are the Reviewer[\s\S]*Model: Opus[\s\S]*# Reviewer/)
   assert.ok(out.length < 10_000, 'hook output over 10,000 characters is cut to a preview')
   assert.doesNotMatch(run(wake('spawn', 'Role: Reviewer · Kit: setup · Size: S')).stdout, /you are the/, 'once per session')
   const { roleOf } = await import('../global/rule-guard.mjs')
@@ -643,6 +677,23 @@ test('rule guard: the coordinator closes or nudges finished threads on its board
   assert.equal(coordinatorCheck(t(call('mcp__hearthbot__post_message', { text: 'hi' }, 'ok')), now), null, 'no board listed, nothing to check')
 })
 
+test('team guard: an Agent call cannot run a gate agent below its file model', async () => {
+  const { decide, downgraded } = await import('../global/team-guard.mjs')
+  const dirs = [join(root, '.claude/agents')]
+  assert.match(decide('Agent', { subagent_type: 'code-reviewer', model: 'sonnet' }, dirs).block ?? '', /runs on opus/)
+  assert.equal(decide('Agent', { subagent_type: 'code-reviewer', model: 'opus' }, dirs).block, undefined)
+  assert.equal(decide('Agent', { subagent_type: 'code-reviewer' }, dirs).block, undefined, 'the file model applies')
+  assert.equal(decide('Agent', { subagent_type: 'doc-updater', model: 'sonnet' }, dirs).block, undefined, 'a higher tier passes')
+  assert.equal(downgraded({ subagent_type: 'architect', model: 'opus' }, dirs), null, 'Opus takes Fable when it is out of credits')
+  assert.equal(downgraded({ subagent_type: 'architect', model: 'sonnet' }, dirs), 'fable')
+  assert.equal(downgraded({ subagent_type: 'code-reviewer', model: 'sonnet', prompt: 'yskills named sonnet' }, dirs), null, 'a model yskills named')
+  assert.equal(downgraded({ subagent_type: 'code-reviewer', model: 'inherit' }, dirs), null, 'no tier, nothing to compare')
+  assert.equal(downgraded({ subagent_type: 'no-such-agent', model: 'haiku' }, dirs), null, 'no agent file')
+  assert.equal(downgraded({ subagent_type: 'code-reviewer', model: 'claude-sonnet-x[1m]' }, dirs), 'opus', 'a full id')
+  for (const a of ['code-reviewer', 'security-reviewer', 'evaluator', 'legal-reviewer', 'red-team', 'design-critic'])
+    assert.equal(downgraded({ subagent_type: a, model: 'sonnet' }, dirs), 'opus', `${a} is a gate agent on Opus`)
+})
+
 test('team guard: a thread start runs its role on the tier its Roster row names', async () => {
   const { decide, wrongModel } = await import('../global/team-guard.mjs')
   const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
@@ -651,8 +702,11 @@ test('team guard: a thread start runs its role on the tier its Roster row names'
   assert.equal(wrongModel(brief('Planner', 'M'), 'opus', teams), null)
   assert.equal(wrongModel(brief('Planner', 'M'), 'fable', teams), null, 'the row names Fable')
   assert.ok(wrongModel(brief('Programmer', 'M'), 'opus', teams), 'an Opus checkpoint subagent is no Opus thread')
-  assert.equal(wrongModel(brief('Tester', 'L'), 'opus', teams), null, 'Opus verdict on L')
-  assert.ok(wrongModel(brief('Tester', 'M'), 'opus', teams))
+  // yskills 2026-11-03: gates always Opus, at every size.
+  for (const size of ['S', 'M', 'L']) {
+    assert.equal(wrongModel(brief('Tester', size), 'opus', teams), null, `Tester ${size} on Opus`)
+    assert.ok(wrongModel(brief('Tester', size), 'sonnet', teams), `Tester ${size} never on Sonnet`)
+  }
   assert.equal(wrongModel(`${brief('Programmer', 'M')}\nModel: opus, yskills named it`, 'opus', teams), null)
   assert.equal(wrongModel('Role: none · Kit: setup · Size: S', 'opus', teams), null)
   assert.match(decide('mcp__hearthbot__start_thread_session', { brief: brief('Programmer', 'M'), model: 'opus' }, [], [], teams).block ?? '', /Roster/)
@@ -825,4 +879,137 @@ test('rule guard: a PR in a repo with a PROGRESS.md warns when ## Jetzt is missi
     sh(repo, 'update-ref', 'refs/remotes/origin/main', 'HEAD~1')
     assert.match(jetztWarning('mcp__github__create_pull_request', pr, repo), /leaves PROGRESS.md untouched/)
   } finally { rmSync(repo, { recursive: true, force: true }) }
+})
+
+// yskills 2026-11-03: the Blender workflow tips are enforced so no progress is lost (one Blender slot, bl_server.py).
+test('rule guard: no second headless Blender while bl_server.py runs; Blender only after the night plan and Fast loop were read', async () => {
+  const { blenderStart, blenderServerBusy, blenderDocsMissing } = await import('../global/rule-guard.mjs')
+  const starts = ['blender -b x.blend', '"/c/Program Files/Blender Foundation/Blender 5.1/blender.exe" -b --python a.py', '& "C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe" --background f.blend', 'cd /x && blender.exe -b f.blend', '$BL -b f.blend', '%BL% -b --python j.py', 'Start-Process -FilePath "C:\\B\\blender.exe" -ArgumentList \'-b f.blend\'', 'nohup blender -b f.blend > log 2>&1 &']
+  for (const c of starts) assert.ok(blenderStart(c), c)
+  for (const c of ['python scripts/blender/pose_precheck.py', 'ls tools/blender/', 'grep -i blender log.txt', 'echo "blender-5.1"', 'git commit -m "fix: blender pose"']) assert.equal(blenderStart(c), null, c)
+  const server = '"C:/Program Files/Blender Foundation/Blender 5.1/blender.exe" -b --factory-startup --python C:/x/qa/bl_server.py -- C:/x/bl_jobs'
+  const busy = (command, procs = `node.exe\n${server}`, tool = 'Bash') => blenderServerBusy(tool, { command }, procs)
+  assert.match(busy('blender -b f.blend --python render.py') ?? '', /bl_server\.py läuft.*bl_jobs.*submit_strip\.sh.*NIGHT-CHAIN\.md.*Persistent Blender/s)
+  assert.match(busy('& "C:\\B\\blender.exe" --background f.blend', undefined, 'PowerShell') ?? '', /bl_server/, 'PowerShell too')
+  assert.equal(busy('blender -b f.blend', 'node.exe\nbash -c "grep bl_server.py x"'), null, 'no bl_server running')
+  assert.equal(busy(server), null, 'the command that starts bl_server.py itself')
+  assert.equal(busy('blender f.blend'), null, 'not headless')
+  assert.equal(busy('blender --version'), null)
+  assert.equal(blenderServerBusy('Write', { command: 'blender -b' }, server), null)
+  let listed = 0
+  blenderServerBusy('Bash', { command: 'git status' }, () => { listed++; return server })
+  assert.equal(listed, 0, 'processes are listed only for a headless Blender start')
+
+  const read = (file_path) => JSON.stringify({ type: 'assistant', message: { content: [{ type: 'tool_use', id: file_path, name: 'Read', input: { file_path } }] } })
+  const plan = read('C:\\Users\\Claude\\Documents\\GameAssetLibrary\\scenes\\companyxy\\ch01\\NACHT-FIX-PLAN.md')
+  const animator = read('C:/Users/Claude/Documents/GitHub/claude-setup/.claude/skills/operator/roles/animator.md')
+  assert.match(blenderDocsMissing('Bash', { command: 'blender -b f.blend' }, '') ?? '', /NACHT-FIX-PLAN\.md und .*animator\.md/)
+  assert.match(blenderDocsMissing('mcp__Blender__execute_blender_code', { code: 'x' }, plan) ?? '', /animator\.md/)
+  assert.doesNotMatch(blenderDocsMissing('mcp__Blender__execute_blender_code', { code: 'x' }, plan) ?? '', /NACHT/)
+  assert.match(blenderDocsMissing('PowerShell', { command: '& $env:BL -b f.blend' }, () => animator) ?? '', /NACHT-FIX-PLAN/)
+  assert.equal(blenderDocsMissing('Bash', { command: 'blender -b f.blend' }, `${plan}\n${animator}`), null)
+  assert.equal(blenderDocsMissing('Bash', { command: 'git status' }, ''), null, 'not a Blender call')
+  const bash = JSON.stringify({ type: 'assistant', message: { content: [{ type: 'tool_use', id: 'b', name: 'Bash', input: { command: 'cat NACHT-FIX-PLAN.md roles/animator.md' } }] } })
+  assert.match(blenderDocsMissing('Bash', { command: 'blender -b f.blend' }, bash) ?? '', /NACHT/, 'only a Read counts')
+
+  const dir = mkdtempSync(join(tmpdir(), 'blender-guard-'))
+  try {
+    const t = join(dir, 's1.jsonl')
+    mkdirSync(join(dir, 's1', 'subagents'), { recursive: true })
+    const run = (command, transcript, procs = '', agent_id) => {
+      writeFileSync(t, transcript)
+      return spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'pre'], { input: JSON.stringify({ session_id: 's1', transcript_path: t, agent_id, tool_name: 'Bash', tool_input: { command } }), env: { ...process.env, CLAUDE_SETUP_PROCS: procs, CLAUDE_SETUP_RULE_GUARD: '' }, encoding: 'utf8' })
+    }
+    const unread = run('blender -b f.blend', '')
+    assert.equal(unread.status, 2)
+    assert.match(unread.stderr, /NACHT-FIX-PLAN/)
+    assert.equal(run('blender -b f.blend', `${plan}\n${animator}`).status, 0)
+    assert.equal(run('blender -b f.blend', `${plan}\n${animator}`, server).status, 2, 'bl_server.py runs')
+    assert.equal(run('git status', '', server).status, 0)
+    writeFileSync(join(dir, 's1', 'subagents', 'agent-a1.jsonl'), `${plan}\n${animator}`)
+    assert.equal(run('blender -b f.blend', '', '', 'a1').status, 0, "a subagent's own reads count")
+  } finally { rmSync(dir, { recursive: true, force: true }) }
+})
+
+// yskills 2026-11-03: the Animator handed off every ~30 min at 350k on a 1M model; the guard warns at 250k (work leaner), backstop at 700k (check the handoff triggers).
+test('context guard: silent below 250k, warns at 250k, backstop at 700k', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'ctx-guard-'))
+  try {
+    const run = (tokens, id) => {
+      const path = join(dir, `${id}.jsonl`)
+      writeFileSync(path, `${JSON.stringify({ message: { usage: { input_tokens: 1, cache_read_input_tokens: tokens - 1 } } })}\n`)
+      const r = spawnSync(process.execPath, [join(root, 'global/context-guard.mjs')], { input: JSON.stringify({ session_id: `t${id}${process.pid}`, transcript_path: path }), encoding: 'utf8', timeout: 5000 })
+      rmSync(join(tmpdir(), `claude-context-guard-t${id}${process.pid}.json`), { force: true })
+      return r.stdout
+    }
+    assert.equal(run(200_000, 'a'), '', 'below the warn point stays silent')
+    assert.match(run(400_000, 'b'), /Batch independent calls/)
+    assert.doesNotMatch(run(620_000, 'd'), /handoff triggers/, 'the old hand-off point is below the backstop (yskills 2026-11-03)')
+    assert.match(run(720_000, 'c'), /handoff triggers/)
+  } finally { rmSync(dir, { recursive: true, force: true }) }
+})
+
+// yskills 2026-11-03: no purchase without his explicit OK, no guessing in a reply.
+test('rule guard: checkout and cart pages are blocked, docs and his own test app pass', async () => {
+  const { purchaseUrl, decide } = await import('../global/rule-guard.mjs')
+  for (const url of ['https://shop.example.com/checkout?x=cs_test_1', 'https://8.8.8.8/checkout', 'https://www.amazon.de/gp/cart/view.html', 'https://shop.example.com/checkout', 'https://checkout.stripe.com/c/pay/cs_live_a1', 'https://buy.stripe.com/abc', 'https://store.steampowered.com/buy/123', 'https://www.paypal.com/checkoutnow?token=x'])
+    assert.equal(purchaseUrl('mcp__claude-in-chrome__navigate', { url }), url, url)
+  for (const url of ['https://nuxt.com/docs/getting-started/upgrade', 'https://create.roblox.com/docs/production/monetization/in-app-purchases', 'http://localhost:8787/checkout', 'http://127.0.0.1:3000/checkout', 'https://shop.test/checkout', 'https://checkout.stripe.com/c/pay/cs_test_a1', 'https://docs.stripe.com/payments/checkout'])
+    assert.equal(purchaseUrl('mcp__Claude_Browser__navigate', { url }), null, url)
+  assert.ok(purchaseUrl('mcp__Claude_Browser__browser_batch', { actions: [{ name: 'navigate', input: { url: 'https://x.com/cart' } }] }))
+  assert.ok(purchaseUrl('Bash', { command: 'curl -X POST https://api.shop.com/v1/purchase' }))
+  assert.equal(purchaseUrl('Read', { file_path: 'https://x.com/cart' }), null, 'only browser and shell steps')
+  assert.match(decide('mcp__claude-in-chrome__navigate', { url: 'https://x.com/checkout' }) ?? '', /explicit OK/)
+})
+
+test('rule guard: a reply that guesses is blocked unless it says what was checked', async () => {
+  const { guessing } = await import('../global/rule-guard.mjs')
+  for (const t of ['Das liegt vermutlich am Rig.', 'Ich nehme an, du willst Opus.', 'It is probably the cache.', 'I assume the base is v4.']) assert.ok(guessing(t), t)
+  for (const t of ['Geprüft: das Rig ist v4, wahrscheinlich reicht ein Rebuild.', 'The cache was checked; it is fine.', 'Fertig, 421 Tests grün.']) assert.equal(guessing(t), false, t)
+})
+
+// yskills 2026-11-04: the coordinator runs without hooks, so the thread side checks its model pick and gate brief.
+test('rule guard: a thread on the wrong model or a gate brief without gate rules does no work', async () => {
+  const { briefCheck, sessionModel } = await import('../global/rule-guard.mjs')
+  const wake = (brief) => `<wake reason="spawn"><relay>${brief}</relay></wake>`
+  const tester = (prior) => `Role: Tester · Kit: app · Size: L${FULL.replace(/\nPrior art:.*$/, '')}\nPrior art: ${prior}`
+  const withGate = tester('.claude/skills/operator/gate.md and the app kit checks -> adapt, because they are the gate')
+  assert.match(await briefCheck(wake(withGate), root, 'claude-sonnet-x'), /Model check.*Tester runs on opus/)
+  assert.doesNotMatch(await briefCheck(wake(withGate), root, 'claude-opus-x[1m]'), /Model check|Gate check/)
+  assert.match(await briefCheck(wake(tester('none, because a test brief')), root, 'claude-opus-x'), /Gate check/)
+  assert.doesNotMatch(await briefCheck(wake(withGate), root, null), /Model check/, 'an unknown model is not guessed')
+  const line = (type, model) => JSON.stringify({ type, message: { model, content: [{ type: 'tool_use', input: { model: 'haiku' } }] } })
+  assert.equal(sessionModel([line('assistant', 'claude-sonnet-x'), line('assistant', 'claude-opus-x')].join('\n'), {}), 'claude-opus-x')
+  assert.equal(sessionModel(line('user', 'claude-haiku-x'), {}), null, 'only assistant entries')
+})
+
+test('rule guard: writes outside a folder\'s .layout.json are blocked', async () => {
+  const { offLayout, decide } = await import('../global/rule-guard.mjs')
+  const lib = mkdtempSync(join(tmpdir(), 'layout-'))
+  try {
+    mkdirSync(join(lib, 'references', '07_Boards'), { recursive: true })
+    writeFileSync(join(lib, '.layout.json'), JSON.stringify({ why: 'one kind per folder', allow: ['README.md', 'references/**'] }))
+    writeFileSync(join(lib, 'references', '.layout.json'), JSON.stringify({ why: 'boards per position', allow: ['*.md', '07_Boards/*/einzel/**', '07_Boards/*/NOTES.md'] }))
+    assert.equal(offLayout(join(lib, 'README.md')), null)
+    assert.equal(offLayout(join(lib, 'references', '07_Boards', 'doggy', 'einzel', 'a.png')), null)
+    assert.equal(offLayout(join(lib, 'references', '07_Boards', 'doggy', 'NOTES.md')), null)
+    assert.equal(offLayout(join(lib, 'fenster_v1.png'))?.rel, 'fenster_v1.png', 'no loose root files')
+    assert.equal(offLayout(join(lib, 'references', '08_Kamera_Refs', 'x.png'))?.rel, '08_Kamera_Refs/x.png', 'the nearest layout applies')
+    assert.equal(offLayout(join(lib, 'references', '.layout.json')), null, 'the layout itself')
+    assert.equal(offLayout(join(tmpdir(), 'no-layout-here', 'x.md')), null, 'no layout, no rule')
+    assert.match(decide('Write', { file_path: join(lib, 'loose.md'), content: 'x' }) ?? '', /outside the agreed folder structure/)
+    writeFileSync(join(lib, '.layout.json'), '{ broken')
+    assert.equal(offLayout(join(lib, 'loose.md')), null, 'a broken layout never blocks')
+  } finally { rmSync(lib, { recursive: true, force: true }) }
+})
+
+test('rule guard: modelCheck compares the model the brief or yskills wants with the one running', async () => {
+  const { modelCheck } = await import('../global/rule-guard.mjs')
+  const run = (model) => JSON.stringify({ type: 'assistant', message: { model, content: [] } })
+  const brief = (m, cited = '') => `<wake reason="spawn"><relay>${cited ? `<cited author="user">${cited}</cited>` : ''}Role: Programmer · Kit: setup · Size: S\nModel: ${m}\n</relay></wake>`
+  assert.match(modelCheck(brief(['claude', 'fable', '5-1'].join('-')), run(['claude', 'sonnet', '5-5'].join('-'))), /^Model check \(docs\/TEAMS.md, Spawn rule 4\):[\s\S]*fable[\s\S]*sonnet[\s\S]*message_coordinator/)
+  assert.match(modelCheck(brief('default', 'bitte ein Fable-Thread'), run(['claude', 'sonnet', '5-5'].join('-'))), /^Model check/)
+  assert.equal(modelCheck(brief('sonnet'), run(['claude', 'sonnet', '5-5'].join('-'))), '')
+  assert.equal(modelCheck(brief('default'), run(['claude', 'sonnet', '5-5'].join('-'))), '', 'no model wanted')
+  assert.equal(modelCheck(brief('fable'), ''), '', 'no running model known yet')
 })

@@ -133,11 +133,13 @@ for (const n of listDirs(join(ROOT, '.claude/rules/ecc'))) items.push([join('.cl
 items.push(['licenses/ECC-LICENSE', join('rules', 'ecc', 'LICENSE')])
 items.push(['global/statusline.mjs', join('claude-setup', 'statusline.mjs')])
 items.push(['global/context-guard.mjs', join('claude-setup', 'context-guard.mjs')])
+items.push(['global/compact-guard.mjs', join('claude-setup', 'compact-guard.mjs')])
 items.push(['global/attempt-guard.mjs', join('claude-setup', 'attempt-guard.mjs')])
 items.push(['global/live-hook.mjs', join('claude-setup', 'live-hook.mjs')])
 items.push(['global/team-guard.mjs', join('claude-setup', 'team-guard.mjs')])
 items.push(['global/rule-guard.mjs', join('claude-setup', 'rule-guard.mjs')])
 items.push(['global/live-shot.ps1', join('claude-setup', 'live-shot.ps1')])
+items.push(['global/git-hooks/pre-push', join('claude-setup', 'git-hooks', 'pre-push')]) // runs a repo's scripts/pre-pr.mjs before every push
 
 const now = new Set(items.map(([, dest]) => dest))
 for (const old of prev.files) {
@@ -200,6 +202,9 @@ settings.hooks ??= {}
 const guard = `node "${join(CLAUDE_DIR, 'claude-setup', 'context-guard.mjs')}"`
 settings.hooks.PostToolUse = (settings.hooks.PostToolUse ?? []).filter((h) => !JSON.stringify(h).includes('context-guard.mjs'))
 settings.hooks.PostToolUse.push({ matcher: '*', hooks: [{ type: 'command', command: guard, timeout: 5 }] })
+// Compact guard (global/compact-guard.mjs): PreCompact, tells the compaction summary what to keep and saves a state note.
+settings.hooks.PreCompact = (settings.hooks.PreCompact ?? []).filter((h) => !JSON.stringify(h).includes('compact-guard.mjs'))
+settings.hooks.PreCompact.push({ hooks: [{ type: 'command', command: `node "${join(CLAUDE_DIR, 'claude-setup', 'compact-guard.mjs')}"`, timeout: 10 }] })
 // Attempt guard (global/attempt-guard.mjs): stops a loop of failing runs; three entries, replaced on every install.
 const attempt = (mode) => `node "${join(CLAUDE_DIR, 'claude-setup', 'attempt-guard.mjs')}" ${mode}`
 for (const [event, mode, matcher] of [['PreToolUse', 'pre', 'Bash|mcp__.*'], ['PostToolUse', 'ok', 'Bash|mcp__.*'], ['PostToolUseFailure', 'fail', 'Bash|mcp__.*']]) {
@@ -213,7 +218,7 @@ for (const event of new Set(teamHooks.map(([e]) => e))) settings.hooks[event] = 
 for (const [event, matcher, mode] of teamHooks) settings.hooks[event].push({ matcher, hooks: [team(mode)] })
 // Rule guard (global/rule-guard.mjs): CLAUDE.md rules that were text only (no PR mails, real cards, short replies, one Artifact, conventional commits, no WebFetch in the cloud, video and stop notes, the repeats of docs/research/2026-10-27-repeats.md); one entry each, replaced on every install.
 const rule = (mode) => ({ type: 'command', command: `node "${join(CLAUDE_DIR, 'claude-setup', 'rule-guard.mjs')}" ${mode}`, timeout: 5 })
-for (const [event, matcher, mode] of [['PreToolUse', 'Bash|Write|Edit|Artifact|WebFetch|mcp__github__.*|mcp__hearthbot__post_message|mcp__remote-devices__create_artifact', 'pre'], ['UserPromptSubmit', '', 'prompt'], ['Stop', '', 'stop']]) {
+for (const [event, matcher, mode] of [['PreToolUse', 'Bash|PowerShell|Write|Edit|Artifact|WebFetch|mcp__github__.*|mcp__hearthbot__post_message|mcp__remote-devices__create_artifact|mcp__Blender__.*|mcp__.*(navigate|browser_batch|tabs_create.*|preview_start)', 'pre'], ['UserPromptSubmit', '', 'prompt'], ['Stop', '', 'stop']]) {
   settings.hooks[event] = (settings.hooks[event] ?? []).filter((h) => !JSON.stringify(h).includes('rule-guard.mjs'))
   settings.hooks[event].push({ ...(matcher ? { matcher } : {}), hooks: [rule(mode)] })
 }
@@ -241,6 +246,14 @@ write(settingsPath, JSON.stringify(settings, null, 2) + '\n')
 log(`  merged (permissions mode: ${settings.permissions.defaultMode}, ${Object.values(settings.enabledPlugins).filter(Boolean).length} plugins on)`)
 
 // ---------------------------------------------------------------- 7. tools on this machine
+step('Git pre-push hook (every repo with scripts/pre-pr.mjs runs its CI pre-check before a push)')
+// Only yverse-studio remotes run the check (the hook checks origin), and a hooksPath someone else set is left alone.
+const hooksDir = join(CLAUDE_DIR, 'claude-setup', 'git-hooks')
+const hooksNow = has('git') ? spawnSync('git', ['config', '--global', '--get', 'core.hooksPath'], { encoding: 'utf8', shell: IS_WIN }).stdout.trim() : ''
+if (!has('git')) warn('git not found: core.hooksPath not set, pushes skip the pre-pr check')
+else if (hooksNow && hooksNow !== hooksDir) warn(`core.hooksPath already set to ${hooksNow}: left as is; add a pre-push there that runs scripts/pre-pr.mjs`)
+else run('git', ['config', '--global', 'core.hooksPath', hooksDir], { allowFail: true })
+
 step('Command-line tools (checked, not installed)')
 const TOOLS = [
   ['gh', 'GitHub CLI: PRs, CI status', { win: 'winget install GitHub.cli', mac: 'brew install gh', linux: 'see https://cli.github.com' }],

@@ -128,3 +128,28 @@ test('a Blender job waits while less than the minimum RAM is free', () => {
   assert.equal(ramShort(4, () => 3 * 2 ** 30), true)
   assert.equal(ramShort(4, () => 5.3 * 2 ** 30), false)
 })
+
+test('topRam lists the biggest RAM users first', async () => {
+  const { topRam } = await import('./laptop-job.mjs')
+  const out = '"blender.exe","111","Console","1","3.200.000 K"\r\n"node.exe","22","Console","1","50.000 K"\r\n"chrome.exe","33","Console","1","1,024,000 K"\r\n'
+  assert.equal(topRam(() => ({ status: 0, stdout: out }), 2), 'blender.exe 111 3125 MB, chrome.exe 33 1000 MB')
+  assert.equal(topRam(() => ({ status: 1, stdout: '' })), 'tasklist failed')
+})
+
+
+test('the STOP file pauses new jobs and "now" kills the running one', async () => {
+  const { stopState } = await import('./laptop-job.mjs')
+  const f = join(mkdtempSync(join(tmpdir(), 'stop-')), 'STOP')
+  assert.equal(stopState(f), null)
+  writeFileSync(f, '')
+  assert.equal(stopState(f), 'pause')
+  writeFileSync(f, 'now\n')
+  assert.equal(stopState(f), 'now')
+})
+
+test('a job stopped with "now" goes back to the queue', async () => {
+  const { endState } = await import('./render-queue.mjs')
+  assert.equal(endState('JOB STOPPED x: STOP file says now', 1), '.json')
+  assert.equal(endState('JOB OK x: finished in 1 min', 0), '.done')
+  assert.equal(endState('JOB FAIL x: exit code 1', 1), '.fail')
+})

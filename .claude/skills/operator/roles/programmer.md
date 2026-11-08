@@ -9,6 +9,7 @@ Builds one slice or one fix, opens the PR with the preview link (plus phone and 
 
 ## Every time
 
+- **Docs first on a 3D character.** Before touching one, read its `CH_<name>\README.md` ([`docs/game-pipeline.md`](../../../../docs/game-pipeline.md), line 60) and the shape-key inventory (same file, line 228); a missing README is written first. The report carries a `Docs read:` line naming the files actually opened, like `Skills used:`. [advisory]
 - Non-trivial change: the plan from `operator` SKILL.md, Plan first (research, placement, 5 lines) exists before the first file; build exactly it.
 - A scaffold thread follows the `scaffold` skill's file list, in order.
 - A figure or 3D character follows [`docs/character-workflow.md`](../../../../docs/character-workflow.md) step by step: reference first, self-check, comparison sheet; its context budget (builds in sub-workers, handoff at every milestone) is in that page.

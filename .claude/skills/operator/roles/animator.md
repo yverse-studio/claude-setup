@@ -9,6 +9,8 @@ Poses and animates rigged figures for a game or story: key poses, loops, scene c
 
 ## Every time
 
+- **Docs first.** Before touching a 3D character, follow [programmer.md](programmer.md#every-time) (README, shape-key inventory, `Docs read:` line).
+- **Cloud first.** Estimate the job; headless `bpy` in the cloud takes it unless it needs GPU or MCP, yskills asks for the laptop, or the cloud run failed (`studio` skill, Where Blender runs). The next line applies once the job is on the laptop.
 - **Check the laptop first.** Pull claude-setup main; list running `blender.exe` (command lines too, including the owner's) and free RAM; start only with about 4 GB free and inside the Blender limits (`docs/pc-claude-user.md`, Long laptop jobs). Anything over ~10 minutes (bake, render) runs through `scripts/laptop-job.mjs`.
 - **Read the scene's single source of truth** (its README or handoff table) before touching anything; one scene has one folder, one position file and one handoff. Update that handoff before you stop, never leave a second copy or leftovers; delete junk only after a backup and an md5 check.
 - **Models and rigs are frozen.** Never rename bones, vertex groups or shape keys, never change topology, never scale an object or armature (a scaled armature breaks every later bake; migrate with a script the owner runs). A missing control (FK switch, hand preset, bone) goes to the modeller as a request that only adds things, logged in the rig handoff.
@@ -26,6 +28,7 @@ Poses and animates rigged figures for a game or story: key poses, loops, scene c
 ## Fast loop (every scene; the coordinator enforces it)
 
 Mandatory from the very first step, unasked: the owner must never have to ask for screenshots or a live loop. Blender stays open in one persistent session; no restart per fix.
+No Blender call before this section and the scene's fix plan were read, and no second `blender -b` while `bl_server.py` runs (jobs go to its job folder). [guard: hook global/rule-guard.mjs]
 Context may grow as large as the scene needs; never restart yourself. Before any hand-over, write the state (files, best copy, open findings, next step) into the scene's PROGRESS.md.
 
 1. **Key pose first**, then motion, then in-betweens. Screenshot the base pose (knees, hands, props, twists show in 10 s) and post it before any bake.
@@ -67,6 +70,8 @@ Measured on the strip and the bake, compared side by side with the reference loo
 5. **Hair:** fringe and side strands follow the head with 2-3 frames of lag; the eyes stay uncovered for more than half the loop.
 6. **Light and look:** skin tone, rim light and highlights match the reference board; too pale or flat is a fail.
 7. **No dead parts:** every soft part moves with the action; fingers differ by a 10-15 degree curl between loop halves.
+8. **Jiggle benchmark (yskills 2026-11-07):** the Sessel bone spring (period 0.25 s, breast and butt 10-14°, lag 2-4 frames, one overshoot near 0.8, settled before the next hit) is the bar; a cache-folded jiggle that wobbles out of step with the stroke fails even with numbers in range. Compare side by side with the Sessel strip.
+9. **Face is one piece with the body (yskills 2026-11-07):** line weight and shading on the face match the body (no toon face on a soft body), at least three expressions per loop that follow the stroke (eyes, brows, mouth), a blink, and the same smooth motion as the body. The bar is the Mund scene built with the scenekit engine (`rigs/interaction/core/engine.py`, face keys ramped by depth).
 
 ## External tools
 

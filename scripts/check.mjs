@@ -7,6 +7,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { styleErrors } from './styles-check.mjs'
+import { conflictMarker } from './conflict-marker.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const errors = []
@@ -73,6 +74,10 @@ if (plugins) {
   for (const m of plugins.marketplaces) if (!sh.includes(`marketplace add ${m.source}`)) errors.push(`cloud/setup.sh does not add marketplace ${m.source}`)
   const inlined = sh.match(/<<'GUARD'\r?\n([\s\S]*?)\r?\nGUARD\r?\n/)?.[1]
   if (inlined?.replace(/\r/g, '').trim() !== readFileSync(join(root, 'global/context-guard.mjs'), 'utf8').replace(/\r/g, '').trim()) errors.push('cloud/setup.sh context guard differs from global/context-guard.mjs')
+  const compact = sh.match(/<<'COMPACT'\r?\n([\s\S]*?)\r?\nCOMPACT\r?\n/)?.[1]
+  if (compact?.replace(/\r/g, '').trim() !== readFileSync(join(root, 'global/compact-guard.mjs'), 'utf8').replace(/\r/g, '').trim()) errors.push('cloud/setup.sh compact guard differs from global/compact-guard.mjs')
+  const prepush = sh.match(/<<'PREPUSH'\r?\n([\s\S]*?)\r?\nPREPUSH\r?\n/)?.[1]
+  if (prepush?.replace(/\r/g, '').trim() !== readFileSync(join(root, 'global/git-hooks/pre-push'), 'utf8').replace(/\r/g, '').trim()) errors.push('cloud/setup.sh pre-push hook differs from global/git-hooks/pre-push')
   const attempt = sh.match(/<<'ATTEMPT'\r?\n([\s\S]*?)\r?\nATTEMPT\r?\n/)?.[1]
   if (attempt?.replace(/\r/g, '').trim() !== readFileSync(join(root, 'global/attempt-guard.mjs'), 'utf8').replace(/\r/g, '').trim()) errors.push('cloud/setup.sh attempt guard differs from global/attempt-guard.mjs')
   const ruleGuard = sh.match(/<<'RULE'\r?\n([\s\S]*?)\r?\nRULE\r?\n/)?.[1]
@@ -167,6 +172,12 @@ const anyText = (d) => readdirSync(join(root, d)).flatMap((n) => {
   if (statSync(join(root, rel)).isDirectory()) return anyText(rel)
   return /\.(md|mjs|js|json|sh|ya?ml|tsx?)$/.test(n) ? [rel] : []
 })
+// A merge is not done until no conflict marker is left (scripts/conflict-marker.mjs says why).
+for (const f of anyText('.')) {
+  if (f === 'scripts/check.mjs' || f.endsWith('.test.mjs')) continue
+  const line = conflictMarker(readFileSync(join(root, f), 'utf8'))
+  if (line) errors.push(`${f}:${line}: a merge conflict marker is left in the file`)
+}
 for (const f of anyText('.')) {
   if (f === 'scripts/check.mjs') continue
   const text = readFileSync(join(root, f), 'utf8').split(modelLine ?? '\0').join('')
@@ -208,12 +219,12 @@ for (const f of anyText('.')) {
 }
 
 // Token budget (docs/WORKFLOW.md, Token budget; yskills, 2026-10-18): the Budget line exists and no
-// gate or role file asks for an Opus verdict on an S or M PR.
+// gate or role file runs a gate below Opus (yskills 2026-11-03: gates always Opus, at every size).
 const budgetLine = readFileSync(join(root, 'docs/WORKFLOW.md'), 'utf8').match(/^Budget: .*$/m)?.[0]
 if (!budgetLine) errors.push('docs/WORKFLOW.md: the Budget line (Token budget) is missing')
-else if (!/never for an S or M gate/.test(budgetLine)) errors.push('docs/WORKFLOW.md: the Budget line must say Opus is never for an S or M gate')
-for (const f of ['.claude/skills/operator/gate.md', '.claude/skills/operator/roles/tester.md', '.claude/skills/operator/roles/reviewer.md', 'docs/WORKFLOW.md']) {
-  if (/Opus verdict[^|\n]*round 2|verdict is Opus on round 2/i.test(readFileSync(join(root, f), 'utf8'))) errors.push(`${f}: demands an Opus verdict on round 2; Opus is size L only (Token budget)`)
+else if (!/includes every gate at every size/.test(budgetLine)) errors.push('docs/WORKFLOW.md: the Budget line must say Opus includes every gate at every size (yskills 2026-11-03)')
+for (const f of ['.claude/skills/operator/gate.md', '.claude/skills/operator/roles/tester.md', '.claude/skills/operator/roles/reviewer.md', '.claude/skills/operator/roles/playtester.md', 'docs/WORKFLOW.md']) {
+  if (/\b(Sonnet|Haiku) (review|subagent of the gate|gate|verdict)|never for an S or M gate|Opus only on size L/i.test(readFileSync(join(root, f), 'utf8'))) errors.push(`${f}: runs a gate below Opus; gates are Opus at every size (docs/TEAMS.md, Models line)`)
 }
 
 // Rule enforcement: a "never" or "always" rule that only lives in prose is advisory. Each such
@@ -279,7 +290,7 @@ for (const f of readdirSync(roleDir).filter((n) => n.endsWith('.md') && n !== 'p
 }
 if (!readFileSync(join(roleDir, 'project-manager.md'), 'utf8').includes('## Model and handoff in every brief')) errors.push('roles/project-manager.md: lacks "Model and handoff in every brief"')
 const briefsText = readFileSync(join(root, '.claude/skills/operator/briefs.md'), 'utf8')
-for (const part of ['Model: <id', 'Handoff: at ', '/handoff/<date>-<topic>.md']) {
+for (const part of ['Model: <id', 'Handoff:', '/handoff/<date>-<topic>.md']) {
   if (!briefsText.includes(part)) errors.push(`briefs.md: thread brief block lacks "${part}"`)
 }
 

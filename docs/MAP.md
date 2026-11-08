@@ -19,7 +19,7 @@ What every session does at start:
 
 | Surface | Reads first | Then |
 |---|---|---|
-| Coordinator (project chat) | `MEMORY.md`, the thread board; `CLAUDE.md` and the coordinator card (Spawn rule, Models, Sizes, Roster, Kits) arrive in context by themselves (`team-guard` start and card) | `roles/project-manager.md` Session start; the full [`TEAMS.md`](TEAMS.md), this file or a role file only when a task needs a part the card lacks (copies in `~/.claude/claude-setup/`); reconciles board and state |
+| Coordinator (project chat) | `/mnt/project-files/claude-setup/COORDINATOR-CARD.md` (Spawn rule, Models, Sizes, Roster, Kits, pre-flight; built by `scripts/coordinator-card.mjs`), then `MEMORY.md`, the thread board | `roles/project-manager.md` Session start; a part the card lacks only through a setup thread (the coordinator has no Bash and no repo); reconciles board and state |
 | Thread | its brief (first line `Role: · Kit: · Size:`), `MEMORY.md`; its Roster row and playbook arrive in context by themselves (`rule-guard`) | `add_repo` claude-setup, `CLAUDE.md`, this section, [`TEAMS.md`](TEAMS.md) (Coordinator or thread), never the Spawn rule; for a product also that repo's `CLAUDE.md` and `docs/LESSONS.md` |
 | Claude Code on the laptop | first `git fetch && checkout main && pull` of the claude-setup clone ([`pc-claude-user.md`](pc-claude-user.md), Fresh main first), then `~/.claude/CLAUDE.md` | the project's `CLAUDE.md`; auto-memory is a scratchpad |
 | New claude.ai project | the generated boot text | as a coordinator; its first session sweeps old memory into the repo |
@@ -72,6 +72,7 @@ lives outside this repo.
 | Clothing pipeline | `docs/clothing-pipeline.md` | How garments are stored, fitted once per base and inherited by every character (follow keys, masks, dress script, naming, backups), moving existing garments, the clipping numbers of the done report (VRM/GLB: `scripts/clipping.mjs`, + `scripts/clipping.test.mjs`; `.blend` characters: `scripts/blender/clearance.py`, mandatory) |
 | Character creator | `docs/character-creator.md` | The engine-independent data design for player-made characters: catalogue, sparse look file with migration, loading order, solid skin under clothes (occlusion masks), poses as IK targets, undo per gesture, the creator checklist, plus the lessons |
 | Game pipeline | `docs/game-pipeline.md` | Where every game file lives (laptop GameAssetLibrary, game folder, project files), how to put an animation on a character, build a scene, write a chapter, plus the lessons |
+| Game in an hour | `docs/game-in-an-hour.md` | Playbook for the next Ren'Py story game: file layout, names in `characters.json`, scene slots with three views and camera A/B, look-intro, muted off-screen test run, what is not proven yet |
 | Characters | `docs/character-workflow.md` | The one way to make a 3D character and show it to yskills: reference, build, self-check, comparison sheet, gate, library |
 | Base + delta (characters) | `docs/base-delta.md` | The fixed rule (body fixes go into the base, characters only get details), scale 1, the delta file, rebuild (`scripts/blender/delta*.py`), the marker proof, topology break, scale migration, the Blender RAM check |
 | Using it (for yskills) | `docs/USING.md` | One phone page: how to start an app, deploy or delete a page in one shot, what you see, what it costs |
@@ -79,7 +80,7 @@ lives outside this repo.
 | GitHub owner migration (plan B if the account stays suspended) | `docs/github-migration.md`, `scripts/migration/` | Inventory of clones and bundles, copy to a new owner, the hands steps and what points at the old owner |
 | GitHub rules (what GitHub forbids, what we do: no 18+ on GitHub, no bulk activity, one account, no big binaries) | `docs/github-rules.md` | The AUP rows and our rule per row |
 | After launch | `docs/LOOP.md` | Errors and feedback become issues and fix threads |
-| Setup loop | operator `SKILL.md` (Setup loop) | Friction with this repo becomes a `loop:setup` issue, then a fix thread through the gate |
+| Setup loop | operator `SKILL.md` (Setup loop) | Friction with this repo becomes a `loop:setup` issue, then a fix thread through the gate; without the GitHub App a block in the [lessons inbox](../.claude/skills/operator/templates/lessons-inbox.md) |
 | Test runs | `docs/TEST-PROJECTS.md` | How the setup is tested end to end, and what each run taught |
 | Why it is built this way | `docs/RESEARCH.md`, `docs/research/` | Dated research notes; history, not rules |
 | Lessons per project | `docs/LESSONS-2026-10-11.md` | Company XY: liked, not liked, quality problems with the fix in force, the next game |
@@ -126,11 +127,19 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 | Rule | Home | Others only link |
 |---|---|---|
 | Org, accounts, where secrets live | `CLAUDE.md` (The world) | `publish` skill, `docs/WORKFLOW.md` (PC work) |
+| Coordinator card (what the project chat reads, its pre-flight) | `scripts/coordinator-card.mjs` (output `/mnt/project-files/claude-setup/COORDINATOR-CARD.md`) | `roles/project-manager.md`, `operator/templates/project-instructions.md` |
+| Close finished threads (resolve or nudge, the daily sweep) | `roles/project-manager.md` (Close threads) | coordinator card, `templates/loop/routine.md` (step 11), `global/rule-guard.mjs` (stop) |
 | Teams, roles, sizes, the pipeline, the Kits (routed per task), the model per role | `docs/TEAMS.md` | `CLAUDE.md` (Teams), `operator/SKILL.md`, `operator/run.md`, `roles/project-manager.md`; `global/team-guard.mjs` enforces `model` |
 | Deploy or delete a page (the steps) | `docs/USING.md` | operator `run.md`, `briefs.md`; detail in `publish` |
 | Where a lesson goes (the decision tree) | `docs/MAP.md` (Start here) | `CLAUDE.md` (Lessons stick), `docs/WORKFLOW.md` (Learning) |
+| Pre-PR check (the one command that runs what CI runs; git pre-push hook on every machine) | `scripts/pre-pr.mjs` | `CLAUDE.md` (How to work), `global/git-hooks/pre-push`, `install.mjs`, `cloud/setup.sh`, `.github/workflows/ci.yml` |
+| Fixes remove the cause (workaround only on yskills' word, labelled, deleted later) | `docs/WORKFLOW.md` (Fixes) | `CLAUDE.md` (Code), operator `gate.md` (diagnosis after two failed checks), `roles/programmer.md` |
+| Project retro (errors and good practice at ship or delete) | `docs/WORKFLOW.md` (Learning, Project retro) | `publish` skill (Delete a project), `templates/lessons.md` |
+| Memory form verdict (why files, not Obsidian, Graphify or graph memory) | `docs/RESEARCH.md` (Memory form) | `docs/WORKFLOW.md` (Learning) |
 | Project memory holds state only (its shape) | `operator/templates/project-memory.md` | `operator/roles/project-manager.md`, `docs/WORKFLOW.md` |
+| Where a Blender job runs (cloud first, estimate before each job, laptop for GPU/MCP/asked/failed; measured render times) | `.claude/skills/studio/SKILL.md` (Where Blender runs) | `.claude/skills/video-studio/templates/blender-cloud/`, `operator/roles/animator.md` |
 | Long laptop jobs (watchdog, Blender limits, GPU and sleep check, one-line failure report, overnight run) | `docs/pc-claude-user.md` (Long laptop jobs) | `scripts/laptop-job.mjs`, `scripts/laptop-slots.mjs` (Blender limits: 3 instances, 2 renders), `operator/roles/project-manager.md`, `programmer.md`, `tester.md` |
+| Laptop drops, RC watchdog and broad permissions template | `docs/pc-claude-user.md` (Dropped sessions and permissions) | `scripts/laptop/rc-watchdog.ps1`, `scripts/laptop/install-rc-watchdog.ps1`, `scripts/laptop/claude-settings.template.json`, `scripts/laptop/install-claude-settings.ps1` |
 | Asks ledger (every ask of yskills becomes a thread or a rule in claude-setup; memory only points; blocked-thread sweep) | `CLAUDE.md` (Lessons stick) | `operator/roles/project-manager.md` |
 | Ask rule (what needs yskills) | `CLAUDE.md` (How to work) | operator `SKILL.md`, `docs/USING.md` |
 | Permission prompts, the allow list and autoMode, safety-check refusals and the way around each | `docs/permissions.md` (settings in `global/settings.json`) | `CLAUDE.md`, operator `SKILL.md`, `gate.md`, `README.md`, `docs/pc-claude-user.md` |
@@ -147,9 +156,11 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 | Gate for models and garments (measurements + render sheet) | `gate.md` (Asset PRs) | `docs/clothing-pipeline.md`, `character-workflow.md`, `roles/tester.md` |
 | Briefs point to guide checks, never weaken them; threads read guides fresh from main | `briefs.md` (Every thread brief starts with, Guides) | `roles/project-manager.md` |
 | Models (the line, the model per role and per task) | `docs/TEAMS.md` (Models line, Roster) | everything else links it; CI fails on a model id outside that line |
-| Context guard numbers (warn 250k, hand off 350k) | `global/context-guard.mjs` | `CLAUDE.md`, `README.md` |
+| Context guard numbers (warn 250k, backstop 700k) | `global/context-guard.mjs` | `CLAUDE.md`, `README.md` |
+| Handoff triggers | `docs/WORKFLOW.md` (Handoff triggers) | `CLAUDE.md`, `briefs.md`, `project-manager.md`, operator `SKILL.md` |
 | Hooks that enforce `CLAUDE.md` lines (no PR mails, real cards, reply cap, one Artifact, conventional commits, no WebFetch in the cloud, video and stop notes, the role card, the canary line and Luna's kaomoji) | `global/rule-guard.mjs` (+ `scripts/guards.test.mjs`) | `CLAUDE.md` |
 | `Prior art:` and `Lessons:` lines in every PR body | `scripts/pr-lessons-check.mjs` | `CLAUDE.md`, `.github/pull_request_template.md`, `operator/briefs.md` |
+| Lessons inbox (the one file, block format, Seen rule, the Monday patch) | `operator/templates/lessons-inbox.md` | operator `SKILL.md` (Setup loop), `docs/WORKFLOW.md` (Learning), `briefs.md` |
 | Remote Control on the PC | `docs/WORKFLOW.md` (PC work) | operator `SKILL.md` |
 | UI rules | `CLAUDE.md` (UI) | `roles/designer.md`, `ui-review` (screenshots, the load-once check, run videos via `desktop.sh`) |
 | What looks AI-made (the slop list) | `.claude/skills/ui-review/SLOP.md` | `CLAUDE.md` (UI), `design-critic`, `roles/designer.md`, `gate.md` check 5 |
@@ -157,7 +168,7 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 | Style library (reusable style directions: tokens, captures, do/don't; first: young-cool) | [`ui-review/styles/README.md`](../.claude/skills/ui-review/styles/README.md) | `operator/roles/designer.md` (step 0), `ui-review/TASTE.md` |
 | How a game plays before it is built (core loop, run length, difficulty, feedback, ad hooks, references) | `operator/roles/game-designer.md`, template `operator/templates/game-design.md`, checked by `game-3d/scripts/gdd-check.mjs` | `game-3d` (§1b), `roles/tester.md` |
 | Who builds and mixes the sound of a product in any medium (scene games, web games, videos, films) | `operator/roles/sound-designer.md` | `roles/audio.md`, `video-studio/roles/sound.md`, `docs/game-pipeline.md` |
-| How a game sounds before it is built (sound palette per feedback moment, music plan, mix bar, mute, autoplay, KB budget, licences) | `operator/roles/audio.md`, template `operator/templates/audio.md`, checked by `game-3d/scripts/audio-check.mjs` | `game-3d`, `roles/game-designer.md`, `roles/tester.md` |
+| How a game sounds before it is built (sound palette per feedback moment, music plan, mix bar, mute, autoplay, KB budget, licences) | `operator/roles/audio.md`, template `operator/templates/audio.md`, checked by `game-3d/scripts/audio-check.mjs`; scene games (Ren'Py): [`docs/sound-template.md`](sound-template.md) (other games' sound, event table, muted checks, licences) | `game-3d`, `roles/game-designer.md`, `roles/tester.md` |
 | How a research report is made (primary sources, describe before judging, numbers as read, `Not checked:`) | `operator/roles/researcher.md` (Method), checked by `scripts/research-check.mjs` | `templates/research.md`, `run.md` |
 | Character workflow (reference, sheet, likeness gate) | `docs/character-workflow.md` | `roles/programmer.md`, `roles/tester.md`, `roles/designer.md`, `briefs.md` |
 | Deploys, the workflows' detail, the two Cloudflare routes, deploy lessons | `publish` skill | `CLAUDE.md`, `docs/USING.md` |

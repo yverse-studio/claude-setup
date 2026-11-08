@@ -1,4 +1,4 @@
 ---
-description: Sonnet tier (builds, fixes, research, reviews, S and M gates).
+description: Sonnet tier (builds, fixes, research; never a gate).
 mode: subagent
 ---

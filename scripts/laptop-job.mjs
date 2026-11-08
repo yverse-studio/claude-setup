@@ -3,9 +3,9 @@
 // Runs the command directly (no shell): wrap a .cmd or .bat as `cmd /c x.bat`.
 // node scripts/laptop-job.mjs [--name n] [--timeout-min 60] [--idle-min 15] [--gpu-max-used-mb 1500] [--no-gpu] -- <command> [args]
 // Blender limits (yskills 2026-10-26): at most 2 jobs run at once and at most 3 Blender instances exist; extra jobs wait (--queue-min, default 180), yskills' own Blender is counted but never blocked.
-// Always ends with ONE line on stdout: `JOB OK|FAIL|HANG|TIMEOUT|BLOCKED <name>: <why>`; exit 0 only for OK.
+// Always ends with ONE line on stdout: `JOB OK|FAIL|HANG|TIMEOUT|BLOCKED|STOPPED <name>: <why>`; exit 0 only for OK.
 import { spawn, spawnSync } from 'node:child_process'
-import { appendFileSync } from 'node:fs'
+import { appendFileSync, existsSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { freemem } from 'node:os'
 import { MAX_BLENDER, MAX_RENDERS, acquireSlot, blenderCount, releaseSlot, slotsHeld } from './laptop-slots.mjs'
@@ -69,22 +69,47 @@ function finish(line, code) {
 // True while less than minGb of RAM is free: the animator's open Blenders count, a crash on 2026-10-26 came from RAM, not slots.
 export const ramShort = (minGb, free = freemem) => free() / 2 ** 30 < minGb
 
+// Top RAM users from `tasklist /FO CSV /NH`, so a "RAM low" wait says who holds the memory.
+export function topRam(run = (c, a) => spawnSync(c, a, { encoding: 'utf8' }), n = 5) {
+  const r = run('tasklist', ['/FO', 'CSV', '/NH'])
+  if (r.error || r.status !== 0) return 'tasklist failed'
+  const rows = (r.stdout ?? '').split(/\r?\n/).map((l) => l.match(/^"([^"]+)","(\d+)",.*"([\d.,\s]+) K"$/)).filter(Boolean)
+    .map(([, name, pid, k]) => ({ name, pid, mb: Math.round(Number(k.replace(/\D/g, '')) / 1024) }))
+  return rows.sort((a, b) => b.mb - a.mb).slice(0, n).map((x) => `${x.name} ${x.pid} ${x.mb} MB`).join(', ')
+}
+
+// Stop switch (yskills 2026-11-08): while the STOP file exists no job starts; "now" in it also kills the running job.
+// File: LAPTOP_STOP_FILE, default STOP in the working directory (the queue folder for render-queue.mjs).
+export function stopState(file = process.env.LAPTOP_STOP_FILE ?? 'STOP') {
+  if (!existsSync(file)) return null
+  try { return /now/i.test(readFileSync(file, 'utf8')) ? 'now' : 'pause' } catch { return 'pause' }
+}
+
 // Waits for a render slot (and a free Blender instance when the command is Blender); null when queueMin ran out.
 async function waitForSlot(opt, cmd) {
   const isBlender = /blender/i.test(cmd.join(' '))
   const pollMs = Number(process.env.LAPTOP_JOB_POLL_MS ?? 5000)
   const maxBlender = Number(process.env.LAPTOP_MAX_BLENDER ?? MAX_BLENDER)
-  const deadline = Date.now() + opt.queueMin * 60000
+  let deadline = Date.now() + opt.queueMin * 60000
   let told = false
+  let nextRamNote = 0
+  let toldStop = false
   for (;;) {
+    if (stopState()) {
+      if (!toldStop) { console.log(`STOPPED ${opt.name}: STOP file present, waiting until it is removed`); toldStop = true }
+      deadline = Date.now() + opt.queueMin * 60000
+      await sleep(pollMs)
+      continue
+    }
     const count = isBlender ? blenderCount() : null
-    const ramLow = isBlender && ramShort(Number(process.env.LAPTOP_MIN_FREE_GB ?? 4))
+    const ramLow = isBlender && ramShort(Number(process.env.LAPTOP_MIN_FREE_GB ?? 2.5))
     if (!(count !== null && count >= maxBlender) && !ramLow) {
       const slot = acquireSlot({ max: Number(process.env.LAPTOP_MAX_RENDERS ?? MAX_RENDERS) })
       if (slot) return slot
     }
     if (Date.now() > deadline) return null
     if (!told) { console.log(`QUEUED ${opt.name}: waiting for a free render slot (max ${MAX_RENDERS} renders, ${maxBlender} Blender instances, ${ramLow ? 'RAM low' : 'RAM ok'})`); told = true }
+    if (ramLow && Date.now() >= nextRamNote) { console.log(`RAM low ${opt.name}: ${(freemem() / 2 ** 30).toFixed(1)} GB free; top: ${topRam()}`); nextRamNote = Date.now() + 10 * 60000 }
     await sleep(pollMs)
   }
 }
@@ -122,7 +147,8 @@ async function main() {
   }
   const watch = setInterval(() => {
     const now = Date.now()
-    if (now - started > opt.timeoutMin * 60000) kill('TIMEOUT', `over ${opt.timeoutMin} min`)
+    if (stopState() === 'now') kill('STOPPED', 'STOP file says now')
+    else if (now - started > opt.timeoutMin * 60000) kill('TIMEOUT', `over ${opt.timeoutMin} min`)
     else if (now - lastOutput > opt.idleMin * 60000) kill('HANG', `no output for ${opt.idleMin} min`)
   }, 10000)
   let finished = false

@@ -32,20 +32,23 @@ fs.mkdirSync(require("path").dirname(p), { recursive: true }); fs.writeFileSync(
 ' || echo "claude-setup: could not set CLAUDE_CODE_SUBAGENT_MODEL"
 
 # Context guard: the same file as global/context-guard.mjs (scripts/check.mjs keeps them equal),
-# run after every tool call so long threads get told to work leaner and then to hand off.
+# run after every tool call so long threads get told to work leaner and, at the backstop, to check the handoff triggers.
 mkdir -p "$HOME/.claude/claude-setup"
 cat > "$HOME/.claude/claude-setup/context-guard.mjs" <<'GUARD'
 #!/usr/bin/env node
 // PostToolUse hook: every tool call re-sends the whole context, so a long session pays for its
 // size again on each call (cache reads were 98% of our usage). At WARN tokens of absolute context,
-// tell Claude once to work leaner; at HANDOFF, to wrap up and leave the rest to a fresh session,
-// and again every REFIRE tokens after that. Silent otherwise; never blocks.
+// tell Claude once to work leaner; at HANDOFF (a backstop only: the real handoff triggers are in
+// docs/WORKFLOW.md, Handoff triggers), to check them, and again every REFIRE tokens after that.
+// Silent otherwise; never blocks.
 import { closeSync, existsSync, openSync, readFileSync, readSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
+// Sized for a 1M window (yskills 2026-11-03: the Animator handed off every ~30 min at 350k). A 200k
+// window never gets here, auto-compact owns it, so these numbers only ever apply to 1M models.
 const WARN = Number(process.env.CLAUDE_SETUP_CONTEXT_WARN) || 250_000
-const HANDOFF = Number(process.env.CLAUDE_SETUP_CONTEXT_HANDOFF) || 350_000
+const HANDOFF = Number(process.env.CLAUDE_SETUP_CONTEXT_HANDOFF) || 700_000
 const REFIRE = 50_000 // after the hand-off, nag again every further REFIRE tokens
 const CHUNK = 256 * 1024
 
@@ -87,11 +90,11 @@ process.stdin.on('end', () => {
     if (!now) return
     const k = (n) => `${Math.round(n / 1000)}k`
     // Absolute floors: a cold start already carries ~100k+ in project threads, so growth since the
-    // first call hides the real size. Warn once at WARN, hand off at HANDOFF, then again every REFIRE.
+    // first call hides the real size. Warn once at WARN, check the handoff triggers at HANDOFF, then again every REFIRE.
     const next = state.next ?? HANDOFF
     let msg = ''
     if (now >= next) {
-      msg = `Context guard: this session's context is ${k(now)} tokens and every tool call re-reads all of it. Finish the current step, write the state (PROGRESS.md, the PR or the thread's reply), and leave further work to a fresh session or thread instead of continuing here.`
+      msg = `Context guard: this session's context is ${k(now)}. Check the three handoff triggers (docs/WORKFLOW.md, Handoff triggers): role change, quality loss (attempt-guard fired twice, the same approach repeated, a contradiction with an earlier step) or a finished milestone. None: keep working; write 10 lines of state into the checklist or PROGRESS.md and rely on compaction (the PreCompact guard keeps the state). One: finish the step, write the handoff file, stop. If you are only waiting, make no tool call and end the turn.`
       state.next = Math.max(next, Math.floor(now / REFIRE) * REFIRE) + REFIRE
       state.fired.push('warn', 'handoff')
     } else if (now >= WARN && !state.fired.includes('warn')) {
@@ -105,6 +108,130 @@ process.stdin.on('end', () => {
   }
 })
 GUARD
+# Compact guard: the same file as global/compact-guard.mjs (scripts/check.mjs keeps them equal);
+# PreCompact: tells the compaction summary what to keep and saves a state note.
+cat > "$HOME/.claude/claude-setup/compact-guard.mjs" <<'COMPACT'
+#!/usr/bin/env node
+// PreCompact hook: what a hook prints to stdout becomes instructions for the compaction summary.
+// Tell it what to keep verbatim (the thread's Role/Kit/Size line, branch, PR, asks, decisions with
+// reasons, the last error, files changed, Done-when) and what to drop, and save the same headings as a
+// note in /mnt/project-files/<project>/handoff/ when the project is known. Never fails a compaction.
+import { closeSync, constants, existsSync, lstatSync, mkdirSync, openSync, readSync, realpathSync, statSync, writeSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
+import { join, resolve, sep } from 'node:path'
+
+const BASE = process.env.CLAUDE_SETUP_PROJECT_FILES || '/mnt/project-files'
+const CHUNK = 256 * 1024
+
+const INSTRUCTIONS = `Compaction summary: keep these verbatim, drop the rest.
+Keep verbatim: the thread's "Role: ... · Kit: ... · Size: ..." line; the branch and the PR; the open asks of yskills and their status; every decision with its reason; the last error text verbatim; the files changed; the "Done when:" line.
+Drop: logs, intermediate states, tool output.`
+
+function tail(path) {
+  const fd = openSync(path, 'r')
+  try {
+    const len = statSync(path).size
+    const n = Math.min(CHUNK, len)
+    const buf = Buffer.alloc(n)
+    readSync(fd, buf, 0, n, len - n)
+    return buf.toString('utf8')
+  } finally { closeSync(fd) }
+}
+
+function extract(text) {
+  const tools = []
+  let lastPost = ''
+  for (const line of text.split('\n')) {
+    try {
+      const content = JSON.parse(line).message?.content
+      for (const b of Array.isArray(content) ? content : []) {
+        if (b.type !== 'tool_use') continue
+        tools.push(b.name)
+        if (/post_message$/.test(b.name) && typeof b.input?.text === 'string') lastPost = b.input.text
+      }
+    } catch { continue } // the chunk's cut-off first line, or a blank
+  }
+  return { tools: tools.slice(-30), lastPost }
+}
+
+function branchOf(cwd) {
+  try {
+    if (!cwd || !existsSync(cwd)) return ''
+    return execFileSync('git', ['-C', cwd, 'rev-parse', '--abbrev-ref', 'HEAD'], { encoding: 'utf8', timeout: 2000, stdio: ['ignore', 'pipe', 'ignore'] }).trim()
+  } catch { return '' }
+}
+
+// The project folder named in cwd or in the transcript. Transcript text is untrusted (tool output, web
+// pages), so the name is a plain word (no dots, no slashes) and the folder must resolve inside BASE.
+function projectOf(cwd, text) {
+  const re = new RegExp(`${BASE.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/([A-Za-z0-9][\\w-]*)/`)
+  const name = String(cwd).match(re)?.[1] || text.match(re)?.[1] || ''
+  if (!name || !/^[A-Za-z0-9][\w-]*$/.test(name)) return ''
+  return resolve(BASE, name).startsWith(resolve(BASE) + sep) ? name : ''
+}
+
+let raw = ''
+process.stdin.setEncoding('utf8')
+process.stdin.on('data', (c) => { raw += c })
+process.stdin.on('end', () => {
+  let out = INSTRUCTIONS
+  try {
+    const { session_id: id = 'unknown', transcript_path: path, trigger = 'auto', cwd = '' } = JSON.parse(raw || '{}')
+    let text = ''
+    try { if (path && existsSync(path)) text = tail(path) } catch (e) { out += `\n(transcript not read: ${e.message})` }
+    const project = projectOf(cwd, text)
+    const dir = project ? join(BASE, project) : ''
+    if (dir && existsSync(dir)) {
+      const { tools, lastPost } = extract(text)
+      const short = String(id).replace(/[^\w-]/g, '').slice(0, 8) || 'unknown'
+      const file = join(dir, 'handoff', `${new Date().toISOString().slice(0, 10)}-compact-${short}.md`)
+      const note = [
+        `# Compaction state (${trigger}, session ${short})`,
+        '',
+        '## Role / Kit / Size',
+        '(copy the thread\'s "Role: · Kit: · Size:" line)',
+        '',
+        '## Branch and PR',
+        branchOf(cwd) || '(branch unknown)',
+        '',
+        '## Open asks of yskills',
+        '(none extracted)',
+        '',
+        '## Decisions with reasons',
+        '(none extracted)',
+        '',
+        '## Last error',
+        '(none extracted)',
+        '',
+        '## Files changed',
+        '(see git status in the branch)',
+        '',
+        '## Done when',
+        '(copy the brief\'s Done-when line)',
+        '',
+        '## Last 30 tool calls',
+        tools.join(', ') || '(none)',
+        '',
+        '## Last post_message',
+        lastPost || '(none)',
+        '',
+      ].join('\n')
+      try {
+        // The folder is shared with other threads: never follow a planted symlink, never overwrite.
+        const handoff = join(dir, 'handoff')
+        mkdirSync(handoff, { recursive: true })
+        if (lstatSync(handoff).isSymbolicLink() || !realpathSync(handoff).startsWith(realpathSync(BASE) + sep)) throw new Error('handoff dir is a link or outside the base')
+        const fd = openSync(file, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o644)
+        try { writeSync(fd, note) } finally { closeSync(fd) }
+        out += `\nState saved at ${file}.`
+      } catch (e) { out += `\nState not saved (${e.message}); keep the headings above in the summary.` }
+    }
+  } catch {
+    // A guard must never break a compaction.
+  }
+  process.stdout.write(`${out}\n`)
+})
+COMPACT
 # Attempt guard: the same file as global/attempt-guard.mjs (scripts/check.mjs keeps them equal);
 # three failed rounds of one command get a reminder, five are blocked until PROGRESS.md has a diagnosis.
 cat > "$HOME/.claude/claude-setup/attempt-guard.mjs" <<'ATTEMPT'
@@ -227,7 +354,7 @@ cat > "$HOME/.claude/claude-setup/team-guard.mjs" <<'TEAM'
 import { execFileSync, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
-import { homedir } from 'node:os'
+import { homedir, tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 // rule-guard sits beside this file (GUARD_FILES); without it only the model-tier check is skipped.
@@ -257,7 +384,7 @@ export function rulesLoaded(cwd, home) {
 // The guards update themselves the same way (yskills 2026-10-27: a rule change on main must reach
 // every session without a cloud rebuild): an installed guard is replaced by main's copy when that
 // copy arrived whole and passes `node --check`. A new hook entry still needs install.mjs or a rebuild.
-export const GUARD_FILES = ['context-guard.mjs', 'attempt-guard.mjs', 'team-guard.mjs', 'rule-guard.mjs']
+export const GUARD_FILES = ['context-guard.mjs', 'compact-guard.mjs', 'attempt-guard.mjs', 'team-guard.mjs', 'rule-guard.mjs']
 const parses = (f) => { try { execFileSync(process.execPath, ['--check', f], { stdio: 'ignore', timeout: 2000 }); return true } catch { return false } }
 // Two downloads, so a guard missing on main (renamed, or not merged yet) never costs the boot files,
 // and each keeps its own time limit inside the hook's 5 s.
@@ -282,6 +409,8 @@ export function refresh(dir, only = null) {
     else rmSync(tmp, { force: true })
   }
 }
+
+export const modelFile = (session) => join(tmpdir(), `claude-setup-model-${String(session).replace(/[^A-Za-z0-9]/g, '')}`)
 
 export const BOOT_MAX = 9800 // hook context over 10,000 characters is cut to a preview; scripts/check.mjs keeps both cards under this
 const section = (t, from, to) => { const a = t.indexOf(`\n## ${from}`); const b = t.indexOf(`\n## ${to}`, a + 1); return a < 0 ? '' : t.slice(a + 1, b < 0 ? undefined : b).trim() }
@@ -349,12 +478,28 @@ export function readBootFiles(transcript) {
   return seen
 }
 
-export function hasOwnModel(type, dirs) {
-  if (!type || !/^[\w.-]+$/.test(type)) return false
-  return dirs.some((d) => {
+// The `model:` of an agent file's frontmatter, or null.
+export function fileModel(type, dirs) {
+  if (!type || !/^[\w.-]+$/.test(type)) return null
+  for (const d of dirs) {
     const file = join(d, `${type}.md`)
-    return existsSync(file) && /^model:\s*\S+/m.test(readFileSync(file, 'utf8').split(/^---\s*$/m)[1] ?? '')
-  })
+    const model = existsSync(file) && (readFileSync(file, 'utf8').split(/^---\s*$/m)[1] ?? '').match(/^model:\s*(\S+)/m)?.[1]
+    if (model) return model
+  }
+  return null
+}
+export const hasOwnModel = (type, dirs) => Boolean(fileModel(type, dirs))
+
+// An Agent call whose `model` is a cheaper tier than its agent file's own `model:` (yskills 2026-11-03: gates
+// always Opus; the reviewer agent files say opus, and a `model: sonnet` on the call would override that).
+// Two exits the Models line allows pass: Opus for a Fable file (Fable out of credits) and a model yskills named.
+const RANK = ['haiku', 'sonnet', 'opus', 'fable']
+const rankOf = (model) => RANK.findIndex((t) => String(model ?? '').toLowerCase().includes(t))
+export function downgraded(input, dirs) {
+  const own = fileModel(input.subagent_type, dirs)
+  const call = rankOf(input.model)
+  if (!own || call < 0 || call >= rankOf(own) || /yskills (named|asked|set|chose)/i.test(String(input.prompt ?? ''))) return null
+  return rankOf(own) === RANK.indexOf('fable') && call === RANK.indexOf('opus') ? null : own
 }
 
 // The brief block's first line (operator/briefs.md): Role, Kit and Size, so the thread knows what it is (yskills 2026-10-27).
@@ -363,9 +508,10 @@ export function stamped(text) {
   return /^[ \t>-]*Role:[ \t]*\S/im.test(plain) && /\bKit:[ \t]*\S/i.test(plain) && /\bSize:[ \t]*[SML]\b/i.test(plain)
 }
 
+// Every size (yskills 2026-11-03: research before guessing, a small task too).
 export function needsPriorArt(text) {
   const plain = text.replace(/[*_`]/g, '')
-  return /\bSize:[ \t]*[ML]\b/i.test(plain) && !/^[ \t>-]*Prior art:[ \t]*[^<\s][^\n]{9,}$/im.test(plain)
+  return /\bSize:[ \t]*[SML]\b/i.test(plain) &&!/^[ \t>-]*Prior art:[ \t]*[^<\s][^\n]{9,}$/im.test(plain)
 }
 
 const briefText = (input) => Object.values(input).filter((v) => typeof v === 'string').join('\n')
@@ -377,7 +523,7 @@ export function needsTester(text) {
 }
 
 // The model tiers a brief's role may run on, from its Roster row: the first tier named, Fable where
-// the row names it, and a tier the row gives "on L" for a size L brief (`Sonnet; Opus verdict on L`). A thread start whose `model` is another tier was a guess (yskills 2026-10-27: "did you
+// the row names it, and a tier the row gives "on L" for a size L brief (`Sonnet; Opus on L`). A thread start whose `model` is another tier was a guess (yskills 2026-10-27: "did you
 // pick Opus on purpose?"); a model yskills named passes when the brief says so.
 const TIERS = ['fable', 'opus', 'sonnet', 'haiku']
 export function wrongModel(text, model, teams) {
@@ -388,7 +534,7 @@ export function wrongModel(text, model, teams) {
   if (why && String(model).toLowerCase().includes(why) && new RegExp(`\\b${why}\\b`, 'i').test(role.row)) return null
   const parts = (role.row.match(/Model: ([^\n]*?)\.?$/)?.[1] ?? '').split(';').map((p) => p.toLowerCase())
   const sizeL = /\bSize:[ \t]*L\b/i.test(text.replace(/[*_`]/g, ''))
-  // The first tier is the thread's own; a later one only for Fable or a size L exception ("Opus verdict on L"), never a subagent's.
+  // The first tier is the thread's own; a later one only for Fable or a size L exception ("Opus on L"), never a subagent's.
   const allowed = TIERS.filter((t, _i, all) => parts.some((p, i) => p.includes(t) && (i === 0 ? all.filter((x) => p.includes(x)).indexOf(t) === 0 : t === 'fable' || (sizeL && /\bon l\b/.test(p)))))
   const tier = TIERS.find((t) => String(model).toLowerCase().includes(t))
   return allowed.length && tier && !allowed.includes(tier) ? { role: role.name, allowed, tier } : null
@@ -457,10 +603,12 @@ export function decide(tool, input = {}, dirs = [], unread = [], teams = '') {
   if (title) return { block: `team-guard: a ${title} thread is titled \`${title} · <what>\` (claude-setup docs/TEAMS.md, Roster "Runs as"), e.g. "${title} · Bienen-Video". Fix the title, then retry.` }
   const lines = kind === 'thread' ? missingLines(briefText(input)) : []
   if (lines.length) return { block: `team-guard: the brief misses ${lines.join(', ')} (claude-setup .claude/skills/operator/briefs.md, Every thread brief starts with). Copy that block, fill each line for this task, then retry.` }
-  if (kind === 'thread' && needsPriorArt(briefText(input))) return { block: 'team-guard: a size M or L brief names what already exists before anything is built (CLAUDE.md, Work for the future): add a line `Prior art: <our repos, skills, plugins, public setups checked> -> copy | adapt | build, because <why>` (or `to find: <where the Researcher looks>`), then retry.' }
+  if (kind === 'thread' && needsPriorArt(briefText(input))) return { block: 'team-guard: every brief names what already exists before anything is built (CLAUDE.md, Work for the future): add a line `Prior art: <our repos, skills, plugins, public setups checked> -> copy | adapt | build, because <why>` (or `to find: <where the Researcher looks>`), then retry.' }
   if (kind === 'thread' && needsTester(briefText(input))) return { block: 'team-guard: a size L Programmer thread starts only after its Tester thread (claude-setup docs/TEAMS.md, Sizes). Start `Tester · <app>` first, then put a line `Tester: <its thread id or title>` in this brief and retry.' }
   const wrong = kind === 'thread' && wrongModel(briefText(input), input.model, teams)
   if (wrong) return { block: `team-guard: the ${wrong.role} runs on ${wrong.allowed.join(' or ')} (claude-setup docs/TEAMS.md, Roster), not ${wrong.tier}. Pass that model. For an exception the row names (e.g. "Opus writes the weekly plan") add \`Model: <tier> (<why>)\` to the brief; if yskills named this model, say "yskills named <model>". Then retry.` }
+  const own = kind === 'Agent' && downgraded(input, dirs)
+  if (own) return { block: `team-guard: the ${input.subagent_type} agent runs on ${own} (its agent file in claude-setup .claude/agents), not ${input.model}. Drop \`model\` or pass ${own}, then retry.` }
   if (!kind || String(input.model ?? '').trim()) return {}
   if (kind === 'Agent' && hasOwnModel(input.subagent_type, dirs)) return {}
   return { block: `team-guard: this ${kind === 'Agent' ? 'Agent call' : 'thread start'} has no \`model\`. Pass the model of the role's row in claude-setup docs/TEAMS.md (Roster; Agent: haiku, sonnet or opus; thread: the full id from the Models line), then retry.` }
@@ -475,10 +623,12 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
   process.stdin.on('data', (c) => { raw += c })
   process.stdin.on('end', () => {
     try {
-      const { tool_name: tool = '', tool_input: input, cwd = process.cwd(), transcript_path: transcript, session_id: session, source } = JSON.parse(raw || '{}')
+      const { tool_name: tool = '', tool_input: input, cwd = process.cwd(), transcript_path: transcript, session_id: session, source, model } = JSON.parse(raw || '{}')
       const mark = (kind) => join(dir, 'booted', `${String(session).replace(/\W/g, '')}.${kind}`)
       const say = (context) => process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: context } }))
       if (mode === 'start') {
+        // SessionStart names the session's model; rule-guard's brief check reads it before the first reply.
+        if (session && typeof model === 'string' && model) writeFileSync(modelFile(session), model)
         if (process.env.CLAUDE_SETUP_BOOT_FETCH !== 'off') refresh(dir)
         sweep(join(dir, 'booted'))
         if (rulesLoaded(cwd, home)) return say(POINTER)
@@ -488,6 +638,8 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         return say(`${bootCard(dir)}\n${POINTER}`)
       }
       if (mode === 'card') {
+        // 2026-11-08: a spawned project thread runs with CLAUDE_CODE_CHILD_SESSION=1 and gets its role card from rule-guard; the coordinator (channel session) does not set it as far as its init event shows, so only the thread skips.
+        if (process.env.CLAUDE_CODE_CHILD_SESSION === '1') return
         // The coordinator runs outside any repo (the project chat); a thread sits in a product repo and needs only its role card (rule-guard).
         if (rulesLoaded(cwd, home) || inRepo(cwd)) return
         // The project chat resumes its session each turn; it needs the card once, the first time hooks exist.
@@ -528,6 +680,33 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
   })
 }
 TEAM
+# Git pre-push hook: the same file as global/git-hooks/pre-push (scripts/check.mjs keeps them equal).
+# Every repo with scripts/pre-pr.mjs runs its CI pre-check before a push, so a red CI for a known check cannot happen.
+mkdir -p "$HOME/.claude/claude-setup/git-hooks"
+cat > "$HOME/.claude/claude-setup/git-hooks/pre-push" <<'PREPUSH'
+#!/bin/sh
+# Git pre-push hook for our own repos (install.mjs on the laptop, cloud/setup.sh in the cloud set core.hooksPath to this
+# folder). A yverse-studio repo that ships scripts/pre-pr.mjs gets its CI pre-check before every push, on every machine,
+# with or without Claude hooks (yskills 2026-11-08: laptop PRs only went red in CI). Other remotes and repos without the
+# script are untouched; a repo's own .git/hooks/pre-push still runs afterwards. Skip once with PRE_PR_SKIP=1 (say why in the PR).
+remote_url=$(git remote get-url origin 2>/dev/null)
+case "$remote_url" in
+  https://github.com/yverse-studio/*|git@github.com:yverse-studio/*|ssh://git@github.com/yverse-studio/*) ours=1 ;;
+  *) ours= ;;
+esac
+if [ -n "$ours" ] && [ -z "$PRE_PR_SKIP" ] && [ -f scripts/pre-pr.mjs ]; then
+  echo "pre-push: node scripts/pre-pr.mjs (what CI runs, tests included)"
+  node scripts/pre-pr.mjs || { echo "pre-push: blocked, fix the failures above (PRE_PR_SKIP=1 to push anyway and say why in the PR)"; exit 1; }
+fi
+own="$(git rev-parse --git-common-dir 2>/dev/null)/hooks/pre-push"
+if [ -x "$own" ]; then exec "$own" "$@"; fi
+exit 0
+PREPUSH
+chmod +x "$HOME/.claude/claude-setup/git-hooks/pre-push"
+if [ -z "$(git config --global --get core.hooksPath 2>/dev/null)" ] || [ "$(git config --global --get core.hooksPath)" = "$HOME/.claude/claude-setup/git-hooks" ]; then
+  git config --global core.hooksPath "$HOME/.claude/claude-setup/git-hooks"
+fi
+
 # First copy of the boot files, so a session whose 3 s refresh fails still has them.
 echo '{}' | node "$HOME/.claude/claude-setup/team-guard.mjs" start >/dev/null || echo "claude-setup: could not fetch the boot files"
 
@@ -553,6 +732,8 @@ cat > "$HOME/.claude/claude-setup/rule-guard.mjs" <<'RULE'
 // prompt: a video link or a bare "stop" gets the matching CLAUDE.md line put next to the message, and
 // the first message naming `Role: <role>` (the brief block, operator/briefs.md) gets that role's
 // Roster row and playbook put into context, so a thread always knows what it is (yskills 2026-10-27).
+// pre also refuses a headless Blender start while bl_server.py runs, and any Blender call before the session read
+// NACHT-FIX-PLAN.md and the animator Fast loop (blenderServerBusy, blenderDocsMissing).
 // pre also warns, never blocks, when a new PR in a repo with a PROGRESS.md leaves its `## Jetzt` block
 // missing or untouched (docs/hq-rows.md, Jetzt block: HQ shows every project from that block).
 // CLAUDE_SETUP_RULE_GUARD=off turns it off. It never breaks a tool call on its own errors.
@@ -560,7 +741,7 @@ cat > "$HOME/.claude/claude-setup/rule-guard.mjs" <<'RULE'
 import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { homedir, tmpdir } from 'node:os'
-import { dirname, join } from 'node:path'
+import { dirname, join, relative } from 'node:path'
 
 const OWNER = 'yskills'
 const MARK = '# Working for yskills' // first line of claude-setup's CLAUDE.md
@@ -643,8 +824,61 @@ export function grillMissing(tool, input, transcript) {
   return !/"name":"mcp__[^"]*(request_decision|ask_decision)"/.test(text)
 }
 
+// No guessing (yskills 2026-11-03: "kein raten, immer fragen bis kein fog mehr da ist"): a reply that
+// rests on an assumption names what was checked, or asks him on a card instead.
+const GUESS = /\b(ich (nehme|denke|glaube|schätze|vermute)[^.\n]{0,12}\ban\b|vermutlich|wahrscheinlich|ich rate|i (assume|guess|suppose)|probably|presumably|my guess)\b/i
+export const guessing = (text) => GUESS.test(text) && !REASON.test(text)
+
+// No purchase without his explicit OK (yskills 2026-11-03): a browser or shell step to a checkout, cart,
+// billing or upgrade page is blocked; his own app on a local host and a Stripe test session pass.
+// A whole path segment only, so docs pages ("/docs/in-app-purchases", "/upgrade-guide") pass.
+const BUY_PATH = /\/(checkout|cart|warenkorb|kasse|purchase|buy|kaufen|bestellen|place-order)(\/|$)/i
+const BUY_HOST = /^(checkout\.stripe\.com|buy\.stripe\.com|www\.paypal\.com|pay\.google\.com)$/i
+const BROWSER_STEP = /navigate|browser_batch|tabs_create|preview_start/
+const isPurchase = (url) => {
+  try {
+    const u = new URL(url)
+    // A test exemption is narrow: his own app on loopback or a .test name, or a Stripe test session on Stripe's own host (a cs_test_ in any query string would bypass the guard).
+    if (u.hostname === 'localhost' || /\.(test|localhost)$/.test(u.hostname) || privateIp(u.hostname.replace(/^\[|\]$/g, '')) || (u.hostname === 'checkout.stripe.com' && /^\/c\/pay\/cs_test_/.test(u.pathname))) return false
+    if (/^docs?\./.test(u.hostname) || /^\/docs?\//.test(u.pathname)) return false // reading about checkout is no purchase
+    return BUY_HOST.test(u.hostname) || BUY_PATH.test(u.pathname)
+  } catch { return false }
+}
+export function purchaseUrl(tool, input = {}) {
+  if (!BROWSER_STEP.test(tool) && !/^(Bash|PowerShell)$/.test(tool)) return null
+  return (JSON.stringify(input).match(/https?:\/\/[^\s"'\\<>]+/g) ?? []).find(isPurchase) ?? null
+}
+
+// A clean folder structure (yskills 2026-11-04): a folder with a `.layout.json` ({ "allow": [globs], "why": "..." })
+// takes writes only at the paths its globs allow, relative to that folder. The nearest one up the tree applies.
+const LAYOUT_DEPTH = 12
+// A glob as a regex: ** spans folders, * and ? stay inside one name; dotfiles match like any name (path.matchesGlob skips them).
+const globRe = (glob) => new RegExp(`^${glob.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*\*\/?|\*|\?/g, (m) => (m === '?' ? '[^/]' : m === '*' ? '[^/]*' : '.*'))}$`)
+export function offLayout(file) {
+  if (!file) return null
+  let dir = dirname(file)
+  for (let i = 0; i < LAYOUT_DEPTH; i++) {
+    const spec = join(dir, '.layout.json')
+    if (existsSync(spec)) {
+      let layout
+      try { layout = JSON.parse(readFileSync(spec, 'utf8')) } catch { return null } // a broken layout never blocks
+      const rel = relative(dir, file).split(/[\\/]/).join('/')
+      const allow = Array.isArray(layout.allow) ? layout.allow : []
+      return rel === '.layout.json' || allow.some((g) => globRe(g).test(rel)) ? null : { rel, root: dir, why: String(layout.why ?? 'see the file') }
+    }
+    const up = dirname(dir)
+    if (up === dir) return null
+    dir = up
+  }
+  return null
+}
+
 // board: the thread board this session last listed (threadBoard), or a function that builds it, for claims that nothing is open.
 export function decide(tool, input = {}, env = {}, published = [], board = null) {
+  const buy = purchaseUrl(tool, input)
+  if (buy) return `rule-guard: ${buy.slice(0, 80)} is a checkout or cart page (CLAUDE.md, Ask first): no purchase without yskills' explicit OK. Put item, price and total on a request_decision card; after his yes he places the order himself.`
+  const off = /^(Write|Edit|NotebookEdit)$/.test(tool) && offLayout(String(input.file_path ?? input.notebook_path ?? ''))
+  if (off) return `rule-guard: ${off.rel} is outside the agreed folder structure of ${off.root} (its .layout.json: ${off.why}). Put it where the layout says, or ask yskills on a card before a new folder.`
   if (/^mcp__github__/.test(tool) || tool === 'Bash') {
     const ask = tool === 'Bash'
       ? GH_ASK.test(input.command ?? '')
@@ -659,6 +893,7 @@ export function decide(tool, input = {}, env = {}, published = [], board = null)
     const text = String(input.text ?? '')
     if (/^[\s>*_]*Card:/m.test(text)) return 'rule-guard: a decision is a real card here (CLAUDE.md, Cards): post it with request_decision (question, 2-4 options, one recommended), not as "Card:" text.'
     if (bareAgreement(text)) return 'rule-guard: this reply agrees without a reason (CLAUDE.md, Co-founder). Check the claim first (repo, a source, a test), then say agree, disagree or "partly, because ..." with what you checked.'
+    if (guessing(text)) return 'rule-guard: this reply guesses ("probably", "vermutlich", "I assume") (CLAUDE.md, No fog). Look it up first (old notes, HANDOFF.md, lessons, the repo), then say what you checked; what is still open goes to yskills as one request_decision batch.'
     const lines = text.split('\n').filter((l) => l.trim()).length
     if (text.length > REPLY_MAX_CHARS || lines > REPLY_MAX_LINES) return `rule-guard: this reply has ${text.length} chars and ${lines} lines; the cap is ${REPLY_MAX_CHARS} and ${REPLY_MAX_LINES} (CLAUDE.md, Replies). Lead with the result in a few lines; put the rest in a file under /mnt/project-files/ and attach it.`
     const why = replyRule(text, input.attached_outputs, board)
@@ -772,7 +1007,22 @@ function roleContext(prompt, cwd, session) {
 // The thread side of the team check (routing test 2026-10-27: a project chat may run without hooks, so a
 // bad start can reach the thread). The spawn brief is checked against docs/TEAMS.md with team-guard's own
 // rules; a bad one tells the thread to do no work and send the start back. Returns '' when it passes.
-export async function briefCheck(prompt, cwd) {
+// The model this session runs on: the newest assistant entry's `message.model` in the transcript (the
+// harness writes it on every reply; a tool input's `model` is not it), else the env the app sets.
+// Unknown is null, and nothing is checked.
+export function sessionModel(transcript = '', env = process.env) {
+  let model = null
+  for (const line of String(transcript).split('\n')) {
+    if (!line.includes('"assistant"')) continue
+    try { const e = JSON.parse(line); if (e.type === 'assistant' && typeof e.message?.model === 'string') model = e.message.model } catch { /* a cut line */ }
+  }
+  return model ?? env.ANTHROPIC_MODEL ?? null
+}
+// Gate roles grade work and need the gate rules (yskills 2026-11-04: "if you don't even get the gate right").
+const GATE_ROLES = /^(Tester|Reviewer|Security|Legal|Playtester|Hook Checker|Critic|Story Editor|Evaluator)$/i
+const GATE_PRIOR = /^[ \t>-]*Prior art:[^\n]*\bgate\.md\b/im
+
+export async function briefCheck(prompt, cwd, model = null) {
   if (!/<(wake|relay)\b[^>]*reason=\\?"spawn/.test(prompt)) return ''
   let guard
   try { guard = await import(new URL('./team-guard.mjs', import.meta.url)) } catch { return '' }
@@ -782,8 +1032,38 @@ export async function briefCheck(prompt, cwd) {
   const why = !guard.stamped(brief) ? 'no `Role: · Kit: · Size:` stamp line'
     : guard.badTeam(brief, teams) ?? (missing.length ? `brief lines missing: ${missing.join(', ')}` : null)
   if (why) return `Brief check (docs/TEAMS.md): this start breaks the team rules: ${why}. Do no work: send this reason and the corrected Role, Kit and Size to the coordinator (message_coordinator), then stop.`
+  // The coordinator runs without hooks, so its model pick and gate brief are checked here, on the thread side.
+  const wrong = model && guard.wrongModel(brief, model, teams)
+  if (wrong) return `Model check (docs/TEAMS.md, Roster): this thread runs on ${wrong.tier}, but the ${wrong.role} runs on ${wrong.allowed.join(' or ')}. Do no work: tell the coordinator (message_coordinator) to restart it on that model, then stop.`
+  const gate = roleOf(brief, teams)?.name
+  if (gate && GATE_ROLES.test(gate) && !GATE_PRIOR.test(brief.replace(/[*_`]/g, ''))) return `Gate check (.claude/skills/operator/gate.md): a ${gate} brief names the gate rules in its \`Prior art:\` line (gate.md and the kit's checks). Do no work: ask the coordinator (message_coordinator) for the brief with them, then stop.`
   const role = guard.stamped(brief) && /\bSize:[ \t]*[ML]\b/i.test(brief.replace(/[*_`]/g, '')) && roleOf(brief, teams)?.name
   return role ? `Title check (docs/TEAMS.md, Roster "Runs as"): this thread's title starts with \`${role} · \`; if it does not, rename_thread to \`${role} · <what>\` first.` : ''
+}
+
+// Spawn rule 4 (proven 2026-11-08: the hook-less coordinator started a thread with no `model` and `Model: default`
+// although yskills asked for a "Fable-Thread"; it ran on Sonnet). The thread compares the model the brief or the cited
+// yskills text names with the one it runs on (latest assistant entry of the transcript, else CLAUDE_MODEL).
+const TIER = /\b(?:claude-)?(fable|opus|sonnet|haiku)\b[\w.-]*/i
+export function modelCheck(brief, transcript, envModel = process.env.CLAUDE_MODEL) {
+  const named = brief.match(/^[ \t]*[*_`]*Model:?[*_`]*[ \t]*[*_`]*([^\n]*)/im)?.[1].match(TIER)
+  const wanted = (named ?? [...brief.matchAll(/<cited\b[^>]*author=\\?"user\\?"[^>]*>([\s\S]*?)<\/cited>/g)].map((m) => m[1].match(TIER)).find(Boolean))?.[1]?.toLowerCase()
+  let running = ''
+  for (const line of transcript.split('\n')) {
+    if (!line.includes('"assistant"')) continue
+    try { const e = JSON.parse(line); if (e.type === 'assistant' && e.message?.model) running = e.message.model } catch { /* not JSON */ }
+  }
+  running = (running || envModel || '').toLowerCase()
+  if (!wanted || !running || running.includes(wanted)) return ''
+  return `Model check (docs/TEAMS.md, Spawn rule 4): the brief or yskills asks for ${wanted}, this thread runs on ${running}. Do no work: message_coordinator with Role, Kit, Size and \`model: ${wanted}\` for a restart, then stop.`
+}
+
+function modelOnce(brief, transcriptPath, session) {
+  const once = join(tmpdir(), `claude-setup-model-${String(session).replace(/\W/g, '')}`)
+  if (!session || existsSync(once) || !/<(wake|relay)\b[^>]*reason=\\?"spawn/.test(brief)) return ''
+  const out = modelCheck(brief, transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : '')
+  if (out) writeFileSync(once, '')
+  return out
 }
 
 // Relay and first wake queue together and the hook fires once, on the second prompt (issue #335): the
@@ -928,6 +1208,47 @@ export function coordinatorCheck(transcript, now = Date.now()) {
   return null
 }
 
+// Blender (yskills 2026-11-03: "no progress lost"): one Blender slot on the laptop. A headless start while the persistent
+// bl_server.py runs is refused (cxy-repo tools/scenekit/NIGHT-CHAIN.md, Persistent Blender), and no Blender call goes out before
+// the session read the night fix plan and the animator's Fast loop (operator/roles/animator.md).
+const BLENDER_EXE = String.raw`(?:"[^"\n]*[\\/]blender(?:\.exe)?"|'[^'\n]*[\\/]blender(?:\.exe)?'|(?:[^\s"';&|]*[\\/])?blender(?:\.exe)?|["']?(?:%BL\w*%|\$\{?(?:env:)?BL\w*\}?)["']?)`
+const BLENDER_RUN = new RegExp(String.raw`(?:^|[;&|(\n\x60]|\s--\s|\b(?:then|do|else|exec|nohup|start|time|xargs|Start-Process(?:\s+-FilePath)?|timeout\s+\S+)\s)\s*(?:&\s*)?${BLENDER_EXE}(?=\s|$)`, 'i')
+const HEADLESS = /(?:^|[\s'",])(?:-b|--background)(?=[\s'",]|$)/
+const BL_SERVER_PROC = /blender(?:\.exe)?["']?\s.*bl_server\.py/i
+export const BLENDER_DOCS = [['GameAssetLibrary/scenes/companyxy/ch01/NACHT-FIX-PLAN.md', /NACHT-FIX-PLAN\.md$/i], ['claude-setup/.claude/skills/operator/roles/animator.md (Fast loop)', /operator[\\/]roles[\\/]animator\.md$/i]]
+const shellCommand = (tool, input) => (/^(Bash|PowerShell)$/.test(tool) ? String(input.command ?? '') : '')
+export const blenderStart = (command) => BLENDER_RUN.exec(command)
+export function blenderCall(tool, input = {}) {
+  return /^mcp__Blender__/.test(tool) || Boolean(blenderStart(shellCommand(tool, input)))
+}
+// procs: the running processes' command lines, one per line (or a function that lists them; only called for a headless start).
+export function blenderServerBusy(tool, input = {}, procs = '') {
+  const command = shellCommand(tool, input)
+  const start = blenderStart(command)
+  if (!start || /bl_server\.py/i.test(command) || !HEADLESS.test(command.slice(start.index + start[0].length))) return null
+  const running = String(typeof procs === 'function' ? procs() : procs).split('\n').some((l) => BL_SERVER_PROC.test(l))
+  if (!running) return null
+  return 'rule-guard: bl_server.py läuft schon und hält den einzigen Blender-Slot. Kein zweites `blender -b`: leg einen Job (*.py mit `result`-dict) in GameAssetLibrary/_research/wild_life_notes/tools/bl_jobs oder nimm tools/submit_strip.sh <slot>. Siehe GitHub/cxy-repo/tools/scenekit/NIGHT-CHAIN.md, "Persistent Blender".'
+}
+// transcript: the session's transcript text (or a function returning it); a Read tool call of each doc counts.
+export function blenderDocsMissing(tool, input = {}, transcript = '') {
+  if (!blenderCall(tool, input)) return null
+  const reads = toolCalls(typeof transcript === 'function' ? transcript() : transcript).filter((c) => c.name === 'Read').map((c) => String(c.input.file_path ?? '').replace(/\\/g, '/'))
+  const missing = BLENDER_DOCS.filter(([, path]) => !reads.some((f) => path.test(f)))
+  if (!missing.length) return null
+  return `rule-guard: vor dem ersten Blender-Aufruf dieser Session erst lesen (Read): ${missing.map(([name]) => name).join(' und ')}. Dann nochmal.`
+}
+const listProcs = () => {
+  if (process.env.CLAUDE_SETUP_PROCS !== undefined) return process.env.CLAUDE_SETUP_PROCS // tests: a fake process list
+  try {
+    return process.platform === 'win32'
+      ? execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', '(Get-CimInstance Win32_Process -Property CommandLine).CommandLine'], { encoding: 'utf8', timeout: 3500, windowsHide: true })
+      : execFileSync('ps', ['-eo', 'args'], { encoding: 'utf8', timeout: 3500 })
+  } catch { return '' }
+}
+// A subagent's own tool calls live next to the session transcript: <session>/subagents/agent-<id>.jsonl.
+const agentTranscript = (transcriptPath, agentId) => (transcriptPath && agentId ? join(transcriptPath.replace(/\.jsonl$/, ''), 'subagents', `agent-${String(agentId).replace(/[^\w-]/g, '')}.jsonl`) : '')
+
 if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/').split('/').pop())) {
   const mode = process.argv[2]
   if (mode === 'read') {
@@ -944,14 +1265,15 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
     process.stdin.on('end', async () => {
       try {
         if (process.env.CLAUDE_SETUP_RULE_GUARD === 'off') return
-        const { tool_name: tool = '', tool_input: input = {}, prompt = '', cwd = process.cwd(), session_id: session, transcript_path: transcriptPath } = JSON.parse(raw || '{}')
+        const { tool_name: tool = '', tool_input: input = {}, prompt = '', cwd = process.cwd(), session_id: session, transcript_path: transcriptPath, agent_id: agentId } = JSON.parse(raw || '{}')
         if (mode === 'prompt') {
           const briefOnce = join(tmpdir(), `claude-setup-brief-${String(session).replace(/\W/g, '')}`)
           const spawned = /reason=\\?"spawn/.test(prompt)
           const lookup = session && !spawned && !existsSync(briefOnce) && transcriptPath && existsSync(transcriptPath)
           const brief = lookup ? spawnPrompt(prompt, read(transcriptPath)) : prompt
           if (session && (spawned || (lookup && brief !== prompt))) writeFileSync(briefOnce, '')
-          const context = [await briefCheck(brief, cwd), roleContext(brief, cwd, session), promptContext(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
+          const model = sessionModel(transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : '') ?? (read(join(tmpdir(), `claude-setup-model-${String(session).replace(/[^A-Za-z0-9]/g, '')}`)).trim() || null)
+          const context = [await briefCheck(brief, cwd, model), modelOnce(brief, transcriptPath, session), roleContext(brief, cwd, session), promptContext(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
           if (context) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: context } }))
           return
         }
@@ -964,10 +1286,13 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         if (mode !== 'pre') return
         const shipped = join(tmpdir(), `claude-setup-artifacts-${String(session).replace(/\W/g, '')}`)
         const transcript = () => (transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : '')
+        const sessionTranscript = () => [transcriptPath, agentTranscript(transcriptPath, agentId)].filter((p) => p && existsSync(p)).map(read).join('\n')
         const block = decide(tool, input ?? {}, process.env, session ? read(shipped).split('\n') : [], () => threadBoard(toolCalls(transcript())))
           ?? canaryMissing(tool, input ?? {}, session ? read(join(process.env.CLAUDE_SETUP_HOME || homedir(), '.claude', 'claude-setup', 'booted', `${String(session).replace(/\W/g, '')}.canary`)) : '', transcript)
           ?? kaomojiMissing(tool, input ?? {})
-          ?? (grillMissing(tool, input ?? {}, transcript) ? 'rule-guard: a Planner at size M or L grills first (CLAUDE.md, Grill first; operator SKILL.md): post 3-5 sharp questions as request_decision cards, each with your recommended answer, then write the plan on the answers (or the recommendations while he is away).' : null)
+          ?? blenderServerBusy(tool, input ?? {}, listProcs)
+          ?? blenderDocsMissing(tool, input ?? {}, sessionTranscript)
+          ?? (grillMissing(tool, input ?? {}, transcript) ? 'rule-guard: a Planner at size M or L grills first (CLAUDE.md, No fog; operator SKILL.md, Grill first): post 3-5 sharp questions as request_decision cards, each with your recommended answer, then write the plan on the answers (or the recommendations while he is away).' : null)
         if (!block && session && tool === 'Artifact' && input?.url && input.file_path) writeFileSync(shipped, `${input.file_path}\n`, { flag: 'a' })
         if (block) { process.stderr.write(block); process.exitCode = 2 }
         else {
@@ -1005,6 +1330,8 @@ const cmd = `node "${require("os").homedir()}/.claude/claude-setup/context-guard
 s.hooks = s.hooks || {}
 s.hooks.PostToolUse = (s.hooks.PostToolUse || []).filter((h) => !JSON.stringify(h).includes("context-guard.mjs"))
 s.hooks.PostToolUse.push({ matcher: "*", hooks: [{ type: "command", command: cmd, timeout: 5 }] })
+s.hooks.PreCompact = (s.hooks.PreCompact || []).filter((h) => !JSON.stringify(h).includes("compact-guard.mjs"))
+s.hooks.PreCompact.push({ hooks: [{ type: "command", command: `node "${require("os").homedir()}/.claude/claude-setup/compact-guard.mjs"`, timeout: 10 }] })
 for (const [event, mode] of [["PreToolUse", "pre"], ["PostToolUse", "ok"], ["PostToolUseFailure", "fail"]]) {
   s.hooks[event] = (s.hooks[event] || []).filter((h) => !JSON.stringify(h).includes("attempt-guard.mjs"))
   s.hooks[event].push({ matcher: "Bash|mcp__.*", hooks: [{ type: "command", command: `node "${require("os").homedir()}/.claude/claude-setup/attempt-guard.mjs" ${mode}`, timeout: 5 }] })
@@ -1014,7 +1341,7 @@ const teamHooks = [["SessionStart", "startup|clear|compact", "start"], ["Session
 for (const event of new Set(teamHooks.map(([e]) => e))) s.hooks[event] = (s.hooks[event] || []).filter((h) => !JSON.stringify(h).includes("team-brief.mjs") && !JSON.stringify(h).includes("team-guard.mjs"))
 for (const [event, matcher, mode] of teamHooks) s.hooks[event].push({ matcher, hooks: [team(mode)] })
 const rule = (mode) => ({ type: "command", command: `node "${require("os").homedir()}/.claude/claude-setup/rule-guard.mjs" ${mode}`, timeout: 5 })
-for (const [event, matcher, mode] of [["PreToolUse", "Bash|Write|Edit|Artifact|WebFetch|mcp__github__.*|mcp__hearthbot__post_message|mcp__remote-devices__create_artifact", "pre"], ["UserPromptSubmit", "", "prompt"], ["Stop", "", "stop"]]) {
+for (const [event, matcher, mode] of [["PreToolUse", "Bash|PowerShell|Write|Edit|Artifact|WebFetch|mcp__github__.*|mcp__hearthbot__post_message|mcp__remote-devices__create_artifact|mcp__Blender__.*|mcp__.*(navigate|browser_batch|tabs_create.*|preview_start)", "pre"], ["UserPromptSubmit", "", "prompt"], ["Stop", "", "stop"]]) {
   s.hooks[event] = (s.hooks[event] || []).filter((h) => !JSON.stringify(h).includes("rule-guard.mjs"))
   s.hooks[event].push({ ...(matcher ? { matcher } : {}), hooks: [rule(mode)] })
 }

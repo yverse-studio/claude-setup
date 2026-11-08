@@ -2,7 +2,7 @@
 name: typescript-reviewer
 description: "TypeScript/JavaScript review: types, async, Node and web security. Use for all TS/JS changes."
 tools: Read, Grep, Glob, Bash
-model: sonnet
+model: opus
 ---
 
 ## Prompt Defense Baseline

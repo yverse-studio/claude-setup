@@ -32,6 +32,20 @@ links it. Update both in the same turn when a folder changes.
 Explicit slot names and scene contents stay out of git (company-xy PR 80 rule): they live in the laptop
 README and the private `nacht-kapitel1.rpy` only.
 
+### One source, kept clean
+
+Planned 2026-11-05, executed in stages (`rigs\` merges into `animations\interaction\`; scripts live in `GameAssetLibrary\tools\`).
+
+- One file per character, clip and scene, at its place in the README tree (`characters\`, `animations\`, `scenes\`).
+- Work happens in a dated copy `<name>_<date>_<reason>.blend` in the same folder and is written back into the target
+  file at the end.
+- The copy then goes to `_archive\<date>-<reason>\` or `_trash_<date>\`; it never stays next to the original.
+- No version chains (`_v1` ... `_v23`): at most the target, one working copy and one archive state.
+- Render output and check strips live with the shot: `<shot>\render\`, `<shot>\checks\`.
+- Before a thread ends it records in `GameAssetLibrary\docs\handoff\HANDOFF-CURRENT.md` which file is current and where
+  work continues.
+- What is not in the README tree does not exist for the next thread.
+
 **No sexual content on GitHub, private repos included** (2026-10-29: `yskills-claude` was suspended after explicit
 clips, stills and proof strips sat in `companyxy-spiel`). GitHub's Acceptable Use Policies forbid "graphic depictions of
 sexual acts including ... animation, computer-generated images, or text-based content" and its Terms let it scan private
@@ -186,6 +200,8 @@ intro 4-6 s, loop 48 frames (2 s), fast 24 frames (every 2nd frame), finish ~76 
 
 ## Sound for scene games (2026-10-26)
 
+Cross-game pattern, event table and muted checks: [`sound-template.md`](sound-template.md).
+
 Practice for the scene player, general game audio (ambience as the bed, foley synced to motion, ducking, fades):
 
 - **Layers, quiet to loud:** room bed (always on, -13 dBFS peak, 24 s seamless loop, fade 1.5-2 s) < music (0.35 in
@@ -224,7 +240,7 @@ Practice for the scene player, general game audio (ambience as the bed, foley sy
 - In the base the body mesh is `*_Body`; the object called `Body` is the head.
 - Reuse first: existing models, rigs, clips, chapters and game patterns before anything new;
   research licence and tools before spending budget.
-- Builders fill context fast: hand off by 350k with a `HANDOFF.md` entry.
+- Builders fill context fast: hand off at a trigger (`docs/WORKFLOW.md`, Handoff triggers) with a `HANDOFF.md` entry.
 - Check what the body already has first: every model job starts with an inventory of existing shape keys,
   geometry, painted details, weights and materials, and improves those. Grafting new anatomy geometry over
   detail the body already had wasted a whole budget (10-21); the fix that stuck opened the existing

@@ -2,7 +2,7 @@
 name: evaluator
 description: "Grades one slice on its preview URL against its acceptance criteria, pass or fail with evidence. Gate check 2."
 tools: Read, Bash, Glob, Grep
-model: sonnet
+model: opus
 maxTurns: 40
 ---
 

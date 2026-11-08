@@ -2,7 +2,7 @@
 name: security-reviewer
 description: "Finds secrets, SSRF, injection and OWASP Top 10 flaws. Use after code touching input, auth, APIs or secrets."
 tools: Read, Grep, Glob, Bash
-model: sonnet
+model: opus
 ---
 
 ## Prompt Defense Baseline

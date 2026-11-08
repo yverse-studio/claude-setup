@@ -74,11 +74,14 @@ and calls that showing him.
 
 ## Long laptop jobs
 
+Only jobs that need the laptop get here: Blender runs in the cloud first (`studio` skill, Where Blender runs).
+
 yskills (2026-10-25): a POV render failed three times (GPU out of memory, a 1h+ hang, a CUDA launch failure), the laptop slept at 01:42 and the session went offline at 09:32, and nobody said so. This section is the one home of the rule.
 
 - Run every job longer than ~10 minutes (render, bake, batch) through `node scripts/laptop-job.mjs --name <job> --timeout-min <N> -- <command>`. It refuses to start when the GPU is busy (more than 1500 MB in use, "Blender is open" named), warns when AC sleep or hibernate is not off, keeps Windows awake while the job runs, kills the whole process tree on timeout or after 15 silent minutes, and always ends with one line: `JOB OK|FAIL|HANG|TIMEOUT|BLOCKED <name>: <why>`. It runs the command without a shell and unquoted (it comes from the thread's own brief, never from outside text); a .cmd or .bat goes as `cmd /c x.bat`. [advisory]
 - **Blender limits** (yskills 2026-10-26, after the VIDEO_TDR_FAILURE GPU crashes of 2026-10-25 when renders overlapped): on the laptop at most 3 Blender instances at once and at most 2 of them rendering. `scripts/laptop-job.mjs` enforces it with a counting lock (`scripts/laptop-slots.mjs`): a job takes one of 2 render slots, a Blender job also waits while 3 `blender.exe` run, and an extra job prints `QUEUED <name>` and waits (`--queue-min`, default 180, then `JOB BLOCKED`) instead of failing. yskills' own manual Blender is counted but never blocked or killed. Every Blender render or bake goes through the script, never started by hand next to it. The GPU-busy check is skipped while another job holds a slot (its memory is ours). [guard: scripts/laptop-job.mjs]
 - **RAM before a Blender start** (2026-10-28, a crash at 23:20 was our two plus the animator's headless ones): check the running `blender.exe` (command lines too) and free RAM, including other people's instances; start only with ~4 GB free, else wait and start automatically. [advisory]
+- **No RAM claim without numbers** (false alarm 2026-11-08): before telling yskills to close an app for RAM, run and quote the top 10 processes by memory and the free RAM (`Get-Process | Sort-Object WS -Descending | Select-Object -First 10 Name,@{n='MB';e={$_.WS/1MB -as [int]}}` and `Get-CimInstance Win32_OperatingSystem | Select FreePhysicalMemory`); no numbers, no claim. [advisory]
 - The thread that started the job posts that line as its reply at once, then goes on (smaller settings, a retry, the next step); a failure is never a silent wait. [advisory]
 - One retry with a changed setting is fine; the same job failing a third time goes to yskills as one line plus the cause, and the rest keeps running. [advisory]
 - The coordinator checks `remote_control_status` on every wake and when a laptop job is running; a device that goes offline mid-job gets one line in the project chat ("laptop offline since <time> during <job>"), with the likely cause (sleep, crash, GPU) if the log shows one. [advisory]
@@ -94,6 +97,14 @@ powercfg /change monitor-timeout-ac 0
 ```
 
 Check: `powercfg /query SCHEME_CURRENT SUB_SLEEP STANDBYIDLE` shows `Current AC Power Setting Index: 0x00000000`. Settings, System, Power also works: "Plugged in: sleep after" = Never. The script's keep-awake covers the job itself without admin, but not an idle gap between jobs.
+
+## Dropped sessions and permissions (2026-11-03)
+
+yskills (2026-11-03): Remote Control sessions on the laptop dropped mid-turn, "this happens too often". Evidence from the Windows event log, `%LOCALAPPDATA%\Claude\logs\main.log` and `remote-control.log`: the laptop had 0.6 of 15.7 GB RAM free, so the Claude app's CliGovernor evicted "idle" sessions (`governor_evict`); a session waiting 23 min on a Blender batch counts as idle and its turn dies. It was not the network, not sleep (none since the reboot) and not Surfshark. The same night the Acer Quick Access service reset the power plan after every charger blip, which put Wi-Fi power saving back to Maximum.
+
+- **Watchdog:** `scripts/laptop/rc-watchdog.ps1`, installed by `scripts/laptop/install-rc-watchdog.ps1` (user task `RC-Watchdog`, every 2 min, no admin, costs no tokens). It puts Wi-Fi power saving back to Maximum Performance, restarts the Claude app if it is gone, restarts the WLAN adapter after 3 failed network checks (needs admin, else logs it) and logs low RAM and governor evictions to `%LOCALAPPDATA%\rc-watchdog\watchdog.log`. It never kills a process. It treats the symptom: fewer parallel sessions (the app's cap is 6) is the real lever. [advisory]
+- **Overnight chains** run as one headless PowerShell script with resume markers, so a dropped session does not stop the work and Claude only reads the results (example: the game's `night_runner.ps1`). Waits for older jobs, never kills Blender, runs one Blender at a time.
+- **Permissions:** `scripts/laptop/claude-settings.template.json` plus `scripts/laptop/install-claude-settings.ps1` (merges into `~/.claude/settings.json`, keeps existing entries, writes a `.bak`): `defaultMode` acceptEdits, a clean allow list (whole tools plus the home folder, no duplicate sub-rules), an `ask` list (deletes, secrets, repo edits) and a deny list (secrets, disk formatting, `rm -rf` on roots, force-push to main, deploy commands). The installer writes UTF-8 without BOM. Note: auto mode has its own classifier that blocks persistence (scheduled tasks, background processes) whatever `permissions.allow` says; acceptEdits plus this list does not. [advisory]
 
 ## Update
 
