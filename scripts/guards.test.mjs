@@ -952,9 +952,9 @@ test('context guard: silent below 250k, warns at 250k, backstop at 700k', () => 
 // yskills 2026-11-03: no purchase without his explicit OK, no guessing in a reply.
 test('rule guard: checkout and cart pages are blocked, docs and his own test app pass', async () => {
   const { purchaseUrl, decide } = await import('../global/rule-guard.mjs')
-  for (const url of ['https://www.amazon.de/gp/cart/view.html', 'https://shop.example.com/checkout', 'https://checkout.stripe.com/c/pay/cs_live_a1', 'https://buy.stripe.com/abc', 'https://store.steampowered.com/buy/123', 'https://www.paypal.com/checkoutnow?token=x'])
+  for (const url of ['https://shop.example.com/checkout?x=cs_test_1', 'https://8.8.8.8/checkout', 'https://www.amazon.de/gp/cart/view.html', 'https://shop.example.com/checkout', 'https://checkout.stripe.com/c/pay/cs_live_a1', 'https://buy.stripe.com/abc', 'https://store.steampowered.com/buy/123', 'https://www.paypal.com/checkoutnow?token=x'])
     assert.equal(purchaseUrl('mcp__claude-in-chrome__navigate', { url }), url, url)
-  for (const url of ['https://nuxt.com/docs/getting-started/upgrade', 'https://create.roblox.com/docs/production/monetization/in-app-purchases', 'http://localhost:8787/checkout', 'https://shop.test/checkout', 'https://checkout.stripe.com/c/pay/cs_test_a1', 'https://docs.stripe.com/payments/checkout'])
+  for (const url of ['https://nuxt.com/docs/getting-started/upgrade', 'https://create.roblox.com/docs/production/monetization/in-app-purchases', 'http://localhost:8787/checkout', 'http://127.0.0.1:3000/checkout', 'https://shop.test/checkout', 'https://checkout.stripe.com/c/pay/cs_test_a1', 'https://docs.stripe.com/payments/checkout'])
     assert.equal(purchaseUrl('mcp__Claude_Browser__navigate', { url }), null, url)
   assert.ok(purchaseUrl('mcp__Claude_Browser__browser_batch', { actions: [{ name: 'navigate', input: { url: 'https://x.com/cart' } }] }))
   assert.ok(purchaseUrl('Bash', { command: 'curl -X POST https://api.shop.com/v1/purchase' }))

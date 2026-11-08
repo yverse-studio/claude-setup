@@ -838,7 +838,8 @@ const BROWSER_STEP = /navigate|browser_batch|tabs_create|preview_start/
 const isPurchase = (url) => {
   try {
     const u = new URL(url)
-    if (privateHost(url) || /\.(test|localhost)$/.test(u.hostname) || /cs_test_/.test(url)) return false
+    // A test exemption is narrow: his own app on loopback or a .test name, or a Stripe test session on Stripe's own host (a cs_test_ in any query string would bypass the guard).
+    if (u.hostname === 'localhost' || /\.(test|localhost)$/.test(u.hostname) || privateIp(u.hostname.replace(/^\[|\]$/g, '')) || (u.hostname === 'checkout.stripe.com' && /^\/c\/pay\/cs_test_/.test(u.pathname))) return false
     if (/^docs?\./.test(u.hostname) || /^\/docs?\//.test(u.pathname)) return false // reading about checkout is no purchase
     return BUY_HOST.test(u.hostname) || BUY_PATH.test(u.pathname)
   } catch { return false }
