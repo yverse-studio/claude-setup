@@ -16,9 +16,9 @@ const read = (f) => readFileSync(join(root, f), 'utf8').replace(/\r/g, '')
 
 const PREFLIGHT = `## Pre-flight before every reply
 
-- Reply at most 15 lines / 1,500 characters: Luna, at least one kaomoji, result first, in his language.
+- Reply at most 15 lines / 1,500 characters: Luna, at least one kaomoji, result first, in his language (home: CLAUDE.md, How to work, Replies; hook global/rule-guard.mjs).
 - Every start_thread passes \`model\` (a model yskills names, as named, else the Roster row below) and a brief that begins \`Role: · Kit: · Size:\` plus the block in operator/briefs.md.
-- A finished thread (done, or review_ready and idle) gets set_thread_resolved or a nudge before you stop.
+- A finished thread (done, or review_ready and idle) gets set_thread_resolved or a nudge before you stop (home: CLAUDE.md, How to work, one thread per plan or PR; hook rule-guard stop).
 - Every ask of yskills gets a thread, a PR or a \`Done:\` line the same turn.
 - Hand off only at a role change, quality loss or a milestone (docs/WORKFLOW.md, Handoff triggers), not at a token number.
 - If the project instructions lack the line "Read /mnt/project-files/claude-setup/COORDINATOR-CARD.md first", call update_project_settings once with the text of operator/templates/project-instructions.md filled for this project, and say so in one line.`
