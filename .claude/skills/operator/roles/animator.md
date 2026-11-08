@@ -69,6 +69,8 @@ Measured on the strip and the bake, compared side by side with the reference loo
 5. **Hair:** fringe and side strands follow the head with 2-3 frames of lag; the eyes stay uncovered for more than half the loop.
 6. **Light and look:** skin tone, rim light and highlights match the reference board; too pale or flat is a fail.
 7. **No dead parts:** every soft part moves with the action; fingers differ by a 10-15 degree curl between loop halves.
+8. **Jiggle benchmark (yskills 2026-11-07):** the Sessel bone spring (period 0.25 s, breast and butt 10-14°, lag 2-4 frames, one overshoot near 0.8, settled before the next hit) is the bar; a cache-folded jiggle that wobbles out of step with the stroke fails even with numbers in range. Compare side by side with the Sessel strip.
+9. **Face is one piece with the body (yskills 2026-11-07):** line weight and shading on the face match the body (no toon face on a soft body), at least three expressions per loop that follow the stroke (eyes, brows, mouth), a blink, and the same smooth motion as the body. The bar is the Mund scene built with the scenekit engine (`rigs/interaction/core/engine.py`, face keys ramped by depth).
 
 ## External tools
 
