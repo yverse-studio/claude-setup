@@ -268,6 +268,7 @@ Worker builds with it, the repo in `yverse-studio` (last), and a leftover branch
 The workflow cannot push to `main`, and a PR it opened with its own token gets no CI run, so it
 leaves `projects/<name>.json` behind: the same thread then removes it with a size-S PR
 (`git rm projects/<name>.json`, gate merges it) and says the project is gone only after that merges.
+Before the dry run: the project retro block (`docs/WORKFLOW.md`, Learning, Project retro), with the repo's `docs/LESSONS.md` copied to `/mnt/project-files/<project>/retro/`.
 Refused before anything is touched: a protected repo name (the list in `scripts/delete-project.mjs`),
 no `projects/<name>.json` on main, a repo without the description "made by claude-setup new-project".
 Irreversible (the repo is restorable for 90 days, D1 is not once deleted): run it when the task

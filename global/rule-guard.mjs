@@ -247,6 +247,31 @@ export async function briefCheck(prompt, cwd) {
   return role ? `Title check (docs/TEAMS.md, Roster "Runs as"): this thread's title starts with \`${role} · \`; if it does not, rename_thread to \`${role} · <what>\` first.` : ''
 }
 
+// Spawn rule 4 (proven 2026-11-08: the hook-less coordinator started a thread with no `model` and `Model: default`
+// although yskills asked for a "Fable-Thread"; it ran on Sonnet). The thread compares the model the brief or the cited
+// yskills text names with the one it runs on (latest assistant entry of the transcript, else CLAUDE_MODEL).
+const TIER = /\b(?:claude-)?(fable|opus|sonnet|haiku)\b[\w.-]*/i
+export function modelCheck(brief, transcript, envModel = process.env.CLAUDE_MODEL) {
+  const named = brief.match(/^[ \t]*[*_`]*Model:?[*_`]*[ \t]*[*_`]*([^\n]*)/im)?.[1].match(TIER)
+  const wanted = (named ?? [...brief.matchAll(/<cited\b[^>]*author=\\?"user\\?"[^>]*>([\s\S]*?)<\/cited>/g)].map((m) => m[1].match(TIER)).find(Boolean))?.[1]?.toLowerCase()
+  let running = ''
+  for (const line of transcript.split('\n')) {
+    if (!line.includes('"assistant"')) continue
+    try { const e = JSON.parse(line); if (e.type === 'assistant' && e.message?.model) running = e.message.model } catch { /* not JSON */ }
+  }
+  running = (running || envModel || '').toLowerCase()
+  if (!wanted || !running || running.includes(wanted)) return ''
+  return `Model check (docs/TEAMS.md, Spawn rule 4): the brief or yskills asks for ${wanted}, this thread runs on ${running}. Do no work: message_coordinator with Role, Kit, Size and \`model: ${wanted}\` for a restart, then stop.`
+}
+
+function modelOnce(brief, transcriptPath, session) {
+  const once = join(tmpdir(), `claude-setup-model-${String(session).replace(/\W/g, '')}`)
+  if (!session || existsSync(once) || !/<(wake|relay)\b[^>]*reason=\\?"spawn/.test(brief)) return ''
+  const out = modelCheck(brief, transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : '')
+  if (out) writeFileSync(once, '')
+  return out
+}
+
 // Relay and first wake queue together and the hook fires once, on the second prompt (issue #335): the
 // spawn brief is then the session's own spawn entries in the transcript, the relay (the brief) and the
 // wake (the marker). Only a user entry that opens with the tag counts, so a chat that merely quotes a spawn is no thread.
@@ -412,7 +437,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           const lookup = session && !spawned && !existsSync(briefOnce) && transcriptPath && existsSync(transcriptPath)
           const brief = lookup ? spawnPrompt(prompt, read(transcriptPath)) : prompt
           if (session && (spawned || (lookup && brief !== prompt))) writeFileSync(briefOnce, '')
-          const context = [await briefCheck(brief, cwd), roleContext(brief, cwd, session), promptContext(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
+          const context = [await briefCheck(brief, cwd), modelOnce(brief, transcriptPath, session), roleContext(brief, cwd, session), promptContext(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
           if (context) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: context } }))
           return
         }

@@ -39,11 +39,27 @@ Why calls, not threads, cost the most (measured 2026-10-18; the breakdown is `cl
 
 Cache-read price per M tokens (2026-10-17, architect report): Fable $0.25, Opus $0.20, Sonnet $0.10, Haiku $0.01 up to 100k and $0.05 above, so a Haiku reader stays under 100k and a Fable read costs 1.25x Opus, not 2.2x. Cloud promo credit ($100 Pro, $250 Max, expires 2026-11-04; found 2026-10-04): it covers only plain claude.ai/code sessions, never Projects, Routines or Remote Control, so every project thread spends the plan's 5-hour and weekly limits; never tell yskills the credit keeps project threads going.
 
+## Handoff triggers
+
+A thread hands off only at one of three triggers (yskills 2026-11-08: a forced handoff at a token number is wrong when a thread merely waits):
+
+1. Role change: the next step needs another role.
+2. Quality loss: `attempt-guard` fired twice, the same approach repeated, or a contradiction with an earlier step.
+3. A finished milestone.
+
+At a trigger: finish the step, write `/mnt/project-files/<project>/handoff/<date>-<topic>.md` (done, next, branch, PR, open asks), reply with its path, stop. A thread only waiting makes no tool call and ends the turn.
+
+Otherwise no handoff: compaction with the PreCompact guard (`global/compact-guard.mjs`) keeps Role/Kit/Size, branch, PR, asks and decisions; after a compaction SessionStart `compact` reloads the rules (team-guard start). The numbers of `global/context-guard.mjs` are a backstop only: it warns once at 250k and asks for the trigger check at 600k.
+
 ## The 5/5 gate
 
 Five pass/fail checks by agents that didn't write the code: CI, evaluator on the preview, fresh
 code review, security + red team, design + legal. At 5/5 the gate merges (author thread for S and M, gate thread for L), claude-setup
 included. The rules, probe mode and the round limit and its summary: `operator` skill, `gate.md`.
+
+## Fixes
+
+A fix removes the cause, not the symptom (yskills 2026-11-08): name the rule, check or design that let the defect through, fix there, add the check that would have caught it (`gate.md`: a check failing twice gets this diagnosis first). A workaround (retry, sleep, catch-all, special case, skipped test) only when yskills says so, labelled `Workaround:` in the PR body and deleted when the root fix lands. Lean setup, deep know-how: the know-how goes into its one home (`docs/MAP.md`), never into a second copy, and a thread finds it through MAP.md, the card or the rules index, not by asking.
 
 ## Learning
 
@@ -59,6 +75,10 @@ Yes: update the line that already covers it, else add one line in its single hom
 line, skill line, or a product repo's `docs/LESSONS.md`; `docs/MAP.md`, Where a lesson goes, decides; never project memory). A mechanical lesson (a fixed pattern, a banned call, a file rule)
 becomes a check, test or lint rule in `scripts/` or CI instead of text. Then prune: delete a
 lesson line that a check now covers, or whose guarded thing is gone.
+
+**Project retro** (yskills 2026-11-08: errors and good practice are recorded at a project's end, not only per merge). The thread that ships a project (go-live PR, store release) or deletes it writes one block before it says done: what broke and why, what worked and is worth reusing, what the next project of this kind does differently. General lessons follow Where a lesson goes (`docs/MAP.md`); product lessons stay in the product's `docs/LESSONS.md`, and a deleted repo's `docs/LESSONS.md` is copied to `/mnt/project-files/<project>/retro/` first, since the repo goes. Reusable good practice becomes a template or skill line, not a story. The `publish` skill (A new project, Delete a project) names this step.
+
+A thread that cannot open a PR itself (cloud, GitHub App disconnected) writes the lesson as a block into the lessons inbox instead ([template](../.claude/skills/operator/templates/lessons-inbox.md): format, `Seen:` rule, Monday patch). `Seen: 3x` or confirmed by yskills is promoted to a rule line in its home via PR; `1x` stays in the inbox.
 
 **Memory check, two speeds.** Every coordinator start, cheap: `MEMORY.md` has only the five sections of
 [the template](../.claude/skills/operator/templates/project-memory.md) and no line that is a rule; a rule
