@@ -44,7 +44,7 @@ replaces check 2, the rest of the table and the sizes stay as they are (clothes 
   sheet, because a `.blend` has no diff. It checks that every piece, pose and slider extreme has a row, that no row is over the
   limit, and looks at the sheet. A sheet that shows clipping the numbers do not is a fail; the Programmer re-measures
   on the laptop (`docs/WORKFLOW.md`, PC work) and attaches the new file.
-- **Contact gate (scenes and clips, mandatory every round, even a camera-only one):** no gate score above 3/5 and no 5/5 for a merge without penetration mm per contact pair over all frames, 1:1 close cams on each contact, a material opacity check and a non-POV camera, with the numbers in the verdict (`roles/animator.md`, Contact gate).
+- **Contact gate (scenes and clips, mandatory every round, even a camera-only one):** no gate score above 3/5 and no PASS (Scored gates below) without penetration mm per contact pair over all frames, 1:1 close cams on each contact, a material opacity check and a non-POV camera, with the numbers in the verdict (`roles/animator.md`, Contact gate).
 - **Check 2** is shown as `evidence` in the table (the file and the sheet), not n/a.
 - **Size:** a garment move or refit with no new look = M; one that changes the look, and any figure, body, character or scene PR, is L (`character-workflow.md`, step 6).
 - No picture of a posed scene or a figure reaches yskills without a gate row in `gate/` that names
@@ -53,6 +53,46 @@ replaces check 2, the rest of the table and the sizes stay as they are (clothes 
   a human-eye pass second; a posed shot from the Programmer alone is a draft.
 - A figure or scene PR that fails the same item in two rounds is not re-gated until the Programmer
   attaches the diagnosis (`character-workflow.md`, step 4).
+
+## Scored gates (the score rule)
+
+The one home of the score rule (yskills 2026-11-04: "4.5, then 2 more tries for 5/5, render the
+highest"). It applies to every gate that scores out of 5: scenes, clips, stills, bodies, figures,
+looks, the video and social Critic, any picture or taste gate. The five pass/fail PR checks above
+have no half points and stay at 5/5. Enforced by `scripts/check.mjs` (this section and its terms
+must exist; the old wording that a render needs 5/5 or his strip OK is banned).
+[guard: test scripts/check.mjs]
+
+1. **Rubric.** The gate scores a fixed, numbered rubric written before round 1 (for scenes the
+   five rows of `two-figure-scenes.md`: contact, body, hands, picture, motion), each row with its
+   measured numbers, scored 0 to 5 in half points. The score is the mean of the rows; a row is never reworded between rounds.
+2. **Hard checks (K.O.).** Some checks pass or fail whatever the score: face lines intact (the
+   project's face-line check, e.g. `FACE_LINES3`), no interpenetration over the contact limit
+   (Contact gate, Asset PRs above), no VRoid face stickers, no missing evidence, and every
+   must-pass check the project's plan names. A version that fails one is not eligible, at any
+   score.
+3. **Same view every round.** A re-gate scores the same cameras and frames as the round before,
+   with old | new side by side on one sheet; a new camera may be added, never swapped in.
+4. **Judge noise.** One judging is noisy (LLM-as-a-judge, Zheng et al. 2023: position and
+   verbosity bias; repeated sampling, Wang et al. 2023). So: in an old | new sheet the judge sees
+   both orders (A|B and B|A) and a verdict that flips with the order is a tie; when a decision
+   hangs on 0.5 or less (a score of 4.0 to 4.5, or the pick between two eligible versions), a
+   fresh judge scores the same sheet two more times and the median counts. Never judged by the
+   version's author.
+5. **PASS = at least 4.5/5 and every hard check green.**
+6. **After a PASS: at most 2 more fix rounds** to reach 5/5; 5/5 ends them at once. A fix
+   round that drops any rubric row against the PASS version is flagged in the verdict as a
+   regression (row, old, new); it can still win only on a higher total with every hard check
+   green.
+7. **Pick and go.** When the fix rounds end (5/5 reached, or the second extra round scored),
+   the eligible version with the highest score goes on (render, bake, merge); on a tie the newer
+   one. Nobody waits for yskills' OK: the check strip is posted to him, the
+   pick is the go, his veto stops it at once and is final.
+8. **Under 4.5** the normal Rounds below apply (up to 6 rounds, a diagnosis after the same fail
+   twice); the 2 rounds after a PASS come on top of that cap.
+
+The verdict names: round, rubric rows with numbers, hard checks, score (and the median runs, if
+any), PASS or not, regressions, the picked version and why.
 
 ## Mode: probe or product
 
@@ -106,7 +146,9 @@ claude-setup PRs included (yskills, "merge everything", 2026-10-06). That merge 
 production deploy. `global/settings.json` allows the merge and tells auto mode the gate review is
 the review (`docs/permissions.md`). If a merge is still refused, the gate reports it once in the
 thread and to the coordinator and goes on with the next PR; it tries no other way. Other files say
-this in one line and point here.
+this in one line and point here. A scene, figure or other asset PR judged by a scored gate
+merges once Scored gates has picked its version (after the fix rounds end); that pick counts as
+5/5 here.
 
 Policy files (`CLAUDE.md`, this file, `hq-refresh.md` in yverse-studio/company-xy, `global/`, `cloud/`, `install.mjs`): edits on
 a branch are allowed by an autoMode line; a refusal follows `docs/permissions.md` (Layer 3), never

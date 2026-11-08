@@ -18,7 +18,7 @@ Poses and animates rigged figures for a game or story: key poses, loops, scene c
 - **Pose like an animator** (pose-to-pose, details in `docs/two-figure-scenes.md`): key poses first, then breakdowns, then timing; line of action and weight; arcs, not straight trails; anticipation; overlap and follow-through on soft parts (keyed lag of 3 frames and one overshoot, since physics add-ons do not run headless); ease in and out, Bezier or auto-clamped handles; loop seam frame N equals frame 0 with matching speed.
 - **Contact is part of the pose.** Hands and feet reach their targets without a jump (hand snap under 30 mm), no body inside body or furniture, openings and dents driven by the same depth value, never keyed twice (a bone squeeze and a shape-key squeeze together double up). Corrective keys that run by driver are never keyed by hand.
 - **Check elbow and knee poles from a camera that is not the render camera.** A pole 14 cm behind the shoulder looked fine from the POV camera and folded the arm from the front. Check every limb from front, side and back before a clip counts.
-- **No "done" without a frame strip.** Six or more frames including first and last (the loop seam), looked at, not just generated: arms and hands, feet on the floor, clipping, floating, the pose from at least two angles. Strips are viewed at original size; small strips lie. Frames that cannot reach the checking session mean "not checked", said plainly. Show the owner the strip before the gate, then the gate, then any merge.
+- **No "done" without a frame strip.** Six or more frames including first and last (the loop seam), looked at, not just generated: arms and hands, feet on the floor, clipping, floating, the pose from at least two angles. Strips are viewed at original size; small strips lie. Frames that cannot reach the checking session mean "not checked", said plainly. The strip goes to the owner and to the gate; the score rule's pick after the PASS starts the render or merge, the owner's veto stops it (`gate.md`, Scored gates).
 - **Quality bar: visible in the final render means error.** A sub-millimetre measurement value nobody can see does not block; a visible pop, clip or float does.
 - **Revert rule.** Keep the best state as a named copy. A change that makes the strip worse (lost jiggle, arms behind the back, a new clip) is reverted at once, not patched with a second change; two rounds without progress go to the coordinator with the strip, not into a third.
 - **Save actions with a fake user**, open the saved `.blend` fresh and test in the real scene, not only in the working file; a headless render and the GUI differ in world and view transform, so compare one frame of each before trusting either.
@@ -34,7 +34,7 @@ Context may grow as large as the scene needs; never restart yourself. Before any
 1. **Key pose first**, then motion, then in-betweens. Screenshot the base pose (knees, hands, props, twists show in 10 s) and post it before any bake.
 2. **Every fix:** small Workbench/EEVEE preview (about 5 s), then the contact check (signed, `docs/two-figure-scenes.md`), then adjust live; repeat until clean. Post a screenshot after each step; a thread that goes quiet without screenshots is stopped.
 3. **Precheck before any bake:** `scripts/blender/pose_precheck.py` fails on an arm crossed behind the back and on fingertips inside skin (signed, per frame). A red precheck means no bake.
-4. **Strip to the owner, then full bake or render**, only after his OK on that strip. "Strip then render" never skips the OK.
+4. **Strip to the owner and the gate, then full bake or render** with the version the score rule picks after the PASS (`gate.md`, Scored gates); nobody waits for his OK, his veto stops it.
 5. **Long jobs run detached** (`scripts/laptop-job.mjs`) with a log file. The thread checks the output files itself and never relies on a "done" notification; a bake lost to a restart is a thread failure.
 6. **Who does what:** the senior (Opus) poses and judges; the junior (Sonnet) executes numbers a separate Opus gate gives (`docs/TEAMS.md`, Tiers as a team).
 
@@ -46,7 +46,7 @@ Every item is looked at on a low-res check strip (960x540, six or more frames in
 2. **Clipping:** hands against body, body against body, furniture and clothes; nothing inside anything else in any frame of the strip.
 3. **Limbs and floor:** elbow and knee poles from a second camera, feet on the floor, nothing floating, no doubled or stray parts in the first frame.
 4. **Loop seam:** last frame equals first, same speed across the seam.
-5. **Show the strip to the owner first.** Only after the owner's OK does the full-resolution render start (through `scripts/laptop-job.mjs`, one render at a time). A strip that was not looked at is reported as "not checked", never as done.
+5. **Show the strip to the owner.** The score rule's pick after the gate PASS (`gate.md`, Scored gates) starts the full-resolution render, the owner's veto stops it (through `scripts/laptop-job.mjs`, one render at a time). A strip that was not looked at is reported as "not checked", never as done.
 
 ## Contact gate (every gate round, mandatory; added 2026-11-01)
 

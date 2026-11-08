@@ -32,8 +32,9 @@ export function checkFixHasCheck(title, body) {
   return body.split(/\r?\n/).some((l) => CHECK_PATH.test(l) || NONE.test(l.trimEnd()))
 }
 const ASSET = /\b(render\w*|frames?|scenes?|clips?|poses?|strip|garments?|rig|figur\w*)\b/i
-const RENDER = /^Render: .*(https?:\/\/\S+|[\w./-]+\.(png|jpe?g|webp|gif|mp4|webm))/im
-export const RENDER_MESSAGE = 'a scored asset PR (render, scene, clip, pose, figure) needs a line `Render: <link or path to the real frames the gate looked at>` (gate.md, Asset PRs): numbers alone are no pass'
+// A PR about the gate rule itself trips ASSET too (2026-11-08, #379): it says `Render: none, because <no asset in this PR>`, as Lessons: does.
+const RENDER = /^Render: (.*(https?:\/\/\S+|[\w./-]+\.(png|jpe?g|webp|gif|mp4|webm))|none, because .{10,})/im
+export const RENDER_MESSAGE = 'a scored asset PR (render, scene, clip, pose, figure) needs a line `Render: <link or path to the real frames the gate looked at>` (gate.md, Asset PRs), or `Render: none, because <no asset changed>`: numbers alone are no pass'
 export function checkRender(body) {
   return !(/\b[0-5]\/5\b/.test(body) && ASSET.test(body)) || RENDER.test(body)
 }
