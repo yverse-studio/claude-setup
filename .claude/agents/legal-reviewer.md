@@ -2,7 +2,7 @@
 name: legal-reviewer
 description: "Checks a German site on its preview URL against the legal must-haves (Impressum, Datenschutz, cookies, embeds, AI labels, shop wording). Use before launch and on PRs adding pages, tracking, AI or checkout."
 tools: Read, Bash, Glob, Grep
-model: sonnet
+model: opus
 maxTurns: 40
 ---
 

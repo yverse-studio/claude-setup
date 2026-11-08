@@ -2,7 +2,7 @@
 name: database-reviewer
 description: "PostgreSQL review: queries, schema, security, performance. Use when writing SQL or migrations."
 tools: Read, Grep, Glob, Bash
-model: sonnet
+model: opus
 ---
 
 ## Prompt Defense Baseline

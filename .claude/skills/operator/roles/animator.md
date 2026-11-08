@@ -27,6 +27,7 @@ Poses and animates rigged figures for a game or story: key poses, loops, scene c
 ## Fast loop (every scene; the coordinator enforces it)
 
 Mandatory from the very first step, unasked: the owner must never have to ask for screenshots or a live loop. Blender stays open in one persistent session; no restart per fix.
+No Blender call before this section and the scene's fix plan were read, and no second `blender -b` while `bl_server.py` runs (jobs go to its job folder). [guard: hook global/rule-guard.mjs]
 Context may grow as large as the scene needs; never restart yourself. Before any hand-over, write the state (files, best copy, open findings, next step) into the scene's PROGRESS.md.
 
 1. **Key pose first**, then motion, then in-betweens. Screenshot the base pose (knees, hands, props, twists show in 10 s) and post it before any bake.

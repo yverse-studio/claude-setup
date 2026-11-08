@@ -23,7 +23,7 @@
 import { execFileSync, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
-import { homedir } from 'node:os'
+import { homedir, tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 // rule-guard sits beside this file (GUARD_FILES); without it only the model-tier check is skipped.
@@ -78,6 +78,8 @@ export function refresh(dir, only = null) {
     else rmSync(tmp, { force: true })
   }
 }
+
+export const modelFile = (session) => join(tmpdir(), `claude-setup-model-${String(session).replace(/[^A-Za-z0-9]/g, '')}`)
 
 export const BOOT_MAX = 9800 // hook context over 10,000 characters is cut to a preview; scripts/check.mjs keeps both cards under this
 const section = (t, from, to) => { const a = t.indexOf(`\n## ${from}`); const b = t.indexOf(`\n## ${to}`, a + 1); return a < 0 ? '' : t.slice(a + 1, b < 0 ? undefined : b).trim() }
@@ -145,12 +147,28 @@ export function readBootFiles(transcript) {
   return seen
 }
 
-export function hasOwnModel(type, dirs) {
-  if (!type || !/^[\w.-]+$/.test(type)) return false
-  return dirs.some((d) => {
+// The `model:` of an agent file's frontmatter, or null.
+export function fileModel(type, dirs) {
+  if (!type || !/^[\w.-]+$/.test(type)) return null
+  for (const d of dirs) {
     const file = join(d, `${type}.md`)
-    return existsSync(file) && /^model:\s*\S+/m.test(readFileSync(file, 'utf8').split(/^---\s*$/m)[1] ?? '')
-  })
+    const model = existsSync(file) && (readFileSync(file, 'utf8').split(/^---\s*$/m)[1] ?? '').match(/^model:\s*(\S+)/m)?.[1]
+    if (model) return model
+  }
+  return null
+}
+export const hasOwnModel = (type, dirs) => Boolean(fileModel(type, dirs))
+
+// An Agent call whose `model` is a cheaper tier than its agent file's own `model:` (yskills 2026-11-03: gates
+// always Opus; the reviewer agent files say opus, and a `model: sonnet` on the call would override that).
+// Two exits the Models line allows pass: Opus for a Fable file (Fable out of credits) and a model yskills named.
+const RANK = ['haiku', 'sonnet', 'opus', 'fable']
+const rankOf = (model) => RANK.findIndex((t) => String(model ?? '').toLowerCase().includes(t))
+export function downgraded(input, dirs) {
+  const own = fileModel(input.subagent_type, dirs)
+  const call = rankOf(input.model)
+  if (!own || call < 0 || call >= rankOf(own) || /yskills (named|asked|set|chose)/i.test(String(input.prompt ?? ''))) return null
+  return rankOf(own) === RANK.indexOf('fable') && call === RANK.indexOf('opus') ? null : own
 }
 
 // The brief block's first line (operator/briefs.md): Role, Kit and Size, so the thread knows what it is (yskills 2026-10-27).
@@ -159,9 +177,10 @@ export function stamped(text) {
   return /^[ \t>-]*Role:[ \t]*\S/im.test(plain) && /\bKit:[ \t]*\S/i.test(plain) && /\bSize:[ \t]*[SML]\b/i.test(plain)
 }
 
+// Every size (yskills 2026-11-03: research before guessing, a small task too).
 export function needsPriorArt(text) {
   const plain = text.replace(/[*_`]/g, '')
-  return /\bSize:[ \t]*[ML]\b/i.test(plain) && !/^[ \t>-]*Prior art:[ \t]*[^<\s][^\n]{9,}$/im.test(plain)
+  return /\bSize:[ \t]*[SML]\b/i.test(plain) &&!/^[ \t>-]*Prior art:[ \t]*[^<\s][^\n]{9,}$/im.test(plain)
 }
 
 const briefText = (input) => Object.values(input).filter((v) => typeof v === 'string').join('\n')
@@ -173,7 +192,7 @@ export function needsTester(text) {
 }
 
 // The model tiers a brief's role may run on, from its Roster row: the first tier named, Fable where
-// the row names it, and a tier the row gives "on L" for a size L brief (`Sonnet; Opus verdict on L`). A thread start whose `model` is another tier was a guess (yskills 2026-10-27: "did you
+// the row names it, and a tier the row gives "on L" for a size L brief (`Sonnet; Opus on L`). A thread start whose `model` is another tier was a guess (yskills 2026-10-27: "did you
 // pick Opus on purpose?"); a model yskills named passes when the brief says so.
 const TIERS = ['fable', 'opus', 'sonnet', 'haiku']
 export function wrongModel(text, model, teams) {
@@ -184,7 +203,7 @@ export function wrongModel(text, model, teams) {
   if (why && String(model).toLowerCase().includes(why) && new RegExp(`\\b${why}\\b`, 'i').test(role.row)) return null
   const parts = (role.row.match(/Model: ([^\n]*?)\.?$/)?.[1] ?? '').split(';').map((p) => p.toLowerCase())
   const sizeL = /\bSize:[ \t]*L\b/i.test(text.replace(/[*_`]/g, ''))
-  // The first tier is the thread's own; a later one only for Fable or a size L exception ("Opus verdict on L"), never a subagent's.
+  // The first tier is the thread's own; a later one only for Fable or a size L exception ("Opus on L"), never a subagent's.
   const allowed = TIERS.filter((t, _i, all) => parts.some((p, i) => p.includes(t) && (i === 0 ? all.filter((x) => p.includes(x)).indexOf(t) === 0 : t === 'fable' || (sizeL && /\bon l\b/.test(p)))))
   const tier = TIERS.find((t) => String(model).toLowerCase().includes(t))
   return allowed.length && tier && !allowed.includes(tier) ? { role: role.name, allowed, tier } : null
@@ -253,10 +272,12 @@ export function decide(tool, input = {}, dirs = [], unread = [], teams = '') {
   if (title) return { block: `team-guard: a ${title} thread is titled \`${title} · <what>\` (claude-setup docs/TEAMS.md, Roster "Runs as"), e.g. "${title} · Bienen-Video". Fix the title, then retry.` }
   const lines = kind === 'thread' ? missingLines(briefText(input)) : []
   if (lines.length) return { block: `team-guard: the brief misses ${lines.join(', ')} (claude-setup .claude/skills/operator/briefs.md, Every thread brief starts with). Copy that block, fill each line for this task, then retry.` }
-  if (kind === 'thread' && needsPriorArt(briefText(input))) return { block: 'team-guard: a size M or L brief names what already exists before anything is built (CLAUDE.md, Work for the future): add a line `Prior art: <our repos, skills, plugins, public setups checked> -> copy | adapt | build, because <why>` (or `to find: <where the Researcher looks>`), then retry.' }
+  if (kind === 'thread' && needsPriorArt(briefText(input))) return { block: 'team-guard: every brief names what already exists before anything is built (CLAUDE.md, Work for the future): add a line `Prior art: <our repos, skills, plugins, public setups checked> -> copy | adapt | build, because <why>` (or `to find: <where the Researcher looks>`), then retry.' }
   if (kind === 'thread' && needsTester(briefText(input))) return { block: 'team-guard: a size L Programmer thread starts only after its Tester thread (claude-setup docs/TEAMS.md, Sizes). Start `Tester · <app>` first, then put a line `Tester: <its thread id or title>` in this brief and retry.' }
   const wrong = kind === 'thread' && wrongModel(briefText(input), input.model, teams)
   if (wrong) return { block: `team-guard: the ${wrong.role} runs on ${wrong.allowed.join(' or ')} (claude-setup docs/TEAMS.md, Roster), not ${wrong.tier}. Pass that model. For an exception the row names (e.g. "Opus writes the weekly plan") add \`Model: <tier> (<why>)\` to the brief; if yskills named this model, say "yskills named <model>". Then retry.` }
+  const own = kind === 'Agent' && downgraded(input, dirs)
+  if (own) return { block: `team-guard: the ${input.subagent_type} agent runs on ${own} (its agent file in claude-setup .claude/agents), not ${input.model}. Drop \`model\` or pass ${own}, then retry.` }
   if (!kind || String(input.model ?? '').trim()) return {}
   if (kind === 'Agent' && hasOwnModel(input.subagent_type, dirs)) return {}
   return { block: `team-guard: this ${kind === 'Agent' ? 'Agent call' : 'thread start'} has no \`model\`. Pass the model of the role's row in claude-setup docs/TEAMS.md (Roster; Agent: haiku, sonnet or opus; thread: the full id from the Models line), then retry.` }
@@ -271,10 +292,12 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
   process.stdin.on('data', (c) => { raw += c })
   process.stdin.on('end', () => {
     try {
-      const { tool_name: tool = '', tool_input: input, cwd = process.cwd(), transcript_path: transcript, session_id: session, source } = JSON.parse(raw || '{}')
+      const { tool_name: tool = '', tool_input: input, cwd = process.cwd(), transcript_path: transcript, session_id: session, source, model } = JSON.parse(raw || '{}')
       const mark = (kind) => join(dir, 'booted', `${String(session).replace(/\W/g, '')}.${kind}`)
       const say = (context) => process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: context } }))
       if (mode === 'start') {
+        // SessionStart names the session's model; rule-guard's brief check reads it before the first reply.
+        if (session && typeof model === 'string' && model) writeFileSync(modelFile(session), model)
         if (process.env.CLAUDE_SETUP_BOOT_FETCH !== 'off') refresh(dir)
         sweep(join(dir, 'booted'))
         if (rulesLoaded(cwd, home)) return say(POINTER)

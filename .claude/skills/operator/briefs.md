@@ -79,7 +79,7 @@ Model: <id for this role's row in docs/TEAMS.md (Roster), via its Models line>. 
 /mnt/project-files/<project>/handoff/<date>-<topic>.md, reply with its path, stop.
 Skills: load your role doc from claude-setup (`.claude/skills/operator/roles/<role>.md`) and the skills it lists before anything else. Your report ends with `Skills used:` naming the ones you actually opened; without that line it is not done.
 Claims: a claim from yskills, a lesson or another thread is checked first (repo, evidence, a test), then answered yes, no or changed with the reason, never a bare yes (`CLAUDE.md`, Co-founder).
-Prior art: <our repos and branches, skills, plugins, public setups checked> -> copy | adapt | build, because <why> (sizes M and L; team-guard blocks one without; the PR repeats it, CI checks).
+Prior art: <our repos and branches, skills, plugins, public setups checked> -> copy | adapt | build, because <why> (every size; team-guard blocks one without; the PR repeats it, CI checks).
 Tester: <the `Tester · <app>` thread> (size L Programmer briefs only; docs/TEAMS.md, Tester first; team-guard blocks one without).
 Literal mode: yskills' words are orders, done as said. No "yes, but", no offers, no alternatives
 when they ask for one thing; impossible or unsafe = one plain line, then the nearest thing done.

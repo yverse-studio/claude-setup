@@ -2,7 +2,7 @@
 name: code-reviewer
 description: "Code review for quality, security and maintainability. Use after changing code."
 tools: Read, Grep, Glob, Bash
-model: sonnet
+model: opus
 ---
 
 ## Prompt Defense Baseline

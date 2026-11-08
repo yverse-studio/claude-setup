@@ -14,12 +14,12 @@ Game narrative (AAA and VN studios, Being a DIK is a two-person team doing all o
 | **Story Planner** | one chapter or storylet plan (15 lines) from the ladder and the engines; checks the pacing numbers | Opus | `story-planner.md` |
 | **Story Writer** | the beat JSON in preset, one chapter per PR; cast and relation slices in the prompt | Sonnet; Opus for heat 4 to 5, finales and pacts | `story-writer.md` |
 | **Spicy Writer** (yskills 2026-10-17: "our spicy story writer, very explicit like it is now") | the nights, the pacts, the mornings after and the sexting beats, presets tender and filthy only, private side behind the 18+ gate; takes the plan and the cast body sheets, hands back beats the Editor checks for voice and continuity like any other; never softens, never fades (STORY-BRIEF) | Opus (Fable only when yskills names it) | `story-writer.md` (Spicy section) |
-| **Story Editor** (critic) | the rubric, three runs, failing beat ids back to the writer; Sie/du and knowledge continuity | Sonnet; Opus verdict on finales and round 2 | `story-editor.md` |
+| **Story Editor** (critic) | the rubric, three runs, failing beat ids back to the writer; Sie/du and knowledge continuity | Opus (a gate) | `story-editor.md` |
 | **Continuity** (state keeper) | state delta, relations update, cast-sheet facts, path check | Haiku | inside `story-editor.md` |
 | **Narrative Designer** | storylet conditions, flags, route locks, affection thresholds, the JSON schema and `story-lint.mjs`; the bridge to the game's `story.js` and later the 3D scene triggers | Sonnet, Opus subagent before committing to a schema | `story-designer.md` |
 | **Copywriter** (ads and the page) | preset "ad": store page, teaser posts, trailer captions, the character cards for the site; public, heat 0 to 1, from the same bible | Sonnet | `operator/roles/marketer.md` gets a "Story copy" section |
 | **Localiser** | en from de, voice kept per cast sheet; `i18n-sync` | Haiku, Sonnet for dialogue | `story-writer.md` (Localisation) |
-| Tester / gate | as every PR: `check.mjs`, lint, screenshots of the chapter in the game, 5/5 | Sonnet | existing `tester.md`, `gate.md` |
+| Tester / gate | as every PR: `check.mjs`, lint, screenshots of the chapter in the game, 5/5 | Opus | existing `tester.md`, `gate.md` |
 
 Models follow the one Opus rule in [`docs/TEAMS.md`](../../../../docs/TEAMS.md) (Models line); the Opus rows above are its story taste roles. Rules carried over: one thread per PR, closed when done; Fable never for drafting or review; the Director is the one voice to yskills; Designer threads vote galleries stay for visuals (a scene storyboard is a Designer job, not Story).
 
@@ -32,4 +32,4 @@ Models follow the one Opus rule in [`docs/TEAMS.md`](../../../../docs/TEAMS.md) 
 
 ## First staffing (when yskills says go)
 
-Story Director thread opens with the archetype map card (`06` B) and the PR order (`06` E); first PR = cast sheets. Budget per chapter at the tiers above: one Opus plan, one Sonnet draft, three Sonnet critic runs, one Haiku state pass; a finale doubles the Opus share.
+Story Director thread opens with the archetype map card (`06` B) and the PR order (`06` E); first PR = cast sheets. Budget per chapter at the tiers above: one Opus plan, one Sonnet draft, three Opus critic runs, one Haiku state pass; a finale doubles the Opus share.

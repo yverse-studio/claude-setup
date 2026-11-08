@@ -24,7 +24,7 @@ The game's roster (`characters/roster.json`) and `figures-ahead.json` stay the m
 
 1. **Plan** (Story Planner, Opus): chapter goal, rung from the ladder, heroines on page, comedic engine, preset, intended state delta, 2 to 3 choices at the turn. Output 15 lines. Check against `03` numbers (one rung, no rival sharing an owned scene, misunderstanding age).
 2. **Draft** (Story Writer, Sonnet by default, Opus for heat 4 to 5 and finales): the beat JSON in the game format (`say`/`goto`/`move`/`choice`/`event`, figure lines ≤ 160 chars, emotions from the allowed list, `bond` and `remember` events, `end` last). Prompt = plan + cast slices for those on page + relations slice + preset + the two exemplar beats + the banned list.
-3. **Critique** (Story Editor, Sonnet, three runs, Opus verdict on a finale): rubric below, 0 to 5 each; a 3 or lower on any row sends it back with the failing beat ids.
+3. **Critique** (Story Editor, Opus, three runs): rubric below, 0 to 5 each; a 3 or lower on any row sends it back with the failing beat ids.
 4. **State** (Haiku): extract the delta (rung reached, flags set, facts remembered, what each woman now knows) and diff it against the plan; mismatch goes back to the writer.
 5. **Lint** (script, `content/story/check.mjs` plus a new `story-lint.mjs`): schema, chars, AI tells, heat-level words outside the private range, "Sie/du" consistency per relation state.
 6. **Commit**: one chapter per PR, screenshots of the chapter in the game at 390 and 1440, the gate as for any PR.
