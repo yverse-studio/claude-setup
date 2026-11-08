@@ -660,19 +660,27 @@ TEAM
 mkdir -p "$HOME/.claude/claude-setup/git-hooks"
 cat > "$HOME/.claude/claude-setup/git-hooks/pre-push" <<'PREPUSH'
 #!/bin/sh
-# Global git pre-push hook (install.mjs on the laptop, cloud/setup.sh in the cloud set core.hooksPath to this folder).
-# A repo that ships scripts/pre-pr.mjs gets its CI pre-check before every push, on every machine, with or without
-# Claude hooks (yskills 2026-11-08: laptop PRs only went red in CI). Repos without the script are untouched.
-# Skip once with PRE_PR_SKIP=1 (say why in the PR).
-if [ -n "$PRE_PR_SKIP" ]; then exit 0; fi
-if [ -f scripts/pre-pr.mjs ]; then
+# Git pre-push hook for our own repos (install.mjs on the laptop, cloud/setup.sh in the cloud set core.hooksPath to this
+# folder). A yverse-studio repo that ships scripts/pre-pr.mjs gets its CI pre-check before every push, on every machine,
+# with or without Claude hooks (yskills 2026-11-08: laptop PRs only went red in CI). Other remotes and repos without the
+# script are untouched; a repo's own .git/hooks/pre-push still runs afterwards. Skip once with PRE_PR_SKIP=1 (say why in the PR).
+remote_url=$(git remote get-url origin 2>/dev/null)
+case "$remote_url" in
+  *github.com[:/]yverse-studio/*) ours=1 ;;
+  *) ours= ;;
+esac
+if [ -n "$ours" ] && [ -z "$PRE_PR_SKIP" ] && [ -f scripts/pre-pr.mjs ]; then
   echo "pre-push: node scripts/pre-pr.mjs --quick (what CI runs)"
   node scripts/pre-pr.mjs --quick || { echo "pre-push: blocked, fix the failures above (PRE_PR_SKIP=1 to push anyway and say why in the PR)"; exit 1; }
 fi
+own="$(git rev-parse --git-common-dir 2>/dev/null)/hooks/pre-push"
+if [ -x "$own" ]; then exec "$own" "$@"; fi
 exit 0
 PREPUSH
 chmod +x "$HOME/.claude/claude-setup/git-hooks/pre-push"
-git config --global core.hooksPath "$HOME/.claude/claude-setup/git-hooks"
+if [ -z "$(git config --global --get core.hooksPath 2>/dev/null)" ] || [ "$(git config --global --get core.hooksPath)" = "$HOME/.claude/claude-setup/git-hooks" ]; then
+  git config --global core.hooksPath "$HOME/.claude/claude-setup/git-hooks"
+fi
 
 # First copy of the boot files, so a session whose 3 s refresh fails still has them.
 echo '{}' | node "$HOME/.claude/claude-setup/team-guard.mjs" start >/dev/null || echo "claude-setup: could not fetch the boot files"

@@ -17,4 +17,6 @@ test('the git pre-push hook runs pre-pr only where the repo has one', () => {
   assert.match(hook, /scripts\/pre-pr\.mjs/)
   assert.match(hook, /-f scripts\/pre-pr\.mjs/)
   assert.match(hook, /--quick/)
+  assert.match(hook, /yverse-studio/) // only our own remotes run repo code from the global hook
+  assert.match(hook, /git-common-dir/) // a repo's own hook still runs
 })
