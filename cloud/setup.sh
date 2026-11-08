@@ -586,6 +586,7 @@ cat > "$HOME/.claude/claude-setup/rule-guard.mjs" <<'RULE'
 
 import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { isIP } from 'node:net'
 import { homedir, tmpdir } from 'node:os'
 import { dirname, join, relative } from 'node:path'
 
@@ -686,14 +687,14 @@ const LOCAL_HOST = /^(localhost|.*\.(localhost|test|local))$/i
 const isPurchase = (url) => {
   try {
     const u = new URL(url)
-    const host = u.hostname.replace(/^\[|\]$/g, '').toLowerCase()
-    if (LOCAL_HOST.test(host) || privateIp(host)) return false // his own app on a loopback or private address
+    const host = u.hostname.replace(/^\[|\]$/g, '').replace(/\.$/, '').toLowerCase()
+    if (LOCAL_HOST.test(host) || (isIP(host) && privateIp(host))) return false // his own app on a loopback or private address
     if (/(^|\.)stripe\.com$/.test(host) && /\/cs_test_/.test(u.pathname)) return false // a Stripe test session
     if (DOCS_HOSTS.test(host)) return false // reading about checkout is no purchase
     return BUY_HOST.test(host) || BUY_PATH.test(u.pathname)
   } catch { return false }
 }
-const URL_TOKEN = /https?:\/\/[^\s"'\\<>]+|\b(?:[a-z0-9-]+\.)+[a-z]{2,}\/[^\s"'\\<>]*/gi // with scheme, or a bare host/path
+const URL_TOKEN = /https?:\/\/[^\s"'\\<>]+|\b(?:[a-z0-9-]+\.)+[a-z]{2,}(?::\d+)?\/[^\s"'\\<>]*/gi // with scheme, or a bare host/path
 export function purchaseUrl(tool, input = {}) {
   if (!BROWSER_STEP.test(tool) && !/^(Bash|PowerShell)$/.test(tool)) return null
   const tokens = JSON.stringify(input).match(URL_TOKEN) ?? []
