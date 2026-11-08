@@ -44,8 +44,10 @@ import { closeSync, existsSync, openSync, readFileSync, readSync, statSync, writ
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-const WARN = Number(process.env.CLAUDE_SETUP_CONTEXT_WARN) || 250_000
-const HANDOFF = Number(process.env.CLAUDE_SETUP_CONTEXT_HANDOFF) || 350_000
+// Sized for a 1M window (yskills 2026-11-03: the Animator handed off every ~30 min at 350k). A 200k
+// window never gets here, auto-compact owns it, so these numbers only ever apply to 1M models.
+const WARN = Number(process.env.CLAUDE_SETUP_CONTEXT_WARN) || 600_000
+const HANDOFF = Number(process.env.CLAUDE_SETUP_CONTEXT_HANDOFF) || 700_000
 const REFIRE = 50_000 // after the hand-off, nag again every further REFIRE tokens
 const CHUNK = 256 * 1024
 
@@ -227,7 +229,7 @@ cat > "$HOME/.claude/claude-setup/team-guard.mjs" <<'TEAM'
 import { execFileSync, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
-import { homedir } from 'node:os'
+import { homedir, tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 // rule-guard sits beside this file (GUARD_FILES); without it only the model-tier check is skipped.
@@ -282,6 +284,8 @@ export function refresh(dir, only = null) {
     else rmSync(tmp, { force: true })
   }
 }
+
+export const modelFile = (session) => join(tmpdir(), `claude-setup-model-${String(session).replace(/[^A-Za-z0-9]/g, '')}`)
 
 export const BOOT_MAX = 9800 // hook context over 10,000 characters is cut to a preview; scripts/check.mjs keeps both cards under this
 const section = (t, from, to) => { const a = t.indexOf(`\n## ${from}`); const b = t.indexOf(`\n## ${to}`, a + 1); return a < 0 ? '' : t.slice(a + 1, b < 0 ? undefined : b).trim() }
@@ -349,12 +353,28 @@ export function readBootFiles(transcript) {
   return seen
 }
 
-export function hasOwnModel(type, dirs) {
-  if (!type || !/^[\w.-]+$/.test(type)) return false
-  return dirs.some((d) => {
+// The `model:` of an agent file's frontmatter, or null.
+export function fileModel(type, dirs) {
+  if (!type || !/^[\w.-]+$/.test(type)) return null
+  for (const d of dirs) {
     const file = join(d, `${type}.md`)
-    return existsSync(file) && /^model:\s*\S+/m.test(readFileSync(file, 'utf8').split(/^---\s*$/m)[1] ?? '')
-  })
+    const model = existsSync(file) && (readFileSync(file, 'utf8').split(/^---\s*$/m)[1] ?? '').match(/^model:\s*(\S+)/m)?.[1]
+    if (model) return model
+  }
+  return null
+}
+export const hasOwnModel = (type, dirs) => Boolean(fileModel(type, dirs))
+
+// An Agent call whose `model` is a cheaper tier than its agent file's own `model:` (yskills 2026-11-03: gates
+// always Opus; the reviewer agent files say opus, and a `model: sonnet` on the call would override that).
+// Two exits the Models line allows pass: Opus for a Fable file (Fable out of credits) and a model yskills named.
+const RANK = ['haiku', 'sonnet', 'opus', 'fable']
+const rankOf = (model) => RANK.findIndex((t) => String(model ?? '').toLowerCase().includes(t))
+export function downgraded(input, dirs) {
+  const own = fileModel(input.subagent_type, dirs)
+  const call = rankOf(input.model)
+  if (!own || call < 0 || call >= rankOf(own) || /yskills (named|asked|set|chose)/i.test(String(input.prompt ?? ''))) return null
+  return rankOf(own) === RANK.indexOf('fable') && call === RANK.indexOf('opus') ? null : own
 }
 
 // The brief block's first line (operator/briefs.md): Role, Kit and Size, so the thread knows what it is (yskills 2026-10-27).
@@ -363,9 +383,10 @@ export function stamped(text) {
   return /^[ \t>-]*Role:[ \t]*\S/im.test(plain) && /\bKit:[ \t]*\S/i.test(plain) && /\bSize:[ \t]*[SML]\b/i.test(plain)
 }
 
+// Every size (yskills 2026-11-03: research before guessing, a small task too).
 export function needsPriorArt(text) {
   const plain = text.replace(/[*_`]/g, '')
-  return /\bSize:[ \t]*[ML]\b/i.test(plain) && !/^[ \t>-]*Prior art:[ \t]*[^<\s][^\n]{9,}$/im.test(plain)
+  return /\bSize:[ \t]*[SML]\b/i.test(plain) &&!/^[ \t>-]*Prior art:[ \t]*[^<\s][^\n]{9,}$/im.test(plain)
 }
 
 const briefText = (input) => Object.values(input).filter((v) => typeof v === 'string').join('\n')
@@ -377,7 +398,7 @@ export function needsTester(text) {
 }
 
 // The model tiers a brief's role may run on, from its Roster row: the first tier named, Fable where
-// the row names it, and a tier the row gives "on L" for a size L brief (`Sonnet; Opus verdict on L`). A thread start whose `model` is another tier was a guess (yskills 2026-10-27: "did you
+// the row names it, and a tier the row gives "on L" for a size L brief (`Sonnet; Opus on L`). A thread start whose `model` is another tier was a guess (yskills 2026-10-27: "did you
 // pick Opus on purpose?"); a model yskills named passes when the brief says so.
 const TIERS = ['fable', 'opus', 'sonnet', 'haiku']
 export function wrongModel(text, model, teams) {
@@ -388,7 +409,7 @@ export function wrongModel(text, model, teams) {
   if (why && String(model).toLowerCase().includes(why) && new RegExp(`\\b${why}\\b`, 'i').test(role.row)) return null
   const parts = (role.row.match(/Model: ([^\n]*?)\.?$/)?.[1] ?? '').split(';').map((p) => p.toLowerCase())
   const sizeL = /\bSize:[ \t]*L\b/i.test(text.replace(/[*_`]/g, ''))
-  // The first tier is the thread's own; a later one only for Fable or a size L exception ("Opus verdict on L"), never a subagent's.
+  // The first tier is the thread's own; a later one only for Fable or a size L exception ("Opus on L"), never a subagent's.
   const allowed = TIERS.filter((t, _i, all) => parts.some((p, i) => p.includes(t) && (i === 0 ? all.filter((x) => p.includes(x)).indexOf(t) === 0 : t === 'fable' || (sizeL && /\bon l\b/.test(p)))))
   const tier = TIERS.find((t) => String(model).toLowerCase().includes(t))
   return allowed.length && tier && !allowed.includes(tier) ? { role: role.name, allowed, tier } : null
@@ -457,10 +478,12 @@ export function decide(tool, input = {}, dirs = [], unread = [], teams = '') {
   if (title) return { block: `team-guard: a ${title} thread is titled \`${title} · <what>\` (claude-setup docs/TEAMS.md, Roster "Runs as"), e.g. "${title} · Bienen-Video". Fix the title, then retry.` }
   const lines = kind === 'thread' ? missingLines(briefText(input)) : []
   if (lines.length) return { block: `team-guard: the brief misses ${lines.join(', ')} (claude-setup .claude/skills/operator/briefs.md, Every thread brief starts with). Copy that block, fill each line for this task, then retry.` }
-  if (kind === 'thread' && needsPriorArt(briefText(input))) return { block: 'team-guard: a size M or L brief names what already exists before anything is built (CLAUDE.md, Work for the future): add a line `Prior art: <our repos, skills, plugins, public setups checked> -> copy | adapt | build, because <why>` (or `to find: <where the Researcher looks>`), then retry.' }
+  if (kind === 'thread' && needsPriorArt(briefText(input))) return { block: 'team-guard: every brief names what already exists before anything is built (CLAUDE.md, Work for the future): add a line `Prior art: <our repos, skills, plugins, public setups checked> -> copy | adapt | build, because <why>` (or `to find: <where the Researcher looks>`), then retry.' }
   if (kind === 'thread' && needsTester(briefText(input))) return { block: 'team-guard: a size L Programmer thread starts only after its Tester thread (claude-setup docs/TEAMS.md, Sizes). Start `Tester · <app>` first, then put a line `Tester: <its thread id or title>` in this brief and retry.' }
   const wrong = kind === 'thread' && wrongModel(briefText(input), input.model, teams)
   if (wrong) return { block: `team-guard: the ${wrong.role} runs on ${wrong.allowed.join(' or ')} (claude-setup docs/TEAMS.md, Roster), not ${wrong.tier}. Pass that model. For an exception the row names (e.g. "Opus writes the weekly plan") add \`Model: <tier> (<why>)\` to the brief; if yskills named this model, say "yskills named <model>". Then retry.` }
+  const own = kind === 'Agent' && downgraded(input, dirs)
+  if (own) return { block: `team-guard: the ${input.subagent_type} agent runs on ${own} (its agent file in claude-setup .claude/agents), not ${input.model}. Drop \`model\` or pass ${own}, then retry.` }
   if (!kind || String(input.model ?? '').trim()) return {}
   if (kind === 'Agent' && hasOwnModel(input.subagent_type, dirs)) return {}
   return { block: `team-guard: this ${kind === 'Agent' ? 'Agent call' : 'thread start'} has no \`model\`. Pass the model of the role's row in claude-setup docs/TEAMS.md (Roster; Agent: haiku, sonnet or opus; thread: the full id from the Models line), then retry.` }
@@ -475,10 +498,12 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
   process.stdin.on('data', (c) => { raw += c })
   process.stdin.on('end', () => {
     try {
-      const { tool_name: tool = '', tool_input: input, cwd = process.cwd(), transcript_path: transcript, session_id: session, source } = JSON.parse(raw || '{}')
+      const { tool_name: tool = '', tool_input: input, cwd = process.cwd(), transcript_path: transcript, session_id: session, source, model } = JSON.parse(raw || '{}')
       const mark = (kind) => join(dir, 'booted', `${String(session).replace(/\W/g, '')}.${kind}`)
       const say = (context) => process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: context } }))
       if (mode === 'start') {
+        // SessionStart names the session's model; rule-guard's brief check reads it before the first reply.
+        if (session && typeof model === 'string' && model) writeFileSync(modelFile(session), model)
         if (process.env.CLAUDE_SETUP_BOOT_FETCH !== 'off') refresh(dir)
         sweep(join(dir, 'booted'))
         if (rulesLoaded(cwd, home)) return say(POINTER)
@@ -553,6 +578,8 @@ cat > "$HOME/.claude/claude-setup/rule-guard.mjs" <<'RULE'
 // prompt: a video link or a bare "stop" gets the matching CLAUDE.md line put next to the message, and
 // the first message naming `Role: <role>` (the brief block, operator/briefs.md) gets that role's
 // Roster row and playbook put into context, so a thread always knows what it is (yskills 2026-10-27).
+// pre also refuses a headless Blender start while bl_server.py runs, and any Blender call before the session read
+// NACHT-FIX-PLAN.md and the animator Fast loop (blenderServerBusy, blenderDocsMissing).
 // pre also warns, never blocks, when a new PR in a repo with a PROGRESS.md leaves its `## Jetzt` block
 // missing or untouched (docs/hq-rows.md, Jetzt block: HQ shows every project from that block).
 // CLAUDE_SETUP_RULE_GUARD=off turns it off. It never breaks a tool call on its own errors.
@@ -560,7 +587,7 @@ cat > "$HOME/.claude/claude-setup/rule-guard.mjs" <<'RULE'
 import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { homedir, tmpdir } from 'node:os'
-import { dirname, join } from 'node:path'
+import { dirname, join, relative } from 'node:path'
 
 const OWNER = 'yskills'
 const MARK = '# Working for yskills' // first line of claude-setup's CLAUDE.md
@@ -643,8 +670,60 @@ export function grillMissing(tool, input, transcript) {
   return !/"name":"mcp__[^"]*(request_decision|ask_decision)"/.test(text)
 }
 
+// No guessing (yskills 2026-11-03: "kein raten, immer fragen bis kein fog mehr da ist"): a reply that
+// rests on an assumption names what was checked, or asks him on a card instead.
+const GUESS = /\b(ich (nehme|denke|glaube|schätze|vermute)[^.\n]{0,12}\ban\b|vermutlich|wahrscheinlich|ich rate|i (assume|guess|suppose)|probably|presumably|my guess)\b/i
+export const guessing = (text) => GUESS.test(text) && !REASON.test(text)
+
+// No purchase without his explicit OK (yskills 2026-11-03): a browser or shell step to a checkout, cart,
+// billing or upgrade page is blocked; his own app on a local host and a Stripe test session pass.
+// A whole path segment only, so docs pages ("/docs/in-app-purchases", "/upgrade-guide") pass.
+const BUY_PATH = /\/(checkout|cart|warenkorb|kasse|purchase|buy|kaufen|bestellen|place-order)(\/|$)/i
+const BUY_HOST = /^(checkout\.stripe\.com|buy\.stripe\.com|www\.paypal\.com|pay\.google\.com)$/i
+const BROWSER_STEP = /navigate|browser_batch|tabs_create|preview_start/
+const isPurchase = (url) => {
+  try {
+    const u = new URL(url)
+    if (privateHost(url) || /\.(test|localhost)$/.test(u.hostname) || /cs_test_/.test(url)) return false
+    if (/^docs?\./.test(u.hostname) || /^\/docs?\//.test(u.pathname)) return false // reading about checkout is no purchase
+    return BUY_HOST.test(u.hostname) || BUY_PATH.test(u.pathname)
+  } catch { return false }
+}
+export function purchaseUrl(tool, input = {}) {
+  if (!BROWSER_STEP.test(tool) && !/^(Bash|PowerShell)$/.test(tool)) return null
+  return (JSON.stringify(input).match(/https?:\/\/[^\s"'\\<>]+/g) ?? []).find(isPurchase) ?? null
+}
+
+// A clean folder structure (yskills 2026-11-04): a folder with a `.layout.json` ({ "allow": [globs], "why": "..." })
+// takes writes only at the paths its globs allow, relative to that folder. The nearest one up the tree applies.
+const LAYOUT_DEPTH = 12
+// A glob as a regex: ** spans folders, * and ? stay inside one name; dotfiles match like any name (path.matchesGlob skips them).
+const globRe = (glob) => new RegExp(`^${glob.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*\*\/?|\*|\?/g, (m) => (m === '?' ? '[^/]' : m === '*' ? '[^/]*' : '.*'))}$`)
+export function offLayout(file) {
+  if (!file) return null
+  let dir = dirname(file)
+  for (let i = 0; i < LAYOUT_DEPTH; i++) {
+    const spec = join(dir, '.layout.json')
+    if (existsSync(spec)) {
+      let layout
+      try { layout = JSON.parse(readFileSync(spec, 'utf8')) } catch { return null } // a broken layout never blocks
+      const rel = relative(dir, file).split(/[\\/]/).join('/')
+      const allow = Array.isArray(layout.allow) ? layout.allow : []
+      return rel === '.layout.json' || allow.some((g) => globRe(g).test(rel)) ? null : { rel, root: dir, why: String(layout.why ?? 'see the file') }
+    }
+    const up = dirname(dir)
+    if (up === dir) return null
+    dir = up
+  }
+  return null
+}
+
 // board: the thread board this session last listed (threadBoard), or a function that builds it, for claims that nothing is open.
 export function decide(tool, input = {}, env = {}, published = [], board = null) {
+  const buy = purchaseUrl(tool, input)
+  if (buy) return `rule-guard: ${buy.slice(0, 80)} is a checkout or cart page (CLAUDE.md, Ask first): no purchase without yskills' explicit OK. Put item, price and total on a request_decision card; after his yes he places the order himself.`
+  const off = /^(Write|Edit|NotebookEdit)$/.test(tool) && offLayout(String(input.file_path ?? input.notebook_path ?? ''))
+  if (off) return `rule-guard: ${off.rel} is outside the agreed folder structure of ${off.root} (its .layout.json: ${off.why}). Put it where the layout says, or ask yskills on a card before a new folder.`
   if (/^mcp__github__/.test(tool) || tool === 'Bash') {
     const ask = tool === 'Bash'
       ? GH_ASK.test(input.command ?? '')
@@ -659,6 +738,7 @@ export function decide(tool, input = {}, env = {}, published = [], board = null)
     const text = String(input.text ?? '')
     if (/^[\s>*_]*Card:/m.test(text)) return 'rule-guard: a decision is a real card here (CLAUDE.md, Cards): post it with request_decision (question, 2-4 options, one recommended), not as "Card:" text.'
     if (bareAgreement(text)) return 'rule-guard: this reply agrees without a reason (CLAUDE.md, Co-founder). Check the claim first (repo, a source, a test), then say agree, disagree or "partly, because ..." with what you checked.'
+    if (guessing(text)) return 'rule-guard: this reply guesses ("probably", "vermutlich", "I assume") (CLAUDE.md, No fog). Look it up first (old notes, HANDOFF.md, lessons, the repo), then say what you checked; what is still open goes to yskills as one request_decision batch.'
     const lines = text.split('\n').filter((l) => l.trim()).length
     if (text.length > REPLY_MAX_CHARS || lines > REPLY_MAX_LINES) return `rule-guard: this reply has ${text.length} chars and ${lines} lines; the cap is ${REPLY_MAX_CHARS} and ${REPLY_MAX_LINES} (CLAUDE.md, Replies). Lead with the result in a few lines; put the rest in a file under /mnt/project-files/ and attach it.`
     const why = replyRule(text, input.attached_outputs, board)
@@ -772,7 +852,22 @@ function roleContext(prompt, cwd, session) {
 // The thread side of the team check (routing test 2026-10-27: a project chat may run without hooks, so a
 // bad start can reach the thread). The spawn brief is checked against docs/TEAMS.md with team-guard's own
 // rules; a bad one tells the thread to do no work and send the start back. Returns '' when it passes.
-export async function briefCheck(prompt, cwd) {
+// The model this session runs on: the newest assistant entry's `message.model` in the transcript (the
+// harness writes it on every reply; a tool input's `model` is not it), else the env the app sets.
+// Unknown is null, and nothing is checked.
+export function sessionModel(transcript = '', env = process.env) {
+  let model = null
+  for (const line of String(transcript).split('\n')) {
+    if (!line.includes('"assistant"')) continue
+    try { const e = JSON.parse(line); if (e.type === 'assistant' && typeof e.message?.model === 'string') model = e.message.model } catch { /* a cut line */ }
+  }
+  return model ?? env.ANTHROPIC_MODEL ?? null
+}
+// Gate roles grade work and need the gate rules (yskills 2026-11-04: "if you don't even get the gate right").
+const GATE_ROLES = /^(Tester|Reviewer|Security|Legal|Playtester|Hook Checker|Critic|Story Editor|Evaluator)$/i
+const GATE_PRIOR = /^[ \t>-]*Prior art:[^\n]*\bgate\.md\b/im
+
+export async function briefCheck(prompt, cwd, model = null) {
   if (!/<(wake|relay)\b[^>]*reason=\\?"spawn/.test(prompt)) return ''
   let guard
   try { guard = await import(new URL('./team-guard.mjs', import.meta.url)) } catch { return '' }
@@ -782,6 +877,11 @@ export async function briefCheck(prompt, cwd) {
   const why = !guard.stamped(brief) ? 'no `Role: · Kit: · Size:` stamp line'
     : guard.badTeam(brief, teams) ?? (missing.length ? `brief lines missing: ${missing.join(', ')}` : null)
   if (why) return `Brief check (docs/TEAMS.md): this start breaks the team rules: ${why}. Do no work: send this reason and the corrected Role, Kit and Size to the coordinator (message_coordinator), then stop.`
+  // The coordinator runs without hooks, so its model pick and gate brief are checked here, on the thread side.
+  const wrong = model && guard.wrongModel(brief, model, teams)
+  if (wrong) return `Model check (docs/TEAMS.md, Roster): this thread runs on ${wrong.tier}, but the ${wrong.role} runs on ${wrong.allowed.join(' or ')}. Do no work: tell the coordinator (message_coordinator) to restart it on that model, then stop.`
+  const gate = roleOf(brief, teams)?.name
+  if (gate && GATE_ROLES.test(gate) && !GATE_PRIOR.test(brief.replace(/[*_`]/g, ''))) return `Gate check (.claude/skills/operator/gate.md): a ${gate} brief names the gate rules in its \`Prior art:\` line (gate.md and the kit's checks). Do no work: ask the coordinator (message_coordinator) for the brief with them, then stop.`
   const role = guard.stamped(brief) && /\bSize:[ \t]*[ML]\b/i.test(brief.replace(/[*_`]/g, '')) && roleOf(brief, teams)?.name
   return role ? `Title check (docs/TEAMS.md, Roster "Runs as"): this thread's title starts with \`${role} · \`; if it does not, rename_thread to \`${role} · <what>\` first.` : ''
 }
@@ -928,6 +1028,47 @@ export function coordinatorCheck(transcript, now = Date.now()) {
   return null
 }
 
+// Blender (yskills 2026-11-03: "no progress lost"): one Blender slot on the laptop. A headless start while the persistent
+// bl_server.py runs is refused (cxy-repo tools/scenekit/NIGHT-CHAIN.md, Persistent Blender), and no Blender call goes out before
+// the session read the night fix plan and the animator's Fast loop (operator/roles/animator.md).
+const BLENDER_EXE = String.raw`(?:"[^"\n]*[\\/]blender(?:\.exe)?"|'[^'\n]*[\\/]blender(?:\.exe)?'|(?:[^\s"';&|]*[\\/])?blender(?:\.exe)?|["']?(?:%BL\w*%|\$\{?(?:env:)?BL\w*\}?)["']?)`
+const BLENDER_RUN = new RegExp(String.raw`(?:^|[;&|(\n\x60]|\s--\s|\b(?:then|do|else|exec|nohup|start|time|xargs|Start-Process(?:\s+-FilePath)?|timeout\s+\S+)\s)\s*(?:&\s*)?${BLENDER_EXE}(?=\s|$)`, 'i')
+const HEADLESS = /(?:^|[\s'",])(?:-b|--background)(?=[\s'",]|$)/
+const BL_SERVER_PROC = /blender(?:\.exe)?["']?\s.*bl_server\.py/i
+export const BLENDER_DOCS = [['GameAssetLibrary/scenes/companyxy/ch01/NACHT-FIX-PLAN.md', /NACHT-FIX-PLAN\.md$/i], ['claude-setup/.claude/skills/operator/roles/animator.md (Fast loop)', /operator[\\/]roles[\\/]animator\.md$/i]]
+const shellCommand = (tool, input) => (/^(Bash|PowerShell)$/.test(tool) ? String(input.command ?? '') : '')
+export const blenderStart = (command) => BLENDER_RUN.exec(command)
+export function blenderCall(tool, input = {}) {
+  return /^mcp__Blender__/.test(tool) || Boolean(blenderStart(shellCommand(tool, input)))
+}
+// procs: the running processes' command lines, one per line (or a function that lists them; only called for a headless start).
+export function blenderServerBusy(tool, input = {}, procs = '') {
+  const command = shellCommand(tool, input)
+  const start = blenderStart(command)
+  if (!start || /bl_server\.py/i.test(command) || !HEADLESS.test(command.slice(start.index + start[0].length))) return null
+  const running = String(typeof procs === 'function' ? procs() : procs).split('\n').some((l) => BL_SERVER_PROC.test(l))
+  if (!running) return null
+  return 'rule-guard: bl_server.py läuft schon und hält den einzigen Blender-Slot. Kein zweites `blender -b`: leg einen Job (*.py mit `result`-dict) in GameAssetLibrary/_research/wild_life_notes/tools/bl_jobs oder nimm tools/submit_strip.sh <slot>. Siehe GitHub/cxy-repo/tools/scenekit/NIGHT-CHAIN.md, "Persistent Blender".'
+}
+// transcript: the session's transcript text (or a function returning it); a Read tool call of each doc counts.
+export function blenderDocsMissing(tool, input = {}, transcript = '') {
+  if (!blenderCall(tool, input)) return null
+  const reads = toolCalls(typeof transcript === 'function' ? transcript() : transcript).filter((c) => c.name === 'Read').map((c) => String(c.input.file_path ?? '').replace(/\\/g, '/'))
+  const missing = BLENDER_DOCS.filter(([, path]) => !reads.some((f) => path.test(f)))
+  if (!missing.length) return null
+  return `rule-guard: vor dem ersten Blender-Aufruf dieser Session erst lesen (Read): ${missing.map(([name]) => name).join(' und ')}. Dann nochmal.`
+}
+const listProcs = () => {
+  if (process.env.CLAUDE_SETUP_PROCS !== undefined) return process.env.CLAUDE_SETUP_PROCS // tests: a fake process list
+  try {
+    return process.platform === 'win32'
+      ? execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', '(Get-CimInstance Win32_Process -Property CommandLine).CommandLine'], { encoding: 'utf8', timeout: 3500, windowsHide: true })
+      : execFileSync('ps', ['-eo', 'args'], { encoding: 'utf8', timeout: 3500 })
+  } catch { return '' }
+}
+// A subagent's own tool calls live next to the session transcript: <session>/subagents/agent-<id>.jsonl.
+const agentTranscript = (transcriptPath, agentId) => (transcriptPath && agentId ? join(transcriptPath.replace(/\.jsonl$/, ''), 'subagents', `agent-${String(agentId).replace(/[^\w-]/g, '')}.jsonl`) : '')
+
 if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/').split('/').pop())) {
   const mode = process.argv[2]
   if (mode === 'read') {
@@ -944,14 +1085,15 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
     process.stdin.on('end', async () => {
       try {
         if (process.env.CLAUDE_SETUP_RULE_GUARD === 'off') return
-        const { tool_name: tool = '', tool_input: input = {}, prompt = '', cwd = process.cwd(), session_id: session, transcript_path: transcriptPath } = JSON.parse(raw || '{}')
+        const { tool_name: tool = '', tool_input: input = {}, prompt = '', cwd = process.cwd(), session_id: session, transcript_path: transcriptPath, agent_id: agentId } = JSON.parse(raw || '{}')
         if (mode === 'prompt') {
           const briefOnce = join(tmpdir(), `claude-setup-brief-${String(session).replace(/\W/g, '')}`)
           const spawned = /reason=\\?"spawn/.test(prompt)
           const lookup = session && !spawned && !existsSync(briefOnce) && transcriptPath && existsSync(transcriptPath)
           const brief = lookup ? spawnPrompt(prompt, read(transcriptPath)) : prompt
           if (session && (spawned || (lookup && brief !== prompt))) writeFileSync(briefOnce, '')
-          const context = [await briefCheck(brief, cwd), roleContext(brief, cwd, session), promptContext(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
+          const model = sessionModel(transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : '') ?? (read(join(tmpdir(), `claude-setup-model-${String(session).replace(/[^A-Za-z0-9]/g, '')}`)).trim() || null)
+          const context = [await briefCheck(brief, cwd, model), roleContext(brief, cwd, session), promptContext(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
           if (context) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: context } }))
           return
         }
@@ -964,10 +1106,13 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         if (mode !== 'pre') return
         const shipped = join(tmpdir(), `claude-setup-artifacts-${String(session).replace(/\W/g, '')}`)
         const transcript = () => (transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : '')
+        const sessionTranscript = () => [transcriptPath, agentTranscript(transcriptPath, agentId)].filter((p) => p && existsSync(p)).map(read).join('\n')
         const block = decide(tool, input ?? {}, process.env, session ? read(shipped).split('\n') : [], () => threadBoard(toolCalls(transcript())))
           ?? canaryMissing(tool, input ?? {}, session ? read(join(process.env.CLAUDE_SETUP_HOME || homedir(), '.claude', 'claude-setup', 'booted', `${String(session).replace(/\W/g, '')}.canary`)) : '', transcript)
           ?? kaomojiMissing(tool, input ?? {})
-          ?? (grillMissing(tool, input ?? {}, transcript) ? 'rule-guard: a Planner at size M or L grills first (CLAUDE.md, Grill first; operator SKILL.md): post 3-5 sharp questions as request_decision cards, each with your recommended answer, then write the plan on the answers (or the recommendations while he is away).' : null)
+          ?? blenderServerBusy(tool, input ?? {}, listProcs)
+          ?? blenderDocsMissing(tool, input ?? {}, sessionTranscript)
+          ?? (grillMissing(tool, input ?? {}, transcript) ? 'rule-guard: a Planner at size M or L grills first (CLAUDE.md, No fog; operator SKILL.md, Grill first): post 3-5 sharp questions as request_decision cards, each with your recommended answer, then write the plan on the answers (or the recommendations while he is away).' : null)
         if (!block && session && tool === 'Artifact' && input?.url && input.file_path) writeFileSync(shipped, `${input.file_path}\n`, { flag: 'a' })
         if (block) { process.stderr.write(block); process.exitCode = 2 }
         else {
@@ -1014,7 +1159,7 @@ const teamHooks = [["SessionStart", "startup|clear|compact", "start"], ["Session
 for (const event of new Set(teamHooks.map(([e]) => e))) s.hooks[event] = (s.hooks[event] || []).filter((h) => !JSON.stringify(h).includes("team-brief.mjs") && !JSON.stringify(h).includes("team-guard.mjs"))
 for (const [event, matcher, mode] of teamHooks) s.hooks[event].push({ matcher, hooks: [team(mode)] })
 const rule = (mode) => ({ type: "command", command: `node "${require("os").homedir()}/.claude/claude-setup/rule-guard.mjs" ${mode}`, timeout: 5 })
-for (const [event, matcher, mode] of [["PreToolUse", "Bash|Write|Edit|Artifact|WebFetch|mcp__github__.*|mcp__hearthbot__post_message|mcp__remote-devices__create_artifact", "pre"], ["UserPromptSubmit", "", "prompt"], ["Stop", "", "stop"]]) {
+for (const [event, matcher, mode] of [["PreToolUse", "Bash|PowerShell|Write|Edit|Artifact|WebFetch|mcp__github__.*|mcp__hearthbot__post_message|mcp__remote-devices__create_artifact|mcp__Blender__.*|mcp__.*(navigate|browser_batch|tabs_create.*|preview_start)", "pre"], ["UserPromptSubmit", "", "prompt"], ["Stop", "", "stop"]]) {
   s.hooks[event] = (s.hooks[event] || []).filter((h) => !JSON.stringify(h).includes("rule-guard.mjs"))
   s.hooks[event].push({ ...(matcher ? { matcher } : {}), hooks: [rule(mode)] })
 }

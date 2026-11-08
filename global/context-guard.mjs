@@ -7,8 +7,10 @@ import { closeSync, existsSync, openSync, readFileSync, readSync, statSync, writ
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-const WARN = Number(process.env.CLAUDE_SETUP_CONTEXT_WARN) || 250_000
-const HANDOFF = Number(process.env.CLAUDE_SETUP_CONTEXT_HANDOFF) || 350_000
+// Sized for a 1M window (yskills 2026-11-03: the Animator handed off every ~30 min at 350k). A 200k
+// window never gets here, auto-compact owns it, so these numbers only ever apply to 1M models.
+const WARN = Number(process.env.CLAUDE_SETUP_CONTEXT_WARN) || 600_000
+const HANDOFF = Number(process.env.CLAUDE_SETUP_CONTEXT_HANDOFF) || 700_000
 const REFIRE = 50_000 // after the hand-off, nag again every further REFIRE tokens
 const CHUNK = 256 * 1024
 

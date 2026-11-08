@@ -31,6 +31,8 @@ Who runs it (yskills, 2026-10-18: a gate thread starts at ~114k tokens and every
 
 ## Asset PRs (models, garments, figures, scenes)
 
+Numbers and the real render, both (yskills 2026-11-03): the gate opens the frames it scores and the PR body links them in a `Render:` line (`scripts/pr-lessons-check.mjs` fails a scored asset PR without it).
+
 Asset work (a garment fit or move, a body, a figure, a posed scene) has no preview URL; the evidence
 replaces check 2, the rest of the table and the sizes stay as they are (clothes moved with no measurements clipped through the body, 2026-10-26). No new system.
 

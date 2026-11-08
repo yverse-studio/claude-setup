@@ -147,7 +147,7 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 | Gate for models and garments (measurements + render sheet) | `gate.md` (Asset PRs) | `docs/clothing-pipeline.md`, `character-workflow.md`, `roles/tester.md` |
 | Briefs point to guide checks, never weaken them; threads read guides fresh from main | `briefs.md` (Every thread brief starts with, Guides) | `roles/project-manager.md` |
 | Models (the line, the model per role and per task) | `docs/TEAMS.md` (Models line, Roster) | everything else links it; CI fails on a model id outside that line |
-| Context guard numbers (warn 250k, hand off 350k) | `global/context-guard.mjs` | `CLAUDE.md`, `README.md` |
+| Context guard numbers (warn 600k, hand off 700k) | `global/context-guard.mjs` | `CLAUDE.md`, `README.md` |
 | Hooks that enforce `CLAUDE.md` lines (no PR mails, real cards, reply cap, one Artifact, conventional commits, no WebFetch in the cloud, video and stop notes, the role card, the canary line and Luna's kaomoji) | `global/rule-guard.mjs` (+ `scripts/guards.test.mjs`) | `CLAUDE.md` |
 | `Prior art:` and `Lessons:` lines in every PR body | `scripts/pr-lessons-check.mjs` | `CLAUDE.md`, `.github/pull_request_template.md`, `operator/briefs.md` |
 | Remote Control on the PC | `docs/WORKFLOW.md` (PC work) | operator `SKILL.md` |

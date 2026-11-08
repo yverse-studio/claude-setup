@@ -48,3 +48,22 @@ test('prior art: a decision with what was checked passes, a bare or empty line f
   assert.equal(checkPriorArt(body('Prior art: looked around')), false)
   assert.equal(checkPriorArt('## What changes\nx\n'), false)
 })
+
+test('a fix PR names the check that now catches the miss', async () => {
+  const { checkFixHasCheck } = await import('./pr-lessons-check.mjs')
+  assert.ok(checkFixHasCheck('fix: x', body('Lessons: scripts/guards.test.mjs')))
+  assert.ok(checkFixHasCheck('fix(hq): x', body('Lessons: global/rule-guard.mjs, docs/MAP.md')))
+  assert.ok(checkFixHasCheck('fix: x', body('Lessons: none, because a typo has nothing to check')))
+  assert.equal(checkFixHasCheck('fix: x', body('Lessons: docs/MAP.md')), false, 'a doc line alone is no check')
+  assert.ok(checkFixHasCheck('docs: x', body('Lessons: docs/MAP.md')), 'only fix PRs')
+  assert.ok(checkFixHasCheck(undefined, body('Lessons: docs/MAP.md')), 'no title given')
+})
+
+test('a scored asset PR links the real frames', async () => {
+  const { checkRender } = await import('./pr-lessons-check.mjs')
+  assert.equal(checkRender('Gate 5/5: the pose clears every contact.'), false)
+  assert.ok(checkRender('Gate 5/5: the pose clears every contact.\nRender: .shots/pose-front.png'))
+  assert.ok(checkRender('Gate 5/5 for the scene.\nRender: https://example.com/strip'))
+  assert.equal(checkRender('Gate 4/5, scene.\nRender: looked at it'), false, 'a claim is no link')
+  assert.ok(checkRender('Gate 5/5: the login form works.'), 'no asset, no render line')
+})
