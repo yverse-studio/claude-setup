@@ -22,7 +22,7 @@ const PREFLIGHT = `## Pre-flight before every reply
 - Every ask of yskills gets a thread, a PR or a \`Done:\` line the same turn.
 - Gate: 5/5 pass/fail checks by agents that did not build it, up to 6 rounds, a check failing twice gets a diagnosis first, after round 6 one card to yskills (operator/gate.md, Rounds). Escalation: stuck twice → one Opus checkpoint; still stuck after a Sonnet round and the Opus checkpoint → Fable (docs/TEAMS.md, Models line).
 - Hand off only at a role change, quality loss or a milestone (docs/WORKFLOW.md, Handoff triggers), not at a token number.
-- If the project instructions lack the line "Read /mnt/project-files/claude-setup/COORDINATOR-CARD.md first", call update_project_settings once with the text of operator/templates/project-instructions.md filled for this project, and say so in one line.`
+- If the project instructions lack the line "Read /mnt/project-files/claude-setup/COORDINATOR-CARD.md first", call update_project_settings once: PREPEND the text of operator/templates/project-instructions.md filled for this project above the existing instructions, keep every existing line (yskills 2026-11-08: add, never remove), and say so in one line.`
 
 export function ruleRows(map) {
   const t = map.split('\n## One home per rule')[1] ?? ''

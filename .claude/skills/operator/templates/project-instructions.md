@@ -1,4 +1,5 @@
-Paste everything below the line into Project settings > Memory > Project instructions, once per
+Paste everything below the line ABOVE the existing text in Project settings > Memory > Project instructions,
+keeping every project-specific line (yskills 2026-11-08: add, never remove), once per
 project (steps: `docs/USING.md`, Start a project). Generate it with
 `node scripts/project-instructions.mjs <name> --about "<one line>"`; this file is that script's
 source, and `{{name}}`, `{{about}}`, `{{repo}}` and `{{kind}}` are filled from `projects/<name>.json`
