@@ -86,8 +86,8 @@ Claude's job. `docs/MAP.md` names the one home of each rule; everywhere else lin
   Every PR body has a `Lessons:` line. [guard: test scripts/pr-lessons-check.test.mjs]
 - Before calling work done or pushing: run what CI runs, never a deploy script; report failures
   with the output. [guard: deny Bash(npm run deploy *)]
-- Tokens: `docs/WORKFLOW.md` (Token budget); `context-guard` hands off at 350k, `attempt-guard`
-  stops loops; a thread idle over an hour is not resumed.
+- Tokens: `docs/WORKFLOW.md` (Token budget, Handoff triggers); `context-guard` warns at 250k,
+  `attempt-guard` stops loops; no resuming a thread idle over 1 h.
 - Cloud threads: never WebFetch (it makes yskills press Allow); a page: `node
   ~/.claude/claude-setup/rule-guard.mjs read <url>`.
   [guard: hook global/rule-guard.mjs] Never `connect_device` unless the task needs his files. [advisory]

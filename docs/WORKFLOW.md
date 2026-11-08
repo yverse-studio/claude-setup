@@ -39,6 +39,18 @@ Why calls, not threads, cost the most (measured 2026-10-18; the breakdown is `cl
 
 Cache-read price per M tokens (2026-10-17, architect report): Fable $0.25, Opus $0.20, Sonnet $0.10, Haiku $0.01 up to 100k and $0.05 above, so a Haiku reader stays under 100k and a Fable read costs 1.25x Opus, not 2.2x. Cloud promo credit ($100 Pro, $250 Max, expires 2026-11-04; found 2026-10-04): it covers only plain claude.ai/code sessions, never Projects, Routines or Remote Control, so every project thread spends the plan's 5-hour and weekly limits; never tell yskills the credit keeps project threads going.
 
+## Handoff triggers
+
+A thread hands off only at one of three triggers (yskills 2026-11-08: a forced handoff at a token number is wrong when a thread merely waits):
+
+1. Role change: the next step needs another role.
+2. Quality loss: `attempt-guard` fired twice, the same approach repeated, or a contradiction with an earlier step.
+3. A finished milestone.
+
+At a trigger: finish the step, write `/mnt/project-files/<project>/handoff/<date>-<topic>.md` (done, next, branch, PR, open asks), reply with its path, stop. A thread only waiting makes no tool call and ends the turn.
+
+Otherwise no handoff: compaction with the PreCompact guard (`global/compact-guard.mjs`) keeps Role/Kit/Size, branch, PR, asks and decisions; after a compaction SessionStart `compact` reloads the rules (team-guard start). The numbers of `global/context-guard.mjs` are a backstop only: it warns once at 250k and asks for the trigger check at 600k.
+
 ## The 5/5 gate
 
 Five pass/fail checks by agents that didn't write the code: CI, evaluator on the preview, fresh
