@@ -284,6 +284,8 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         return say(`${bootCard(dir)}\n${POINTER}`)
       }
       if (mode === 'card') {
+        // 2026-11-08: a spawned project thread runs with CLAUDE_CODE_CHILD_SESSION=1 and gets its role card from rule-guard; the coordinator (channel session) does not set it as far as its init event shows, so only the thread skips.
+        if (process.env.CLAUDE_CODE_CHILD_SESSION === '1') return
         // The coordinator runs outside any repo (the project chat); a thread sits in a product repo and needs only its role card (rule-guard).
         if (rulesLoaded(cwd, home) || inRepo(cwd)) return
         // The project chat resumes its session each turn; it needs the card once, the first time hooks exist.
