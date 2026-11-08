@@ -34,6 +34,20 @@ links it. Update both in the same turn when a folder changes.
 Explicit slot names and scene contents stay out of git (company-xy PR 80 rule): they live in the laptop
 README and the private `nacht-kapitel1.rpy` only.
 
+### One source, kept clean
+
+Planned 2026-11-05, executed in stages (`rigs\` merges into `animations\interaction\`; scripts live in `GameAssetLibrary\tools\`).
+
+- One file per character, clip and scene, at its place in the README tree (`characters\`, `animations\`, `scenes\`).
+- Work happens in a dated copy `<name>_<date>_<reason>.blend` in the same folder and is written back into the target
+  file at the end.
+- The copy then goes to `_archive\<date>-<reason>\` or `_trash_<date>\`; it never stays next to the original.
+- No version chains (`_v1` ... `_v23`): at most the target, one working copy and one archive state.
+- Render output and check strips live with the shot: `<shot>\render\`, `<shot>\checks\`.
+- Before a thread ends it records in `GameAssetLibrary\docs\handoff\HANDOFF-CURRENT.md` which file is current and where
+  work continues.
+- What is not in the README tree does not exist for the next thread.
+
 **No sexual content on GitHub, private repos included** (2026-10-29: `yskills-claude` was suspended after explicit
 clips, stills and proof strips sat in `companyxy-spiel`). GitHub's Acceptable Use Policies forbid "graphic depictions of
 sexual acts including ... animation, computer-generated images, or text-based content" and its Terms let it scan private
@@ -187,6 +201,8 @@ intro 4-6 s, loop 48 frames (2 s), fast 24 frames (every 2nd frame), finish ~76 
 - Scene gate, camera and motion rules: [`two-figure-scenes.md`](two-figure-scenes.md).
 
 ## Sound for scene games (2026-10-26)
+
+Cross-game pattern, event table and muted checks: [`sound-template.md`](sound-template.md).
 
 Practice for the scene player, general game audio (ambience as the bed, foley synced to motion, ducking, fades):
 

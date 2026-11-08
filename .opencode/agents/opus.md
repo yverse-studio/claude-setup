@@ -1,4 +1,4 @@
 ---
-description: Opus tier (Planner, taste calls, one checkpoint per task, the L gate verdict).
+description: Opus tier (Planner, taste calls, one checkpoint per task, every gate at every size).
 mode: subagent
 ---

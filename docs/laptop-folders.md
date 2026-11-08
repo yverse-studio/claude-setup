@@ -9,7 +9,7 @@ C:\Users\Claude\Documents\
   GitHub\            only git clones (one per repo) and _worktrees\<repo>\<branch>; nothing else
   Games\<game>\      builds and release zips of a game (not a repo), store-capsules\ for store art
   GameAssetLibrary\  the one 3D and art source, incl. scenes\ (its README is the source of truth)
-  Private18\         18+ content that must never reach a git remote (renders\, ref\, backups); the 18+ game code
+  Private18\         18+ content that must never reach a git remote (renders\, ref\, teardowns\ = unpacked third-party games and rips, backups); the 18+ game code
                      and story live in their private repo, not here
   References\        reference material and inputs that are not code (watch\, social-media-manager\)
   Tools\             portable tools (Ren'Py SDK); installers do not go here
@@ -30,6 +30,7 @@ C:\Users\Claude\     only system folders, twin-tools\ (35 GB, venv, Twin on hold
   (`grep` the old path in claude-setup, the clones, the art library and `~/.config/opencode`), and the allow lines in
   `~/.claude/settings.json`. Then check the desktop links (`Desktop\*.lnk` targets and working directories exist).
 - Move to `_trash-*`, never delete; a folder with a venv or a running tool or render job is not moved.
+- Where the current file of a character, clip or scene lives, and how work copies are archived: [One source, kept clean](game-pipeline.md#one-source-kept-clean).
 - OpenCode and Luna 2 read `AGENTS.md` first, which points to `ORDNER.md`.
 
 ## Where reference images go

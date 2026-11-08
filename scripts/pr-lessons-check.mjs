@@ -2,7 +2,7 @@
 // of the homes that changed, or "none, because <why the next thread would not repeat it>"; and for the
 // Prior art: line (yskills 2026-10-27, CLAUDE.md Work for the future): what already exists was checked
 // (our repos, skills, plugins, public setups) and the decision copy, adapt or build, with its reason.
-// Usage: node scripts/pr-lessons-check.mjs [body-file]   (no file: reads stdin)
+// Usage: PR_TITLE=<title> node scripts/pr-lessons-check.mjs [body-file]   (no file: reads stdin)
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
@@ -23,8 +23,23 @@ export function checkLessons(body) {
   return body.split(/\r?\n/).some((l) => PATHS.test(l) || NONE.test(l.trimEnd()))
 }
 
+// yskills 2026-11-03: every miss becomes an automatic check, and a gate checks the numbers and looks at the real render.
+// A fix PR's Lessons: line names a test, check, guard or lint file (or "none, because"); a scored asset PR links its frames.
+const CHECK_PATH = /^Lessons: .*([\w-]+\.test\.\w+|check\w*\.\w+|[\w-]*guard\.\w+|lint\w*\.\w+)/
+export const FIX_MESSAGE = 'a fix PR turns its miss into a check: the Lessons: line names the test, check, guard or lint file that now catches it, or says "none, because <why no check can>" (CLAUDE.md, Lessons stick)'
+export function checkFixHasCheck(title, body) {
+  if (!/^fix(\([^)]*\))?!?:/i.test(String(title ?? '').trim())) return true
+  return body.split(/\r?\n/).some((l) => CHECK_PATH.test(l) || NONE.test(l.trimEnd()))
+}
+const ASSET = /\b(render\w*|frames?|scenes?|clips?|poses?|strip|garments?|rig|figur\w*)\b/i
+const RENDER = /^Render: .*(https?:\/\/\S+|[\w./-]+\.(png|jpe?g|webp|gif|mp4|webm))/im
+export const RENDER_MESSAGE = 'a scored asset PR (render, scene, clip, pose, figure) needs a line `Render: <link or path to the real frames the gate looked at>` (gate.md, Asset PRs): numbers alone are no pass'
+export function checkRender(body) {
+  return !(/\b[0-5]\/5\b/.test(body) && ASSET.test(body)) || RENDER.test(body)
+}
+
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const body = readFileSync(process.argv[2] ?? 0, 'utf8')
-  const missing = [!checkLessons(body) && MESSAGE, !checkPriorArt(body) && PRIOR_MESSAGE].filter(Boolean)
+  const missing = [!checkLessons(body) && MESSAGE, !checkPriorArt(body) && PRIOR_MESSAGE, !checkFixHasCheck(process.env.PR_TITLE, body) && FIX_MESSAGE, !checkRender(body) && RENDER_MESSAGE].filter(Boolean)
   if (missing.length) { console.error(missing.join('\n')); process.exit(1) }
 }

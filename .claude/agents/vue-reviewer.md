@@ -2,7 +2,7 @@
 name: vue-reviewer
 description: "Vue review: Composition API, reactivity, components, template security, Nuxt. Use for any Vue change."
 tools: Read, Grep, Glob, Bash
-model: sonnet
+model: opus
 ---
 
 ## Prompt Defense Baseline
