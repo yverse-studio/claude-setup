@@ -65,5 +65,7 @@ test('a scored asset PR links the real frames', async () => {
   assert.ok(checkRender('Gate 5/5: the pose clears every contact.\nRender: .shots/pose-front.png'))
   assert.ok(checkRender('Gate 5/5 for the scene.\nRender: https://example.com/strip'))
   assert.equal(checkRender('Gate 4/5, scene.\nRender: looked at it'), false, 'a claim is no link')
+  assert.ok(checkRender('Scored gates pass at 4.5/5 (render, clip).\nRender: none, because this PR changes the gate text, no asset'), 'a PR about the rule itself')
+  assert.equal(checkRender('Gate 4/5, scene.\nRender: none, because'), false, 'none needs its reason')
   assert.ok(checkRender('Gate 5/5: the login form works.'), 'no asset, no render line')
 })
