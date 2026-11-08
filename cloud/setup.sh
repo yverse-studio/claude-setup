@@ -15,6 +15,12 @@ for id in \
 do
   claude plugin install "$id" --scope user || echo "claude-setup: could not install $id"
 done
+# Our own cross-project skills (mods/setup-skills, prototype: publish). Skills in a repo's .claude/skills/ do not load in
+# project cloud threads (docs/RESEARCH.md); a user-scope plugin does. The marketplace is claude-setup itself, a private repo:
+# if the setup script has no GitHub access, this step fails loudly and the rest still runs.
+claude plugin marketplace add yverse-studio/claude-setup \
+  && claude plugin install setup-skills@claude-setup-mods --scope user \
+  || echo "claude-setup: could not add marketplace yverse-studio/claude-setup or install setup-skills (private repo, no access at setup time?)"
 # Retired plugins (config/plugins.json "retired") load their skill listing into every session: remove
 # them when an older copy of this script left them behind.
 for id in code-review chrome-devtools-mcp code-simplifier feature-dev claude-md-management claude-code-setup; do
