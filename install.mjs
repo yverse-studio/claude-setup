@@ -104,14 +104,15 @@ else {
       if (!ok) warn(`plugin ${p.id}: ${r.out.split('\n').slice(-2).join(' ')}`)
     }
   }
-  // Our own mods (mods/), from this clone as a local marketplace; they show in the terminal and
-  // the desktop Code tab, not in cloud project threads.
-  const modsDir = join(ROOT, 'mods')
+  // Our own plugins (mods/), from this clone as a local marketplace (.claude-plugin/marketplace.json at the
+  // repo root; cloud/setup.sh adds the same file from GitHub for project cloud threads).
   // shell: true on Windows splits an unquoted path with spaces.
-  const mods = run('claude', ['plugin', 'marketplace', 'add', IS_WIN ? `"${modsDir}"` : modsDir], { allowFail: true, quiet: true })
+  // The marketplace used to be the mods/ folder; drop an old entry so the name points at the repo root (the loop below reinstalls).
+  run('claude', ['plugin', 'marketplace', 'remove', 'claude-setup-mods'], { allowFail: true, quiet: true })
+  const mods = run('claude', ['plugin', 'marketplace', 'add', IS_WIN ? `"${ROOT}"` : ROOT], { allowFail: true, quiet: true })
   if (!mods.ok && !/already/i.test(mods.out)) warn(`marketplace mods: ${mods.out}`)
   else run('claude', ['plugin', 'marketplace', 'update', 'claude-setup-mods'], { allowFail: true, quiet: true })
-  for (const m of readJson(join(ROOT, 'mods/.claude-plugin/marketplace.json')).plugins) {
+  for (const m of readJson(join(ROOT, '.claude-plugin/marketplace.json')).plugins) {
     const r = run('claude', ['plugin', 'install', `${m.name}@claude-setup-mods`, '--scope', 'user'], { allowFail: true, quiet: true })
     const ok = r.ok || /already installed/i.test(r.out)
     log(`  ${ok ? '+' : 'x'} mod ${m.name}`)

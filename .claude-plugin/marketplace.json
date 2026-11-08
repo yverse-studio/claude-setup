@@ -6,8 +6,13 @@
   "plugins": [
     {
       "name": "team",
-      "source": "./team",
+      "source": "./mods/team",
       "description": "Your digital team inside Claude Code: who works on what (programmer, reviewer, security, legal, design, QA), a Watch link to what they build, and what each turn cost."
+    },
+    {
+      "name": "setup-skills",
+      "source": "./mods/setup-skills",
+      "description": "yskills' own cross-project skills from claude-setup (prototype: publish). Loads in project cloud threads, where repo .claude/skills/ does not."
     }
   ]
 }

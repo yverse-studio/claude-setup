@@ -157,3 +157,17 @@ So nobody proposes them again, or loses an open gap:
 - 2026-10-18 (3D route): the two YouTube links on 3D base models were never watched (cloud got 429 / bot check; no cookies by rule); the fix is a laptop RC session, which needs a card.
 - 2026-10-10 (model and tools): no "indexed folder structure for workflows like payment" exists (queries listed in the report); the coordinator model is the Models line in `docs/WORKFLOW.md` (now `docs/TEAMS.md`).
 - 2026-10-08 (Luna audit): `luna-monorepo` is the live Luna (Docker + Caddy); `aissistant` and `personal-luna` are stale duplicates, suggested for archive (`trayding-bot` still reads `aissistant`); `ARCHITECTURE-3-REPOS-DE.md` in the monorepo describes the old 3 repos and needs a rewrite on yskills' call.
+
+## Own skills as a plugin (2026-11-08)
+
+Skills committed to a repo's `.claude/skills/` do **not** load in a claude.ai project's cloud threads
+([skills docs](https://code.claude.com/docs/en/skills): "In a project's cloud thread, skills committed to a
+repository's .claude/skills/ aren't available"). Our skills only worked there because hooks injected role
+playbooks or a brief named a file. User-scope plugins installed by `cloud/setup.sh` and account skills do load.
+So the cross-project skills ship as the plugin `setup-skills` (`mods/setup-skills`, marketplace
+`.claude-plugin/marketplace.json` at the repo root, name `claude-setup-mods`), installed by `cloud/setup.sh`
+(threads) and `install.mjs` (laptop). Prototype: only `publish`, symlinked from `.claude/skills/publish`, so
+git keeps one source (the install dereferences the link; tested 2026-11-08, `claude plugin details` shows
+~71 tokens always-on). Roll out more skills only after the cloud proof (a fresh project thread lists `publish`).
+Rule: "always do X" stays in CLAUDE.md, "how to do X" becomes a skill; no account skills for our own rules.
+Verdict: `/mnt/project-files/claude-setup/research/2026-11-08-skills-plugins-verdict.md`.

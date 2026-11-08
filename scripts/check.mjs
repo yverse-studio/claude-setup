@@ -126,13 +126,19 @@ if (index) {
   }
 }
 
-// Every mod the local marketplace lists is a plugin folder with the same name and a hooks module.
-const mods = json('mods/.claude-plugin/marketplace.json')
+// Every plugin the repo marketplace lists is a folder with the same name; a hooks module must exist; a skill
+// symlinked from .claude/skills (setup-skills: one source, no copy) must resolve.
+const mods = json('.claude-plugin/marketplace.json')
 for (const m of mods?.plugins ?? []) {
-  const manifest = json(join('mods', m.source, '.claude-plugin/plugin.json'))
-  if (manifest && manifest.name !== m.name) errors.push(`mods/${m.source}: plugin.json name "${manifest.name}" does not match "${m.name}"`)
-  for (const mod of json(join('mods', m.source, 'hooks/hooks.json'))?.modules ?? []) {
-    if (!existsSync(join(root, 'mods', m.source, 'hooks', mod))) errors.push(`mods/${m.source}: hooks module ${mod} is missing`)
+  const manifest = json(join(m.source, '.claude-plugin/plugin.json'))
+  if (manifest && manifest.name !== m.name) errors.push(`${m.source}: plugin.json name "${manifest.name}" does not match "${m.name}"`)
+  const hooksFile = join(m.source, 'hooks/hooks.json')
+  if (existsSync(join(root, hooksFile))) for (const mod of json(hooksFile)?.modules ?? []) {
+    if (!existsSync(join(root, m.source, 'hooks', mod))) errors.push(`${m.source}: hooks module ${mod} is missing`)
+  }
+  const skillsDir = join(root, m.source, 'skills')
+  if (existsSync(skillsDir)) for (const n of readdirSync(skillsDir)) {
+    if (!existsSync(join(skillsDir, n, 'SKILL.md'))) errors.push(`${m.source}/skills/${n}: SKILL.md does not resolve`)
   }
 }
 
