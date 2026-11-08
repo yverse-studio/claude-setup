@@ -107,6 +107,8 @@ else {
   // Our own plugins (mods/), from this clone as a local marketplace (.claude-plugin/marketplace.json at the
   // repo root; cloud/setup.sh adds the same file from GitHub for project cloud threads).
   // shell: true on Windows splits an unquoted path with spaces.
+  // The marketplace used to be the mods/ folder; drop an old entry so the name points at the repo root (the loop below reinstalls).
+  run('claude', ['plugin', 'marketplace', 'remove', 'claude-setup-mods'], { allowFail: true, quiet: true })
   const mods = run('claude', ['plugin', 'marketplace', 'add', IS_WIN ? `"${ROOT}"` : ROOT], { allowFail: true, quiet: true })
   if (!mods.ok && !/already/i.test(mods.out)) warn(`marketplace mods: ${mods.out}`)
   else run('claude', ['plugin', 'marketplace', 'update', 'claude-setup-mods'], { allowFail: true, quiet: true })
