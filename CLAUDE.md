@@ -84,10 +84,10 @@ Claude's job. `docs/MAP.md` names the one home of each rule; everywhere else lin
   test, lint rule or hook; friction with this setup a `loop:setup` issue. Memory holds state only
   [guard: hook global/rule-guard.mjs]; a rule lives in one file, the others link it [guard: test scripts/check.mjs].
   Every PR body has a `Lessons:` line. [guard: test scripts/pr-lessons-check.test.mjs]
-- Before "done" or a push: `node scripts/pre-pr.mjs --body <file>` (what CI runs; the git pre-push hook
-  runs it everywhere), never a deploy script; report failures with the output. [guard: deny Bash(npm run deploy *)]
-- Tokens, handoff: `docs/WORKFLOW.md` (Token budget, Handoff triggers); no resuming a thread idle 1 h+.
-- Cloud threads: no WebFetch (Allow tap); a page: `node
+- Before "done" or a push: `node scripts/pre-pr.mjs --body <file>` (what CI runs; git pre-push hook
+  too), never a deploy script; report failures. [guard: deny Bash(npm run deploy *)]
+- Tokens, handoff: `docs/WORKFLOW.md` (Token budget, Handoff triggers); idle 1 h+: no resume.
+- Cloud threads: no WebFetch; a page: `node
   ~/.claude/claude-setup/rule-guard.mjs read <url>`. [guard: hook global/rule-guard.mjs]
   `connect_device` only when the task needs his files. [advisory]
 
