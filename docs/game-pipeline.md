@@ -200,6 +200,8 @@ intro 4-6 s, loop 48 frames (2 s), fast 24 frames (every 2nd frame), finish ~76 
 
 ## Sound for scene games (2026-10-26)
 
+Cross-game pattern, event table and muted checks: [`sound-template.md`](sound-template.md).
+
 Practice for the scene player, general game audio (ambience as the bed, foley synced to motion, ducking, fades):
 
 - **Layers, quiet to loud:** room bed (always on, -13 dBFS peak, 24 s seamless loop, fade 1.5-2 s) < music (0.35 in
