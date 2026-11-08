@@ -7,6 +7,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { styleErrors } from './styles-check.mjs'
+import { conflictMarker } from './conflict-marker.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const errors = []
@@ -171,6 +172,12 @@ const anyText = (d) => readdirSync(join(root, d)).flatMap((n) => {
   if (statSync(join(root, rel)).isDirectory()) return anyText(rel)
   return /\.(md|mjs|js|json|sh|ya?ml|tsx?)$/.test(n) ? [rel] : []
 })
+// A merge is not done until no conflict marker is left (scripts/conflict-marker.mjs says why).
+for (const f of anyText('.')) {
+  if (f === 'scripts/check.mjs' || f.endsWith('.test.mjs')) continue
+  const line = conflictMarker(readFileSync(join(root, f), 'utf8'))
+  if (line) errors.push(`${f}:${line}: a merge conflict marker is left in the file`)
+}
 for (const f of anyText('.')) {
   if (f === 'scripts/check.mjs') continue
   const text = readFileSync(join(root, f), 'utf8').split(modelLine ?? '\0').join('')
