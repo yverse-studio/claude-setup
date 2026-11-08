@@ -86,7 +86,7 @@ yskills (2026-10-25): a POV render failed three times (GPU out of memory, a 1h+ 
 - One retry with a changed setting is fine; the same job failing a third time goes to yskills as one line plus the cause, and the rest keeps running. [advisory]
 - The coordinator checks `remote_control_status` on every wake and when a laptop job is running; a device that goes offline mid-job gets one line in the project chat ("laptop offline since <time> during <job>"), with the likely cause (sleep, crash, GPU) if the log shows one. [advisory]
 
-**Overnight and long runs:** a thread works until the goal is reached or its limit is used up, whichever comes first, and does not stop to ask on the way (ask-first items excepted). While yskills sleeps it writes one short progress line per milestone to its checklist (what finished, what runs now, what failed) so the morning read is the checklist, not a scroll. It hands off only at a trigger (`docs/WORKFLOW.md`, Handoff triggers), never at a token count; "run on" never means past a trigger. [advisory]
+**Overnight and long runs:** a thread works until the goal is reached or a handoff trigger fires, whichever comes first, and does not stop to ask on the way (ask-first items excepted). While yskills sleeps it writes one short progress line per milestone to its checklist (what finished, what runs now, what failed) so the morning read is the checklist, not a scroll. It hands off only at a trigger (`docs/WORKFLOW.md`, Handoff triggers), never at a token count; "run on" never means past a trigger. [advisory]
 
 **Hands step, once (yskills, admin PowerShell on the laptop):** Windows must not sleep on AC. The script warns at every job start until this is done.
 
