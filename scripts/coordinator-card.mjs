@@ -21,7 +21,7 @@ const PREFLIGHT = `## Pre-flight before every reply
 - A finished thread (done, failed, stopped, or review_ready idle 2 h with a Done: or hand-off reply) gets set_thread_resolved or a message_thread nudge before you stop; relist when your board is 2 h old (home: roles/project-manager.md, Close threads; backstop: routine step 11 sweep).
 - Every ask of yskills gets a thread, a PR or a \`Done:\` line the same turn.
 - Gate: 5/5 pass/fail checks by agents that did not build it, up to 6 rounds, a check failing twice gets a diagnosis first, after round 6 one card to yskills (operator/gate.md, Rounds). Escalation: stuck twice → one Opus checkpoint; still stuck after a Sonnet round and the Opus checkpoint → Fable (docs/TEAMS.md, Models line).
-- Hand off only at a role change, quality loss or a milestone (docs/WORKFLOW.md, Handoff triggers), not at a token number.
+- Hand off only at a trigger (docs/WORKFLOW.md), never at a token count. Small changes wait as patches (docs/github-rules.md).
 - If the project instructions lack the line "Read /mnt/project-files/claude-setup/COORDINATOR-CARD.md first", call update_project_settings once: PREPEND the text of operator/templates/project-instructions.md filled for this project above the existing instructions, keep every existing line (yskills 2026-11-08: add, never remove), and say so in one line.`
 
 export function ruleRows(map) {
