@@ -22,6 +22,10 @@ Loop reader for <project> (<owner/repo>). Read-only, one turn, no code changes.
 4. Nothing new (no open issue without a "Thread:" comment, no red run): end the turn right after step 1 or 2 with no message, no reply, no thread. Never open, edit or close issues yourself.
 ```
 
+## Weekly repo audit: lessons step
+
+Mondays, after the audit: read `/mnt/project-files/claude-setup/LESSONS-INBOX.md` (template `lessons-inbox.md`). Every block with `Status: open` and `Seen: 3x` or `confirmed by yskills` becomes one rule line in its home (`docs/MAP.md`, One home per rule); all of them go into ONE patch, `/mnt/project-files/claude-setup/handoff/<date>-lessons.patch`. Do not push. The laptop applies and pushes it; the block then gets `Status: PR #n`. `1x` blocks stay.
+
 ## claude-setup's own reader
 
 The routine "Loop reader claude-setup" fires into the coordinator and adds four steps after step 4

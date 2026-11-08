@@ -79,7 +79,7 @@ lives outside this repo.
 | GitHub owner migration (plan B if the account stays suspended) | `docs/github-migration.md`, `scripts/migration/` | Inventory of clones and bundles, copy to a new owner, the hands steps and what points at the old owner |
 | GitHub rules (what GitHub forbids, what we do: no 18+ on GitHub, no bulk activity, one account, no big binaries) | `docs/github-rules.md` | The AUP rows and our rule per row |
 | After launch | `docs/LOOP.md` | Errors and feedback become issues and fix threads |
-| Setup loop | operator `SKILL.md` (Setup loop) | Friction with this repo becomes a `loop:setup` issue, then a fix thread through the gate |
+| Setup loop | operator `SKILL.md` (Setup loop) | Friction with this repo becomes a `loop:setup` issue, then a fix thread through the gate; without the GitHub App a block in the [lessons inbox](../.claude/skills/operator/templates/lessons-inbox.md) |
 | Test runs | `docs/TEST-PROJECTS.md` | How the setup is tested end to end, and what each run taught |
 | Why it is built this way | `docs/RESEARCH.md`, `docs/research/` | Dated research notes; history, not rules |
 | Lessons per project | `docs/LESSONS-2026-10-11.md` | Company XY: liked, not liked, quality problems with the fix in force, the next game |
@@ -150,6 +150,7 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 | Context guard numbers (warn 250k, hand off 350k) | `global/context-guard.mjs` | `CLAUDE.md`, `README.md` |
 | Hooks that enforce `CLAUDE.md` lines (no PR mails, real cards, reply cap, one Artifact, conventional commits, no WebFetch in the cloud, video and stop notes, the role card, the canary line and Luna's kaomoji) | `global/rule-guard.mjs` (+ `scripts/guards.test.mjs`) | `CLAUDE.md` |
 | `Prior art:` and `Lessons:` lines in every PR body | `scripts/pr-lessons-check.mjs` | `CLAUDE.md`, `.github/pull_request_template.md`, `operator/briefs.md` |
+| Lessons inbox (the one file, block format, Seen rule, the Monday patch) | `operator/templates/lessons-inbox.md` | operator `SKILL.md` (Setup loop), `docs/WORKFLOW.md` (Learning), `briefs.md` |
 | Remote Control on the PC | `docs/WORKFLOW.md` (PC work) | operator `SKILL.md` |
 | UI rules | `CLAUDE.md` (UI) | `roles/designer.md`, `ui-review` (screenshots, the load-once check, run videos via `desktop.sh`) |
 | What looks AI-made (the slop list) | `.claude/skills/ui-review/SLOP.md` | `CLAUDE.md` (UI), `design-critic`, `roles/designer.md`, `gate.md` check 5 |

@@ -167,6 +167,7 @@ comment on a match instead of filing twice. The daily loop reader lists them wit
 items; the coordinator starts one `Programmer · setup #<n>` thread per issue, which fixes
 it, passes `gate.md` and merges. A fix to a policy file that the safety check refuses follows `docs/permissions.md` (Layer 3),
 never reworded to pass a check. [advisory]
+While the GitHub App is disconnected, a thread cannot file the issue: the friction goes as one block into the lessons inbox ([template](templates/lessons-inbox.md)) instead; when the App is connected again it is the issue, and the inbox block links it. [advisory]
 A safety check that stalls routine work is friction: the fix is an allow or autoMode line in
 `global/settings.json` (`docs/permissions.md`), never a way around the check. [advisory]
 
