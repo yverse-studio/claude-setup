@@ -21,9 +21,9 @@ A thread that is unsure whether something violates a row above asks yskills with
 Pushes and merges are spaced out (table above), so a small change that need not ship now (a doc tip, a lesson line, a typo) is not its own PR:
 
 1. Commit it on the thread's branch as usual.
-2. `git format-patch -1 -o /mnt/project-files/<project>/batch/<repo>/` (one patch per commit), then `git switch --detach origin/main`.
+2. `git format-patch origin/main..HEAD -o /mnt/project-files/<project>/batch/<repo>/` (one patch per commit), make the tree clean (`git status --porcelain` empty: commit, stash or delete leftovers such as screenshots), then `git switch --detach origin/main`.
 3. Reply with `Batched: <patch path>` instead of a PR link.
 
-Why step 2: the cloud's own stop hook (`~/.claude/stop-hook-git-check.sh`, platform code, not in this repo) tells a thread to push whenever the checked-out branch has unpushed commits or the tree is dirty. A clean detached checkout passes it (tested 2026-11-08), and the patch in project files outlives the container. If the hook still fires, answer in one line, `batched at <path>, not pushing (docs/github-rules.md, Batching small changes)`, and end the turn; it does not fire twice in a row.
+Why step 2: the cloud's own stop hook (`~/.claude/stop-hook-git-check.sh`, platform code, not in this repo) tells a thread to push whenever the checked-out branch has unpushed commits or the tree is dirty. A clean detached checkout passes it (tested 2026-11-08); a dirty or untracked file still trips it, and the patch in project files outlives the container. If the hook still fires, answer in one line, `batched at <path>, not pushing (docs/github-rules.md, Batching small changes)`, and end the turn; it does not fire twice in a row.
 
 The next thread that opens a PR on that repo first applies every patch in that folder (`git am`), names them in its PR body and deletes them after the merge. A patch older than a day goes into the next PR the coordinator starts on that repo.
