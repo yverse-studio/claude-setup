@@ -125,3 +125,8 @@ game; the sessions' own token logs are not visible from the project.)
   not at milestones; Mira in the game wrote it at hand-off and lost its shot harness with the
   container.
 - Each figure rebuilt the shared flaws on its own branch. The rule from now on is rule 5.
+
+## Reference tips (from watched videos, 2026-11-08)
+
+- Character body from scratch (not the base): subdivision-surface workflow, no sculpt and retopo. Mirror + Subsurf (clipping on, merge off), half cube, 3 loop cuts per axis, extrude limbs in 4 quads, apply the mirror before uniform X scaling.
+- Cartoony smoke VFX: a metaball as the particle render object (Render tab, Object), gravity off, normal velocity ~15, damping, a blend texture with a color ramp on size so puffs shrink away.
