@@ -960,7 +960,7 @@ test('rule guard: checkout and cart pages are blocked, docs and his own test app
   assert.ok(purchaseUrl('Bash', { command: 'curl -X POST https://api.shop.com/v1/purchase' }))
   assert.equal(purchaseUrl('Read', { file_path: 'https://x.com/cart' }), null, 'only browser and shell steps')
   // bypass attempts (security review 2026-11-08)
-  for (const url of ['HTTPS://x.com/cart', 'x.com/checkout', 'https://docs.evil.com/checkout', 'https://evil.com/checkout/cs_test_1', 'https://8.8.8.8/checkout', 'https://fd-shop.com/checkout', 'https://fe80shop.com/cart', 'https://shop.com./checkout', 'shop.com:8443/checkout'])
+  for (const url of ['HTTPS://x.com/cart', 'x.com/checkout', 'https://docs.evil.com/checkout', 'https://evil.com/checkout/cs_test_1', 'https://8.8.8.8/checkout', 'https://fd-shop.com/checkout', 'https://fe80shop.com/cart', 'https://shop.com./checkout', 'shop.com:8443/checkout', 'https://buy.stripe.com/x/cs_test_1/checkout', 'https://nuxt.com/checkout'])
     assert.ok(purchaseUrl('mcp__Claude_Browser__navigate', { url }), url)
   assert.ok(purchaseUrl('Bash', { command: 'curl -X POST shop.com/purchase' }))
   assert.equal(purchaseUrl('Bash', { command: 'curl http://127.0.0.1:8787/checkout' }), null)

@@ -118,15 +118,16 @@ export const guessing = (text) => GUESS.test(text) && !REASON.test(text)
 const BUY_PATH = /\/(checkout|cart|warenkorb|kasse|purchase|buy|kaufen|bestellen|place-order)(\/|$)/i
 const BUY_HOST = /^(checkout\.stripe\.com|buy\.stripe\.com|www\.paypal\.com|pay\.google\.com)$/i
 const BROWSER_STEP = /navigate|browser_batch|tabs_create|preview_start/
-const DOCS_HOSTS = /^(docs\.(stripe|github|paypal)\.com|developers\.cloudflare\.com|nuxt\.com|create\.roblox\.com|developer\.apple\.com|developers\.google\.com)$/i
+const DOCS_HOSTS = /^docs\.(stripe|github|paypal)\.com$/i // hosts that serve docs only
+const DOCS_PATH_HOSTS = /^(developers\.cloudflare\.com|nuxt\.com|create\.roblox\.com|developer\.apple\.com|developers\.google\.com)$/i // docs under /docs only
 const LOCAL_HOST = /^(localhost|.*\.(localhost|test|local))$/i
 const isPurchase = (url) => {
   try {
     const u = new URL(url)
     const host = u.hostname.replace(/^\[|\]$/g, '').replace(/\.$/, '').toLowerCase()
     if (LOCAL_HOST.test(host) || (isIP(host) && privateIp(host))) return false // his own app on a loopback or private address
-    if (/(^|\.)stripe\.com$/.test(host) && /\/cs_test_/.test(u.pathname)) return false // a Stripe test session
-    if (DOCS_HOSTS.test(host)) return false // reading about checkout is no purchase
+    if (host === 'checkout.stripe.com' && /^\/c\/pay\/cs_test_\w+$/.test(u.pathname)) return false // a Stripe test session
+    if (DOCS_HOSTS.test(host) || (DOCS_PATH_HOSTS.test(host) && /^\/docs(\/|$)/.test(u.pathname))) return false // reading about checkout is no purchase
     return BUY_HOST.test(host) || BUY_PATH.test(u.pathname)
   } catch { return false }
 }
