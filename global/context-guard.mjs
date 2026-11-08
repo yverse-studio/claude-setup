@@ -1,15 +1,16 @@
 #!/usr/bin/env node
 // PostToolUse hook: every tool call re-sends the whole context, so a long session pays for its
 // size again on each call (cache reads were 98% of our usage). At WARN tokens of absolute context,
-// tell Claude once to work leaner; at HANDOFF, to wrap up and leave the rest to a fresh session,
-// and again every REFIRE tokens after that. Silent otherwise; never blocks.
+// tell Claude once to work leaner; at HANDOFF (a backstop only: the real handoff triggers are in
+// docs/WORKFLOW.md, Handoff triggers), to check them, and again every REFIRE tokens after that.
+// Silent otherwise; never blocks.
 import { closeSync, existsSync, openSync, readFileSync, readSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 // Sized for a 1M window (yskills 2026-11-03: the Animator handed off every ~30 min at 350k). A 200k
 // window never gets here, auto-compact owns it, so these numbers only ever apply to 1M models.
-const WARN = Number(process.env.CLAUDE_SETUP_CONTEXT_WARN) || 600_000
+const WARN = Number(process.env.CLAUDE_SETUP_CONTEXT_WARN) || 250_000
 const HANDOFF = Number(process.env.CLAUDE_SETUP_CONTEXT_HANDOFF) || 700_000
 const REFIRE = 50_000 // after the hand-off, nag again every further REFIRE tokens
 const CHUNK = 256 * 1024
@@ -52,11 +53,11 @@ process.stdin.on('end', () => {
     if (!now) return
     const k = (n) => `${Math.round(n / 1000)}k`
     // Absolute floors: a cold start already carries ~100k+ in project threads, so growth since the
-    // first call hides the real size. Warn once at WARN, hand off at HANDOFF, then again every REFIRE.
+    // first call hides the real size. Warn once at WARN, check the handoff triggers at HANDOFF, then again every REFIRE.
     const next = state.next ?? HANDOFF
     let msg = ''
     if (now >= next) {
-      msg = `Context guard: this session's context is ${k(now)} tokens and every tool call re-reads all of it. Finish the current step, write the state (PROGRESS.md, the PR or the thread's reply), and leave further work to a fresh session or thread instead of continuing here.`
+      msg = `Context guard: this session's context is ${k(now)}. Check the three handoff triggers (docs/WORKFLOW.md, Handoff triggers): role change, quality loss (attempt-guard fired twice, the same approach repeated, a contradiction with an earlier step) or a finished milestone. None: keep working; write 10 lines of state into the checklist or PROGRESS.md and rely on compaction (the PreCompact guard keeps the state). One: finish the step, write the handoff file, stop. If you are only waiting, make no tool call and end the turn.`
       state.next = Math.max(next, Math.floor(now / REFIRE) * REFIRE) + REFIRE
       state.fired.push('warn', 'handoff')
     } else if (now >= WARN && !state.fired.includes('warn')) {
