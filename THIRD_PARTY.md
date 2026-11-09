@@ -17,7 +17,6 @@ change config/ecc.json and re-run the script.
 - skills/api-design
 - skills/database-migrations
 - skills/e2e-testing
-- skills/design-system
 - skills/i18n-sync
 - skills/seo
 - skills/docker-patterns
