@@ -33,6 +33,11 @@ C:\Users\Claude\     only system folders, twin-tools\ (35 GB, venv, Twin on hold
 - Moving or renaming a folder changes, in the same change: `ORDNER.md`, every doc and script that names the old path
   (`grep` the old path in claude-setup, the clones, the art library and `~/.config/opencode`), and the allow lines in
   `~/.claude/settings.json`. Then check the desktop links (`Desktop\*.lnk` targets and working directories exist).
+  For the art library (B1 move, 2026-11-09) "every path" also means paths built from a root variable
+  (`os.path.join(LIB, 'characters')`), bare subpaths in prose, and blend files: `tools\laptop\migrate_paths.py` for text,
+  `tools\laptop\relink_libs.py` for blends (datablocks and MeshCache files; its `--audit` must show 0 paths into the old
+  root or `_research`), then `regress_scenes.py` and `tidy_check`. Project JSON paths like `characters/...` are relative
+  to `lib\` and keep that form.
 - Move to `_trash-*`, never delete; a folder with a venv or a running tool or render job is not moved.
 - Art work: read `StudioLibrary\README.md` §Regeln before the first file, run `tools\laptop\tidy_check.py --baseline docs\TIDY-BASELINE-2026-11-09.json` before `Done:` (exit 1 = a new stray file, version copy, duplicate or missing README).
 - Where the current file of a character, clip or scene lives, and how work copies are archived: [One source, kept clean](game-pipeline.md#one-source-kept-clean).
