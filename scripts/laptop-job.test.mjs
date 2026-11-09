@@ -153,3 +153,39 @@ test('a job stopped with "now" goes back to the queue', async () => {
   assert.equal(endState('JOB OK x: finished in 1 min', 0), '.done')
   assert.equal(endState('JOB FAIL x: exit code 1', 1), '.fail')
 })
+
+// RAM guard (laptop-health.mjs): pool, free RAM, uptime -> one plain status line.
+import { topPoolTag, healthProblems, nonpagedPoolBytes, vmmemBytes, writeStatus, clearStatus } from './laptop-health.mjs'
+import { readFileSync } from 'node:fs'
+test('health: leaking pool asks for a restart with the number', () => {
+  const p = healthProblems({ freeGb: 1.2, poolGb: 5.3, vmmemGb: 4.1, uptimeDays: 6 })
+  assert.equal(p[0], 'Laptop braucht Neustart: Pool 5.3 GB (normal unter 1 GB, Treiber-Leck), frei 1.2 GB')
+  assert.match(p[1], /Laptop läuft seit 6\.0 Tagen/)
+})
+test('health: low free RAM names vmmem, healthy laptop is silent, unreadable pool is skipped', () => {
+  assert.match(healthProblems({ freeGb: 1.5, poolGb: 0.8, vmmemGb: 4.1, uptimeDays: 1 })[0], /nur 1\.5 GB RAM frei \(vmmem hält 4\.1 GB\)/)
+  assert.deepEqual(healthProblems({ freeGb: 6, poolGb: 0.8, vmmemGb: null, uptimeDays: 1 }), [])
+  assert.deepEqual(healthProblems({ freeGb: 6, poolGb: null, vmmemGb: null, uptimeDays: 1 }), [])
+})
+test('health: parses the counter and vmmem output', () => {
+  assert.equal(nonpagedPoolBytes(() => ({ status: 0, stdout: '5586542592\r\n' })), 5586542592)
+  assert.equal(nonpagedPoolBytes(() => ({ status: 1, stdout: '' })), null)
+  assert.equal(vmmemBytes(() => ({ status: 0, stdout: '"vmmem","9120","Services","0","4,194,304 K"\r\n' })), 4194304 * 1024)
+  assert.equal(vmmemBytes(() => ({ status: 0, stdout: 'INFO: No tasks are running' })), null)
+})
+test('health: status file gets ONE line, replaced not duplicated, cleared when healthy', () => {
+  const f = join(mkdtempSync(join(tmpdir(), 'stat-')), 'STATUS.md')
+  writeFileSync(f, 'Queue: 3 Jobs\n')
+  assert.equal(writeStatus(['Laptop braucht Neustart: Pool 5.3 GB'], f), true)
+  assert.equal(writeStatus(['Laptop braucht Neustart: Pool 5.3 GB'], f), false)
+  writeStatus(['Laptop braucht Neustart: Pool 5.6 GB'], f)
+  assert.equal(readFileSync(f, 'utf8'), 'Laptop braucht Neustart: Pool 5.6 GB\nQueue: 3 Jobs\n')
+  clearStatus(f)
+  assert.equal(readFileSync(f, 'utf8'), 'Queue: 3 Jobs\n')
+})
+test('health: PoolMon snapshot names the biggest nonpaged tag, line carries it', () => {
+  const snap = ' Tag  Type  Allocs  Frees  Diff  Bytes  Per Alloc\n Ndu   Nonp   900   10   890  4294967296  4800\n Ntfs  Nonp   50   5   45  1048576  23000\n Pool  Paged  1  0  1  99999999999  5\n'
+  assert.equal(topPoolTag(snap), 'Ndu 4.0 GB')
+  assert.equal(topPoolTag('nothing'), null)
+  assert.match(healthProblems({ freeGb: 1, poolGb: 5.3, vmmemGb: null, uptimeDays: 1, poolTag: 'Ndu 4.0 GB' })[0], /größter Tag: Ndu 4\.0 GB/)
+})
