@@ -23,7 +23,7 @@ figure is first made: [`character-workflow.md`](character-workflow.md); garments
 
 ## What a delta holds
 
-`characters/CH_<name>/delta/<name>.delta.json`, written by `delta.py extract`, human-readable:
+`lib/characters/CH_<name>/delta/<name>.delta.json`, written by `delta.py extract`, human-readable:
 
 | Field | Meaning |
 |---|---|

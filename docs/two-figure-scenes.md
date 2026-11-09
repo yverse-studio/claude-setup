@@ -8,7 +8,7 @@ characters' key names) live in the private game repo and the laptop README.
 
 - Blender headless: `blender.exe -b --factory-startup`. At most 2 Blender processes at once on 16 GB RAM
   (~3.4 GB each); more and jobs die without a message.
-- Figures: one `.blend` per character (`characters\CH_<name>\Blend\<name>.blend`). Back up before any change
+- Figures: one `.blend` per character (`lib\characters\CH_<name>\Blend\<name>.blend`). Back up before any change
   (`<name>_backup_<date>.blend`). Never rename or delete bones or weights: the bone maps depend on them.
 - Bone maps: `lib\anims\interaction\core\bone_maps\<char>.json`, one per rig.
 
@@ -195,9 +195,9 @@ scene tools solve it (VaM, sandbox games, pose editors, Blender pose-library add
 
 A fresh agent follows this with claude-setup plus the laptop handoffs, no questions. Handoffs (read-only sources, in
 `StudioLibrary\`): `lib\anims\interaction\HANDOFF.md` (sections 6-8 gate, image language, engineering lessons; 9a vision;
-9e order), `characters\CH_rika\Blend\HANDOFF.md` ("Rig v2"), `projects\games\companyxy\ch01\INTEGRATION.md` (player).
+9e order), `lib\characters\CH_rika\Blend\HANDOFF.md` ("Rig v2"), `projects\games\companyxy\ch01\INTEGRATION.md` (player).
 
-1. Models: Rika `characters\CH_rika\Blend\rika.blend` (Rig v2), the man `characters\CH_male\male.blend` (v2.2, 1.90 m,
+1. Models: Rika `lib\characters\CH_rika\Blend\rika.blend` (Rig v2), the man `lib\characters\CH_male\male.blend` (v2.2, 1.90 m,
    normals out), room `lib\rooms\office_night`. Check first: bone maps (`rika_now.json`, `mh_male.json`:
    names), `core\test_openings.py` (0 hits, stop ~61 mm), finger-axis measurement, then `--pos` with numbers.
 2. Geometry in the side view (she kneels at the desk edge, he leans back, shaft 15-30° up); face 45-55° to the camera,

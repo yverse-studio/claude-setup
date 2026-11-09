@@ -14,17 +14,17 @@ Standing calls for every scene and character (adult main character, base + delta
 ## Where things live
 
 The folder tree, the scene slots and the step-by-step for building a scene by hand live in **one place**:
-`StudioLibrary\README.md` on the laptop (references zip `Downloads\CompanyXY-Referenzen.zip` listed there; a copy for cloud threads: `/mnt/project-files/companyxy/docs/StudioLibrary-README.md`).
+`StudioLibrary\README.md` on the laptop (references zip `Downloads\CompanyXY-Referenzen.zip` listed there; a copy for cloud threads: `/mnt/project-files/companyxy/docs/GameAssetLibrary-README.md`).
 That README is for yskills and is the home of every laptop path; this page only names the main ones and
 links it. Update both in the same turn when a folder changes.
 
 | What | Where |
 |---|---|
 | Asset library | laptop `C:\Users\Claude\Documents\StudioLibrary` (not in git; `catalog.json` one entry per asset) |
-| Female base template (only file in its folder) | `characters\CH_Base\female\Blend\base_female_v4.blend`; tools and work log in `..\_work\` (`sets.py`, `cg_lib.py`, `poses.py`, `body_aware.py`, `HANDOFF.md`) |
-| A character | `characters\CH_<name>\` (Rika: `CH_rika\Blend\rika.blend`; man: `CH_male\male.blend`) |
+| Female base template (only file in its folder) | `lib\characters\CH_Base\female\Blend\base_female_v4.blend`; tools and work log in `..\_work\` (`sets.py`, `cg_lib.py`, `poses.py`, `body_aware.py`, `HANDOFF.md`) |
+| A character | `lib\characters\CH_<name>\` (Rika: `CH_rika\Blend\rika.blend`; man: `CH_male\male.blend`) |
 | Rooms | `lib\rooms\<room>\<room>.blend` + `_preview.png` (built by `_work\sets.py`, saved by `save_rooms.py`; office_night has `Camera_POV_stand`, `Camera_POV_sit`, `Camera_Side`) |
-| Shots | `scenes\<game>\<chapter>\<shot>\<shot>.blend` + `compare.png`; overview `projects\games\companyxy\ch01\overview.png` |
+| Shots | `projects\games\<game>\<chapter>\<shot>\<shot>.blend` + `compare.png`; overview `projects\games\companyxy\ch01\overview.png` |
 | Animation | `animations\retarget\ANIMATIONEN.md` (+ `retarget.py`, `maps\`); packs in `animations\AN_<name>\` |
 | Two-person rig | `lib\anims\interaction\kiss\` (`README.md`, `kiss.json`, `apply_interaction.py`, `bone_maps\`) |
 | Ren'Py game | private repo `yverse-studio/companyxy-spiel` (`game/` source, `story/<char>/` chapters, `story/briefs/` scene list + briefs); playable build on the laptop `GitHub\CompanyXY-Spiel\CompanyXY-1.0-pc\` (art in `game\art\`, `game\art\loops\`, slots in `game\slots.rpy`) |
@@ -69,10 +69,10 @@ game's `game/art/` and the 18+ `.rpy` files are git-ignored), and are shown to y
 
 ## Characters
 
-Our female base is `characters\CH_Base\female\Blend\base_female_v4.blend`: body, rig, hair and clothes
+Our female base is `lib\characters\CH_Base\female\Blend\base_female_v4.blend`: body, rig, hair and clothes
 with our adult head, straight rest pose, scaled uniformly to 1.65 m (rig and body together; bones and weights
 untouched). Face kit 447 keys + 15 emotion keys; breast and five butt sliders on the body. A new character =
-copy of the base in `characters\CH_<name>\Blend\<name>.blend` + slider values, head, hair, outfit, never a new
+copy of the base in `lib\characters\CH_<name>\Blend\<name>.blend` + slider values, head, hair, outfit, never a new
 body. Rika (21, adult, our first figure): `CH_rika\Blend\rika.blend`, profile `CH_rika\README.md`, rebuilt by
 `CH_Base\female\_work\build_rika.py`. Object names inside the files keep their original prefix (scripts and
 bone maps depend on them; find the body as `*_Body`); never rename them by hand. The body source and its
@@ -105,7 +105,7 @@ Two people (kiss, bed scenes): templates name roles, not bones. Give each charac
 in `lib\anims\interaction\kiss\bone_maps\<name>.json` (copy `rika.json`), then
 `blender -b --factory-startup --python rigs\interaction\kiss\apply_interaction.py -- <scene>.json <charA.blend> <charB.blend> out.blend`.
 The solver links the characters as library overrides and scales contacts by `height_m`;
-characters are never edited. Details: `lib\anims\interaction\kiss\README.md`, scene sheets in `animations\Nsfw\`.
+characters are never edited. Details: `lib\anims\interaction\kiss\README.md`, scene sheets in `lib\anims\Nsfw\`.
 
 Free mocap in the cloud: 75 CMU BVH clips + `scripts/retarget_cmu_to_mixamo.py` in
 `/mnt/project-files/companyxy/patches/base-body/library/assets/` (`SOURCES.md`).
@@ -114,7 +114,7 @@ Free mocap in the cloud: 75 CMU BVH clips + `scripts/retarget_cmu_to_mixamo.py` 
 
 Two figures (poses, contact solver, motion, POV camera, look, export): `docs/two-figure-scenes.md`.
 
-1. New `.blend` under `scenes\<game>\<chapter>\<shot>\`. Link the room from `lib\rooms\`
+1. New `.blend` under `projects\games\<game>\<chapter>\<shot>\`. Link the room from `lib\rooms\`
    (a new room: build it in `sets.py`, save it there), link the characters, make library overrides to pose.
    By script instead: copy a shot script from `_work\` (`cg_desk_pact.py` still, `loop_stretch.py` loop);
    scripts never save into the base.
@@ -147,8 +147,8 @@ threads), and in `StudioLibrary\README.md` (section on the night scenes); they s
 
 1. Save a new file as `projects\games\companyxy\ch01\<slot>\<slot>.blend`.
 2. File > Link: room `lib\rooms\office_night\office_night.blend` (10th floor, desk, chief chair,
-   window wall with skyline; preview `office_night_preview.png`), Rika `characters\CH_rika\Blend\rika.blend`,
-   the man `characters\CH_male\male.blend` (1.90 m in scenes); Object > Library Override > Make to pose.
+   window wall with skyline; preview `office_night_preview.png`), Rika `lib\characters\CH_rika\Blend\rika.blend`,
+   the man `lib\characters\CH_male\male.blend` (1.90 m in scenes); Object > Library Override > Make to pose.
 3. Cameras already in the room: `Camera_POV_stand` (eye 1.78 m), `Camera_POV_sit` (1.27 m), `Camera_Side`,
    `Camera_Render`. Output 1920x1080.
 4. Pose by hand or from an `MX_*` action; references: `C:\Users\Claude\Downloads\CompanyXY-Referenzen.zip`
