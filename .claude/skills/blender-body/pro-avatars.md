@@ -2,7 +2,7 @@
 
 Study of five clothed Booth avatars in Blender 5.1 (2026-10-19): Avatar A (.blend),
 Ferris/Felis v0.8.1 (FBX), Hayakawa Aoi v1.11 (FBX), Amagi-chan v1.11 (FBX `XiaoTianCheng.fbx`),
-Rurumu/Lulum 1.10 (VRM 0.x). Files: `C:\Users\Claude\Documents\GameAssetLibrary\characters\CH_*`.
+Rurumu/Lulum 1.10 (VRM 0.x). Files: `C:\Users\Claude\Documents\StudioLibrary\lib\characters\CH_*`.
 Clothed, SFW-only study: no genital geometry was inspected and none is documented here. Licences
 (VN3 and similar) make these **study only** for us, as in the licence note in [`SKILL.md`](SKILL.md).
 

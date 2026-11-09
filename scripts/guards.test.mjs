@@ -913,7 +913,7 @@ test('rule guard: no second headless Blender while bl_server.py runs; Blender on
   assert.equal(listed, 0, 'processes are listed only for a headless Blender start')
 
   const read = (file_path) => JSON.stringify({ type: 'assistant', message: { content: [{ type: 'tool_use', id: file_path, name: 'Read', input: { file_path } }] } })
-  const plan = read('C:\\Users\\Claude\\Documents\\GameAssetLibrary\\scenes\\companyxy\\ch01\\NACHT-FIX-PLAN.md')
+  const plan = read('C:\\Users\\Claude\\Documents\\StudioLibrary\\projects\\games\\companyxy\\ch01\\NACHT-FIX-PLAN.md')
   const animator = read('C:/Users/Claude/Documents/GitHub/claude-setup/.claude/skills/operator/roles/animator.md')
   assert.match(blenderDocsMissing('Bash', { command: 'blender -b f.blend' }, '') ?? '', /NACHT-FIX-PLAN\.md und .*animator\.md/)
   assert.match(blenderDocsMissing('mcp__Blender__execute_blender_code', { code: 'x' }, plan) ?? '', /animator\.md/)

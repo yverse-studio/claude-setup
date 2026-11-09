@@ -17,8 +17,8 @@ import bpy, sys, os, json, hashlib
 import numpy as np
 from mathutils import Vector
 
-LIB = os.environ.get('GAL_LIB', r'C:\Users\Claude\Documents\GameAssetLibrary')
-BASE_DEFAULT = os.path.join(LIB, 'characters', 'CH_Base', 'female', 'Blend', 'base_female_v4.blend')
+LIB = os.environ.get('GAL_LIB', r'C:\Users\Claude\Documents\StudioLibrary')
+BASE_DEFAULT = os.path.join(LIB, 'lib', 'characters', 'CH_Base', 'female', 'Blend', 'base_female_v4.blend')
 ARGS = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
 OPT = {a.split('=', 1)[0]: a.split('=', 1)[1] for a in ARGS if '=' in a}
 POS = [a for a in ARGS if '=' not in a]
@@ -27,7 +27,7 @@ DRIFT_MM = 0.5
 
 
 def cfg(char):
-    return json.load(open(os.path.join(LIB, '_tools', 'clothes_items.json'), encoding='utf-8'))['characters'][char]
+    return json.load(open(os.path.join(LIB, 'tools', 'laptop', 'clothes_items.json'), encoding='utf-8'))['characters'][char]
 
 
 def arr(data, n):

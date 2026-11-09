@@ -18,7 +18,7 @@ Free-licence sounds for the video studio (yskills 2026-10-26: "free licence soun
 | music | 13 | 8 human-made beds from Freesound, CC0 1.0 (chill/lo-fi 3, funky 2, playful 1, synthwave 1, cinematic 1; each 60 s from its first full-level beat, 128 kbps mp3, 2 s fade out, original page saved as proof), plus 5 Juhani Junkala chiptunes (OpenGameArt, CC0): `big` only, game-flavoured; Title Screen is 15 s, too short for a bed |
 
 Known gaps: no scratch, no real riser. FreePD closed in 2026; the Freesound beds came through Openverse (`license=cc0`) and are Freesound's HQ mp3 previews (originals need a login). `bpm` is only an estimate (`bpm_estimated`): librosa reads several beds as exactly 117.5 and was off by 1.5x on `hiphop-chill-calm`, which is about 86. `mix` uses the real beat grid, so cuts do not depend on it; it only filters `big`'s 110-140 range. The beds were chosen by title, tags and spectrum, not by ear: audition before the first post. The synth in `sound.py sfx` covers riser and sub boom.
-Getting new files: the cloud proxy blocks kenney.nl, freesound, opengameart and similar, so download on the laptop (Remote Control, `GameAssetLibrary/sound-inbox-*`) and import from there.
+Getting new files: the cloud proxy blocks kenney.nl, freesound, opengameart and similar, so download on the laptop (Remote Control, `StudioLibrary/sound-inbox-*`) and import from there.
 
 ## Preset fit (Critic, 2026-10-26)
 

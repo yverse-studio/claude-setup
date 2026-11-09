@@ -6,14 +6,14 @@ Per character: copy of the live file -> delta.py sync (rig, shape keys, weights,
 --extract  also reads the delta back from the rebuilt file; it must equal the stored delta (proportion, key values).
 --marker   proof run: makes a test base with a +1 mm vertex and a +1 mm bone, rebuilds every character from it, and checks the
            marker arrived in each one (body Basis vertex 5000, identity key, bone Head tail x k).
-Env: BLENDER (exe), GAL_LIB (library root, default C:\\Users\\Claude\\Documents\\GameAssetLibrary)."""
+Env: BLENDER (exe), GAL_LIB (library root, default C:\\Users\\Claude\\Documents\\StudioLibrary)."""
 import os, sys, json, subprocess, shutil
 import numpy as np
 
-LIB = os.environ.get('GAL_LIB', r'C:\Users\Claude\Documents\GameAssetLibrary')
+LIB = os.environ.get('GAL_LIB', r'C:\Users\Claude\Documents\StudioLibrary')
 BLENDER = os.environ.get('BLENDER', r'C:\Program Files\Blender Foundation\Blender 5.1\blender.exe')
 HERE = os.path.dirname(os.path.abspath(__file__))
-TOOLS = os.path.join(LIB, '_tools')
+TOOLS = os.path.join(LIB, 'tools', 'laptop')
 A = sys.argv[1:]
 
 
@@ -54,8 +54,8 @@ def character_file(char):
 
 def main():
     chars = [a for a in A if not a.startswith('--') and a not in (opt('--base'), opt('--out'))]
-    base = opt('--base', os.path.join(LIB, 'characters', 'CH_Base', 'female', 'Blend', 'base_female_v4.blend'))
-    out = opt('--out', os.path.join(LIB, 'characters', 'CH_Base', 'female', '_work', 'delta', 'out'))
+    base = opt('--base', os.path.join(LIB, 'lib', 'characters', 'CH_Base', 'female', 'Blend', 'base_female_v4.blend'))
+    out = opt('--out', os.path.join(LIB, 'lib', 'characters', 'CH_Base', 'female', '_work', 'delta', 'out'))
     os.makedirs(out, exist_ok=True)
     delta_py, verify_py = os.path.join(TOOLS, 'delta.py'), os.path.join(TOOLS, 'delta_verify.py')
     orig_base = base

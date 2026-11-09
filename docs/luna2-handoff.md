@@ -44,7 +44,7 @@ then writes lessons and state back through a PR, never into chat memory. Shared 
 
 - Repo `yverse-studio/companyxy-spiel` (private): `game/` source, `story/<char>/` chapters, `story/briefs/`. Playable build on the laptop: `GitHub\CompanyXY-Spiel\CompanyXY-1.0-pc\`.
 - Read first: `docs/game-pipeline.md` (all paths, Blender steps, lessons), `docs/renpy.md`, `.claude/skills/blender-body/SKILL.md`, the storyteller guide (`09-story-plan.md` in project files).
-- Assets: `C:\Users\Claude\Documents\GameAssetLibrary` (not in git); its README is the home of every laptop path.
+- Assets: `C:\Users\Claude\Documents\StudioLibrary` (not in git); its README is the home of every laptop path.
 - Rule from the repo: explicit slot names and scene contents stay out of git; they live in the laptop README and the private `nacht-kapitel1.rpy` only.
 - Realistic split: Luna 2 can write and edit Ren'Py script and story text, wire existing art into `slots.rpy`, and run `renpy` lint. It cannot reliably drive Blender, rigging, retargeting or render checks; those need Claude or yskills looking at the images. Never let it commit art it has not shown to yskills.
 

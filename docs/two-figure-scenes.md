@@ -1,7 +1,7 @@
 # Two-figure scenes in Blender 5.1 (stills and loops)
 
 The how-to for any scene with two rigged figures (from the animator's working guide, 2026-10-21). Paths are the
-laptop library (`GameAssetLibrary`, see `docs/game-pipeline.md`); project specifics (slot lists, the
+laptop library (`StudioLibrary`, see `docs/game-pipeline.md`); project specifics (slot lists, the
 characters' key names) live in the private game repo and the laptop README.
 
 ## Setup
@@ -10,9 +10,9 @@ characters' key names) live in the private game repo and the laptop README.
   (~3.4 GB each); more and jobs die without a message.
 - Figures: one `.blend` per character (`characters\CH_<name>\Blend\<name>.blend`). Back up before any change
   (`<name>_backup_<date>.blend`). Never rename or delete bones or weights: the bone maps depend on them.
-- Bone maps: `rigs\interaction\core\bone_maps\<char>.json`, one per rig.
+- Bone maps: `lib\anims\interaction\core\bone_maps\<char>.json`, one per rig.
 
-## The system (`rigs\interaction\`)
+## The system (`lib\anims\interaction\`)
 
 - `core\`: the engine (`engine.py`, `build_scene.py`, `run_scenes.py`, `config.py`, `secondary.py`,
   `apply_interaction.py`, `rooms.json`, `defaults.json`).
@@ -185,7 +185,7 @@ Rig conventions (finger axis, IK switches, ring groups, group names) are in
 ## One-shot direction
 
 Every solution (hands, collision, openings, intro tease, loop A/B, camera, effects) becomes a reusable script in
-`rigs\interaction\core` with JSON parameters, so a scene is a chain of scripts. The goal is a small HUD (people 1-4,
+`lib\anims\interaction\core` with JSON parameters, so a scene is a chain of scripts. The goal is a small HUD (people 1-4,
 characters, room, action, optional furniture, ticks for intro/loop/finish) that builds the scene, opens Blender to
 adjust it, renders the clips after saving and puts them in the game. The base exists: `run_scenes.py`,
 `projects/<project>.json`, `<action>/<action>.json`, `rooms.json`. Before building a heavy part, look at how existing
@@ -194,11 +194,11 @@ scene tools solve it (VaM, sandbox games, pose editors, Blender pose-library add
 ## Recipe: the mund scene from zero (state 2026-10-26)
 
 A fresh agent follows this with claude-setup plus the laptop handoffs, no questions. Handoffs (read-only sources, in
-`GameAssetLibrary\`): `rigs\interaction\HANDOFF.md` (sections 6-8 gate, image language, engineering lessons; 9a vision;
-9e order), `characters\CH_rika\Blend\HANDOFF.md` ("Rig v2"), `scenes\companyxy\ch01\INTEGRATION.md` (player).
+`StudioLibrary\`): `lib\anims\interaction\HANDOFF.md` (sections 6-8 gate, image language, engineering lessons; 9a vision;
+9e order), `characters\CH_rika\Blend\HANDOFF.md` ("Rig v2"), `projects\games\companyxy\ch01\INTEGRATION.md` (player).
 
 1. Models: Rika `characters\CH_rika\Blend\rika.blend` (Rig v2), the man `characters\CH_male\male.blend` (v2.2, 1.90 m,
-   normals out), room `environment\rooms\office_night`. Check first: bone maps (`rika_now.json`, `mh_male.json`:
+   normals out), room `lib\rooms\office_night`. Check first: bone maps (`rika_now.json`, `mh_male.json`:
    names), `core\test_openings.py` (0 hits, stop ~61 mm), finger-axis measurement, then `--pos` with numbers.
 2. Geometry in the side view (she kneels at the desk edge, he leans back, shaft 15-30° up); face 45-55° to the camera,
    camera at his eyes +0.15 forward, lens 22. Then `python rigs\interaction\core\run_scenes.py <slot> --pos`.
@@ -213,5 +213,5 @@ A fresh agent follows this with claude-setup plus the laptop handoffs, no questi
    in the file. Effects (finish) from a reusable generator with presets and JSON, visible in the still.
 6. Gate: sheets (A, B, hands close-ups, speed curve, loop strip next to the reference strip) -> five-star table ->
    yskills -> 1080p, 24-32 samples, one render at a time -> copy to the game, rebuild the contact sheet.
-7. Known open points are listed at the end of `rigs\interaction\HANDOFF.md` section 9d/9e; do not repeat the listed
+7. Known open points are listed at the end of `lib\anims\interaction\HANDOFF.md` section 9d/9e; do not repeat the listed
    mistakes below.
