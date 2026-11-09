@@ -23,6 +23,9 @@ C:\Users\Claude\     only system folders, twin-tools\ (35 GB, venv, Twin on hold
 ```
 
 ## Rules
+- Render farm (2026-11-09): the live Flamenco install is `Documents\StudioLibrary\tools\flamenco\` (exes, yaml, DB; not git),
+  its source is claude-setup `scripts/laptop/flamenco/`; queue state stays in `StudioLibrary\_queue\` (`WHO.md`, `STOP`).
+  Rules: `docs/pc-claude-user.md` (Render farm).
 - A new clone goes into `GitHub\`, a game build into `Games\<game>\`, new art into `GameAssetLibrary`, a reference
   into `References\` (a private one into `Private18\ref\`). Never "somewhere next to it", never loose in the profile root.
 - Downloads, zips and loose notes are not left in any of these; they go to `GameAssetLibrary\temp\` (art) or `Archiv\`.

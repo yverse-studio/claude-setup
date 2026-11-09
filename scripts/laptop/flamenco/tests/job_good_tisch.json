@@ -1,0 +1,21 @@
+{
+ "name": "d2-test-good-tisch-89-96",
+ "settings": {
+  "blendfile": "C:/Users/Claude/Documents/StudioLibrary/_research/wild_life_notes/oral_pair/_strips_a14/delta_sync/final8/tisch_j.blend",
+  "cams_json": "C:/Users/Claude/Documents/StudioLibrary/_research/wild_life_notes/oral_pair/_strips_a14/delta_sync/tisch_cams_a17.json",
+  "clip_key": "tisch",
+  "frame_start": 89,
+  "frame_end": 96,
+  "out_dir": "C:/Users/Claude/Documents/StudioLibrary/_work/flamenco-test/tisch_89_96",
+  "scene": "tisch",
+  "res": "1920x1080",
+  "samples": 16,
+  "only": "",
+  "pre_scripts": "C:/Users/Claude/Documents/StudioLibrary/_research/wild_life_notes/oral_pair/_strips_a14/delta_sync/pre_look_global.py|C:/Users/Claude/Documents/StudioLibrary/_research/wild_life_notes/oral_pair/_strips_a14/delta_sync/pre_lines_soft.py",
+  "render_script": "C:/Users/Claude/Documents/StudioLibrary/_research/wild_life_notes/oral_pair/_strips_a14/final_render_a14.py",
+  "env": "SHAFT_CUT_Z=0.643",
+  "overwrite": false,
+  "thread": "Programmer · Flamenco als Dienst (D2) test",
+  "min_free_gb": 4.0
+ }
+}

@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+// Scene final renders moved to Flamenco (job type cxy-scene-final, scripts/laptop/flamenco/, docs/pc-claude-user.md Render farm);
+// this queue only drains old .cmd jobs.
 // Minimal local render queue: runs queued Blender jobs one after another, independent of any Claude session.
 // Add a job: write <queueDir>/jobs/<NN>-<name>.json  {"name":"titten","cmd":["blender.exe","-b",...]}  (sorted by file name).
 // Start once, detached:  node scripts/render-queue.mjs <queueDir>

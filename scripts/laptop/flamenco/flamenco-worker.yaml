@@ -1,0 +1,4 @@
+# Flamenco Worker for the CXY laptop: one worker (one Blender lane, RAM), talks only to the local Manager.
+manager_url: http://127.0.0.1:8080/
+task_types: [blender, file-management, misc]
+restart_exit_code: 47

@@ -1,0 +1,55 @@
+# Flamenco Manager for the CXY laptop (wave D2, 2026-11-09). README.md next to this file explains the setup.
+# NOTE: the Manager web UI may rewrite this file; keep changes in git-free StudioLibrary only through README steps.
+
+_meta:
+  version: 3
+manager_name: Flamenco CXY Laptop
+database: flamenco-manager.sqlite
+database_check_period: 10m0s
+listen: 127.0.0.1:8080
+autodiscoverable: false
+local_manager_storage_path: ./flamenco-manager-storage
+shared_storage_path: C:/Users/Claude/Documents/StudioLibrary
+shaman:
+  enabled: false
+  garbageCollect:
+    period: 24h0m0s
+    maxAge: 744h0m0s
+task_timeout: 20m0s
+worker_timeout: 1m0s
+blocklist_threshold: 3
+task_fail_after_softfail_count: 1
+mqtt:
+  client:
+    enabled: false
+    broker: ""
+    clientID: flamenco
+    topic_prefix: flamenco
+    username: ""
+    password: ""
+variables:
+  blender:
+    values:
+    - audience: all
+      platform: windows
+      value: C:/Users/Claude/Apps/blender-5.2.3-windows-x64/blender.exe
+  blenderArgs:
+    values:
+    - audience: all
+      platform: all
+      value: -b -y
+  cxypython:
+    values:
+    - audience: all
+      platform: windows
+      value: C:/Users/Claude/Apps/blender-5.2.3-windows-x64/5.2/python/bin/python.exe
+  cxytools:
+    values:
+    - audience: all
+      platform: windows
+      value: C:/Users/Claude/Documents/StudioLibrary/tools/flamenco/cxy
+  cxyqueue:
+    values:
+    - audience: all
+      platform: windows
+      value: C:/Users/Claude/Documents/StudioLibrary/_queue
