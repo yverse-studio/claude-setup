@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { acquireSlot, blenderCount, releaseSlot } from './laptop-slots.mjs'
-import { parseAcMinutes, parseArgs, powerProblems, gpuProblem, ramShort } from './laptop-job.mjs'
+import { parseAcMinutes, parseArgs, powerProblems, gpuProblem, ramShort, zeroRendered } from './laptop-job.mjs'
 
 const script = fileURLToPath(new URL('./laptop-job.mjs', import.meta.url))
 const run = (flags, ...cmd) => spawnSync('node', [script, '--no-gpu', ...flags, '--', ...cmd], { encoding: 'utf8', env: { ...process.env, LAPTOP_JOB_LOG: process.platform === 'win32' ? 'NUL' : '/dev/null' } })
@@ -152,4 +152,20 @@ test('a job stopped with "now" goes back to the queue', async () => {
   assert.equal(endState('JOB STOPPED x: STOP file says now', 1), '.json')
   assert.equal(endState('JOB OK x: finished in 1 min', 0), '.done')
   assert.equal(endState('JOB FAIL x: exit code 1', 1), '.fail')
+})
+test('zeroRendered is true only when every rendered count is 0', () => {
+  assert.equal(zeroRendered('FINAL_A14_DONE {"A": {"rendered": 0}, "B": {"rendered": 0}}'), true)
+  assert.equal(zeroRendered('FINAL_A14_DONE {"A": {"rendered": 0}, "B": {"rendered": 3}}'), false)
+  assert.equal(zeroRendered('FINAL_A14_DONE {"A": {"rendered": 12}}'), false)
+  assert.equal(zeroRendered('no marker here'), false)
+})
+test('a job that rendered 0 frames reports FAIL, not OK', () => {
+  const r = run([], 'node', '-e', 'console.log(\'FINAL_A14_DONE {"A": {"rendered": 0}}\')')
+  assert.equal(r.status, 1)
+  assert.match(lastLine(r), /^JOB FAIL job: rendered 0 frames/)
+})
+test('a job that rendered frames still reports OK', () => {
+  const r = run([], 'node', '-e', 'console.log(\'FINAL_A14_DONE {"A": {"rendered": 4}}\')')
+  assert.equal(r.status, 0)
+  assert.match(lastLine(r), /^JOB OK job:/)
 })

@@ -78,6 +78,16 @@ export function topRam(run = (c, a) => spawnSync(c, a, { encoding: 'utf8' }), n 
   return rows.sort((a, b) => b.mb - a.mb).slice(0, n).map((x) => `${x.name} ${x.pid} ${x.mb} MB`).join(', ')
 }
 
+// A render that skipped every frame (resume-safe script, old PNGs still there) prints rendered=0 and must not pass as OK.
+// Looks at every FINAL_A14_DONE line: true when it reports rendered counts and all are 0 (lesson 2026-11-08).
+export function zeroRendered(text) {
+  const lines = String(text).split('\n').filter((l) => l.includes('FINAL_A14_DONE'))
+  if (!lines.length) return false
+  return lines.every((l) => {
+    const counts = [...l.matchAll(/"rendered":\s*(\d+)/g)].map((m) => Number(m[1]))
+    return counts.length > 0 && counts.every((n) => n === 0)
+  })
+}
 // Stop switch (yskills 2026-11-08): while the STOP file exists no job starts; "now" in it also kills the running job.
 // File: LAPTOP_STOP_FILE, default STOP in the working directory (the queue folder for render-queue.mjs).
 export function stopState(file = process.env.LAPTOP_STOP_FILE ?? 'STOP') {
@@ -134,7 +144,8 @@ async function main() {
   runningChild = child
   const started = Date.now()
   let lastOutput = started
-  const touch = (chunk) => { lastOutput = Date.now(); process.stdout.write(chunk) }
+  let doneText = ''
+  const touch = (chunk) => { lastOutput = Date.now(); process.stdout.write(chunk); const t = String(chunk); if (t.includes('FINAL_A14_DONE')) doneText += t }
   child.stdout.on('data', touch)
   child.stderr.on('data', touch)
   let verdict = null
@@ -157,7 +168,7 @@ async function main() {
     finished = true
     clearInterval(watch)
     awake?.kill()
-    const [state, reason] = verdict ?? (code === 0 ? ['OK', `finished in ${Math.round((Date.now() - started) / 60000)} min`] : ['FAIL', why ?? (code === null ? 'ended by a signal' : `exit code ${code}`)])
+    const [state, reason] = verdict ?? (code === 0 && zeroRendered(doneText) ? ['FAIL', 'rendered 0 frames (all skipped, nothing new on disk)'] : code === 0 ? ['OK', `finished in ${Math.round((Date.now() - started) / 60000)} min`] : ['FAIL', why ?? (code === null ? 'ended by a signal' : `exit code ${code}`)])
     finish(statusLine(state, opt.name, reason), state === 'OK' ? 0 : 1)
   }
   child.on('error', (e) => done(1, `could not start: ${e.message}`))
