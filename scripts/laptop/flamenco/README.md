@@ -8,4 +8,4 @@ Live install of Flamenco 3.9.3 (wave D2, 2026-11-09). Source of the scripts and 
 - Job type `cxy-scene-final` (`scripts/cxy_scene_final.js`): gate (STOP, RAM >= 4 GB, no other blender.exe, WHO.md line) -> render one position (all cams, all frames, one Blender) -> verify (every PNG > 0 bytes, DONE marker, rendered > 0).
 - Submit: `<blender python> -I cxy\cxy_submit.py submit job.json`; status: `... status <job-id>`. Example: `tests\job_good_tisch.json`.
 - Install / reinstall (admin, once): `install_flamenco_admin.ps1`. Blender path: `variables.blender` in the yaml must equal `StudioLibrary\BLENDER_EXE.txt`.
-- Downloads with checksums: `_dl\` (flamenco sha256 from flamenco.blender.org; WinSW v2.12.0 from github.com/winsw/winsw, Defender-scanned).
+- Downloads with checksums: `_dl\` (flamenco zip + sha256 from flamenco.blender.org). WinSW v2.12.0 (github.com/winsw/winsw, Defender-scanned, sha256 05b82d46...a0da) lives only as `flamenco-manager-service.exe`.

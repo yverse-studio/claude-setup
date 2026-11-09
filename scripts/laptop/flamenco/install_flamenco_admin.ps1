@@ -19,6 +19,7 @@ if (-not $me.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
 
 # 0. hand-started test copies would block port 8080 and the worker slot
 Get-Process flamenco-manager, flamenco-worker -ErrorAction SilentlyContinue | Stop-Process -Force
+Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" | Where-Object { $_.CommandLine -like '*worker-loop.ps1*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
 Start-Sleep 2
 
 # 1. Manager service
@@ -35,8 +36,9 @@ Start-Sleep 5
 Get-Service $svc | Format-Table Name, StartType, Status -AutoSize
 
 # 2. Worker at logon of claude (runs only while claude is logged on: needed for the GPU)
+# conhost --headless: no window at all (Windows Terminal ignores -WindowStyle Hidden and showed two windows, 2026-11-09)
 $ps = "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe"
-$a = New-ScheduledTaskAction -Execute $ps -Argument "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$F\worker-loop.ps1`"" -WorkingDirectory $F
+$a = New-ScheduledTaskAction -Execute "$env:SystemRoot\System32\conhost.exe" -Argument "--headless `"$ps`" -NoProfile -ExecutionPolicy Bypass -File `"$F\worker-loop.ps1`"" -WorkingDirectory $F
 $s = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1) `
     -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -MultipleInstances IgnoreNew
 Register-ScheduledTask -TaskName $task -Action $a -Trigger (New-ScheduledTaskTrigger -AtLogOn -User 'claude') -Settings $s `

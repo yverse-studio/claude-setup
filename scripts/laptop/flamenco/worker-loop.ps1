@@ -8,7 +8,7 @@ New-Item -ItemType Directory -Force (Join-Path $F 'logs') | Out-Null
 while (-not (Test-Path (Join-Path $F 'WORKER_OFF'))) {
     if (Get-Process flamenco-worker -ErrorAction SilentlyContinue) { Start-Sleep 30; continue }
     Add-Content $log "$(Get-Date -Format s) start worker"
-    $p = Start-Process -FilePath (Join-Path $F 'flamenco-worker.exe') -WorkingDirectory $F -WindowStyle Hidden -PassThru `
+    $p = Start-Process -FilePath (Join-Path $F 'flamenco-worker.exe') -WorkingDirectory $F -NoNewWindow -PassThru `
         -RedirectStandardError (Join-Path $F 'logs\worker.log') -RedirectStandardOutput (Join-Path $F 'logs\worker.out')
     $null = $p.Handle  # PS 5.1: ExitCode stays empty unless the handle is opened before exit
     $p.WaitForExit()
