@@ -37,7 +37,7 @@ figure is first made: [`character-workflow.md`](character-workflow.md); garments
 
 Not in the delta, because the character file keeps them: outfits and looks, actions, materials and textures, own objects.
 
-## Rebuild (`scripts/blender/delta.py`, copy in `_tools/`)
+## Rebuild (`scripts/blender/delta.py`, copy in `StudioLibrary	oolsaptop`)
 
 `delta.py sync` re-applies the current base onto a character file: rig rest pose x k (bones the base gained are added), every base
 shape key and weight on body, face and hair, key `CH_<name>` = basis x k at value 1, mesh `co` = Basis, key values from the delta.
@@ -46,8 +46,8 @@ A character mesh with an old topology (Saki's face had 91 extra vertices from an
 and keeps its material slots and key values. Then `dress.py <char> all` refits every outfit and keeps the looks.
 
 ```bash
-python -I _tools/delta_rebuild.py rika saki --dress --extract          # live files are never written; results in --out
-python -I _tools/delta_rebuild.py rika saki --marker --dress --extract # the proof run
+python -I tools/laptop/delta_rebuild.py rika saki --dress --extract          # live files are never written; results in --out
+python -I tools/laptop/delta_rebuild.py rika saki --marker --dress --extract # the proof run
 ```
 
 ## Proof (what "perfect" means here)
