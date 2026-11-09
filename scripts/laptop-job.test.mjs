@@ -155,7 +155,7 @@ test('a job stopped with "now" goes back to the queue', async () => {
 })
 
 // RAM guard (laptop-health.mjs): pool, free RAM, uptime -> one plain status line.
-import { topPoolTag, healthProblems, nonpagedPoolBytes, vmmemBytes, writeStatus, clearStatus } from './laptop-health.mjs'
+import { logHealth, topPoolTag, healthProblems, nonpagedPoolBytes, vmmemBytes, writeStatus, clearStatus } from './laptop-health.mjs'
 import { readFileSync } from 'node:fs'
 test('health: leaking pool asks for a restart with the number', () => {
   const p = healthProblems({ freeGb: 1.2, poolGb: 5.3, vmmemGb: 4.1, uptimeDays: 6 })
@@ -188,4 +188,12 @@ test('health: PoolMon snapshot names the biggest nonpaged tag, line carries it',
   assert.equal(topPoolTag(snap), 'Ndu 4.0 GB')
   assert.equal(topPoolTag('nothing'), null)
   assert.match(healthProblems({ freeGb: 1, poolGb: 5.3, vmmemGb: null, uptimeDays: 1, poolTag: 'Ndu 4.0 GB' })[0], /größter Tag: Ndu 4\.0 GB/)
+})
+test('health: log line matches ram_admin format and appends to the day file', () => {
+  const d = join(mkdtempSync(join(tmpdir(), 'ram-')), 'ram')
+  const now = new Date('2026-11-09T08:00:00Z')
+  const l = logHealth({ freeGb: 1.2, poolGb: 5, vmmemGb: null }, 'job1', d, now)
+  assert.equal(l, '2026-11-09T08:00:00.000Z | job1 | 1.2 | 5120 | ?')
+  logHealth({ freeGb: 3, poolGb: 0.5, vmmemGb: 4 }, 'job1', d, now)
+  assert.equal(readFileSync(join(d, 'ram-20261109.log'), 'utf8').trim().split('\n').length, 2)
 })

@@ -2,7 +2,7 @@
 // Reusable on its own (Flamenco worker pre-check later). Home of the rule: docs/pc-claude-user.md (RAM guard).
 // A bad laptop gets ONE plain line in the owner's status file instead of a silent wait.
 import { spawnSync } from 'node:child_process'
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { freemem, tmpdir, uptime } from 'node:os'
 import { join } from 'node:path'
 
@@ -50,6 +50,16 @@ export function healthProblems(h, l = LIMITS) {
   else if (h.freeGb < l.minFreeGb) out.push(`${STATUS_PREFIX} nur ${h.freeGb.toFixed(1)} GB RAM frei${h.vmmemGb ? ` (vmmem hält ${h.vmmemGb.toFixed(1)} GB)` : ''}, Pool ${h.poolGb === null ? '?' : h.poolGb.toFixed(1)} GB`)
   if (h.uptimeDays > l.maxUptimeDays) out.push(`Render-Nacht erst nach Neustart: Laptop läuft seit ${h.uptimeDays.toFixed(1)} Tagen`)
   return out
+}
+
+// Same format as GAL\\_tools\\ram_admin.ps1: `ts | label | free GB | nonpaged MB | vmmem MB` in <dir>/ram-<yyyymmdd>.log (default _work/ram, LAPTOP_RAM_LOG_DIR).
+// Read-only: this watcher never restarts the VM or a service (admin only, owner-run).
+export function logHealth(h, label = 'queue', dir = process.env.LAPTOP_RAM_LOG_DIR ?? join('_work', 'ram'), now = new Date()) {
+  mkdirSync(dir, { recursive: true })
+  const mb = (g) => (g === null || g === undefined ? '?' : Math.round(g * 1024))
+  const line = `${now.toISOString()} | ${label} | ${h.freeGb.toFixed(1)} | ${mb(h.poolGb)} | ${mb(h.vmmemGb)}`
+  appendFileSync(join(dir, `ram-${now.toISOString().slice(0, 10).replaceAll('-', '')}.log`), line + '\n')
+  return line
 }
 
 // Replaces any earlier health line, keeps the rest of the file; returns true when the file changed.

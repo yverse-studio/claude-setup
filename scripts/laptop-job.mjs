@@ -8,7 +8,7 @@ import { spawn, spawnSync } from 'node:child_process'
 import { appendFileSync, existsSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { freemem } from 'node:os'
-import { clearStatus, healthProblems, readHealth, writeStatus } from './laptop-health.mjs'
+import { clearStatus, healthProblems, logHealth, readHealth, writeStatus } from './laptop-health.mjs'
 import { MAX_BLENDER, MAX_RENDERS, acquireSlot, blenderCount, releaseSlot, slotsHeld } from './laptop-slots.mjs'
 
 const KILL_GRACE_MS = 5000
@@ -108,7 +108,9 @@ async function waitForSlot(opt, cmd) {
     const ramLow = isBlender && ramShort(minFree)
     if (isBlender && Date.now() >= nextHealth) {
       nextHealth = Date.now() + 60000
-      const bad = healthProblems(readHealth(), { minFreeGb: minFree, maxPoolGb: Number(process.env.LAPTOP_MAX_POOL_GB ?? 2), maxUptimeDays: Number(process.env.LAPTOP_MAX_UPTIME_DAYS ?? 3) })
+      const health = readHealth()
+      try { logHealth(health, opt.name) } catch (e) { console.error(`WARN ram log not written: ${e.message}`) }
+      const bad = healthProblems(health, { minFreeGb: minFree, maxPoolGb: Number(process.env.LAPTOP_MAX_POOL_GB ?? 2), maxUptimeDays: Number(process.env.LAPTOP_MAX_UPTIME_DAYS ?? 3) })
       try { if (bad.length) { if (writeStatus(bad)) console.log(`HEALTH ${opt.name}: ${bad.join('; ')}`) } else clearStatus() } catch (e) { console.error(`WARN status not written: ${e.message}`) }
     }
     if (!(count !== null && count >= maxBlender) && !ramLow) {
