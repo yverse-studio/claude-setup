@@ -104,7 +104,7 @@ added as a second repo, or a plain chat), read that file by path, then the files
 | App stores | `store` (Capacitor, RevenueCat, TestFlight, review) | `toolbox/catalog/app-platform.md` |
 | Game as APK and on Google Play (workflow, Learnings) | `store-publish` | `publish` (the website), `game-3d` (Steam later) |
 | German law, DSGVO | `legal` | `legal-reviewer` agent; `sell/legal-de.md` for shops |
-| Security | `security-review` | `security-reviewer`, `red-team` agents |
+| Security | the built-in `/security-review` command | `security-reviewer`, `red-team` agents |
 | Design, UI/UX | `operator/roles/designer.md` (Art direction first), `ui-review/SLOP.md`, the project's `DESIGN.md` | `impeccable`, `make-interfaces-feel-better`, `web-interface-guidelines`, `design-system`, `ui-review`, `design-critic` agent |
 | 3D games, Steam | `game-3d` (three.js + Electron, decided 2026-10-07) | `game-3d/refs/` (camera, game feel, levels, glTF, lighting, perf, Steam, `vfx-nodes.md`) |
 | 2D and web games | `toolbox/catalog/data-web.md` (Phaser, PixiJS, Poki, CrazyGames) | `toolbox/catalog/money.md` (H5 game ads) |

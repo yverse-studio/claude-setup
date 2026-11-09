@@ -11,7 +11,6 @@ change config/ecc.json and re-run the script.
 
 - skills/search-first
 - skills/strategic-compact
-- skills/security-review
 - skills/context-budget
 - skills/product-lens
 - skills/market-research
