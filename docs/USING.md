@@ -141,6 +141,10 @@ One throwaway helper branch (`media-*`): run `delete-helper-branch.yml` with `re
 `archive/<branch>` first and refuses any other name, the default branch and a branch with an open PR.
 A session's own safety check blocks raw `git push --delete`; this is the route.
 
+## A skill idea
+
+A thread that spots a repeated procedure may show a "Save skill" card. Ignore it: a saved card is an account skill outside git. Claude uses `new-skill` instead, and the skill arrives as part of the next claude-setup PR. Both plugins (`setup-skills`, `setup-domains`) load in every project thread by themselves; there is nothing to do per project.
+
 ## When Claude asks you
 
 Only for real money, a new paid service, force-pushing `main`, rotating a
