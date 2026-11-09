@@ -12,7 +12,7 @@ import sys
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from cxy_common import expected_cams, frame_path, marker_path, parse_opts  # noqa: E402
+from cxy_common import expected_cams, frame_path, marker_path, parse_opts
 
 
 def move_aside(out, cams, frames, stamp):

@@ -8,7 +8,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from cxy_common import expected_cams, frame_path, marker_path  # noqa: E402
+from cxy_common import expected_cams, frame_path, marker_path
 
 
 def check(out, cams_json, key, f0, f1, only=''):

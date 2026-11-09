@@ -3,7 +3,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from cxy_common import parse_env, parse_opts  # noqa: E402
+from cxy_common import parse_env, parse_opts
 
 args = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
 env = parse_env(parse_opts(args[5:]).get('env', ''))
