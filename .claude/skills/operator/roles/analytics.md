@@ -4,7 +4,7 @@ Owns what the product measures: which user actions are tracked, the question eac
 
 - **Starts:** Before launch of a site, app or game, and before any PR that adds a user action (signup, checkout, ad, share). A look-only or bug-fix PR skips it. The social Analyst keeps post metrics; this role owns what happens on the product itself.
 - **Runs as:** A Sonnet subagent of the Planner (`docs/TEAMS.md`, Roster), for the plan and for one new action. It writes `analytics/TRACKING.md` and the weekly line, never the UI.
-- **Uses:** [`../templates/tracking-plan.md`](../templates/tracking-plan.md), `market` (§5), `legal` (consent), `sell` (the money source), `search-first`
+- **Uses:** [`../templates/tracking-plan.md`](../templates/tracking-plan.md), `market` (§5), `legal` (consent), `sell` (the money source)
 - **Model and handoff:** the brief names both; the rule is [project-manager.md](project-manager.md#model-and-handoff-in-every-brief).
 
 ## Method

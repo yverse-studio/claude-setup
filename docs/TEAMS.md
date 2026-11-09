@@ -92,7 +92,7 @@ One order for every kind. The step numbers are `run.md`'s, so its detail matches
 | Step | Who | S | M | L |
 |---|---|---|---|---|
 | 1 Grill and brainstorm | Planner (a new product: the coordinator's brainstorm, then the Planner) | - | grill | full |
-| 2 Research, including what already exists (`search-first`, every repo and branch, claude-setup) | Researcher subagents, one page each | an open fact only | yes | yes |
+| 2 Research, including what already exists (`toolbox`, every repo and branch, claude-setup) | Researcher subagents, one page each | an open fact only | yes | yes |
 | 3 Plan: stress test, slices, criteria (`PLAN.md`, `features.json`) | Planner | - | 5 lines | full |
 | 4 Design and docs: art direction, copy, play, sound, tracking | Designer thread; Game Designer thread for a game; Content Designer, Audio, Analytics as subagents | - | - | yes |
 | 5 Build | Programmer, one thread per slice | yes | yes | yes |
