@@ -15,7 +15,7 @@ skills and tools that are added to each project with `toolbox`:
 | Consistent voice | ECC `brand-voice` |
 | Short videos and ads | `video-studio` (the studio roles; HyperFrames for motion) |
 | Scheduled posting, comments, DMs | `social-team` (posting service, Instagram Messaging API) |
-| Audience and competitors | `market-research`, `product-lens` (both global) |
+| Audience and competitors | `product-lens` (global) and WebSearch |
 | SEO | `seo` and `seo-specialist` (both global) |
 
 Markers: **[S]** search results and legal publishers agree; **[K]** known but not re-read.

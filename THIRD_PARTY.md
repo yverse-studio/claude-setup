@@ -10,7 +10,6 @@ Copied by scripts/sync-ecc.mjs from the list in config/ecc.json. Do not edit the
 change config/ecc.json and re-run the script.
 
 - skills/product-lens
-- skills/market-research
 - skills/vue-patterns
 - skills/nuxt4-patterns
 - skills/vite-patterns
