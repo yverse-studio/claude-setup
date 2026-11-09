@@ -257,3 +257,4 @@ Practice for the scene player, general game audio (ambience as the bed, foley sy
   library with licence and catalog entry, then empty temp.
 - Back up a file before a body change as `<name>_before-<change>.blend`; scale uniformly, never touch bones
   or weights.
+- The render queue runner (`scripts/render-queue.mjs`) does not survive a reboot (2026-11-09: the baseline job sat idle for 30 min until it was started by hand). After a reboot check the runner (`queue.log` shows `queue started` within 2 min, or the logon task `GAL Render Queue` from `ram_admin.ps1 -Install` ran) before trusting the queue. `node scripts/laptop-health.mjs <queueDir>` flags a job that waits with no runner as `Queue steht: ...` in `STATUS.md`. [guard: scripts/laptop-health.mjs]

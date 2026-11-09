@@ -3,7 +3,7 @@
 // Reusable on its own (Flamenco worker pre-check later). Home of the rule: docs/pc-claude-user.md (RAM guard).
 // A bad laptop gets ONE plain line in the owner's status file instead of a silent wait.
 import { spawnSync } from 'node:child_process'
-import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
 import { freemem, tmpdir, uptime } from 'node:os'
 import { join } from 'node:path'
 
@@ -65,9 +65,20 @@ export function logHealth(h, label = 'queue', dir = process.env.LAPTOP_RAM_LOG_D
   return line
 }
 
+// A queued job (.json) nobody picked up while nothing runs: render-queue.mjs polls every 30 s, so 2 min means the runner is dead
+// (it does not survive a reboot). Returns a plain line or null; a STOP file or a .running job is a normal wait.
+export function staleQueueLine(queueDir, now = Date.now(), staleMin = 2) {
+  const jobs = join(queueDir, 'jobs')
+  if (!existsSync(jobs) || existsSync(join(queueDir, 'STOP'))) return null
+  const files = readdirSync(jobs)
+  if (files.some((f) => f.endsWith('.running'))) return null
+  const waiting = files.filter((f) => f.endsWith('.json')).map((f) => ({ f, min: (now - statSync(join(jobs, f)).mtimeMs) / 60000 })).filter((x) => x.min > staleMin).sort((a, b) => b.min - a.min)[0]
+  return waiting ? `Queue steht: ${waiting.f.replace(/\.json$/, '')} wartet seit ${Math.round(waiting.min)} min, Runner läuft nicht (nach Neustart: node scripts/render-queue.mjs ${queueDir} starten)` : null
+}
+
 // Replaces any earlier health line, keeps the rest of the file; returns true when the file changed.
 export function writeStatus(lines, file = process.env.LAPTOP_STATUS_FILE ?? 'STATUS.md') {
-  const isOurs = (l) => l.startsWith(STATUS_PREFIX) || l.startsWith('Render-Nacht erst nach Neustart:')
+  const isOurs = (l) => l.startsWith(STATUS_PREFIX) || l.startsWith('Queue steht:') || l.startsWith('Render-Nacht erst nach Neustart:')
   const old = existsSync(file) ? readFileSync(file, 'utf8').split(/\r?\n/) : []
   const keep = old.filter((l) => !isOurs(l))
   const next = [...lines, ...keep].join('\n').replace(/\n+$/, '') + '\n'
@@ -82,6 +93,10 @@ export const clearStatus = (file = process.env.LAPTOP_STATUS_FILE ?? 'STATUS.md'
 if (process.argv[1] === new URL(import.meta.url).pathname) {
   const h = readHealth()
   const p = healthProblems(h)
+  const qDir = process.argv[2] ?? process.env.LAPTOP_QUEUE_DIR
+  const stale = qDir ? staleQueueLine(qDir) : null
+  if (stale) p.push(stale)
+  try { if (p.length) writeStatus(p); else clearStatus() } catch (e) { console.error(`WARN status not written: ${e.message}`) }
   try { logHealth(h, 'cli') } catch (e) { console.error(`WARN ram log not written: ${e.message}`) }
   console.log(JSON.stringify(h))
   console.log(p.length ? p.join('\n') : 'Laptop ok')

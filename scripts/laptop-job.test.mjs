@@ -155,8 +155,8 @@ test('a job stopped with "now" goes back to the queue', async () => {
 })
 
 // RAM guard (laptop-health.mjs): pool, free RAM, uptime -> one plain status line.
-import { logHealth, topPoolTag, healthProblems, nonpagedPoolBytes, vmmemBytes, writeStatus, clearStatus } from './laptop-health.mjs'
-import { readFileSync } from 'node:fs'
+import { staleQueueLine, logHealth, topPoolTag, healthProblems, nonpagedPoolBytes, vmmemBytes, writeStatus, clearStatus } from './laptop-health.mjs'
+import { readFileSync, mkdirSync, utimesSync } from 'node:fs'
 test('health: leaking pool asks for a restart with the number', () => {
   const p = healthProblems({ freeGb: 1.2, poolGb: 5.3, vmmemGb: 4.1, uptimeDays: 6 })
   assert.equal(p[0], 'Laptop braucht Neustart: Pool 5.3 GB (normal unter 1 GB, Treiber-Leck), frei 1.2 GB; nicht mitten im Render, erst nach dem Job')
@@ -200,4 +200,16 @@ test('health: log line matches ram_admin format and appends to the day file', ()
 test('health: 2.5 GB pool is fine, NtFC tag names Claude Desktop', () => {
   assert.deepEqual(healthProblems({ freeGb: 6, poolGb: 2.5, vmmemGb: null, uptimeDays: 1 }), [])
   assert.match(healthProblems({ freeGb: 6, poolGb: 3.4, vmmemGb: null, uptimeDays: 1, poolTag: 'NtFC 3.1 GB' })[0], /NtFC 3\.1 GB \(Claude Desktop, CLAUDE_CODE_TMPDIR setzen\)/)
+})
+test('health: queued job with no runner is flagged, running job or STOP is a normal wait', () => {
+  const q = mkdtempSync(join(tmpdir(), 'q-'))
+  mkdirSync(join(q, 'jobs'))
+  const job = join(q, 'jobs', '01-baseline.json')
+  writeFileSync(job, '{}')
+  const old = new Date(Date.now() - 30 * 60000)
+  utimesSync(job, old, old)
+  assert.match(staleQueueLine(q), /^Queue steht: 01-baseline wartet seit 30 min, Runner läuft nicht/)
+  assert.equal(staleQueueLine(q, Date.now() - 31 * 60000), null)
+  writeFileSync(join(q, 'STOP'), '')
+  assert.equal(staleQueueLine(q), null)
 })
