@@ -1,4 +1,5 @@
 // Pre-job health check for the laptop: free RAM, kernel nonpaged pool (driver leak) and uptime.
+// Run it from Task Scheduler every ~10 min to log pool growth continuously (each run appends one log line).
 // Reusable on its own (Flamenco worker pre-check later). Home of the rule: docs/pc-claude-user.md (RAM guard).
 // A bad laptop gets ONE plain line in the owner's status file instead of a silent wait.
 import { spawnSync } from 'node:child_process'
@@ -7,7 +8,9 @@ import { freemem, tmpdir, uptime } from 'node:os'
 import { join } from 'node:path'
 
 const GB = 2 ** 30
-export const LIMITS = { minFreeGb: 2.5, maxPoolGb: 2, maxUptimeDays: 3 }
+export const LIMITS = { minFreeGb: 2.5, maxPoolGb: 3, maxUptimeDays: 3 }
+// Pool tags that point at Claude Desktop itself (MSIX/bindflt file-open leak, claude-code issues 94198, 95489, 96870); anything else: measure first.
+const CLAUDE_TAGS = /^(NtFC|File|FMfn)\b/
 export const STATUS_PREFIX = 'Laptop braucht Neustart:'
 
 // Memory\Pool Nonpaged Bytes in bytes (normal < 1 GB; a leaking driver grows it for days); null when unreadable.
@@ -46,7 +49,7 @@ export function readHealth({ win = process.platform === 'win32', run } = {}) {
 // Problems as plain German lines; empty list = healthy. A reading that is null is skipped, never guessed.
 export function healthProblems(h, l = LIMITS) {
   const out = []
-  if (h.poolGb !== null && h.poolGb > l.maxPoolGb) out.push(`${STATUS_PREFIX} Pool ${h.poolGb.toFixed(1)} GB (normal unter 1 GB, Treiber-Leck), frei ${h.freeGb.toFixed(1)} GB${h.poolTag ? `, größter Tag: ${h.poolTag}` : ''}`)
+  if (h.poolGb !== null && h.poolGb > l.maxPoolGb) out.push(`${STATUS_PREFIX} Pool ${h.poolGb.toFixed(1)} GB (normal unter 1 GB, Treiber-Leck), frei ${h.freeGb.toFixed(1)} GB${h.poolTag ? `, größter Tag: ${h.poolTag}${CLAUDE_TAGS.test(h.poolTag) ? ' (Claude Desktop, CLAUDE_CODE_TMPDIR setzen)' : ''}` : ''}; nicht mitten im Render, erst nach dem Job`)
   else if (h.freeGb < l.minFreeGb) out.push(`${STATUS_PREFIX} nur ${h.freeGb.toFixed(1)} GB RAM frei${h.vmmemGb ? ` (vmmem hält ${h.vmmemGb.toFixed(1)} GB)` : ''}, Pool ${h.poolGb === null ? '?' : h.poolGb.toFixed(1)} GB`)
   if (h.uptimeDays > l.maxUptimeDays) out.push(`Render-Nacht erst nach Neustart: Laptop läuft seit ${h.uptimeDays.toFixed(1)} Tagen`)
   return out
@@ -79,6 +82,7 @@ export const clearStatus = (file = process.env.LAPTOP_STATUS_FILE ?? 'STATUS.md'
 if (process.argv[1] === new URL(import.meta.url).pathname) {
   const h = readHealth()
   const p = healthProblems(h)
+  try { logHealth(h, 'cli') } catch (e) { console.error(`WARN ram log not written: ${e.message}`) }
   console.log(JSON.stringify(h))
   console.log(p.length ? p.join('\n') : 'Laptop ok')
   process.exit(p.length ? 1 : 0)

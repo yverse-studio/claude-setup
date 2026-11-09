@@ -110,7 +110,7 @@ async function waitForSlot(opt, cmd) {
       nextHealth = Date.now() + 60000
       const health = readHealth()
       try { logHealth(health, opt.name) } catch (e) { console.error(`WARN ram log not written: ${e.message}`) }
-      const bad = healthProblems(health, { minFreeGb: minFree, maxPoolGb: Number(process.env.LAPTOP_MAX_POOL_GB ?? 2), maxUptimeDays: Number(process.env.LAPTOP_MAX_UPTIME_DAYS ?? 3) })
+      const bad = healthProblems(health, { minFreeGb: minFree, maxPoolGb: Number(process.env.LAPTOP_MAX_POOL_GB ?? 3), maxUptimeDays: Number(process.env.LAPTOP_MAX_UPTIME_DAYS ?? 3) })
       try { if (bad.length) { if (writeStatus(bad)) console.log(`HEALTH ${opt.name}: ${bad.join('; ')}`) } else clearStatus() } catch (e) { console.error(`WARN status not written: ${e.message}`) }
     }
     if (!(count !== null && count >= maxBlender) && !ramLow) {

@@ -159,7 +159,7 @@ import { logHealth, topPoolTag, healthProblems, nonpagedPoolBytes, vmmemBytes, w
 import { readFileSync } from 'node:fs'
 test('health: leaking pool asks for a restart with the number', () => {
   const p = healthProblems({ freeGb: 1.2, poolGb: 5.3, vmmemGb: 4.1, uptimeDays: 6 })
-  assert.equal(p[0], 'Laptop braucht Neustart: Pool 5.3 GB (normal unter 1 GB, Treiber-Leck), frei 1.2 GB')
+  assert.equal(p[0], 'Laptop braucht Neustart: Pool 5.3 GB (normal unter 1 GB, Treiber-Leck), frei 1.2 GB; nicht mitten im Render, erst nach dem Job')
   assert.match(p[1], /Laptop läuft seit 6\.0 Tagen/)
 })
 test('health: low free RAM names vmmem, healthy laptop is silent, unreadable pool is skipped', () => {
@@ -187,7 +187,7 @@ test('health: PoolMon snapshot names the biggest nonpaged tag, line carries it',
   const snap = ' Tag  Type  Allocs  Frees  Diff  Bytes  Per Alloc\n Ndu   Nonp   900   10   890  4294967296  4800\n Ntfs  Nonp   50   5   45  1048576  23000\n Pool  Paged  1  0  1  99999999999  5\n'
   assert.equal(topPoolTag(snap), 'Ndu 4.0 GB')
   assert.equal(topPoolTag('nothing'), null)
-  assert.match(healthProblems({ freeGb: 1, poolGb: 5.3, vmmemGb: null, uptimeDays: 1, poolTag: 'Ndu 4.0 GB' })[0], /größter Tag: Ndu 4\.0 GB/)
+  assert.match(healthProblems({ freeGb: 1, poolGb: 5.3, vmmemGb: null, uptimeDays: 1, poolTag: 'Ndu 4.0 GB' })[0], /größter Tag: Ndu 4\.0 GB; nicht/)
 })
 test('health: log line matches ram_admin format and appends to the day file', () => {
   const d = join(mkdtempSync(join(tmpdir(), 'ram-')), 'ram')
@@ -196,4 +196,8 @@ test('health: log line matches ram_admin format and appends to the day file', ()
   assert.equal(l, '2026-11-09T08:00:00.000Z | job1 | 1.2 | 5120 | ?')
   logHealth({ freeGb: 3, poolGb: 0.5, vmmemGb: 4 }, 'job1', d, now)
   assert.equal(readFileSync(join(d, 'ram-20261109.log'), 'utf8').trim().split('\n').length, 2)
+})
+test('health: 2.5 GB pool is fine, NtFC tag names Claude Desktop', () => {
+  assert.deepEqual(healthProblems({ freeGb: 6, poolGb: 2.5, vmmemGb: null, uptimeDays: 1 }), [])
+  assert.match(healthProblems({ freeGb: 6, poolGb: 3.4, vmmemGb: null, uptimeDays: 1, poolTag: 'NtFC 3.1 GB' })[0], /NtFC 3\.1 GB \(Claude Desktop, CLAUDE_CODE_TMPDIR setzen\)/)
 })
