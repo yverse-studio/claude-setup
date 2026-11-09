@@ -43,6 +43,16 @@ class Verify(unittest.TestCase):
             self.assertFalse(r['ok'])
             self.assertIn('rendered 0', ' '.join(r['problems']))
 
+    def test_red_when_old_frames_kept_without_overwrite(self):
+        with tempfile.TemporaryDirectory() as t:
+            cj, out = make_case(t, marker={'ok': True, 'rendered_new': 1, 'overwrite': False})
+            self.assertIn('rest are old PNGs', ' '.join(cxy_verify.check(out, cj, 'tisch', 1, 2)['problems']))
+
+    def test_green_when_partial_but_overwrite_cleared_first(self):
+        with tempfile.TemporaryDirectory() as t:
+            cj, out = make_case(t, marker={'ok': True, 'rendered_new': 1, 'overwrite': True})
+            self.assertTrue(cxy_verify.check(out, cj, 'tisch', 1, 2)['ok'])
+
     def test_red_when_marker_missing(self):
         with tempfile.TemporaryDirectory() as t:
             cj, out = make_case(t)

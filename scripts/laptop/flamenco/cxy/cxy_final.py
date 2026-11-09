@@ -51,7 +51,7 @@ def main():
     start = time.time() - 1  # mtime granularity
     g = runpy.run_path(script, run_name='__main__')
     rec = dict(ok=True, start=start, end=time.time(), rendered_new=count_new(out, cams, frames, start),
-               expected=len(cams) * len(frames), cams=cams, log=g.get('log'))
+               expected=len(cams) * len(frames), overwrite=opt.get('overwrite') == '1', cams=cams, log=g.get('log'))
     os.makedirs(os.path.dirname(marker), exist_ok=True)
     with open(marker, 'w', encoding='utf-8') as fh:
         json.dump(rec, fh, indent=1, default=str)

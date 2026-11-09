@@ -37,6 +37,8 @@ def check(out, cams_json, key, f0, f1, only=''):
             problems.append('DONE marker not ok')
         if int(marker.get('rendered_new', 0)) == 0:
             problems.append('rendered 0 frames this run (existing PNGs skipped; resubmit with overwrite)')
+        elif not marker.get('overwrite') and int(marker.get('rendered_new', 0)) < len(cams) * len(frames):
+            problems.append(f"only {marker.get('rendered_new')} of {len(cams) * len(frames)} frames rendered now, the rest are old PNGs (overwrite off)")
     expected = len(cams) * len(frames)
     return dict(ok=not problems, expected=expected, found=expected - len(missing),
                 rendered_new=(marker or {}).get('rendered_new'), problems=problems)

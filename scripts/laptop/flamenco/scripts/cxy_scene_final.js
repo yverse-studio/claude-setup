@@ -20,7 +20,7 @@ const JOB_TYPE = {
         { key: "pre_scripts", type: "string", default: "", description: "Pre scripts run in this order, separated by |" },
         { key: "render_script", type: "string", required: true, description: "Renderer, e.g. final_render_a14.py" },
         { key: "env", type: "string", default: "", description: "Env vars for the pre scripts, K=V separated by |" },
-        { key: "overwrite", type: "bool", default: false, description: "Move existing PNGs of this range aside first (skip-existing trap)" },
+        { key: "overwrite", type: "bool", default: true, description: "Move existing PNGs of this range aside first; false = keep them, then verify is RED unless every frame was rendered now" },
         { key: "thread", type: "string", default: "flamenco", description: "Who submitted, for the WHO.md line" },
         { key: "min_free_gb", type: "float", default: 4.0 },
     ]
@@ -38,7 +38,7 @@ function compileJob(job) {
     const gate = author.Task("gate", "misc");
     gate.addCommand(author.Command("exec", {
         exe: "{cxypython}",
-        args: ["-I", "{cxytools}/cxy_gate.py", "--queue", "{cxyqueue}", "--job", job.name,
+        args: ["-I", "-X", "utf8", "{cxytools}/cxy_gate.py", "--queue", "{cxyqueue}", "--job", job.name,
                "--thread", s.thread, "--min-free-gb", `${s.min_free_gb}`],
     }));
     job.addTask(gate);
@@ -65,7 +65,7 @@ function compileJob(job) {
     const verify = author.Task("verify", "misc");
     verify.addCommand(author.Command("exec", {
         exe: "{cxypython}",
-        args: ["-I", "{cxytools}/cxy_verify.py"].concat(common),
+        args: ["-I", "-X", "utf8", "{cxytools}/cxy_verify.py"].concat(common),
     }));
     verify.addDependency(render);
     job.addTask(verify);

@@ -10,6 +10,7 @@ while (-not (Test-Path (Join-Path $F 'WORKER_OFF'))) {
     Add-Content $log "$(Get-Date -Format s) start worker"
     $p = Start-Process -FilePath (Join-Path $F 'flamenco-worker.exe') -WorkingDirectory $F -WindowStyle Hidden -PassThru `
         -RedirectStandardError (Join-Path $F 'logs\worker.log') -RedirectStandardOutput (Join-Path $F 'logs\worker.out')
+    $null = $p.Handle  # PS 5.1: ExitCode stays empty unless the handle is opened before exit
     $p.WaitForExit()
     Add-Content $log "$(Get-Date -Format s) worker exited with $($p.ExitCode), restart in 15 s"
     Start-Sleep 15

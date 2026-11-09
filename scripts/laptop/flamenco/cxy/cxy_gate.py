@@ -75,9 +75,9 @@ def main():
         time.sleep(POLL_S)
     line = (f'{time.strftime("%Y-%m-%d %H:%M")} | {a.thread} | Flamenco worker (one Blender -b) | '
             f'job {a.job} (cxy-scene-final) | free RAM {gb:.1f} GB at start\n')
+    print('GATE OPEN', line.strip(), flush=True)  # print first: a print error must not leave a WHO.md claim behind
     with open(os.path.join(a.queue, 'WHO.md'), 'a', encoding='utf-8') as fh:
         fh.write(line)
-    print('GATE OPEN', line.strip(), flush=True)
 
 
 if __name__ == '__main__':
