@@ -36,9 +36,9 @@ README and the private `nacht-kapitel1.rpy` only.
 
 ### One source, kept clean
 
-Planned 2026-11-05, executed in stages (`rigs\` merges into `animations\interaction\`; scripts live in `StudioLibrary\tools\`).
+Live since 2026-11-09 (wave B1). **Every thread that touches art, Blender or renders reads `Documents\StudioLibrary\README.md` §Regeln first** (where each kind of file goes, nsfw mirror, finals, names) and runs `python tools\laptop\tidy_check.py --baseline docs\TIDY-BASELINE-2026-11-09.json` before its `Done:`; a new hit it caused is its own to fix. Each top folder and `lib\<type>` has a README saying what goes in it.
 
-- One file per character, clip and scene, at its place in the README tree (`characters\`, `animations\`, `scenes\`).
+- One file per character, clip and scene, at its place in the README tree (`lib\characters\`, `lib\anims\`, `projects\<kind>\<project>\<scene>\`).
 - Work happens in a dated copy `<name>_<date>_<reason>.blend` in the same folder and is written back into the target
   file at the end.
 - The copy then goes to `_archive\<date>-<reason>\` or `_trash_<date>\`; it never stays next to the original.
