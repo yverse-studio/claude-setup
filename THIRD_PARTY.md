@@ -9,7 +9,6 @@ Commit: c05b2d6614f62f6db0047669aa4eefb223d478f9
 Copied by scripts/sync-ecc.mjs from the list in config/ecc.json. Do not edit these by hand;
 change config/ecc.json and re-run the script.
 
-- skills/strategic-compact
 - skills/context-budget
 - skills/product-lens
 - skills/market-research
