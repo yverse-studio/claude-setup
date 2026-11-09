@@ -9,8 +9,8 @@ yskills, 2026-10-12: "be my social media manager", "a real working company start
 money". The `video-studio` team makes each video; this team decides what gets made, where and when
 it goes out, answers the people who react, and measures what earns. Every post has a money job:
 follow, profile tap, visit, install, sign-up or sale. Checked 2026-10-17 and 2026-10-18; sources in
-[`docs/research/2026-10-17-social-team.md`](../../../docs/research/2026-10-17-social-team.md) and
-[`docs/research/2026-10-18-brand-deals.md`](../../../docs/research/2026-10-18-brand-deals.md).
+`docs/research/2026-10-17-social-team.md` (`claude-setup/docs/research/2026-10-17-social-team.md`) and
+`docs/research/2026-10-18-brand-deals.md` (`claude-setup/docs/research/2026-10-18-brand-deals.md`).
 
 Every role reads [`learnings.md`](learnings.md) first. The order of work from idea to numbers, every role's hand-over and pass bar: [`pipeline.md`](pipeline.md).
 
@@ -42,7 +42,7 @@ Paid ads stay with the Marketer (`operator/roles/marketer.md`); the studio makes
 No own law or security team: Partnerships hands contracts to the operator's Legal role and
 suspicious brand mail to its Security role (`operator/roles/legal.md`, `security.md`).
 Thread titles follow the operator rule; team map and models in
-[`docs/TEAMS.md`](../../../docs/TEAMS.md) (Social).
+`docs/TEAMS.md` (`claude-setup/docs/TEAMS.md`) (Social).
 
 ## Where things live
 
@@ -69,7 +69,7 @@ the ideas-to-posts app for every brand: `https://social.yverse.workers.dev`, Wor
 ## Daily lane and the full studio
 
 2 videos a day cannot each go through the seven-role studio (research 2026-10-26,
-[`docs/research/2026-10-26-claude-video-autopost.md`](../../../docs/research/2026-10-26-claude-video-autopost.md)).
+`docs/research/2026-10-26-claude-video-autopost.md` (`claude-setup/docs/research/2026-10-26-claude-video-autopost.md`)).
 
 - **Daily lane** (the slots): one of three templates, filled from a Writer script: real-photo or
   screenshot slideshow (the Larry format), screen-capture devlog (Playwright capture of the real

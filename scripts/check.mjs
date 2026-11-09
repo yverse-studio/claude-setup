@@ -4,7 +4,7 @@
 // are short and say when to use them, own agents cap their turns, and every never/always rule
 // names its guard or is tagged advisory.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { dirname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { styleErrors } from './styles-check.mjs'
 import { conflictMarker } from './conflict-marker.mjs'
@@ -158,6 +158,31 @@ const walk = (d) => readdirSync(join(root, d)).flatMap((n) => {
   if (statSync(join(root, rel)).isDirectory()) return walk(rel)
   return rel.endsWith('.md') ? [rel] : []
 })
+
+// A plugin is copied to a cache, so a relative link out of its skills lands nowhere there: a skill may link only skills
+// of its own plugin, and points at repo files by `claude-setup/<path>` text (yskills 2026-11-09, docs/MAP.md, Skills).
+{
+  const pluginOf = new Map()
+  for (const m of mods?.plugins ?? []) {
+    const dir = join(root, m.source, 'skills')
+    if (existsSync(dir)) for (const n of readdirSync(dir)) pluginOf.set(n, m.name)
+  }
+  const linkRe = /\[[^\]]*\]\(([^)\s#]+)(?:#[^)]*)?\)/g
+  for (const [name, plugin] of pluginOf) {
+    const base = join(root, '.claude/skills', name)
+    const files = existsSync(base) ? walk(`.claude/skills/${name}`) : []
+    for (const f of files) for (const [, target] of readFileSync(join(root, f), 'utf8').matchAll(linkRe)) {
+      if (/^[a-z]+:|^\//.test(target)) continue
+      const rel = relative(join(root, '.claude/skills'), resolve(root, dirname(f), target)).split(sep)
+      if (rel[0] === '..' || (pluginOf.has(rel[0]) ? pluginOf.get(rel[0]) !== plugin : true)) errors.push(`${f}: link ${target} leaves plugin ${plugin} (it breaks in the plugin cache): write the repo path as text, claude-setup/<path>`)
+    }
+  }
+  const setupSh = readFileSync(join(root, 'cloud/setup.sh'), 'utf8')
+  for (const m of mods?.plugins ?? []) if (m.name.startsWith('setup-') && !setupSh.includes(`plugin install ${m.name}@claude-setup-mods`)) errors.push(`cloud/setup.sh does not install plugin ${m.name}`)
+  for (const [file, text] of [['cloud/setup.sh', setupSh], ['install.mjs', readFileSync(join(root, 'install.mjs'), 'utf8')]]) if (!text.includes('|propose_skills|')) errors.push(`${file}: the rule-guard PreToolUse matcher must include propose_skills`)
+  for (const m of mods?.plugins ?? []) if (m.name.startsWith('setup-') && json(join(m.source, '.claude-plugin/plugin.json'))?.version) errors.push(`${m.source}: plugin.json must not set version (the cache is then keyed by commit; a fixed version would never update)`)
+}
+
 const eccDirs = (ecc?.skills ?? []).map((n) => `.claude/skills/${n}/`)
 // docs/research and docs/archive hold dated notes that quote old paths and old rules; they are history, not instructions.
 const OWN_DOCS = ['README.md', 'CLAUDE.md', ...walk('docs').filter((f) => !f.startsWith('docs/research/') && !f.startsWith('docs/archive/'))]

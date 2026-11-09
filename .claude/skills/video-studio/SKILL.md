@@ -8,7 +8,7 @@ description: "Make a short video or ad like a small studio: Producer, Writer, Di
 yskills, 2026-10-17: videos and ads are made "like a professional studio, everyone with their own
 tasks and skills". Seven roles, one pipeline, one gate. Free, licence-clean tools first; anything
 paid waits for yskills' card (CLAUDE.md, ask rule). Checked 2026-10-17; sources in
-[`docs/research/2026-10-17-video-studio.md`](../../../docs/research/2026-10-17-video-studio.md).
+`docs/research/2026-10-17-video-studio.md` (`claude-setup/docs/research/2026-10-17-video-studio.md`).
 
 Before anything else, every role reads [`learnings.md`](learnings.md): what earlier videos got
 wrong and how they were fixed.
@@ -64,7 +64,7 @@ The test build behind this pipeline copied a viral TikTok explainer's format (re
 
 Thread titles follow the operator rule (`<Role> · <what>`). Text roles stay subagents because every
 thread re-reads its context; Editor gets a thread because filming and encoding run long. Models: the
-role rows in [`docs/TEAMS.md`](../../../docs/TEAMS.md) (Film).
+role rows in `docs/TEAMS.md` (`claude-setup/docs/TEAMS.md`) (Film).
 
 ## Tools (one pick per job)
 

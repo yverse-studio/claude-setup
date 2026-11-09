@@ -11,7 +11,7 @@ project may pick, never a default.
 
 ## How a project picks one
 
-1. Art direction step 0 (Breadth first, [`designer.md`](../../operator/roles/designer.md)) lists
+1. Art direction step 0 (Breadth first, `designer.md` (`claude-setup/.claude/skills/operator/roles/designer.md`)) lists
    these folders as candidate families beside the project's own `design/STYLES.md` landscape.
 2. The chosen style goes in the project's `design/DESIGN.md` under `## Direction`, citing the
    style's `refs/` file names. The project copies only the tokens it keeps into its own

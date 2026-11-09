@@ -1,6 +1,5 @@
 {
   "name": "setup-skills",
-  "version": "0.1.0",
-  "description": "yskills' own cross-project skills from claude-setup, so they load in project cloud threads too (repo .claude/skills/ does not).",
+  "description": "yskills' own cross-project skills from claude-setup (deploy, review, UI, video watch, legal, sell, market), so they load in project cloud threads too (repo .claude/skills/ does not).",
   "author": { "name": "yskills" }
 }
