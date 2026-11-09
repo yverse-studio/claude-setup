@@ -1030,3 +1030,14 @@ test('rule guard: modelCheck compares the model the brief or yskills wants with 
   assert.equal(modelCheck(brief('default'), run(['claude', 'sonnet', '5-5'].join('-'))), '', 'no model wanted')
   assert.equal(modelCheck(brief('fable'), ''), '', 'no running model known yet')
 })
+
+// Skill ideas become PRs through new-skill, never a saved propose_skills card (an account skill: no PR, no gate, loads in every thread).
+test('rule guard: propose_skills is refused and names new-skill; hook matchers see the tool', async () => {
+  const { proposeSkillsBlocked } = await import('../global/rule-guard.mjs')
+  for (const t of ['propose_skills', 'mcp__hearthbot__propose_skills', 'mcp__x__propose_skills']) assert.match(proposeSkillsBlocked(t) ?? '', /new-skill/, t)
+  for (const t of ['Bash', 'mcp__hearthbot__post_message', 'Skill', 'propose_skills_later']) assert.equal(proposeSkillsBlocked(t), null, t)
+  for (const f of ['cloud/setup.sh', 'install.mjs']) assert.match(readFileSync(join(root, f), 'utf8'), /\|propose_skills\|mcp__\.\*propose_skills/, `${f} matcher`)
+  const run = spawnSync('node', [join(root, 'global/rule-guard.mjs'), 'pre'], { input: JSON.stringify({ tool_name: 'propose_skills', tool_input: {} }), encoding: 'utf8', env: { ...process.env, CLAUDE_SETUP_RULE_GUARD: '' } })
+  assert.equal(run.status, 2, 'the hook exits 2 for propose_skills')
+  assert.match(run.stderr, /new-skill/)
+})

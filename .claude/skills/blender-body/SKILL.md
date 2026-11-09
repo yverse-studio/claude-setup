@@ -9,7 +9,7 @@ Why this exists: Luna's body took 13 rounds (lc1 to lc13, 2026-10-18) and ended 
 asking what had been learned. The rounds stacked edits on a mesh nobody
 owned, graded outlines instead of looking, and never posed the body. This skill is the answer.
 Every 3D builder and reviewer thread loads it. Blender setup and views: [`studio`](../studio/SKILL.md);
-the character order (reference, brief, sheet, gate): [`docs/character-workflow.md`](../../../docs/character-workflow.md).
+the character order (reference, brief, sheet, gate): `docs/character-workflow.md` (`claude-setup/docs/character-workflow.md`).
 The per-round lists live in [`checklists.md`](checklists.md): builder checklist, reviewer checklist,
 hand-in sheet contract.
 How a professional game avatar is built (mesh split, naming, rig and physics bones, clothes,

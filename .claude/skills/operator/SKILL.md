@@ -120,7 +120,7 @@ enterprise-flavoured: German law and this stack's rules win.
 
 | Team | Always | Per project, only when the plan needs it | Brings back |
 |---|---|---|---|
-| Research | `market-research`, `product-lens`, `search-first`, `toolbox` | `Marketing` plugin's `competitive-brief` | competitors, prices, who pays, tool picks |
+| Research | `market`, `product-lens`, `toolbox` | `Marketing` plugin's `competitive-brief` | competitors, prices, who pays, tool picks |
 | Legal | `legal` skill, `legal-reviewer`; shops `sell`'s `legal-de.md`; ads `market` §4 | `privacy-legal`, `ip-legal`, `ai-governance-legal` | must-haves for the plan, then pass/fail on the preview |
 | Design | `roles/designer.md` (art direction first), `frontend-design`, `impeccable`, `ui-review` (`SLOP.md`, `design-check.mjs`), `design-critic` | `Figma` plugin, Canva connector | references, palette, type, 2-3 directions as drafts, then reviews |
 | Build | builder threads; `architect`, `database-reviewer`, `build-error-resolver` | stack plugins via `toolbox`; 3D, game or figures: `game-3d` and its `starter/` kit, read once at the start | a PR with green CI |

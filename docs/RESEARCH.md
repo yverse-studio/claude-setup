@@ -168,6 +168,6 @@ So the cross-project skills ship as the plugin `setup-skills` (`mods/setup-skill
 `.claude-plugin/marketplace.json` at the repo root, name `claude-setup-mods`), installed by `cloud/setup.sh`
 (threads) and `install.mjs` (laptop). Prototype: only `publish`, symlinked from `.claude/skills/publish`, so
 git keeps one source (the install dereferences the link; tested 2026-11-08, `claude plugin details` shows
-~71 tokens always-on). Roll out more skills only after the cloud proof (a fresh project thread lists `publish`).
+~71 tokens always-on). The cloud proof (a fresh project thread lists the plugin skills) is checked after the merge of the 24-skill rollout; a Linux or macOS PC then lists them twice (user skills and plugin skills), and on Windows a checkout without `core.symlinks` gives the plugins no skills.
 Rule: "always do X" stays in CLAUDE.md, "how to do X" becomes a skill; no account skills for our own rules.
 Verdict: `/mnt/project-files/claude-setup/research/2026-11-08-skills-plugins-verdict.md`.

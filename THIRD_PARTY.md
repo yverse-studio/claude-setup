@@ -9,20 +9,13 @@ Commit: c05b2d6614f62f6db0047669aa4eefb223d478f9
 Copied by scripts/sync-ecc.mjs from the list in config/ecc.json. Do not edit these by hand;
 change config/ecc.json and re-run the script.
 
-- skills/search-first
-- skills/strategic-compact
-- skills/security-review
-- skills/context-budget
 - skills/product-lens
-- skills/market-research
 - skills/vue-patterns
 - skills/nuxt4-patterns
 - skills/vite-patterns
 - skills/api-design
 - skills/database-migrations
 - skills/e2e-testing
-- skills/make-interfaces-feel-better
-- skills/design-system
 - skills/i18n-sync
 - skills/seo
 - skills/docker-patterns

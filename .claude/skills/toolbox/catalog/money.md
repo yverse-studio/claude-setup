@@ -19,7 +19,7 @@ tested templates and German law; this table is the overview.
 | Ads in a native app | **AdMob** | | SDK |
 | Running your own ads (marketing) | Meta, TikTok and Google Ads managers + campaign copy | Set up conversion tracking first (see growth.md) | ECC skill `marketing-campaign` |
 | Billing support ops (refunds, churn, failed payments) | Stripe + ops skills | | ECC skills `customer-billing-ops`, `finance-billing-ops` |
-| Pricing and market check | Competitor research | | ECC skills `market-research` (global), `product-lens` (global) |
+| Pricing and market check | Competitor research | | `market`, ECC skill `product-lens` (global) |
 
 ## German / EU legal checklist (before going live)
 
