@@ -37,7 +37,7 @@ figure is first made: [`character-workflow.md`](character-workflow.md); garments
 
 Not in the delta, because the character file keeps them: outfits and looks, actions, materials and textures, own objects.
 
-## Rebuild (`scripts/blender/delta.py`, copy in `StudioLibrary	oolsaptop`)
+## Rebuild (`scripts/blender/delta.py`, copy in `StudioLibrary\tools\laptop\`)
 
 `delta.py sync` re-applies the current base onto a character file: rig rest pose x k (bones the base gained are added), every base
 shape key and weight on body, face and hair, key `CH_<name>` = basis x k at value 1, mesh `co` = Basis, key values from the delta.
