@@ -25,11 +25,11 @@ links it. Update both in the same turn when a folder changes.
 | A character | `lib\characters\CH_<name>\` (Rika: `CH_rika\Blend\rika.blend`; man: `CH_male\male.blend`) |
 | Rooms | `lib\rooms\<room>\<room>.blend` + `_preview.png` (built by `_work\sets.py`, saved by `save_rooms.py`; office_night has `Camera_POV_stand`, `Camera_POV_sit`, `Camera_Side`) |
 | Shots | `projects\games\<game>\<chapter>\<shot>\<shot>.blend` + `compare.png`; overview `projects\games\companyxy\ch01\overview.png` |
-| Animation | `animations\retarget\ANIMATIONEN.md` (+ `retarget.py`, `maps\`); packs in `animations\AN_<name>\` |
+| Animation | `lib\anims\retarget\ANIMATIONEN.md` (+ `retarget.py`, `maps\`); packs in `lib\anims\AN_<name>\` |
 | Two-person rig | `lib\anims\interaction\kiss\` (`README.md`, `kiss.json`, `apply_interaction.py`, `bone_maps\`) |
 | Ren'Py game | private repo `yverse-studio/companyxy-spiel` (`game/` source, `story/<char>/` chapters, `story/briefs/` scene list + briefs); playable build on the laptop `GitHub\CompanyXY-Spiel\CompanyXY-1.0-pc\` (art in `game\art\`, `game\art\loops\`, slots in `game\slots.rpy`) |
 | Story guide + plan | `/mnt/project-files/companyxy/story/storyteller/` (`09-story-plan.md`); Rika's ten chapters: company-xy branch `story-rika-fanservice` |
-| Body building guide + lessons | `/mnt/project-files/companyxy/patches/base-body/` (`GUIDE.md`, `LESSONS.md`); posing `characters/POSEN-ANLEITUNG.md` |
+| Body building guide + lessons | `/mnt/project-files/companyxy/patches/base-body/` (`GUIDE.md`, `LESSONS.md`); posing `lib\references\05_Anleitungen\POSEN-ANLEITUNG.md` |
 
 Explicit slot names and scene contents stay out of git (company-xy PR 80 rule): they live in the laptop
 README and the private `nacht-kapitel1.rpy` only.
@@ -86,7 +86,7 @@ characters as delivered never go into 18+ scenes. Clothes are fitted once per ba
 
 Full steps and the clip table: `StudioLibrary\lib\anims\retarget\ANIMATIONEN.md`. Short:
 
-1. New clip: put the FBX in `animations\AN_<pack>\source\`, add a `catalog.json` entry.
+1. New clip: put the FBX in `lib\anims\AN_<pack>\source\`, add a `catalog.json` entry.
 2. Bone map: copy `retarget\maps\mixamo_to_rika.json`, fix the target bone names for a new rig.
 3. Bake: `blender -b <char.blend> --python retarget.py -- bake <map.json> <out.blend> <clip.fbx>... [--floor meshA,meshB]`.
    Clips land as actions `MX_<clip>` (fake user, 24 fps) in the character file.
@@ -103,7 +103,7 @@ kind of task (rig, cloth, physics), look up how artists do it without AI and fol
 
 Two people (kiss, bed scenes): templates name roles, not bones. Give each character one bone map
 in `lib\anims\interaction\kiss\bone_maps\<name>.json` (copy `rika.json`), then
-`blender -b --factory-startup --python rigs\interaction\kiss\apply_interaction.py -- <scene>.json <charA.blend> <charB.blend> out.blend`.
+`blender -b --factory-startup --python lib\anims\interaction\kiss\apply_interaction.py -- <scene>.json <charA.blend> <charB.blend> out.blend`.
 The solver links the characters as library overrides and scales contacts by `height_m`;
 characters are never edited. Details: `lib\anims\interaction\kiss\README.md`, scene sheets in `lib\anims\Nsfw\`.
 

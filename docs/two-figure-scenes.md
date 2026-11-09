@@ -19,9 +19,9 @@ characters' key names) live in the private game repo and the laptop README.
 - `<action>\`: one folder per pose/action: `<action>.py` (pose per variant), `<action>.json` (persons, roles,
   `accepts_anchors`, `camera_default`, variants, defaults), README, `preview.png`. New folder = new action.
 - `projects\<project>.json`: slot → action, variant, anchor, figures, outfit (`hide_A`), overrides, output folder.
-- Commands: `python rigs\interaction\core\run_scenes.py <slot> --pos` (test, no render) · `<slot>` (preview)
-  · `<slot> --loop` (48-frame loop + webm + frame strip). Contact sheet: `scenes\<project>\<chapter>\make_contact.py`.
-- Output: `scenes\<project>\<chapter>\<slot>\` (`.blend`, `_preview.png`, `_strip.png`, `.webm`, `_check.json`).
+- Commands: `python lib\anims\interaction\core\run_scenes.py <slot> --pos` (test, no render) · `<slot>` (preview)
+  · `<slot> --loop` (48-frame loop + webm + frame strip). Contact sheet: `projects\games\<project>\<chapter>\make_contact.py`.
+- Output: `projects\games\<project>\<chapter>\<slot>\` (`.blend`, `_preview.png`, `_strip.png`, `.webm`, `_check.json`).
 
 ## Order per scene
 
@@ -201,7 +201,7 @@ A fresh agent follows this with claude-setup plus the laptop handoffs, no questi
    normals out), room `lib\rooms\office_night`. Check first: bone maps (`rika_now.json`, `mh_male.json`:
    names), `core\test_openings.py` (0 hits, stop ~61 mm), finger-axis measurement, then `--pos` with numbers.
 2. Geometry in the side view (she kneels at the desk edge, he leans back, shaft 15-30° up); face 45-55° to the camera,
-   camera at his eyes +0.15 forward, lens 22. Then `python rigs\interaction\core\run_scenes.py <slot> --pos`.
+   camera at his eyes +0.15 forward, lens 22. Then `python lib\anims\interaction\core\run_scenes.py <slot> --pos`.
 3. Timeline (frames at 24 fps): intro 1-144 (close-up tease, hands to the chest 44-96, mouth opens, first stroke), loop
    145-192 (48, seamless), finish 193-268 (burst 24, hold with breathing, still). Render order: `intro=1-144
    loop=145-192 finish=193-268`; B camera extra (`--camera Camera_B --hide ... --mask mh_body:Penis_2`).
