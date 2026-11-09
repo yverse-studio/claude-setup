@@ -65,7 +65,7 @@ lives outside this repo.
 | Vendored skills, agents, rules | `.claude/skills`, `.claude/agents`, `.claude/rules/ecc` | ECC subset (`config/ecc.json`, refreshed by `scripts/sync-ecc.mjs`), impeccable, web-interface-guidelines, ponytail, claude-video (`THIRD_PARTY.md`); never hand-edited |
 | Own agents | `.claude/agents/` | `design-critic`, `evaluator`, `legal-reviewer`, `red-team` |
 | Skills: where they load, how a new one starts | `.claude/skills/new-skill/` | Project threads load only plugin skills: `mods/setup-skills` (core) and `mods/setup-domains` (games, video, social, stores); a skill idea is a PR, never a `propose_skills` card |
-| PC install | `install.mjs`, `global/`, `config/plugins.json`, `mods/` (team, setup-skills, setup-domains), `.claude-plugin/marketplace.json` | Copies this repo into `~/.claude`, settings, status line, context guard, plugins, the team mod |
+| PC install | `install.mjs`, `global/`, `config/plugins.json`, `mods/` (team; setup-skills and setup-domains are meant for cloud threads), `.claude-plugin/marketplace.json` | Copies this repo into `~/.claude`, settings, status line, context guard, plugins, the team mod |
 | Claude's PC user | `docs/pc-claude-user.md` | What differs on the `Claude` Windows user (portable Git, env var, paths) and what still needs hands |
 | Laptop folders | `docs/laptop-folders.md` | Where each kind of thing lives on the Claude laptop (clones, game builds, art library, references, Private18); one folder, one kind, each thing once |
 | Cloud threads | `cloud/bootstrap.sh` (paste once), runs `cloud/setup.sh` | Plugins and the guards in a cloud environment (Project settings > Cloud environment) |

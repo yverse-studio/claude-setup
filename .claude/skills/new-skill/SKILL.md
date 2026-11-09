@@ -20,7 +20,7 @@ loaded in every thread of every project and paid for in tokens every turn. The h
 1. **Prior art.** Search `docs/MAP.md`, `.claude/skills/` and `config/ecc.json`. A fit gets extended, never doubled.
    Never edit vendored skills (the ECC set, impeccable, ponytail, web-interface-guidelines).
 2. **Write** `.claude/skills/<name>/SKILL.md` in the format `scripts/check.mjs` checks: `description` up to 200
-   characters, third person, trigger case first, containing "Use ..."; body under 150 lines; detail in files one
+   characters, third person, trigger case first, containing "Use ..." (check.mjs enforces these two); keep the body short, detail in files one
    level down. Only what Claude does not already know. Anthropic's `skill-creator` helps with the draft.
 3. **Eval first.** `evals/<case>/prompt.md` plus `graders/criteria.md` (see this skill's `evals/`): one case that
    should fire it and one that should not. `claude plugin eval` (laptop) compares with and without the skill.

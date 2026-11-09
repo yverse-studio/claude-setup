@@ -12,7 +12,7 @@ Source: videos yskills shared; tool names marked (unverified) came from captions
 - (a) real handheld selfie footage plus one AI element per shot (fire, water, glider);
 - (b) fully generated video from reference photos of yskills, with a character sheet first so face and outfit stay the same in every shot.
 - Formula: selfie angle, 2 to 5 s per beat, one iconic world detail per shot, a personal payoff (a wanted poster with his own face).
-- Gear: phone 4K/60, stable grip, plain-ish background. Tool for the video-to-video step is not confirmed (unverified): pick with `search-first`, money means a card.
+- Gear: phone 4K/60, stable grip, plain-ish background. Tool for the video-to-video step is not confirmed (unverified): pick with `toolbox`, money means a card.
 - Legal: an original world inspired by, never using, Avatar / One Piece / Harry Potter names, logos or characters; label AI per platform rules (`market` section 4). Every real person shown consents.
 
 ## Blockout to AI video (from @aisavvy, @comfyorg)

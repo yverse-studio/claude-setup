@@ -409,7 +409,7 @@ const KAOMOJI = /[◕‿ω꒳ᴗ･˘ᵕ◡╹≧≦∀ヾﾉ✧♡☆✿ʕʔﾟ
 // A skill idea becomes a PR through the new-skill skill, never a saved account skill (a second rule source outside git,
 // loaded in every thread of every project). The platform tool's card is a signal; saving it is the problem.
 export function proposeSkillsBlocked(tool) {
-  return /(^|__)propose_skills$/.test(tool) ? 'rule-guard: no propose_skills card (CLAUDE.md, Skills; skill new-skill): a saved card becomes an account skill outside git, no PR, no gate, loaded in every thread of every project. Use the new-skill skill: check docs/MAP.md for an existing home, then batch the skill into the next claude-setup PR (or an unpushed patch in /mnt/project-files/<project>/batch/claude-setup/).' : null
+  return /(^|__)propose_skills$/.test(tool) ? 'rule-guard: no propose_skills card (CLAUDE.md, How to work, Lessons stick; skill new-skill): a saved card becomes an account skill outside git, no PR, no gate, loaded in every thread of every project. Use the new-skill skill: check docs/MAP.md for an existing home, then batch the skill into the next claude-setup PR (or an unpushed patch in /mnt/project-files/<project>/batch/claude-setup/).' : null
 }
 
 export function kaomojiMissing(tool, input) {
