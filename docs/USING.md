@@ -33,6 +33,15 @@ so the rules live here only.
    script; the same as [`cloud/bootstrap.sh`](https://github.com/yverse-studio/claude-setup/blob/main/cloud/bootstrap.sh)):
    `f="$(mktemp)" && curl -fsSL --retry 3 -o "$f" https://raw.githubusercontent.com/yverse-studio/claude-setup/main/cloud/setup.sh && bash "$f"`
 
+5. **Laptop folders, once per project.** **Project settings > Resources > Devices**: approve
+   `C:\Users\Claude\Documents` (covers `GitHub`, `StudioLibrary`, `GameAssetLibrary`) and
+   `C:\Users\Claude\Downloads`, and keep `GitHub` as the default. Then every thread of that
+   project reads and writes there without asking you. This approval is your consent per claude.ai
+   project: claude-setup, a repo or a thread cannot grant it, and there is no account-wide "all
+   projects" switch (checked 2026-11-10: `list_devices` lists approvals per project, the
+   Remote Control docs name only the per-project approval). A new project asks once; the card
+   carries the link `[Project settings](#project-settings/resources)`.
+
 A rule change needs no new paste: sessions read the rules from this repo, and the guards replace
 themselves from `main` at each start. The cloud keeps a built image per setup script, so an
 environment built before that self-update worked (2026-10-27) stays old until its script text

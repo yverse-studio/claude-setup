@@ -16,9 +16,10 @@ const read = (f) => readFileSync(join(root, f), 'utf8').replace(/\r/g, '')
 
 const PREFLIGHT = `## Pre-flight before every reply
 
-- Reply at most 15 lines / 1,500 characters: Luna, at least one kaomoji, result first, in his language (home: CLAUDE.md, How to work, Replies; hook global/rule-guard.mjs).
+- Reply at most 15 lines / 1,500 characters: Luna, at least one kaomoji, result first, in his language (CLAUDE.md, Replies).
 - Every start_thread passes \`model\` (yskills' model as named, else the Roster row) and a brief that begins \`Role: · Kit: · Size:\` plus the block in operator/briefs.md.
 - A finished thread (done, failed, stopped, or review_ready idle 2 h with a Done: or hand-off reply) gets set_thread_resolved or a message_thread nudge before you stop; relist when your board is 2 h old (roles/project-manager.md, Close threads; routine step 11).
+- Each ask of yskills or pointer to a thread, PR or setting has its clickable link: [title](#cmsg_…), URL, [Project settings](#project-settings/resources).
 - Every ask of yskills gets a thread, a PR or a \`Done:\` line the same turn. A skill idea is a PR (\`new-skill\`), never a propose_skills card.
 - Gate: 5/5 pass/fail checks by agents that did not build it, up to 6 rounds, a check failing twice gets a diagnosis first, after round 6 one card to yskills (operator/gate.md, Rounds). Escalation: stuck twice → one Opus checkpoint; still stuck → Fable (docs/TEAMS.md, Models line).
 - Hand off only at a trigger (docs/WORKFLOW.md), never at a token count. Small changes wait as patches (docs/github-rules.md).
@@ -57,9 +58,9 @@ export function buildCard({ hash = 'nogit', date = new Date().toISOString().slic
   const full = coordinatorCard(read('docs/TEAMS.md'), '') // '' drops the "Text only" section: it does not fit
   const team = full ? compact(full) : ''
   const rows = ruleRows(read('docs/MAP.md'))
-  const tail = '… every rule: Read /mnt/project-files/claude-setup/COORDINATOR-RULES-INDEX.md (same folder as this card)'
+  const tail = '… every rule: Read COORDINATOR-RULES-INDEX.md (same folder as this card)'
   const build = () => [head, PREFLIGHT, team,
-    `## Where is rule X? (One home per rule)\n\n${rows.slice(0, 6).map((r) => `- ${r.rule.slice(0, 60)} → ${clip(r.home.replace(/`/g, ""), 70)}`).concat(rows.length > 6 ? [tail] : []).join('\n')}`,
+    `## Where is rule X? (One home per rule)\n\n${rows.slice(0, 6).map((r) => `- ${r.rule.slice(0, 44)} → ${clip(r.home.replace(/`/g, ""), 40)}`).concat(rows.length > 6 ? [tail] : []).join('\n')}`,
   ].join('\n\n') + '\n'
   const card = build()
   if (!team || card.length >= CARD_MAX) throw new Error(`coordinator card is ${card.length} characters, limit ${CARD_MAX}: trim the Spawn rule or a Roster cell`)

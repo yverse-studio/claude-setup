@@ -54,10 +54,19 @@ plain official URL as text he opens on his own device, numbered steps with the e
 and minutes, and a screenshot in the thread when the state matters. It never opens the page here
 and calls that showing him.
 
+**Every ask carries its link** (yskills 2026-11-10: "everything you want me to do or show with a
+link"). Whenever a reply needs something from yskills (an answer, a card, an Allow, folder access,
+a file, a review) or points him at a place, it gives the exact place as a clickable link: a thread
+as `[title](#cmsg_…)`, a PR or page as its full URL, a setting as
+`[Project settings](#project-settings/<section>)` (`resources` for repos and folders), GitHub
+access as `https://claude.ai/connect-github`. Never "in thread X" or "see the PR" without the
+link. Threads: rule-guard blocks such a reply; the project chat has no hooks, so the coordinator
+card carries the rule.
+
 - **Remote Control host restart:** the running `claude remote-control` still has the PATH from
   before the installs. In a fresh terminal on this user: `cd C:\Users\Claude\Documents\GitHub`,
   then `C:\Users\Claude\.local\bin\claude.exe remote-control`.
-- **One folder approval, once per claude.ai project:** every repo is cloned under
+- **One folder approval, once per claude.ai project (steps: `docs/USING.md`, Start a project step 5):** every repo is cloned under
   `C:\Users\Claude\Documents\GitHub`, so approving that one folder in the project's settings
   (Resources > Devices) covers every current and future project there; nothing is needed per
   repo. A thread cannot approve it itself (it is yskills' consent), so a new claude.ai project

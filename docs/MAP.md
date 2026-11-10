@@ -143,6 +143,7 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 | Laptop drops, RC watchdog and broad permissions template | `docs/pc-claude-user.md` (Dropped sessions and permissions) | `scripts/laptop/rc-watchdog.ps1`, `scripts/laptop/install-rc-watchdog.ps1`, `scripts/laptop/claude-settings.template.json`, `scripts/laptop/install-claude-settings.ps1` |
 | Asks ledger (every ask of yskills becomes a thread or a rule in claude-setup; memory only points; blocked-thread sweep) | `CLAUDE.md` (Lessons stick) | `operator/roles/project-manager.md` |
 | Ask rule (what needs yskills) | `CLAUDE.md` (How to work) | operator `SKILL.md`, `docs/USING.md` |
+| Every ask of yskills carries its clickable link (thread, PR, setting, folder) | `docs/pc-claude-user.md` (What still needs yskills' hands) | `CLAUDE.md`, coordinator card, `global/rule-guard.mjs` (replyRule) |
 | Permission prompts, the allow list and autoMode, safety-check refusals and the way around each | `docs/permissions.md` (settings in `global/settings.json`) | `CLAUDE.md`, operator `SKILL.md`, `gate.md`, `README.md`, `docs/pc-claude-user.md` |
 | Workflows with keys run from main only (`environment: production`) | `docs/permissions.md` (Layer 4) | `docs/permissions.md` only |
 | Auto-run, pauses and taste calls | `CLAUDE.md` (How to work) | operator `SKILL.md`, `docs/WORKFLOW.md` |
