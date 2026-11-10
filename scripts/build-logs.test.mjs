@@ -93,6 +93,13 @@ test('triggerBuild throws on an invalid or production branch and posts nothing',
   assert.equal(calls.some((c) => c[0] === 'POST'), false)
 })
 
+test('triggerBuild refuses a branch the production trigger builds, even if it is not called main', async () => {
+  const calls = []
+  const odd = { ...prod, branch_includes: ['release'] }
+  await assert.rejects(() => triggerBuild(fakeCf([odd, prev], calls), 'w', 'release', async () => null, async () => {}), /production branch/)
+  assert.equal(calls.some((c) => c[0] === 'POST'), false)
+})
+
 test('triggerBuild reports a build that never appears or never stops as not finished', async () => {
   const never = await triggerBuild(fakeCf([prev]), 'w', 'claude/x', async () => undefined, async () => {}, 60000)
   assert.equal(never.finished, false)

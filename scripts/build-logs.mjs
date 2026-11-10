@@ -70,8 +70,11 @@ export function pickTrigger(triggers) {
 // Returns { uuid, finished, outcome }; the caller fails the run unless it finished.
 export async function triggerBuild(cf, workerId, branch, getBuild, wait = (ms) => new Promise((r) => setTimeout(r, ms)), limit = WAIT_MS) {
   if (!validBranch(branch)) throw new Error(`BUILD_BRANCH "${scrub(String(branch))}" is not a plain git branch name`)
-  const trigger = pickTrigger((await cf(`/builds/workers/${workerId}/triggers`)).json?.result)
-  if (isProduction(branch, trigger)) throw new Error(`refusing to start a build of the production branch (${scrub(branch)}): it deploys only through the gate's merge`)
+  const triggers = (await cf(`/builds/workers/${workerId}/triggers`)).json?.result
+  const trigger = pickTrigger(triggers)
+  // production = main, master and whatever the OTHER triggers (the production one) build; the preview trigger's own `*` is no guide
+  const others = (triggers || []).filter((t) => t !== trigger)
+  if (isProduction(branch, { branch_includes: others.flatMap((t) => t.branch_includes || []) })) throw new Error(`refusing to start a build of the production branch (${scrub(branch)}): it deploys only through the gate's merge`)
   const started = (await cf(`/builds/triggers/${trigger.trigger_uuid}/builds`, 'POST', { branch })).json?.result
   const uuid = started?.build_uuid
   if (!uuid) throw new Error('the build was not started: the API answered without a build id')
