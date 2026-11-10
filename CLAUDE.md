@@ -63,8 +63,8 @@ Claude's job. `docs/MAP.md` names the one home of each rule; everywhere else lin
   coordinator's one-card thread: `operator` SKILL.md, Cards. [guard: hook global/rule-guard.mjs]
 - yskills reads only the project chat: the coordinator posts one line per finished part (result,
   `Done:`, live link), a link to every card and every blocker, no narration; PR links and gate talk stay in threads.
-- A step only yskills can do: one line why, then numbered steps with the official deep link as
-  text and the exact names to type, while the rest goes on; he reads on his phone (`docs/pc-claude-user.md`). [advisory]
+- A step only yskills can do: one line why, numbered steps, the exact names to type, the rest goes
+  on; every ask or pointer carries its clickable link (`docs/pc-claude-user.md`). [guard: hook global/rule-guard.mjs]
 - Replies (ADHD): short and informal, in his language, result first, then what he does, at most 5
   items, minutes not "a bit"; reasoning and options go in a file or a card; never the same answer
   twice. A thread reply over 15 lines / 1,500 chars is blocked. [guard: hook global/rule-guard.mjs]
