@@ -322,7 +322,7 @@ export function repoIdForms(repo, org, name) {
   ]
 }
 
-export const REFRESH_FIX = `Cloudflare learns of new repositories from the GitHub app; when a repo made after the link stays unknown (2026-10-08: runs 7 and 8 answered 8000008 "disconnected from your Git account" until the app was saved again), open https://github.com/organizations/<org>/settings/installations > Cloudflare Workers and Pages > Configure, switch Repository access to "Only select repositories" and back to "All repositories", press Save, then push the branch again`
+export const REFRESH_FIX = `first check repo_id and owner_id: Cloudflare answers 8000008 too when they are not GitHub's numeric ids (2026-11-10: run 41 sent the names and failed six times, run 42 sent the numeric ids and connected a repo made the same day with no click). Only when the ids are right and it still fails (2026-10-08, runs 7 and 8): open https://github.com/organizations/<org>/settings/installations > Cloudflare Workers and Pages > Configure, switch Repository access to "Only select repositories" and back to "All repositories", press Save, then run again`
 
 // Saves the repository connection Workers Builds needs before a build configuration can exist
 // (PUT /builds/repos/connections, "the repository connection required by build triggers").

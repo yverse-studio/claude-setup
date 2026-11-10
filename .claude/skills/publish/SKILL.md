@@ -42,8 +42,9 @@ the two keys. Research and the routes weighed: `research/auto-deploy.md` in the 
    https://github.com/apps/cloudflare-workers-and-pages/installations/select_target.
    Then connect the org in Cloudflare once (the API needs it): Workers & Pages → Create →
    **Import a repository** → **Add account** → pick `yverse-studio`, 2 min.
-   When a run fails with "Workers Builds does not see <org>/<name>" (Cloudflare missed a repo made
-   after the link), open https://github.com/organizations/yverse-studio/settings/installations →
+   A repo made after the link needs no click: run 42 (2026-11-10) connected `vacation-game`, made the
+   same day, by its numeric GitHub ids. When a run still fails with "Workers Builds does not see
+   <org>/<name>" and the ids are numeric (2026-10-08, runs 7 and 8), open https://github.com/organizations/yverse-studio/settings/installations →
    Cloudflare Workers and Pages → Configure, switch Repository access to **Only select
    repositories** and back to **All repositories**, Save, then push the branch again, 1 min.
 3. Cloudflare token, 4 min: https://dash.cloudflare.com/profile/api-tokens → Create Token →
@@ -245,8 +246,10 @@ needs yskills' own hands (money, domain, an owner setting) goes to yskills, as a
 Lessons from the deploy tests (10-08, runs 1 to 9) and the move to Claude's account (10-11):
 
 - A static Nuxt site needs `nitro.preset: 'static'`: Workers Builds sets `WORKERS_CI` (above).
-- "This project is disconnected from your Git account" (8000008) means Cloudflare has not seen the
-  new repo yet. Fix: GitHub org > Settings > Installations > Cloudflare Workers and Pages >
+- "This project is disconnected from your Git account" (8000008): first check that `repo_id` and
+  `owner_id` are GitHub's numeric ids, names in their place get the same answer (run 41 failed on
+  that alone, run 42 with the ids connected a same-day repo with no click; a mono-repo was planned on
+  the wrong reading). Only with numeric ids and still 8000008: GitHub org > Settings > Installations > Cloudflare Workers and Pages >
   Configure > Repository access: switch to "Only select repositories", back to "All repositories",
   Save; then push `new/<name>` again.
 - Judge a build by `build_outcome`, not `status` ("stopped" is not a failure).
