@@ -731,11 +731,13 @@ test('rule guard: an ask of yskills or a thread pointer carries a clickable link
   for (const text of [
     'Antwort steht im Thread Build plane chapter (◕‿◕)', 'Du musst nur den Ordner freigeben~', 'Bitte gib den Ordner frei (｡•̀ᴗ-)✧',
     'Waiting on you: the 3 cards in the Planner thread.', 'You need to approve the folder once.', 'Ich brauch noch deine Antwort zu Karte 2.',
+    'Antwort steht im Planner-Thread.', 'Kannst du den Ordner freigeben?', 'Can you approve the folder?', 'Du müsstest den Ordner freigeben.', 'Siehe PR 400.',
   ]) assert.match(replyRule(text) ?? '', /clickable link/, text)
   for (const text of [
     'Antwort steht in [Build plane chapter](#cmsg_012abc) (◕‿◕)', 'Du musst nur hier freigeben: [Project settings](#project-settings/resources)',
     'Bitte schau dir https://github.com/yverse-studio/claude-setup/pull/400 an', 'Jaa, PR ist durch ٩(◕‿◕)۶ du musst nix machen~',
     'Du musst nichts tun, der Gate läuft.', 'Thread-Board ist leer, alles gemerged.',
+    'Kein Ding, du musst dich um nichts kümmern.', 'Der Fix steht auf dem Thread-Board, alles grün.',
   ]) assert.equal(replyRule(text), null, text)
 })
 
