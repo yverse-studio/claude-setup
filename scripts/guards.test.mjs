@@ -737,7 +737,7 @@ test('rule guard: an ask of yskills or a thread pointer carries a clickable link
     'Antwort steht in [Build plane chapter](#cmsg_012abc) (◕‿◕)', 'Du musst nur hier freigeben: [Project settings](#project-settings/resources)',
     'Bitte schau dir https://github.com/yverse-studio/claude-setup/pull/400 an', 'Jaa, PR ist durch ٩(◕‿◕)۶ du musst nix machen~',
     'Du musst nichts tun, der Gate läuft.', 'Thread-Board ist leer, alles gemerged.',
-    'Kein Ding, du musst dich um nichts kümmern.', 'Der Fix steht auf dem Thread-Board, alles grün.',
+    'Kein Ding, du musst dich um nichts kümmern.', 'Der Fix steht auf dem Thread-Board, alles grün.', 'Siehe Prüfbericht unten, alles grün.',
   ]) assert.equal(replyRule(text), null, text)
 })
 
