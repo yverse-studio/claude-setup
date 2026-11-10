@@ -1,7 +1,7 @@
 name: build-logs
 
 # Prints the tail of a project's latest Workers Builds log (redacted), so a cloud thread can read
-# why a build failed without the Cloudflare dashboard. Read-only. Started with Run workflow or a
+# why a build failed without the Cloudflare dashboard. Reads builds; its only writes are the optional cancel of stuck builds and the optional start of a preview build of a branch (never the production branch). Started with Run workflow or a
 # thread's workflow dispatch; input: the Worker name.
 on:
   workflow_dispatch:
@@ -15,6 +15,10 @@ on:
         required: false
         type: boolean
         default: false
+      branch:
+        description: 'Start a Workers Builds build of this branch (a Worker Preview), for a push the webhook missed'
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -23,7 +27,7 @@ jobs:
   logs:
     environment: production
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v5
         with:
@@ -37,5 +41,6 @@ jobs:
         env:
           NAME: ${{ inputs.name }}
           CANCEL: ${{ inputs.cancel }}
+          BUILD_BRANCH: ${{ inputs.branch }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
