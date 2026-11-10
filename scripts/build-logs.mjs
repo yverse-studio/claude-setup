@@ -56,7 +56,12 @@ export const POLL_MS = 15000
 const PRODUCTION_BRANCHES = ['main', 'master']
 
 // What a refusal says about a trigger: its name, the branches it builds, a CLASS of its deploy command and the names of its fields (never values, ids or secrets).
-export const commandClass = (c) => (/wrangler (preview|versions upload)|deploy:preview/.test(c || '') ? 'preview' : /wrangler (versions )?deploy|deploy/.test(c || '') ? 'deploy' : c ? 'other' : 'none')
+// Strip the preview markers first: whatever "deploy" is left (a gradual `versions deploy` chained after `versions upload`) makes it a deploy.
+export const commandClass = (c) => {
+  const rest = String(c || '').replace(/wrangler (preview|versions upload)|deploy:preview/g, '')
+  if (/deploy/.test(rest)) return 'deploy'
+  return rest !== String(c || '') ? 'preview' : c ? 'other' : 'none'
+}
 const describeTrigger = (t) => `name ${t.trigger_name || '?'}, branch_includes [${(t.branch_includes || []).join(',')}], command ${commandClass(t.deploy_command)}, fields [${Object.keys(t).filter((k) => !/uuid|id$|token|secret/i.test(k)).join(',')}]`
 
 // The one trigger that builds previews. A Worker with preview builds has two triggers; starting a branch on the production one would run

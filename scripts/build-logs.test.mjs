@@ -112,6 +112,10 @@ test('the refusal names the trigger fields and a command class, never the raw co
   assert.doesNotMatch(message, /--var|X=1/)
   assert.equal(commandClass('npx wrangler versions upload'), 'preview')
   assert.equal(commandClass(''), 'none')
+  assert.equal(commandClass('npx wrangler versions upload && npx wrangler versions deploy'), 'deploy') // a chained gradual deploy is a deploy
+  assert.equal(commandClass('npx wrangler versions upload; npx wrangler deploy'), 'deploy')
+  assert.equal(commandClass('npm run deploy:preview'), 'preview')
+  assert.equal(commandClass('npx wrangler versions upload'), 'preview')
 })
 
 test('triggerBuild refuses a branch the production trigger builds, even if it is not called main', async () => {
