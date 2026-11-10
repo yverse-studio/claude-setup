@@ -55,6 +55,9 @@ export const WAIT_MS = 4 * 60000
 export const POLL_MS = 15000
 const PRODUCTION_BRANCHES = ['main', 'master']
 
+// What a refusal says about a trigger: names and the fields that decide production vs preview, never ids or secrets.
+const describeTrigger = (t) => `name ${t.trigger_name || '?'}, branch_includes [${(t.branch_includes || []).join(',')}], branch_excludes [${(t.branch_excludes || []).join(',')}], deploy_command "${t.deploy_command || ''}", keys: ${Object.keys(t).filter((k) => !/uuid|id$|token|secret/i.test(k)).join(',')}`
+
 // The one trigger that builds previews. A Worker with preview builds has two triggers; starting a branch on the production one would run
 // its `wrangler deploy` on unmerged code. Anything but exactly one clearly non-production trigger is an error, never a guess.
 export function pickTrigger(triggers) {
@@ -62,7 +65,7 @@ export function pickTrigger(triggers) {
     const includesMain = (t.branch_includes || []).some((b) => PRODUCTION_BRANCHES.includes(b))
     return !includesMain && !/wrangler (versions )?deploy/.test(t.deploy_command || '') // a preview trigger never builds main and never deploys
   })
-  if (preview.length !== 1) throw new Error(`expected exactly one preview trigger, found ${preview.length} of ${(triggers || []).length}; refusing to start a build (names: ${scrub((triggers || []).map((t) => t.trigger_name || '?').join(', '))})`)
+  if (preview.length !== 1) throw new Error(`expected exactly one preview trigger, found ${preview.length} of ${(triggers || []).length}; refusing to start a build (${scrub((triggers || []).map(describeTrigger).join(' | '))})`)
   return preview[0]
 }
 
