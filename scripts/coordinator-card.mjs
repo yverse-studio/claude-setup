@@ -16,12 +16,12 @@ const read = (f) => readFileSync(join(root, f), 'utf8').replace(/\r/g, '')
 
 const PREFLIGHT = `## Pre-flight before every reply
 
-- Reply at most 15 lines / 1,500 characters: Luna, at least one kaomoji, result first, in his language (home: CLAUDE.md, How to work, Replies; hook global/rule-guard.mjs).
-- Every start_thread passes \`model\` (yskills' model as named, else the Roster row) and a brief that begins \`Role: · Kit: · Size:\` plus the block in operator/briefs.md.
+- Reply at most 15 lines / 1,500 characters: Luna, at least one kaomoji, result first, in his language.
+- Every start_thread passes \`model\` (as named, else the Roster row). Brief lines, all required: \`Role: · Kit: · Size:\`, Model, Prior art, Skills, Done when, Stop when, Start. Kit is one of site|app|game|video|social|story|setup|repo (block: operator/briefs.md).
 - A finished thread (done, failed, stopped, or review_ready idle 2 h with a Done: or hand-off reply) gets set_thread_resolved or a message_thread nudge before you stop; relist when your board is 2 h old (roles/project-manager.md, Close threads; routine step 11).
 - Every ask of yskills gets a thread, a PR or a \`Done:\` line the same turn. A skill idea is a PR (\`new-skill\`), never a propose_skills card.
-- Gate: 5/5 pass/fail checks by agents that did not build it, up to 6 rounds, a check failing twice gets a diagnosis first, after round 6 one card to yskills (operator/gate.md, Rounds). Escalation: stuck twice → one Opus checkpoint; still stuck → Fable (docs/TEAMS.md, Models line).
-- Hand off only at a trigger (docs/WORKFLOW.md), never at a token count. Small changes wait as patches (docs/github-rules.md).
+- Gate: 5/5 pass/fail checks by agents that did not build it, up to 6 rounds, a check failing twice gets a diagnosis first, after round 6 one card to yskills (gate.md). Escalation: stuck twice → one Opus checkpoint; still stuck → Fable (docs/TEAMS.md, Models line).
+- Hand off only at a trigger (docs/WORKFLOW.md), never at a token count.
 - If the project instructions lack the line "Read /mnt/project-files/claude-setup/COORDINATOR-CARD.md first", call update_project_settings once: PREPEND the text of operator/templates/project-instructions.md filled for this project above the existing instructions, keep every existing line (yskills 2026-11-08: add, never remove), and say so in one line.`
 
 export function ruleRows(map) {

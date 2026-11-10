@@ -16,7 +16,9 @@ figure is first made: [`character-workflow.md`](character-workflow.md); garments
    (Saki 1.04236 = 1.72 m on the 1.65 m base). Per-segment proportions (legs, torso, neck, arm length against girth) are
    the next step; they extend the same delta field (`proportion.kind`), the rebuild stays the same.
 4. **The modeller contract** for the base: never rename, no topology change, only add (keys, groups, bones). Backup and md5
-   before every write; every write is measured by the rebuild proof below.
+   before every write; every write is measured by the rebuild proof below. **A backup is the full live file** (never a small
+   creator or source file) copied next to it with its sha256, and the copy's sha is read back and equal before anything
+   overwrites the live file (2026-11-10: a "backup" of the small creator file let the live Rika be overwritten with no copy).
 5. **Key `co` equals Basis** before any bmesh write or save (up to 6.8 mm drift was found in Face and Body).
 6. **Laptop: Blender jobs check room first** (running `blender.exe` including the animator's, and free RAM; start only with more than 4 GB
    free, else wait): the one home is `pc-claude-user.md` (Blender limits). `delta_rebuild.py` does the RAM check itself.
@@ -44,6 +46,11 @@ shape key and weight on body, face and hair, key `CH_<name>` = basis x k at valu
 Keys that are new in the base arrive at the base's value, keys the character already has keep the character's value.
 A character mesh with an old topology (Saki's face had 91 extra vertices from an older mouth) is swapped for the current base mesh
 and keeps its material slots and key values. Then `dress.py <char> all` refits every outfit and keeps the looks.
+
+The rebuild reads the delta and the old-file dump **fresh from the live file on every run** (2026-11-10: a reused October `delta.json`
+rebuilt an approved Saki with old height and bust values); `--reuse-delta` is only for a re-run in the same `--out`. A rig or tech update
+adds `--keep-approved`: the approved body key values must be unchanged, the rebuilt body's rest within 3 mm of the live file, else it
+fails and nothing goes live. A rebuild keeps driven corrective keys driven and the approved face; compare both in the proof.
 
 ```bash
 python -I _tools/delta_rebuild.py rika saki --dress --extract          # live files are never written; results in --out

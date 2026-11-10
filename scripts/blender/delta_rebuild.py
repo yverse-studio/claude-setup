@@ -1,8 +1,10 @@
 """Rebuild characters from the CURRENT base and prove it (docs/base-delta.md). Plain Python, calls Blender.
-  python delta_rebuild.py <char> [<char> ...] [--base <base.blend>] [--out <dir>] [--dress] [--extract] [--marker]
+  python delta_rebuild.py <char> [<char> ...] [--base <base.blend>] [--out <dir>] [--dress] [--extract] [--marker] [--reuse-delta] [--keep-approved]
 
 Per character: copy of the live file -> delta.py sync (rig, shape keys, weights, identity key) -> optional dress.py all
 (re-fits every outfit, keeps looks) -> delta.py dump -> delta_verify.py. Live files are never written; results go to --out.
+--reuse-delta  only for a re-run in the same --out: skip the fresh read of delta and old-file dump (default: both are read fresh from the live file every run; a stale delta once rebuilt an approved model from October values).
+--keep-approved  rig/tech update: fails when the rebuilt body's rest differs from the live file by more than 3 mm (docs/base-delta.md, Rebuild).
 --extract  also reads the delta back from the rebuilt file; it must equal the stored delta (proportion, key values).
 --marker   proof run: makes a test base with a +1 mm vertex and a +1 mm bone, rebuilds every character from it, and checks the
            marker arrived in each one (body Basis vertex 5000, identity key, bone Head tail x k).
@@ -65,7 +67,7 @@ def main():
     ok_all = True
     for c in chars:
         live = character_file(c); delta = os.path.join(out, f'{c}.delta.json'); sync = os.path.join(out, f'{c}.rebuilt.blend')
-        if not os.path.exists(delta) or '--extract-fresh' in A:
+        if '--reuse-delta' not in A or not os.path.exists(delta):
             blender(live, delta_py, 'extract', c, delta, f'base={orig_base}')
         print(c, blender(live, delta_py, 'sync', c, delta, sync, f'base={base}')[-1][:300])
         if '--dress' in A:
@@ -73,11 +75,14 @@ def main():
             shutil.move(dressed, sync)
         dump = os.path.join(out, f'{c}.rebuilt.npz'); blender(sync, delta_py, 'dump', dump)
         livedump = os.path.join(out, f'{c}.live.npz')
-        if not os.path.exists(livedump): blender(live, delta_py, 'dump', livedump)
+        if '--reuse-delta' not in A or not os.path.exists(livedump): blender(live, delta_py, 'dump', livedump)
         rep = os.path.join(out, f'{c}.verify.json')
         r = subprocess.run([sys.executable, '-I', verify_py, bdump, delta, dump, '--live', livedump, '--out', rep], capture_output=True, text=True)
         ok = r.returncode == 0; ok_all &= ok
         print(c, 'VERIFY', 'OK' if ok else 'FAIL', json.load(open(rep))['fails'][:5])
+        if '--keep-approved' in A:
+            o, l = np.load(dump), np.load(livedump); eff = lambda z, r: z[f'{r}|Basis'] + (z[f'{r}|CH_{c}'] - z[f'{r}|Basis'] if f'{r}|CH_{c}' in z else 0)
+            mm = float(np.abs(eff(o, 'body') - eff(l, 'body')).max() * 1000); print(c, f'APPROVED body rest vs live: {mm:.2f} mm', 'OK' if mm <= 3 else 'FAIL (over 3 mm)'); ok_all &= mm <= 3
         if '--extract' in A:
             again = os.path.join(out, f'{c}.delta.rebuilt.json'); blender(sync, delta_py, 'extract', c, again, f'base={base}')
             d0, d1 = json.load(open(delta)), json.load(open(again))

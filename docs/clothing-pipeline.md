@@ -106,7 +106,7 @@ The gate checks both (`gate.md`, Asset PRs).
 - One entry per garment in the library catalog: source, licence, bases fitted, date, md5 of each
   fitted file, which characters wear it.
 - Versioning: `.blend` files do not diff or merge, so whoever edits one owns it until it is saved.
-  A dated backup (`_backup\<file>_YYYY-MM-DD.blend`) before every fit plus the md5 in the catalog is
+  A dated backup (`_backup\<file>_YYYY-MM-DD.blend`, the full live file, sha verified: [`base-delta.md`](base-delta.md) rule 4) before every fit plus the md5 in the catalog is
   enough for one person; Git LFS (with file locking) only when the library is shared, and it costs
   storage and bandwidth quota.
 

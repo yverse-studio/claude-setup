@@ -111,7 +111,7 @@ No `Mode:` line in `PLAN.md` means product mode. Product mode is the full table 
 **Preview test:** check 2 opens the live preview. Screenshots are for UI only: the Programmer's
 390 px and 1440 px set from the preview is the one `design-critic` uses; the evaluator adds a
 screenshot only for a failed criterion or the journey run. A change without UI is proven by test
-output or a live check.
+output or a live check. A gate on work judged by the image (a figure, garment, pose, scene) posts the images with the checked spots marked (circle or arrow on each flaw or measured area, pass or fail beside it), never bare renders.
 Roblox projects have no preview URL: play the test place through the Studio MCP server and
 `screen_capture` it (`toolbox/catalog/roblox.md`, The loop).
 
