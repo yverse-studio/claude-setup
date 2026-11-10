@@ -240,3 +240,53 @@ test('main stops on a missing or expired PAT and on kind repo without one, and m
     Object.assign(process.env, keep)
   }
 })
+
+test('a Worker counts as ours only with the new-project tag or the id the registry pins', async () => {
+  const { workerIsOurs, WORKER_TAG } = await import('./new-project.mjs')
+  assert.ok(workerIsOurs({ id: 'a', tags: [WORKER_TAG] }, null))
+  assert.ok(workerIsOurs({ id: 'f20ae4f9310e489eb5eb4ab6b892a27e', tags: [] }, 'f20ae4f9310e489eb5eb4ab6b892a27e'))
+  assert.ok(!workerIsOurs({ id: 'b', tags: ['other'] }, null))
+  assert.ok(!workerIsOurs({ id: 'b' }, 'f20ae4f9310e489eb5eb4ab6b892a27e'))
+  const { projectConfig } = await import('./new-project.mjs')
+  assert.equal(projectConfig('x', { worker: 'not-an-id' }).worker, null)
+  assert.equal(projectConfig('vacation-game', { worker: 'f20ae4f9310e489eb5eb4ab6b892a27e' }).worker, 'f20ae4f9310e489eb5eb4ab6b892a27e')
+})
+
+// Token-free runs: a fake Cloudflare that lists one Worker of the project's name, and no GitHub at all.
+async function tokenFreeRun(name, workerHit) {
+  const { main } = await import('./new-project.mjs')
+  const keep = { ...process.env }
+  const calls = []
+  const realFetch = globalThis.fetch
+  globalThis.fetch = async (url, init) => {
+    calls.push(`${init?.method || 'GET'} ${url}`)
+    if (String(url).includes('/workers/workers?')) return new Response(JSON.stringify({ result: workerHit ? [workerHit] : [] }), { status: 200 })
+    return new Response('{"result":null}', { status: 500 })
+  }
+  try {
+    Object.assign(process.env, { NAME: name, ORG: 'yverse-studio', KIND: 'game', D1: 'false', GITHUB_TOKEN_FREE: 'true', CLOUDFLARE_API_TOKEN: 'x', CLOUDFLARE_ACCOUNT_ID: 'a' })
+    delete process.env.PROJECTS_GITHUB_TOKEN
+    return await main().then(() => null, (err) => err.message)
+  } finally {
+    globalThis.fetch = realFetch
+    for (const k of Object.keys(process.env)) if (!(k in keep)) delete process.env[k]
+    Object.assign(process.env, keep)
+    tokenFreeRun.calls = calls
+  }
+}
+
+test('token-free stops for a project that is not registered on main, before any Cloudflare call', async () => {
+  assert.match(await tokenFreeRun('zz-unregistered', null), /not registered/)
+  assert.equal(tokenFreeRun.calls.length, 0)
+})
+
+test('token-free refuses a Worker of the same name that new-project did not make', async () => {
+  assert.match(await tokenFreeRun('vacation-game', { id: '0'.repeat(32), name: 'vacation-game', tags: [] }), /not made by new-project/)
+  assert.ok(!tokenFreeRun.calls.some((c) => c.startsWith('POST')), 'nothing is created or changed')
+})
+
+test('token-free adopts the vacation-game Worker the registry pins and goes on to the build token', async () => {
+  const err = await tokenFreeRun('vacation-game', { id: 'f20ae4f9310e489eb5eb4ab6b892a27e', name: 'vacation-game' })
+  assert.doesNotMatch(err, /not made by new-project|not registered/)
+  assert.ok(tokenFreeRun.calls.some((c) => c.includes('/builds/tokens')))
+})

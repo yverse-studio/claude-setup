@@ -20,6 +20,9 @@ import { fileURLToPath } from 'node:url'
 
 export const BUILD_TOKEN_NAME = 'claude-setup-builds'
 export const MARKER = 'made by claude-setup new-project'
+// Every Worker this script makes carries this tag; a Worker of the project's name without it (or
+// without the id `"worker"` in the registry on main pins) was made by someone else and is never adopted.
+export const WORKER_TAG = 'claude-setup-new-project'
 const TEMPLATE = new URL('../.claude/skills/publish/templates/new-project/', import.meta.url)
 const GAME_TEMPLATE = new URL('../.claude/skills/publish/templates/new-game/', import.meta.url) // laid over TEMPLATE for kind "game"
 const SKILLS = new URL('../.claude/skills/', import.meta.url)
@@ -64,6 +67,7 @@ export function projectConfig(name, cfg = {}) {
     org: cfg.org || ORG,
     repo: cfg.repo || cfg.name || name,
     existing: Boolean(cfg.repo),
+    worker: /^[0-9a-f]{32}$/.test(cfg.worker || '') ? cfg.worker : null, // a Worker made before WORKER_TAG, pinned by id
     secret: kind === 'site' && cfg.secret !== false, // a game has no login
     kv: (Array.isArray(cfg.kv) ? cfg.kv : []).filter((b) => /^[A-Z][A-Z0-9_]{0,40}$/.test(b)),
     commands: {
@@ -244,12 +248,17 @@ async function ensureKv(cf, name, binding) {
   return created.json.result.id
 }
 
-async function ensureWorker(cf, name, previewSecret, { adopt }) {
+export function workerIsOurs(worker, pinnedId) {
+  return (worker.tags || []).includes(WORKER_TAG) || (Boolean(pinnedId) && worker.id === pinnedId)
+}
+
+async function ensureWorker(cf, name, previewSecret, { adopt, provenOnly, pinnedId }) {
   let page = 1
   for (;;) {
     const r = await cf(`/workers/workers?per_page=100&page=${page}`)
     const hit = (r.json?.result || []).find((w) => w.name === name)
     if (hit && !adopt) throw new Error(`a Worker named ${name} already exists but the repo is new: pick another name (a re-run adopts a Worker only when its repo exists)`)
+    if (hit && provenOnly && !workerIsOurs(hit, pinnedId)) throw new Error(`a Worker named ${name} exists but was not made by new-project (no ${WORKER_TAG} tag, and projects/${name}.json on main pins no "worker" id): pick another name, or pin its id there through the gate once you know it is ours`)
     if (hit) { log('worker', `exists ${name} ${hit.id}`); return hit }
     if ((r.json?.result || []).length < 100) break
     page += 1
@@ -258,6 +267,7 @@ async function ensureWorker(cf, name, previewSecret, { adopt }) {
     method: 'POST',
     body: {
       name,
+      tags: [WORKER_TAG],
       observability: { enabled: true },
       subdomain: { enabled: true, previews_enabled: true },
       previews_base_config: { env: { BETTER_AUTH_SECRET: { type: 'secret_text', text: previewSecret } } },
@@ -495,6 +505,7 @@ async function repoOnly(gh, { org, name, repo, branch, token }) {
 
 export async function main() {
   const readJson = (file) => (existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : null)
+  const registered = Boolean(validName(process.env.NAME || '') && readJson(`projects/${process.env.NAME}.json`))
   const project = process.env.NAME
     ? projectConfig(process.env.NAME, readJson(`projects/${process.env.NAME}.json`) || { d1: env('D1', false) !== 'false', org: env('ORG', false), kind: env('KIND', false) })
     : projectFromBranch(process.env.PROJECT_BRANCH, readJson)
@@ -520,6 +531,8 @@ export async function main() {
   const tokenFree = found === null
   const ghToken = tokenFree ? '' : env('PROJECTS_GITHUB_TOKEN')
   if (tokenFree && kind === 'repo') throw new Error(`kind "repo" only makes a repo: make it with the laptop's gh login (gh repo create ${org}/${repoName} --private), no workflow needed`)
+  // Without the token nothing proves the repo is ours (no MARKER check), so the reviewed registry on main has to.
+  if (tokenFree && !registered) throw new Error(`token-free: ${name} is not registered; add projects/${name}.json on main through the gate first (projects/README.md), then run again`)
   if (!tokenFree) {
     if (existing && !found.ok) throw new Error(`${org}/${repoName} not found (${found.status}); an existing-repo project creates nothing, so check the "repo" name in projects/${name}.json`)
     if (!existing && found.ok && !String(found.json?.description || '').includes(MARKER)) throw new Error(`${org}/${repoName} exists and was not made by new-project; register it with "repo" in projects/${name}.json on main to deploy it`)
@@ -529,7 +542,7 @@ export async function main() {
   if (!validBranch(branch || '')) throw new Error(`default branch "${branch}" of ${org}/${repoName} is not a branch name`)
   if (kind === 'repo') return repoOnly(gh, { org, name: repoName, repo, branch, token: ghToken })
   // A Worker of the same name is adopted only on a re-run for a repo this workflow made.
-  // Token-free re-runs adopt the Worker an earlier token-free run made (the dispatch is explicit and the repo is ours).
+  // Token-free re-runs adopt only a Worker proven ours: the WORKER_TAG, or the id the registry pins.
   const adopt = tokenFree ? !existing : Boolean(found.ok) && !existing
   const liveId = d1 ? await ensureD1(cf, name) : undefined
   const previewId = d1 ? await ensureD1(cf, `${name}-preview`) : undefined
@@ -549,7 +562,7 @@ export async function main() {
     log('repo', 'has commits, nothing pushed')
   }
 
-  const worker = await ensureWorker(cf, name, randomBytes(32).toString('base64url'), { adopt })
+  const worker = await ensureWorker(cf, name, randomBytes(32).toString('base64url'), { adopt, provenOnly: tokenFree, pinnedId: project.worker })
   const buildTokenUuid = await pickBuildToken(cf, process.env.BUILD_TOKEN_NAME, process.env.CLOUDFLARE_BUILD_TOKEN)
   const git = await connectRepo(cf, { repo, org, name: repoName })
   await ensureBuilds(cf, { tag: worker.id, git, org, name: repoName, branch, d1, buildTokenUuid, commands })

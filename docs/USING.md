@@ -78,11 +78,13 @@ What you do: write the idea. A thread does the rest.
 2. No GitHub token (use this while `PROJECTS_GITHUB_TOKEN` is expired, or by default): the laptop makes the
    empty private repo (Remote Control with the gh login `yskills`: `gh repo create
    yverse-studio/<name> --private`, Actions off; cloud threads cannot create repos, they `add_repo`
-   with push once it exists). Nobody asks you for a token. Push the code to `main`, then skip step 3's
-   branch push and run `new-project.yml` with `token_free` true (dispatch only): it makes only the
+   with push once it exists). Nobody asks you for a token. Push the code to `main`, register
+   `projects/<name>.json` on claude-setup's `main` first (step 4; without the token it is the only proof
+   the repo is ours, so an unregistered name stops), then skip step 3's branch push and run `new-project.yml` with `token_free` true (dispatch only): it makes only the
    Worker, the Builds link and, with `d1` true, the D1 databases (their ids are in the run summary and must
    be added to `wrangler.jsonc` before the build can pass, so a game or a no-D1 page is the easy case).
-   A re-run adopts the Worker an earlier token-free run made.
+   A re-run adopts only a Worker new-project made (tag `claude-setup-new-project`, or the id
+   `"worker"` in the registry pins); any other Worker of that name stops the run.
 3. With the token: push branch `new/<name>` **in one push, with the file in it** (git, or `push_files` to
    a new branch; `create_branch` then `create_or_update_file` is two pushes and the first, empty
    one makes a site), file `projects/<name>.json`:
