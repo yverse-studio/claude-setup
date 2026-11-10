@@ -133,6 +133,13 @@ The gate checks both (`gate.md`, Asset PRs).
 - Prove a move with evaluated vertex positions (rest, a pose, sliders at 1) before vs after, plus one render
   per look; zero difference is reachable for the character the garment was fitted on. It never replaces the
   clipping numbers (Moving or re-dressing, above).
+- Where two body parts overlap at rest (Saki's cheeks in the cleft, ~6 mm after a slim key; touching inner thighs), the nearest skin face
+  faces the wrong way: Shrinkwrap leaves the cloth inside and "walk out along the normal" drives it deeper (Saki jeans "seat hole",
+  -30 mm, 2026-11-09). `clearance.py` now exits along the shortest valid axis, counts points with no valid exit as `selfcol` (hidden
+  body overlap), clamps a rest correction to `maxfix` (25 mm, no spikes) and blurs it (`smooth=`); with `into=CH_<name>` the fix
+  goes only into that character's key, so the base fit and other characters stay as they were.
+- `clearance.py` fixes the cage: Subsurf/Solidify are switched off while fixing (a Subsurf-first stack made the measured mesh longer
+  than the vertex list and crashed the fix), so its own report with the full stack is the proof. Test: `scripts/blender/clearance_gen.test.py`.
 - VRoid/VRM files bake skin, cloth and hair into one mesh with one shared position buffer, split only by
   material name: `scripts/clipping.mjs` measures them by material (`--body SKIN --parts CLOTH`), skips the
   vertices the body itself uses, and a source `.vrm` that already clips shows in its baseline row, so run it

@@ -42,13 +42,35 @@ for o in pieces:
         gi_ = {g.index: g.name for g in o.vertex_groups}
         VMASK[o.name] = {v.index for v in o.data.vertices if sum(g.weight for g in v.groups if gi_[g.group].startswith(VG)) > 0.5}
 SAVED = {o: (o.hide_viewport, o.hide_render) for o in heavy + cos}
+GEN = {'SUBSURF', 'SOLIDIFY', 'MULTIRES', 'MIRROR', 'ARRAY', 'BEVEL', 'REMESH', 'DECIMATE', 'WELD', 'SKIN', 'SCREW', 'BOOLEAN'}
+GEN_SAVED = {}; EXTRA = {}   # EXTRA[piece] = m added to lo/to: the inner shell of a switched-off Solidify sits that far inside the cage
+INTO = A.get('into')   # into=<garment key> (e.g. CH_saki): rest and pose corrections go into that key only, so other characters keep the base fit
+
+
+def gen_off():
+    """Fix modes move the garment's own vertices, so they measure the cage: generative modifiers (FIT_SUB subsurf first, Solidify ...)
+    make the evaluated mesh longer than the vertex list and the push index past it (IndexError in fold, KeyError FACE_SRC, 2026-11-09).
+    They are switched off while fixing and restored after; the subdivided surface lies inside a convex cage, so the report
+    (full stack, file state) is the proof, and a Solidify's inner shell is added to the margin."""
+    for o in pieces:
+        for md in o.modifiers:
+            if md.type in GEN and md.show_viewport:
+                GEN_SAVED[(o.name, md.name)] = True; md.show_viewport = False
+                if md.type == 'SUBSURF': EXTRA[o.name] = EXTRA.get(o.name, 0.0) + float(A.get('subextra', 2)) / 1000   # the limit surface lies inside a convex cage
+                if md.type == 'SOLIDIFY': EXTRA[o.name] = max(EXTRA.get(o.name, 0.0), abs(md.thickness) * (1 - md.offset) / 2)
+    bpy.context.view_layer.update()
+
+
+def gen_on():
+    for (on, mn) in GEN_SAVED: bpy.data.objects[on].modifiers[mn].show_viewport = True
+    GEN_SAVED.clear(); bpy.context.view_layer.update()
 
 
 def setup_state():
     for o in heavy: o.hide_viewport = True
     for fc in body.animation_data.drivers:
         if MASK in fc.data_path: fc.mute = True
-    body.modifiers[MASK].show_viewport = False
+    if MASK in body.modifiers: body.modifiers[MASK].show_viewport = False
     for o in cos: o.hide_render = True
     for o in pieces: o.hide_render = False; o.hide_viewport = False   # a hidden object is not evaluated: no pose, no keys, no modifiers (Pencil was measured unposed until 2026-10-26)
     for n in A.get('also', 'King_Legs' if LOOK == 'king' else 'Shoes,Pumps').split(','):   # pieces that stay visible while measuring (they hide skin or move the feet)
@@ -73,6 +95,7 @@ def par(tree, p, d):
 
 
 EXIT = 0.003
+DISAGREE = {}; NSIDE = 0.002
 FACES = 'faces' in ARGV; FACE_SRC = {}; FACE_CO = {}
 EXEMPT = False   # poses only: vertices trapped inside a self-intersecting body are counted apart, not as clearance
 SELFCOL = {}
@@ -96,6 +119,9 @@ def measure():
     for o in pieces:
         gco = np.empty(len(o.data.vertices) * 3); o.data.vertices.foreach_get('co', gco); gco = gco.reshape(-1, 3)
         eo = o.evaluated_get(dg); m = eo.to_mesh(); n0 = len(m.vertices)
+        if GEN_SAVED and n0 != len(gco):
+            raise RuntimeError(f'{o.name}: evaluated mesh has {n0} vertices, the object {len(gco)}; a modifier that adds geometry is still on: '
+                               + str([(md.type, md.name) for md in o.modifiers if md.show_viewport]))
         co = np.empty(n0 * 3); m.vertices.foreach_get('co', co); co = co.reshape(-1, 3)
         vm = VMASK.get(o.name); ref = np.arange(n0)
         if FACES:   # faces, not only vertices: triangle centres and edge midpoints are measured too (triangles: the centre of a big ring-shaped n-gon is not on the cloth) (skin can show between vertices)
@@ -113,6 +139,8 @@ def measure():
             if loc is None or dist > 0.03: continue
             if ref[i] < len(gco) and np.linalg.norm(bco[pv0[fi]] - gco[ref[i]]) > SELF_R: continue   # skin of another limb (arm through torso): the pose's own self-collision
             ins = dist < 1e-9 or sum(par(tree, p, d) for d in DIRS) >= 2
+            if ins and not EXEMPT and (p - loc).dot(no) > NSIDE and not all(par(tree, p, d) for d in AXES):   # parity says inside, the nearest face says outside:
+                ins = False; DISAGREE[o.name] = DISAGREE.get(o.name, 0) + 1   # body not watertight (genital/anus tubes) -> 6-axis vote: inside only if every axis ray agrees
             sd[i] = -dist if ins else dist; loc_a[i] = loc; nrm_a[i] = no
             if ins and EXEMPT and (p - loc).dot(no) > 0.0005:   # outside the nearest skin face yet inside the body: another body part cuts through here
                 sd[i] = 1.0; SELFCOL[o.name] = SELFCOL.get(o.name, 0) + 1; continue
@@ -126,7 +154,7 @@ def measure():
                     if hd + EXIT < best[1] and exits_ok(tree, c) and tree.find_nearest(c)[3] > 0.0015:
                         best = (c - p, hd + EXIT)
                 if best[0] is not None: loc_a[i] = p + best[0] - no * EXIT; nrm_a[i] = no
-                elif EXEMPT:   # every way out leads into another part of the body: the pose makes the body cut through itself
+                else:   # every way out leads into another part of the body: two body parts overlap here (inner thighs, cheeks, arm in torso), hidden by skin on both sides; counted as selfcol, not pushed
                     sd[i] = 1.0; SELFCOL[o.name] = SELFCOL.get(o.name, 0) + 1
         eo.to_mesh_clear()
         out[o.name] = (sd, co, loc_a, nrm_a)
@@ -160,9 +188,32 @@ def shift(o, d, only=None):
     me.update()
 
 
-def to_target(sd, co, loc, nrm, lo, to):
+def fold(o, a):
+    """With `faces` the measure has extra points (triangle centres, edge midpoints): hand each one's value to its vertices (largest wins), so the fix moves real vertices."""
+    nv = len(o.data.vertices)
+    if len(a) == nv: return a
+    if o.name not in FACE_SRC:
+        raise RuntimeError(f'{o.name}: {len(a)} measured points for {nv} vertices without `faces`: generative modifiers were on while fixing (gen_off)')
+    out = a[:nv].copy(); mag = np.linalg.norm(a, axis=1) if a.ndim == 2 else np.abs(a); cur = mag[:nv].copy()
+    for j, (_kind, vs) in enumerate(FACE_SRC[o.name]):
+        i = nv + j
+        if mag[i] <= 0: continue
+        for v in vs:
+            if mag[i] > cur[v]: out[v] = a[i]; cur[v] = mag[i]
+    return out
+
+
+def into_block(o):
+    ks = o.data.shape_keys
+    return ks.key_blocks.get(INTO) if INTO and ks else None
+
+
+def to_target(sd, co, loc, nrm, lo, to, o=None):
+    if o is not None and EXTRA.get(o.name): lo += EXTRA[o.name]; to += EXTRA[o.name]
     flag = sd < lo
-    return np.where(flag[:, None], loc + nrm * to - co, 0.0), flag
+    d = np.where(flag[:, None], loc + nrm * to - co, 0.0)
+    if o is not None: d = fold(o, d); flag = np.linalg.norm(d, axis=1) > 0
+    return d, flag
 
 
 def summarize(res, tag, worst=0):
@@ -224,14 +275,14 @@ def reweight(res):
     bpy.context.view_layer.update()
 
 
-def snap_weights(res, gap=0.012):
+def snap_weights(res, gap=float(A.get('snapgap', 0.012))):
     """Tight pieces: where a vertex hugs the skin (rest gap < `gap`) it takes the body's weights at the nearest skin point
     (all bone groups), so it moves exactly like the skin there instead of lagging in folds (waist in a forward bend)."""
     me = body.data; bvh_co = [v.co.copy() for v in me.vertices]
     tree = BVHTree.FromPolygons(bvh_co, [p.vertices[:] for p in me.polygons])
     bgi = {g.index: g.name for g in body.vertex_groups}; bones = set(arm.data.bones.keys())
     for o in pieces:
-        if o.get('clr_snapped'): continue
+        if o.get('clr_snapped') and 'resnap' not in ARGV: continue
         sd = res[o.name][0]; co = res[o.name][1]; n = 0
         for v in o.data.vertices:
             if abs(sd[v.index]) >= gap: continue
@@ -252,6 +303,39 @@ def snap_weights(res, gap=0.012):
                 g.add([v.index], w / sw, 'REPLACE')
             n += 1
         o['clr_snapped'] = True; print('SNAPW', o.name.split('_Cos_')[-1], n, flush=True)
+    bpy.context.view_layer.update()
+
+
+def breast_follow(R=float(A.get('breastw', 0)) / 1000):
+    """Cloth that bridges under or between the breasts (tops, bra bands, knit) is nearest to torso skin at rest, so it keeps
+    Chest/Spine weights while the breast bones swing in a bend or crouch and the breast drops through it (Saki crouch -30 mm,
+    2026-11-09). Each garment vertex within R of breast skin takes a share of that skin's Breast_* weights, fading with distance."""
+    from mathutils.kdtree import KDTree
+    me = body.data; bgi = {g.index: g.name for g in body.vertex_groups}
+    bw = {}
+    for v in me.vertices:
+        d = {bgi[g.group]: g.weight for g in v.groups if bgi[g.group].startswith('Breast_') and g.weight > 0}
+        if sum(d.values()) > 0.3: bw[v.index] = d
+    kd = KDTree(len(bw)); ids = list(bw)
+    for k, i in enumerate(ids): kd.insert(me.vertices[i].co, k)
+    kd.balance()
+    for o in pieces:
+        if o.get('clr_breast'): continue
+        gi = {g.index: g.name for g in o.vertex_groups}; n = 0
+        for v in o.data.vertices:
+            co, k, d = kd.find(v.co)
+            if co is None or d >= R: continue
+            src = bw[ids[k]]; f = (1 - d / R) * min(1.0, sum(src.values()))
+            have = sum(g.weight for g in v.groups if gi[g.group].startswith('Breast_'))
+            if have >= f: continue
+            f -= have
+            for g in v.groups:
+                if gi[g.group] in arm.data.bones and not gi[g.group].startswith('Breast_'): g.weight *= (1 - f)
+            tot = sum(src.values())
+            for nm, w in src.items():
+                g = o.vertex_groups.get(nm) or o.vertex_groups.new(name=nm); g.add([v.index], f * w / tot, 'ADD')
+            n += 1
+        o['clr_breast'] = True; print('BREASTW', o.name.split('_Cos_')[-1], n, flush=True)
     bpy.context.view_layer.update()
 
 
@@ -351,26 +435,77 @@ def free_verts(with_poses=False):
         print('FREEGROUP', o.name.split('_Cos_')[-1], len(bad[o.name]), '+ring', len(r), flush=True)
 
 
+SMOOTH_R = float(A.get('smooth', 0)) / 1000   # smooth=<mm>: after the rest fix, the correction field is blurred over this radius (all shells of the piece together: patch, waistband, pocket) and fixed again, so pushes leave no ridges
+
+
+def block_co(o, kb=None):
+    kb = kb or (into_block(o) or o.data.shape_keys.key_blocks[0]); a = np.empty(len(kb.data) * 3); kb.data.foreach_get('co', a); return a.reshape(-1, 3)
+
+
+def blur_field(o, D, r):
+    from mathutils.kdtree import KDTree
+    co = block_co(o, o.data.shape_keys.key_blocks[0]); n = len(co); act = np.linalg.norm(D, axis=1) > 1e-6
+    if not act.any(): return D
+    kd = KDTree(n)
+    for i, c in enumerate(co): kd.insert(c, i)
+    kd.balance(); out = D.copy(); near = set()
+    for i in np.nonzero(act)[0]:
+        for _c, j, _d in kd.find_range(co[i], r): near.add(j)
+    for i in near:
+        s = np.zeros(3); w = 0.0
+        for _c, j, dd in kd.find_range(co[i], r):
+            g = np.exp(-(dd / (0.5 * r)) ** 2); s += g * D[j]; w += g
+        out[i] = s / w
+    return out
+
+
 def fix_rest(max_it=8):
+    _fix_rest(max_it)
+    if SMOOTH_R:
+        for cyc in range(2):
+            for o in pieces:
+                kb = into_block(o) or o.data.shape_keys.key_blocks[0]; cur = block_co(o, kb); D = cur - ORIG[o.name]
+                Ds = blur_field(o, D, SMOOTH_R); shift(o, Ds - D, only=into_block(o))
+            bpy.context.view_layer.update(); _fix_rest(max_it, f'SMOOTH{cyc}_')
+
+
+MAXFIX = float(A.get('maxfix', 25)) / 1000   # m: a rest correction never moves a vertex farther than this from where it started (a point trapped in an
+                                             # overlap of two body parts otherwise walks out step by step and leaves a spike: Saki skirt frill 2026-11-09)
+
+
+def clamp(o):
+    if o.name not in ORIG: return
+    kb = into_block(o) or o.data.shape_keys.key_blocks[0]; cur = block_co(o, kb); D = cur - ORIG[o.name]
+    L = np.linalg.norm(D, axis=1); big = L > MAXFIX
+    if big.any(): shift(o, np.where(big[:, None], D * (MAXFIX / np.maximum(L, 1e-9))[:, None] - D, 0.0), only=into_block(o))
+
+
+def _fix_rest(max_it=8, tag=''):
     rest_state()
     for it in range(max_it):
-        res = measure(); summarize(res, f'REST{it}')
+        res = measure(); summarize(res, f'{tag}REST{it}')
         if all(sd.min() >= REST_LO for sd, *_r in res.values()): break
         for o in pieces:
-            sd, co, loc, nrm = res[o.name]; d, flag = to_target(sd, co, loc, nrm, REST_LO, REST_TO)
-            if flag.any(): shift(o, spread(edges(o), d, flag, iters=2))
+            sd, co, loc, nrm = res[o.name]; d, flag = to_target(sd, co, loc, nrm, REST_LO, REST_TO, o)
+            if flag.any(): shift(o, spread(edges(o), d, flag, iters=2), only=into_block(o)); clamp(o)
         bpy.context.view_layer.update()
 
 
-def fix_keys():
+def fix_keys(iters=int(A.get('keyit', 4))):
+    """Each follow key is corrected up to `iters` times at its own state (measure, push, measure again) until it clears."""
     kb = body.data.shape_keys.key_blocks
     for k, per in sorted(follow_keys().items()):
-        old = kb[k].value; kb[k].value = 1.0; bpy.context.view_layer.update(); res = measure()
-        for pn, gk in per.items():
-            o = bpy.data.objects[pn]; sd, co, loc, nrm = res[pn]; d, flag = to_target(sd, co, loc, nrm, KEY_LO, KEY_TO)
-            if flag.any():
-                shift(o, spread(edges(o), d, flag), only=o.data.shape_keys.key_blocks[gk])
-                print('KEYFIX', k, pn.split('_Cos_')[-1], int(flag.sum()), 'min', round(1000 * sd.min(), 1), flush=True)
+        old = kb[k].value; kb[k].value = 1.0; bpy.context.view_layer.update()
+        for it in range(iters):
+            res = measure(); left = 0
+            for pn, gk in per.items():
+                o = bpy.data.objects[pn]; sd, co, loc, nrm = res[pn]; d, flag = to_target(sd, co, loc, nrm, KEY_LO, KEY_TO, o)
+                if flag.any():
+                    left += 1
+                    shift(o, spread(edges(o), d, flag), only=o.data.shape_keys.key_blocks[gk])
+                    print('KEYFIX', k, pn.split('_Cos_')[-1], it, int(flag.sum()), 'min', round(1000 * sd.min(), 1), flush=True)
+            if not left: break
+            bpy.context.view_layer.update()
         kb[k].value = old
     bpy.context.view_layer.update()
 
@@ -398,7 +533,7 @@ def fix_poses():
         res = measure()
         for o in pieces:
             sd = res[o.name][0]; amt = np.minimum(np.where(sd < POSE_LO, POSE_TO - sd, 0.0), POSE_CAP); amt[sd >= 1.0] = 0
-            need[o.name] = np.maximum(need[o.name], amt)
+            need[o.name] = np.maximum(need[o.name], fold(o, amt))
         print('pose', case, {k.split('_Cos_')[-1]: round(1000 * float(v.max()), 1) for k, v in need.items()}, flush=True)
     if 'diag' in ARGV:
         for o in pieces:
@@ -416,7 +551,7 @@ def fix_poses():
     rn = {o.name: rest_normals(o) for o in pieces}
     for o in pieces:
         flag = need[o.name] > 0
-        if flag.any(): shift(o, spread(edges(o), rn[o.name] * need[o.name][:, None], flag, iters=4, k=0.75))
+        if flag.any(): shift(o, spread(edges(o), rn[o.name] * need[o.name][:, None], flag, iters=4, k=0.75), only=into_block(o))
     bpy.context.view_layer.update()
 
 
@@ -424,7 +559,8 @@ def report():
     out = {}; kb = body.data.shape_keys.key_blocks
     row = lambda res: {n.split('_Cos_')[-1]: dict(min_mm=round(1000 * float(sd.min()), 1), inside=int((sd < 0).sum()), n=len(sd),
                                                 pct_inside=round(100 * float((sd < 0).mean()), 2)) for n, (sd, *_r) in res.items()}
-    rest_state(); out['rest'] = row(measure())
+    rest_state(); SELFCOL.clear(); out['rest'] = row(measure())
+    for n, c in SELFCOL.items(): out['rest'][n.split('_Cos_')[-1]]['selfcol'] = c
     for k in sorted(follow_keys()):
         old = kb[k].value; kb[k].value = 1.0; bpy.context.view_layer.update(); out['key ' + k] = row(measure()); kb[k].value = old
     global EXEMPT
@@ -476,18 +612,37 @@ def case_debug(spec):
 
 t0 = time.time()
 setup_state()
+if not REPORT: gen_off()
+ORIG = {o.name: block_co(o) for o in pieces if o.data.shape_keys}
+if A.get('keycase'):   # keycase=<body key>: list the worst points with that key at 1 (vertex or face point, position, bone weights)
+    rest_state(); kb = body.data.shape_keys.key_blocks; kb[A['keycase']].value = 1.0; bpy.context.view_layer.update(); res = measure()
+    for o in pieces:
+        sd, co, loc, nrm = res[o.name]; nv = len(o.data.vertices); gi = {g.index: g.name for g in o.vertex_groups}
+        for i in np.argsort(sd)[:12]:
+            if sd[i] >= 0: break
+            vs = [i] if i < nv else FACE_SRC[o.name][i - nv][1]
+            print('KEYPT', o.name.split('_Cos_')[-1], 'face' if i >= nv else 'vert', int(i), round(1000 * sd[i], 1), np.round(co[i], 3).tolist(), 'verts', vs[:3],
+                  [(gi[g.group], round(g.weight, 2)) for g in o.data.vertices[vs[0]].groups][:3])
+    if 'probe' in ARGV:
+        dg = bpy.context.evaluated_depsgraph_get(); e = body.evaluated_get(dg); me = e.to_mesh()
+        tr = BVHTree.FromPolygons([v.co.copy() for v in me.vertices], [p.vertices[:] for p in me.polygons])
+        for o in pieces:
+            sd, co, loc, nrm = res[o.name]
+            for i in np.argsort(sd)[:6]:
+                p = Vector(co[i]); l, nn, fi, dd = tr.find_nearest(p)
+                print('PROBE', int(i), round(1000 * sd[i], 1), 'dist', round(1000 * dd, 1), 'par', [par(tr, p, d) for d in DIRS], 'p-loc.n', round(1000 * (p - l).dot(nn), 1),
+                      'axhits', [round(1000 * tr.ray_cast(p, ax)[3], 1) if tr.ray_cast(p, ax)[0] else None for ax in AXES])
+    restore_state(); sys.exit(0)
 if A.get('case'):
-    case_debug(A['case']); restore_state(); sys.exit(0)
+    case_debug(A['case']); gen_on(); restore_state(); sys.exit(0)
 try:
     if 'free' in ARGV:
         tgt = proxy()
         for o in pieces: shrinkwrap(o, tgt)
         sw_set(True); free_verts('poses' in ARGV)
-    elif REPORT:
-        tgt = proxy()
-        for o in pieces:
-            shrinkwrap(o, tgt)
-        sw_set('raw' not in ARGV); report()
+    elif REPORT:   # measures the FILE state (stacks as saved, viewport as saved); `raw` switches the Clearance* stacks off to see the bare corrections
+        if 'raw' in ARGV: sw_set(False)
+        report()
     else:
         tgt = proxy()
         for o in pieces:
@@ -495,12 +650,14 @@ try:
                 if nm in o.modifiers: o.modifiers[nm].show_viewport = False
         rest_state(); r0 = measure(); add_dqs(r0); reweight(r0)
         if 'snapw' in ARGV: snap_weights(r0)
+        if A.get('breastw'): breast_follow()
         fix_rest()
         if 'diag' in ARGV: fix_poses(); ROUNDS = 0
         for r in range(ROUNDS):
-            fix_keys(); fix_rest()
+            if 'nokeys' not in ARGV: fix_keys(); fix_rest()   # nokeys: the character's sliders are fixed values; bone-driven correctives are covered by the poses
             if 'poses' in ARGV: fix_poses(); fix_rest()
         for o in pieces: shrinkwrap(o, tgt)
+        sw_set(True)   # the fix switched the stacks off while correcting: leave them ON in the saved file
         rest_state(); summarize(measure(), 'FINAL REST', 6)
         if 'dbg' in ARGV:
             o = bpy.data.objects['Caesar_Cos_King_Legs']; sd, co, loc, nrm = measure()[o.name]; i = int(np.argmin(sd))
@@ -511,6 +668,7 @@ try:
                 hl, hn, hf, hd = tree.ray_cast(p, ax); print('  ax', tuple(ax), hl, hd, exits_ok(tree, hl + ax * EXIT) if hl else None)
             print('  par', [par(tree, p, d) for d in DIRS], 'near', tree.find_nearest(p))
 finally:
+    gen_on()
     arm.data.pose_position = 'POSE'
     if arm.animation_data: arm.animation_data.action = None
     restore_state()
