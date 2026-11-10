@@ -155,6 +155,8 @@ A render-based story game is made chapter by chapter, like a VN studio (yskills 
 | 10 | Playtest | Tester with a Playtester subagent, Opus | every route played, screenshots |
 | 11 | Pipeline TD (retro) | the Producer | new assets promoted into the library, one lesson line per surprise, the four planning files copied as the next chapter's start |
 
+**One chapter plan, gated before any build** (yskills 2026-11-10): steps 1 and 2 write one `CHAPTER-PLAN.md` (chapter facts, rooms, shots, clips, asset jobs) on locked text, Opus at high effort. A fresh Opus plan gate passes it only when every beat has a shot, every row has a ref and numbers, every library asset is named by path, continuity holds, and a previz contact sheet (grey proxies in the real set and camera, 10 %) has been looked at beside the refs. Builders then get one brief per job with inputs and sha, exact values copied from the plan, one output path and a clean end; they read nothing else and decide nothing.
+
 Researcher, Architect (the fix list), Continuity (a column in the shot list) and Playtester are subagents, never threads. Waves: a wave goes from build to integration as soon as its assets pass; the next wave builds meanwhile. Project paths and the current chapter's status live in the project's own copy of this table, never in git when the game is 18+.
 
 ## The chapter 1 night scenes (yskills builds them himself)
