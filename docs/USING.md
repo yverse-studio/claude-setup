@@ -79,7 +79,7 @@ What you do: write the idea. A thread does the rest.
    empty private repo (Remote Control with the gh login `yskills`: `gh repo create
    yverse-studio/<name> --private`, Actions off; cloud threads cannot create repos, they `add_repo`
    with push once it exists). Nobody asks you for a token. Push the code to `main`, then skip step 3's
-   branch push and run `new-project.yml` with `token_free` true (dispatch only): it makes only the
+   branch push and run `new-project.yml` with `token_free` true plus `repo_id` and `owner_id` (dispatch only; the numeric ids: `gh api -X GET search/repositories -f q='repo:<org>/<name>' --jq '.items[0] | {id, owner_id: .owner.id}'`): it makes only the
    Worker, the Builds link and, with `d1` true, the D1 databases (their ids are in the run summary and must
    be added to `wrangler.jsonc` before the build can pass, so a game or a no-D1 page is the easy case).
    A re-run adopts the Worker an earlier token-free run made.
@@ -89,7 +89,7 @@ What you do: write the idea. A thread does the rest.
    `{ "name": "<name>", "d1": true, "org": "yverse-studio" }`, plus `"kind": "game"` for a game, `"kind": "repo"` for a private repo with no Worker (e.g. a Ren'Py game). A game writes `"d1": false` unless it stores data.
    Or start `new-project.yml` in `yverse-studio/claude-setup`: GitHub MCP `actions_run_trigger`
    `run_workflow`, ref `main`, inputs `name`, `d1` (false when the page stores no data), `kind`
-   (`site`, `game` or `repo`), `token_free` (step 2).
+   (`site`, `game` or `repo`), `token_free`, `repo_id`, `owner_id` (step 2).
 4. Register it: the new repo's first PR (or a small PR in claude-setup) adds
    `projects/<name>.json` to `main`; the branch is deleted after the run, so nobody else does.
    Delete refuses names without it. A game's first PR replaces the day-zero stub; until it
