@@ -339,6 +339,16 @@ def breast_follow(R=float(A.get('breastw', 0)) / 1000):
     bpy.context.view_layer.update()
 
 
+def dqs_place(o):
+    """Armature_DQS right after the main Armature modifier, as on the body. Appended at the end (after a Subsurf-first stack's
+    Shrinkwrap) its multi-modifier blend exploded sleeves 30 cm in arm poses (Saki r5, 2026-11-10)."""
+    names = [m.name for m in o.modifiers]
+    if 'Armature_DQS' not in names: return
+    main = next((i for i, m in enumerate(o.modifiers) if m.type == 'ARMATURE' and m.name != 'Armature_DQS'), None)
+    if main is not None:
+        with bpy.context.temp_override(object=o): bpy.ops.object.modifier_move_to_index(modifier='Armature_DQS', index=main + 1)
+
+
 def add_dqs(res):
     """The body twists forearm and wrist with a second, dual-quaternion Armature modifier on the group Twist_DQS; a
     garment skinned linearly only parts from the skin by up to 3 cm there. Same group (nearest skin point) and modifier."""
@@ -346,7 +356,7 @@ def add_dqs(res):
     tree = BVHTree.FromPolygons(co_b, [p.vertices[:] for p in me.polygons]); tg = body.vertex_groups['Twist_DQS'].index
     wb = np.array([next((g.weight for g in v.groups if g.group == tg), 0.0) for v in me.vertices])
     for o in pieces:
-        if 'Armature_DQS' in o.modifiers: continue
+        if 'Armature_DQS' in o.modifiers: dqs_place(o); continue
         co = res[o.name][1]; w = np.zeros(len(co))
         for i, p in enumerate(co):
             loc, no, fi, d = tree.find_nearest(Vector(p))
@@ -358,6 +368,7 @@ def add_dqs(res):
         for i in np.nonzero(w > 0.001)[0]: g.add([int(i)], float(w[i]), 'REPLACE')
         m = o.modifiers.new('Armature_DQS', 'ARMATURE'); m.object = arm
         m.use_deform_preserve_volume = True; m.use_multi_modifier = True; m.vertex_group = 'Twist_DQS'
+        dqs_place(o)
         print('DQS', o.name.split('_Cos_')[-1], int((w > 0.01).sum()), flush=True)
     bpy.context.view_layer.update()
 
