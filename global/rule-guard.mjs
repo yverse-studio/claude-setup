@@ -8,7 +8,8 @@
 // (Replies), a new Artifact besides the Company XY one (Dashboard), a commit message that is not
 // conventional (Code), WebFetch in a cloud thread (Cloud threads: WebSearch, no Allow taps), a memory
 // file write with a rule line (memory holds state only), and a reply that asks yskills for an Allow or a go, says "can't" with nothing tried, posts `Done:` without proof, or
-// says nothing is open while the last thread board shows open threads (replyRule).
+// says nothing is open while the last thread board shows open threads, or asks him for something or names a
+// thread without a clickable link (replyRule).
 // stop: a thread that posted `Done:` resolves itself; a coordinator closes or nudges every finished
 // thread on its last board and lists the board again when it is over two hours old (coordinatorCheck).
 // prompt: a video link or a bare "stop" gets the matching CLAUDE.md line put next to the message, and
@@ -70,6 +71,12 @@ const ASK_FIRST = /€|\b(money|geld|eur|euro|live key|stripe live|purchas\w*|ka
 const CANT = /\b(i|we) (can['’]?t|cannot|am unable to|are unable to)\b|\b(ich kann|wir können) (das |es )?nicht\b/i
 const TRIED = /^[\s>*_-]*(tried|versucht)\s*:/im
 const DONE = /^[\s>*_]*Done:/m
+// An ask of yskills (do, answer, approve, open) or a pointer to a thread carries a clickable link to the exact place:
+// a thread link [title](#cmsg_…), a PR or page URL, [Project settings](#project-settings/<section>) (yskills 2026-11-10:
+// "everything you want me to do or show with a link"). Home: docs/pc-claude-user.md (What still needs yskills' hands).
+const NEEDS_YOU = /\b(du musst(?! (nix|nichts|gar nichts|nicht))|musst du|bitte (tipp|klick|antwort|schau|gib|erlaub|freigeb|bestätig|prüf|check|lad|schick|öffne|verbind|wähl|approve|review)\w*|brauch\w* (ich )?(noch )?(von dir|dein\w*)|wartet? auf dich|waiting (on|for) you|you need to|you have to|please (tap|click|answer|review|approve|allow|grant|open|connect|upload|send|pick|check)|needs? your (ok|approval|answer|review|allow|go|input))\b/i
+const THREAD_REF = /\b(im|in( the| dem| den)?) thread\b|\bthread\s*["„“'«]/i
+const HAS_LINK = /https?:\/\/|\]\(#/
 const NOTHING_OPEN = /\b(no blockers?|keine blocker|nothing (is )?(open|left|blocking|needed from you|needs you|waiting on you)|nichts (mehr )?(ist )?(offen|blockiert)|nothing else needs you)\b/i
 // A memory line that reads as a rule: it opens with always/never/rule (not "immer noch", not "rule-guard")
 // and has a must/should/use later; a line with a PR, issue or date is state, never a rule.
@@ -78,6 +85,7 @@ export const RULE_LINE = /^(?![^\n]*(\bPR \d|#\d|\d{4}-\d{2}))\s*[-*]?\s*(\*\*)?
 export function replyRule(text, attached = [], board = null) {
   if (ASK_ALLOW.test(text) && !ASK_FIRST.test(text)) return 'rule-guard: do not ask yskills for an Allow or a go (CLAUDE.md, Auto-run): pick the sensible default and do it; a refused call takes its fixed way around (docs/permissions.md, Layer 3). Only the ask-first items wait, and a choice is a request_decision card.'
   if (CANT.test(text) && !TRIED.test(text)) return 'rule-guard: "can\'t" needs every route tried first (CLAUDE.md, Never "can\'t"): another tool, a workflow with the org token, the laptop (RC), another approach. Try them; if it is still impossible, add a line `Tried: <route, route, route>` with the one step only his hands can do.'
+  if ((NEEDS_YOU.test(text) || THREAD_REF.test(text)) && !HAS_LINK.test(text)) return 'rule-guard: this reply asks yskills for something or points at a thread without a link (docs/pc-claude-user.md, What still needs yskills\' hands). Give the exact place as a clickable link: a thread [title](#cmsg_…), the PR or page URL, [Project settings](#project-settings/<section>), or the connect link.'
   if (DONE.test(text) && !/https?:\/\//.test(text) && !(attached ?? []).length) return 'rule-guard: a `Done:` line carries its proof (CLAUDE.md, Honesty): the live link, the merged PR link or an attached screenshot or test output. Add it, then post.'
   const listed = NOTHING_OPEN.test(text) && (typeof board === 'function' ? board() : board)
   if (listed) {

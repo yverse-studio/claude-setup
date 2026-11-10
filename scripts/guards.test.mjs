@@ -725,6 +725,20 @@ test('team guard: a thread start runs its role on the tier its Roster row names'
   assert.equal(decide('mcp__hearthbot__start_thread_session', { brief: brief('Programmer', 'M'), model: 'sonnet' }, [], [], teams).block, undefined)
 })
 
+// yskills 2026-11-10: "everything you want me to do or show with a link". An ask of him or a thread pointer needs a clickable link.
+test('rule guard: an ask of yskills or a thread pointer carries a clickable link', async () => {
+  const { replyRule } = await import('../global/rule-guard.mjs')
+  for (const text of [
+    'Antwort steht im Thread Build plane chapter (◕‿◕)', 'Du musst nur den Ordner freigeben~', 'Bitte gib den Ordner frei (｡•̀ᴗ-)✧',
+    'Waiting on you: the 3 cards in the Planner thread.', 'You need to approve the folder once.', 'Ich brauch noch deine Antwort zu Karte 2.',
+  ]) assert.match(replyRule(text) ?? '', /clickable link/, text)
+  for (const text of [
+    'Antwort steht in [Build plane chapter](#cmsg_012abc) (◕‿◕)', 'Du musst nur hier freigeben: [Project settings](#project-settings/resources)',
+    'Bitte schau dir https://github.com/yverse-studio/claude-setup/pull/400 an', 'Jaa, PR ist durch ٩(◕‿◕)۶ du musst nix machen~',
+    'Du musst nichts tun, der Gate läuft.', 'Thread-Board ist leer, alles gemerged.',
+  ]) assert.equal(replyRule(text), null, text)
+})
+
 // Gate review of PR 323: the ordinary replies and state lines these checks must let through, and the edges.
 test('rule guard: repeats checks pass ordinary replies and memory state, honour told threads and filtered lists', async () => {
   const { replyRule, decide, threadBoard } = await import('../global/rule-guard.mjs')
