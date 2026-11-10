@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { logLines, latestBuild, recentLines, openBuilds, scrub, validBranch, isProduction, pickTrigger, triggerBuild } from './build-logs.mjs'
+import { logLines, latestBuild, recentLines, openBuilds, scrub, validBranch, isProduction, pickTrigger, triggerBuild, commandClass } from './build-logs.mjs'
 
 test('logLines keeps the tail and reads [time, text] pairs and plain strings', () => {
   const json = { result: { lines: [['t1', 'one'], ['t2', 'two'], 'three'] } }
@@ -74,6 +74,9 @@ test('pickTrigger takes the one preview trigger and refuses none, two or a produ
   assert.throws(() => pickTrigger([prod]), /exactly one preview trigger/)
   assert.throws(() => pickTrigger([]), /exactly one preview trigger/)
   assert.throws(() => pickTrigger([prev, { ...prev, trigger_name: 'other' }]), /exactly one preview trigger/)
+  assert.throws(() => pickTrigger([{ ...prev, branch_includes: ['main'] }]), /exactly one preview trigger/) // versions upload but it builds main: not a preview trigger
+  assert.throws(() => pickTrigger([{ ...prev, deploy_command: 'npx wrangler versions deploy' }]), /exactly one preview trigger/)
+  assert.throws(() => pickTrigger([{ ...prev, deploy_command: '' }]), /exactly one preview trigger/) // no positive preview signal: refused
 })
 
 test('triggerBuild posts the branch to the preview trigger and follows the returned build id until it stops', async () => {
@@ -98,4 +101,26 @@ test('triggerBuild reports a build that never appears or never stops as not fini
   assert.equal(never.finished, false)
   const slow = await triggerBuild(fakeCf([prev]), 'w', 'claude/x', async () => ({ status: 'running' }), async () => {}, 60000)
   assert.equal(slow.finished, false)
+})
+
+test('the refusal names the trigger fields and a command class, never the raw command', () => {
+  const secretish = { ...prod, deploy_command: 'npx wrangler deploy --var X=1', build_command: 'npm ci', root_directory: '/' }
+  let message = ''
+  try { pickTrigger([secretish]) } catch (e) { message = e.message }
+  assert.match(message, /fields \[[^\]]*branch_includes[^\]]*\]/)
+  assert.match(message, /command deploy/)
+  assert.doesNotMatch(message, /--var|X=1/)
+  assert.equal(commandClass('npx wrangler versions upload'), 'preview')
+  assert.equal(commandClass(''), 'none')
+  assert.equal(commandClass('npx wrangler versions upload && npx wrangler versions deploy'), 'deploy') // a chained gradual deploy is a deploy
+  assert.equal(commandClass('npx wrangler versions upload; npx wrangler deploy'), 'deploy')
+  assert.equal(commandClass('npm run deploy:preview'), 'preview')
+  assert.equal(commandClass('npx wrangler versions upload'), 'preview')
+})
+
+test('triggerBuild refuses a branch the production trigger builds, even if it is not called main', async () => {
+  const calls = []
+  const odd = { ...prod, branch_includes: ['release'] }
+  await assert.rejects(() => triggerBuild(fakeCf([odd, prev], calls), 'w', 'release', async () => null, async () => {}), /production branch/)
+  assert.equal(calls.some((c) => c[0] === 'POST'), false)
 })

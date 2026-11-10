@@ -55,14 +55,23 @@ export const WAIT_MS = 4 * 60000
 export const POLL_MS = 15000
 const PRODUCTION_BRANCHES = ['main', 'master']
 
+// What a refusal says about a trigger: its name, the branches it builds, a CLASS of its deploy command and the names of its fields (never values, ids or secrets).
+// Strip the preview markers first: whatever "deploy" is left (a gradual `versions deploy` chained after `versions upload`) makes it a deploy.
+export const commandClass = (c) => {
+  const rest = String(c || '').replace(/wrangler (preview|versions upload)|deploy:preview/g, '')
+  if (/deploy/.test(rest)) return 'deploy'
+  return rest !== String(c || '') ? 'preview' : c ? 'other' : 'none'
+}
+const describeTrigger = (t) => `name ${t.trigger_name || '?'}, branch_includes [${(t.branch_includes || []).join(',')}], command ${commandClass(t.deploy_command)}, fields [${Object.keys(t).filter((k) => !/uuid|id$|token|secret/i.test(k)).join(',')}]`
+
 // The one trigger that builds previews. A Worker with preview builds has two triggers; starting a branch on the production one would run
 // its `wrangler deploy` on unmerged code. Anything but exactly one clearly non-production trigger is an error, never a guess.
 export function pickTrigger(triggers) {
   const preview = (triggers || []).filter((t) => {
     const includesMain = (t.branch_includes || []).some((b) => PRODUCTION_BRANCHES.includes(b))
-    return /versions upload/.test(t.deploy_command || '') || (!includesMain && !/wrangler deploy/.test(t.deploy_command || ''))
+    return !includesMain && commandClass(t.deploy_command) === 'preview' // a preview trigger never builds main, and says so: a preview command, not just "not a deploy" 
   })
-  if (preview.length !== 1) throw new Error(`expected exactly one preview trigger, found ${preview.length} of ${(triggers || []).length}; refusing to start a build (names: ${scrub((triggers || []).map((t) => t.trigger_name || '?').join(', '))})`)
+  if (preview.length !== 1) throw new Error(`expected exactly one preview trigger, found ${preview.length} of ${(triggers || []).length}; refusing to start a build (${scrub((triggers || []).map(describeTrigger).join(' | '))})`)
   return preview[0]
 }
 
@@ -70,8 +79,10 @@ export function pickTrigger(triggers) {
 // Returns { uuid, finished, outcome }; the caller fails the run unless it finished.
 export async function triggerBuild(cf, workerId, branch, getBuild, wait = (ms) => new Promise((r) => setTimeout(r, ms)), limit = WAIT_MS) {
   if (!validBranch(branch)) throw new Error(`BUILD_BRANCH "${scrub(String(branch))}" is not a plain git branch name`)
-  const trigger = pickTrigger((await cf(`/builds/workers/${workerId}/triggers`)).json?.result)
-  if (isProduction(branch, trigger)) throw new Error(`refusing to start a build of the production branch (${scrub(branch)}): it deploys only through the gate's merge`)
+  const triggers = (await cf(`/builds/workers/${workerId}/triggers`)).json?.result
+  const trigger = pickTrigger(triggers)
+  // production = main, master and every branch any trigger lists by name ("*" never equals a real branch name)
+  if (isProduction(branch, { branch_includes: (triggers || []).flatMap((t) => t.branch_includes || []) })) throw new Error(`refusing to start a build of the production branch (${scrub(branch)}): it deploys only through the gate's merge`)
   const started = (await cf(`/builds/triggers/${trigger.trigger_uuid}/builds`, 'POST', { branch })).json?.result
   const uuid = started?.build_uuid
   if (!uuid) throw new Error('the build was not started: the API answered without a build id')
@@ -122,9 +133,9 @@ async function main() {
     }
   }
   const meta = build.build_trigger_metadata || {}
-  console.log(`[build-logs] ${name}: ${build.status}, outcome ${build.build_outcome}, branch ${meta.branch || '?'}, commit ${String(meta.commit_hash || '?').slice(0, 7)}, created ${build.created_on}`)
+  console.log(scrub(`[build-logs] ${name}: ${build.status}, outcome ${build.build_outcome}, branch ${meta.branch || '?'}, commit ${String(meta.commit_hash || '?').slice(0, 7)}, created ${build.created_on}`))
   for (const line of logLines((await cf(`/builds/builds/${build.build_uuid}/logs`)).json)) console.log(line)
-  // a dispatcher must never read green as "preview ready" when it is not
+  // a dispatcher must never read green as "preview ready" when it is not (the log above is printed first so a slow build can still be read)
   if (mine && !mine.finished) throw new Error('the build did not finish within 4 minutes (or never appeared); run this again to read its log')
   if (mine && mine.outcome !== 'success') throw new Error(`the build finished with outcome ${mine.outcome}`)
 }
