@@ -140,6 +140,13 @@ The gate checks both (`gate.md`, Asset PRs).
   goes only into that character's key, so the base fit and other characters stay as they were.
 - `clearance.py` fixes the cage: Subsurf/Solidify are switched off while fixing (a Subsurf-first stack made the measured mesh longer
   than the vertex list and crashed the fix), so its own report with the full stack is the proof. Test: `scripts/blender/clearance_gen.test.py`.
+- Contact is not clearance (Saki R2, 2026-11-10): cloth on the breast underside in a crouch, in the armpit with the arms up, a shoe sole on the
+  foot sole, or skin under a hide mask is **contact**. Mark that skin as a body vertex group (`underbust_fold`, `armpit`, `foot_sole`, `Hide_*`)
+  and pass `ignore_vg=` to `clearance.py`: those points are reported as `contact` and never pushed, and the render decides. Test:
+  `scripts/blender/clearance_contact.test.py`. The other-limb test (skin far away at rest = another body part) also covers Subsurf points now:
+  before, an arm folded on the belly read as a -28 mm sleeve clip.
+- A closed shoe hides the foot with a hide mask under it (below the collar rim minus 5 mm). When toes still show, the shoe is shorter than the foot:
+  stretch the toe box in the character key, don't push. Find bad spots with `dump=<n>[@action@frame]`, which measures the full stack.
 - `Armature_DQS` on a garment goes right after its main Armature modifier. Appended at the end of a Subsurf-first stack (after the
   Shrinkwrap) its multi-modifier blend exploded sleeves 30 cm in arm poses (Saki r5, 2026-11-10); the cage fix never saw it, the render did.
 - VRoid/VRM files bake skin, cloth and hair into one mesh with one shared position buffer, split only by

@@ -7,6 +7,8 @@ the margin) out along the skin normal, as a smooth field, and writes it into the
   blender -b <character>.blend --factory-startup -P clearance.py -- look=king|office pieces=<substring,...> [rounds=2] [save] [report=out.json] [faces]
   Arguments (all optional, defaults are Caesar's names): body=<body object> prefix=<garment object name prefix> hair=<hair object> mask=<body hide-mask modifier>
   poses=<action,action,..> noshrink snapw lo=<mm> to=<mm> vg=<bone group prefix> swoff=<m> free poses
+  dump=<n>[@action@frame]: print the n worst points (position, basis, top bone weights) at rest or in a pose frame; no fix.
+  ignore_vg=<group|prefix*,..>: inside points on that body skin count as `contact` in the report (never pushed): underbust_fold, Hide_* masks.
   `report=` measures rest, every follow key at 1 and 3 frames of each pose; `faces` also measures polygon centres and edge midpoints (skin can show between
   vertices); a piece that is hidden is NOT evaluated (no pose, keys or modifiers): this script unhides the measured pieces itself.
 Clearance limit: smallest >= 0 mm, 0 % inside, in every case; self-collision of the body (arm through torso) is counted apart (selfcol), not as clothing."""
@@ -44,6 +46,15 @@ for o in pieces:
 SAVED = {o: (o.hide_viewport, o.hide_render) for o in heavy + cos}
 GEN = {'SUBSURF', 'SOLIDIFY', 'MULTIRES', 'MIRROR', 'ARRAY', 'BEVEL', 'REMESH', 'DECIMATE', 'WELD', 'SKIN', 'SCREW', 'BOOLEAN'}
 GEN_SAVED = {}; EXTRA = {}   # EXTRA[piece] = m added to lo/to: the inner shell of a switched-off Solidify sits that far inside the cage
+MASKS = []
+IGN_VG = [t for t in A.get('ignore_vg', '').split(',') if t]   # ignore_vg=<body group or prefix*>,..: skin under these groups (underbust_fold, Hide_* masks) is contact, not clearance
+CONTACT = {}
+IGN = np.zeros(len(body.data.vertices), bool)
+if IGN_VG:
+    _ig = {g.index for g in body.vertex_groups if any(g.name == t or (t.endswith('*') and g.name.startswith(t[:-1])) for t in IGN_VG)}
+    for v in body.data.vertices:
+        if any(g.group in _ig and g.weight > 0.5 for g in v.groups): IGN[v.index] = True
+    print('IGNORE_VG', IGN_VG, int(IGN.sum()), flush=True)
 INTO = A.get('into')   # into=<garment key> (e.g. CH_saki): rest and pose corrections go into that key only, so other characters keep the base fit
 
 
@@ -68,8 +79,11 @@ def gen_on():
 
 def setup_state():
     for o in heavy: o.hide_viewport = True
-    for fc in body.animation_data.drivers:
-        if MASK in fc.data_path: fc.mute = True
+    MASKS[:] = [md.name for md in body.modifiers if md.type == 'MASK' and md.show_viewport]   # every hide mask (Hide_<item>, Hide_<piece>) off: a masked body has holes, parity breaks
+    if body.animation_data:
+        for fc in body.animation_data.drivers:
+            if any(f'"{mn}"' in fc.data_path for mn in MASKS) or MASK in fc.data_path: fc.mute = True
+    for mn in MASKS: body.modifiers[mn].show_viewport = False
     if MASK in body.modifiers: body.modifiers[MASK].show_viewport = False
     for o in cos: o.hide_render = True
     for o in pieces: o.hide_render = False; o.hide_viewport = False   # a hidden object is not evaluated: no pose, no keys, no modifiers (Pencil was measured unposed until 2026-10-26)
@@ -79,8 +93,9 @@ def setup_state():
 
 
 def restore_state():
-    for fc in body.animation_data.drivers:
-        if MASK in fc.data_path: fc.mute = False
+    for fc in (body.animation_data.drivers if body.animation_data else []):
+        if any(f'"{mn}"' in fc.data_path for mn in MASKS) or MASK in fc.data_path: fc.mute = False
+    for mn in MASKS: body.modifiers[mn].show_viewport = True
     for o, (hv, hr) in SAVED.items(): o.hide_viewport = hv; o.hide_render = hr
     bpy.context.view_layer.update()
 
@@ -99,6 +114,7 @@ DISAGREE = {}; NSIDE = 0.002
 FACES = 'faces' in ARGV; FACE_SRC = {}; FACE_CO = {}
 EXEMPT = False   # poses only: vertices trapped inside a self-intersecting body are counted apart, not as clearance
 SELFCOL = {}
+REST_EVAL = {}; BODY_REST = []   # full-stack rest positions (garment eval points, body verts): the other-limb test for Subsurf points
 SELF_R = 0.12   # m: skin farther than this from the vertex at rest is another body part, not the garment's own skin
 POSE_CAP = 0.015
 AXES = [Vector(a) for a in ((1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1))]
@@ -113,7 +129,8 @@ def measure():
     dg = bpy.context.evaluated_depsgraph_get(); dg.update()
     e = body.evaluated_get(dg); me = e.to_mesh()
     tree = BVHTree.FromPolygons([v.co.copy() for v in me.vertices], [p.vertices[:] for p in me.polygons])
-    pv0 = np.array([p.vertices[0] for p in me.polygons]); e.to_mesh_clear()
+    if arm.data.pose_position == 'REST': BODY_REST[:] = [v.co[:] for v in me.vertices]
+    pv0 = np.array([p.vertices[0] for p in me.polygons]); pfv = [tuple(p.vertices) for p in me.polygons]; e.to_mesh_clear()
     bco = np.empty(len(body.data.vertices) * 3); body.data.vertices.foreach_get('co', bco); bco = bco.reshape(-1, 3)
     out = {}
     for o in pieces:
@@ -137,8 +154,12 @@ def measure():
             if vm is not None and ref[i] not in vm: continue
             p = Vector(co[i]); loc, no, fi, dist = tree.find_nearest(p)
             if loc is None or dist > 0.03: continue
-            if ref[i] < len(gco) and np.linalg.norm(bco[pv0[fi]] - gco[ref[i]]) > SELF_R: continue   # skin of another limb (arm through torso): the pose's own self-collision
+            if ref[i] < len(gco) and np.linalg.norm(bco[pv0[fi]] - gco[ref[i]]) > SELF_R: continue
+            if ref[i] >= len(gco) and o.name in REST_EVAL and ref[i] < len(REST_EVAL[o.name]) and len(BODY_REST) == len(bco) \
+                    and np.linalg.norm(np.asarray(BODY_REST[pv0[fi]]) - REST_EVAL[o.name][ref[i]]) > SELF_R: continue   # same test for Subsurf points (no cage index): rest positions of the full stack   # skin of another limb (arm through torso): the pose's own self-collision
             ins = dist < 1e-9 or sum(par(tree, p, d) for d in DIRS) >= 2
+            if ins and IGN_VG and IGN[list(pfv[fi])].any():   # inside, but on masked / fold skin: contact (reported apart, never pushed)
+                sd[i] = 1.0; CONTACT[o.name] = CONTACT.get(o.name, 0) + 1; continue
             if ins and not EXEMPT and (p - loc).dot(no) > NSIDE and not all(par(tree, p, d) for d in AXES):   # parity says inside, the nearest face says outside:
                 ins = False; DISAGREE[o.name] = DISAGREE.get(o.name, 0) + 1   # body not watertight (genital/anus tubes) -> 6-axis vote: inside only if every axis ray agrees
             sd[i] = -dist if ins else dist; loc_a[i] = loc; nrm_a[i] = no
@@ -156,6 +177,8 @@ def measure():
                 if best[0] is not None: loc_a[i] = p + best[0] - no * EXIT; nrm_a[i] = no
                 else:   # every way out leads into another part of the body: two body parts overlap here (inner thighs, cheeks, arm in torso), hidden by skin on both sides; counted as selfcol, not pushed
                     sd[i] = 1.0; SELFCOL[o.name] = SELFCOL.get(o.name, 0) + 1
+        if arm.data.pose_position == 'REST':
+            REST_EVAL[o.name] = co[:n0].copy()
         eo.to_mesh_clear()
         out[o.name] = (sd, co, loc_a, nrm_a)
     return out
@@ -218,7 +241,7 @@ def to_target(sd, co, loc, nrm, lo, to, o=None):
 
 def summarize(res, tag, worst=0):
     for nm, (sd, co, *_r) in res.items():
-        print(f'{tag} {nm.split("_Cos_")[1]:12s} min {1000 * sd.min():7.1f} mm  inside {(sd < 0).sum():4d} ({100 * (sd < 0).mean():.2f}%)', flush=True)
+        print(f'{tag} {nm.split("_Cos_")[-1]:12s} min {1000 * sd.min():7.1f} mm  inside {(sd < 0).sum():4d} ({100 * (sd < 0).mean():.2f}%)', flush=True)
         for i in np.argsort(sd)[:worst]:
             if sd[i] < 0: print('    worst', i, round(1000 * sd[i], 1), np.round(co[i], 3).tolist())
 
@@ -426,7 +449,7 @@ def free_verts(with_poses=False):
             bad[n].update(int(i) for i in ids)
     rest_state(); look('rest')
     kb = body.data.shape_keys.key_blocks
-    for k in sorted(follow_keys()):
+    for k in ([] if 'nokeyrep' in ARGV else sorted(follow_keys())):   # nokeyrep: rest + poses only (the gate table)
         old = kb[k].value; kb[k].value = 1.0; bpy.context.view_layer.update(); look('key ' + k); kb[k].value = old
     if with_poses:
         for case in pose_cases():
@@ -570,15 +593,17 @@ def report():
     out = {}; kb = body.data.shape_keys.key_blocks
     row = lambda res: {n.split('_Cos_')[-1]: dict(min_mm=round(1000 * float(sd.min()), 1), inside=int((sd < 0).sum()), n=len(sd),
                                                 pct_inside=round(100 * float((sd < 0).mean()), 2)) for n, (sd, *_r) in res.items()}
-    rest_state(); SELFCOL.clear(); out['rest'] = row(measure())
+    rest_state(); SELFCOL.clear(); CONTACT.clear(); out['rest'] = row(measure())
     for n, c in SELFCOL.items(): out['rest'][n.split('_Cos_')[-1]]['selfcol'] = c
-    for k in sorted(follow_keys()):
+    for n, c in CONTACT.items(): out['rest'][n.split('_Cos_')[-1]]['contact'] = c
+    for k in ([] if 'nokeyrep' in ARGV else sorted(follow_keys())):   # nokeyrep: rest + poses only (the gate table)
         old = kb[k].value; kb[k].value = 1.0; bpy.context.view_layer.update(); out['key ' + k] = row(measure()); kb[k].value = old
     global EXEMPT
     EXEMPT = True
     for case in pose_cases():
-        SELFCOL.clear(); r = row(measure())
+        SELFCOL.clear(); CONTACT.clear(); r = row(measure())
         for n, c in SELFCOL.items(): r[n.split('_Cos_')[-1]]['selfcol'] = c
+        for n, c in CONTACT.items(): r[n.split('_Cos_')[-1]]['contact'] = c
         out[case] = r; print('report', case, dict(SELFCOL), flush=True)
     EXEMPT = False
     json.dump(out, open(REPORT, 'w'), indent=1)
@@ -623,7 +648,7 @@ def case_debug(spec):
 
 t0 = time.time()
 setup_state()
-if not REPORT: gen_off()
+if not REPORT and not A.get('dump') and not A.get('local'): gen_off()
 ORIG = {o.name: block_co(o) for o in pieces if o.data.shape_keys}
 if A.get('keycase'):   # keycase=<body key>: list the worst points with that key at 1 (vertex or face point, position, bone weights)
     rest_state(); kb = body.data.shape_keys.key_blocks; kb[A['keycase']].value = 1.0; bpy.context.view_layer.update(); res = measure()
@@ -643,6 +668,48 @@ if A.get('keycase'):   # keycase=<body key>: list the worst points with that key
                 p = Vector(co[i]); l, nn, fi, dd = tr.find_nearest(p)
                 print('PROBE', int(i), round(1000 * sd[i], 1), 'dist', round(1000 * dd, 1), 'par', [par(tr, p, d) for d in DIRS], 'p-loc.n', round(1000 * (p - l).dot(nn), 1),
                       'axhits', [round(1000 * tr.ray_cast(p, ax)[3], 1) if tr.ray_cast(p, ax)[0] else None for ax in AXES])
+    restore_state(); sys.exit(0)
+if A.get('local'):   # local=<rounds> [to=<mm>] [ring=<n>]: rest fix measured on the FULL stack (Subsurf/Shrinkwrap on); each inside point moves its
+    from mathutils.kdtree import KDTree   # nearest cage vertex out along the skin normal by depth + to, in the into= key only, spread over `ring` edge rings
+    TO_L = float(A.get('to', 2.5)) / 1000; RING = int(A.get('ring', 2))
+    for rnd in range(int(A['local'])):
+        rest_state(); res = measure(); left = 0
+        for o in pieces:
+            sd, co, loc, nrm = res[o.name]; nv = len(o.data.vertices); bad = np.where(sd < 0)[0]
+            print('LOCAL', rnd, o.name.split('_Cos_')[-1], len(bad), round(1000 * float(sd.min()), 1), flush=True)
+            if not len(bad): continue
+            left += len(bad); gm = [md for md in o.modifiers if md.type in GEN and md.show_viewport]
+            for md in gm: md.show_viewport = False
+            dg = bpy.context.evaluated_depsgraph_get(); dg.update(); eo = o.evaluated_get(dg); mm = eo.to_mesh(); cage = [v.co.copy() for v in mm.vertices]; eo.to_mesh_clear()
+            for md in gm: md.show_viewport = True
+            kd = KDTree(nv); [kd.insert(c, i) for i, c in enumerate(cage)]; kd.balance()
+            disp = np.zeros((nv, 3)); w = np.zeros(nv)
+            for i in bad:
+                vi = kd.find(Vector(co[i]))[1]; d = (np.asarray(loc[i]) - co[i]) + np.asarray(nrm[i]) * TO_L   # to the skin point, then TO_L outside
+                if np.linalg.norm(d) > np.linalg.norm(disp[vi]): disp[vi] = d; w[vi] = 1
+            ed = np.array([e.vertices[:] for e in o.data.edges])
+            for _r in range(RING):
+                acc = np.zeros_like(disp); c_ = np.zeros(nv)
+                np.add.at(acc, ed[:, 0], disp[ed[:, 1]]); np.add.at(acc, ed[:, 1], disp[ed[:, 0]]); np.add.at(c_, ed[:, 0], w[ed[:, 1]]); np.add.at(c_, ed[:, 1], w[ed[:, 0]])
+                m_ = (w == 0) & (c_ > 0); disp[m_] = 0.5 * acc[m_] / c_[m_][:, None]; w[m_] = 1
+            shift(o, disp, only=into_block(o))
+        bpy.context.view_layer.update()
+        if not left: break
+    rest_state(); summarize(measure(), 'LOCAL FINAL', 6); restore_state()
+    if 'save' in ARGV: bpy.ops.wm.save_mainfile(); print('SAVED')
+    sys.exit(0)
+if A.get('dump'):   # dump=<n>[@action@frame]: the n worst points (rest, or that pose frame) with position and top bone weights, to locate a local fix
+    spec = A['dump'].split('@'); rest_state()
+    if len(spec) == 3: arm.data.pose_position = 'POSE'; arm.animation_data_create(); arm.animation_data.action = bpy.data.actions[spec[1]]; bpy.context.scene.frame_set(int(spec[2])); EXEMPT = True
+    res = measure()
+    for o in pieces:
+        sd, co, loc, nrm = res[o.name]; nv = len(o.data.vertices); gi = {g.index: g.name for g in o.vertex_groups}
+        for i in np.argsort(sd)[:int(spec[0])]:
+            if sd[i] >= 0: break
+            ne = len(FACE_CO.get(o.name, co)); vs = [int(i)] if i < ne else FACE_SRC[o.name][i - ne][1]
+            if vs[0] >= nv: print('DUMP', o.name.split('_Cos_')[-1], 'eval', int(vs[0]), round(1000 * sd[i], 1), 'at', np.round(co[i], 3).tolist(), flush=True); continue
+            print('DUMP', o.name.split('_Cos_')[-1], int(vs[0]), round(1000 * sd[i], 1), 'at', np.round(co[i], 3).tolist(), 'basis', np.round(o.data.vertices[vs[0]].co, 3).tolist(),
+                  sorted([(gi[g.group], round(g.weight, 2)) for g in o.data.vertices[vs[0]].groups if not gi[g.group].startswith(('FIT', 'Clear'))], key=lambda t: -t[1])[:3], flush=True)
     restore_state(); sys.exit(0)
 if A.get('case'):
     case_debug(A['case']); gen_on(); restore_state(); sys.exit(0)
