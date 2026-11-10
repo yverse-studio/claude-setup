@@ -360,6 +360,12 @@ class InventoryTest(unittest.TestCase):
         for rel in ("run12/bake_lod.py", "run10/lib/index.js", "run11/run.py"):
             self.assertGreater(rows[rel]["mentioned_by"], 0, rel)
 
+    def test_same_named_wrapper_importing_by_dotted_path(self):
+        write(self.root, "pipeline/bake.py", '"""bake.py: thin wrapper."""\nfrom run13.bake import main\n')
+        write(self.root, "run13/bake.py", '"""bake.py: the real one."""\ndef main(): pass\n')
+        rows = {r["path"]: r for r in inventory.build(self.root, self.reg, rules=RULES)}
+        self.assertGreater(rows["run13/bake.py"]["mentioned_by"], 0)
+
     def test_markdown_lists_all_rows(self):
         md = inventory.to_markdown(list(self.rows.values()))
         for rel in self.rows:

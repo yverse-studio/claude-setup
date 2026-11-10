@@ -226,7 +226,8 @@ def build(root, registry, now=None, rules=None):
             cands |= words.get(st_, set())
         # a file with the same name (a fork naming itself in its docstring) counts only when it points at a path:
         # "../run11/run.py"
-        path_ref = re.compile(r"[/\\]" + re.escape(b) + r"\b")
+        # ... or imports it by a dotted path: `from run13.bake import main`, `-m pkg.bake`
+        path_ref = re.compile(r"[/\\]" + re.escape(b) + r"\b|\w\." + re.escape(os.path.splitext(b)[0]) + r"\b")
         others = {m for m in cands if m != p and os.path.dirname(m) != os.path.dirname(p) and sha_of.get(m, "") != own_sha
                   and (os.path.basename(m) != b or path_ref.search(texts.get(m, "")))}
         age_h = round((now - st.st_mtime) / 3600, 1)
