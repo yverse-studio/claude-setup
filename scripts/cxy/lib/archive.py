@@ -59,8 +59,14 @@ def plan(rows, root):
     return out
 
 
-def apply(moves, root, dest, report):
+SCRIPT_EXT = (".py", ".mjs", ".js", ".sh", ".ps1")
+
+
+def apply(moves, root, dest, report, rows=None):
     """Move files; write dest/MANIFEST.tsv (original, archived, sha16, reason). Returns number moved."""
+    inventoried = {}
+    for r in (rows if rows is not None else [m[0] for m in moves]):
+        inventoried.setdefault(os.path.dirname(r["path"]), set()).add(r["path"])
     os.makedirs(dest, exist_ok=True)
     man = os.path.join(dest, "MANIFEST.tsv")
     new = not os.path.exists(man)
@@ -69,8 +75,22 @@ def apply(moves, root, dest, report):
         w = csv.writer(fh, delimiter="\t")
         if new:
             w.writerow(["original", "archived", "sha16", "reason", "root"])
+        known = {}
+        for r, _ in moves:
+            known.setdefault(os.path.dirname(r["path"]), set())
+        listed = {}
+        for d in known:
+            try:
+                listed[d] = {os.path.join(d, f) for f in os.listdir(os.path.join(root, d)) if f.endswith(SCRIPT_EXT)}
+            except OSError:
+                listed[d] = set()
         for r, reason in moves:
             src = os.path.join(root, r["path"])
+            d = os.path.dirname(r["path"])
+            new_files = listed[d] - inventoried.get(d, set())
+            if new_files:
+                report.warn(f"kept {r['path']}: its folder has scripts newer than the inventory ({', '.join(sorted(new_files))[:120]})")
+                continue
             if not os.path.exists(src):
                 report.warn(f"gone already: {r['path']}")
                 continue
@@ -82,8 +102,15 @@ def apply(moves, root, dest, report):
                 report.red(f"already in the archive, not overwritten: {r['path']}")
                 continue
             os.makedirs(os.path.dirname(dst), exist_ok=True)
-            shutil.move(src, dst)
+            # manifest row first: a moved file is always recorded, so undo can bring it back
             w.writerow([r["path"], os.path.relpath(dst, root), r["sha"], reason, os.path.abspath(root)])
+            fh.flush()
+            os.fsync(fh.fileno())
+            try:
+                shutil.move(src, dst)
+            except OSError as e:
+                report.red(f"move failed, file stays: {r['path']} ({e})")
+                continue
             n += 1
     report.ok(f"moved {n} scripts to {os.path.relpath(dest, root)} (manifest MANIFEST.tsv)")
     return n

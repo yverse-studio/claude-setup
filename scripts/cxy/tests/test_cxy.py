@@ -99,7 +99,7 @@ class InventoryTest(unittest.TestCase):
 
     def test_sibling_import_blocks_a_move(self):
         # treat old_tools/helper.py as a plain duplicate candidate: it may move together with old_tools/main.py
-        rows = [dict(r, status="duplicate") if r["path"] == "cb/old_tools/helper.py" else r for r in self.rows.values()]
+        rows = [dict(r, status="duplicate", mentioned_by=0) if r["path"] == "cb/old_tools/helper.py" else r for r in self.rows.values()]
         moves = {r["path"] for r, _ in archive.plan(rows, self.root)}
         self.assertIn("cb/old_tools/helper.py", moves)
         # make main.py stay (protected): now helper must stay too
@@ -111,7 +111,7 @@ class InventoryTest(unittest.TestCase):
         moves = archive.plan(list(self.rows.values()), self.root)
         dest = os.path.join(self.root, "_archive", "t")
         rep = cxylib.Report(out=io.StringIO())
-        n = archive.apply(moves, self.root, dest, rep)
+        n = archive.apply(moves, self.root, dest, rep, rows=list(self.rows.values()))
         self.assertEqual(n, len(moves))
         self.assertFalse(os.path.exists(os.path.join(self.root, "cb/out/run1/build.py")))
         self.assertTrue(os.path.exists(os.path.join(dest, "cb/out/run1/build.py")))
@@ -198,6 +198,46 @@ class InventoryTest(unittest.TestCase):
         app = subprocess.run(base + ["--apply"], capture_output=True, text=True, env=env)
         self.assertEqual(app.returncode, 0, app.stdout)
         self.assertFalse(os.path.exists(os.path.join(self.root, "cb/out/run1/build.py")))
+
+    def test_package_and_relative_imports_protect_the_module(self):
+        write(self.root, "cb/tools/main.py", '"""main.py: tool."""\nfrom lib.util import f\nfrom .rel import g\n')
+        write(self.root, "cb/tools/lib/util.py", '"""util.py: same bytes."""\n')
+        write(self.root, "cb/common/util.py", '"""util.py: same bytes."""\n')
+        write(self.root, "cb/gate_r7/rel.py", '"""rel.py: imported relatively."""\n')
+        rows = {r["path"]: r for r in inventory.build(self.root, self.reg, rules=RULES)}
+        moves = {r["path"] for r, _ in archive.plan(list(rows.values()), self.root)}
+        self.assertEqual(rows["cb/tools/lib/util.py"]["status"], "helper")
+        self.assertNotIn("cb/tools/lib/util.py", moves)
+        self.assertNotIn("cb/gate_r7/rel.py", moves)
+
+    def test_module_imported_from_another_folder_stays(self):
+        write(self.root, "cb/other/run_it.py", '"""run_it.py: used."""\nimport sys; sys.path.insert(0, "../r2")\nimport shared_mod\n')
+        write(self.root, "cb/r2/shared_mod.py", '"""shared_mod.py: old round."""\n')
+        rows = {r["path"]: r for r in inventory.build(self.root, self.reg, rules=RULES)}
+        moves = {r["path"] for r, _ in archive.plan(list(rows.values()), self.root)}
+        self.assertNotIn("cb/r2/shared_mod.py", moves)
+
+    def test_script_written_after_the_inventory_blocks_its_folder(self):
+        rows = list(self.rows.values())
+        moves = archive.plan(rows, self.root)
+        write(self.root, "cb/out/run1/new_user.py", "import build\n")   # appears after the inventory
+        rep = cxylib.Report(out=io.StringIO())
+        archive.apply(moves, self.root, os.path.join(self.root, "_archive", "t"), rep, rows=rows)
+        self.assertTrue(os.path.exists(os.path.join(self.root, "cb/out/run1/build.py")))
+        self.assertFalse(os.path.exists(os.path.join(self.root, "cb/gate_r3/probe.py")))
+
+    def test_failed_move_is_reported_and_recorded(self):
+        rows = list(self.rows.values())
+        moves = [m for m in archive.plan(rows, self.root) if m[0]["path"] == "cb/out/run1/build.py"]
+        rep = cxylib.Report(out=io.StringIO())
+        orig = archive.shutil.move
+        archive.shutil.move = lambda *a: (_ for _ in ()).throw(OSError("disk full"))
+        try:
+            archive.apply(moves, self.root, os.path.join(self.root, "_archive", "t"), rep, rows=rows)
+        finally:
+            archive.shutil.move = orig
+        self.assertTrue(rep.failed)
+        self.assertTrue(os.path.exists(os.path.join(self.root, "cb/out/run1/build.py")))
 
     def test_markdown_lists_all_rows(self):
         md = inventory.to_markdown(list(self.rows.values()))

@@ -28,6 +28,18 @@ ROUND_RE = re.compile(r"(^|/)(gate_?r?\d+\w*|r\d+\w*|run\d+\w*|v\d+\w*|patch\w*|
                       r"switch\d+|round\d+)(/|$)")
 ARCHIVED_RE = re.compile(r"(^|/)(_withdrawn|_superseded\w*|_archive\w*|old_art|archive)(/|$)")
 IMPORT_RE = re.compile(r"^\s*(?:import|from)\s+([A-Za-z_][\w]*)", re.M)
+IMPORT_ANY_RE = re.compile(r"^\s*(?:from\s+(\.*[\w.]*)\s+import\s+\(?([\w ,]+)|import\s+([\w., ]+))", re.M)
+
+
+def imported_names(text):
+    """Every name an import statement can load as a file: dotted parts, relative parts, `from x import y` names."""
+    out = set()
+    for mod, names, plain in IMPORT_ANY_RE.findall(text):
+        for chunk in (mod, names, plain):
+            for part in re.split(r"[\s,.]+", chunk or ""):
+                if part and part != "as" and part.isidentifier():
+                    out.add(part)
+    return out
 EXEC_RE = re.compile(r"""open\(\s*['"]([^'"]+\.py)['"]""")
 
 
@@ -130,6 +142,13 @@ def build(root, registry, now=None, rules=None):
         for b in set(word.findall(t)) & base_names:
             mentions[b].add(p)
 
+    # a module any other script imports (also `from pkg.mod import`, relative, or via sys.path from another folder)
+    importers = {}
+    for p in scripts:
+        if p.endswith(".py"):
+            for n in imported_names(texts.get(p) or _read(p)):
+                importers.setdefault(n + ".py", set()).add(p)
+
     rows = []
     for p in scripts:
         rel = os.path.relpath(p, root)
@@ -138,6 +157,7 @@ def build(root, registry, now=None, rules=None):
         b = os.path.basename(p)
         # mentions by other files, not by its own folder and not by its own copies (same file name)
         others = {m for m in mentions.get(b, ()) if os.path.dirname(m) != os.path.dirname(p) and os.path.basename(m) != b}
+        others |= {m for m in importers.get(b, ()) if os.path.basename(m) != b and os.path.dirname(m) != os.path.dirname(p)}
         age_h = round((now - st.st_mtime) / 3600, 1)
         rows.append({
             "path": rel, "name": b, "bytes": st.st_size, "lines": text.count("\n") + 1,
@@ -149,7 +169,9 @@ def build(root, registry, now=None, rules=None):
 
     def is_helper(r):
         # in a canonical tool's folder, or a module a canonical tool imports / execs by name
-        return os.path.dirname(r["_abs"]) in canonical_dirs or (r["name"] in helper_names and not ROUND_RE.search(r["path"]))
+        d = os.path.dirname(r["_abs"])
+        # subfolders count only for a real tools folder, never for the root (a tool registered at the top level)
+        return any(d == c or (c != root and d.startswith(c + os.sep)) for c in canonical_dirs) or (r["name"] in helper_names and not ROUND_RE.search(r["path"]))
 
     def rank(r):
         return (r["_abs"] in canonical, is_helper(r), bool(r["protect"]), r["mentioned_by"] > 0,

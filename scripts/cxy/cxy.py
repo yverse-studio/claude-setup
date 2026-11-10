@@ -144,7 +144,7 @@ def cmd_archive(reg, argv):
         return rep.finish()
     with open(inv_json, encoding="utf-8") as fh:
         rows = json.load(fh)
-    archive.apply(archive.plan(rows, root), root, dest, rep)
+    archive.apply(archive.plan(rows, root), root, dest, rep, rows=rows)
     return rep.finish()
 
 
