@@ -20,7 +20,7 @@ import time
 from cxylib import sha256
 
 SCRIPT_EXT = (".py", ".mjs", ".js", ".sh", ".ps1")
-TEXT_EXT = SCRIPT_EXT + (".md", ".json", ".txt", ".tsv")
+TEXT_EXT = SCRIPT_EXT + (".md", ".json", ".txt", ".tsv", ".html", ".htm", ".bat", ".cmd", ".yml", ".yaml", ".toml", ".cfg", ".ini", ".rpy")
 SKIP_DIRS = {"node_modules", "__pycache__", ".git", "uploads", "_archive"}   # _archive: already archived
 DEAD_HOURS = 12
 ROUND_RE = re.compile(r"(^|/)(gate_?r?\d+\w*|r\d+\w*|run\d+\w*|v\d+\w*|patch\w*|lane[A-Z]\w*|build\d+|"

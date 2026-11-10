@@ -271,6 +271,16 @@ class InventoryTest(unittest.TestCase):
         self.assertEqual(out.returncode, 1)
         self.assertIn("registry", out.stdout)
 
+    def test_page_in_the_same_folder_keeps_its_script(self):
+        write(self.root, "web/v2/index.html", '<script src="game.js"></script>\n')
+        write(self.root, "web/v2/game.js", "console.log(1)\n")
+        write(self.root, "bin/run.bat", "python ..\\old\\r3\\job_tool.py\n")
+        write(self.root, "old/r3/job_tool.py", '"""job_tool.py: called by a bat."""\n')
+        rows = {r["path"]: r for r in inventory.build(self.root, self.reg, rules=RULES)}
+        moves = {r["path"] for r, _ in archive.plan(list(rows.values()), self.root)}
+        self.assertNotIn("web/v2/game.js", moves)
+        self.assertNotIn("old/r3/job_tool.py", moves)
+
     def test_markdown_lists_all_rows(self):
         md = inventory.to_markdown(list(self.rows.values()))
         for rel in self.rows:

@@ -35,6 +35,18 @@ def plan(rows, root):
                 texts[rel] = ""
         return texts[rel]
 
+    listing = {}
+
+    def folder_texts(d):
+        if d not in listing:
+            from inventory import TEXT_EXT
+            try:
+                listing[d] = [os.path.join(d, f) for f in os.listdir(os.path.join(root, d) if d else root)
+                              if f.endswith(TEXT_EXT) and not f.startswith("INVENTORY")]
+            except OSError:
+                listing[d] = []
+        return listing[d]
+
     changed = True
     while changed:
         changed = False
@@ -42,11 +54,13 @@ def plan(rows, root):
             if r["path"] not in cand:
                 continue
             pat = re.compile(r"\b" + re.escape(os.path.splitext(r["name"])[0]) + r"\b")
-            for sib in by_dir[os.path.dirname(r["path"])]:
-                if sib is not r and sib["path"] not in cand and pat.search(text(sib["path"])):
-                    cand.discard(r["path"])
-                    changed = True
-                    break
+            d = os.path.dirname(r["path"])
+            # staying siblings: script rows not moving, plus every other text file in the folder (html, bat, yml, ...)
+            sibs = [sib["path"] for sib in by_dir[d] if sib is not r and sib["path"] not in cand]
+            sibs += [rel for rel in folder_texts(d) if rel not in cand and rel != r["path"] and rel not in sibs]
+            if any(pat.search(text(rel)) for rel in sibs):
+                cand.discard(r["path"])
+                changed = True
     out = []
     for r in rows:
         if r["path"] not in cand:
