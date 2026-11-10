@@ -112,6 +112,27 @@ the website gets a download button, a tag builds and signs the APK, and later re
 by workflow. You do the account steps it sends you, one at a time (Play account, service account,
 testers). Every project adds its lessons to that skill.
 
+## Live board (NOW.md)
+
+What you do: nothing; read it when you ask "who is doing what". Every project keeps ONE board, `NOW.md`,
+at the root of its project files (`/mnt/project-files/NOW.md`, template `docs/templates/NOW.md`;
+network mount: trailing-slash path, re-read ~10 s after writing). The coordinator creates it from the
+template if it is missing and links it in every status answer.
+
+1. **Every job writes one line when it starts and updates that same line when it ends.** A job is a
+   thread, a laptop run or a routine. Columns: `| time (UTC) | who (thread title + link) | model | what | status | waiting on |`.
+2. **Status** is `running`, `waiting` (put what or who in `waiting on`), `done` or `failed`. A job that
+   ends in a hand-off or a `Done:` line sets `done` as its last step, before it resolves itself.
+3. **Archive.** A `done` line older than 24 h moves to `NOW-archive.md` (same table, newest last);
+   whoever notices does it (the coordinator at each start). A `running` line whose job is gone gets
+   `failed`, never a silent delete.
+4. **Edit only your own line.** Re-read the file right before writing: the last write wins and other
+   jobs write too.
+5. **Not a lock.** `WHO.md` stays the hard claim for the Blender lane only (a second job there waits);
+   NOW.md only shows what runs so nobody guesses.
+
+Every brief's `Done when:` includes "NOW.md line set to done" (`.claude/skills/operator/briefs.md`).
+
 ## Share a video
 
 What you do: in Instagram, TikTok or YouTube tap Share, then Copy link, and paste it into the project
