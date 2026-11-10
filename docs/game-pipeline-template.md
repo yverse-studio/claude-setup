@@ -49,9 +49,10 @@ StudioLibrary/
 | Builder | cheap; heavy 3D (weights, topology, shape-key solving) the expensive tier | edits exactly the plan, renders previews only, never scores itself |
 | Reader / lists / index refresh | cheapest | no builds |
 
-- **Bar: 4.8/5** for asset gates in this template, plus every hard check green. Below the bar the
-  gate lists exact fixes and the same gate runs again. The score mechanics (rounds, best eligible
-  version, judge noise) have one home: [`gate.md`](../.claude/skills/operator/gate.md), Scored gates.
+- **Bar: 4.5/5 by default** (the PASS in [`gate.md`](../.claude/skills/operator/gate.md), Scored
+  gates), plus every hard check green. **4.8/5 only for the important things:** scenes, key shots
+  and the opening. No blanket 4.8. Below the bar the gate lists exact fixes and the same gate runs
+  again. The score mechanics (rounds, best eligible version, judge noise) have one home: `gate.md`.
 - Gate results are always posted with marked image links, text and labels on images large enough to
   read on a phone.
 - Loop that worked (five rounds): architect plan, builder previews only (low percentage, few
