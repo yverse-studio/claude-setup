@@ -46,6 +46,11 @@ again, and never Playwright on Chrome's main profile (Chrome 136+ blocks remote 
 the run just hangs). Chrome closed: ask him to open it, then go on. Headless Playwright stays for
 pages without a login.
 
+"Mein Browser" (yskills, 2026-11-10, corrected twice): always this Chrome on his laptop, never the
+browser pane inside the Claude app, which has none of his logins. A cloud thread without
+`claude-in-chrome` tools does not open the app pane; it starts a Remote Control session on the
+laptop that drives his Chrome (its own tab group), he signs in, the session does the rest.
+
 ## What still needs yskills' hands
 
 **Showing yskills something** (2026-10-18, he reads on his phone): a page opened in Claude's Chrome
