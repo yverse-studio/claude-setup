@@ -138,6 +138,25 @@ One file per game: a scene table (chapter, beat, slot, type), then one brief per
 - **Shape keys and expressions**: by name from the laptop README; values per phase.
 - **Sound** cues, and **checks**: feet planted, no clipping, loop seam, hands.
 
+## Chapter roles (who does what, per chapter)
+
+A render-based story game is made chapter by chapter, like a VN studio (yskills 2026-11-10: "like a real project, every chapter grows the library and the workflow"). The story text is the only input; two Opus passes extract everything from it before anyone builds. Expensive models plan and gate, cheap models build ([`TEAMS.md`](TEAMS.md), Models).
+
+| Step | Studio role | Our role, runs as, model | Hands over |
+|---|---|---|---|
+| 0 | Writer, script doctor | Story team (`storyteller` 07), threads | chapter text, Editor 5/5, scene tags and animation blocks in the text |
+| 1 | Producer / line producer: script breakdown | `Producer · CH<n>` thread, Opus | `needs.md`: per scene set, cast and outfit state, props, clips; each library hit with its path, each miss a job with role and wave |
+| 2 | Director / storyboard, reference researcher | `Director · CH<n>` thread (Designer playbook as scene director), Opus; Researcher subagent, Sonnet | `shotlist.md` (one row per image or clip: slot, camera, pose, expression, outfit, light, sound cue, ref), `REFS.md` (per shot: ref file, what to copy), animation plan (intro, loop, finish beats) |
+| 3 | Modeller, rigger, costume, environment, props | Programmer threads, Sonnet (Fable only for rig weights or topology) | only the misses of `needs.md`, each in the library with its gate passed |
+| 4 | Layout / camera | planned by the Director, done by the still builder | cameras as data per set, a framing check, a contact sheet with large labels |
+| 5 | Lighting, render, animation | still builder (Sonnet) with an Opus fix list per round; `Animator · <clip>` | previews with the ref beside each shot |
+| 6 | QA / dailies | one fixed gate thread per area, Opus, never the builder | `GATE.md` with marked images (`operator/gate.md`, Scored gates) |
+| 7-9 | Render, sound, integration | Programmer, Sound Designer, Sonnet | finals, sound per the cue column, slots filled, 0 placeholders |
+| 10 | Playtest | Tester with a Playtester subagent, Opus | every route played, screenshots |
+| 11 | Pipeline TD (retro) | the Producer | new assets promoted into the library, one lesson line per surprise, the four planning files copied as the next chapter's start |
+
+Researcher, Architect (the fix list), Continuity (a column in the shot list) and Playtester are subagents, never threads. Waves: a wave goes from build to integration as soon as its assets pass; the next wave builds meanwhile. Project paths and the current chapter's status live in the project's own copy of this table, never in git when the game is 18+.
+
 ## The chapter 1 night scenes (yskills builds them himself)
 
 Claude threads do not render these; they only keep this recipe right. Five seamless loops (one per position)
