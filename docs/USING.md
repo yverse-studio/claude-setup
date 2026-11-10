@@ -4,34 +4,27 @@ One page, made for a phone. Every number has its source; "not measured yet" mean
 
 ## Start a project
 
-Once per new claude.ai project, before the first message. The text is a short pointer: every
-session, the project chat included, loads this repo with `add_repo` and follows its `CLAUDE.md`,
-so the rules live here only.
+The one way to start a new claude.ai project. You write one line; nothing is pasted from chat and
+no script runs in the project chat (it has no Bash).
 
-1. Run `node scripts/project-instructions.mjs <name> --about "<one line>"` (or ask a thread to
-   print it) and copy the text. Add `--kind` when `projects/<name>.json` doesn't say it,
-   `--repo none` for a project with no repo (a social or video team), `--repo new` before the
-   repo exists; the flags: the script's header.
-2. In the project: **Project settings > Memory > Project instructions**, paste, save.
-3. **Project settings > Repositories**: add `yverse-studio/claude-setup` and the project's repo.
-4. **Project settings > Cloud environment**: pick **Claude Setup**. Proof it worked: the project
-   chat's first reply opens with `Luna · rules #<hash> · guards: on` (written by the hook, blocked
-   without it). A new project's chat container skips the environment's setup script until
-   you restart the project once (routing test 2026-10-27); auto mode denies it installing hooks
-   into itself even when you ask ([Self-Modification]). So restart the project after the start
-   message. Without hooks, its first reply opens with
-   `Luna · guards: OFF, starte das Projekt neu`: until you do, it follows the rules from the
-   project instructions, and every thread (which does run the setup script) checks its own start
-   (role, kit, size, brief lines; not the model) against `docs/TEAMS.md` and sends a bad one back. Every reply to you, in every chat, project and
-   thread, is Luna: a cute e-girl with kaomoji (the boot text carries her card from the first message,
-   hooks or not; where the guards run, rule-guard also adds it to each turn and blocks a reply
-   without a kaomoji). A Luna who drops the tone is a soft warning; only the hook line proves anything. The guards (team-guard,
-   rule-guard) are hooks that only exist where the environment's setup script ran
-   (`cloud/bootstrap.sh`); a new project starts on the account's default environment, where
-   nothing is enforced (blind test 2026-10-27). To skip this step for every future project, paste
-   this one line once into the Setup script of each other environment in that menu (gear > Setup
-   script; the same as [`cloud/bootstrap.sh`](https://github.com/yverse-studio/claude-setup/blob/main/cloud/bootstrap.sh)):
-   `f="$(mktemp)" && curl -fsSL --retry 3 -o "$f" https://raw.githubusercontent.com/yverse-studio/claude-setup/main/cloud/setup.sh && bash "$f"`
+1. Make the project, open its chat, write `hi Luna`. Your account preferences make the chat read
+   `/mnt/project-files/claude-setup/COORDINATOR-CARD.md` first.
+2. The card is missing in a new project, so the chat starts one thread "Setup-Karte einrichten"
+   (Programmer, kit setup, size S, Sonnet). It clones claude-setup, runs
+   `node scripts/coordinator-card.mjs /mnt/project-files/claude-setup/COORDINATOR-CARD.md` and writes
+   the card plus `COORDINATOR-RULES-INDEX.md` into that project's files. The chat's first reply then
+   opens with `Luna · card <hash>`.
+3. The card's pre-flight makes the chat prepend `operator/templates/project-instructions.md`, filled
+   for the project, above the existing instructions (nothing existing is removed).
+4. You, once: Project settings > Cloud environment: pick **Claude Setup**, then restart the project.
+   The setup script (`cloud/setup.sh`, one line below) only runs in a new project's chat after a restart
+   (routing test 2026-10-27; `docs/tech-traps.md`). Every thread runs it and checks its own start
+   (role, kit, size, brief lines) against `docs/TEAMS.md`.
+
+Every reply to you is Luna (a cute e-girl with kaomoji); in a thread the hooks add it and block a
+reply without one (`global/rule-guard.mjs`). Environment setup script, pasted once (the same as
+[`cloud/bootstrap.sh`](https://github.com/yverse-studio/claude-setup/blob/main/cloud/bootstrap.sh)):
+`f="$(mktemp)" && curl -fsSL --retry 3 -o "$f" https://raw.githubusercontent.com/yverse-studio/claude-setup/main/cloud/setup.sh && bash "$f"`
 
 A rule change needs no new paste: sessions read the rules from this repo, and the guards replace
 themselves from `main` at each start. The cloud keeps a built image per setup script, so an
