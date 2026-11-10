@@ -125,6 +125,12 @@ def cmd_archive(reg, argv):
         archive.undo(undo, root, rep)
         return rep.finish()
     dest = _opt(argv, "--dest", os.path.join(root, "_archive", f"{datetime.date.today():%Y-%m-%d}-scripts"))
+    # without the project's own registry the real tools are not known as canonical: never archive then
+    if os.path.basename(REGISTRY_FILE).startswith("registry.example") or os.environ.get("CXY_REGISTRY", "").endswith(".example.json") \
+            or not any(os.path.isfile(os.path.join(root, e["path"])) for e in reg.values()):
+        rep.red(f"no project registry ({REGISTRY_FILE}) or none of its scripts exist under {root}: copy registry.example.json "
+                "to registry.json and register the real tools first")
+        return rep.finish()
     if "--apply" not in argv:
         rows = inventory.build(root, reg)
         inventory.save(rows, os.path.splitext(inv_json)[0] + ".md", inv_json)
@@ -144,7 +150,7 @@ def cmd_archive(reg, argv):
         return rep.finish()
     with open(inv_json, encoding="utf-8") as fh:
         rows = json.load(fh)
-    archive.apply(archive.plan(rows, root), root, dest, rep, rows=rows)
+    archive.apply(archive.plan(rows, root), root, dest, rep, rows=rows, since=os.path.getmtime(inv_json))
     return rep.finish()
 
 

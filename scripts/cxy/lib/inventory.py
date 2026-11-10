@@ -28,7 +28,9 @@ ROUND_RE = re.compile(r"(^|/)(gate_?r?\d+\w*|r\d+\w*|run\d+\w*|v\d+\w*|patch\w*|
                       r"switch\d+|round\d+)(/|$)")
 ARCHIVED_RE = re.compile(r"(^|/)(_withdrawn|_superseded\w*|_archive\w*|old_art|archive)(/|$)")
 IMPORT_RE = re.compile(r"^\s*(?:import|from)\s+([A-Za-z_][\w]*)", re.M)
-IMPORT_ANY_RE = re.compile(r"^\s*(?:from\s+(\.*[\w.]*)\s+import\s+\(?([\w ,]+)|import\s+([\w., ]+))", re.M)
+IMPORT_ANY_RE = re.compile(r"^\s*(?:from\s+(\.*[\w.]*)\s+import\s+(\([\w\s,#]*\)?|[\w ,]+)|import\s+([\w., ]+))", re.M)
+JS_IMPORT_RE = re.compile(r"""(?:require\(\s*|import\s*\(\s*|from\s+|import\s+)['"]([^'"]+)['"]""")
+DASH_M_RE = re.compile(r"-m\s+([\w.]+)")
 
 
 def imported_names(text):
@@ -36,9 +38,23 @@ def imported_names(text):
     out = set()
     for mod, names, plain in IMPORT_ANY_RE.findall(text):
         for chunk in (mod, names, plain):
-            for part in re.split(r"[\s,.]+", chunk or ""):
+            for part in re.split(r"[\s,.()]+", chunk or ""):
                 if part and part != "as" and part.isidentifier():
                     out.add(part)
+    for mod in DASH_M_RE.findall(text):   # python -m pkg.mod in shell scripts and docs
+        out |= {p for p in mod.split(".") if p.isidentifier()}
+    return out
+
+
+def js_imported_files(text):
+    """File names a JS module loads by a relative or bare specifier, with and without extension."""
+    out = set()
+    for spec in JS_IMPORT_RE.findall(text):
+        base = spec.rstrip("/").split("/")[-1]
+        if not base:
+            continue
+        stem = base.rsplit(".", 1)[0] if base.endswith((".js", ".mjs")) else base
+        out |= {stem + ".js", stem + ".mjs"}
     return out
 EXEC_RE = re.compile(r"""open\(\s*['"]([^'"]+\.py)['"]""")
 
@@ -144,10 +160,12 @@ def build(root, registry, now=None, rules=None):
 
     # a module any other script imports (also `from pkg.mod import`, relative, or via sys.path from another folder)
     importers = {}
-    for p in scripts:
-        if p.endswith(".py"):
-            for n in imported_names(texts.get(p) or _read(p)):
-                importers.setdefault(n + ".py", set()).add(p)
+    for p in set(scripts) | set(texts):
+        t = texts.get(p) or _read(p)
+        for n in imported_names(t) if p.endswith((".py", ".sh", ".ps1", ".md", ".txt")) else ():
+            importers.setdefault(n + ".py", set()).add(p)
+        for f in js_imported_files(t) if p.endswith((".js", ".mjs")) else ():
+            importers.setdefault(f, set()).add(p)
 
     rows = []
     for p in scripts:
@@ -170,8 +188,7 @@ def build(root, registry, now=None, rules=None):
     def is_helper(r):
         # in a canonical tool's folder, or a module a canonical tool imports / execs by name
         d = os.path.dirname(r["_abs"])
-        # subfolders count only for a real tools folder, never for the root (a tool registered at the top level)
-        return any(d == c or (c != root and d.startswith(c + os.sep)) for c in canonical_dirs) or (r["name"] in helper_names and not ROUND_RE.search(r["path"]))
+        return d in canonical_dirs or (r["name"] in helper_names and not ROUND_RE.search(r["path"]))
 
     def rank(r):
         return (r["_abs"] in canonical, is_helper(r), bool(r["protect"]), r["mentioned_by"] > 0,

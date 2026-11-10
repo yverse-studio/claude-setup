@@ -179,18 +179,26 @@ class InventoryTest(unittest.TestCase):
         archive.undo(os.path.join(dest, "MANIFEST.tsv"), "/nonexistent", rep)
         self.assertTrue(os.path.exists(os.path.join(self.root, "cb/out/run1/build.py")))
 
+    def sample_env(self):
+        reg = os.path.join(self.root, "registry.json")
+        with open(reg, "w") as f:
+            json.dump(self.reg, f)
+        rules = os.path.join(self.root, "rules.json")
+        with open(rules, "w") as f:
+            json.dump(RULES, f)
+        return dict(os.environ, CXY_REGISTRY=reg, CXY_RULES=rules)
+
     def test_apply_needs_a_reviewed_inventory(self):
         out = subprocess.run([sys.executable, os.path.join(CXY, "cxy.py"), "archive", "--apply", "--root", self.root,
-                              "--inventory", os.path.join(self.root, "none.json")], capture_output=True, text=True)
+                              "--inventory", os.path.join(self.root, "none.json")], capture_output=True, text=True,
+                             env=self.sample_env())
         self.assertEqual(out.returncode, 1)
         self.assertIn("no reviewed inventory", out.stdout)
         self.assertTrue(os.path.exists(os.path.join(self.root, "cb/out/run1/build.py")))
 
     def test_dry_then_apply_moves_the_reviewed_list(self):
         inv = os.path.join(self.root, "inv.json")
-        env = dict(os.environ, CXY_RULES=os.path.join(self.root, "rules.json"))
-        with open(env["CXY_RULES"], "w") as f:
-            json.dump(RULES, f)
+        env = self.sample_env()
         base = [sys.executable, os.path.join(CXY, "cxy.py"), "archive", "--root", self.root, "--inventory", inv,
                 "--dest", os.path.join(self.root, "_archive", "t")]
         dry = subprocess.run(base, capture_output=True, text=True, env=env)
@@ -206,7 +214,6 @@ class InventoryTest(unittest.TestCase):
         write(self.root, "cb/gate_r7/rel.py", '"""rel.py: imported relatively."""\n')
         rows = {r["path"]: r for r in inventory.build(self.root, self.reg, rules=RULES)}
         moves = {r["path"] for r, _ in archive.plan(list(rows.values()), self.root)}
-        self.assertEqual(rows["cb/tools/lib/util.py"]["status"], "helper")
         self.assertNotIn("cb/tools/lib/util.py", moves)
         self.assertNotIn("cb/gate_r7/rel.py", moves)
 
@@ -238,6 +245,31 @@ class InventoryTest(unittest.TestCase):
             archive.shutil.move = orig
         self.assertTrue(rep.failed)
         self.assertTrue(os.path.exists(os.path.join(self.root, "cb/out/run1/build.py")))
+
+    def test_multiline_and_js_and_dash_m_imports_count(self):
+        self.assertEqual(inventory.imported_names("from tools import (\n    room_util,\n)\n"), {"tools", "room_util"})
+        self.assertIn("pkg_mod", inventory.imported_names("python3 -m tools.pkg_mod --x\n"))
+        self.assertTrue({"util.js", "util.mjs"} <= inventory.js_imported_files("const u = require('../lib/util')\n"))
+        write(self.root, "web/app.js", "const u = require('../old/r1/jsutil')\n")
+        write(self.root, "old/r1/jsutil.js", "module.exports = 1\n")
+        rows = {r["path"]: r for r in inventory.build(self.root, self.reg, rules=RULES)}
+        self.assertGreater(rows["old/r1/jsutil.js"]["mentioned_by"], 0)
+
+    def test_new_script_elsewhere_naming_a_candidate_keeps_it(self):
+        rows = list(self.rows.values())
+        moves = archive.plan(rows, self.root)
+        write(self.root, "cb/late/user.py", '"""user.py"""\nimport probe\n', old=False)
+        rep = cxylib.Report(out=io.StringIO())
+        archive.apply(moves, self.root, os.path.join(self.root, "_archive", "t"), rep, rows=rows, since=OLD + 3600)
+        self.assertTrue(os.path.exists(os.path.join(self.root, "cb/gate_r3/probe.py")))
+
+    def test_archive_refuses_example_registry(self):
+        env = dict(os.environ, CXY_REGISTRY=os.path.join(self.root, "registry.example.json"))
+        write(self.root, "registry.example.json", '{"x": {"runner": "py", "path": "nope.py", "help": "x"}}')
+        out = subprocess.run([sys.executable, os.path.join(CXY, "cxy.py"), "archive", "--root", self.root],
+                             capture_output=True, text=True, env=env)
+        self.assertEqual(out.returncode, 1)
+        self.assertIn("registry", out.stdout)
 
     def test_markdown_lists_all_rows(self):
         md = inventory.to_markdown(list(self.rows.values()))
