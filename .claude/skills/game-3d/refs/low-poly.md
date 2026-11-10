@@ -23,7 +23,7 @@ Overdraw and shaders hurt mobile more than triangle count (C). Budget draw calls
 - Stylised objects under about 5k tris rarely need LOD; instancing and culling matter more (U).
 
 ## Rigging for animation
-- 4 bone influences per vertex is the default and the cheap setting (V, Unity FBX importer docs); glTF skinning carries 4 per `JOINTS_0` set (C).
+- 4 bone influences per vertex is the default and the cheap setting (V, Unity FBX importer docs); glTF skinning carries 4 per `JOINTS_0` set and three.js reads only that set (V, glTF spec, GLTFLoader.js; [`crowds-and-lod.md`](crowds-and-lod.md)).
 - VRM 1.0 requires 15 humanoid bones (V, vrm.dev/vrm1/humanoid). Mixamo names map to VRM names with a retarget table (C).
 - 2 to 3 edge loops at elbows and knees, no triangles in bending zones (U, standard practice; check the Polycount wiki).
 
