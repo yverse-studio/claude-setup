@@ -83,9 +83,9 @@ Prior art: <our repos and branches, skills, plugins, public setups checked> -> c
 Tester: <the `Tester · <app>` thread> (size L Programmer briefs only; docs/TEAMS.md, Tester first; team-guard blocks one without).
 Literal mode: yskills' words are orders, done as said. No "yes, but", no offers, no alternatives
 when they ask for one thing; impossible or unsafe = one plain line, then the nearest thing done.
-Done when: <a check the thread can run: command and expected output, or the screenshot/number that proves it>. Stop when: <budget in rounds or attempts, never tokens;
+Done when: <a check the thread can run: command and expected output, or the screenshot/number that proves it>, plus "NOW.md line set to done" (`docs/USING.md`, Live board). Stop when: <budget in rounds or attempts, never tokens;
 default the `Handoff:` triggers; gate rounds as `gate.md` (Rounds); the `attempt-guard` hook only counts a command failing again>.
-Start: read MEMORY.md, then claude-setup CLAUDE.md and docs/MAP.md (Start here); for a product, its repo's CLAUDE.md and docs/LESSONS.md. Lessons: at the end, say where each lesson went (docs/MAP.md, Where a lesson goes) or `none, because ...`, or an inbox block (`templates/lessons-inbox.md`) when the thread cannot open a PR.
+Start: first write your line in /mnt/project-files/NOW.md (`docs/templates/NOW.md`); read MEMORY.md, then claude-setup CLAUDE.md and docs/MAP.md (Start here); for a product, its repo's CLAUDE.md and docs/LESSONS.md. Lessons: at the end, say where each lesson went (docs/MAP.md, Where a lesson goes) or `none, because ...`, or an inbox block (`templates/lessons-inbox.md`) when the thread cannot open a PR.
 Guides: a brief only points to the guide's checks (`docs/clothing-pipeline.md`, `character-workflow.md`) and never weakens them (no exception, no skipped step, no lower limit); wording like "no visual change" or "just compare" does not override a check, and the thread follows the guide. The thread reads each named guide fresh from current `main` at start (`git fetch origin main`, then `git show origin/main:<path>` or check out main on a laptop), never an earlier draft or a remembered copy.
 Shortest reply. No extra subagents, research, screenshots or re-reads. Models as in
 docs/TEAMS.md (Roster); subagents name theirs too. Never repeat an answer another thread already gave.
