@@ -201,20 +201,39 @@ def build(root, registry, now=None, rules=None):
         for f in js_imported_files(t):
             importers.setdefault(f, set()).add(p)
 
+    # whole-word index over every text file (conservative: any word equal to a script's stem counts as a caller)
+    words = {}
+    for p, t in texts.items():
+        for wd in set(re.findall(r"[A-Za-z_][\w\-]*", t)):
+            words.setdefault(wd, set()).add(p)
+    sha_of = {p: sha256(p)[:16] for p in scripts}
+
     rows = []
     for p in scripts:
         rel = os.path.relpath(p, root)
         st = os.stat(p)
         text = texts.get(p) or _read(p)
         b = os.path.basename(p)
-        # mentions by other files, not by its own folder and not by its own copies (same file name)
-        others = {m for m in mentions.get(b, ()) if os.path.dirname(m) != os.path.dirname(p) and os.path.basename(m) != b}
-        others |= {m for m in importers.get(b, ()) if os.path.basename(m) != b and os.path.dirname(m) != os.path.dirname(p)}
+        # mentioned = its file name, an import of it, or its bare stem as a whole word (`python -c "import x"`,
+        # `--python-expr`, `import_module("x")`, `require('./lib')` -> lib/index.js) in any other text file outside its
+        # folder; a byte-identical copy of it does not count (copies name themselves)
+        own_sha = sha_of.get(p)
+        stems = {os.path.splitext(b)[0]}
+        if stems == {"index"}:
+            stems.add(os.path.basename(os.path.dirname(p)))
+        cands = set(mentions.get(b, ())) | set(importers.get(b, ()))
+        for st_ in stems:
+            cands |= words.get(st_, set())
+        # a file with the same name (a fork naming itself in its docstring) counts only when it points at a path:
+        # "../run11/run.py"
+        path_ref = re.compile(r"[/\\]" + re.escape(b) + r"\b")
+        others = {m for m in cands if m != p and os.path.dirname(m) != os.path.dirname(p) and sha_of.get(m, "") != own_sha
+                  and (os.path.basename(m) != b or path_ref.search(texts.get(m, "")))}
         age_h = round((now - st.st_mtime) / 3600, 1)
         rows.append({
             "path": rel, "name": b, "bytes": st.st_size, "lines": text.count("\n") + 1,
             "mtime": int(st.st_mtime), "age_h": age_h,
-            "sha": sha256(p)[:16], "what": summary_line(text),
+            "sha": sha_of[p], "what": summary_line(text),
             "mentioned_by": len(others),
             "protect": protection(rel, age_h, rules, st.st_size) or (
                 "Blender add-on / startup script (loaded by place)"

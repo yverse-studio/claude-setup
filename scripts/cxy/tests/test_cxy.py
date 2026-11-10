@@ -349,6 +349,17 @@ class InventoryTest(unittest.TestCase):
         rows = {r["path"]: r for r in inventory.build(self.root, self.reg, rules=RULES)}
         self.assertTrue(rows["tests/test_rigging/test_bones.py"]["protect"])
 
+    def test_callers_inside_strings_folder_imports_and_same_name(self):
+        write(self.root, "tools2/bake_all.bat", 'blender -b x.blend --python-expr "import sys; import bake_lod; bake_lod.main()"\n')
+        write(self.root, "run12/bake_lod.py", '"""bake_lod.py"""\n')
+        write(self.root, "run10/main.js", "const l = require('./lib')\n")
+        write(self.root, "run10/lib/index.js", "module.exports = 1\n")
+        write(self.root, "export/run.py", 'import subprocess; subprocess.run(["py", "../run11/run.py"])\n')
+        write(self.root, "run11/run.py", '"""run.py: the old runner."""\n')
+        rows = {r["path"]: r for r in inventory.build(self.root, self.reg, rules=RULES)}
+        for rel in ("run12/bake_lod.py", "run10/lib/index.js", "run11/run.py"):
+            self.assertGreater(rows[rel]["mentioned_by"], 0, rel)
+
     def test_markdown_lists_all_rows(self):
         md = inventory.to_markdown(list(self.rows.values()))
         for rel in self.rows:
