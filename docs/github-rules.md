@@ -16,6 +16,17 @@ What GitHub forbids that this setup could touch, what we do about it. Sources:
 
 A thread that is unsure whether something violates a row above asks yskills with a card before pushing.
 
+## Throttle (yskills 2026-11-10)
+
+Evidence: 2026-11-10 had 12+ new draft PRs in claude-setup, 12 CI runs in 7 minutes and 5 pushes in 10 minutes to one branch, all under yskills' login. That is the "automated bulk activity" row above, and its spacing rule alone was not kept. GitHub never named the reason for the 2026-10-29 suspension, so a link between the two is a guess; the numbers below are cheap to keep anyway.
+
+1. Per repo, one push per PR branch every 10 minutes at most. Run `node scripts/pre-pr.mjs --body <file>` first, so a push is not followed by a fix push.
+2. The PR body (Prior art and Lessons lines included) is complete when the PR opens; fixing it later is a re-run and a mail.
+3. Org-wide at most 4 new PRs per hour (the coordinator counts). A fifth waits or is batched (Batching small changes).
+4. Same-minute bursts are batched: a thread with several small changes makes one PR, not one per change.
+5. A failed CI run is fixed in one push after reading the log; no trial pushes.
+6. Manual workflow dispatches (`new-project`, `build-logs`) are not retried until the cause in the log is fixed (a Cloudflare GitHub app link, a token), then run once.
+
 ## Batching small changes
 
 Pushes and merges are spaced out (table above), so a small change that need not ship now (a doc tip, a lesson line, a typo) is not its own PR:
