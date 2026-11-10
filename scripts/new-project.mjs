@@ -508,13 +508,14 @@ export async function main() {
   const cf = cfClient(cfToken, account)
   const gh = ghClient(env('PROJECTS_GITHUB_TOKEN', false))
 
-  // Token-free path: the repo was made with the laptop's gh login or a cloud thread's GitHub App
-  // (docs/USING.md), so the Worker and Builds steps need only the Cloudflare token. Forced by
-  // GITHUB_TOKEN_FREE=true, or taken when the PAT is missing or answers 401 (expired).
+  // Token-free path: the repo was made with the laptop's gh login (docs/USING.md), so the Worker and
+  // Builds steps need only the Cloudflare key. Only on purpose (GITHUB_TOKEN_FREE=true, the
+  // workflow_dispatch input); a missing or expired PAT stops the run instead of switching silently.
   let found = null
-  if (env('PROJECTS_GITHUB_TOKEN', false) && process.env.GITHUB_TOKEN_FREE !== 'true') {
+  if (process.env.GITHUB_TOKEN_FREE !== 'true') {
+    if (!env('PROJECTS_GITHUB_TOKEN', false)) throw new Error('PROJECTS_GITHUB_TOKEN is not set: make the repo with the laptop gh login and run the workflow with token_free true (docs/USING.md)')
     found = await gh(`/repos/${org}/${repoName}`)
-    if (found.status === 401) { log('github', 'PROJECTS_GITHUB_TOKEN answered 401 (expired): token-free path'); found = null }
+    if (found.status === 401) throw new Error('PROJECTS_GITHUB_TOKEN answered 401 (expired): make the repo with the laptop gh login and run the workflow with token_free true (docs/USING.md)')
   }
   const tokenFree = found === null
   const ghToken = tokenFree ? '' : env('PROJECTS_GITHUB_TOKEN')

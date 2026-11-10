@@ -70,9 +70,9 @@ What you do: write the idea. A thread does the rest.
    `yskills`: `gh repo create yverse-studio/<name> --private`, Actions off; cloud threads cannot
    create repos, they `add_repo` with push once it exists). Nobody asks you for a token. Then push the code to
    `main` and run the workflow below with `token_free` true: it makes only the D1 databases, the
-   Worker and the Builds link from the Cloudflare key. `PROJECTS_GITHUB_TOKEN` is the fallback that
-   lets the workflow make and fill the repo itself; if it is missing or expired (401) the run
-   switches to the token-free path on its own.
+   Worker and the Builds link from the Cloudflare key. Without `token_free` the run uses
+   `PROJECTS_GITHUB_TOKEN` to make and fill the repo itself; if that is missing or expired (401) the
+   run stops and says to use `token_free` (it never switches silently).
 3. Start it: push branch `new/<name>` **in one push, with the file in it** (git, or `push_files` to
    a new branch; `create_branch` then `create_or_update_file` is two pushes and the first, empty
    one makes a site), file `projects/<name>.json`:
