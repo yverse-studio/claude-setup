@@ -220,7 +220,7 @@ and sat behind the owner's passkey, so nobody clicked the real app.
 - **Builds run one at a time** on Workers Builds: every `claude/*` push queues in front of `main`'s
   deploy. Push once per finished round, at most three branches building at once; a stuck build is
   cancelled with `build-logs` (`cancel`). A branch push the webhook missed (no build in the list for
-  that branch, no check run on the PR) is started with `build-logs` (`branch`, optional `commit`); it waits up to
+  that branch, no check run on the PR) is started with `build-logs` (`branch`, never the production branch; the tip is built); it waits up to
   4 minutes and prints the log tail with the preview URL. `deploy-watch.yml` catches what still slips. [advisory]
 
 ## Two routes to Cloudflare, and what the deploy tests taught

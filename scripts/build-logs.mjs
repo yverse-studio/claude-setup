@@ -3,7 +3,7 @@
 // cannot open the Cloudflare dashboard) can read why a build failed. Run by
 // .github/workflows/build-logs.yml (workflow_dispatch). Every line goes through new-project's
 // redact(): ids, uuids and token-like strings never reach the public Actions log.
-// With CANCEL=true it also cancels builds stuck for over 10 minutes. With BUILD_BRANCH=<branch> (and optional BUILD_COMMIT) it starts a Workers Builds build of that branch (a Worker Preview) when the push webhook missed it, waits for it, then prints its log tail, which carries the preview URL. Only registered projects (`projects/<name>.json` on main). Reads CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID, read-only calls only.
+// With CANCEL=true it also cancels builds stuck for over 10 minutes. With BUILD_BRANCH=<branch> it starts a Workers Builds build of that branch (a Worker Preview) when the push webhook missed it, waits for it, then prints its log tail, which carries the preview URL. Only registered projects (`projects/<name>.json` on main). Reads CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID, read-only calls only.
 import { existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { validName, redact, describe } from './new-project.mjs'
@@ -48,17 +48,19 @@ export function openBuilds(builds, now = Date.now(), minutes = STUCK_MINUTES) {
 
 // Branch names go into an API body, not a shell, but the Actions log is public: plain git ref characters only.
 export const validBranch = (b) => typeof b === 'string' && /^[A-Za-z0-9][A-Za-z0-9._/-]{0,100}$/.test(b) && !b.includes('..')
-export const validCommit = (c) => typeof c === 'string' && /^[0-9a-f]{7,40}$/.test(c)
+// Never the production branch: a manual build of main would be a deploy outside the gate. The trigger builds the branch tip, so no commit is forwarded.
+export const isProduction = (b, trigger) => ['main', 'master', ...(trigger?.branch_includes || [])].includes(b)
 
 export const WAIT_MS = 4 * 60000
-async function triggerBuild(cf, workerId, branch, commit, listBuilds, wait = (ms) => new Promise((r) => setTimeout(r, ms))) {
+async function triggerBuild(cf, workerId, branch, listBuilds, wait = (ms) => new Promise((r) => setTimeout(r, ms))) {
   const triggers = (await cf(`/builds/workers/${workerId}/triggers`)).json?.result || []
   const trigger = triggers[0]
   if (!trigger) throw new Error('this Worker has no Workers Builds trigger (no repo connection)')
-  const body = { branch, ...(validCommit(commit) && { commit_hash: commit }) }
+  if (isProduction(branch, trigger)) throw new Error(`refusing to start a build of the production branch (${scrub(branch)}): it deploys only through the gate's merge`)
+  const body = { branch }
   const started = Date.now()
   await cf(`/builds/triggers/${trigger.trigger_uuid}/builds`, 'POST', body)
-  console.log(`[build-logs] started a build of branch ${scrub(branch)}${body.commit_hash ? ` at ${body.commit_hash.slice(0, 7)}` : ''}`)
+  console.log(`[build-logs] started a build of branch ${scrub(branch)}`)
   while (Date.now() - started < WAIT_MS) {
     await wait(15000)
     const mine = (await listBuilds()).find((b) => b.build_trigger_metadata?.branch === branch && Date.parse(b.created_on) >= started - 60000)
@@ -87,7 +89,7 @@ async function main() {
   const worker = workers.find((w) => w.name === name)
   if (!worker) throw new Error(`no Worker named ${name} in this account`)
   const listBuilds = async () => (await cf(`/builds/workers/${worker.id}/builds?per_page=50`)).json?.result || []
-  if (validBranch(process.env.BUILD_BRANCH)) await triggerBuild(cf, worker.id, process.env.BUILD_BRANCH, process.env.BUILD_COMMIT, listBuilds)
+  if (validBranch(process.env.BUILD_BRANCH)) await triggerBuild(cf, worker.id, process.env.BUILD_BRANCH, listBuilds)
   const builds = await listBuilds()
   const build = latestBuild(builds)
   if (!build) throw new Error(`${name} has no builds yet`)
