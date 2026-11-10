@@ -4,7 +4,8 @@
   python3 cxy.py list                         every command, its PIPELINE step and the script it runs
   python3 cxy.py doctor                       scripts exist, Blender 5.2.3 / bpy python found, PIPELINE paths OK
   python3 cxy.py inventory [--root DIR] [--out FILE.md]    what every script is (canonical/helper/used/active/one-off/duplicate/dead)
-  python3 cxy.py archive [--apply] [--root DIR]            dead + duplicate scripts -> _archive/<date>-scripts/ (dry run by default)
+  python3 cxy.py archive [--apply] [--root DIR]            dead + duplicate scripts -> _archive/<date>-scripts/ (dry run writes the
+                                                           INVENTORY.json to review; --apply moves exactly that list)
   python3 cxy.py archive --undo <MANIFEST.tsv>             put them back
   python3 cxy.py <command> [--cxy-dry] [--cxy-factory] <args...>   run a pipeline tool (see `list`)
 
@@ -20,6 +21,7 @@ import os
 import shlex
 import subprocess
 import sys
+import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "lib"))
@@ -100,6 +102,8 @@ def cmd_inventory(reg, argv):
     out = _opt(argv, "--out", os.path.join(HERE, "INVENTORY.md"))
     rows = inventory.build(root, reg)
     inventory.save(rows, out, os.path.splitext(out)[0] + ".json")
+    with open(os.path.splitext(out)[0] + ".json.root", "w", encoding="utf-8") as fh:
+        fh.write(os.path.abspath(root))
     rep = Report()
     from collections import Counter
     for s, n in sorted(Counter(r["status"] for r in rows).items()):
@@ -109,23 +113,38 @@ def cmd_inventory(reg, argv):
 
 
 def cmd_archive(reg, argv):
+    """Dry run: fresh inventory -> INVENTORY.json + the move list. --apply: moves exactly what the saved
+    INVENTORY.json (the reviewed one) lists, refuses when it is missing, older than 12 h or from another root."""
     import archive
     import inventory
-    root = _opt(argv, "--root", cxylib.PF_ROOT)
+    root = os.path.abspath(_opt(argv, "--root", cxylib.PF_ROOT))
+    inv_json = _opt(argv, "--inventory", os.path.join(HERE, "INVENTORY.json"))
     rep = Report()
     undo = _opt(argv, "--undo", None)
     if undo:
         archive.undo(undo, root, rep)
         return rep.finish()
-    rows = inventory.build(root, reg)
-    moves = archive.plan(rows, root)
     dest = _opt(argv, "--dest", os.path.join(root, "_archive", f"{datetime.date.today():%Y-%m-%d}-scripts"))
     if "--apply" not in argv:
+        rows = inventory.build(root, reg)
+        inventory.save(rows, os.path.splitext(inv_json)[0] + ".md", inv_json)
+        with open(inv_json + ".root", "w", encoding="utf-8") as fh:
+            fh.write(root)
+        moves = archive.plan(rows, root)
         for r, reason in moves:
             print(f"MOVE {r['path']}  ({reason})")
-        rep.ok(f"dry run: {len(moves)} scripts would move to {dest}; add --apply to move them")
+        rep.ok(f"dry run: {len(moves)} scripts would move to {dest}; review, then add --apply (uses {inv_json})")
         return rep.finish()
-    archive.apply(moves, root, dest, rep)
+    if not os.path.isfile(inv_json) or time.time() - os.path.getmtime(inv_json) > 12 * 3600:
+        rep.red(f"no reviewed inventory younger than 12 h at {inv_json}: run `cxy archive` (dry) first")
+        return rep.finish()
+    saved_root = open(inv_json + ".root", encoding="utf-8").read().strip() if os.path.isfile(inv_json + ".root") else ""
+    if saved_root != root:
+        rep.red(f"inventory was taken for root {saved_root or '?'}, not {root}: run `cxy archive --root {root}` (dry) first")
+        return rep.finish()
+    with open(inv_json, encoding="utf-8") as fh:
+        rows = json.load(fh)
+    archive.apply(archive.plan(rows, root), root, dest, rep)
     return rep.finish()
 
 

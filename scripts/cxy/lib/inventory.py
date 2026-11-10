@@ -148,11 +148,12 @@ def build(root, registry, now=None, rules=None):
         })
 
     def is_helper(r):
-        return os.path.dirname(r["_abs"]) in canonical_dirs
+        # in a canonical tool's folder, or a module a canonical tool imports / execs by name
+        return os.path.dirname(r["_abs"]) in canonical_dirs or (r["name"] in helper_names and not ROUND_RE.search(r["path"]))
 
     def rank(r):
-        return (r["_abs"] in canonical, is_helper(r), bool(r["protect"]), not ARCHIVED_RE.search(r["path"]),
-                not ROUND_RE.search(r["path"]), r["mtime"])
+        return (r["_abs"] in canonical, is_helper(r), bool(r["protect"]), r["mentioned_by"] > 0,
+                not ARCHIVED_RE.search(r["path"]), not ROUND_RE.search(r["path"]), r["mtime"])
 
     by_sha, by_name = {}, {}
     for r in rows:
@@ -198,7 +199,7 @@ def build(root, registry, now=None, rules=None):
         elif a in keeper:
             r["status"] = "duplicate"
             r["keeper"] = keeper[a]
-        elif ARCHIVED_RE.search(r["path"]):
+        elif ARCHIVED_RE.search(r["path"]) and r["mentioned_by"] == 0:
             r["status"] = "dead"
         elif a in fork_of:
             r["status"] = "fork"

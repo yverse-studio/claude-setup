@@ -98,11 +98,12 @@ class InventoryTest(unittest.TestCase):
             self.assertNotIn(kept, moves)
 
     def test_sibling_import_blocks_a_move(self):
-        # old_tools/helper.py is a duplicate, but old_tools/main.py imports it: both are candidates, so it may move with it
-        moves = {r["path"] for r, _ in archive.plan(list(self.rows.values()), self.root)}
+        # treat old_tools/helper.py as a plain duplicate candidate: it may move together with old_tools/main.py
+        rows = [dict(r, status="duplicate") if r["path"] == "cb/old_tools/helper.py" else r for r in self.rows.values()]
+        moves = {r["path"] for r, _ in archive.plan(rows, self.root)}
         self.assertIn("cb/old_tools/helper.py", moves)
         # make main.py stay (protected): now helper must stay too
-        rows = [dict(r, protect="keep") if r["path"] == "cb/old_tools/main.py" else r for r in self.rows.values()]
+        rows = [dict(r, protect="keep") if r["path"] == "cb/old_tools/main.py" else r for r in rows]
         moves = {r["path"] for r, _ in archive.plan(rows, self.root)}
         self.assertNotIn("cb/old_tools/helper.py", moves)
 
@@ -135,6 +136,68 @@ class InventoryTest(unittest.TestCase):
         rules = dict(RULES, protected_docs=["PROVEN.md"])
         rows = {r["path"]: r for r in inventory.build(self.root, self.reg, rules=rules)}
         self.assertEqual(rows["cb/male/tools/fit.py"]["protect"], "named in PROVEN.md")
+
+    def test_second_apply_never_overwrites_the_archive(self):
+        dest = os.path.join(self.root, "_archive", "t")
+        rep = cxylib.Report(out=io.StringIO())
+        archive.apply(archive.plan(list(self.rows.values()), self.root), self.root, dest, rep)
+        write(self.root, "cb/out/run1/build.py", '"""build.py: run 1."""\n')   # same file back (e.g. a failed undo)
+        rows = list(inventory.build(self.root, self.reg, rules=RULES))
+        rep2 = cxylib.Report(out=io.StringIO())
+        archive.apply(archive.plan(rows, self.root), self.root, dest, rep2)
+        self.assertTrue(rep2.failed)
+        self.assertTrue(os.path.exists(os.path.join(self.root, "cb/out/run1/build.py")))
+
+    def test_sibling_block_is_transitive(self):
+        write(self.root, "cb/gate_r5/a.py", '"""a.py: leaf."""\n')
+        write(self.root, "cb/gate_r5/b.py", '"""b.py: uses a."""\nimport a\n')
+        write(self.root, "cb/gate_r5/c.py", '"""c.py: uses b."""\nimport b\n')
+        rows = [dict(r, protect="keep") if r["path"] == "cb/gate_r5/c.py" else r
+                for r in inventory.build(self.root, self.reg, rules=RULES)]
+        moves = {r["path"] for r, _ in archive.plan(rows, self.root)}
+        self.assertNotIn("cb/gate_r5/b.py", moves)
+        self.assertNotIn("cb/gate_r5/a.py", moves)
+
+    def test_module_a_canonical_tool_imports_is_a_helper(self):
+        write(self.root, "cb/tools/main.py", '"""main.py: the proven tool."""\nimport common\n')
+        write(self.root, "cb/shared/common.py", '"""common.py: imported from another folder."""\n')
+        rows = {r["path"]: r for r in inventory.build(self.root, self.reg, rules=RULES)}
+        self.assertEqual(rows["cb/shared/common.py"]["status"], "helper")
+
+    def test_named_copy_is_kept(self):
+        write(self.root, "cb/a/util.py", '"""util.py: same."""\n')
+        write(self.root, "cb/b/util.py", '"""util.py: same."""\n')
+        write(self.root, "cb/a/README.md", "run `../b/util.py`\n")   # names it from outside cb/b
+        rows = {r["path"]: r for r in inventory.build(self.root, self.reg, rules=RULES)}
+        moves = {r["path"] for r, _ in archive.plan(list(rows.values()), self.root)}
+        self.assertNotIn("cb/b/util.py", moves)
+
+    def test_undo_uses_the_manifest_root(self):
+        dest = os.path.join(self.root, "_archive", "t")
+        rep = cxylib.Report(out=io.StringIO())
+        archive.apply(archive.plan(list(self.rows.values()), self.root), self.root, dest, rep)
+        archive.undo(os.path.join(dest, "MANIFEST.tsv"), "/nonexistent", rep)
+        self.assertTrue(os.path.exists(os.path.join(self.root, "cb/out/run1/build.py")))
+
+    def test_apply_needs_a_reviewed_inventory(self):
+        out = subprocess.run([sys.executable, os.path.join(CXY, "cxy.py"), "archive", "--apply", "--root", self.root,
+                              "--inventory", os.path.join(self.root, "none.json")], capture_output=True, text=True)
+        self.assertEqual(out.returncode, 1)
+        self.assertIn("no reviewed inventory", out.stdout)
+        self.assertTrue(os.path.exists(os.path.join(self.root, "cb/out/run1/build.py")))
+
+    def test_dry_then_apply_moves_the_reviewed_list(self):
+        inv = os.path.join(self.root, "inv.json")
+        env = dict(os.environ, CXY_RULES=os.path.join(self.root, "rules.json"))
+        with open(env["CXY_RULES"], "w") as f:
+            json.dump(RULES, f)
+        base = [sys.executable, os.path.join(CXY, "cxy.py"), "archive", "--root", self.root, "--inventory", inv,
+                "--dest", os.path.join(self.root, "_archive", "t")]
+        dry = subprocess.run(base, capture_output=True, text=True, env=env)
+        self.assertIn("MOVE cb/out/run1/build.py", dry.stdout)
+        app = subprocess.run(base + ["--apply"], capture_output=True, text=True, env=env)
+        self.assertEqual(app.returncode, 0, app.stdout)
+        self.assertFalse(os.path.exists(os.path.join(self.root, "cb/out/run1/build.py")))
 
     def test_markdown_lists_all_rows(self):
         md = inventory.to_markdown(list(self.rows.values()))
