@@ -6,7 +6,8 @@ name: new-project
 # new-project-request.yml (a pushed branch `new/<name>`). On `workflow_run`
 # GitHub runs this file and the checked-out code from `main`; the pushed branch supplies only
 # `projects/<name>.json`. The branch is deleted when the run succeeds. Then `add_repo` the result.
-# Keys: secrets CLOUDFLARE_API_TOKEN and PROJECTS_GITHUB_TOKEN, variable CLOUDFLARE_ACCOUNT_ID
+# Keys: secrets CLOUDFLARE_API_TOKEN and PROJECTS_GITHUB_TOKEN (needed unless input token_free is true;
+# an expired one stops the run with that hint), variable CLOUDFLARE_ACCOUNT_ID
 # (publish skill, §A new project).
 on:
   workflow_run:
@@ -29,6 +30,11 @@ on:
         type: choice
         options: [site, game, repo]
         default: site
+      token_free:
+        description: 'No GitHub token: the repo already exists with its code on main (made with the laptop gh login or a cloud thread); only the Worker and Builds are made'
+        required: false
+        type: boolean
+        default: false
       org:
         description: 'GitHub org that owns the repo'
         required: false
@@ -70,6 +76,7 @@ jobs:
           D1: ${{ inputs.d1 }}
           KIND: ${{ inputs.kind }}
           ORG: ${{ inputs.org }}
+          GITHUB_TOKEN_FREE: ${{ inputs.token_free }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           PROJECTS_GITHUB_TOKEN: ${{ secrets.PROJECTS_GITHUB_TOKEN }}

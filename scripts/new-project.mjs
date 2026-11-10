@@ -214,6 +214,11 @@ async function ensureRepo(gh, org, name) {
   return created.json
 }
 
+// A repo made outside the workflow, seen without the GitHub API: Cloudflare's `names` identifier form needs only these.
+export function tokenFreeRepo(org, name) {
+  return { html_url: `https://github.com/${org}/${name}`, id: name, owner: { id: org }, default_branch: 'main' }
+}
+
 async function repoIsEmpty(gh, org, name) {
   const r = await gh(`/repos/${org}/${name}/commits?per_page=1`)
   return r.status === 409 || (r.ok && Array.isArray(r.json) && r.json.length === 0)
@@ -500,19 +505,32 @@ export async function main() {
   if (org !== ORG) throw new Error(`org "${org}": projects live in ${ORG} only`)
   const cfToken = env('CLOUDFLARE_API_TOKEN')
   const account = env('CLOUDFLARE_ACCOUNT_ID')
-  const ghToken = env('PROJECTS_GITHUB_TOKEN')
   const cf = cfClient(cfToken, account)
-  const gh = ghClient(ghToken)
+  const gh = ghClient(env('PROJECTS_GITHUB_TOKEN', false))
 
-  const found = await gh(`/repos/${org}/${repoName}`)
-  if (existing && !found.ok) throw new Error(`${org}/${repoName} not found (${found.status}); an existing-repo project creates nothing, so check the "repo" name in projects/${name}.json`)
-  if (!existing && found.ok && !String(found.json?.description || '').includes(MARKER)) throw new Error(`${org}/${repoName} exists and was not made by new-project; register it with "repo" in projects/${name}.json on main to deploy it`)
-  const repo = existing ? found.json : await ensureRepo(gh, org, repoName)
-  const branch = existing ? repo.default_branch : 'main'
+  // Token-free path: the repo was made with the laptop's gh login (docs/USING.md), so the Worker and
+  // Builds steps need only the Cloudflare key. Only on purpose (GITHUB_TOKEN_FREE=true, the
+  // workflow_dispatch input); a missing or expired PAT stops the run instead of switching silently.
+  let found = null
+  if (process.env.GITHUB_TOKEN_FREE !== 'true') {
+    if (!env('PROJECTS_GITHUB_TOKEN', false)) throw new Error('PROJECTS_GITHUB_TOKEN is not set: make the repo with the laptop gh login and run the workflow with token_free true (docs/USING.md)')
+    found = await gh(`/repos/${org}/${repoName}`)
+    if (found.status === 401) throw new Error('PROJECTS_GITHUB_TOKEN answered 401 (expired): make the repo with the laptop gh login and run the workflow with token_free true (docs/USING.md)')
+  }
+  const tokenFree = found === null
+  const ghToken = tokenFree ? '' : env('PROJECTS_GITHUB_TOKEN')
+  if (tokenFree && kind === 'repo') throw new Error(`kind "repo" only makes a repo: make it with the laptop's gh login (gh repo create ${org}/${repoName} --private), no workflow needed`)
+  if (!tokenFree) {
+    if (existing && !found.ok) throw new Error(`${org}/${repoName} not found (${found.status}); an existing-repo project creates nothing, so check the "repo" name in projects/${name}.json`)
+    if (!existing && found.ok && !String(found.json?.description || '').includes(MARKER)) throw new Error(`${org}/${repoName} exists and was not made by new-project; register it with "repo" in projects/${name}.json on main to deploy it`)
+  }
+  const repo = tokenFree ? tokenFreeRepo(org, repoName) : existing ? found.json : await ensureRepo(gh, org, repoName)
+  const branch = existing && !tokenFree ? repo.default_branch : 'main'
   if (!validBranch(branch || '')) throw new Error(`default branch "${branch}" of ${org}/${repoName} is not a branch name`)
   if (kind === 'repo') return repoOnly(gh, { org, name: repoName, repo, branch, token: ghToken })
   // A Worker of the same name is adopted only on a re-run for a repo this workflow made.
-  const adopt = found.ok && !existing
+  // Token-free re-runs adopt the Worker an earlier token-free run made (the dispatch is explicit and the repo is ours).
+  const adopt = tokenFree ? !existing : Boolean(found.ok) && !existing
   const liveId = d1 ? await ensureD1(cf, name) : undefined
   const previewId = d1 ? await ensureD1(cf, `${name}-preview`) : undefined
   const kvIds = {}
@@ -520,8 +538,9 @@ export async function main() {
     kvIds[binding] = { live: await ensureKv(cf, name, binding), preview: await ensureKv(cf, name, `${binding}-preview`) }
   }
 
-  if (existing && await repoIsEmpty(gh, org, repoName)) throw new Error(`${org}/${repoName} is empty; an existing-repo project needs its code on ${branch}`)
-  if (await repoIsEmpty(gh, org, repoName)) {
+  if (tokenFree) log('repo', 'token-free: nothing read or pushed on GitHub; the repo must already hold its code on main, or the first build fails')
+  else if (existing && await repoIsEmpty(gh, org, repoName)) throw new Error(`${org}/${repoName} is empty; an existing-repo project needs its code on ${branch}`)
+  else if (await repoIsEmpty(gh, org, repoName)) {
     const dir = mkdtempSync(join(tmpdir(), 'new-project-'))
     writeScaffold(dir, { name, d1, liveId, previewId, kind, org, repo: repoName })
     pushScaffold(dir, org, repoName, branch, ghToken)

@@ -208,3 +208,35 @@ test('a game scaffold has no test login, a site has it, and the repo placeholder
   assert.match(read(site, 'src/index.js'), /repo: 'yverse-studio\/ydeas-world'/)
   assert.ok(!read(site, 'src/index.js').includes('__REPO__'))
 })
+
+test('token-free repo stub gives Cloudflare the names form and needs no GitHub answer', async () => {
+  const { tokenFreeRepo, repoIdForms } = await import('./new-project.mjs')
+  const repo = tokenFreeRepo('yverse-studio', 'vacation-game')
+  assert.equal(repo.html_url, 'https://github.com/yverse-studio/vacation-game')
+  assert.deepEqual(repoIdForms(repo, 'yverse-studio', 'vacation-game')[1], { label: 'names', provider_account_id: 'yverse-studio', repo_id: 'vacation-game' })
+  assert.equal(repo.default_branch, 'main')
+})
+
+test('main stops on a missing or expired PAT and on kind repo without one, and makes no GitHub call token-free', async () => {
+  const { main } = await import('./new-project.mjs')
+  const keep = { ...process.env }
+  const calls = []
+  const realFetch = globalThis.fetch
+  globalThis.fetch = async (url) => { calls.push(String(url)); return new Response('{}', { status: url.includes('api.github.com') ? 401 : 500 }) }
+  try {
+    Object.assign(process.env, { NAME: 'zz-test', ORG: 'yverse-studio', KIND: 'game', D1: 'false', CLOUDFLARE_API_TOKEN: 'x', CLOUDFLARE_ACCOUNT_ID: 'a' })
+    delete process.env.PROJECTS_GITHUB_TOKEN
+    delete process.env.GITHUB_TOKEN_FREE
+    await assert.rejects(main(), /PROJECTS_GITHUB_TOKEN is not set/)
+    process.env.PROJECTS_GITHUB_TOKEN = 'expired'
+    await assert.rejects(main(), /answered 401/)
+    process.env.GITHUB_TOKEN_FREE = 'true'
+    process.env.KIND = 'repo'
+    await assert.rejects(main(), /only makes a repo/)
+    assert.ok(calls.every((u) => u.includes('api.github.com')) && calls.length === 1)
+  } finally {
+    globalThis.fetch = realFetch
+    for (const k of Object.keys(process.env)) if (!(k in keep)) delete process.env[k]
+    Object.assign(process.env, keep)
+  }
+})
