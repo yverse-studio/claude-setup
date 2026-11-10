@@ -1,0 +1,186 @@
+#!/usr/bin/env python3
+"""cxy: the ONE entry point for the GameDev pipeline tools (cloud). Plain python3, no bpy needed to start.
+
+  python3 cxy.py list                         every command, its PIPELINE step and the script it runs
+  python3 cxy.py doctor                       scripts exist, Blender 5.2.3 / bpy python found, PIPELINE paths OK
+  python3 cxy.py inventory [--root DIR] [--out FILE.md]    what every script is (canonical/helper/used/active/one-off/duplicate/dead)
+  python3 cxy.py archive [--apply] [--root DIR]            dead + duplicate scripts -> _archive/<date>-scripts/ (dry run by default)
+  python3 cxy.py archive --undo <MANIFEST.tsv>             put them back
+  python3 cxy.py <command> [--cxy-dry] [--cxy-factory] <args...>   run a pipeline tool (see `list`)
+
+Runners: py = system python3; bpy = $CXY_BPY (default /tmp/bpyenv/bin/python) -I; blender = $CXY_BLENDER
+(default /opt/blender/blender-5.2.3-linux-x64/blender) -b <first arg> [--factory-startup] -P <script> -- <rest>.
+Every run ends with one line `RESULT PASS` or `RESULT RED (...)`; exit 0 / 1 (the tool's own exit code is passed on).
+The tools themselves are not changed: their old paths keep working for threads that call them directly.
+Docs: ../PIPELINE.md section 2, README.md next to this file.
+"""
+import datetime
+import json
+import os
+import shlex
+import subprocess
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(HERE, "lib"))
+
+import cxylib
+from cxylib import Report
+
+REGISTRY_FILE = os.environ.get("CXY_REGISTRY") or next(
+    (p for p in (os.path.join(HERE, "registry.json"), os.path.join(HERE, "registry.example.json")) if os.path.isfile(p)),
+    os.path.join(HERE, "registry.json"))
+
+
+def load_registry(path=None):
+    with open(path or REGISTRY_FILE, encoding="utf-8") as fh:
+        reg = json.load(fh)
+    return {k: v for k, v in reg.items() if not k.startswith("_")}
+
+
+def build_argv(entry, args, root=None, factory=False):
+    """The exact command line a registry entry runs with (pure, testable)."""
+    root = root or cxylib.PF_ROOT
+    script = os.path.join(root, entry["path"])
+    runner = entry["runner"]
+    if runner == "py":
+        return [sys.executable or "python3", script, *args]
+    if runner == "bpy":
+        return [cxylib.bpy_python(), "-I", script, *args]
+    if runner == "blender":
+        if not args:
+            raise SystemExit(f"usage: cxy <cmd> <file.blend> [args...]  (blender runner needs the .blend first)")
+        blend, rest = args[0], list(args[1:])
+        if rest and rest[0] == "--":
+            rest = rest[1:]
+        cmd = [cxylib.blender_exe(), "-b", blend]
+        if factory or entry.get("factory"):
+            cmd.append("--factory-startup")
+        return cmd + ["-P", script, "--", *rest]
+    if runner == "node":
+        return ["node", script, *args]
+    raise SystemExit(f"unknown runner {runner!r}")
+
+
+def cmd_list(reg):
+    w = max(len(k) for k in reg)
+    for k, e in sorted(reg.items(), key=lambda kv: (kv[1].get("step", "z"), kv[0])):
+        print(f"{k:<{w}}  [{e.get('step', '-'):>3}] {e['runner']:<7} {e['help']}")
+        print(f"{'':<{w}}        -> {e['path']}")
+    return 0
+
+
+def cmd_doctor(reg, root=None):
+    root = root or cxylib.PF_ROOT
+    rep = Report()
+    for k, e in sorted(reg.items()):
+        p = os.path.join(root, e["path"])
+        (rep.ok if os.path.isfile(p) else rep.red)(f"{k}: {e['path']}")
+    runners = {e["runner"] for e in reg.values()}
+    if "blender" in runners:
+        b = cxylib.blender_exe()
+        if os.path.isfile(b):
+            rep.ok(f"blender {b}")
+        else:
+            rep.warn(f"blender not found at {b} (set CXY_BLENDER; laptop: StudioLibrary\\BLENDER_EXE.txt)")
+    if "bpy" in runners:
+        py = cxylib.bpy_python()
+        (rep.ok if os.path.isfile(py) else rep.warn)(f"bpy python {py}" + ("" if os.path.isfile(py) else
+                                                       " missing (python3 rooms/tools/room.py setup installs it)"))
+    pc = os.path.join(cxylib.CLOUD_BLENDER, "pipeline_check.py")
+    if os.path.isfile(pc):
+        r = subprocess.run([sys.executable, pc], capture_output=True, text=True)
+        (rep.ok if r.returncode == 0 else rep.red)("pipeline_check: " + (r.stdout.strip().splitlines() or ["?"])[-1])
+    return rep.finish()
+
+
+def cmd_inventory(reg, argv):
+    import inventory
+    root = _opt(argv, "--root", cxylib.PF_ROOT)
+    out = _opt(argv, "--out", os.path.join(HERE, "INVENTORY.md"))
+    rows = inventory.build(root, reg)
+    inventory.save(rows, out, os.path.splitext(out)[0] + ".json")
+    rep = Report()
+    from collections import Counter
+    for s, n in sorted(Counter(r["status"] for r in rows).items()):
+        rep.ok(f"{s}: {n}")
+    rep.ok(f"written {out}")
+    return rep.finish()
+
+
+def cmd_archive(reg, argv):
+    import archive
+    import inventory
+    root = _opt(argv, "--root", cxylib.PF_ROOT)
+    rep = Report()
+    undo = _opt(argv, "--undo", None)
+    if undo:
+        archive.undo(undo, root, rep)
+        return rep.finish()
+    rows = inventory.build(root, reg)
+    moves = archive.plan(rows, root)
+    dest = _opt(argv, "--dest", os.path.join(root, "_archive", f"{datetime.date.today():%Y-%m-%d}-scripts"))
+    if "--apply" not in argv:
+        for r, reason in moves:
+            print(f"MOVE {r['path']}  ({reason})")
+        rep.ok(f"dry run: {len(moves)} scripts would move to {dest}; add --apply to move them")
+        return rep.finish()
+    archive.apply(moves, root, dest, rep)
+    return rep.finish()
+
+
+def cmd_run(name, entry, argv):
+    # cxy's own flags carry a cxy- prefix so they never clash with a tool's flags (clip_fix/assemble have --dry)
+    dry = "--cxy-dry" in argv
+    factory = "--cxy-factory" in argv
+    args = [a for a in argv if a not in ("--cxy-dry", "--cxy-factory")]
+    cmd = build_argv(entry, args, factory=factory)
+    cwd = os.path.join(cxylib.PF_ROOT, entry["cwd"]) if entry.get("cwd") else None
+    print("RUN  " + " ".join(shlex.quote(c) for c in cmd) + (f"   (cwd {cwd})" if cwd else ""), flush=True)
+    if dry:
+        print("RESULT PASS (dry run, nothing started)")
+        return 0
+    if not os.path.isfile(cmd[0]) and os.sep in cmd[0]:
+        print(f"RED  runner not found: {cmd[0]} (cxy doctor)")
+        print("RESULT RED (1 red, 0 warn, 0 ok)")
+        return 1
+    code = subprocess.call(cmd, cwd=cwd)
+    if code == 0:
+        print(f"RESULT PASS ({name} exit 0)")
+    else:
+        print(f"RESULT RED ({name} exit {code})")
+    return 0 if code == 0 else 1
+
+
+def _opt(argv, flag, default):
+    if flag in argv:
+        i = argv.index(flag)
+        if i + 1 < len(argv):
+            return argv[i + 1]
+    return default
+
+
+def main(argv=None):
+    argv = list(sys.argv[1:] if argv is None else argv)
+    reg = load_registry()
+    if not argv or argv[0] in ("-h", "--help", "help"):
+        print(__doc__)
+        return 0
+    cmd, rest = argv[0], argv[1:]
+    if cmd == "list":
+        return cmd_list(reg)
+    if cmd == "doctor":
+        return cmd_doctor(reg)
+    if cmd == "inventory":
+        return cmd_inventory(reg, rest)
+    if cmd == "archive":
+        return cmd_archive(reg, rest)
+    if cmd in reg:
+        return cmd_run(cmd, reg[cmd], rest)
+    print(f"RED  unknown command {cmd!r}; `python3 cxy.py list` shows all")
+    print("RESULT RED (1 red, 0 warn, 0 ok)")
+    return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
