@@ -15,6 +15,14 @@ on:
         required: false
         type: boolean
         default: false
+      branch:
+        description: 'Start a Workers Builds build of this branch (a Worker Preview), for a push the webhook missed'
+        required: false
+        type: string
+      commit:
+        description: 'Optional commit sha for that build (7 to 40 hex characters)'
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -23,7 +31,7 @@ jobs:
   logs:
     environment: production
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v5
         with:
@@ -37,5 +45,7 @@ jobs:
         env:
           NAME: ${{ inputs.name }}
           CANCEL: ${{ inputs.cancel }}
+          BUILD_BRANCH: ${{ inputs.branch }}
+          BUILD_COMMIT: ${{ inputs.commit }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}

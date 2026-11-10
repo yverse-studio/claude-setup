@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { logLines, latestBuild, recentLines, openBuilds, scrub } from './build-logs.mjs'
+import { logLines, latestBuild, recentLines, openBuilds, scrub, validBranch, validCommit } from './build-logs.mjs'
 
 test('logLines keeps the tail and reads [time, text] pairs and plain strings', () => {
   const json = { result: { lines: [['t1', 'one'], ['t2', 'two'], 'three'] } }
@@ -55,4 +55,11 @@ test('openBuilds keeps only unfinished builds older than the limit', () => {
   ]
   assert.deepEqual(openBuilds(builds, now), [builds[0]])
   assert.deepEqual(openBuilds(undefined, now), [])
+})
+
+test('validBranch and validCommit take git refs and shas only', () => {
+  assert.equal(validBranch('claude/project-thread-1ei5r9'), true)
+  for (const bad of ['', undefined, 'a b', 'x;rm', '../x', '-x', 'a..b', '$(id)']) assert.equal(validBranch(bad), false, String(bad))
+  assert.equal(validCommit('b001acd'), true)
+  for (const bad of ['', 'xyz', 'b001', 'B001ACD', undefined]) assert.equal(validCommit(bad), false, String(bad))
 })
