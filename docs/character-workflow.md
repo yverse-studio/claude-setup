@@ -6,6 +6,9 @@ gate follows it; nobody switches the order.
 **Body fixes go into the base, characters only get details** (yskills 2026-10-26, fixed): see [`base-delta.md`](base-delta.md)
 for the delta, the rebuild, the scale-1 rule and the proof before touching a body.
 
+**New character = pick one of the 3 body bases** (`BT_small_curvy`, `BT_normal_curvy`, `BT_tall_curvy`), then texture, hair and face
+(or existing presets): numbers and steps in the game project's `BODY-SPECS.md` (project files root), section "New character recipe".
+
 ## Why
 
 Company XY's figures are not one-offs. The work builds a repeatable character-generation
