@@ -412,7 +412,23 @@ def proxy():
                 n.use_multi_modifier = md.use_multi_modifier; n.vertex_group = md.vertex_group
         ob.hide_render = True; ob.display_type = 'WIRE'
         ob.hide_set(True)
+    sync_proxy_mods(ob)
     return ob
+
+
+def sync_proxy_mods(ob):
+    """The twin must deform exactly like the body, or the garment is wrapped around a different skin: the neighbour's body has a breast
+    Corrective Smooth + self-Shrinkwrap (CS_Br, SW_Br_S) that move the bust up to 8.5 mm, the proxy had only the Armatures (knit -27 mm at the bust in the
+    report). Copies every non-Mask body modifier the proxy lacks, in body order (Mask = the hide masks, the proxy stays unmasked)."""
+    was = ob.hide_get(); ob.hide_set(False)
+    try:
+        for md in body.modifiers:
+            if md.type == 'MASK' or md.name in ob.modifiers: continue
+            with bpy.context.temp_override(object=body, active_object=body, selected_objects=[body, ob], selected_editable_objects=[body, ob]):
+                bpy.ops.object.modifier_copy_to_selected(modifier=md.name)
+            print('PROXY_MOD', md.name, flush=True)
+    finally:
+        ob.hide_set(was)
 
 
 SW_NAMES = [SW, SW + '2', SW + '3']   # stacked: a vertex the first pass leaves in a fold is caught by the next one
@@ -720,6 +736,7 @@ try:
         sw_set(True); free_verts('poses' in ARGV)
     elif REPORT:   # measures the FILE state (stacks as saved, viewport as saved); `raw` switches the Clearance* stacks off to see the bare corrections
         if 'raw' in ARGV: sw_set(False)
+        if bpy.data.objects.get(PROXY): proxy()   # same modifiers as the body (sync_proxy_mods); the file state is only saved with `save`
         report()
     else:
         tgt = proxy()

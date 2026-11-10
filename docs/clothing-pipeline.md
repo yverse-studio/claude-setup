@@ -147,6 +147,13 @@ The gate checks both (`gate.md`, Asset PRs).
   before, an arm folded on the belly read as a -28 mm sleeve clip.
 - A closed shoe hides the foot with a hide mask under it (below the collar rim minus 5 mm). When toes still show, the shoe is shorter than the foot:
   stretch the toe box in the character key, don't push. Find bad spots with `dump=<n>[@action@frame]`, which measures the full stack.
+- The ClearanceProxy must deform like the body (neighbour knit, 2026-11-10): it had only the Armature modifiers, so the body's breast Corrective Smooth +
+  self-Shrinkwrap (up to 8.5 mm at the bust) was missing and the garment was wrapped against a different skin. `clearance.py` now copies every non-Mask
+  body modifier onto the proxy (`sync_proxy_mods`). Test: `scripts/blender/clearance_proxy.test.py`.
+- The fix writes every follow key unless `nokeys` is given: for a character whose sliders are fixed values use `into=CH_<name> nokeys`, else the shared garment's
+  `Shrink_*`/slider keys change for every other character. An open cuff on the wrist joint is a contact zone (`wrist`, skin within 50 mm of the Hand head), not
+  clearance: the fix pushed the rim 25 mm out into shards. Never judge a fix by the numbers alone: render the bust from the side and the cuffs (a flat fin at
+  the underbust and cuff shards both passed the numbers).
 - `Armature_DQS` on a garment goes right after its main Armature modifier. Appended at the end of a Subsurf-first stack (after the
   Shrinkwrap) its multi-modifier blend exploded sleeves 30 cm in arm poses (Saki r5, 2026-11-10); the cage fix never saw it, the render did.
 - VRoid/VRM files bake skin, cloth and hair into one mesh with one shared position buffer, split only by
