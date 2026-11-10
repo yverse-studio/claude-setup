@@ -295,6 +295,23 @@ class InventoryTest(unittest.TestCase):
         for kept in ("pkga/__init__.py", "pkgb/__init__.py", "w/old_tool.py", "tools/v3/ci_step.py", "lib/r1/vue_helper.js"):
             self.assertNotIn(kept, moves)
 
+    def test_blender_addon_copy_stays(self):
+        write(self.root, "cb/tools/io_game.py", 'bl_info = {"name": "io"}\ndef register():\n    pass\n')
+        write(self.root, "blender/addons/io_game.py", 'bl_info = {"name": "io"}\ndef register():\n    pass\n')
+        write(self.root, "blender/startup/boot.py", "print(1)\n")
+        rows = {r["path"]: r for r in inventory.build(self.root, self.reg, rules=RULES)}
+        moves = {r["path"] for r, _ in archive.plan(list(rows.values()), self.root)}
+        self.assertNotIn("blender/addons/io_game.py", moves)
+        self.assertNotIn("blender/startup/boot.py", moves)
+
+    def test_late_check_sees_copied_files_with_old_mtime(self):
+        rows = list(self.rows.values())
+        moves = archive.plan(rows, self.root)
+        write(self.root, "cb/synced/caller.py", "import probe\n")   # old mtime (like rsync -a), fresh ctime
+        rep = cxylib.Report(out=io.StringIO())
+        archive.apply(moves, self.root, os.path.join(self.root, "_archive", "t"), rep, rows=rows, since=time.time() - 60)
+        self.assertTrue(os.path.exists(os.path.join(self.root, "cb/gate_r3/probe.py")))
+
     def test_markdown_lists_all_rows(self):
         md = inventory.to_markdown(list(self.rows.values()))
         for rel in self.rows:

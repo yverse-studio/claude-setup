@@ -64,6 +64,7 @@ BINARY_EXT = (".blend", ".blend1", ".png", ".jpg", ".jpeg", ".webp", ".gif", ".e
               ".mp4", ".webm", ".mov", ".mkv", ".wav", ".mp3", ".ogg", ".flac", ".ttf", ".otf", ".woff", ".woff2", ".pdf",
               ".psd", ".kra", ".abc", ".vdb", ".pyc", ".so", ".dll", ".exe", ".bin", ".sha256")
 NEVER_MOVE = ("__init__.py", "__main__.py", "conftest.py", "setup.py")
+LOADED_BY_FOLDER_RE = re.compile(r"(^|/)(addons|startup|modules|presets|scripts/startup)/")   # Blender loads these by place
 
 
 def walk_text(root, limit=2_000_000):
@@ -211,7 +212,10 @@ def build(root, registry, now=None, rules=None):
             "path": rel, "name": b, "bytes": st.st_size, "lines": text.count("\n") + 1,
             "mtime": int(st.st_mtime), "age_h": age_h,
             "sha": sha256(p)[:16], "what": summary_line(text),
-            "mentioned_by": len(others), "protect": protection(rel, age_h, rules, st.st_size),
+            "mentioned_by": len(others),
+            "protect": protection(rel, age_h, rules, st.st_size) or (
+                "Blender add-on / startup script (loaded by place)"
+                if LOADED_BY_FOLDER_RE.search(rel) or "bl_info" in text or re.search(r"^def register\(", text, re.M) else ""),
             "_abs": os.path.normpath(p),
         })
 

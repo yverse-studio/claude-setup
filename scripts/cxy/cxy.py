@@ -132,10 +132,13 @@ def cmd_archive(reg, argv):
                 "to registry.json and register the real tools first")
         return rep.finish()
     if "--apply" not in argv:
+        started = time.time()   # texts are read after this moment: --apply rescans everything changed since
         rows = inventory.build(root, reg)
         inventory.save(rows, os.path.splitext(inv_json)[0] + ".md", inv_json)
         with open(inv_json + ".root", "w", encoding="utf-8") as fh:
             fh.write(root)
+        with open(inv_json + ".started", "w", encoding="utf-8") as fh:
+            fh.write(repr(started))
         moves = archive.plan(rows, root)
         for r, reason in moves:
             print(f"MOVE {r['path']}  ({reason})")
@@ -150,7 +153,12 @@ def cmd_archive(reg, argv):
         return rep.finish()
     with open(inv_json, encoding="utf-8") as fh:
         rows = json.load(fh)
-    archive.apply(archive.plan(rows, root), root, dest, rep, rows=rows, since=os.path.getmtime(inv_json))
+    try:
+        since = float(open(inv_json + ".started", encoding="utf-8").read())
+    except (OSError, ValueError):
+        since = os.path.getmtime(inv_json) - 12 * 3600   # unknown scan start: look back the whole window
+    own = [inv_json, inv_json + ".root", inv_json + ".started", os.path.splitext(inv_json)[0] + ".md"]
+    archive.apply(archive.plan(rows, root), root, dest, rep, rows=rows, since=since, exclude=own)
     return rep.finish()
 
 

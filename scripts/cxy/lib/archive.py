@@ -77,20 +77,24 @@ def plan(rows, root):
 SCRIPT_EXT = (".py", ".mjs", ".js", ".sh", ".ps1")
 
 
-def _late_mentions(root, since, skip_dirs=("node_modules", "__pycache__", ".git", "_archive", "uploads")):
+def _late_mentions(root, since, exclude=()):
     """Text of every script or doc changed after `since` (the inventory time): they may name a candidate now."""
     from inventory import walk_text, _read
     out = []
+    skip = {os.path.abspath(x) for x in exclude}
     for p in walk_text(root):
+        if os.path.abspath(p) in skip:
+            continue
         try:
-            if os.path.getmtime(p) > since:
+            st = os.stat(p)
+            if max(st.st_mtime, st.st_ctime) > since:   # ctime too: rsync -a / cp -p / unzip keep old mtimes
                 out.append((p, _read(p)))
         except OSError:
             continue
     return out
 
 
-def apply(moves, root, dest, report, rows=None, since=None):
+def apply(moves, root, dest, report, rows=None, since=None, exclude=()):
     """Move files; write dest/MANIFEST.tsv (original, archived, sha16, reason). Returns number moved."""
     inventoried = {}
     for r in (rows if rows is not None else [m[0] for m in moves]):
@@ -112,7 +116,7 @@ def apply(moves, root, dest, report, rows=None, since=None):
                 listed[d] = {os.path.join(d, f) for f in os.listdir(os.path.join(root, d)) if f.endswith(SCRIPT_EXT)}
             except OSError:
                 listed[d] = set()
-        late = _late_mentions(root, since) if since else []
+        late = _late_mentions(root, since, exclude) if since else []   # exclude: our own inventory files
         for r, reason in moves:
             src = os.path.join(root, r["path"])
             d = os.path.dirname(r["path"])
