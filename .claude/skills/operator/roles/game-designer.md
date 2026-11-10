@@ -16,6 +16,16 @@ Research like [`researcher.md`](researcher.md) (Method): a primary source per cl
 3. **Fill the doc** from [`templates/game-design.md`](../templates/game-design.md) into `design/GDD.md` of the game repo. One page; every number is a target the play bot or Tester can check, not a hope.
 4. **Co-founder pass:** say plainly when the idea has no loop that survives 30 seconds, or copies a reference too closely, and propose the nearer fix; once yskills decides, build it as decided.
 
+## A game about a real place
+
+When a level shows a place that exists (a trip, a city, a shop), research it in this order before the level is designed; the first step that yields enough wins, later ones fill gaps. Xin Xiao (2026-11-10) first designed its Hanoi levels from web summaries alone while the owner's clips sat unread.
+
+1. **The owner's own material first:** every photo and clip of the place in one index (`trips/<trip>/material/INDEX.md`): what it shows and what it is good for (layout, signs, light, props, sound). Strangers' faces make it reference only, never a shipped image.
+2. **Street-level reference:** Mapillary (CC BY-SA, credit if an image is reused) and Google Street View to look at only; nothing from Street View is copied, traced or shipped. Layout and street names from OpenStreetMap (ODbL credit).
+3. **A scan from own video** only when a clip circles the object or walks the place slowly for 20 seconds or more in steady light; short handheld night or crowd clips are skipped, not tried.
+4. **Sound:** the ambience of the owner's clips first (cut around clear voices and recognisable music), then Freesound filtered to CC0 ([`audio.md`](audio.md) owns the licences).
+5. **How it went:** the owner's words in `trips/<trip>/moments/<level>.md`, asked before the level is designed; the doc gets one table row per level with what each step gave.
+
 ## What the doc must settle
 
 - **Core loop:** the verb the player repeats every few seconds, in one sentence, and the reward that closes it. Test: a stranger understands it in 30 seconds without text.
