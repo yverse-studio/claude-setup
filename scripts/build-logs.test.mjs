@@ -74,6 +74,8 @@ test('pickTrigger takes the one preview trigger and refuses none, two or a produ
   assert.throws(() => pickTrigger([prod]), /exactly one preview trigger/)
   assert.throws(() => pickTrigger([]), /exactly one preview trigger/)
   assert.throws(() => pickTrigger([prev, { ...prev, trigger_name: 'other' }]), /exactly one preview trigger/)
+  assert.throws(() => pickTrigger([{ ...prev, branch_includes: ['main'] }]), /exactly one preview trigger/) // versions upload but it builds main: not a preview trigger
+  assert.throws(() => pickTrigger([{ ...prev, deploy_command: 'npx wrangler versions deploy' }]), /exactly one preview trigger/)
 })
 
 test('triggerBuild posts the branch to the preview trigger and follows the returned build id until it stops', async () => {

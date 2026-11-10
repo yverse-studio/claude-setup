@@ -60,7 +60,7 @@ const PRODUCTION_BRANCHES = ['main', 'master']
 export function pickTrigger(triggers) {
   const preview = (triggers || []).filter((t) => {
     const includesMain = (t.branch_includes || []).some((b) => PRODUCTION_BRANCHES.includes(b))
-    return /versions upload/.test(t.deploy_command || '') || (!includesMain && !/wrangler deploy/.test(t.deploy_command || ''))
+    return !includesMain && !/wrangler (versions )?deploy/.test(t.deploy_command || '') // a preview trigger never builds main and never deploys
   })
   if (preview.length !== 1) throw new Error(`expected exactly one preview trigger, found ${preview.length} of ${(triggers || []).length}; refusing to start a build (names: ${scrub((triggers || []).map((t) => t.trigger_name || '?').join(', '))})`)
   return preview[0]
@@ -70,8 +70,11 @@ export function pickTrigger(triggers) {
 // Returns { uuid, finished, outcome }; the caller fails the run unless it finished.
 export async function triggerBuild(cf, workerId, branch, getBuild, wait = (ms) => new Promise((r) => setTimeout(r, ms)), limit = WAIT_MS) {
   if (!validBranch(branch)) throw new Error(`BUILD_BRANCH "${scrub(String(branch))}" is not a plain git branch name`)
-  const trigger = pickTrigger((await cf(`/builds/workers/${workerId}/triggers`)).json?.result)
-  if (isProduction(branch, trigger)) throw new Error(`refusing to start a build of the production branch (${scrub(branch)}): it deploys only through the gate's merge`)
+  const triggers = (await cf(`/builds/workers/${workerId}/triggers`)).json?.result
+  const trigger = pickTrigger(triggers)
+  // production = main, master and whatever the OTHER triggers (the production one) build; the preview trigger's own `*` is no guide
+  const others = (triggers || []).filter((t) => t !== trigger)
+  if (isProduction(branch, { branch_includes: others.flatMap((t) => t.branch_includes || []) })) throw new Error(`refusing to start a build of the production branch (${scrub(branch)}): it deploys only through the gate's merge`)
   const started = (await cf(`/builds/triggers/${trigger.trigger_uuid}/builds`, 'POST', { branch })).json?.result
   const uuid = started?.build_uuid
   if (!uuid) throw new Error('the build was not started: the API answered without a build id')
@@ -122,9 +125,9 @@ async function main() {
     }
   }
   const meta = build.build_trigger_metadata || {}
-  console.log(`[build-logs] ${name}: ${build.status}, outcome ${build.build_outcome}, branch ${meta.branch || '?'}, commit ${String(meta.commit_hash || '?').slice(0, 7)}, created ${build.created_on}`)
+  console.log(scrub(`[build-logs] ${name}: ${build.status}, outcome ${build.build_outcome}, branch ${meta.branch || '?'}, commit ${String(meta.commit_hash || '?').slice(0, 7)}, created ${build.created_on}`))
   for (const line of logLines((await cf(`/builds/builds/${build.build_uuid}/logs`)).json)) console.log(line)
-  // a dispatcher must never read green as "preview ready" when it is not
+  // a dispatcher must never read green as "preview ready" when it is not (the log above is printed first so a slow build can still be read)
   if (mine && !mine.finished) throw new Error('the build did not finish within 4 minutes (or never appeared); run this again to read its log')
   if (mine && mine.outcome !== 'success') throw new Error(`the build finished with outcome ${mine.outcome}`)
 }
