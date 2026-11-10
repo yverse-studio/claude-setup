@@ -20,8 +20,8 @@ A thread that is unsure whether something violates a row above asks yskills with
 
 Evidence: 2026-11-10 had 12+ new draft PRs in claude-setup, 12 CI runs in 7 minutes and 5 pushes in 10 minutes to one branch, all under yskills' login. That is the "automated bulk activity" row above, and its spacing rule alone was not kept. GitHub never named the reason for the 2026-10-29 suspension, so a link between the two is a guess; the numbers below are cheap to keep anyway.
 
-1. Per repo, one push per PR branch every 10 minutes at most. Run `node scripts/pre-pr.mjs --body <file>` first, so a push is not followed by a fix push.
-2. The PR body (Prior art and Lessons lines included) is complete when the PR opens; fixing it later is a re-run and a mail.
+1. Per repo, one push per PR branch every 10 minutes at most. Before every push, and before the PR opens, run `node scripts/pre-pr.mjs --body <file>` (all the CI checks), so a push is not followed by a fix push. A red CI mail is only acceptable when the failure cannot be seen locally.
+2. The PR body is written to a file first and complete when the PR opens: the `Prior art:` and `Lessons:` lines (`scripts/pr-lessons-check.mjs`) were the cause of 11 red runs on 2026-11-10. Fixing the body later is an `edited` re-run and a mail. Drafts are not skipped by CI: the harness opens every PR as a draft and the gate reads the CI result on it.
 3. Org-wide at most 4 new PRs per hour (the coordinator counts). A fifth waits or is batched (Batching small changes).
 4. Same-minute bursts are batched: a thread with several small changes makes one PR, not one per change.
 5. A failed CI run is fixed in one push after reading the log; no trial pushes.
