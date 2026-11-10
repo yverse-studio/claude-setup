@@ -218,9 +218,12 @@ async function ensureRepo(gh, org, name) {
   return created.json
 }
 
-// A repo made outside the workflow, seen without the GitHub API: Cloudflare's `names` identifier form needs only these.
-export function tokenFreeRepo(org, name) {
-  return { html_url: `https://github.com/${org}/${name}`, id: name, owner: { id: org }, default_branch: 'main' }
+// A repo made outside the workflow, seen without the GitHub API. Its numeric ids (repo_id, owner_id
+// workflow inputs, looked up with `gh api -X GET search/repositories`) make Cloudflare's "numeric ids"
+// form real; without them that form would repeat the names. Run 41 (2026-11-10, vacation-game) sent
+// the names twice and got 8000008 six times.
+export function tokenFreeRepo(org, name, { repoId, ownerId } = {}) {
+  return { html_url: `https://github.com/${org}/${name}`, id: repoId || name, owner: { id: ownerId || org }, default_branch: 'main' }
 }
 
 async function repoIsEmpty(gh, org, name) {
@@ -537,7 +540,9 @@ export async function main() {
     if (existing && !found.ok) throw new Error(`${org}/${repoName} not found (${found.status}); an existing-repo project creates nothing, so check the "repo" name in projects/${name}.json`)
     if (!existing && found.ok && !String(found.json?.description || '').includes(MARKER)) throw new Error(`${org}/${repoName} exists and was not made by new-project; register it with "repo" in projects/${name}.json on main to deploy it`)
   }
-  const repo = tokenFree ? tokenFreeRepo(org, repoName) : existing ? found.json : await ensureRepo(gh, org, repoName)
+  const ids = { repoId: process.env.REPO_ID, ownerId: process.env.OWNER_ID }
+  if (tokenFree && !(/^\d+$/.test(ids.repoId || '') && /^\d+$/.test(ids.ownerId || ''))) throw new Error(`token_free needs the numeric GitHub ids as inputs repo_id and owner_id: gh api -X GET search/repositories -f q='repo:${org}/${repoName}' --jq '.items[0] | {id, owner_id: .owner.id}' (docs/USING.md, step 2)`)
+  const repo = tokenFree ? tokenFreeRepo(org, repoName, ids) : existing ? found.json : await ensureRepo(gh, org, repoName)
   const branch = existing && !tokenFree ? repo.default_branch : 'main'
   if (!validBranch(branch || '')) throw new Error(`default branch "${branch}" of ${org}/${repoName} is not a branch name`)
   if (kind === 'repo') return repoOnly(gh, { org, name: repoName, repo, branch, token: ghToken })
