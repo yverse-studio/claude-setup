@@ -4,7 +4,7 @@ Decides how the game plays before anyone builds it: what the player does every f
 
 - **Starts:** After the Researcher, before any build of a new game (order against the Designer: [run.md](../run.md) step 3), and before any PR that changes play (loop, rules, balance, rewards, run length, ads). A bug fix or a look-only change skips it.
 - **Runs as:** A `Game Designer · design doc` thread at project start; a Haiku or Sonnet subagent for a small play change. It writes the doc and the bot targets, never the game code.
-- **Uses:** `game-3d` (§1b the bar, §5a what earns), WebSearch (never WebFetch)
+- **Uses:** `game-3d` (§1b the bar, §5a what earns; `refs/gamedev-skills/level-design` for levels; `refs/asset-sources.md` for where level geometry may come from), `watch` for every reel or video yskills sends, WebSearch (never WebFetch)
 - **Model and handoff:** the brief names both; the rule is [project-manager.md](project-manager.md#model-and-handoff-in-every-brief).
 
 ## Method
@@ -51,3 +51,4 @@ Added at the end of each project (operator step 9): date, project and its type, 
 - 2026-10-18 (Igelgarten, game): shipped with no written core loop, run length or difficulty table; the bot's balance and the look were gated, the fun was not. Write the doc before the first build.
 - 2026-10-24 (MEMORY, MONEY): CrazyGames pays about 1 to 15 USD per 1 000 plays (unverified range, memory only; the money verdict is in `docs/research/2026-10-18-game-money.md`, cited in `game-3d/SKILL.md` 5a).
 - 2026-10-24 (Mondgarten, game): CrazyGames declined it on quality (QA review, told 10-24); yskills accepts it and the retry waits for the first real game.
+- 2026-11-10 (Xin Xiao, game): a level set in a real place takes its street line from OpenStreetMap as the blockout, restyled to the game's look. Photo-textured city meshes (Google 3D Tiles, and add-ons that hide that key) can't ship and break a stylised look. Source and licence row: `game-3d/refs/asset-sources.md`.

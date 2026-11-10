@@ -33,6 +33,7 @@ Each thread reads only the Read-first files of its own role from its Kits row. A
 
 1. A mechanical pattern (a banned call, a file rule, a number): a check in `scripts/` or CI, not text.
 2. True for every project: the home named in One home per rule below; no home yet: add a row there.
+2b. True for one role on every project (how a Game Designer, Tester or Animator works): that role file's `## Lessons` in `.claude/skills/operator/roles/`, or its `Uses:` line when it is a tool or skill the role should reach for.
 3. True for one product only: `<product repo>/docs/LESSONS.md` (template `.claude/skills/operator/templates/lessons.md`), dated, newest last.
 4. State (what is open, who owes what): the `MEMORY.md` section it belongs to.
 5. Everything else (how the day went, a dead end, a report): `/mnt/project-files/<project>/`; nothing to do.
