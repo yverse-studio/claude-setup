@@ -14,7 +14,8 @@ Research like [`researcher.md`](researcher.md) (Method): a primary source per cl
 1. **Three or more references.** Shipped games at the top of the genre on the target platform (for CrazyGames and Poki: their category top pages; for Steam: top sellers and reviews). Per game read the store page, then play it or watch a run: session length, how fast the first reward comes, what the player does in the first 60 seconds, the monetisation placement.
 2. **One line each: Copy / Skip.** What to take (a rule, a number, a pacing beat) and what not to, with the source in the same line. Numbers are copied from the store page or measured in the play, with the date.
 3. **Fill the doc** from [`templates/game-design.md`](../templates/game-design.md) into `design/GDD.md` of the game repo. One page; every number is a target the play bot or Tester can check, not a hope.
-4. **Co-founder pass:** say plainly when the idea has no loop that survives 30 seconds, or copies a reference too closely, and propose the nearer fix; once yskills decides, build it as decided.
+4. **Real moments: ask first** (yskills 2026-11-10, Xin Xiao: "mission toilet" was really asking the neighbour to let him out, then occupied, standing around, walking; the chapter had guessed it). Before you design a chapter, scene or screen about a real moment from yskills' life or trip, ask him in one card how it went, step by step, and how it felt. Mechanics may be invented, facts and feelings may not. This is the one home of the rule for every role that designs from real material (Designer, Planner link here).
+5. **Co-founder pass:** say plainly when the idea has no loop that survives 30 seconds, or copies a reference too closely, and propose the nearer fix; once yskills decides, build it as decided.
 
 ## What the doc must settle
 

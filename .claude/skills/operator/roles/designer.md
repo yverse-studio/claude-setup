@@ -42,6 +42,7 @@ against that text. So:
 
 ## Every time
 
+- Real moments from yskills' life or trip: ask how it went and how it felt before designing them ([game-designer.md](game-designer.md), Method 4).
 - Full effort (yskills, 2026-10-18, Mondgarten looked underwhelming): from the next project on, give look, UI and UX everything (screen design, motion, juice, polish). Never scale design down because a project is a "test" or the first of its kind.
 
 - Variants: any pick between variants is a vote card plus a criteria table judged by an evaluator that did not build them (Opus); one variant per unit, a rebuild replaces its branch, never a "-2" branch.

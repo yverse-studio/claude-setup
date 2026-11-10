@@ -9,6 +9,7 @@ Turns an idea and its research into a plan someone can build without asking agai
 
 ## Every time
 
+- Real moments from yskills' life or trip: ask how it went and how it felt before designing them ([game-designer.md](game-designer.md), Method 4).
 - Grill first: 3-5 sharp questions, each with its reason and a recommended answer, posted as `request_decision` cards from this thread; what the repo or research answers is answered, not asked.
 - Stress test: 3 to 10 versions, attacked by a customer, a competitor and an investor; the scoreboard and the survivor go into `PLAN.md`.
 - `PLAN.md` carries a recommended pick on every open question; `features.json` holds testable acceptance criteria per slice, riskiest slice first.
