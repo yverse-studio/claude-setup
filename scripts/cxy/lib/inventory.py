@@ -59,6 +59,32 @@ def js_imported_files(text):
 EXEC_RE = re.compile(r"""open\(\s*['"]([^'"]+\.py)['"]""")
 
 
+BINARY_EXT = (".blend", ".blend1", ".png", ".jpg", ".jpeg", ".webp", ".gif", ".exr", ".hdr", ".tif", ".tiff", ".bmp",
+              ".zip", ".7z", ".gz", ".tar", ".rar", ".npz", ".npy", ".pkl", ".fbx", ".glb", ".gltf", ".obj", ".vrm", ".bvh",
+              ".mp4", ".webm", ".mov", ".mkv", ".wav", ".mp3", ".ogg", ".flac", ".ttf", ".otf", ".woff", ".woff2", ".pdf",
+              ".psd", ".kra", ".abc", ".vdb", ".pyc", ".so", ".dll", ".exe", ".bin", ".sha256")
+NEVER_MOVE = ("__init__.py", "__main__.py", "conftest.py", "setup.py")
+
+
+def walk_text(root, limit=2_000_000):
+    """Every file that reads as text (any extension or none: Makefile, .ts, .vue, .gd, .yml ...), for mentions."""
+    for d, dirs, files in os.walk(root):
+        dirs[:] = sorted(x for x in dirs if x not in SKIP_DIRS)
+        for f in sorted(files):
+            if f.lower().endswith(BINARY_EXT) or ".zip.part" in f or f.startswith("INVENTORY"):
+                continue
+            p = os.path.join(d, f)
+            try:
+                if os.path.getsize(p) > limit:
+                    continue
+                with open(p, "rb") as fh:
+                    if b"\0" in fh.read(4096):
+                        continue
+            except OSError:
+                continue
+            yield p
+
+
 def walk(root, exts):
     for d, dirs, files in os.walk(root):
         dirs[:] = sorted(x for x in dirs if x not in SKIP_DIRS)
@@ -116,8 +142,12 @@ def doc_paths(root, docs):
     return out
 
 
-def protection(rel, age_h, rules):
+def protection(rel, age_h, rules, size=None):
     """Why a file must not be moved ('' = it may move)."""
+    if os.path.basename(rel) in NEVER_MOVE:
+        return "package / test marker file"
+    if size == 0:
+        return "empty file (marker)"
     if age_h < rules.get("recent_hours", 6):
         return f"changed {age_h} h ago"
     for prefix, doc in rules.get("_doc_paths", {}).items():
@@ -143,7 +173,7 @@ def build(root, registry, now=None, rules=None):
 
     scripts = list(walk(root, SCRIPT_EXT))
     # our own INVENTORY.* output names every script: never count it as a mention
-    texts = {p: _read(p) for p in walk(root, TEXT_EXT) if not os.path.basename(p).startswith("INVENTORY")}
+    texts = {p: _read(p) for p in walk_text(root)}
 
     helper_names = set()
     for p in canonical:
@@ -162,9 +192,9 @@ def build(root, registry, now=None, rules=None):
     importers = {}
     for p in set(scripts) | set(texts):
         t = texts.get(p) or _read(p)
-        for n in imported_names(t) if p.endswith((".py", ".sh", ".ps1", ".md", ".txt")) else ():
+        for n in imported_names(t):   # every text file: CI yml, bat, toml, Makefile can run `python -m x`
             importers.setdefault(n + ".py", set()).add(p)
-        for f in js_imported_files(t) if p.endswith((".js", ".mjs")) else ():
+        for f in js_imported_files(t):
             importers.setdefault(f, set()).add(p)
 
     rows = []
@@ -181,7 +211,7 @@ def build(root, registry, now=None, rules=None):
             "path": rel, "name": b, "bytes": st.st_size, "lines": text.count("\n") + 1,
             "mtime": int(st.st_mtime), "age_h": age_h,
             "sha": sha256(p)[:16], "what": summary_line(text),
-            "mentioned_by": len(others), "protect": protection(rel, age_h, rules),
+            "mentioned_by": len(others), "protect": protection(rel, age_h, rules, st.st_size),
             "_abs": os.path.normpath(p),
         })
 

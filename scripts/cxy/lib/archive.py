@@ -39,10 +39,11 @@ def plan(rows, root):
 
     def folder_texts(d):
         if d not in listing:
-            from inventory import TEXT_EXT
+            from inventory import BINARY_EXT
             try:
                 listing[d] = [os.path.join(d, f) for f in os.listdir(os.path.join(root, d) if d else root)
-                              if f.endswith(TEXT_EXT) and not f.startswith("INVENTORY")]
+                              if not f.lower().endswith(BINARY_EXT) and not f.startswith("INVENTORY")
+                              and os.path.isfile(os.path.join(root, d, f))]
             except OSError:
                 listing[d] = []
         return listing[d]
@@ -78,18 +79,14 @@ SCRIPT_EXT = (".py", ".mjs", ".js", ".sh", ".ps1")
 
 def _late_mentions(root, since, skip_dirs=("node_modules", "__pycache__", ".git", "_archive", "uploads")):
     """Text of every script or doc changed after `since` (the inventory time): they may name a candidate now."""
-    from inventory import TEXT_EXT, _read
+    from inventory import walk_text, _read
     out = []
-    for d, dirs, files in os.walk(root):
-        dirs[:] = [x for x in dirs if x not in skip_dirs]
-        for f in files:
-            p = os.path.join(d, f)
-            if f.endswith(TEXT_EXT) and not f.startswith("INVENTORY"):
-                try:
-                    if os.path.getmtime(p) > since:
-                        out.append((p, _read(p)))
-                except OSError:
-                    continue
+    for p in walk_text(root):
+        try:
+            if os.path.getmtime(p) > since:
+                out.append((p, _read(p)))
+        except OSError:
+            continue
     return out
 
 

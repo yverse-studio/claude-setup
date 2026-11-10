@@ -281,6 +281,20 @@ class InventoryTest(unittest.TestCase):
         self.assertNotIn("web/v2/game.js", moves)
         self.assertNotIn("old/r3/job_tool.py", moves)
 
+    def test_package_markers_and_extensionless_callers(self):
+        write(self.root, "pkga/__init__.py", "")
+        write(self.root, "pkgb/__init__.py", "")
+        write(self.root, "Makefile", "build:\n\tpython w/old_tool.py\n")
+        write(self.root, "w/old_tool.py", '"""old_tool.py"""\n')
+        write(self.root, "ci/run.yml", "run: python -m tools.ci_step\n")
+        write(self.root, "tools/v3/ci_step.py", '"""ci_step.py"""\n')
+        write(self.root, "ui/App.vue", "import x from '../lib/r1/vue_helper'\n")
+        write(self.root, "lib/r1/vue_helper.js", "export default 1\n")
+        rows = {r["path"]: r for r in inventory.build(self.root, self.reg, rules=RULES)}
+        moves = {r["path"] for r, _ in archive.plan(list(rows.values()), self.root)}
+        for kept in ("pkga/__init__.py", "pkgb/__init__.py", "w/old_tool.py", "tools/v3/ci_step.py", "lib/r1/vue_helper.js"):
+            self.assertNotIn(kept, moves)
+
     def test_markdown_lists_all_rows(self):
         md = inventory.to_markdown(list(self.rows.values()))
         for rel in self.rows:
