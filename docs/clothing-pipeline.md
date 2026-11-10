@@ -71,7 +71,7 @@ the same file): `blender -b <character>.blend --factory-startup -P clearance.py 
 smallest clearance, the vertices inside and the share inside for rest, **every follow key at 1** and 3 frames of each pose in one JSON. `faces`
 also measures triangle centres and edge midpoints, because skin shows between vertices (a vertex-only report passed a shirt whose faces cut the
 chest). Self-collision of the body (arm through torso in the pose) is counted apart as `selfcol` and named in the report as animation, not clothing.
-The same script fixes what it finds (`rounds=2`, key and weight correction, see its docstring). The render sheet (idle,
+The same script fixes what it finds (`rounds=2`, key and weight correction, see its docstring). `faces` is for `report=` only (the fix passes work per vertex and refuse it). If fix mode clears rest to 0 mm but makes poses worse, a runtime Shrinkwrap `OUTSIDE` (3 mm) to an unmasked body twin after the Armature modifiers did better on the v2.4 male base. The render sheet (idle,
 big pose, back, close-up of each hem, seam and the body parts under the garment) goes beside it.
 The gate checks both (`gate.md`, Asset PRs).
 

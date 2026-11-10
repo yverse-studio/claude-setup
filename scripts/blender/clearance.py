@@ -4,7 +4,7 @@ the margin) out along the skin normal, as a smooth field, and writes it into the
   rest   -> every key block of the piece (Basis and follow keys move together, key deltas stay)
   keys   -> each body key at 1: the garment's follow key of the same name only
   poses  -> the worst pose need, as an outward offset along the rest normal on every block
-  blender -b <character>.blend --factory-startup -P clearance.py -- look=king|office pieces=<substring,...> [rounds=2] [save] [report=out.json] [faces]
+  blender -b <character>.blend --factory-startup -P clearance.py -- look=king|office pieces=<substring,...> [rounds=2] [save] [report=out.json] [faces]   (`faces` only with report=)
   Arguments (all optional, defaults are Caesar's names): body=<body object> prefix=<garment object name prefix> hair=<hair object> mask=<body hide-mask modifier>
   poses=<action,action,..> noshrink snapw lo=<mm> to=<mm> vg=<bone group prefix> swoff=<m> free poses
   `report=` measures rest, every follow key at 1 and 3 frames of each pose; `faces` also measures polygon centres and edge midpoints (skin can show between
@@ -74,6 +74,8 @@ def par(tree, p, d):
 
 EXIT = 0.003
 FACES = 'faces' in ARGV; FACE_SRC = {}; FACE_CO = {}
+if FACES and not (REPORT or A.get('case')):
+    sys.exit('clearance.py: `faces` only works with report=<out.json> (or case=); the fix passes work per vertex. Run the fix without `faces`, then measure with `faces report=...`.')
 EXEMPT = False   # poses only: vertices trapped inside a self-intersecting body are counted apart, not as clearance
 SELFCOL = {}
 SELF_R = 0.12   # m: skin farther than this from the vertex at rest is another body part, not the garment's own skin
@@ -167,7 +169,7 @@ def to_target(sd, co, loc, nrm, lo, to):
 
 def summarize(res, tag, worst=0):
     for nm, (sd, co, *_r) in res.items():
-        print(f'{tag} {nm.split("_Cos_")[1]:12s} min {1000 * sd.min():7.1f} mm  inside {(sd < 0).sum():4d} ({100 * (sd < 0).mean():.2f}%)', flush=True)
+        print(f'{tag} {nm.split("_Cos_")[-1]:12s} min {1000 * sd.min():7.1f} mm  inside {(sd < 0).sum():4d} ({100 * (sd < 0).mean():.2f}%)', flush=True)
         for i in np.argsort(sd)[:worst]:
             if sd[i] < 0: print('    worst', i, round(1000 * sd[i], 1), np.round(co[i], 3).tolist())
 
