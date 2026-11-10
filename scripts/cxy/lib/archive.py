@@ -94,51 +94,74 @@ def _late_mentions(root, since, exclude=()):
     return out
 
 
+def _keep_reason(r, root, dest, late, listed, inventoried):
+    """Why a planned file must stay after all ('' = it may move). Checked at --apply time."""
+    src = os.path.join(root, r["path"])
+    d = os.path.dirname(r["path"])
+    stem = re.escape(os.path.splitext(r["name"])[0])
+    hit = next((p for p, t in late if os.path.abspath(p) != os.path.abspath(src) and re.search(r"\b" + stem + r"\b", t)), None)
+    if hit:
+        return f"named by {os.path.relpath(hit, root)}, changed after the inventory"
+    new_files = listed.get(d, set()) - inventoried.get(d, set())
+    if new_files:
+        return f"its folder has scripts newer than the inventory ({', '.join(sorted(new_files))[:120]})"
+    if not os.path.exists(src):
+        return "gone already"
+    if sha256(src)[:16] != r["sha"]:
+        return "changed since the inventory"
+    if os.path.lexists(os.path.join(dest, r["path"])):
+        return "already in the archive (never overwritten)"
+    return ""
+
+
 def apply(moves, root, dest, report, rows=None, since=None, exclude=()):
-    """Move files; write dest/MANIFEST.tsv (original, archived, sha16, reason). Returns number moved."""
+    """1. check every planned file again (late callers, new scripts, sha, archive collision);
+    2. re-plan with the kept files as staying, so a kept file keeps its imports too (repeat until stable);
+    3. move, manifest row first; if any move fails, every move of this run is rolled back.
+    Writes dest/MANIFEST.tsv (original, archived, sha16, reason, root). Returns number moved."""
+    rows = rows if rows is not None else [m[0] for m in moves]
     inventoried = {}
-    for r in (rows if rows is not None else [m[0] for m in moves]):
+    for r in rows:
         inventoried.setdefault(os.path.dirname(r["path"]), set()).add(r["path"])
-    os.makedirs(dest, exist_ok=True)
-    man = os.path.join(dest, "MANIFEST.tsv")
-    new = not os.path.exists(man)
-    n = 0
-    with open(man, "a", newline="", encoding="utf-8") as fh:
-        w = csv.writer(fh, delimiter="\t")
-        if new:
-            w.writerow(["original", "archived", "sha16", "reason", "root"])
-        known = {}
-        for r, _ in moves:
-            known.setdefault(os.path.dirname(r["path"]), set())
-        listed = {}
-        for d in known:
+    listed = {}
+    for r, _ in moves:
+        d = os.path.dirname(r["path"])
+        if d not in listed:
             try:
                 listed[d] = {os.path.join(d, f) for f in os.listdir(os.path.join(root, d)) if f.endswith(SCRIPT_EXT)}
             except OSError:
                 listed[d] = set()
-        late = _late_mentions(root, since, exclude) if since else []   # exclude: our own inventory files
+    late = _late_mentions(root, since, exclude) if since else []   # exclude: our own inventory files
+
+    kept = {}
+    while True:
+        for r, _ in moves:
+            if r["path"] not in kept:
+                why = _keep_reason(r, root, dest, late, listed, inventoried)
+                if why:
+                    kept[r["path"]] = why
+        staying = [dict(r, protect=f"kept at apply: {kept[r['path']]}") if r["path"] in kept else r for r in rows]
+        replanned = plan(staying, root)
+        allowed = {r["path"] for r, _ in replanned}
+        dropped = [r for r, _ in moves if r["path"] not in allowed and r["path"] not in kept]
+        for r in dropped:
+            kept[r["path"]] = "a kept file in its folder names it"
+        moves = [(r, why) for r, why in moves if r["path"] in allowed]
+        if not dropped:
+            break
+    for path, why in sorted(kept.items()):
+        (report.red if why.startswith("already in the archive") else report.warn)(f"kept {path}: {why}")
+
+    os.makedirs(dest, exist_ok=True)
+    man = os.path.join(dest, "MANIFEST.tsv")
+    new = not os.path.exists(man)
+    done = []
+    with open(man, "a", newline="", encoding="utf-8") as fh:
+        w = csv.writer(fh, delimiter="\t")
+        if new:
+            w.writerow(["original", "archived", "sha16", "reason", "root"])
         for r, reason in moves:
-            src = os.path.join(root, r["path"])
-            d = os.path.dirname(r["path"])
-            stem = re.escape(os.path.splitext(r["name"])[0])
-            hit = next((p for p, t in late if os.path.abspath(p) != os.path.abspath(src) and re.search(r"\b" + stem + r"\b", t)), None)
-            if hit:
-                report.warn(f"kept {r['path']}: named by {os.path.relpath(hit, root)}, changed after the inventory")
-                continue
-            new_files = listed[d] - inventoried.get(d, set())
-            if new_files:
-                report.warn(f"kept {r['path']}: its folder has scripts newer than the inventory ({', '.join(sorted(new_files))[:120]})")
-                continue
-            if not os.path.exists(src):
-                report.warn(f"gone already: {r['path']}")
-                continue
-            if sha256(src)[:16] != r["sha"]:
-                report.warn(f"changed since inventory, kept: {r['path']}")
-                continue
-            dst = os.path.join(dest, r["path"])
-            if os.path.lexists(dst):
-                report.red(f"already in the archive, not overwritten: {r['path']}")
-                continue
+            src, dst = os.path.join(root, r["path"]), os.path.join(dest, r["path"])
             os.makedirs(os.path.dirname(dst), exist_ok=True)
             # manifest row first: a moved file is always recorded, so undo can bring it back
             w.writerow([r["path"], os.path.relpath(dst, root), r["sha"], reason, os.path.abspath(root)])
@@ -147,11 +170,17 @@ def apply(moves, root, dest, report, rows=None, since=None, exclude=()):
             try:
                 shutil.move(src, dst)
             except OSError as e:
-                report.red(f"move failed, file stays: {r['path']} ({e})")
-                continue
-            n += 1
-    report.ok(f"moved {n} scripts to {os.path.relpath(dest, root)} (manifest MANIFEST.tsv)")
-    return n
+                report.red(f"move failed: {r['path']} ({e}); rolling back the {len(done)} moves of this run")
+                for s_, d_ in reversed(done):
+                    try:
+                        shutil.move(d_, s_)
+                    except OSError as e2:
+                        report.red(f"rollback failed, restore by MANIFEST: {os.path.relpath(s_, root)} ({e2})")
+                report.ok(f"moved 0 scripts (rolled back; manifest rows of this run point at files that are back)")
+                return 0
+            done.append((src, dst))
+    report.ok(f"moved {len(done)} scripts to {os.path.relpath(dest, root)} (manifest MANIFEST.tsv)")
+    return len(done)
 
 
 def undo(manifest, root, report):

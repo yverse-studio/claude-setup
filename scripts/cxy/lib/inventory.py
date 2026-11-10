@@ -145,8 +145,11 @@ def doc_paths(root, docs):
 
 def protection(rel, age_h, rules, size=None):
     """Why a file must not be moved ('' = it may move)."""
-    if os.path.basename(rel) in NEVER_MOVE:
+    base = os.path.basename(rel)
+    if base in NEVER_MOVE:
         return "package / test marker file"
+    if re.match(r"test_.*\.py$|.*_test\.py$|.*\.test\.m?js$", base) or re.search(r"(^|/)tests?/", rel):
+        return "test file (found by name, not by mention)"
     if size == 0:
         return "empty file (marker)"
     if age_h < rules.get("recent_hours", 6):

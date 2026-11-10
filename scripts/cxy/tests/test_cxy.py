@@ -312,6 +312,43 @@ class InventoryTest(unittest.TestCase):
         archive.apply(moves, self.root, os.path.join(self.root, "_archive", "t"), rep, rows=rows, since=time.time() - 60)
         self.assertTrue(os.path.exists(os.path.join(self.root, "cb/gate_r3/probe.py")))
 
+    def test_kept_file_keeps_its_imports(self):
+        write(self.root, "rounds/run12/oldbake.py", '"""oldbake.py"""\nimport bake_util\n')
+        write(self.root, "rounds/run12/bake_util.py", '"""bake_util.py"""\n')
+        rows = list(inventory.build(self.root, self.reg, rules=RULES))
+        moves = archive.plan(rows, self.root)
+        self.assertIn("rounds/run12/bake_util.py", {r["path"] for r, _ in moves})
+        write(self.root, "tools/run.sh", "python3 rounds/run12/oldbake.py\n", old=False)   # a caller appears later
+        rep = cxylib.Report(out=io.StringIO())
+        archive.apply(moves, self.root, os.path.join(self.root, "_archive", "t"), rep, rows=rows, since=time.time() - 60)
+        self.assertTrue(os.path.exists(os.path.join(self.root, "rounds/run12/oldbake.py")))
+        self.assertTrue(os.path.exists(os.path.join(self.root, "rounds/run12/bake_util.py")))
+
+    def test_failed_move_rolls_back_the_run(self):
+        rows = list(self.rows.values())
+        moves = archive.plan(rows, self.root)
+        calls = {"n": 0}
+        orig = archive.shutil.move
+
+        def flaky(a, b):
+            calls["n"] += 1
+            if calls["n"] == 3:
+                raise OSError("disk full")
+            return orig(a, b)
+        archive.shutil.move = flaky
+        try:
+            n = archive.apply(moves, self.root, os.path.join(self.root, "_archive", "t"), cxylib.Report(out=io.StringIO()), rows=rows)
+        finally:
+            archive.shutil.move = orig
+        self.assertEqual(n, 0)
+        for r, _ in moves:
+            self.assertTrue(os.path.exists(os.path.join(self.root, r["path"])), r["path"])
+
+    def test_pytest_files_stay(self):
+        write(self.root, "tests/test_rigging/test_bones.py", "def test_x():\n    pass\n")
+        rows = {r["path"]: r for r in inventory.build(self.root, self.reg, rules=RULES)}
+        self.assertTrue(rows["tests/test_rigging/test_bones.py"]["protect"])
+
     def test_markdown_lists_all_rows(self):
         md = inventory.to_markdown(list(self.rows.values()))
         for rel in self.rows:
