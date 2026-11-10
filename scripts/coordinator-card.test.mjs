@@ -26,3 +26,9 @@ test('the rules index holds every row, unclipped, under 20,000 characters', () =
   assert.ok(idx.split('\n').filter((l) => l.startsWith('- ')).length >= 40)
   assert.match(idx, /^Rules index \(claude-setup x, d\)/)
 })
+
+test('the card lists every required brief line and every valid kit (GameDev 2026-11-10)', () => {
+  const card = buildCard({ hash: 'x', date: 'd' })
+  for (const l of ['Role: · Kit: · Size:', 'Model', 'Prior art', 'Skills', 'Done when', 'Stop when', 'Start']) assert.ok(card.includes(l), l)
+  assert.ok(card.includes('site|app|game|video|social|story|setup|repo'))
+})
