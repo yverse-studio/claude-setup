@@ -529,7 +529,8 @@ export async function main() {
   if (!validBranch(branch || '')) throw new Error(`default branch "${branch}" of ${org}/${repoName} is not a branch name`)
   if (kind === 'repo') return repoOnly(gh, { org, name: repoName, repo, branch, token: ghToken })
   // A Worker of the same name is adopted only on a re-run for a repo this workflow made.
-  const adopt = Boolean(found?.ok) && !existing
+  // Token-free re-runs adopt the Worker an earlier token-free run made (the dispatch is explicit and the repo is ours).
+  const adopt = tokenFree ? !existing : Boolean(found.ok) && !existing
   const liveId = d1 ? await ensureD1(cf, name) : undefined
   const previewId = d1 ? await ensureD1(cf, `${name}-preview`) : undefined
   const kvIds = {}

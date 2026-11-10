@@ -6,7 +6,7 @@ name: new-project
 # new-project-request.yml (a pushed branch `new/<name>`). On `workflow_run`
 # GitHub runs this file and the checked-out code from `main`; the pushed branch supplies only
 # `projects/<name>.json`. The branch is deleted when the run succeeds. Then `add_repo` the result.
-# Keys: secrets CLOUDFLARE_API_TOKEN and, PROJECTS_GITHUB_TOKEN (needed unless input token_free is true;
+# Keys: secrets CLOUDFLARE_API_TOKEN and PROJECTS_GITHUB_TOKEN (needed unless input token_free is true;
 # an expired one stops the run with that hint), variable CLOUDFLARE_ACCOUNT_ID
 # (publish skill, §A new project).
 on:

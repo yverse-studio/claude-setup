@@ -66,20 +66,21 @@ with one recommended; work continues on it unless it is money, a new service or 
 What you do: write the idea. A thread does the rest.
 
 1. Pick the name: lowercase letters, digits, dashes. It is the repo and the Worker name.
-2. Repo first, no token: the laptop makes the empty private repo (Remote Control with the gh login
-   `yskills`: `gh repo create yverse-studio/<name> --private`, Actions off; cloud threads cannot
-   create repos, they `add_repo` with push once it exists). Nobody asks you for a token. Then push the code to
-   `main` and run the workflow below with `token_free` true: it makes only the D1 databases, the
-   Worker and the Builds link from the Cloudflare key. Without `token_free` the run uses
-   `PROJECTS_GITHUB_TOKEN` to make and fill the repo itself; if that is missing or expired (401) the
-   run stops and says to use `token_free` (it never switches silently).
-3. Start it: push branch `new/<name>` **in one push, with the file in it** (git, or `push_files` to
+2. No GitHub token (use this while `PROJECTS_GITHUB_TOKEN` is expired, or by default): the laptop makes the
+   empty private repo (Remote Control with the gh login `yskills`: `gh repo create
+   yverse-studio/<name> --private`, Actions off; cloud threads cannot create repos, they `add_repo`
+   with push once it exists). Nobody asks you for a token. Push the code to `main`, then skip step 3's
+   branch push and run `new-project.yml` with `token_free` true (dispatch only): it makes only the
+   Worker, the Builds link and, with `d1` true, the D1 databases (their ids are in the run summary and must
+   be added to `wrangler.jsonc` before the build can pass, so a game or a no-D1 page is the easy case).
+   A re-run adopts the Worker an earlier token-free run made.
+3. With the token: push branch `new/<name>` **in one push, with the file in it** (git, or `push_files` to
    a new branch; `create_branch` then `create_or_update_file` is two pushes and the first, empty
    one makes a site), file `projects/<name>.json`:
    `{ "name": "<name>", "d1": true, "org": "yverse-studio" }`, plus `"kind": "game"` for a game, `"kind": "repo"` for a private repo with no Worker (e.g. a Ren'Py game). A game writes `"d1": false` unless it stores data.
    Or start `new-project.yml` in `yverse-studio/claude-setup`: GitHub MCP `actions_run_trigger`
    `run_workflow`, ref `main`, inputs `name`, `d1` (false when the page stores no data), `kind`
-   (`site`, `game` or `repo`).
+   (`site`, `game` or `repo`), `token_free` (step 2).
 4. Register it: the new repo's first PR (or a small PR in claude-setup) adds
    `projects/<name>.json` to `main`; the branch is deleted after the run, so nobody else does.
    Delete refuses names without it. A game's first PR replaces the day-zero stub; until it
