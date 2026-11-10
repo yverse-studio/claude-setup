@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { logLines, latestBuild, recentLines, openBuilds, scrub, validBranch, isProduction } from './build-logs.mjs'
+import { logLines, latestBuild, recentLines, openBuilds, scrub, validBranch, isProduction, pickTrigger, triggerBuild } from './build-logs.mjs'
 
 test('logLines keeps the tail and reads [time, text] pairs and plain strings', () => {
   const json = { result: { lines: [['t1', 'one'], ['t2', 'two'], 'three'] } }
@@ -63,4 +63,39 @@ test('validBranch takes git refs only and the production branch is refused', () 
   assert.equal(isProduction('main'), true)
   assert.equal(isProduction('release', { branch_includes: ['release'] }), true)
   assert.equal(isProduction('claude/x', { branch_includes: ['main'] }), false)
+})
+
+const prod = { trigger_uuid: 'p', trigger_name: 'production', branch_includes: ['main'], deploy_command: 'npx wrangler deploy' }
+const prev = { trigger_uuid: 'v', trigger_name: 'preview', branch_includes: ['*'], deploy_command: 'npx wrangler versions upload' }
+const fakeCf = (triggers, calls = []) => async (path, method = 'GET', body) => { calls.push([method, path, body]); return { json: { result: path.endsWith('/triggers') ? triggers : { build_uuid: 'b1' } } } }
+
+test('pickTrigger takes the one preview trigger and refuses none, two or a production-only list', () => {
+  assert.equal(pickTrigger([prod, prev]).trigger_name, 'preview')
+  assert.throws(() => pickTrigger([prod]), /exactly one preview trigger/)
+  assert.throws(() => pickTrigger([]), /exactly one preview trigger/)
+  assert.throws(() => pickTrigger([prev, { ...prev, trigger_name: 'other' }]), /exactly one preview trigger/)
+})
+
+test('triggerBuild posts the branch to the preview trigger and follows the returned build id until it stops', async () => {
+  const calls = []
+  const seen = []
+  const getBuild = async (uuid) => { seen.push(uuid); return seen.length < 3 ? { status: 'running' } : { status: 'stopped', build_outcome: 'success' } }
+  const r = await triggerBuild(fakeCf([prod, prev], calls), 'w', 'claude/x', getBuild, async () => {})
+  assert.deepEqual(r, { uuid: 'b1', finished: true, outcome: 'success' })
+  assert.deepEqual(calls.find((c) => c[0] === 'POST'), ['POST', '/builds/triggers/v/builds', { branch: 'claude/x' }])
+  assert.deepEqual(seen, ['b1', 'b1', 'b1'])
+})
+
+test('triggerBuild throws on an invalid or production branch and posts nothing', async () => {
+  const calls = []
+  await assert.rejects(() => triggerBuild(fakeCf([prev], calls), 'w', 'a b', async () => null, async () => {}), /not a plain git branch/)
+  await assert.rejects(() => triggerBuild(fakeCf([prev], calls), 'w', 'main', async () => null, async () => {}), /production branch/)
+  assert.equal(calls.some((c) => c[0] === 'POST'), false)
+})
+
+test('triggerBuild reports a build that never appears or never stops as not finished', async () => {
+  const never = await triggerBuild(fakeCf([prev]), 'w', 'claude/x', async () => undefined, async () => {}, 60000)
+  assert.equal(never.finished, false)
+  const slow = await triggerBuild(fakeCf([prev]), 'w', 'claude/x', async () => ({ status: 'running' }), async () => {}, 60000)
+  assert.equal(slow.finished, false)
 })

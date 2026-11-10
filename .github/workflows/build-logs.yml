@@ -1,7 +1,7 @@
 name: build-logs
 
 # Prints the tail of a project's latest Workers Builds log (redacted), so a cloud thread can read
-# why a build failed without the Cloudflare dashboard. Read-only. Started with Run workflow or a
+# why a build failed without the Cloudflare dashboard. Reads builds; its only writes are the optional cancel of stuck builds and the optional start of a preview build of a branch (never the production branch). Started with Run workflow or a
 # thread's workflow dispatch; input: the Worker name.
 on:
   workflow_dispatch:
