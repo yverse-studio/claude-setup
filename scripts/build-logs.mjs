@@ -55,15 +55,16 @@ export const WAIT_MS = 4 * 60000
 export const POLL_MS = 15000
 const PRODUCTION_BRANCHES = ['main', 'master']
 
-// What a refusal says about a trigger: names and the fields that decide production vs preview, never ids or secrets.
-const describeTrigger = (t) => `name ${t.trigger_name || '?'}, branch_includes [${(t.branch_includes || []).join(',')}], branch_excludes [${(t.branch_excludes || []).join(',')}], deploy_command "${t.deploy_command || ''}", keys: ${Object.keys(t).filter((k) => !/uuid|id$|token|secret/i.test(k)).join(',')}`
+// What a refusal says about a trigger: its name, the branches it builds, a CLASS of its deploy command and the names of its fields (never values, ids or secrets).
+export const commandClass = (c) => (/wrangler (preview|versions upload)|deploy:preview/.test(c || '') ? 'preview' : /wrangler (versions )?deploy|deploy/.test(c || '') ? 'deploy' : c ? 'other' : 'none')
+const describeTrigger = (t) => `name ${t.trigger_name || '?'}, branch_includes [${(t.branch_includes || []).join(',')}], command ${commandClass(t.deploy_command)}, fields [${Object.keys(t).filter((k) => !/uuid|id$|token|secret/i.test(k)).join(',')}]`
 
 // The one trigger that builds previews. A Worker with preview builds has two triggers; starting a branch on the production one would run
 // its `wrangler deploy` on unmerged code. Anything but exactly one clearly non-production trigger is an error, never a guess.
 export function pickTrigger(triggers) {
   const preview = (triggers || []).filter((t) => {
     const includesMain = (t.branch_includes || []).some((b) => PRODUCTION_BRANCHES.includes(b))
-    return !includesMain && !/wrangler (versions )?deploy/.test(t.deploy_command || '') // a preview trigger never builds main and never deploys
+    return !includesMain && commandClass(t.deploy_command) === 'preview' // a preview trigger never builds main, and says so: a preview command, not just "not a deploy" 
   })
   if (preview.length !== 1) throw new Error(`expected exactly one preview trigger, found ${preview.length} of ${(triggers || []).length}; refusing to start a build (${scrub((triggers || []).map(describeTrigger).join(' | '))})`)
   return preview[0]
@@ -75,9 +76,8 @@ export async function triggerBuild(cf, workerId, branch, getBuild, wait = (ms) =
   if (!validBranch(branch)) throw new Error(`BUILD_BRANCH "${scrub(String(branch))}" is not a plain git branch name`)
   const triggers = (await cf(`/builds/workers/${workerId}/triggers`)).json?.result
   const trigger = pickTrigger(triggers)
-  // production = main, master and whatever the OTHER triggers (the production one) build; the preview trigger's own `*` is no guide
-  const others = (triggers || []).filter((t) => t !== trigger)
-  if (isProduction(branch, { branch_includes: others.flatMap((t) => t.branch_includes || []) })) throw new Error(`refusing to start a build of the production branch (${scrub(branch)}): it deploys only through the gate's merge`)
+  // production = main, master and every branch any trigger lists by name ("*" never equals a real branch name)
+  if (isProduction(branch, { branch_includes: (triggers || []).flatMap((t) => t.branch_includes || []) })) throw new Error(`refusing to start a build of the production branch (${scrub(branch)}): it deploys only through the gate's merge`)
   const started = (await cf(`/builds/triggers/${trigger.trigger_uuid}/builds`, 'POST', { branch })).json?.result
   const uuid = started?.build_uuid
   if (!uuid) throw new Error('the build was not started: the API answered without a build id')
