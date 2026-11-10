@@ -208,3 +208,11 @@ test('a game scaffold has no test login, a site has it, and the repo placeholder
   assert.match(read(site, 'src/index.js'), /repo: 'yverse-studio\/ydeas-world'/)
   assert.ok(!read(site, 'src/index.js').includes('__REPO__'))
 })
+
+test('token-free repo stub gives Cloudflare the names form and needs no GitHub answer', async () => {
+  const { tokenFreeRepo, repoIdForms } = await import('./new-project.mjs')
+  const repo = tokenFreeRepo('yverse-studio', 'vacation-game')
+  assert.equal(repo.html_url, 'https://github.com/yverse-studio/vacation-game')
+  assert.deepEqual(repoIdForms(repo, 'yverse-studio', 'vacation-game')[1], { label: 'names', provider_account_id: 'yverse-studio', repo_id: 'vacation-game' })
+  assert.equal(repo.default_branch, 'main')
+})

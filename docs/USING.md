@@ -66,23 +66,30 @@ with one recommended; work continues on it unless it is money, a new service or 
 What you do: write the idea. A thread does the rest.
 
 1. Pick the name: lowercase letters, digits, dashes. It is the repo and the Worker name.
-2. Start it: push branch `new/<name>` **in one push, with the file in it** (git, or `push_files` to
+2. Repo first, no token: the laptop makes the empty private repo (Remote Control with the gh login
+   `yskills`: `gh repo create yverse-studio/<name> --private`, Actions off; cloud threads cannot
+   create repos, they `add_repo` with push once it exists). Nobody asks you for a token. Then push the code to
+   `main` and run the workflow below with `token_free` true: it makes only the D1 databases, the
+   Worker and the Builds link from the Cloudflare key. `PROJECTS_GITHUB_TOKEN` is the fallback that
+   lets the workflow make and fill the repo itself; if it is missing or expired (401) the run
+   switches to the token-free path on its own.
+3. Start it: push branch `new/<name>` **in one push, with the file in it** (git, or `push_files` to
    a new branch; `create_branch` then `create_or_update_file` is two pushes and the first, empty
    one makes a site), file `projects/<name>.json`:
    `{ "name": "<name>", "d1": true, "org": "yverse-studio" }`, plus `"kind": "game"` for a game, `"kind": "repo"` for a private repo with no Worker (e.g. a Ren'Py game). A game writes `"d1": false` unless it stores data.
    Or start `new-project.yml` in `yverse-studio/claude-setup`: GitHub MCP `actions_run_trigger`
    `run_workflow`, ref `main`, inputs `name`, `d1` (false when the page stores no data), `kind`
    (`site`, `game` or `repo`).
-3. Register it: the new repo's first PR (or a small PR in claude-setup) adds
+4. Register it: the new repo's first PR (or a small PR in claude-setup) adds
    `projects/<name>.json` to `main`; the branch is deleted after the run, so nobody else does.
    Delete refuses names without it. A game's first PR replaces the day-zero stub; until it
    merges, the live URL shows the stub.
    Its CI fails a PR that changes UI, text or play before the docs exist (design, copy, tracking
    plan; game design and sound for a game); each failure names the fix (`publish` skill).
-4. Wait for the run: `actions_list` `list_workflow_runs` ignores `per_page` and returns about
+5. Wait for the run: `actions_list` `list_workflow_runs` ignores `per_page` and returns about
    20k tokens, so read it once, then `actions_get` `get_workflow_run` by id. Its summary has the
    repo, `https://<name>.yverse.workers.dev` and the first build's status.
-5. `add_repo` the new repo, then build on branches: every branch gets a Preview, every merge to
+6. `add_repo` the new repo, then build on branches: every branch gets a Preview, every merge to
    `main` goes live. Post the live link.
 
 Detail and failures: `publish` skill (A new project). What the workflows cannot do (KV, wrangler,
