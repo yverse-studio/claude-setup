@@ -113,3 +113,10 @@ test('the refusal names the trigger fields and a command class, never the raw co
   assert.equal(commandClass('npx wrangler versions upload'), 'preview')
   assert.equal(commandClass(''), 'none')
 })
+
+test('triggerBuild refuses a branch the production trigger builds, even if it is not called main', async () => {
+  const calls = []
+  const odd = { ...prod, branch_includes: ['release'] }
+  await assert.rejects(() => triggerBuild(fakeCf([odd, prev], calls), 'w', 'release', async () => null, async () => {}), /production branch/)
+  assert.equal(calls.some((c) => c[0] === 'POST'), false)
+})
