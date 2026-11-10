@@ -215,6 +215,8 @@ test('token-free repo stub gives Cloudflare the names form and needs no GitHub a
   assert.equal(repo.html_url, 'https://github.com/yverse-studio/vacation-game')
   assert.deepEqual(repoIdForms(repo, 'yverse-studio', 'vacation-game')[1], { label: 'names', provider_account_id: 'yverse-studio', repo_id: 'vacation-game' })
   assert.equal(repo.default_branch, 'main')
+  const withIds = tokenFreeRepo('yverse-studio', 'vacation-game', { repoId: '1452814220', ownerId: '339767647' })
+  assert.deepEqual(repoIdForms(withIds, 'yverse-studio', 'vacation-game')[0], { label: 'numeric ids', provider_account_id: '339767647', repo_id: '1452814220' })
 })
 
 test('main stops on a missing or expired PAT and on kind repo without one, and makes no GitHub call token-free', async () => {
@@ -231,6 +233,9 @@ test('main stops on a missing or expired PAT and on kind repo without one, and m
     process.env.PROJECTS_GITHUB_TOKEN = 'expired'
     await assert.rejects(main(), /answered 401/)
     process.env.GITHUB_TOKEN_FREE = 'true'
+    delete process.env.REPO_ID
+    await assert.rejects(main(), /needs the numeric GitHub ids/)
+    Object.assign(process.env, { REPO_ID: '1', OWNER_ID: '2' })
     process.env.KIND = 'repo'
     await assert.rejects(main(), /only makes a repo/)
     assert.ok(calls.every((u) => u.includes('api.github.com')) && calls.length === 1)
