@@ -46,7 +46,7 @@ the two keys. Research and the routes weighed: `research/auto-deploy.md` in the 
    same day, by its numeric GitHub ids. When a run still fails with "Workers Builds does not see
    <org>/<name>" and the ids are numeric (2026-10-08, runs 7 and 8), open https://github.com/organizations/yverse-studio/settings/installations →
    Cloudflare Workers and Pages → Configure, switch Repository access to **Only select
-   repositories** and back to **All repositories**, Save, then push the branch again, 1 min.
+   repositories** and back to **All repositories**, Save, then run the workflow again, 1 min.
 3. Cloudflare token, 4 min: https://dash.cloudflare.com/profile/api-tokens → Create Token →
    Custom. Permissions (Account): **Workers Builds Configuration · Edit**, **Workers Scripts ·
    Edit**, **D1 · Edit**, **Account Settings · Read**. Account Resources: only your account.
@@ -251,7 +251,7 @@ Lessons from the deploy tests (10-08, runs 1 to 9) and the move to Claude's acco
   that alone, run 42 with the ids connected a same-day repo with no click; a mono-repo was planned on
   the wrong reading). Only with numeric ids and still 8000008: GitHub org > Settings > Installations > Cloudflare Workers and Pages >
   Configure > Repository access: switch to "Only select repositories", back to "All repositories",
-  Save; then push `new/<name>` again.
+  Save; then run the workflow again.
 - Judge a build by `build_outcome`, not `status` ("stopped" is not a failure).
 - Read the real API answer, never the schema. Check a PR is still open before pushing to it.
   Never merge on red. [advisory]
