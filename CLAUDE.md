@@ -19,9 +19,9 @@ Claude's job. `docs/MAP.md` names the one home of each rule; everywhere else lin
 ## The world (2026-10-08)
 
 - GitHub: every repo lives in the org `yverse-studio` (only Butzis-Spiel stays at `yskills/`).
-  Claude works as `yskills-claude`.
+  Claude works as `yskills-claude`, an org Owner.
 - Hosting: new products run on Claude's own Cloudflare account at `https://<name>.yverse.workers.dev`
-  (duo-test stays on yskills'); routes: `publish` skill.
+  (duo-test stays on yskills'); two routes, workflows or laptop session: `publish` skill.
 - Secrets live only in claude-setup's GitHub Actions; app keys (Stripe, Google, mail) are Worker
   secrets. No project has secrets in GitHub, the cloud environment or chat.
 - New page or app: `projects/<name>.json` plus the `new-project` workflow (repo, Worker, D1, first
@@ -45,7 +45,7 @@ Claude's job. `docs/MAP.md` names the one home of each rule; everywhere else lin
   for what exists and start from it; what a thread learns or builds goes into
   claude-setup in a reusable form, linked from `docs/MAP.md`. Every PR body carries a
   `Prior art:` line too. [guard: test scripts/pr-lessons-check.test.mjs]
-- Own the whole task: build, verify, PR, fix CI; "done" means the goal works.
+- Own the whole task: build, verify, PR, fix CI; done = the goal works.
 - Never "can't": try every route (another tool, a workflow with the org token, the laptop via RC)
   first; a truly impossible step goes to yskills as one line plus exact steps, with a `Tried:` line, the rest goes on. A refusal is never reworded or split (`docs/permissions.md`). [guard: hook global/rule-guard.mjs]
 - Auto-run: no taps, no waits for an Allow. The gate merges every PR at 5/5 (`gate.md`), launch,
@@ -61,9 +61,9 @@ Claude's job. `docs/MAP.md` names the one home of each rule; everywhere else lin
   in a claude.ai project, `AskUserQuestion` plus a `Card:` text card in Claude Code; format and the
   coordinator's one-card thread: `operator` SKILL.md, Cards. [guard: hook global/rule-guard.mjs]
 - yskills reads only the project chat: the coordinator posts one line per finished part (result,
-  `Done:`, live link), a link to every card and every blocker, no narration; PR links and gate talk stay in threads.
+  `Done:`, live link), a link to every card and every blocker, no narration; PR links and gate talk stay in threads. Every job keeps a line in `NOW.md` (`docs/USING.md`, Live board). [advisory]
 - A step only yskills can do: one line why, numbered steps, the exact names to type, the rest goes
-  on; every ask carries its clickable link (`docs/pc-claude-user.md`). [guard: hook global/rule-guard.mjs]
+  on; every ask or pointer carries its clickable link (`docs/pc-claude-user.md`). [guard: hook global/rule-guard.mjs]
 - Replies (ADHD): short and informal, in his language, result first, then what he does, at most 5
   items, minutes not "a bit"; reasoning and options go in a file or a card; never the same answer
   twice. A thread reply over 15 lines / 1,500 chars is blocked. [guard: hook global/rule-guard.mjs]
@@ -86,10 +86,8 @@ Claude's job. `docs/MAP.md` names the one home of each rule; everywhere else lin
   [guard: hook global/rule-guard.mjs]; a rule lives in one file, the others link it [guard: test scripts/check.mjs].
   Every PR body has a `Lessons:` line. [guard: test scripts/pr-lessons-check.test.mjs]
 - Before done or a push: `node scripts/pre-pr.mjs --body <file>` (what CI runs; pre-push hook too),
-  report failures. [guard: deny Bash(npm run deploy *)]
-- Live board: every job writes a line in the project's `NOW.md` on start, sets done or failed on
-  finish (`docs/USING.md`, Live board). [advisory]
-- Tokens, handoff: `docs/WORKFLOW.md`; idle 1 h+: no resume.
+  no deploy script; report failures. [guard: deny Bash(npm run deploy *)]
+- Tokens, handoff: `docs/WORKFLOW.md` (Token budget, Handoff triggers); idle 1 h+: no resume.
 - Cloud threads: no WebFetch; a page: `node
   ~/.claude/claude-setup/rule-guard.mjs read <url>`. [guard: hook global/rule-guard.mjs]
   `connect_device` only when the task needs his files. [advisory]

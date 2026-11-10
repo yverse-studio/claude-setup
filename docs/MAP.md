@@ -129,7 +129,7 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 |---|---|---|
 | Org, accounts, where secrets live | `CLAUDE.md` (The world) | `publish` skill, `docs/WORKFLOW.md` (PC work) |
 | Coordinator card (what the project chat reads, its pre-flight) | `scripts/coordinator-card.mjs` (output `/mnt/project-files/claude-setup/COORDINATOR-CARD.md`) | `roles/project-manager.md`, `operator/templates/project-instructions.md` |
-| Live board (who is doing what: one `NOW.md` per project, a line per job, 24 h archive) | `docs/USING.md` (Live board), template `docs/templates/NOW.md` | `CLAUDE.md` (How to work), `operator/briefs.md` (Done when), `WHO.md` (hard lock for one lane only) |
+| Live board (who is doing what: one `NOW.md` per project, a line per job, 24 h archive) | `docs/USING.md` (Live board), template `docs/templates/NOW.md` | `CLAUDE.md` (How to work), `operator/briefs.md` (Done when), the laptop's `GAL_queue\WHO.md` stays a separate lane lock |
 | Close finished threads (resolve or nudge, the daily sweep) | `roles/project-manager.md` (Close threads) | coordinator card, `templates/loop/routine.md` (step 11), `global/rule-guard.mjs` (stop) |
 | Teams, roles, sizes, the pipeline, the Kits (routed per task), the model per role | `docs/TEAMS.md` | `CLAUDE.md` (Teams), `operator/SKILL.md`, `operator/run.md`, `roles/project-manager.md`; `global/team-guard.mjs` enforces `model` |
 | Deploy or delete a page (the steps) | `docs/USING.md` | operator `run.md`, `briefs.md`; detail in `publish` |

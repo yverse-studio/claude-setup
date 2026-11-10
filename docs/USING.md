@@ -123,13 +123,14 @@ template if it is missing and links it in every status answer.
    thread, a laptop run or a routine. Columns: `| time (UTC) | who (thread title + link) | model | what | status | waiting on |`.
 2. **Status** is `running`, `waiting` (put what or who in `waiting on`), `done` or `failed`. A job that
    ends in a hand-off or a `Done:` line sets `done` as its last step, before it resolves itself.
-3. **Archive.** A `done` line older than 24 h moves to `NOW-archive.md` (same table, newest last);
-   whoever notices does it (the coordinator at each start). A `running` line whose job is gone gets
-   `failed`, never a silent delete.
-4. **Edit only your own line.** Re-read the file right before writing: the last write wins and other
-   jobs write too.
-5. **Not a lock.** `WHO.md` stays the hard claim for the Blender lane only (a second job there waits);
-   NOW.md only shows what runs so nobody guesses.
+3. **Edit only your own line.** Re-read the file right before writing: the last write wins and other
+   jobs write too. The one exception is the coordinator's sweep (step 4).
+4. **Sweep: the coordinator**, at each start, with its file tools (it has no Bash). A `done` line
+   older than 24 h moves to `NOW-archive.md` (same table, newest last). A `running` or `waiting`
+   line older than 24 h whose thread is resolved or missing on the thread board gets `failed`,
+   never a silent delete.
+5. **Not a lock.** The hard claim for the Blender lane stays `GAL_queue\WHO.md` on the laptop (not in
+   this repo; a second job there waits); NOW.md only shows what runs so nobody guesses.
 
 Every brief's `Done when:` includes "NOW.md line set to done" (`.claude/skills/operator/briefs.md`).
 
