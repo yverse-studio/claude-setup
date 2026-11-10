@@ -172,9 +172,10 @@ test('a repo project is a private repo with a README only: no database, login or
   rmSync(dir, { recursive: true, force: true })
 })
 
-test('a game project is a static Vite + three.js Worker without a database or login', () => {
-  const game = projectFromBranch('new/blob', (file) => (file.startsWith('incoming/') ? { kind: 'game', d1: true } : null))
+test('a game project is a static Vite + three.js Worker without a login, and without a database unless it says d1 true', () => {
+  const game = projectFromBranch('new/blob', (file) => (file.startsWith('incoming/') ? { kind: 'game' } : null))
   assert.deepEqual([game.kind, game.d1, game.secret], ['game', false, false])
+  assert.equal(projectFromBranch('new/blob', (file) => (file === 'projects/blob.json' ? { kind: 'game', d1: false } : null)).d1, false)
   assert.equal(projectFromBranch('new/shop', () => null).kind, 'site')
   const c = wranglerConfig({ name: 'blob', d1: false, kind: 'game' })
   assert.deepEqual(c.assets, { directory: './dist', binding: 'ASSETS', run_worker_first: ['/api/*'] })
@@ -207,4 +208,25 @@ test('a game scaffold has no test login, a site has it, and the repo placeholder
   assert.match(read(site, 'scripts/journey.mjs'), /previewLoginHeaders/)
   assert.match(read(site, 'src/index.js'), /repo: 'yverse-studio\/ydeas-world'/)
   assert.ok(!read(site, 'src/index.js').includes('__REPO__'))
+})
+
+test('a game with d1 true gets the D1 binding, the migrations and the migrating deploy commands', () => {
+  const game = projectFromBranch('new/waitlist', (file) => (file.startsWith('incoming/') ? { kind: 'game', d1: true } : null))
+  assert.deepEqual([game.kind, game.d1, game.secret], ['game', true, false])
+  assert.equal(game.commands.production.deploy_command, 'npm run deploy')
+  assert.equal(game.commands.previews.deploy_command, 'npm run deploy:preview')
+  const c = wranglerConfig({ name: 'waitlist', d1: true, liveId: 'live', previewId: 'prev', kind: 'game' })
+  assert.deepEqual(c.assets, { directory: './dist', binding: 'ASSETS', run_worker_first: ['/api/*'] })
+  assert.equal(c.d1_databases[0].database_id, 'live')
+  assert.equal(c.previews.d1_databases[0].database_id, 'prev')
+  assert.match(packageJson({ name: 'waitlist', d1: true, kind: 'game' }).scripts.deploy, /^wrangler d1 migrations apply DB --remote && wrangler deploy/)
+  const dir = mkdtempSync(join(tmpdir(), 'np-gamed1-'))
+  writeScaffold(dir, { name: 'waitlist', d1: true, liveId: 'live', previewId: 'prev', kind: 'game' })
+  assert.ok(existsSync(join(dir, 'migrations/0001_meta.sql')), 'the game keeps the migrations folder')
+  assert.ok(JSON.parse(readFileSync(join(dir, 'wrangler.jsonc'), 'utf8')).d1_databases)
+  const plain = mkdtempSync(join(tmpdir(), 'np-gamenod1-'))
+  writeScaffold(plain, { name: 'blob', d1: false, kind: 'game' })
+  assert.ok(!existsSync(join(plain, 'migrations')))
+  rmSync(dir, { recursive: true, force: true })
+  rmSync(plain, { recursive: true, force: true })
 })

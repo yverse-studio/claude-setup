@@ -69,7 +69,7 @@ What you do: write the idea. A thread does the rest.
 2. Start it: push branch `new/<name>` **in one push, with the file in it** (git, or `push_files` to
    a new branch; `create_branch` then `create_or_update_file` is two pushes and the first, empty
    one makes a site), file `projects/<name>.json`:
-   `{ "name": "<name>", "d1": true, "org": "yverse-studio" }`, plus `"kind": "game"` for a game, `"kind": "repo"` for a private repo with no Worker (e.g. a Ren'Py game). A game writes `"d1": false` unless it stores data.
+   `{ "name": "<name>", "d1": true, "org": "yverse-studio" }`, plus `"kind": "game"` for a game, `"kind": "repo"` for a private repo with no Worker (e.g. a Ren'Py game). A game has no D1 unless the file says `"d1": true` (it stores data, e.g. a waitlist): then it gets the DB binding, `migrations/` and the migrating deploy commands like a site. The `new-project.yml` inputs never give a game D1; use the file. A game already made without D1 cannot be switched by a re-run (Workers Builds commands are set once): `delete-project`, then a new run with `"d1": true` (ask first, it deletes a live project; safe while it is only the day-zero stub).
    Or start `new-project.yml` in `yverse-studio/claude-setup`: GitHub MCP `actions_run_trigger`
    `run_workflow`, ref `main`, inputs `name`, `d1` (false when the page stores no data), `kind`
    (`site`, `game` or `repo`).

@@ -84,7 +84,7 @@ from a pushed branch; private repo, no outside collaborators, `yskills-claude` i
    one builds a plain site that a later `kind: game` run never converts, 2026-10-18), `{ "name": "<name>", "d1": true, "org": "yverse-studio" }` (`name`:
    lowercase, digits, dashes; it is the repo and the Worker name; `d1` false when PLAN.md says no
    data; `"kind": "game"` makes a static three.js game instead of the day-zero site: `templates/new-game/`
-   laid over `templates/new-project/`, no D1, no login; see the `game-3d` skill; `"kind": "repo"` makes only a private repo with a README, no Worker, D1 or scaffold, for code that is no web page, like the Ren'Py game `companyxy-spiel`, 2026-10-21). The push runs `new-project-request.yml` (no keys), and on its completion GitHub runs
+   laid over `templates/new-project/`, no login, no D1 unless `"d1": true` (then binding, `migrations/` and `npm run deploy` like a site; a re-run never adds D1 to a game made without it, `delete-project` first); see the `game-3d` skill; `"kind": "repo"` makes only a private repo with a README, no Worker, D1 or scaffold, for code that is no web page, like the Ren'Py game `companyxy-spiel`, 2026-10-21). The push runs `new-project-request.yml` (no keys), and on its completion GitHub runs
    `new-project.yml` with the keys, from `main`'s workflow file and code (`workflow_run`), so a
    pushed branch supplies only the json, never code that runs with the keys. The branch is deleted
    when the run succeeds. From the PC or the Actions page the same workflow runs with Run workflow

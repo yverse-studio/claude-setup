@@ -24,7 +24,7 @@ on:
         type: boolean
         default: true
       kind:
-        description: 'site (day-zero site), game (static three.js game, no D1) or repo (private repo only, no Worker)'
+        description: 'site (day-zero site), game (static three.js game; D1 only via projects/<name>.json "d1": true) or repo (private repo only, no Worker)'
         required: false
         type: choice
         options: [site, game, repo]

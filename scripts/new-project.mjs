@@ -55,7 +55,9 @@ export const ORG = 'yverse-studio'
 // shares the Worker's name. Build commands are the day-zero site's unless the json names its own.
 export function projectConfig(name, cfg = {}) {
   const kind = ['game', 'repo'].includes(cfg.kind) ? cfg.kind : 'site'
-  const d1 = kind === 'site' && cfg.d1 !== false // a game is static: no database
+  // A site has D1 unless `d1: false`; a game is static unless it says `d1: true` (it stores data,
+  // e.g. a waitlist); a repo project has no Worker.
+  const d1 = kind === 'site' ? cfg.d1 !== false : kind === 'game' && cfg.d1 === true
   const defaults = buildCommands(d1)
   return {
     name: cfg.name || name,
@@ -92,10 +94,11 @@ export function wranglerConfig({ name, d1, liveId, previewId, kind }) {
     observability: { enabled: true },
     previews: {},
   }
-  if (kind === 'game') return { ...base, assets: { directory: './dist', binding: 'ASSETS', run_worker_first: ['/api/*'] } }
-  if (!d1) return base
+  const game = kind === 'game' ? { assets: { directory: './dist', binding: 'ASSETS', run_worker_first: ['/api/*'] } } : {}
+  if (!d1) return { ...base, ...game }
   return {
     ...base,
+    ...game,
     d1_databases: [{ binding: 'DB', database_name: name, migrations_dir: 'migrations', database_id: liveId, preview_database_id: previewId }],
     previews: { d1_databases: [{ binding: 'DB', database_name: `${name}-preview`, migrations_dir: 'migrations', database_id: previewId }] },
   }
@@ -491,7 +494,7 @@ async function repoOnly(gh, { org, name, repo, branch, token }) {
 export async function main() {
   const readJson = (file) => (existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : null)
   const project = process.env.NAME
-    ? projectConfig(process.env.NAME, readJson(`projects/${process.env.NAME}.json`) || { d1: env('D1', false) !== 'false', org: env('ORG', false), kind: env('KIND', false) })
+    ? projectConfig(process.env.NAME, readJson(`projects/${process.env.NAME}.json`) || { d1: env('KIND', false) === 'game' ? undefined : env('D1', false) !== 'false', org: env('ORG', false), kind: env('KIND', false) })
     : projectFromBranch(process.env.PROJECT_BRANCH, readJson)
   if (!project) throw new Error('NAME is not set and the branch is not new/<name>')
   const { name, d1, kind, org, repo: repoName, existing, commands, secret, kv } = project
