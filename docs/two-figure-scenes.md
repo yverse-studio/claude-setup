@@ -26,7 +26,7 @@ characters' key names) live in the private game repo and the laptop README.
 ## Order per scene
 
 1. `--pos`, then read `_check.json` (hand distance mm, vertices inside furniture, partner clipping, feet/knee/hip z).
-2. Preview, look at it downscaled. 3. Loop, look at the 8-frame strip. Never "done" without the strip.
+2. Preview. 3. Loop with its 8-frame strip. Strip and `_check.json` go to the gate; never "done" without the gate's pass.
 
 ## Gate and workflow (2026-10-26, night scenes)
 

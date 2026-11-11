@@ -41,9 +41,10 @@ and yskills had to say it twice. This page is the fix.
      needs a login is registered with the email yskills provides;
    - Poses and motion natural: clips from the library (Quaternius UAL, VRMA), spring bones settled,
      feet on the floor, arms outside the body.
-4. **Self-check before anyone sees it.** The builder renders every outfit under the office lights
-   and fixes, before showing: washed-out fabric, white blotches, clipping, wrong colours, shirt
-   or skirt hems that gap or tear. `check_layers.py` prints ok.
+4. **Fixed checks, then the gate.** The builder renders every outfit under the office lights and
+   runs the fixed scripts (`check_layers.py` prints ok). The gate looks for washed-out fabric,
+   white blotches, clipping, wrong colours, hems that gap or tear; the builder does not grade its
+   own render ([`TEAMS.md`](TEAMS.md), Who checks).
    - Eyes are checked in the exported game file as the game renders it (three-vrm), not only in
      Blender: the iris has its own colour and clear contrast against the eye white. A colour boost
      made in Blender that never reaches the export does not count (Hinata, 2026-10-08: a near-white
@@ -107,7 +108,7 @@ game; the sessions' own token logs are not visible from the project.)
    logs stay with them.
 2. **Logs are tailed, never printed whole.** `tail -n 30` of a log file, `grep` for errors; a
    long run goes to the background with output to a file.
-3. **Look at the comparison sheet only, reduced.** One sheet (reference beside render) at
+3. **The comparison sheet goes to the gate, reduced.** One sheet (reference beside render) at
    most 1000 px wide per check; full-size stills only to chase one named flaw, one at a time.
 4. **Save and write down at every milestone.** Built files (`.blend`, `build/`, exports, renders)
    go to `/mnt/project-files/companyxy/patches/<slug>/`; `characters/<slug>/HANDOFF.md` (setup

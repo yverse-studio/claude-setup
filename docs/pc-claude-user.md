@@ -81,6 +81,14 @@ card carries the rule.
 - **Laptop allow list and autoMode (2026-10-26):** `install.mjs` writes them from `global/settings.json` (`docs/permissions.md`); `claude auto-mode config` shows the effective rules.
 - **Laptop permission mode: Accept edits (yskills 2026-10-26).** In Auto mode the classifier blocked replacing a live `.blend` three times although the old file was zipped and MD5-checked and yskills had said yes; an allow rule like `Bash(mv:*)` does not get past it. So on the laptop `C:\Users\Claude\.claude\settings.json` has `"defaultMode": "acceptEdits"`: the allow and project rules decide, `ask` and `deny` still stop the risky things (force push, deploy, secrets, `rm -rf`). Cloud threads keep `auto` (nobody there to answer a prompt). Claude never edits its own permission settings; yskills changes the mode (the file, or the mode button under the message box in the Code tab; Remote Control on the phone has no such button). A running session keeps the mode it started with. `install.mjs` keeps a `defaultMode` already set on the machine. Deleting: allowed without asking once checked (copy verified, file not open, nothing links to it); ask only for important things.
 
+## No windows
+
+Nothing opens on yskills' screen while Claude works, on any machine, unless he asked for it (yskills
+2026-11-11: "ich will nicht das mir irgendwas in gesicht springt jemals wenn du arbeitest außer ich sage
+es"): no exe, browser, Explorer window, Blender UI or popup. Screenshots come from a headless browser
+(Playwright), renders from `blender -b`, helpers from `Start-Process -WindowStyle Hidden`. When he asked to
+see something, the command ends with `# yskills asked`. [guard: hook global/rule-guard.mjs]
+
 ## Long laptop jobs
 
 Only jobs that need the laptop get here: Blender runs in the cloud first (`studio` skill, Where Blender runs).

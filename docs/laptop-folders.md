@@ -38,4 +38,5 @@ C:\Users\Claude\     only system folders, twin-tools\ (35 GB, venv, Twin on hold
 Art references (poses, bodies, scene look, boards, video frames) go to `reference\` and nowhere else;
 character-bound ones to that character's `Image\ref`; 18+ ones to `Private18\ref\`; social-media references (Dandadan remake, beat maps, shotlists, post analyses) to `reference\social-media\`; video analysis output to `reference\watch\`.
 Whoever downloads or generates a reference saves it there in the same turn and adds one line with the source link to that folder's README. A reference that exists only in a chat, a temp folder or a tool's work dir does not exist for the next session.
+A reference yskills sends himself (image, sketch, concept) is routed by the coordinator straight to the laptop lane, which saves it here in the same turn: no review step, no detour through another thread. The Archivist adds an index entry afterwards only when asked ([`roles/archivist.md`](../.claude/skills/operator/roles/archivist.md)).
 Motion data (BVH, FBX, anim) lives in `lib\anims\` (two-person rigs in `lib\anims\interaction\`).
