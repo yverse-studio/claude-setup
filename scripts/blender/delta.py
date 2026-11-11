@@ -27,7 +27,7 @@ DRIFT_MM = 0.5
 
 
 def cfg(char):
-    return json.load(open(os.path.join(LIB, '_tools', 'clothes_items.json'), encoding='utf-8'))['characters'][char]
+    return json.load(open(os.path.join(os.environ.get('GAL_TOOLS', os.path.join(os.path.dirname(LIB), 'tools', 'laptop')), 'clothes_items.json'), encoding='utf-8'))['characters'][char]
 
 
 def arr(data, n):
