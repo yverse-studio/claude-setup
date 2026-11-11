@@ -17,7 +17,7 @@ import bpy, sys, os, json, hashlib
 import numpy as np
 from mathutils import Vector
 
-LIB = os.environ.get('GAL_LIB', r'C:\Users\Claude\Documents\GameAssetLibrary')
+LIB = os.environ.get('GAL_LIB', r'C:\Users\Claude\Documents\lib')
 BASE_DEFAULT = os.path.join(LIB, 'characters', 'CH_Base', 'female', 'Blend', 'base_female_v4.blend')
 ARGS = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
 OPT = {a.split('=', 1)[0]: a.split('=', 1)[1] for a in ARGS if '=' in a}

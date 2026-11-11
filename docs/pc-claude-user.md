@@ -8,8 +8,8 @@ in `install.mjs` works as on yskills' own user (`C:\Users\Ich`); this page lists
 
 - `Documents\GitHub\<repo>`: one git clone per repo, nothing else (no zips, tars, loose notes, secrets files).
   Extra branches of a repo live as worktrees in `Documents\GitHub\_worktrees\<repo>\<name>`, never in `%TEMP%`.
-- `Documents\GameAssetLibrary`: all art sources; downloads land in `temp\` (the inbox). The game play copy stays
-  in `Documents\Games\CompanyXY\` (not a repo).
+- `Documents\lib` (assets by type) and `Documents\projects\games\companyxy`: all art sources; downloads land in `Documents\_inbox\`. The game play copy stays
+  in `Documents\projects\games\companyxy\build\` (not a repo).
 - `C:\Users\Claude\Documents\Private18`: 18+ content and its backups, never in any git remote (`docs/game-pipeline.md`).
 - `C:\Users\Claude\tools`: SDKs installed by hand (Ren'Py). Scratch work: `%TEMP%\opencode`, deleted when done.
 

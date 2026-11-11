@@ -22,6 +22,6 @@ Hooks and guards do not run here, so follow every `[guard: ...]` line by hand an
 
 ## Where things are on the laptop
 
-Read `C:\Users\Claude\Documents\ORDNER.md` first: one map of every folder, each thing exists once. OpenCode work
+Read `C:\Users\Claude\Documents\START.md` first: one map of every folder, each thing exists once. OpenCode work
 (Mochi, duo R1+ v4, Puppet-Talk, Halloween-Short, Dandadan v6) lives in `Documents\GitHub\social-handoff`; its entry point is
 `HANDOFF-OPENCODE.md` there. Git backups of everything not yet pushed: `C:\Users\Claude\_backup-bundles-2026-10-29`.

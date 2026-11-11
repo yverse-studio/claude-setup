@@ -34,7 +34,7 @@ so the rules live here only.
    `f="$(mktemp)" && curl -fsSL --retry 3 -o "$f" https://raw.githubusercontent.com/yverse-studio/claude-setup/main/cloud/setup.sh && bash "$f"`
 
 5. **Laptop folders, once per project.** **Project settings > Resources > Devices**: approve
-   `C:\Users\Claude\Documents` (covers `GitHub`, `StudioLibrary`, `GameAssetLibrary`) and
+   `C:\Users\Claude\Documents` (covers `GitHub`, `lib`, `projects`, `tools`) and
    `C:\Users\Claude\Downloads`, and keep `GitHub` as the default. Then every thread of that
    project reads and writes there without asking you. This approval is your consent per claude.ai
    project: claude-setup, a repo or a thread cannot grant it, and there is no account-wide "all

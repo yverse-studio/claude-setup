@@ -6,11 +6,11 @@ Per character: copy of the live file -> delta.py sync (rig, shape keys, weights,
 --extract  also reads the delta back from the rebuilt file; it must equal the stored delta (proportion, key values).
 --marker   proof run: makes a test base with a +1 mm vertex and a +1 mm bone, rebuilds every character from it, and checks the
            marker arrived in each one (body Basis vertex 5000, identity key, bone Head tail x k).
-Env: BLENDER (exe), GAL_LIB (library root, default C:\\Users\\Claude\\Documents\\GameAssetLibrary)."""
+Env: BLENDER (exe), GAL_LIB (library root, default C:\\Users\\Claude\\Documents\\lib)."""
 import os, sys, json, subprocess, shutil
 import numpy as np
 
-LIB = os.environ.get('GAL_LIB', r'C:\Users\Claude\Documents\GameAssetLibrary')
+LIB = os.environ.get('GAL_LIB', r'C:\Users\Claude\Documents\lib')
 BLENDER = os.environ.get('BLENDER', r'C:\Program Files\Blender Foundation\Blender 5.1\blender.exe')
 HERE = os.path.dirname(os.path.abspath(__file__))
 TOOLS = os.path.join(LIB, '_tools')

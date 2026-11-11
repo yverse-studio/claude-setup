@@ -3,7 +3,7 @@
 Goal: a new game (the vacation game is the first user) needs **only new story, characters and animation**.
 Everything below was done and checked in the CompanyXY test chapter (2026-11-02). What is not proven yet is
 listed at the end and must not be treated as a rule. Genre patterns only: no meshes, textures, names or code
-from another game (teardowns are read for patterns, `GameAssetLibrary\_research\game-teardowns-use-for-company-2026-11-02.md`).
+from another game (teardowns are read for patterns, `Documents\_archive\research\game-teardowns-use-for-company-2026-11-02.md`).
 
 Home of the rest: building a still or loop `docs/game-pipeline.md`; two figures `docs/two-figure-scenes.md`;
 18+ content stays off every git remote (game-pipeline.md, "No sexual content on GitHub").
@@ -43,7 +43,7 @@ A scene is a **slot name** plus files in `game/art/loops/`, nothing else:
   for that part. Render time only, no code per view.
 - **Camera A/B**: automatic cut every 4-8 s (A/B), or locked by the player (Kamera: Auto/A/B). Clip pair has equal length.
 - The Blender side (clip library, retarget, contact gate, strip OK before any full render) is the animator's recipe:
-  `GameAssetLibrary\animations\retarget\ANIMATIONEN.md`, `scenes\companyxy\ch01\SZENE-REZEPT.md`.
+  `lib\anims\retarget\ANIMATIONEN.md`, `projects\games\companyxy\ch01\SZENE-REZEPT.md`.
 - New loops are copied into `game/art/loops/` only after the gate; the game never waits for them.
 
 ## 3. UI and gameplay patterns that worked
