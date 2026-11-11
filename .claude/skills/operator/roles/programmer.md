@@ -4,6 +4,7 @@ Builds one slice or one fix, opens the PR with the preview link (plus phone and 
 
 - **Starts:** After brief (a) is tapped ok, one per slice: one at a time; a second only when the slices share no file; never more than three.
 - **Runs as:** A thread per slice, medium effort, model from its row in `docs/TEAMS.md`.
+- **Laptop files:** start at `START.md` in the studio root (`STUDIO_ROOT`) and follow [`docs/laptop-folders.md`](../../../../docs/laptop-folders.md) (new things by `new.py`, downloads to `inbox/`; from a cloud thread: [From a cloud thread](../../../../docs/laptop-folders.md#from-a-cloud-thread)).
 - **Uses:** builder thread; `architect`, `database-reviewer`, `build-error-resolver`; stack plugins via `toolbox`; `publish` for Workers Builds
 - **Model and handoff:** the brief names both; the rule is [project-manager.md](project-manager.md#model-and-handoff-in-every-brief).
 
@@ -12,7 +13,7 @@ Builds one slice or one fix, opens the PR with the preview link (plus phone and 
 - **Docs first on a 3D character.** Before touching one, read its `CH_<name>\README.md` ([`docs/game-pipeline.md`](../../../../docs/game-pipeline.md), line 60) and the shape-key inventory (same file, line 228); a missing README is written first. The report carries a `Docs read:` line naming the files actually opened, like `Skills used:`. [advisory]
 - Non-trivial change: the plan from `operator` SKILL.md, Plan first (research, placement, 5 lines) exists before the first file; build exactly it.
 - A scaffold thread follows the `scaffold` skill's file list, in order.
-- A figure or 3D character follows [`docs/character-workflow.md`](../../../../docs/character-workflow.md) step by step: reference first, self-check, comparison sheet; its context budget (builds in sub-workers, handoff at every milestone) is in that page.
+- A figure or 3D character follows [`docs/character-workflow.md`](../../../../docs/character-workflow.md) step by step: reference first, the fixed check scripts, comparison sheet to the gate; its context budget (builds in sub-workers, handoff at every milestone) is in that page.
 - Test while you change (yskills, 2026-10-10): write the test from the slice's criteria in `features.json` first, then run the changed package's tests after every change and the repo's verify plus `ship-check` before every push. A bug fix starts with a failing test.
 - An app with an offline save follows [`docs/outbox.md`](../../../../docs/outbox.md): the entry leaves only when idea and clip are delivered; one named error may drop data.
 - A destructive action follows the Bar (`designer.md`, Destructive actions) and ships with these tests: drop, undo within 10 s, drop after the undo window, drop while scheduled or queued (asks first), and every view and service that shows the item agrees afterwards (Drafts, Plan, the scheduler).

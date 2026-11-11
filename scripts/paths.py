@@ -33,4 +33,4 @@ def blender_exe():
     f = path('blender_exe_file')
     if not os.path.isfile(f):
         raise SystemExit(f'{f} missing: put the path of blender.exe in it')
-    return open(f, encoding='utf-8').read().strip().splitlines()[0].strip()
+    return open(f, encoding='utf-8-sig').read().strip().splitlines()[0].strip().strip('"')

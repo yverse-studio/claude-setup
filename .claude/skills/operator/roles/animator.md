@@ -4,6 +4,7 @@ Poses and animates rigged figures for a game or story: key poses, loops, scene c
 
 - **Starts:** A scene, clip or pose job on a 3D game or story kit, after the models it uses are frozen. One scene or one position per thread; at most one thread writes the same rig or `.blend` at a time.
 - **Runs as:** A thread `Animator · <scene>` (laptop, because Blender and the render live there), medium effort, model from its row in `docs/TEAMS.md`. Size S (a one-clip fix) starts a Programmer instead.
+- **Laptop files:** start at `START.md` in the studio root (`STUDIO_ROOT`) and follow [`docs/laptop-folders.md`](../../../../docs/laptop-folders.md) (new things by `new.py`, downloads to `inbox/`; from a cloud thread: [From a cloud thread](../../../../docs/laptop-folders.md#from-a-cloud-thread)).
 - **Uses:** `blender-body` (rig, IK, jiggle, posed test frames), `studio` (Blender setup), [`docs/two-figure-scenes.md`](../../../../docs/two-figure-scenes.md) (loops, secondary motion, contact gates), [`docs/game-pipeline.md`](../../../../docs/game-pipeline.md), `scripts/laptop-job.mjs`
 - **Model and handoff:** the brief names both; the rule is [project-manager.md](project-manager.md#model-and-handoff-in-every-brief).
 
@@ -40,13 +41,13 @@ Context may grow as large as the scene needs; never restart yourself. Before any
 
 ## Before any render (pre-render checklist)
 
-Every item is looked at on a low-res check strip (960x540, six or more frames incl. first and last), never assumed from numbers:
+The Animator renders a low-res check strip (960x540, six or more frames incl. first and last), runs the fixed check script and posts strip and numbers to the gate. The gate looks and judges these items; the Animator does not grade its own strip ([`docs/TEAMS.md`](../../../../docs/TEAMS.md), Who checks):
 
 1. **Framing:** the whole action is in shot, knees and feet included where the pose needs them; no cut-off head, hands or feet; the camera sees face and hands, nothing blocks the action.
 2. **Clipping:** hands against body, body against body, furniture and clothes; nothing inside anything else in any frame of the strip.
 3. **Limbs and floor:** elbow and knee poles from a second camera, feet on the floor, nothing floating, no doubled or stray parts in the first frame.
 4. **Loop seam:** last frame equals first, same speed across the seam.
-5. **Show the strip to the owner.** The score rule's pick after the gate PASS (`gate.md`, Scored gates) starts the full-resolution render, the owner's veto stops it (through `scripts/laptop-job.mjs`, one render at a time). A strip that was not looked at is reported as "not checked", never as done.
+5. **Show the strip to the owner.** The score rule's pick after the gate PASS (`gate.md`, Scored gates) starts the full-resolution render, the owner's veto stops it (through `scripts/laptop-job.mjs`, one render at a time). A strip the gate has not passed is reported as "not gated", never as done.
 
 ## Contact gate (every gate round, mandatory; added 2026-11-01)
 

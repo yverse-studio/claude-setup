@@ -69,7 +69,7 @@ The local qwen (Ollama `llama-server`) holds 2-5 GB RAM: `ollama stop qwen3:8b` 
   (Bit, round4 R1: original forked ears, faceted fur; v3/v4 rejected). 3D from the VRoid base rejected; duo 3D v1
   is a 2D-to-3D projection. Next: rig, poses, 6 faces, alpha render, then the gravity explainer remake with the duo.
 - The files live only in the claude.ai project files (`social/2026-10-27-lowpoly-strategy/`, HANDOFF.md, models/duo-r1/);
-  the laptop has only the index (`reference/social-media-manager/`). Luna 2 needs that folder on the laptop.
+  the laptop has only the index (`tools/apps/social-media-manager/`). Luna 2 needs that folder on the laptop.
 - Twin: tools installed and `doctor` ok; waits for his recordings in `GitHub\twin-raw\`. Videos are English only.
 
 ## Which open items Luna 2 can take
@@ -117,5 +117,5 @@ deletes stay with Claude and yskills.
   before showing it; a role never grades its own work; stop at 3 rounds and change the method, not the numbers.
 - Media traps: Pixel clips are 10-bit HLG HDR (bt2020, arib-std-b67): tonemap to SDR (zscale + tonemap) or ask him to
   turn 10-bit HDR off; never a colour grade without his OK.
-- Showing files: one combined compare video/sheet per question (the Review pane shows one file), plus Start-Process.
+- Showing files: one combined compare video/sheet per question (the Review pane shows one file), plus Start-Process, only when he asked to see it (`pc-claude-user.md`, No windows).
 - Waiting is free: a render through laptop-job costs no tokens; agents should not poll in short loops.

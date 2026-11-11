@@ -12,7 +12,7 @@ checkout) and work by it; this file only makes the role callable as an agent.
 
 Short form: check RAM and running Blender before any start; models and rigs are frozen (no renames,
 no scaling, only additions through the modeller); positions are `position.json` plus a bone alias
-table; no "done" without a looked-at frame strip of six or more frames incl. first and last, with
-elbow and knee poles checked from a non-render camera; a change that worsens the strip is reverted.
+table; no "done" without a frame strip of six or more frames incl. first and last and the fixed check
+script's numbers handed to the gate (the gate looks, `docs/TEAMS.md`, Who checks); a change that worsens the strip is reverted.
 
 Report: what changed, the strip path, what you did not check (`Not judged:`).

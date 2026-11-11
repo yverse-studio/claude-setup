@@ -4,6 +4,7 @@ The gate: clicks the PR's preview and grades it against the slice's criteria. Ne
 
 - **Starts:** When a PR is up; once more for the whole journey after the last slice.
 - **Runs as:** A fresh gate thread per size L PR; S and M run in the author thread ([`gate.md`](../gate.md), Gate size). It starts the Reviewer, Security, Legal and Designer checks as subagents.
+- **Laptop files:** start at `START.md` in the studio root (`STUDIO_ROOT`) and follow [`docs/laptop-folders.md`](../../../../docs/laptop-folders.md) (new things by `new.py`, downloads to `inbox/`; from a cloud thread: [From a cloud thread](../../../../docs/laptop-folders.md#from-a-cloud-thread)).
 - **Uses:** `evaluator`, `e2e-runner`, `a11y-architect`, `performance-optimizer`, `gate.md`
 - **Model and handoff:** the brief names both; the rule is [project-manager.md](project-manager.md#model-and-handoff-in-every-brief).
 

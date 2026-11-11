@@ -58,7 +58,7 @@ game's `game/art/` and the 18+ `.rpy` files are git-ignored), and are shown to y
 
 ## Blender basics on the laptop
 
-- Blender 5.1 at the path in `tools/BLENDER_EXE.txt` (under `STUDIO_ROOT`; not on PATH).
+- Blender 5.2.3, never 5.1; its exe path is the one line of `tools/BLENDER_EXE.txt` under `STUDIO_ROOT` (not on PATH).
   Run headless: `blender -b <file> --python <script>.py -- <args>`; the Blender MCP `_for_cli`
   tools fail.
 - Cloud Blender (no laptop): `apt-get install libegl1 libgl1-mesa-dri libegl-mesa0 libgles2`,
@@ -92,7 +92,7 @@ Full steps and the clip table: `lib\anims\retarget\ANIMATIONEN.md`. Short:
    Clips land as actions `MX_<clip>` (fake user, 24 fps) in the character file.
 4. Arm fix: `... -- armfix <out.blend> <action>...` (the body is wider than the Mixamo X Bot).
 5. QA: `... -- strip <action> <png> --outfit office` (8 frames + `##GATE`: lowest shoe point,
-   arm verts inside the body). Look at the strip yourself.
+   arm verts inside the body). Strip and numbers go to the gate.
 6. Loop: `loop_window.py -- <name> <frames> <actions>...` picks the best seamless window
    (`Dance_Tease` is the example).
 7. Add the row to the clip table in `ANIMATIONEN.md`.
@@ -274,7 +274,7 @@ Practice for the scene player, general game audio (ambience as the bed, foley sy
   verify full lists, never a truncated print.
 - Renames happen all at once or not at all, with the bone/animation maps updated in the same step; a half
   rename broke the animator's maps (10-21). Adopted models are named after the current character.
-- New downloads land in `_claude/_inbox` (the inbox): unpack, keep only what is needed, sort into the
+- New downloads land in `inbox/` (the inbox): unpack, keep only what is needed, sort into the
   library with licence and catalog entry, then empty temp.
 - Back up a file before a body change as `<name>_before-<change>.blend`; scale uniformly, never touch bones
   or weights.

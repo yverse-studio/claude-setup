@@ -8,7 +8,6 @@
     "rooms": "lib/rooms",
     "projects": "projects",
     "companyxy": "projects/games/companyxy",
-    "reference": "reference",
     "repos": "repos",
     "tools": "tools",
     "tools_laptop": "tools/laptop",
@@ -19,9 +18,12 @@
     "archive": "_claude/_archive",
     "queue": "_claude/_queue",
     "who": "_claude/_queue/WHO.md",
-    "inbox": "_claude/_inbox",
+    "inbox": "inbox",
     "worktrees": "_claude/_worktrees",
-    "trash": "_claude/trash"
+    "trash": "_claude/trash",
+    "guides": "docs/guides",
+    "renpy_sdk": "tools/apps/renpy-8.3.7-sdk",
+    "interaction": "lib/anims/interaction"
   },
   "dead_names": [
     "GameAssetLibrary",
@@ -34,6 +36,8 @@
     "GAL_LIB",
     "GAL_queue",
     "GAL_TOOLS",
-    "CXY_BLENDER"
+    "CXY_BLENDER",
+    "_claude\\_inbox",
+    "_claude/_inbox"
   ]
 }
