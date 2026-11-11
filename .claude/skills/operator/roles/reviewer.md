@@ -15,11 +15,12 @@ Reads the code diff for bugs, mess and missing tests.
 
 ## Report
 
-The one home of the review format; `gate.md`, the Tester and the own reviewer agents link here. Give every reviewer subagent this block with the diff. A verdict missing any of the three parts is not a pass: the gate sends it back.
+The one home of the review format; `gate.md`, the Tester and the own reviewer agents link here. Give every reviewer subagent this block with the diff. A verdict missing any of the four parts is not a pass: the gate sends it back.
 
 1. **Quote the line.** Every finding quotes the exact line it is about, as `path:line` and the line itself. A concern you cannot quote goes under "Not judged", not into the findings.
 2. **Would a test fail?** For every finding and every check you pass, say whether a test would fail if it broke (name the test you read, or write `gap: no test would fail`). Read the test before claiming what it covers; search the repo by symbol before saying none exists. A stub, or a test that is skipped or too weak to observe the break, is a gap, not coverage. A checker or guard script needs one test per rule that feeds it a violation, not only a happy path (PR 173 took four rounds to close that); a colour or pattern rule also gets a table test of ordinary values it must pass (greys, off-whites, dark greens and blues, a danger red), because hue and saturation thresholds flagged them in three rounds of PR 174.
 3. **Not judged.** End with a `Not judged:` list, one line each: what you did not or could not check, and why (no preview, no access, outside the diff). An empty list says you set nothing aside.
+4. **The fix.** Every fail says how to make it better, so the builder acts without guessing: what to change, where (`path:line` or the scene object), the number to aim for, and the target (the reference frame, test or criterion that shows it is fixed). "Looks off" without a fix is not a finding (yskills 2026-11-11, vacation-game market gate).
 
 Sources: [`THIRD_PARTY.md`](../../../../THIRD_PARTY.md) (Reviewer upgrades).
 
