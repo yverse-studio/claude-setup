@@ -14,7 +14,7 @@ import re
 import shutil
 
 from cxylib import sha256
-from inventory import ARCHIVED_RE, ROUND_RE
+from inventory import ARCHIVED_RE, OWN_OUTPUTS, ROUND_RE
 
 MOVE_STATUS = ("dead", "duplicate")
 
@@ -47,7 +47,7 @@ def plan(rows, root):
             from inventory import BINARY_EXT
             try:
                 listing[d] = [os.path.join(d, f) for f in os.listdir(os.path.join(root, d) if d else root)
-                              if not f.lower().endswith(BINARY_EXT) and not f.startswith(("INVENTORY", "ARCHIVE-PLAN"))
+                              if not f.lower().endswith(BINARY_EXT) and f not in OWN_OUTPUTS
                               and os.path.isfile(os.path.join(root, d, f))]
             except OSError:
                 listing[d] = []
@@ -118,7 +118,7 @@ def _keep_reason(r, root, dest, late, listed, inventoried):
     return ""
 
 
-def apply(moves, root, dest, report, rows=None, since=None, exclude=()):
+def apply(moves, root, dest, report, rows=None, since=None, exclude=(), kept=None):
     """1. check every planned file again (late callers, new scripts, sha, archive collision);
     2. re-plan with the kept files as staying, so a kept file keeps its imports too (repeat until stable);
     3. move, manifest row first; if any move fails, every move of this run is rolled back.
@@ -137,7 +137,7 @@ def apply(moves, root, dest, report, rows=None, since=None, exclude=()):
                 listed[d] = set()
     late = _late_mentions(root, since, exclude) if since else []   # exclude: our own inventory files
 
-    kept = {}
+    kept = dict(kept or {})   # path -> why, decided before apply (e.g. a fresh scan no longer lists it)
     while True:
         for r, _ in moves:
             if r["path"] not in kept:

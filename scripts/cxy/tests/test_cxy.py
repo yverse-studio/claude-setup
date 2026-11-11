@@ -230,6 +230,31 @@ class InventoryTest(unittest.TestCase):
         self.assertIn("not the list the last", app.stdout)
         self.assertTrue(os.path.exists(os.path.join(self.root, "cb/out/run1/build.py")))
 
+    def test_apply_moves_only_printed_files_a_fresh_scan_still_allows(self):
+        write(self.root, "cb/out/run1/notes.txt", "uses helper2\n")
+        write(self.root, "cb/out/run1/helper2.py", '"""helper2"""\n')
+        inv = os.path.join(self.root, "plan.json")
+        aged = ("import sys; sys.path[:0] = [%r, %r]; import inventory; inventory.touched = lambda st: st.st_mtime; "
+                "import cxy; sys.exit(cxy.main(sys.argv[1:]))" % (os.path.join(CXY, "lib"), CXY))
+        base = [sys.executable, "-c", aged, "archive", "--root", self.root, "--inventory", inv,
+                "--dest", os.path.join(self.root, "_archive", "t")]
+        env = self.sample_env()
+        dry = subprocess.run(base, capture_output=True, text=True, env=env)
+        self.assertIn("MOVE cb/out/run1/build.py", dry.stdout)
+        self.assertIn("MOVE cb/gate_r3/probe.py", dry.stdout)
+        self.assertNotIn("helper2.py", dry.stdout)
+        os.rename(os.path.join(self.root, "cb/out/run1/notes.txt"), os.path.join(self.root, "notes.bak"))   # not printed -> never moves
+        write(self.root, "laptop/go.bat", "python cb\\gate_r3\\probe.py\r\n")   # synced up with an old mtime
+        app = subprocess.run(base + ["--apply"], capture_output=True, text=True, env=env)
+        self.assertTrue(os.path.exists(os.path.join(self.root, "cb/out/run1/helper2.py")), app.stdout)
+        self.assertTrue(os.path.exists(os.path.join(self.root, "cb/gate_r3/probe.py")), app.stdout)
+        self.assertFalse(os.path.exists(os.path.join(self.root, "cb/out/run1/build.py")), app.stdout)
+
+    def test_project_docs_named_like_inventory_are_read(self):
+        write(self.root, "docs/INVENTORY_SPEC.md", "run `cb/gate_r3/probe.py` before export\n")
+        rows = {r["path"]: r for r in inventory.build(self.root, self.reg, rules=RULES)}
+        self.assertGreater(rows["cb/gate_r3/probe.py"]["mentioned_by"], 0)
+
     def test_package_and_relative_imports_protect_the_module(self):
         write(self.root, "cb/tools/main.py", '"""main.py: tool."""\nfrom lib.util import f\nfrom .rel import g\n')
         write(self.root, "cb/tools/lib/util.py", '"""util.py: same bytes."""\n')

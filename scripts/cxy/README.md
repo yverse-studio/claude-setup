@@ -12,7 +12,7 @@ and `archive_rules.example.json` to `archive_rules.json`, set `CXY_ROOT` if the 
 | `python3 cxy.py list` | every tool command, its pipeline step, runner, script |
 | `python3 cxy.py doctor` | registered scripts exist, Blender / bpy python found |
 | `python3 cxy.py inventory` | every script under the root: canonical, helper, used, fork, one-off, duplicate, dead (+ why it is protected) → `INVENTORY.md` |
-| `python3 cxy.py archive [--apply]` | dry run writes `ARCHIVE-PLAN.json` + the move list to review; `--apply` moves exactly that reviewed list (refused if rewritten since) to `_archive/<date>-scripts/` with `MANIFEST.tsv`; never deletes or overwrites |
+| `python3 cxy.py archive [--apply]` | dry run writes `ARCHIVE-PLAN.json` + the move list to review; `--apply` moves only files that reviewed list printed and a fresh scan still allows (refused if rewritten since) to `_archive/<date>-scripts/` with `MANIFEST.tsv`; never deletes or overwrites |
 | `python3 cxy.py archive --undo <MANIFEST.tsv>` | everything back |
 | `python3 cxy.py <tool> [--cxy-dry] [--cxy-factory] args` | runs the registered script with its runner (python3, bpy python, Blender batch, node) |
 

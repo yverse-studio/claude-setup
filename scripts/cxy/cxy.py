@@ -141,6 +141,8 @@ def cmd_archive(reg, argv):
         with open(inv_json + ".started", "w", encoding="utf-8") as fh:
             fh.write(f"{started!r}\n{cxylib.sha256(inv_json)}\n")
         moves = archive.plan(rows, root)
+        with open(inv_json + ".started", "a", encoding="utf-8") as fh:   # the printed list: --apply moves only these
+            fh.writelines(r["path"] + "\n" for r, _ in moves)
         for r, reason in moves:
             print(f"MOVE {r['path']}  ({reason})")
         rep.ok(f"dry run: {len(moves)} scripts would move to {dest}; review, then add --apply (uses {inv_json})")
@@ -155,15 +157,20 @@ def cmd_archive(reg, argv):
     with open(inv_json, encoding="utf-8") as fh:
         rows = json.load(fh)
     try:
-        since_s, sha = open(inv_json + ".started", encoding="utf-8").read().split()[:2]
-        since = float(since_s)
-    except (OSError, ValueError):
-        since, sha = None, None
+        lines = open(inv_json + ".started", encoding="utf-8").read().splitlines()
+        since, sha, printed = float(lines[0]), lines[1].strip(), set(lines[2:])
+    except (OSError, ValueError, IndexError):
+        since, sha, printed = None, None, set()
     if since is None or sha != cxylib.sha256(inv_json):
         rep.red(f"{inv_json} is not the list the last `cxy archive` dry run printed (rewritten since): run the dry run again")
         return rep.finish()
     own = [inv_json, inv_json + ".root", inv_json + ".started", os.path.splitext(inv_json)[0] + ".md"]
-    archive.apply(archive.plan(rows, root), root, dest, rep, rows=rows, since=since, exclude=own)
+    # exactly the printed list, and only what a fresh scan right now would still move
+    moves = [(r, why) for r, why in archive.plan(rows, root) if r["path"] in printed]
+    fresh = {r["path"] for r, _ in archive.plan(inventory.build(root, reg, skip=own), root)}
+    kept = {r["path"]: "a fresh scan no longer lists it (new caller, change or protection)" for r, _ in moves
+            if r["path"] not in fresh}
+    archive.apply(moves, root, dest, rep, rows=rows, since=since, exclude=own, kept=kept)
     return rep.finish()
 
 

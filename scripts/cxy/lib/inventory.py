@@ -24,6 +24,9 @@ TEXT_EXT = SCRIPT_EXT + (".md", ".json", ".txt", ".tsv", ".html", ".htm", ".bat"
 SKIP_DIRS = {"node_modules", "__pycache__", ".git", "uploads", "_archive"}   # _archive: already archived
 # callers are read in uploads/ and .git/hooks/ too (a hook or an uploaded .bat can run a script); only scripts there never move
 TEXT_SKIP_DIRS = {"node_modules", "__pycache__", "_archive"}
+# cxy's own outputs list every script by name: never read them as callers (other INVENTORY_*.md files are read)
+OWN_OUTPUTS = {"INVENTORY.md", "INVENTORY.json", "INVENTORY.json.root", "ARCHIVE-PLAN.md", "ARCHIVE-PLAN.json",
+               "ARCHIVE-PLAN.json.root", "ARCHIVE-PLAN.json.started"}
 DEAD_HOURS = 12
 ROUND_RE = re.compile(r"(^|/)(gate_?r?\d+\w*|r\d+\w*|run\d+\w*|v\d+\w*|patch\w*|lane[A-Z]\w*|build\d+|"
                       r"verdict\w*|reports?\w*|_gate\w*|gates?|stress\w*|test_\w+|clearance_repro|freeze|"
@@ -77,7 +80,7 @@ def walk_text(root, limit=None):
             dirs[:] = [x for x in dirs if x == "hooks"]
             files = []
         for f in sorted(files):
-            if f.lower().endswith(BINARY_EXT) or ".zip.part" in f or f.startswith(("INVENTORY", "ARCHIVE-PLAN")):
+            if f.lower().endswith(BINARY_EXT) or ".zip.part" in f or f in OWN_OUTPUTS:
                 continue
             p = os.path.join(d, f)
             try:
@@ -195,7 +198,7 @@ def protection(rel, age_h, rules, size=None):
     return ""
 
 
-def build(root, registry, now=None, rules=None):
+def build(root, registry, now=None, rules=None, skip=()):
     """Return a list of row dicts, one per script under root."""
     now = now or time.time()
     rules = dict(rules if rules is not None else load_rules())
@@ -206,7 +209,8 @@ def build(root, registry, now=None, rules=None):
 
     scripts = list(walk(root, SCRIPT_EXT))
     # our own INVENTORY.* output names every script: never count it as a mention
-    texts = {p: _read(p) for p in walk_text(root)}
+    skip = {os.path.abspath(x) for x in skip}   # e.g. an --inventory file of another name: it names every script
+    texts = {p: _read(p) for p in walk_text(root) if os.path.abspath(p) not in skip}
 
     helper_names = set()
     for p in canonical:
