@@ -13,7 +13,7 @@ const [, , outdir, tag, ...figs] = process.argv
       const fwd = new hb.position.constructor(0, 0, 1).applyQuaternion(q); return { x: v.x, y: v.y + 0.07, z: v.z, fx: fwd.x, fz: fwd.z } })
     await p.close()
     const body = !!process.env.BODY
-    for (const [nm, ang] of [['front', 0], ['34', 0.6]]) {
+    for (const [nm, ang] of [['front', 0], ['34', 0.6], ['back', Math.PI], ['backl', 2.3], ['backr', -2.3]].filter(([n]) => (process.env.VIEWS || 'front,34').split(',').includes(n))) {
       const c = Math.cos(ang), s = Math.sin(ang), dx = h.fx * c - h.fz * s, dz = h.fx * s + h.fz * c, d = body ? 2.4 : 0.55, ty = body ? h.y * 0.55 : h.y
       const cam = [h.x + dx * d, ty + 0.02, h.z + dz * d, h.x, ty, h.z].map((n) => n.toFixed(3)).join(',')
       const p2 = await b.newPage({ viewport: { width: 900, height: 900 } }); p2.setDefaultTimeout(300000)

@@ -154,7 +154,7 @@ if 'tuck' in OPS:  # an inner waistband poking out of the shirt hem (dark tabs a
         pt += 1
     print('TUCK skin scraps recoloured', len(patch), pt)
     print('TUCK verts', nt, 'shirt hem z', round(hem, 3))
-if {'brows', 'scalp', 'haircontrast', 'cheekcards', 'lipsmear'} & set(OPS):
+if {'brows', 'scalp', 'haircontrast', 'cheekcards', 'lipsmear', 'fringe'} & set(OPS):
     import numpy as np, os
     img = next(i for i in bpy.data.images if i.name.endswith('_color.png'))
     if not img.has_data or img.size[0] == 0:
@@ -194,7 +194,8 @@ if {'brows', 'scalp', 'haircontrast', 'cheekcards', 'lipsmear'} & set(OPS):
     if 'scalp' in OPS:  # skin under the hair takes the hair colour: gaps between cards read as hair, not skin
         hb2 = BVHTree.FromPolygons([v.co for v in bm.verts], [[v.index for v in f.verts] for f in hair_f])
         hu = hair_f[0].loops[0][uvl].uv.copy()
-        best = min((l[uvl].uv.copy() for f in hair_f for l in f.loops), key=lambda u: float(np.abs(tex(u)[:3] - hairc).sum()))
+        tgt = hairc * float(os.environ.get('SCALPK', 1))  # SCALPK < 1: a darker scalp, so the band under a fringe reads as hair, not grey skin
+        best = min((l[uvl].uv.copy() for f in hair_f for l in f.loops if tex(l[uvl].uv)[3] > 0.9), key=lambda u: float(np.abs(tex(u)[:3] - tgt).sum()))
         ns = 0
         for f in body_f:
             c = f.calc_center_median()
@@ -205,6 +206,21 @@ if {'brows', 'scalp', 'haircontrast', 'cheekcards', 'lipsmear'} & set(OPS):
                 for l in f.loops: l[uvl].uv = best
                 ns += 1
         print('SCALP faces', ns)
+    if 'fringe' in OPS:  # saw-tooth fringe: blur the hair alpha where it meets the forehead and cut again at 50 %: a soft, closed edge
+        from scipy.ndimage import gaussian_filter, binary_dilation
+        from PIL import Image, ImageDraw
+        sig = float(os.environ.get('FRINGES', 5))
+        fr = [f for f in hair_f if f.calc_center_median().z < nz + 0.13 and f.normal.y < -0.2 and abs(f.calc_center_median().x) < float(os.environ.get('FRINGEX', 0.08))]
+        mk = Image.new('L', (W_, H_), 0); dr = ImageDraw.Draw(mk)
+        for f in fr: dr.polygon([(l[uvl].uv.x * W_, l[uvl].uv.y * H_) for l in f.loops], fill=255)
+        m = binary_dilation(np.array(mk) > 0, iterations=int(sig * 2))
+        a0 = px[..., 3].copy(); bl = gaussian_filter(a0, sig); new = np.where(bl > 0.5, 1.0, 0.0)
+        hole = m & (a0 < 0.5) & (new > 0.5)
+        if hole.any():
+            w = (a0 >= 0.5).astype(np.float32); den = gaussian_filter(w, sig) + 1e-6
+            for k in range(3): px[..., k][hole] = (gaussian_filter(px[..., k] * w, sig) / den)[hole]
+        px[..., 3][m] = new[m]
+        print('FRINGE faces', len(fr), 'texels', int(m.sum()), 'filled', int(hole.sum()), 'cut', int((m & (a0 >= 0.5) & (new < 0.5)).sum()))
     if 'cheekcards' in OPS:  # stray long-hair cards in front of the cheeks and eyes go
         kill = []
         for f in hair_f:

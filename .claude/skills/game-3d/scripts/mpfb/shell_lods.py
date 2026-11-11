@@ -17,7 +17,39 @@ def sel(*objs, active=None):
     bpy.ops.object.select_all(action='DESELECT')
     for o in objs: o.select_set(True)
     bpy.context.view_layer.objects.active = active or objs[0]
+def uv_overlaps(me, R=512):
+    import numpy as np
+    uv = me.uv_layers.active.data; me.calc_loop_triangles(); own = -np.ones((R, R), int); bad = set()
+    for t in me.loop_triangles:
+        P = np.array([uv[l].uv[:] for l in t.loops]) * R; a, b, c = P
+        d = (b[1] - c[1]) * (a[0] - c[0]) + (c[0] - b[0]) * (a[1] - c[1])
+        if abs(d) < 1e-9: continue
+        x0, y0 = np.floor(P.min(0)).astype(int); x1, y1 = np.ceil(P.max(0)).astype(int)
+        xs, ys = np.meshgrid(np.arange(max(x0, 0), min(x1, R)) + .5, np.arange(max(y0, 0), min(y1, R)) + .5)
+        w1 = ((b[1] - c[1]) * (xs - c[0]) + (c[0] - b[0]) * (ys - c[1])) / d; w2 = ((c[1] - a[1]) * (xs - c[0]) + (a[0] - c[0]) * (ys - c[1])) / d
+        m = (w1 > 0.02) & (w2 > 0.02) & (1 - w1 - w2 > 0.02); iy = (ys[m] - .5).astype(int); ix = (xs[m] - .5).astype(int)
+        prev = {int(p) for p in own[iy, ix] if p >= 0 and p != t.polygon_index}
+        if prev: bad |= prev; bad.add(t.polygon_index)
+        own[iy, ix] = t.polygon_index
+    return bad
 def tris(o): return sum(len(p.vertices) - 2 for p in o.data.polygons)
+# bake source: the near LOD without faces that sit under another layer (a white sock under the trouser hem baked through as
+# white shards, round 11). HIDDEN = how close the outer layer must be (m), HIDZ = only below this height (m).
+src = near
+HID = float(os.environ.get('HIDDEN', 0))
+if HID:
+    from mathutils.bvhtree import BVHTree
+    src = near.copy(); src.data = near.data.copy(); bpy.context.collection.objects.link(src); src.name = near.name + '_bakesrc'
+    src.modifiers.clear(); src.parent = None; src.matrix_world = near.matrix_world.copy()
+    bvh = BVHTree.FromObject(src, bpy.context.evaluated_depsgraph_get(), deform=False); mw = src.matrix_world; hz = float(os.environ.get('HIDZ', 0.6))
+    bm = bmesh.new(); bm.from_mesh(src.data); bm.faces.ensure_lookup_table(); kill = []
+    for f in bm.faces:
+        c = mw @ f.calc_center_median(); n = (mw.to_3x3() @ f.normal).normalized()
+        if c.z > hz: continue
+        loc, nrm, i, d = bvh.ray_cast(c + n * 1e-4, n, HID)
+        if loc is not None and i != f.index: kill.append(f)
+    bmesh.ops.delete(bm, geom=kill, context='FACES'); bm.to_mesh(src.data); bm.free(); src.hide_render = True
+    print('HIDDEN faces removed from bake source', len(kill))
 for old in far:
     t = 2000 if old.name.endswith('_LOD2') else 700
     for vox in (VOX, VOX * 1.4, VOX * 2, VOX * 3):  # tunnels (genus) stop decimation; a coarser voxel closes them
@@ -65,13 +97,23 @@ for old in far:
     for u in list(sh.data.uv_layers): sh.data.uv_layers.remove(u)
     sh.data.uv_layers.new(name='UVMap')
     bpy.ops.object.mode_set(mode='EDIT'); bpy.ops.mesh.select_all(action='SELECT')
-    bpy.ops.uv.smart_project(angle_limit=1.15, island_margin=0.01); bpy.ops.object.mode_set(mode='OBJECT')
+    bpy.ops.uv.smart_project(angle_limit=float(os.environ.get('UVANG', 1.15)), island_margin=0.01); bpy.ops.object.mode_set(mode='OBJECT')
+    # smart UV can fold an island over itself at the shoe and hem; both faces then bake into the same texels (round 12: the
+    # white shoe printed onto the trouser hem). Give the overlapping faces their own islands and repack everything.
+    for it in range(4):
+        ov = uv_overlaps(sh.data); print('UV overlap faces', len(ov))
+        if not ov: break
+        bm3 = bmesh.new(); bm3.from_mesh(sh.data); bm3.faces.ensure_lookup_table()
+        for f in bm3.faces: f.select = f.index in ov
+        bm3.to_mesh(sh.data); bm3.free(); sc.tool_settings.use_uv_select_sync = True
+        bpy.ops.object.mode_set(mode='EDIT'); bpy.ops.uv.smart_project(angle_limit=0.2, island_margin=0.01)
+        bpy.ops.mesh.select_all(action='SELECT'); bpy.ops.uv.pack_islands(margin=0.01); bpy.ops.object.mode_set(mode='OBJECT')
     # bake colour from the near LOD
     img = bpy.data.images.new(old.name + '_bake', TEX[t], TEX[t]); img.generated_color = (1, 0, 1, 1); mat = bpy.data.materials.new(old.name + '_mat'); mat.use_nodes = True
     nt = mat.node_tree; tn = nt.nodes.new('ShaderNodeTexImage'); tn.image = img
     nt.links.new(tn.outputs['Color'], nt.nodes['Principled BSDF'].inputs['Base Color']); nt.nodes['Principled BSDF'].inputs['Roughness'].default_value = 0.75
     nt.nodes.active = tn; sh.data.materials.clear(); sh.data.materials.append(mat)
-    near.hide_render = False; sel(near, sh, active=sh)
+    src.hide_render = False; sel(src, sh, active=sh)
     sc.render.bake.use_selected_to_active = True; sc.render.bake.cage_extrusion = float(os.environ.get('CAGE', 0.03)); sc.render.bake.max_ray_distance = float(os.environ.get('RAY', 0.08))
     sc.render.bake.use_pass_direct = False; sc.render.bake.use_pass_indirect = False; sc.render.bake.margin = 4
     bpy.ops.object.bake(type='DIFFUSE', pass_filter={'COLOR'})
@@ -99,6 +141,7 @@ for old in far:
     nm = old.name; bpy.data.objects.remove(old); sh.name = nm; sh.data.name = nm; sh.parent = rig
     bpy.ops.object.shade_smooth()
     print('SHELL', nm, tris(sh))
+if src is not near: bpy.data.objects.remove(src)
 lods = sorted([o for o in bpy.data.objects if o.type == 'MESH' and '_LOD' in o.name], key=lambda o: o.name)
 sel(rig, *lods, active=rig)
 bpy.ops.export_scene.gltf(filepath=os.path.join(OUT, NAME + '.glb'), use_selection=True, export_format='GLB',
