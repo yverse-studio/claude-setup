@@ -231,7 +231,9 @@ def build(root, registry, now=None, rules=None, skip=()):
     # lookbehind: a match only starts at the start of a name, so a long run of word chars is scanned once, not per offset
     word = re.compile(r"(?<![\w.\-])[\w.\-]+\.(?:py|mjs|js|sh|ps1)")
     for p, t in scan.items():
-        for b in set(word.findall(t)) & base_names:
+        found = set(word.findall(t))
+        found |= {m.lstrip("_") for m in found}   # markdown _bake.py_ / __bake.py__
+        for b in found & base_names:
             mentions[b].add(p)
     # names the pattern cannot capture ("fix rig.py", "bake(2).py"): plain substring search
     odd = [b for b in base_names if re.search(r"[^\w.\-]", b)]
@@ -252,7 +254,8 @@ def build(root, registry, now=None, rules=None, skip=()):
     # whole-word index over every text file (conservative: any word equal to a script's stem counts as a caller)
     words = {}
     for p, t in scan.items():
-        for wd in set(re.findall(r"\w[\w\-]*", t)):
+        found = set(re.findall(r"\w[\w\-]*", t))
+        for wd in found | {w.strip("_") for w in found}:   # _bake_ in markdown italics
             words.setdefault(wd, set()).add(p)
     sha_of = {p: sha256(p)[:16] for p in scripts}
     # a symlink ("tools/rig.py -> ../gate_r4/rig_fix.py") and its target: neither ever moves (moving the target dangles the link)

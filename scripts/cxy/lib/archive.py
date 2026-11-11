@@ -64,7 +64,10 @@ def plan(rows, root):
             # staying siblings: script rows not moving, plus every other text file in the folder (html, bat, yml, ...)
             sibs = [sib["path"] for sib in by_dir[d] if sib is not r and sib["path"] not in cand]
             sibs += [rel for rel in folder_texts(d) if rel not in cand and rel != r["path"] and rel not in sibs]
-            if any(pat.search(text(rel)) for rel in sibs):
+            stem = os.path.splitext(r["name"])[0].casefold()
+            # a staying same-stem sibling (bake.bat running "%~dpn0.py", bake.sh running "${0%.*}.py") runs it by its own name
+            if any(os.path.splitext(os.path.basename(rel))[0].casefold() == stem for rel in sibs) \
+                    or any(pat.search(text(rel)) for rel in sibs):
                 cand.discard(r["path"])
                 changed = True
     out = []

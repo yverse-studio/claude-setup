@@ -260,6 +260,18 @@ class InventoryTest(unittest.TestCase):
         moves = {r["path"] for r, _ in archive.plan(list(rows.values()), self.root)}
         self.assertFalse(moves & {"run13/bake.py", "tools/bake.py"})
 
+    def test_same_stem_wrapper_and_markdown_italics(self):
+        write(self.root, "run12/bake.bat", 'python "%~dpn0.py" %*\r\n')
+        write(self.root, "run12/bake.py", '"""bake"""\n')
+        write(self.root, "docs/notes.md", "then run _gen_lod.py_ and __pack_atlas__\n")
+        write(self.root, "run12/gen_lod.py", '"""lod"""\n')
+        write(self.root, "run11/pack_atlas.py", '"""atlas"""\n')
+        rows = {r["path"]: r for r in inventory.build(self.root, self.reg, rules=RULES)}
+        self.assertGreater(rows["run12/gen_lod.py"]["mentioned_by"], 0)
+        self.assertGreater(rows["run11/pack_atlas.py"]["mentioned_by"], 0)
+        moves = {r["path"] for r, _ in archive.plan(list(rows.values()), self.root)}
+        self.assertNotIn("run12/bake.py", moves)
+
     def test_project_docs_named_like_inventory_are_read(self):
         write(self.root, "docs/INVENTORY_SPEC.md", "run `cb/gate_r3/probe.py` before export\n")
         write(self.root, "game/INVENTORY.md", "Rebuild icons: python run12/gen_item_icons.py\n")   # the game's item inventory
