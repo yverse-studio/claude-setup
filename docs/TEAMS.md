@@ -114,20 +114,21 @@ The company. Runs as: where the role lives. Model: the tier (the id is in the Mo
 | Project Manager ([`project-manager.md`](../.claude/skills/operator/roles/project-manager.md)) | talks to yskills, sizes the task, starts every thread with its model, keeps `PROGRESS.md`, HQ rows, the asks ledger; never builds | always | the project chat | as yskills sets it |
 | Planner ([`planner.md`](../.claude/skills/operator/roles/planner.md)) | the grill cards, the stress test, `PLAN.md` and `features.json` | sizes M and L, step 1 to 3 | a thread `Planner · <topic>` | Opus; Fable for a new product's architecture |
 | Researcher ([`researcher.md`](../.claude/skills/operator/roles/researcher.md)) | what exists already (ours first), what the best do, prices, tools, proof people pay | step 2 | subagents, one page each | Sonnet; Haiku to read; Opus to weigh conflicting findings |
+| Archivist ([`archivist.md`](../.claude/skills/operator/roles/archivist.md)) | documents gate-passed scripts, workflows and recipes, keeps the indexes, cleans up by the project's cleanup rule; never files or reviews yskills' reference images (those go straight to the laptop reference folder, [`laptop-folders.md`](laptop-folders.md)), never decides content, never steers threads | a pipeline project with gates; every gate pass is relayed to it | a thread | Sonnet |
 | Designer ([`designer.md`](../.claude/skills/operator/roles/designer.md)) | the look before any screen: references, palette, type, 2-3 drafts, the vote card; reviews every UI PR | size L, step 4; every UI PR | a thread; `design-critic` subagent per UI PR | Opus; Fable for a new product's art direction |
 | Content Designer ([`content-designer.md`](../.claude/skills/operator/roles/content-designer.md)) | every word a user reads, German and English | step 4 of a site or app; a PR with a new flow | subagent of the Designer | Sonnet |
 | Game Designer ([`game-designer.md`](../.claude/skills/operator/roles/game-designer.md)) | how a game plays: core loop, run length, difficulty, ad hooks | step 4 of a game; a PR that changes play | a thread at game start; subagent for a small play change | Opus; Fable for a new game's core loop |
 | Audio ([`audio.md`](../.claude/skills/operator/roles/audio.md)) | how a game sounds, licence-clean and small | after the Game Designer's doc; a PR with a new sound moment | subagent of the Game Designer | Sonnet |
 | Sound Designer ([`sound-designer.md`](../.claude/skills/operator/roles/sound-designer.md)) | builds and mixes all sound | picture locked; new scene or cut | a thread | Sonnet |
 | Analytics ([`analytics.md`](../.claude/skills/operator/roles/analytics.md)) | what is measured and why, the weekly numbers line | step 4 of a site, app or game; a PR with a new user action | subagent of the Planner | Sonnet |
-| Animator ([`animator.md`](../.claude/skills/operator/roles/animator.md)) | poses and animates frozen rigged figures: key poses, loops, scene clips, contact; no "done" without a looked-at frame strip | size M or L of a `game` or `story` scene or clip, after the models are frozen | a thread `Animator · <scene>` on the laptop (Blender); `animator` agent file | Sonnet for given numbers; Opus for posing, IK, scene systems |
-| Programmer ([`programmer.md`](../.claude/skills/operator/roles/programmer.md)) | one slice or fix as one PR, tests first, green CI; runs the S and M gate, its verdict from a fresh Opus reviewer | every size, step 5 | a thread per slice, never more than three at once | Sonnet; one Opus checkpoint subagent |
+| Animator ([`animator.md`](../.claude/skills/operator/roles/animator.md)) | poses and animates frozen rigged figures: key poses, loops, scene clips, contact; runs the fixed check script and hands strip and numbers to the gate | size M or L of a `game` or `story` scene or clip, after the models are frozen | a thread `Animator · <scene>`; `animator` agent file | Sonnet for given numbers; Opus for posing, IK, scene systems |
+| Programmer ([`programmer.md`](../.claude/skills/operator/roles/programmer.md)) | one slice or fix as one PR, tests first, green CI; runs the S and M gate, its verdict from a fresh Opus reviewer | every size, step 5 | a thread per slice, max three at once | Sonnet; one Opus checkpoint subagent |
 | Tester ([`tester.md`](../.claude/skills/operator/roles/tester.md)) | QA: the gate, grades the preview against the criteria; never built it | step 6 | S, M: the author thread; L: a fresh thread | Opus |
 | Reviewer ([`reviewer.md`](../.claude/skills/operator/roles/reviewer.md)) | reads the diff for bugs, mess, missing tests | every gate | subagent of the gate | Opus |
 | Security ([`security.md`](../.claude/skills/operator/roles/security.md)) | the diff and the preview attacked like an outsider | user input, auth, money, secrets; before launch | subagent of the gate | Opus, effort high on money, auth, secrets |
 | Playtester ([`playtester.md`](../.claude/skills/operator/roles/playtester.md)) | plays a game build like a stranger | every build that changes play | a fresh subagent of the gate | Opus |
-| Legal ([`legal.md`](../.claude/skills/operator/roles/legal.md)) | German law must-haves, then pass or fail on the preview | the plan, pages with tracking or checkout, launch | subagent; a thread to write legal texts | Opus |
-| Marketer ([`marketer.md`](../.claude/skills/operator/roles/marketer.md)) | the probe, launch posts, ads, weekly growth | step 7 and 8 | a thread at launch, then the weekly routine | Sonnet |
+| Legal ([`legal.md`](../.claude/skills/operator/roles/legal.md)) | German law must-haves, then pass or fail on the preview | the plan, pages with tracking or checkout, launch | subagent; a thread for legal texts | Opus |
+| Marketer ([`marketer.md`](../.claude/skills/operator/roles/marketer.md)) | the probe, launch posts, ads, weekly growth | step 7 and 8 | a thread at launch, then weekly | Sonnet |
 
 ### Film (`video-studio`)
 
@@ -191,6 +192,24 @@ non-trivial change in any kit, `setup` included, starts with research, a placeme
 (`operator` SKILL.md, Plan first). A kind not in the table is sized as `site`. Several ideas in one message become one chain each; chains that
 share no file run at once, the rest queue in `PROGRESS.md`. The `Done:` line ends with one short
 line per role saying what it found or checked, and the skills actually used (`briefs.md`, Skills).
+
+## Who checks
+
+Only the gate and yskills look at work and judge it (yskills 2026-11-11: "ich und gate gaten der rest
+macht einfach"). The gate works from fixed analysis scripts and their numbers, then looks. Every other
+role executes its brief and runs the fixed script its playbook names; it does not open, review or grade
+images, content or quality, its own or another thread's, and adds no check of its own.
+
+- Project Manager: routes and relays; checks that a file or link exists, never what it shows.
+- Planner: thinks the plan through (grill, stress test); judges no built work.
+- Researcher: reports sources as read; judges no built work.
+- Archivist: documents what passed the gate; reviews nothing.
+- Designer: makes the direction and drafts for yskills' vote; a UI PR is judged by the gate's `design-critic`.
+- Content Designer, Game Designer, Audio, Sound Designer, Analytics, Legal, Marketer: write or build their part; the gate checks it.
+- Animator: builds, runs the fixed check script, hands strip and numbers to the gate.
+- Programmer: builds and runs the tests (numbers); the look is the gate's.
+- Tester, Reviewer, Security, Playtester: these are the gate.
+- Film and Social teams: makers make; only the Critic and the Hook Checker grade.
 
 ## Models for tasks that are not a role
 

@@ -40,13 +40,13 @@ Context may grow as large as the scene needs; never restart yourself. Before any
 
 ## Before any render (pre-render checklist)
 
-Every item is looked at on a low-res check strip (960x540, six or more frames incl. first and last), never assumed from numbers:
+The Animator renders a low-res check strip (960x540, six or more frames incl. first and last), runs the fixed check script and posts strip and numbers to the gate. The gate looks and judges these items; the Animator does not grade its own strip ([`docs/TEAMS.md`](../../../../docs/TEAMS.md), Who checks):
 
 1. **Framing:** the whole action is in shot, knees and feet included where the pose needs them; no cut-off head, hands or feet; the camera sees face and hands, nothing blocks the action.
 2. **Clipping:** hands against body, body against body, furniture and clothes; nothing inside anything else in any frame of the strip.
 3. **Limbs and floor:** elbow and knee poles from a second camera, feet on the floor, nothing floating, no doubled or stray parts in the first frame.
 4. **Loop seam:** last frame equals first, same speed across the seam.
-5. **Show the strip to the owner.** The score rule's pick after the gate PASS (`gate.md`, Scored gates) starts the full-resolution render, the owner's veto stops it (through `scripts/laptop-job.mjs`, one render at a time). A strip that was not looked at is reported as "not checked", never as done.
+5. **Show the strip to the owner.** The score rule's pick after the gate PASS (`gate.md`, Scored gates) starts the full-resolution render, the owner's veto stops it (through `scripts/laptop-job.mjs`, one render at a time). A strip the gate has not passed is reported as "not gated", never as done.
 
 ## Contact gate (every gate round, mandatory; added 2026-11-01)
 

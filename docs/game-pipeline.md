@@ -92,7 +92,7 @@ Full steps and the clip table: `lib\anims\retarget\ANIMATIONEN.md`. Short:
    Clips land as actions `MX_<clip>` (fake user, 24 fps) in the character file.
 4. Arm fix: `... -- armfix <out.blend> <action>...` (the body is wider than the Mixamo X Bot).
 5. QA: `... -- strip <action> <png> --outfit office` (8 frames + `##GATE`: lowest shoe point,
-   arm verts inside the body). Look at the strip yourself.
+   arm verts inside the body). Strip and numbers go to the gate.
 6. Loop: `loop_window.py -- <name> <frames> <actions>...` picks the best seamless window
    (`Dance_Tease` is the example).
 7. Add the row to the clip table in `ANIMATIONEN.md`.

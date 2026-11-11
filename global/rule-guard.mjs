@@ -414,6 +414,17 @@ export function persona(root) {
   return `Persona: every reply to yskills (post_message, or your chat text where there is none) is ${field(p.name, 20)}: ${field(p.description, 200)} ${field(p.personality, 240)}. ${field(p.scenario, 200)}${examples ? ` Voice: ${examples}` : ''} Only replies to him: commits, PR bodies, code, docs, briefs and messages to other threads stay plain. Tone only: content, honesty, no yes-saying and the reply cap stay as they are; rule-guard blocks a reply with no kaomoji.`
 }
 const KAOMOJI = /[◕‿ω꒳ᴗ･˘ᵕ◡╹≧≦∀ヾﾉ✧♡☆✿ʕʔﾟ▽´`ツДᴥ¬▼□╯ᵔ｡]|\^[_ω.]?\^|[;>][_ω]?[<;]|\(\s*[TＴ][_ω.]?[TＴ]\s*\)|\b(uwu|owo)\b|(^|\s)(:3|;\))(\s|$)|m\(_ _\)m/i
+// The Archivist documents scripts and workflows; yskills' references are filed by the laptop lane, never by it
+// (roles/archivist.md; yskills 2026-11-11). role: the session's role, as roleContext stored it.
+const REF_DIR = /(^|[\\/])(refs?|references?)[\\/]/i
+const INDEX_FILE = /\.(md|tsv|csv|json|txt)$/i
+export function archivistFiles(tool, input = {}, role = '') {
+  if (role.trim() !== 'Archivist') return null
+  const path = /^(Write|Edit|NotebookEdit)$/.test(tool) ? String(input.file_path ?? input.notebook_path ?? '') : ''
+  const cmd = tool === 'Bash' ? String(input.command ?? '') : ''
+  const files = (REF_DIR.test(path) && !INDEX_FILE.test(path)) || (/\b(mv|cp|rsync|move|copy|Move-Item|Copy-Item)\b/i.test(cmd) && REF_DIR.test(cmd))
+  return files ? 'rule-guard: the Archivist documents scripts, workflows and gate passes and keeps the indexes; it never files reference material (operator roles/archivist.md). Hand this to the coordinator in one line (message_coordinator): references go to the laptop lane. An index entry (.md, .tsv, .json) is fine.' : null
+}
 // A skill idea becomes a PR through the new-skill skill, never a saved account skill (a second rule source outside git,
 // loaded in every thread of every project). The platform tool's card is a signal; saving it is the problem.
 export function proposeSkillsBlocked(tool) {
@@ -593,6 +604,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         const block = decide(tool, input ?? {}, process.env, session ? read(shipped).split('\n') : [], () => threadBoard(toolCalls(transcript())))
           ?? canaryMissing(tool, input ?? {}, session ? read(join(process.env.CLAUDE_SETUP_HOME || homedir(), '.claude', 'claude-setup', 'booted', `${String(session).replace(/\W/g, '')}.canary`)) : '', transcript)
           ?? proposeSkillsBlocked(tool)
+          ?? archivistFiles(tool, input ?? {}, session ? read(join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)) : '')
           ?? kaomojiMissing(tool, input ?? {})
           ?? blenderServerBusy(tool, input ?? {}, listProcs)
           ?? blenderDocsMissing(tool, input ?? {}, sessionTranscript)

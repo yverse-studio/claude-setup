@@ -1060,3 +1060,15 @@ test('rule guard: propose_skills is refused and names new-skill; hook matchers s
   assert.equal(run.status, 2, 'the hook exits 2 for propose_skills')
   assert.match(run.stderr, /new-skill/)
 })
+
+test('rule-guard: an Archivist thread documents, it does not file references', async () => {
+  const { archivistFiles } = await import('../global/rule-guard.mjs')
+  const a = (tool, input) => archivistFiles(tool, input, 'Archivist')
+  assert.match(a('Write', { file_path: '/mnt/project-files/refs/posen/x.png' }) ?? '', /laptop lane/)
+  assert.match(a('Bash', { command: 'mv /mnt/project-files/uploads/a.jpg /mnt/project-files/refs/aussehen/' }) ?? '', /laptop lane/)
+  assert.match(a('Bash', { command: 'Copy-Item a.png C:\\Users\\Claude\\Documents\\reference\\06\\' }) ?? '', /laptop lane/)
+  assert.equal(a('Write', { file_path: '/mnt/project-files/refs/README.md' }), null)
+  assert.equal(a('Edit', { file_path: '/mnt/project-files/PROVEN.md' }), null)
+  assert.equal(a('Bash', { command: 'rm /mnt/project-files/_tmp/old.blend' }), null)
+  assert.equal(archivistFiles('Write', { file_path: '/mnt/project-files/refs/posen/x.png' }, 'Animator'), null)
+})
