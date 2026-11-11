@@ -1,7 +1,7 @@
 # Two-figure scenes in Blender 5.1 (stills and loops)
 
 The how-to for any scene with two rigged figures (from the animator's working guide, 2026-10-21). Paths are the
-laptop library (`GameAssetLibrary`, see `docs/game-pipeline.md`); project specifics (slot lists, the
+laptop library (`lib\` and `projects\games\`, see `docs/game-pipeline.md`); project specifics (slot lists, the
 characters' key names) live in the private game repo and the laptop README.
 
 ## Setup
@@ -194,8 +194,8 @@ scene tools solve it (VaM, sandbox games, pose editors, Blender pose-library add
 ## Recipe: the mund scene from zero (state 2026-10-26)
 
 A fresh agent follows this with claude-setup plus the laptop handoffs, no questions. Handoffs (read-only sources, in
-`GameAssetLibrary\`): `rigs\interaction\HANDOFF.md` (sections 6-8 gate, image language, engineering lessons; 9a vision;
-9e order), `characters\CH_rika\Blend\HANDOFF.md` ("Rig v2"), `scenes\companyxy\ch01\INTEGRATION.md` (player).
+`Documents\`): `lib\anims\interaction\HANDOFF.md` (sections 6-8 gate, image language, engineering lessons; 9a vision;
+9e order), `lib\characters\CH_rika\Blend\HANDOFF.md` ("Rig v2"), `projects\games\companyxy\ch01\INTEGRATION.md` (player).
 
 1. Models: Rika `characters\CH_rika\Blend\rika.blend` (Rig v2), the man `characters\CH_male\male.blend` (v2.2, 1.90 m,
    normals out), room `environment\rooms\office_night`. Check first: bone maps (`rika_now.json`, `mh_male.json`:

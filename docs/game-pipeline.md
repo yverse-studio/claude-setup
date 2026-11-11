@@ -14,19 +14,19 @@ Standing calls for every scene and character (adult main character, base + delta
 ## Where things live
 
 The folder tree, the scene slots and the step-by-step for building a scene by hand live in **one place**:
-`GameAssetLibrary\README.md` on the laptop (references zip `Downloads\CompanyXY-Referenzen.zip` listed there; a copy for cloud threads: `/mnt/project-files/companyxy/docs/GameAssetLibrary-README.md`).
+`Documents\START.md` on the laptop (the live map; asset folders: `lib\README.md`; references zip `Downloads\CompanyXY-Referenzen.zip` listed there; a copy for cloud threads: `/mnt/project-files/MAP.md` section 3, old to new table).
 That README is for yskills and is the home of every laptop path; this page only names the main ones and
 links it. Update both in the same turn when a folder changes.
 
 | What | Where |
 |---|---|
-| Asset library | laptop `C:\Users\Claude\Documents\GameAssetLibrary` (not in git; `catalog.json` one entry per asset) |
-| Female base template (only file in its folder) | `characters\CH_Base\female\Blend\base_female_v4.blend`; tools and work log in `..\_work\` (`sets.py`, `cg_lib.py`, `poses.py`, `body_aware.py`, `HANDOFF.md`) |
-| A character | `characters\CH_<name>\` (Rika: `CH_rika\Blend\rika.blend`; man: `CH_male\male.blend`) |
-| Rooms | `environment\rooms\<room>\<room>.blend` + `_preview.png` (built by `_work\sets.py`, saved by `save_rooms.py`; office_night has `Camera_POV_stand`, `Camera_POV_sit`, `Camera_Side`) |
-| Shots | `scenes\<game>\<chapter>\<shot>\<shot>.blend` + `compare.png`; overview `scenes\companyxy\ch01\overview.png` |
-| Animation | `animations\retarget\ANIMATIONEN.md` (+ `retarget.py`, `maps\`); packs in `animations\AN_<name>\` |
-| Two-person rig | `rigs\interaction\kiss\` (`README.md`, `kiss.json`, `apply_interaction.py`, `bone_maps\`) |
+| Asset library | laptop `C:\Users\Claude\Documents\lib\` (not in git; `GameAssetLibrary` was the pre-2026-11-10 name; `Documents\catalog.json` one entry per asset) |
+| Female base template (only file in its folder) | `lib\characters\CH_Base\female\Blend\base_female_v4.blend`; tools and work log in `..\_work\` (`sets.py`, `cg_lib.py`, `poses.py`, `body_aware.py`, `HANDOFF.md`) |
+| A character | `lib\characters\CH_<name>\` (Rika: `CH_rika\Blend\rika.blend`; man: `CH_male\male.blend`) |
+| Rooms | `lib\rooms\<room>\<room>.blend` + `_preview.png` (built by `_work\sets.py`, saved by `save_rooms.py`; office_night has `Camera_POV_stand`, `Camera_POV_sit`, `Camera_Side`) |
+| Shots | `projects\games\<game>\<chapter>\<shot>\<shot>.blend` + `compare.png`; overview `projects\games\companyxy\ch01\overview.png` |
+| Animation | `lib\anims\retarget\ANIMATIONEN.md` (+ `retarget.py`, `maps\`); packs in `lib\anims\AN_<name>\` |
+| Two-person rig | `lib\anims\interaction\kiss\` (`README.md`, `kiss.json`, `apply_interaction.py`, `bone_maps\`) |
 | Ren'Py game | private repo `yverse-studio/companyxy-spiel` (`game/` source, `story/<char>/` chapters, `story/briefs/` scene list + briefs); playable build on the laptop `GitHub\CompanyXY-Spiel\CompanyXY-1.0-pc\` (art in `game\art\`, `game\art\loops\`, slots in `game\slots.rpy`) |
 | Story guide + plan | `/mnt/project-files/companyxy/story/storyteller/` (`09-story-plan.md`); Rika's ten chapters: company-xy branch `story-rika-fanservice` |
 | Body building guide + lessons | `/mnt/project-files/companyxy/patches/base-body/` (`GUIDE.md`, `LESSONS.md`); posing `characters/POSEN-ANLEITUNG.md` |
@@ -36,15 +36,15 @@ README and the private `nacht-kapitel1.rpy` only.
 
 ### One source, kept clean
 
-Planned 2026-11-05, executed in stages (`rigs\` merges into `animations\interaction\`; scripts live in `GameAssetLibrary\tools\`).
+Planned 2026-11-05, executed in stages (`rigs\` merged into `lib\anims\interaction\`; scripts live in `Documents\tools\`).
 
-- One file per character, clip and scene, at its place in the README tree (`characters\`, `animations\`, `scenes\`).
+- One file per character, clip and scene, at its place in the README tree (`lib\characters\`, `lib\anims\`, `projects\games\`).
 - Work happens in a dated copy `<name>_<date>_<reason>.blend` in the same folder and is written back into the target
   file at the end.
 - The copy then goes to `_archive\<date>-<reason>\` or `_trash_<date>\`; it never stays next to the original.
 - No version chains (`_v1` ... `_v23`): at most the target, one working copy and one archive state.
 - Render output and check strips live with the shot: `<shot>\render\`, `<shot>\checks\`.
-- Before a thread ends it records in `GameAssetLibrary\docs\handoff\HANDOFF-CURRENT.md` which file is current and where
+- Before a thread ends it records in `Documents\docs\handoff\HANDOFF-CURRENT.md` which file is current and where
   work continues.
 - What is not in the README tree does not exist for the next thread.
 
@@ -52,7 +52,7 @@ Planned 2026-11-05, executed in stages (`rigs\` merges into `animations\interact
 clips, stills and proof strips sat in `companyxy-spiel`). GitHub's Acceptable Use Policies forbid "graphic depictions of
 sexual acts including ... animation, computer-generated images, or text-based content" and its Terms let it scan private
 repos for content that breaks them. So 18+ renders, loops, proof strips, gate sheets and explicit scene text never go
-into any repo, branch or PR, not even "for review": they stay in `GameAssetLibrary` and the laptop play copy (the
+into any repo, branch or PR, not even "for review": they stay in `lib\`, `projects\` and the laptop play copy (the
 game's `game/art/` and the 18+ `.rpy` files are git-ignored), and are shown to yskills as local files. Code, tools,
 `position.json` numbers and neutral docs stay in git.
 
@@ -69,7 +69,7 @@ game's `game/art/` and the 18+ `.rpy` files are git-ignored), and are shown to y
 
 ## Characters
 
-Our female base is `characters\CH_Base\female\Blend\base_female_v4.blend`: body, rig, hair and clothes
+Our female base is `lib\characters\CH_Base\female\Blend\base_female_v4.blend`: body, rig, hair and clothes
 with our adult head, straight rest pose, scaled uniformly to 1.65 m (rig and body together; bones and weights
 untouched). Face kit 447 keys + 15 emotion keys; breast and five butt sliders on the body. A new character =
 copy of the base in `characters\CH_<name>\Blend\<name>.blend` + slider values, head, hair, outfit, never a new
@@ -84,7 +84,7 @@ characters as delivered never go into 18+ scenes. Clothes are fitted once per ba
 
 ## Put an animation on a character
 
-Full steps and the clip table: `GameAssetLibrary\animations\retarget\ANIMATIONEN.md`. Short:
+Full steps and the clip table: `lib\anims\retarget\ANIMATIONEN.md`. Short:
 
 1. New clip: put the FBX in `animations\AN_<pack>\source\`, add a `catalog.json` entry.
 2. Bone map: copy `retarget\maps\mixamo_to_rika.json`, fix the target bone names for a new rig.
@@ -164,7 +164,7 @@ Researcher, Architect (the fix list), Continuity (a column in the shot list) and
 Claude threads do not render these; they only keep this recipe right. Five seamless loops (one per position)
 and five stills (kiss, three endings, after). The exact file names are in the game source, block `init 2`
 of `game/nacht-kapitel1.rpy` (laptop game folder, or `/mnt/project-files/companyxy/game/` for cloud
-threads), and in `GameAssetLibrary\README.md` (section on the night scenes); they stay out of git.
+threads), and in `Documents\START.md` and `projects\games\companyxy\ch01\` (the night scenes); they stay out of git.
 
 1. Save a new file as `scenes\companyxy\ch01\<slot>\<slot>.blend`.
 2. File > Link: room `environment\rooms\office_night\office_night.blend` (10th floor, desk, chief chair,
@@ -274,7 +274,7 @@ Practice for the scene player, general game audio (ambience as the bed, foley sy
   verify full lists, never a truncated print.
 - Renames happen all at once or not at all, with the bone/animation maps updated in the same step; a half
   rename broke the animator's maps (10-21). Adopted models are named after the current character.
-- New downloads land in `GameAssetLibrary\temp` (the inbox): unpack, keep only what is needed, sort into the
+- New downloads land in `Documents\_inbox` (the inbox): unpack, keep only what is needed, sort into the
   library with licence and catalog entry, then empty temp.
 - Back up a file before a body change as `<name>_before-<change>.blend`; scale uniformly, never touch bones
   or weights.
