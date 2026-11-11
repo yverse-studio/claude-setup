@@ -425,6 +425,15 @@ class InventoryTest(unittest.TestCase):
         moves = {r["path"] for r, _ in archive.plan(list(rows.values()), self.root)}
         self.assertFalse(moves & {"run10/fix rig.py", "run10/val.py", "tools1/dupa.py", "tools2/dupb.py"}, moves)
 
+    def test_copy_named_script_with_sibling_caller_stays(self):
+        write(self.root, "run10/go.bat", 'python "%~dp0bake (2).py"\r\n')
+        write(self.root, "run10/bake (2).py", '"""copy"""\n')
+        rows = {r["path"]: r for r in inventory.build(self.root, self.reg, rules=RULES)}
+        moves = {r["path"] for r, _ in archive.plan(list(rows.values()), self.root)}
+        self.assertNotIn("run10/bake (2).py", moves)
+        late = [("x/new.bat", 'python ..\\run10\\bake (2).py')]
+        self.assertTrue(archive.stem_re("bake (2).py").search(late[0][1]))
+
     def test_markdown_lists_all_rows(self):
         md = inventory.to_markdown(list(self.rows.values()))
         for rel in self.rows:

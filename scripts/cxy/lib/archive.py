@@ -19,6 +19,11 @@ from inventory import ARCHIVED_RE, ROUND_RE
 MOVE_STATUS = ("dead", "duplicate")
 
 
+def stem_re(name):
+    """The bare stem as a whole word; lookarounds, not \\b, so "bake (2)" matches before its ".py" too."""
+    return re.compile(r"(?<!\w)" + re.escape(os.path.splitext(name)[0].casefold()) + r"(?!\w)")
+
+
 def plan(rows, root):
     """Rows that may move: list of (row, reason). A candidate that a staying sibling names stays too,
     repeated until nothing changes (A imported by B, B kept because C imports it -> A stays)."""
@@ -54,7 +59,7 @@ def plan(rows, root):
         for r in rows:
             if r["path"] not in cand:
                 continue
-            pat = re.compile(r"\b" + re.escape(os.path.splitext(r["name"])[0].casefold()) + r"\b")
+            pat = stem_re(r["name"])
             d = os.path.dirname(r["path"])
             # staying siblings: script rows not moving, plus every other text file in the folder (html, bat, yml, ...)
             sibs = [sib["path"] for sib in by_dir[d] if sib is not r and sib["path"] not in cand]
@@ -98,8 +103,7 @@ def _keep_reason(r, root, dest, late, listed, inventoried):
     """Why a planned file must stay after all ('' = it may move). Checked at --apply time."""
     src = os.path.join(root, r["path"])
     d = os.path.dirname(r["path"])
-    stem = re.escape(os.path.splitext(r["name"])[0].casefold())
-    hit = next((p for p, t in late if os.path.abspath(p) != os.path.abspath(src) and re.search(r"\b" + stem + r"\b", t)), None)
+    hit = next((p for p, t in late if os.path.abspath(p) != os.path.abspath(src) and stem_re(r["name"]).search(t)), None)
     if hit:
         return f"named by {os.path.relpath(hit, root)}, changed after the inventory"
     new_files = listed.get(d, set()) - inventoried.get(d, set())
