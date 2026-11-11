@@ -44,7 +44,12 @@ for f in bm.faces:
     if isl[f.verts[0].index] != body: continue
     us = [tuple(l[uv].uv) for l in f.loops]
     if max(abs(u[0] - us[0][0]) + abs(u[1] - us[0][1]) for u in us) > 1e-6: continue  # not painted
-    if all(ht.ray_cast(v.co + v.normal * 0.001, v.normal, 0.03)[0] is not None for v in f.verts): continue  # really under the hair
+    import os
+    from mathutils import Vector
+    c = f.calc_center_median()
+    if os.environ.get('FRONT') and f.normal.y < -0.3:  # a frontal face that the eye sees straight on is never under the hair
+        if ht.ray_cast(c + Vector((0, -0.001, 0)), Vector((0, -1, 0)), 0.5)[0] is not None: continue
+    elif all(ht.ray_cast(v.co + v.normal * 0.001, v.normal, 0.03)[0] is not None for v in f.verts): continue  # really under the hair
     for l in f.loops:
         loc, nr, i, d = rt.find_nearest(l.vert.co); rf = rfaces[i]
         tri = [lv.vert.co for lv in rf.loops[:3]]; tu = [lv[ruv].uv.to_3d() for lv in rf.loops[:3]]

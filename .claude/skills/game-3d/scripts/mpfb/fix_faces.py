@@ -154,7 +154,7 @@ if 'tuck' in OPS:  # an inner waistband poking out of the shirt hem (dark tabs a
         pt += 1
     print('TUCK skin scraps recoloured', len(patch), pt)
     print('TUCK verts', nt, 'shirt hem z', round(hem, 3))
-if {'brows', 'scalp', 'haircontrast', 'cheekcards', 'lipsmear', 'fringe'} & set(OPS):
+if {'brows', 'scalp', 'haircontrast', 'cheekcards', 'lipsmear', 'fringe', 'liptone'} & set(OPS):
     import numpy as np, os
     img = next(i for i in bpy.data.images if i.name.endswith('_color.png'))
     if not img.has_data or img.size[0] == 0:
@@ -210,7 +210,7 @@ if {'brows', 'scalp', 'haircontrast', 'cheekcards', 'lipsmear', 'fringe'} & set(
         from scipy.ndimage import gaussian_filter, binary_dilation
         from PIL import Image, ImageDraw
         sig = float(os.environ.get('FRINGES', 5))
-        fr = [f for f in hair_f if f.calc_center_median().z < nz + 0.13 and f.normal.y < -0.2 and abs(f.calc_center_median().x) < float(os.environ.get('FRINGEX', 0.08))]
+        fr = [f for f in hair_f if f.calc_center_median().z < nz + float(os.environ.get('FRINGEZ', 0.13)) and f.normal.y < -0.2 and abs(f.calc_center_median().x) < float(os.environ.get('FRINGEX', 0.08))]
         mk = Image.new('L', (W_, H_), 0); dr = ImageDraw.Draw(mk)
         for f in fr: dr.polygon([(l[uvl].uv.x * W_, l[uvl].uv.y * H_) for l in f.loops], fill=255)
         m = binary_dilation(np.array(mk) > 0, iterations=int(sig * 2))
@@ -234,6 +234,29 @@ if {'brows', 'scalp', 'haircontrast', 'cheekcards', 'lipsmear', 'fringe'} & set(
         kill = [f for f in hair_f if isl[f.verts[0].index] in ki]
         bmesh.ops.delete(bm, geom=kill, context='FACES')
         print('CHEEK hair faces deleted', len(kill))
+    if 'liptone' in OPS:  # far LOD: a few big mouth triangles stretch the lip texels into a hard red bar; give them one muted lip tone
+        near = [l for f in body_f for l in f.loops if (l.vert.co - mc).length < 0.05 and l.vert.normal.y < -0.3]
+        lipl = [l for l in near if (l.vert.co - mc).length < 0.016]
+        if lipl and near:
+            lipc = np.median([tex(l[uvl].uv)[:3] for l in lipl], axis=0); skin = np.median([tex(l[uvl].uv)[:3] for l in near], axis=0)
+            tgt = skin * (1 - float(os.environ.get('LIPK', 0.35))) + lipc * float(os.environ.get('LIPK', 0.35))
+            best = min((l[uvl].uv.copy() for l in near), key=lambda u: float(np.abs(tex(u)[:3] - tgt).sum()))
+            nl = 0; body_set = set(body_f)
+            def red(f): return any(tex(l[uvl].uv)[0] > tex(l[uvl].uv)[1] * 1.45 for l in f.loops)
+            perface = os.environ.get('LIPMODE') == 'face'  # round 14: one tone for all made pale wedges; each red face takes the
+            for f in bm.faces:  # colour of its own skin corner instead (only red faces), so it matches the cheek next to it
+                d = (f.calc_center_median() - mc).length
+                if perface:
+                    if d < 0.035 and red(f):
+                        ok = [l[uvl].uv.copy() for l in f.loops if not (tex(l[uvl].uv)[0] > tex(l[uvl].uv)[1] * 1.45)]
+                        u = ok[0] if ok else best
+                        for l in f.loops: l[uvl].uv = u
+                        nl += 1
+                    continue
+                if (d < 0.016 and f.normal.y < -0.2 and f in body_set) or (d < 0.03 and red(f)):
+                    for l in f.loops: l[uvl].uv = best
+                    nl += 1
+            print('LIPTONE faces', nl, 'lip', np.round(lipc, 2), 'skin', np.round(skin, 2), 'tone', np.round(tex(best)[:3], 2))
     if 'lipsmear' in OPS:  # far LOD: lip colour smeared over a collapsed mouth takes the cheek skin instead
         cheek = [l[uvl].uv.copy() for f in body_f for l in f.loops if 0.025 < (l.vert.co - mc).length < 0.07 and l.vert.normal.y < -0.4]
         cols = np.array([tex(u)[:3] for u in cheek]) if cheek else None

@@ -69,6 +69,12 @@ back, lower LODs, face). Ship: `node optimize-figures.mjs in.glb out.glb <colour
   makes a blocky stepped hairline: `unpaint.py` gives uncovered forehead faces their skin UVs back from an untouched LOD and
   `fix_faces.py fringe` blurs the hair alpha at the forehead and cuts again (soft, closed edge). Hands open on a held prop read as
   claws: curl the fingers (+x on this rig) round its back. Check the back hem in neutral Blender light; the scene is too dark.
+- Round 14: a saw-tooth fringe needs a wide blur (`fringe FRINGES=20 FRINGEX=0.12 FRINGEZ=0.16` on 2048 px; 9 px changed nothing
+  in the engine). Single hair-card wisps hanging over the forehead go with `wisps.py <blend> 12 0.04` (max island verts, depth below the hair top). Far-LOD lips:
+  remapping mouth faces to one skin texel (`fix_faces.py liptone`) leaves flat pale wedges; `mouthcut.py <blend> <LOD index>` instead
+  gives each red corner the UV of its nearest skin corner on the same face, so the skin gradient carries on and a thin lip stays.
+  A shell bake takes the first hit, so see-through hair-card texels bake as a dark blotch with white specks over the forehead:
+  `shell_lods.py ALPHACUT=0.5` drops mostly transparent faces from the bake source.
 - Check holes before a gate: `holes.py file.blend` renders each LOD on magenta and fails on background seen through the figure.
 - meshoptimizer `simplifyWithAttributes` per part tears UV seams worse than Decimate on the joined mesh; do not use it for figures.
 - `Object3D.clone()` of a skinned GLB keeps the skin on the cached skeleton: the figure vanishes. Use `SkeletonUtils.clone`.

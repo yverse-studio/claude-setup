@@ -14,7 +14,8 @@ for nm, t in (('LOD2', 2000), ('LOD3', 700)):
     old = lods[nm]; name = old.name
     o = near.copy(); o.data = near.data.copy(); bpy.context.collection.objects.link(o)
     bpy.ops.object.select_all(action='DESELECT'); o.select_set(True); bpy.context.view_layer.objects.active = o
-    for hd, tt in ((False, t * (1 - HF)), (True, t * HF)):
+    hf = float(os.environ.get('HEADF3', HF)) if nm == 'LOD3' else HF
+    for hd, tt in ((False, t * (1 - hf)), (True, t * hf)):
         g = o.vertex_groups.new(name='_dec')
         for v in o.data.vertices: g.add([v.index], 1.0 if ((o.matrix_world @ v.co).z > neck - 0.01) == hd else 0.0, 'REPLACE')
         for _ in range(14):

@@ -50,6 +50,21 @@ if HID:
         if loc is not None and i != f.index: kill.append(f)
     bmesh.ops.delete(bm, geom=kill, context='FACES'); bm.to_mesh(src.data); bm.free(); src.hide_render = True
     print('HIDDEN faces removed from bake source', len(kill))
+ACUT = float(os.environ.get('ALPHACUT', 0))  # round 14: the bake takes the first hit, so clear hair-card texels baked as a dark
+if ACUT:                                    # blotch with white specks over the forehead; drop source faces that are mostly see-through
+    import numpy as np
+    if src is near:
+        src = near.copy(); src.data = near.data.copy(); bpy.context.collection.objects.link(src); src.name = near.name + '_bakesrc'
+        src.modifiers.clear(); src.parent = None; src.matrix_world = near.matrix_world.copy(); src.hide_render = True
+    im = next(i for i in bpy.data.images if i.name.endswith('_color.png')); W, H = im.size
+    A = np.array(im.pixels[:], dtype=np.float32).reshape(H, W, 4)[..., 3]
+    uv = src.data.uv_layers.active.data; bm = bmesh.new(); bm.from_mesh(src.data); ul = bm.loops.layers.uv.active; kill = []
+    for f in bm.faces:
+        us = [l[ul].uv for l in f.loops]; c = sum((u for u in us), Vector((0, 0))) / len(us)
+        pts = us + [c] + [(u + c) / 2 for u in us]
+        if np.mean([A[min(H - 1, max(0, int(u.y * H))), min(W - 1, max(0, int(u.x * W)))] for u in pts]) < ACUT: kill.append(f)
+    bmesh.ops.delete(bm, geom=kill, context='FACES'); bm.to_mesh(src.data); bm.free()
+    print('ALPHACUT faces removed from bake source', len(kill))
 for old in far:
     t = 2000 if old.name.endswith('_LOD2') else 700
     for vox in (VOX, VOX * 1.4, VOX * 2, VOX * 3):  # tunnels (genus) stop decimation; a coarser voxel closes them
