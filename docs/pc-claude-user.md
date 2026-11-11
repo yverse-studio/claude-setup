@@ -1,30 +1,30 @@
 # The `Claude` Windows user on MeinLaptop
 
 Claude's own home on yskills' laptop since 2026-10-08: a standard (non-admin) Windows user named
-`Claude`, home `C:\Users\Claude`. Remote Control sessions for project work run here. Everything
-in `install.mjs` works as on yskills' own user (`C:\Users\Ich`); this page lists only what differs.
+`Claude`, home `%USERPROFILE%`. Remote Control sessions for project work run here. Everything
+in `install.mjs` works as on yskills' own user (`%USERPROFILE%` of that user); this page lists only what differs.
 
 ## Folders on this user (2026-10-29)
 
-- `Documents\GitHub\<repo>`: one git clone per repo, nothing else (no zips, tars, loose notes, secrets files).
-  Extra branches of a repo live as worktrees in `Documents\GitHub\_worktrees\<repo>\<name>`, never in `%TEMP%`.
-- `Documents\lib` (assets by type) and `Documents\projects\games\companyxy`: all art sources; downloads land in `Documents\_inbox\`. The game play copy stays
-  in `Documents\projects\games\companyxy\build\` (not a repo).
-- `C:\Users\Claude\Documents\Private18`: 18+ content and its backups, never in any git remote (`docs/game-pipeline.md`).
-- `C:\Users\Claude\tools`: SDKs installed by hand (Ren'Py). Scratch work: `%TEMP%\opencode`, deleted when done.
+- `repos/<repo>` (under `STUDIO_ROOT`): one git clone per repo, nothing else (no zips, tars, loose notes, secrets files).
+  Extra branches of a repo live as worktrees in `_claude/_worktrees/<repo>/<name>`, never in `%TEMP%`.
+- `lib/` (assets by type) and `projects/games/companyxy/`: all art sources; downloads land in `inbox/`. The game play copy stays
+  in `projects/games/companyxy/build/` (not a repo).
+- `Private18` (in the Documents folder, not under `STUDIO_ROOT`): 18+ content and its backups, never in any git remote (`docs/game-pipeline.md`).
+- `%USERPROFILE%\tools`: SDKs installed by hand (Ren'Py). Scratch work: `%TEMP%\opencode`, deleted when done.
 
 ## What is different
 
 | Item | On this user | Why |
 |---|---|---|
-| Git | Portable Git in `C:\Users\Claude\Git` (PortableGit 2.55.0.5), `C:\Users\Claude\Git\cmd` on the **user** PATH | `winget install Git.Git` elevates and fails with exit code 4 on a standard user |
-| Git Bash for Claude Code | user env `CLAUDE_CODE_GIT_BASH_PATH=C:\Users\Claude\Git\bin\bash.exe` | Claude Code needs Git Bash; the portable one is not where it looks by default |
-| Claude Code | `C:\Users\Claude\.local\bin\claude.exe`, folder on the user PATH | native installer puts it there; PATH entry added by hand |
-| claude-setup clone | `C:\Users\Claude\claude-setup` | same as `C:\Users\Ich\claude-setup` on yskills' user |
-| Node, gh, Chrome | winget, machine-wide (`C:\Program Files\...`) | installed with yskills at the laptop |
+| Git | Portable Git in `%USERPROFILE%\Git` (PortableGit 2.55.0.5), `%USERPROFILE%\Git\cmd` on the **user** PATH | `winget install Git.Git` elevates and fails with exit code 4 on a standard user |
+| Git Bash for Claude Code | user env `CLAUDE_CODE_GIT_BASH_PATH=%USERPROFILE%\Git\bin\bash.exe` | Claude Code needs Git Bash; the portable one is not where it looks by default |
+| Claude Code | `%USERPROFILE%\.local\bin\claude.exe`, folder on the user PATH | native installer puts it there; PATH entry added by hand |
+| claude-setup clone | `%USERPROFILE%\claude-setup` | same place on yskills' user |
+| Node, gh, Chrome | winget, machine-wide (`%ProgramFiles%`) | installed with yskills at the laptop |
 | Python 3.13, ffmpeg, uv, fnm | winget `--scope user` (all in `%LOCALAPPDATA%`) | the tools `install.mjs` reports as missing |
 | pwsh 7 | Microsoft Store package via `winget install --id 9MZ1SNWT0N5D --source msstore` | the MSI needs admin; `live-shot.ps1` needs pwsh |
-| Blender | 5.1, machine-wide (`C:\Program Files\Blender Foundation`); Blender Lab MCP add-on 1.0.3 with Auto Start, server `Blender` in `~/.claude.json` (`studio` skill) | shared with yskills' user; add-on and server are per user |
+| Blender | 5.1, machine-wide (`%ProgramFiles%\Blender Foundation`); Blender Lab MCP add-on 1.0.3 with Auto Start, server `Blender` in `~/.claude.json` (`studio` skill) | shared with yskills' user; add-on and server are per user |
 | GitHub | `gh` logged in as `yskills-claude`; commits are authored as `Claude <339700673+yskills-claude@users.noreply.github.com>` | Claude's own account; Write on claude-setup (tested 2026-10-08), the other repos once yskills adds it |
 | Claude in Chrome | extension installed in this user's Chrome profile | works (2026-10-26): `list_connected_browsers` shows it while yskills' Chrome is open |
 | Roblox Studio | not installed | installs per user and needs a Roblox login Claude does not have yet |
@@ -35,7 +35,7 @@ PATH of the process that hosts them. After installs, restart that host (not just
 
 ## Fresh main first
 
-yskills (2026-10-26): a laptop thread read claude-setup from an old branch and missed the current rules. The first step of every laptop or Remote Control thread, before it reads anything: `git -C <claude-setup clone> fetch origin && git -C <clone> checkout main && git -C <clone> pull --ff-only` (clone: `C:\Users\Claude\claude-setup`, or the one under `Documents\GitHub`); run `node install.mjs` too when the pull changed `global/` or `config/`. Only then read `CLAUDE.md`, `docs/MAP.md` and the brief's guides. A dirty tree or a failed pull is reported in one line, not read around.
+yskills (2026-10-26): a laptop thread read claude-setup from an old branch and missed the current rules. The first step of every laptop or Remote Control thread, before it reads anything: `git -C <claude-setup clone> fetch origin && git -C <clone> checkout main && git -C <clone> pull --ff-only` (clone: `%USERPROFILE%\claude-setup`, or the one in `repos/`); run `node install.mjs` too when the pull changed `global/` or `config/`. Only then read `CLAUDE.md`, `docs/MAP.md` and the brief's guides. A dirty tree or a failed pull is reported in one line, not read around.
 
 ## Logins: use yskills' open Chrome
 
@@ -64,10 +64,10 @@ link. Threads: rule-guard blocks such a reply; the project chat has no hooks, so
 card carries the rule.
 
 - **Remote Control host restart:** the running `claude remote-control` still has the PATH from
-  before the installs. In a fresh terminal on this user: `cd C:\Users\Claude\Documents\GitHub`,
-  then `C:\Users\Claude\.local\bin\claude.exe remote-control`.
+  before the installs. In a fresh terminal on this user: `cd %STUDIO_ROOT%\repos`,
+  then `%USERPROFILE%\.local\bin\claude.exe remote-control`.
 - **One folder approval, once per claude.ai project (steps: `docs/USING.md`, Start a project step 5):** every repo is cloned under
-  `C:\Users\Claude\Documents\GitHub`, so approving that one folder in the project's settings
+  `repos/` under `STUDIO_ROOT`, so approving that one folder in the project's settings
   (Resources > Devices) covers every current and future project there; nothing is needed per
   repo. A thread cannot approve it itself (it is yskills' consent), so a new claude.ai project
   asks once, on its first Remote Control start, and never again.
@@ -79,7 +79,7 @@ card carries the rule.
   session).
 - **Roblox Studio:** later, once Claude has a Roblox login.
 - **Laptop allow list and autoMode (2026-10-26):** `install.mjs` writes them from `global/settings.json` (`docs/permissions.md`); `claude auto-mode config` shows the effective rules.
-- **Laptop permission mode: Accept edits (yskills 2026-10-26).** In Auto mode the classifier blocked replacing a live `.blend` three times although the old file was zipped and MD5-checked and yskills had said yes; an allow rule like `Bash(mv:*)` does not get past it. So on the laptop `C:\Users\Claude\.claude\settings.json` has `"defaultMode": "acceptEdits"`: the allow and project rules decide, `ask` and `deny` still stop the risky things (force push, deploy, secrets, `rm -rf`). Cloud threads keep `auto` (nobody there to answer a prompt). Claude never edits its own permission settings; yskills changes the mode (the file, or the mode button under the message box in the Code tab; Remote Control on the phone has no such button). A running session keeps the mode it started with. `install.mjs` keeps a `defaultMode` already set on the machine. Deleting: allowed without asking once checked (copy verified, file not open, nothing links to it); ask only for important things.
+- **Laptop permission mode: Accept edits (yskills 2026-10-26).** In Auto mode the classifier blocked replacing a live `.blend` three times although the old file was zipped and MD5-checked and yskills had said yes; an allow rule like `Bash(mv:*)` does not get past it. So on the laptop `%USERPROFILE%\.claude\settings.json` has `"defaultMode": "acceptEdits"`: the allow and project rules decide, `ask` and `deny` still stop the risky things (force push, deploy, secrets, `rm -rf`). Cloud threads keep `auto` (nobody there to answer a prompt). Claude never edits its own permission settings; yskills changes the mode (the file, or the mode button under the message box in the Code tab; Remote Control on the phone has no such button). A running session keeps the mode it started with. `install.mjs` keeps a `defaultMode` already set on the machine. Deleting: allowed without asking once checked (copy verified, file not open, nothing links to it); ask only for important things.
 
 ## No windows
 
@@ -126,6 +126,6 @@ yskills (2026-11-03): Remote Control sessions on the laptop dropped mid-turn, "t
 ## Update
 
 ```
-git -C C:\Users\Claude\claude-setup pull
-node C:\Users\Claude\claude-setup\install.mjs
+git -C %USERPROFILE%\claude-setup pull
+node %USERPROFILE%\claude-setup\install.mjs
 ```

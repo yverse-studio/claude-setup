@@ -49,7 +49,7 @@ Vision (same day, RTX 4060 8 GB, 15.7 GB RAM): `qwen2.5vl:7b` fits and sees coar
 but it invented defects (a floating cup that sits on the tray, a "cut-off" arm that is plain cropping). OpenCode cannot use it:
 `does not support tools`, so it works only through the Ollama API. Treat it as "what is in the picture", never as defect hunting.
 Free Zen models (`big-pickle`, `deepseek-v4.1-flash-free`, `glm-5.3-flash-free`) hung with no output, likely needing an `opencode auth` login
-(an account signup; not done). Ren'Py SDK is not installed on the laptop, so lint cannot run yet; `CompanyXY-Spiel` there is a plain folder, not a git clone.
+(an account signup; not done). Ren'Py SDK is not installed on the laptop, so lint cannot run yet; the game folder there is a plain folder, not a git clone.
 
 Persona check on OpenCode 2.2.0 with `qwen3:8b` (repo `opencode.json` + `docs/luna2-persona.md`): FAIL. It calls the `question` tool with
 empty arguments, or a web search, instead of answering; denying a tool only moves it to the next one. Without those tricks it read the handoff and got
@@ -73,7 +73,7 @@ Claude Desktop's own gateway mode does not work with this key (billing error on 
 
 ## Overview "Was ist offen"
 
-`scripts/open-items.mjs` collects the `## Jetzt` block of every `PROGRESS.md` in `%USERPROFILE%\Documents\GitHub`, branch and
+`scripts/open-items.mjs` collects the `## Jetzt` block of every `PROGRESS.md` in `repos/` under `STUDIO_ROOT`, branch and
 uncommitted count, open PRs and `ceo` issues of `yverse-studio` (`gh`; a failure shows as "nicht geprüft"), and the job files in
 `%USERPROFILE%\.claude\jobs`. `--md` prints at most 60 lines, `--html [file]` writes a dark self-contained page (default
 `%USERPROFILE%\.claude\open-items.html`, refreshes every 5 minutes). Every run with `gh` also writes `%USERPROFILE%\.claude\open-items.md`,

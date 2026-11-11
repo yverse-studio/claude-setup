@@ -3,14 +3,14 @@
 Goal: a new game (the vacation game is the first user) needs **only new story, characters and animation**.
 Everything below was done and checked in the CompanyXY test chapter (2026-11-02). What is not proven yet is
 listed at the end and must not be treated as a rule. Genre patterns only: no meshes, textures, names or code
-from another game (teardowns are read for patterns, `Documents\_archive\research\game-teardowns-use-for-company-2026-11-02.md`).
+from another game (teardowns are read for patterns, `_claude/_archive/research/game-teardowns-use-for-company-2026-11-02.md`).
 
 Home of the rest: building a still or loop `docs/game-pipeline.md`; two figures `docs/two-figure-scenes.md`;
 18+ content stays off every git remote (game-pipeline.md, "No sexual content on GitHub").
 
 ## 0. Start (5 min)
 
-1. New project folder under `Games\<name>\`, copy `docs/renpy-template/` (`slots.rpy`, `testcases.example.rpy`) and
+1. New project folder under `projects/games/<name>/`, copy `docs/renpy-template/` (`slots.rpy`, `testcases.example.rpy`) and
    from the CompanyXY play copy these four files: `game/szene.rpy`, `game/szene_ton.rpy`, `game/characters.rpy`,
    `game/characters.json`. The engine files hold no story; one copy of truth = the newest CompanyXY game folder.
 2. Edit `characters.json` only: one entry per figure (`name`, `var`, `color`, `sprite`, `slot_prefix`). Scripts read

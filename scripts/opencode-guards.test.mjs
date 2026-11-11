@@ -38,7 +38,7 @@ test('deploys, pkill wrangler and a force push to main are blocked, the rule nam
 })
 
 test('real .env files are blocked, .env.example is not', () => {
-  for (const p of ['.env', 'app/.env.local', 'C:\\work\\.env.production', '.dev.vars']) assert.ok(isEnvFile(p), p)
+  for (const p of ['.env', 'app/.env.local', 'C:\\work\\.env.production', '.dev.vars']) assert.ok(isEnvFile(p), p) // path-lint: fixture
   for (const p of ['.env.example', 'app/.env.example', 'README.md', 'src/env.ts', 'myenv']) assert.ok(!isEnvFile(p), p)
   assert.match(permissionBlock('read', ['.env']), /env rule/)
   assert.match(permissionBlock('edit', ['api/.env.local']), /env rule/)
@@ -67,10 +67,10 @@ test('rule-guard shell checks run here too: conventional commits, no review requ
 })
 
 test('keys, logins and certificates are blocked like in global/settings.json', () => {
-  const home = 'C:\\Users\\Claude'
-  for (const p of ['C:\\Users\\Claude\\.ssh\\id_ed25519', '~/.ssh/config', 'C:\\Users\\Claude\\.config\\gh\\hosts.yml', 'C:\\Users\\Claude\\.npmrc', 'certs/server.pem', 'tls.key'])
+  const home = 'C:\\Users\\Claude' // path-lint: fixture
+  for (const p of ['C:\\Users\\Claude\\.ssh\\id_ed25519', '~/.ssh/config', 'C:\\Users\\Claude\\.config\\gh\\hosts.yml', 'C:\\Users\\Claude\\.npmrc', 'certs/server.pem', 'tls.key']) // path-lint: fixture
     assert.ok(isSecretFile(p, home), p)
-  for (const p of ['app/.npmrc', 'app/.wrangler/state/x.sqlite', 'docs/keys.md', 'README.md', 'C:\\Users\\Claude\\Documents\\x.md'])
+  for (const p of ['app/.npmrc', 'app/.wrangler/state/x.sqlite', 'docs/keys.md', 'README.md', 'C:\\Users\\Claude\\Documents\\x.md']) // path-lint: fixture
     assert.ok(!isSecretFile(p, home), p)
   assert.match(permissionBlock('read', ['server.pem']), /secret rule/)
   assert.match(permissionBlock('shell', ['cat certs/tls.key']), /secret rule/)

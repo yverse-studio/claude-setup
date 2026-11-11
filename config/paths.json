@@ -1,0 +1,43 @@
+{
+  "_doc": "The one table of laptop folder names, relative to STUDIO_ROOT (env var, set once per machine, no default). Scripts and hooks ask scripts/paths.mjs or scripts/paths.py, never write a drive path. Home and rule: docs/laptop-folders.md.",
+  "names": {
+    "lib": "lib",
+    "characters": "lib/characters",
+    "clothes": "lib/clothes",
+    "parts": "lib/parts",
+    "rooms": "lib/rooms",
+    "projects": "projects",
+    "companyxy": "projects/games/companyxy",
+    "repos": "repos",
+    "tools": "tools",
+    "tools_laptop": "tools/laptop",
+    "blender_exe_file": "tools/BLENDER_EXE.txt",
+    "docs": "docs",
+    "logs": "docs/logs",
+    "work": "_claude/_work",
+    "archive": "_claude/_archive",
+    "queue": "_claude/_queue",
+    "who": "_claude/_queue/WHO.md",
+    "inbox": "inbox",
+    "worktrees": "_claude/_worktrees",
+    "trash": "_claude/trash",
+    "guides": "docs/guides",
+    "renpy_sdk": "tools/apps/renpy-8.3.7-sdk",
+    "interaction": "lib/anims/interaction"
+  },
+  "dead_names": [
+    "GameAssetLibrary",
+    "StudioLibrary",
+    "ORDNER.md",
+    "CompanyXY-Spiel",
+    "GitHub\\_worktrees",
+    "Documents\\GitHub",
+    "lib\\vroid",
+    "GAL_LIB",
+    "GAL_queue",
+    "GAL_TOOLS",
+    "CXY_BLENDER",
+    "_claude\\_inbox",
+    "_claude/_inbox"
+  ]
+}

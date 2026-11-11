@@ -68,19 +68,19 @@ rotate only on yskills' word (rotating a secret is an ask-first item).
    `templates/android-release.yml` to `.github/workflows/android-release.yml`; replace `CHANGE_ME` in
    the workflow with the app id. `WEB_BUILD_CMD` (env of the build step) overrides `npm run build`.
 5. **Keystore and secrets (laptop route).** One RC session on the laptop (`start_rc_session`, folder
-   `C:\Users\Claude\Documents\GitHub`). Needs a JDK (`winget install EclipseAdoptium.Temurin.21.JDK`)
+   `repos` of `STUDIO_ROOT`). Needs a JDK (`winget install EclipseAdoptium.Temurin.21.JDK`)
    and `gh` as `yskills-claude`. This step is the CLAUDE.md exception: keys live in this game repo's
    Actions secrets, nowhere else, never printed, and the one shared keystore means one leak exposes all games.
    First game only; later games reuse the file:
    ```powershell
-   mkdir C:\Users\Claude\keystores
+   mkdir $env:USERPROFILE\keystores
    $pw = -join ((48..57)+(65..90)+(97..122) | Get-Random -Count 24 | % {[char]$_})
-   keytool -genkeypair -keystore C:\Users\Claude\keystores\yverse-upload.jks -alias upload -keyalg RSA -keysize 2048 -validity 10000 -storepass $pw -keypass $pw -dname "CN=yverse-studio"
-   $pw | Out-File -NoNewline C:\Users\Claude\keystores\yverse-upload.pw
+   keytool -genkeypair -keystore $env:USERPROFILE\keystores\yverse-upload.jks -alias upload -keyalg RSA -keysize 2048 -validity 10000 -storepass $pw -keypass $pw -dname "CN=yverse-studio"
+   $pw | Out-File -NoNewline $env:USERPROFILE\keystores\yverse-upload.pw
    ```
    Per game (never echo the values; the password file stays outside every repo):
    ```powershell
-   $r = "yverse-studio/<name>"; $d = "C:\Users\Claude\keystores"
+   $r = "yverse-studio/<name>"; $d = "$env:USERPROFILE\keystores"
    [Convert]::ToBase64String([IO.File]::ReadAllBytes("$d\yverse-upload.jks")) | gh secret set ANDROID_KEYSTORE_BASE64 -R $r
    Get-Content -Raw "$d\yverse-upload.pw" | gh secret set ANDROID_KEYSTORE_PASSWORD -R $r
    Get-Content -Raw "$d\yverse-upload.pw" | gh secret set ANDROID_KEY_PASSWORD -R $r
@@ -118,7 +118,7 @@ rotate only on yskills' word (rotating a secret is an ask-first item).
    `play-publisher`, then its "Keys" tab, "Add key", "Create new key", JSON. In Play Console >
    "Users and permissions" > "Invite new users", paste the service account's email, role "Release Manager"
    (the older "Setup > API access" page may exist instead) [U]. Save the JSON on the laptop as
-   `C:\Users\Claude\keystores\play-service-account.json`. Never paste it in chat.
+   `%USERPROFILE%\keystores\play-service-account.json`. Never paste it in chat.
 4. Why: Google's rule for new personal accounts. Testing > Closed testing > add 12 testers' emails, send
    the opt-in link, keep them 14 days. Start early. Then Dashboard > "Apply for production" (5 min).
 

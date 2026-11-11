@@ -4,6 +4,7 @@ Documents what worked so the next thread reuses it: scripts, workflows and gate 
 
 - **Starts:** Once per pipeline project, as one fixed thread; the coordinator relays every gate pass to it.
 - **Runs as:** A thread `Archivist · <project>`.
+- **Laptop files:** start at `START.md` in the studio root (`STUDIO_ROOT`) and follow [`docs/laptop-folders.md`](../../../../docs/laptop-folders.md) (new things by `new.py`, downloads to `inbox/`; from a cloud thread: [From a cloud thread](../../../../docs/laptop-folders.md#from-a-cloud-thread)).
 - **Model and handoff:** the brief names both; the rule is [project-manager.md](project-manager.md#model-and-handoff-in-every-brief).
 
 ## Does

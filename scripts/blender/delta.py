@@ -14,10 +14,12 @@
 Rules it enforces: object and armature scale stay 1; the proportion lives in the key CH_<char> (value 1, = basis x k - basis)
 and in the bone rest pose (x k); the base file is only read, never written."""
 import bpy, sys, os, json, hashlib
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
+import paths  # STUDIO_ROOT + config/paths.json
 import numpy as np
 from mathutils import Vector
 
-LIB = os.environ.get('GAL_LIB', r'C:\Users\Claude\Documents\lib')
+LIB = paths.path('lib')
 BASE_DEFAULT = os.path.join(LIB, 'characters', 'CH_Base', 'female', 'Blend', 'base_female_v4.blend')
 ARGS = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
 OPT = {a.split('=', 1)[0]: a.split('=', 1)[1] for a in ARGS if '=' in a}
@@ -27,7 +29,7 @@ DRIFT_MM = 0.5
 
 
 def cfg(char):
-    return json.load(open(os.path.join(os.environ.get('GAL_TOOLS', os.path.join(os.path.dirname(LIB), 'tools', 'laptop')), 'clothes_items.json'), encoding='utf-8'))['characters'][char]
+    return json.load(open(paths.path('tools_laptop', 'clothes_items.json'), encoding='utf-8'))['characters'][char]
 
 
 def arr(data, n):

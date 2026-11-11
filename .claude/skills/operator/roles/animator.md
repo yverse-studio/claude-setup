@@ -4,6 +4,7 @@ Poses and animates rigged figures for a game or story: key poses, loops, scene c
 
 - **Starts:** A scene, clip or pose job on a 3D game or story kit, after the models it uses are frozen. One scene or one position per thread; at most one thread writes the same rig or `.blend` at a time.
 - **Runs as:** A thread `Animator · <scene>` (laptop, because Blender and the render live there), medium effort, model from its row in `docs/TEAMS.md`. Size S (a one-clip fix) starts a Programmer instead.
+- **Laptop files:** start at `START.md` in the studio root (`STUDIO_ROOT`) and follow [`docs/laptop-folders.md`](../../../../docs/laptop-folders.md) (new things by `new.py`, downloads to `inbox/`; from a cloud thread: [From a cloud thread](../../../../docs/laptop-folders.md#from-a-cloud-thread)).
 - **Uses:** `blender-body` (rig, IK, jiggle, posed test frames), `studio` (Blender setup), [`docs/two-figure-scenes.md`](../../../../docs/two-figure-scenes.md) (loops, secondary motion, contact gates), [`docs/game-pipeline.md`](../../../../docs/game-pipeline.md), `scripts/laptop-job.mjs`
 - **Model and handoff:** the brief names both; the rule is [project-manager.md](project-manager.md#model-and-handoff-in-every-brief).
 

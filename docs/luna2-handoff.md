@@ -36,15 +36,15 @@ Long goal: a 3D horde game on every store.
 
 ## Projects and layout
 
-One repo per project, all in `C:\Users\Claude\Documents\GitHub\` (repo list: `projects/*.json`; org `yverse-studio`).
+One repo per project, all in `repos/` under `STUDIO_ROOT` (repo list: `projects/*.json`; org `yverse-studio`).
 Each repo has its own `CLAUDE.md`, `PROGRESS.md` (`## Jetzt`) and `docs/LESSONS.md`; Luna 2 reads those first,
 then writes lessons and state back through a PR, never into chat memory. Shared rules stay in claude-setup.
 
 ## Company XY (Ren'Py game), priority one
 
-- Repo `yverse-studio/companyxy-spiel` (private): `game/` source, `story/<char>/` chapters, `story/briefs/`. Playable build on the laptop: `GitHub\CompanyXY-Spiel\CompanyXY-1.0-pc\`.
+- Repo `yverse-studio/companyxy-spiel` (private): `game/` source, `story/<char>/` chapters, `story/briefs/`. Playable build on the laptop: `projects/games/companyxy/build/`.
 - Read first: `docs/game-pipeline.md` (all paths, Blender steps, lessons), `docs/renpy.md`, `.claude/skills/blender-body/SKILL.md`, the storyteller guide (`09-story-plan.md` in project files).
-- Assets: `C:\Users\Claude\Documents\lib` and `projects\games\companyxy` (not in git); `Documents\START.md` is the home of every laptop path.
+- Assets: `lib/` and `projects/games/companyxy/` under `STUDIO_ROOT` (not in git); `START.md` in the root is the home of every laptop path (names: `config/paths.json`).
 - Rule from the repo: explicit slot names and scene contents stay out of git; they live in the laptop README and the private `nacht-kapitel1.rpy` only.
 - Realistic split: Luna 2 can write and edit Ren'Py script and story text, wire existing art into `slots.rpy`, and run `renpy` lint. It cannot reliably drive Blender, rigging, retargeting or render checks; those need Claude or yskills looking at the images. Never let it commit art it has not shown to yskills.
 
@@ -52,8 +52,8 @@ then writes lessons and state back through a PR, never into chat memory. Shared 
 
 | Tool | State |
 |---|---|
-| Blender 5.1.1 | `C:\Program Files\Blender Foundation\Blender 5.1\blender.exe`, headless EEVEE render works (`--factory-startup --python x.py --python-exit-code 1`) |
-| Ren'Py SDK 8.3.7 | `C:\Users\Claude\Documents\Tools\renpy-8.3.7-sdk`; lint: `lib\py3-windows-x86_64\python.exe renpy.py <repo> lint <out.txt>` |
+| Blender 5.1.1 | the path in `tools/BLENDER_EXE.txt`, headless EEVEE render works (`--factory-startup --python x.py --python-exit-code 1`) |
+| Ren'Py SDK 8.3.7 | `tools/apps/renpy-8.3.7-sdk`; lint: `lib\py3-windows-x86_64\python.exe renpy.py <repo> lint <out.txt>` |
 | ffmpeg 9, uv, Python 3.13, Node 24 | on PATH (winget); ad-hoc Python packages via `uv run --no-project --with <pkg>` |
 | gh | `yskills-claude`, scopes repo, read:org, gist (no `delete_repo`) |
 | wrangler | `npx wrangler`, OAuth logged in |
@@ -69,7 +69,7 @@ The local qwen (Ollama `llama-server`) holds 2-5 GB RAM: `ollama stop qwen3:8b` 
   (Bit, round4 R1: original forked ears, faceted fur; v3/v4 rejected). 3D from the VRoid base rejected; duo 3D v1
   is a 2D-to-3D projection. Next: rig, poses, 6 faces, alpha render, then the gravity explainer remake with the duo.
 - The files live only in the claude.ai project files (`social/2026-10-27-lowpoly-strategy/`, HANDOFF.md, models/duo-r1/);
-  the laptop has only the index (`Documents\reference\social-media-manager\`). Luna 2 needs that folder on the laptop.
+  the laptop has only the index (`tools/apps/social-media-manager/`). Luna 2 needs that folder on the laptop.
 - Twin: tools installed and `doctor` ok; waits for his recordings in `GitHub\twin-raw\`. Videos are English only.
 
 ## Which open items Luna 2 can take
@@ -104,7 +104,7 @@ deletes stay with Claude and yskills.
 
 - 2026-10-29 lesson for the setup: in OpenCode no hook enforces the video pipeline roles (Director storyboard/animatic was skipped on the Halloween cut); team-guard only checks model tiers. Port the pipeline check (video-studio ready.py per step) to a guard.
 
-- 2026-10-29 yskills: when showing files, always give clickable links (file:///C:/... per file) in the reply; the Review pane only shows the last opened file.
+- 2026-10-29 yskills: when showing files, always give clickable links (a `file:///` link per file) in the reply; the Review pane only shows the last opened file.
 
 ## Cost review 2026-10-29 (24 h: $128.84; Opus $71.94, Sonnet $56.87, Haiku $0.03)
 

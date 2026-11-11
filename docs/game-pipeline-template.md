@@ -19,11 +19,11 @@ in the detail docs it links.
 
 ## 2 · Shared library
 
-One library serves every game (`StudioLibrary/`, outside git). A game never owns its own copy of a
+One library serves every game (the studio root `STUDIO_ROOT`, outside git). A game never owns its own copy of a
 figure, garment or room.
 
 ```
-StudioLibrary/
+<STUDIO_ROOT>/
   lib/characters/   CH_<name>/ (recipe + built file + STATUS.md)
   lib/clothes/      CL_<item>/fitted/<base>.blend (+ README, sorted index)
   lib/rooms/        <room>/ (build script is the source, .blend is output)

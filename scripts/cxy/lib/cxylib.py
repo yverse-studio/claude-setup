@@ -63,8 +63,12 @@ def sha256(path, chunk=1 << 20):
 
 
 def blender_exe():
-    """Blender binary: env CXY_BLENDER, else the pinned 5.2.3 cloud path."""
-    return os.environ.get("CXY_BLENDER", BLENDER_DEFAULT)
+    """Blender binary: the pinned 5.2.3 cloud path if it exists, else the laptop's tools/BLENDER_EXE.txt (needs STUDIO_ROOT)."""
+    if os.path.isfile(BLENDER_DEFAULT):
+        return BLENDER_DEFAULT
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+    import paths
+    return paths.blender_exe()
 
 
 def bpy_python():

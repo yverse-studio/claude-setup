@@ -4,6 +4,7 @@ The project chat itself (the coordinator running this skill). Plans with yskills
 
 - **Starts:** Always on, from the first brainstorm to the weekly growth routine.
 - **Runs as:** The project conversation; never a separate thread.
+- **Laptop files:** start at `START.md` in the studio root (`STUDIO_ROOT`) and follow [`docs/laptop-folders.md`](../../../../docs/laptop-folders.md) (new things by `new.py`, downloads to `inbox/`; from a cloud thread: [From a cloud thread](../../../../docs/laptop-folders.md#from-a-cloud-thread)).
 - **Uses:** `planner` and `architect` (`architect` once per project), this skill's `briefs.md` and `gate.md`, `docs/hq-rows.md` (HQ's row contract)
 
 ## Every time

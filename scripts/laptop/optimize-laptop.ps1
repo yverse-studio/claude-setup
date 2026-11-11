@@ -24,7 +24,7 @@ powercfg /setactive 381b4222-f694-41f0-9685-ff5bb260df2e
 Step 'Blender on the RTX 4060 (already set, kept)'
 $k = 'HKCU:\Software\Microsoft\DirectX\UserGpuPreferences'
 New-Item $k -Force | Out-Null
-Set-ItemProperty $k -Name 'C:\Program Files\Blender Foundation\Blender 5.1\blender.exe' -Value 'GpuPreference=2;'
+Set-ItemProperty $k -Name "$env:ProgramFiles\Blender Foundation\Blender 5.1\blender.exe" -Value 'GpuPreference=2;'
 
 Step 'Windows Game Bar / Game DVR off (background capture)'
 Set-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\GameDVR' -Name AppCaptureEnabled -Value 0 -ErrorAction SilentlyContinue

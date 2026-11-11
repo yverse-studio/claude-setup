@@ -135,7 +135,7 @@ test('hq-panel-install adds the plugin folder once, keeps other entries and keys
   assert.deepEqual(once, { model: 'x', plugins: ['other-plugin', dir] })
   assert.deepEqual(withPlugin(once, dir), once)
   assert.deepEqual(withPlugin(once, dir, true), config)
-  assert.deepEqual(withPlugin({ plugins: ['C:\\old clone\\.opencode\\plugins\\hq', 'other-plugin'] }, dir), { plugins: ['other-plugin', dir] })
+  assert.deepEqual(withPlugin({ plugins: ['C:\\old clone\\.opencode\\plugins\\hq', 'other-plugin'] }, dir), { plugins: ['other-plugin', dir] }) // path-lint: fixture
   assert.deepEqual(withPlugin({ model: 'x' }, dir, true), { model: 'x' })
   assert.deepEqual(withPlugin({ plugins: [dir] }, dir, true), {})
   assert.deepEqual(config, { model: 'x', plugins: ['other-plugin'] })

@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
+import { studioPath } from './paths.mjs'
 
 const root = join(fileURLToPath(import.meta.url), '..', '..')
 const read = (p) => JSON.parse(readFileSync(join(root, p), 'utf8'))
@@ -912,10 +913,10 @@ test('rule guard: a PR in a repo with a PROGRESS.md warns when ## Jetzt is missi
 // yskills 2026-11-03: the Blender workflow tips are enforced so no progress is lost (one Blender slot, bl_server.py).
 test('rule guard: no second headless Blender while bl_server.py runs; Blender only after the night plan and Fast loop were read', async () => {
   const { blenderStart, blenderServerBusy, blenderDocsMissing } = await import('../global/rule-guard.mjs')
-  const starts = ['blender -b x.blend', '"/c/Program Files/Blender Foundation/Blender 5.1/blender.exe" -b --python a.py', '& "C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe" --background f.blend', 'cd /x && blender.exe -b f.blend', '$BL -b f.blend', '%BL% -b --python j.py', 'Start-Process -FilePath "C:\\B\\blender.exe" -ArgumentList \'-b f.blend\'', 'nohup blender -b f.blend > log 2>&1 &']
+  const starts = ['blender -b x.blend', '"/c/Program Files/Blender Foundation/Blender 5.1/blender.exe" -b --python a.py', '& "C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe" --background f.blend', 'cd /x && blender.exe -b f.blend', '$BL -b f.blend', '%BL% -b --python j.py', 'Start-Process -FilePath "C:\\B\\blender.exe" -ArgumentList \'-b f.blend\'', 'nohup blender -b f.blend > log 2>&1 &'] // path-lint: fixture
   for (const c of starts) assert.ok(blenderStart(c), c)
   for (const c of ['python scripts/blender/pose_precheck.py', 'ls tools/blender/', 'grep -i blender log.txt', 'echo "blender-5.1"', 'git commit -m "fix: blender pose"']) assert.equal(blenderStart(c), null, c)
-  const server = '"C:/Program Files/Blender Foundation/Blender 5.1/blender.exe" -b --factory-startup --python C:/x/qa/bl_server.py -- C:/x/bl_jobs'
+  const server = '"C:/Program Files/Blender Foundation/Blender 5.1/blender.exe" -b --factory-startup --python C:/x/qa/bl_server.py -- C:/x/bl_jobs' // path-lint: fixture
   const busy = (command, procs = `node.exe\n${server}`, tool = 'Bash') => blenderServerBusy(tool, { command }, procs)
   assert.match(busy('blender -b f.blend --python render.py') ?? '', /bl_server\.py läuft.*bl_jobs.*submit_strip\.sh.*NIGHT-CHAIN\.md.*Persistent Blender/s)
   assert.match(busy('& "C:\\B\\blender.exe" --background f.blend', undefined, 'PowerShell') ?? '', /bl_server/, 'PowerShell too')
@@ -929,9 +930,10 @@ test('rule guard: no second headless Blender while bl_server.py runs; Blender on
   assert.equal(listed, 0, 'processes are listed only for a headless Blender start')
 
   const read = (file_path) => JSON.stringify({ type: 'assistant', message: { content: [{ type: 'tool_use', id: file_path, name: 'Read', input: { file_path } }] } })
-  const plan = read('C:\\Users\\Claude\\Documents\\projects\\games\\companyxy\\ch01\\NACHT-FIX-PLAN.md')
+  process.env.STUDIO_ROOT ??= join(tmpdir(), 'studio-root-test') // the resolver has no default root
+  const plan = read(studioPath('companyxy', 'ch01', 'NACHT-FIX-PLAN.md'))
   const cloudPlan = read('/mnt/project-files/NACHT-FIX-PLAN.md')
-  const animator = read('C:/Users/Claude/Documents/GitHub/claude-setup/.claude/skills/operator/roles/animator.md')
+  const animator = read(studioPath('repos', 'claude-setup', '.claude', 'skills', 'operator', 'roles', 'animator.md'))
   assert.match(blenderDocsMissing('Bash', { command: 'blender -b f.blend' }, '') ?? '', /NACHT-FIX-PLAN\.md.* und .*animator\.md/)
   assert.match(blenderDocsMissing('mcp__Blender__execute_blender_code', { code: 'x' }, plan) ?? '', /animator\.md/)
   assert.doesNotMatch(blenderDocsMissing('mcp__Blender__execute_blender_code', { code: 'x' }, plan) ?? '', /NACHT/)
@@ -1064,9 +1066,9 @@ test('rule guard: propose_skills is refused and names new-skill; hook matchers s
 test('rule-guard: nothing opens on his screen unless he asked', async () => {
   const { opensWindow } = await import('../global/rule-guard.mjs')
   const w = (command) => opensWindow('Bash', { command })
-  const bl = '"C:/Program Files/Blender Foundation/Blender 5.2/blender.exe"'
-  for (const c of ['explorer C:\\Users\\Claude\\Documents', 'ls ; explorer', 'Start-Process notepad.exe x.txt', 'cd x; start msedge https://a.b', 'xdg-open out.png',
-    `${bl} scene.blend`, `${bl} x.blend -- -b`, '& "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" https://a.b', 'Invoke-Item sheet.png',
+  const bl = '"C:/Program Files/Blender Foundation/Blender 5.2/blender.exe"' // path-lint: fixture
+  for (const c of ['explorer C:\\Users\\Claude\\Documents', 'ls ; explorer', 'Start-Process notepad.exe x.txt', 'cd x; start msedge https://a.b', 'xdg-open out.png', // path-lint: fixture
+    `${bl} scene.blend`, `${bl} x.blend -- -b`, '& "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" https://a.b', 'Invoke-Item sheet.png', // path-lint: fixture
     'cmd /c start "" a.png', 'powershell -Command "Invoke-Item a.png"', 'node scripts/laptop-job.mjs --name r -- blender x.blend -P a.py',
     'google-chrome https://a.b', 'chrome --headless-not https://a.b', '$p = Start-Process blender -ArgumentList x.blend -PassThru', 'Get-ChildItem *.png | ForEach-Object { Start-Process $_ }',
     'if (Test-Path a.png) { explorer a.png }', 'nohup blender x.blend &', 'timeout 60 blender x.blend', 'xargs -I{} explorer {}', 'bash -c "explorer ."', 'cmd /k start a.png', 'npx -y playwright test --headed',
@@ -1083,7 +1085,7 @@ test('rule-guard: nothing opens on his screen unless he asked', async () => {
 test('rule-guard: an Archivist thread documents, it does not file references', async () => {
   const { archivistFiles } = await import('../global/rule-guard.mjs')
   const a = (tool, input) => archivistFiles(tool, input, 'Archivist\n')
-  for (const command of ['mv /mnt/project-files/uploads/a.jpg /mnt/project-files/refs/aussehen/', 'Copy-Item a.png C:\\Users\\Claude\\Documents\\reference\\06\\', 'cp a.png refs/x/',
+  for (const command of ['mv /mnt/project-files/uploads/a.jpg /mnt/project-files/refs/aussehen/', 'Copy-Item a.png C:\\Users\\Claude\\Documents\\reference\\06\\', 'cp a.png refs/x/', // path-lint: fixture
     'cp a.png Referenzen/', 'tar xf a.tar -C refs/', 'curl -o refs/a.png https://a.b/a.png', 'cp a.png ./refs', 'cp a.png reference-images/', 'ln -s /x/a.png refs/a.png', 'cp a.png refs/heads/x.png', 'mv a.png refs/tags/', 'cd /x && cp a.png refs/', 'cp -t refs/ a.png', 'robocopy . refs\\ a.png', 'curl -sLo refs/a.png https://x/y.png', 'curl https://x/y.png > refs/a.png', 'git mv a.png refs/a.png']) assert.match(a('Bash', { command }) ?? '', /laptop lane/, command)
   assert.match(a('Write', { file_path: '/mnt/project-files/refs/posen/x.png' }) ?? '', /laptop lane/)
   assert.equal(a('Write', { file_path: '/mnt/project-files/refs/README.md' }), null)

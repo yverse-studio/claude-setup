@@ -9,8 +9,8 @@
   python3 cxy.py archive --undo <MANIFEST.tsv>             put them back
   python3 cxy.py <command> [--cxy-dry] [--cxy-factory] <args...>   run a pipeline tool (see `list`)
 
-Runners: py = system python3; bpy = $CXY_BPY (default /tmp/bpyenv/bin/python) -I; blender = $CXY_BLENDER
-(default /opt/blender/blender-5.2.3-linux-x64/blender) -b <first arg> [--factory-startup] -P <script> -- <rest>.
+Runners: py = system python3; bpy = $CXY_BPY (default /tmp/bpyenv/bin/python) -I; blender = the pinned cloud
+binary /opt/blender/blender-5.2.3-linux-x64/blender, else the path in <STUDIO_ROOT>/tools/BLENDER_EXE.txt -b <first arg> [--factory-startup] -P <script> -- <rest>.
 Every run ends with one line `RESULT PASS` or `RESULT RED (...)`; exit 0 / 1 (the tool's own exit code is passed on).
 The tools themselves are not changed: their old paths keep working for threads that call them directly.
 Docs: ../PIPELINE.md section 2, README.md next to this file.
@@ -80,11 +80,12 @@ def cmd_doctor(reg, root=None):
         (rep.ok if os.path.isfile(p) else rep.red)(f"{k}: {e['path']}")
     runners = {e["runner"] for e in reg.values()}
     if "blender" in runners:
-        b = cxylib.blender_exe()
-        if os.path.isfile(b):
-            rep.ok(f"blender {b}")
+        try:
+            b = cxylib.blender_exe()
+        except SystemExit as e:
+            rep.warn(f"blender: {e}")
         else:
-            rep.warn(f"blender not found at {b} (set CXY_BLENDER; laptop: StudioLibrary\\BLENDER_EXE.txt)")
+            (rep.ok if os.path.isfile(b) else rep.warn)(f"blender {b}" if os.path.isfile(b) else f"blender not found at {b}")
     if "bpy" in runners:
         py = cxylib.bpy_python()
         (rep.ok if os.path.isfile(py) else rep.warn)(f"bpy python {py}" + ("" if os.path.isfile(py) else
