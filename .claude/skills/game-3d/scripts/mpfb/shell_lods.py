@@ -62,7 +62,7 @@ for old in far:
     nt.links.new(tn.outputs['Color'], nt.nodes['Principled BSDF'].inputs['Base Color']); nt.nodes['Principled BSDF'].inputs['Roughness'].default_value = 0.75
     nt.nodes.active = tn; sh.data.materials.clear(); sh.data.materials.append(mat)
     near.hide_render = False; sel(near, sh, active=sh)
-    sc.render.bake.use_selected_to_active = True; sc.render.bake.cage_extrusion = 0.03; sc.render.bake.max_ray_distance = 0.08
+    sc.render.bake.use_selected_to_active = True; sc.render.bake.cage_extrusion = float(os.environ.get('CAGE', 0.03)); sc.render.bake.max_ray_distance = float(os.environ.get('RAY', 0.08))
     sc.render.bake.use_pass_direct = False; sc.render.bake.use_pass_indirect = False; sc.render.bake.margin = 4
     bpy.ops.object.bake(type='DIFFUSE', pass_filter={'COLOR'})
     img.filepath_raw = os.path.join(OUT, old.name + '_bake.png'); img.file_format = 'PNG'; img.save()
