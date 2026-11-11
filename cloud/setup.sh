@@ -1143,15 +1143,19 @@ const KAOMOJI = /[◕‿ω꒳ᴗ･˘ᵕ◡╹≧≦∀ヾﾉ✧♡☆✿ʕʔﾟ
 // irgendwas in gesicht springt"). Screenshots and renders run headless. `# yskills asked` on the command lets it through.
 // commandsOf: the commands of a shell line, split outside quotes; heredoc bodies are text, not commands.
 const commandsOf = (cmd) => {
+  const text = cmd.replace(/<<-?\s*(['"]?)(\w+)\1[^\n]*\n[\s\S]*?\n\s*\2\b/g, '')
   const out = []
   let cur = ''
   let quote = ''
-  for (const ch of cmd.replace(/<<-?\s*(['"]?)(\w+)\1[^\n]*\n[\s\S]*?\n\s*\2\b/g, '')) {
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i]
+    if (quote === '"' && ch === '\\' && text[i + 1] === '"') { cur += '\\"'; i++; continue }
     if (quote) { if (ch === quote) quote = '' } else if (ch === '"' || ch === "'") quote = ch
-    else if (';&|(\n'.includes(ch)) { out.push(cur); cur = ''; continue }
+    else if (ch === '#' && /(^|\s)$/.test(cur)) { while (i + 1 < text.length && text[i + 1] !== '\n') i++; continue }
+    else if (';&|(){}\n'.includes(ch)) { out.push(cur); cur = ''; continue }
     cur += ch
   }
-  return [...out, cur].map((c) => c.trim()).filter(Boolean)
+  return [...out, cur].map((c) => c.trim().replace(/^\$[\w:]+\s*=\s*/, '')).filter(Boolean)
 }
 const WINDOW_APPS = /^(explorer|invoke-item|ii|xdg-open|notepad|mspaint|rundll32)$/
 const BROWSERS = /^(chrome|google-chrome|chromium|chromium-browser|msedge|firefox|brave)$/
@@ -1162,16 +1166,17 @@ function opensOne(command, depth = 0) {
   const exe = (m[1] ?? m[2] ?? m[3]).split(/[\\/]/).pop().replace(/\.exe$/i, '').toLowerCase()
   const args = m[4]
   const inner = (text) => commandsOf(text.trim().replace(/^(["'])([\s\S]*)\1$/, '$2')).some((c) => opensOne(c, depth + 1))
-  if (/^(npx|sudo|env|time)$/.test(exe)) return inner(args)
-  if (exe === 'cmd' && /(^|\s)\/c\s/i.test(args)) return inner(args.replace(/^[\s\S]*?\/c\s+/i, ''))
-  if (/^(powershell|pwsh)$/.test(exe) && /(^|\s)-(c|command)\s/i.test(args)) return inner(args.replace(/^[\s\S]*?-(c|command)\s+/i, ''))
+  // A wrapper's own flags and numbers come before the command it runs (`timeout 60`, `npx -y`, `xargs -I{}`).
+  if (/^(npx|sudo|env|time|nohup|timeout|xargs|wsl)$/.test(exe)) return inner(args.replace(/^((-\S*|\d+\w?)\s+)+/, ''))
+  if (exe === 'cmd' && /(^|\s)\/[ck]\s/i.test(args)) return inner(args.replace(/^[\s\S]*?\/[ck]\s+/i, ''))
+  if (/^(powershell|pwsh|bash|sh|zsh)$/.test(exe) && /(^|\s)-(c|command)\s/i.test(args)) return inner(args.replace(/^[\s\S]*?-(c|command)\s+/i, ''))
   if (exe === 'node' && /laptop-job\.mjs\b[\s\S]*?\s--\s/.test(args)) return inner(args.replace(/^[\s\S]*?\s--\s+/, ''))
   if (/^(start-process|saps)$/.test(exe)) return !/-WindowStyle\s+Hidden|-NoNewWindow/i.test(args)
   if (exe === 'start') return !flag(args, '/b')
   if (WINDOW_APPS.test(exe)) return true
   if (BROWSERS.test(exe)) return !flag(args, '--headless(=\\S+)?|--version')
   if (exe === 'blender') return !flag(args.split(/\s--(\s|$)/)[0], '-b|--background|--version|-v|--help|-h|--command|-c')
-  if (exe === 'playwright') return flag(args, '--headed|--ui|open|codegen')
+  if (exe === 'playwright') return flag(args, '--headed|--ui|open|codegen|show-report|show-trace')
   if (/^(python\d?|py)$/.test(exe)) return /(^|\s)-m\s+webbrowser\b/.test(args)
   return false
 }
@@ -1182,14 +1187,15 @@ export function opensWindow(tool, input = {}) {
 }
 // The Archivist documents scripts and workflows; yskills' references are filed by the laptop lane, never by it
 // (roles/archivist.md; yskills 2026-11-11). role: the session's role, as roleContext stored it.
-const REF_DIR = /(^|[\\/\s"'=])(refs?|references?|referenzen)[\\/]/i
+const REF_DIR = /(^|[\\/])(refs?|references?|referenzen|reference-images)([\\/]|$)/i
+const GIT_REF = /:\/\/|(^|[\\/])refs[\\/](heads|tags|remotes|pull)([\\/]|$)/i
 const INDEX_FILE = /\.(md|tsv|csv|json|txt)$/i
-const FILES_IN = /(^|[\s;&|(])(mv|cp|rsync|move|copy|Move-Item|Copy-Item|tar|unzip|Expand-Archive|curl|wget)\s/i
+const FILES_IN = /(^|[\s;&|(])(mv|cp|rsync|move|copy|Move-Item|Copy-Item|robocopy|ln|tar|unzip|Expand-Archive|curl|wget)\s/i
 export function archivistFiles(tool, input = {}, role = '') {
   if (String(role ?? '').trim() !== 'Archivist') return null
   const path = /^(Write|Edit|NotebookEdit)$/.test(tool) ? String(input.file_path ?? input.notebook_path ?? '') : ''
   const cmd = tool === 'Bash' ? String(input.command ?? '') : ''
-  const refArgs = FILES_IN.test(cmd) ? cmd.split(/\s+/).map((t) => t.replace(/^["']|["']$/g, '')).filter((t) => REF_DIR.test(t)) : []
+  const refArgs = FILES_IN.test(cmd) ? cmd.split(/\s+/).map((t) => t.replace(/^["']|["']$/g, '')).filter((t) => REF_DIR.test(t) && !GIT_REF.test(t)) : []
   const files = (REF_DIR.test(path) && !INDEX_FILE.test(path)) || refArgs.some((t) => !INDEX_FILE.test(t))
   return files ? 'rule-guard: the Archivist documents scripts, workflows and gate passes and keeps the indexes; it never files reference material (operator roles/archivist.md). Hand this to the coordinator in one line (message_coordinator): references go to the laptop lane. An index entry (.md, .tsv, .json) is fine.' : null
 }

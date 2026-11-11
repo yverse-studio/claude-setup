@@ -1068,11 +1068,13 @@ test('rule-guard: nothing opens on his screen unless he asked', async () => {
   for (const c of ['explorer C:\\Users\\Claude\\Documents', 'ls ; explorer', 'Start-Process notepad.exe x.txt', 'cd x; start msedge https://a.b', 'xdg-open out.png',
     `${bl} scene.blend`, `${bl} x.blend -- -b`, '& "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" https://a.b', 'Invoke-Item sheet.png',
     'cmd /c start "" a.png', 'powershell -Command "Invoke-Item a.png"', 'node scripts/laptop-job.mjs --name r -- blender x.blend -P a.py',
-    'google-chrome https://a.b', 'chrome --headless-not https://a.b', 'npx playwright test --headed', 'python -m webbrowser https://a.b', 'notepad a.txt']) assert.match(w(c) ?? '', /No windows/, c)
+    'google-chrome https://a.b', 'chrome --headless-not https://a.b', '$p = Start-Process blender -ArgumentList x.blend -PassThru', 'Get-ChildItem *.png | ForEach-Object { Start-Process $_ }',
+    'if (Test-Path a.png) { explorer a.png }', 'nohup blender x.blend &', 'timeout 60 blender x.blend', 'xargs -I{} explorer {}', 'bash -c "explorer ."', 'cmd /k start a.png', 'npx -y playwright test --headed',
+    'npx playwright show-report', "# it's fine\nexplorer .", 'npx playwright test --headed', 'python -m webbrowser https://a.b', 'notepad a.txt']) assert.match(w(c) ?? '', /No windows/, c)
   for (const c of ['blender -b x.blend -P a.py', `${bl} --background --python a.py`, 'blender --command extension list', 'Start-Process -WindowStyle Hidden node a.mjs',
     'node scripts/laptop-job.mjs --name r -- blender -b x.blend -P a.py', 'chrome --headless --screenshot=a.png https://a.b', 'npx playwright test', 'grep -rn blender docs', 'npm start',
     'git log --oneline 2>&1 | tail -3', 'explorer C:\\x # yskills asked', 'pip install bpy', 'rg -n "start|explorer" docs', 'git commit -m "docs; explorer opens no window"',
-    'grep -rn "Start-Process" docs scripts', 'git commit -m "fix: Start-Process now hidden"', 'git commit -m "$(cat <<\'EOF\'\nfix: x\n\nBlender 5.2 is pinned\nStart the server\nExplorer shows it\nEOF\n)"',
+    'grep -rn "Start-Process" docs scripts', 'git commit -m "fix: Start-Process now hidden"', 'git commit -m "guard: block \\"cmd /c start; explorer .\\" lines"', 'time grep -rn start docs', 'timeout 60 node a.mjs', 'git commit -m "$(cat <<\'EOF\'\nfix: x\n\nBlender 5.2 is pinned\nStart the server\nExplorer shows it\nEOF\n)"',
     'cat > notes.md <<EOF\nChrome stays headless now\nEOF']) assert.equal(w(c), null, c)
   assert.equal(opensWindow('Write', { file_path: 'explorer.md' }), null)
 })
@@ -1081,12 +1083,13 @@ test('rule-guard: an Archivist thread documents, it does not file references', a
   const { archivistFiles } = await import('../global/rule-guard.mjs')
   const a = (tool, input) => archivistFiles(tool, input, 'Archivist\n')
   for (const command of ['mv /mnt/project-files/uploads/a.jpg /mnt/project-files/refs/aussehen/', 'Copy-Item a.png C:\\Users\\Claude\\Documents\\reference\\06\\', 'cp a.png refs/x/',
-    'cp a.png Referenzen/', 'tar xf a.tar -C refs/', 'curl -o refs/a.png https://a.b/a.png']) assert.match(a('Bash', { command }) ?? '', /laptop lane/, command)
+    'cp a.png Referenzen/', 'tar xf a.tar -C refs/', 'curl -o refs/a.png https://a.b/a.png', 'cp a.png ./refs', 'cp a.png reference-images/', 'ln -s /x/a.png refs/a.png']) assert.match(a('Bash', { command }) ?? '', /laptop lane/, command)
   assert.match(a('Write', { file_path: '/mnt/project-files/refs/posen/x.png' }) ?? '', /laptop lane/)
   assert.equal(a('Write', { file_path: '/mnt/project-files/refs/README.md' }), null)
   assert.equal(a('Edit', { file_path: '/mnt/project-files/PROVEN.md' }), null)
   assert.equal(a('Bash', { command: 'rm /mnt/project-files/_tmp/old.blend' }), null)
-  assert.equal(a('Bash', { command: 'git mv docs/refs/a.md docs/refs/b.md' }), null)
+  for (const command of ['git mv docs/refs/a.md docs/refs/b.md', 'curl -sL https://raw.githubusercontent.com/o/r/refs/heads/main/scripts/a.mjs', 'curl -s https://api.github.com/repos/o/r/git/refs/heads/main',
+    'git push origin refs/heads/x && cp a.py scripts/']) assert.equal(a('Bash', { command }), null, command)
   assert.equal(archivistFiles('Write', { file_path: '/mnt/project-files/refs/posen/x.png' }, 'Animator'), null)
   assert.equal(archivistFiles('Write', { file_path: '/mnt/project-files/refs/posen/x.png' }, null), null)
 })
