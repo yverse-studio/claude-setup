@@ -40,8 +40,8 @@ def sample_tree(root):
     """A tiny project-files: one canonical tool + helper, copies, rounds, an archived folder, a protected area."""
     write(root, "cb/tools/main.py", '"""main.py: the proven tool."""\nimport helper\nprint("hi")\n')
     write(root, "cb/tools/helper.py", '"""helper.py: shared helper."""\n')
-    write(root, "cb/old_tools/main.py", '"""main.py: the proven tool."""\nimport helper\nprint("hi")\n')   # byte-identical
-    write(root, "cb/old_tools/helper.py", '"""helper.py: shared helper."""\n')                            # identical, but imported by sibling
+    write(root, "cb/r1_tools/main.py", '"""main.py: the proven tool."""\nimport helper\nprint("hi")\n')   # byte-identical
+    write(root, "cb/r1_tools/helper.py", '"""helper.py: shared helper."""\n')                            # identical, but imported by sibling
     write(root, "cb/job/main.py", '"""main.py: a job\'s private fork."""\nprint("fork")\n')
     write(root, "cb/out/run1/build.py", '"""build.py: run 1."""\n')
     write(root, "cb/out/run2/build.py", '"""build.py: run 2, newer."""\n')
@@ -73,8 +73,8 @@ class InventoryTest(unittest.TestCase):
     def test_classifies_every_kind(self):
         self.assertEqual(self.status("cb/tools/main.py"), "canonical")
         self.assertEqual(self.status("cb/tools/helper.py"), "helper")
-        self.assertEqual(self.status("cb/old_tools/main.py"), "duplicate")
-        self.assertEqual(self.rows["cb/old_tools/main.py"]["keeper"], "cb/tools/main.py")
+        self.assertEqual(self.status("cb/r1_tools/main.py"), "duplicate")
+        self.assertEqual(self.rows["cb/r1_tools/main.py"]["keeper"], "cb/tools/main.py")
         self.assertEqual(self.status("cb/job/main.py"), "fork")
         self.assertEqual(self.status("cb/out/run1/build.py"), "dead")
         self.assertEqual(self.rows["cb/out/run1/build.py"]["keeper"], "cb/out/run2/build.py")
@@ -94,22 +94,22 @@ class InventoryTest(unittest.TestCase):
 
     def test_archive_plan_is_safe(self):
         moves = {r["path"] for r, _ in archive.plan(list(self.rows.values()), self.root)}
-        self.assertIn("cb/old_tools/main.py", moves)
+        self.assertIn("cb/r1_tools/main.py", moves)
         self.assertIn("cb/out/run1/build.py", moves)
-        self.assertIn("cb/male/tools/fit.py", moves)
+        self.assertNotIn("cb/male/tools/fit.py", moves)   # duplicate outside a round folder: listed, not moved
         for kept in ("cb/tools/main.py", "cb/tools/helper.py", "cb/job/main.py", "cb/used/tool.py",
                      "live/gate_r1/probe2.py", "cb/fresh/gate_r9/new.py", "cb/freeze/v4/tools/fit.py"):
             self.assertNotIn(kept, moves)
 
     def test_sibling_import_blocks_a_move(self):
-        # treat old_tools/helper.py as a plain duplicate candidate: it may move together with old_tools/main.py
-        rows = [dict(r, status="duplicate", mentioned_by=0) if r["path"] == "cb/old_tools/helper.py" else r for r in self.rows.values()]
+        # treat r1_tools/helper.py as a plain duplicate candidate: it may move together with r1_tools/main.py
+        rows = [dict(r, status="duplicate", mentioned_by=0) if r["path"] == "cb/r1_tools/helper.py" else r for r in self.rows.values()]
         moves = {r["path"] for r, _ in archive.plan(rows, self.root)}
-        self.assertIn("cb/old_tools/helper.py", moves)
+        self.assertIn("cb/r1_tools/helper.py", moves)
         # make main.py stay (protected): now helper must stay too
-        rows = [dict(r, protect="keep") if r["path"] == "cb/old_tools/main.py" else r for r in rows]
+        rows = [dict(r, protect="keep") if r["path"] == "cb/r1_tools/main.py" else r for r in rows]
         moves = {r["path"] for r, _ in archive.plan(rows, self.root)}
-        self.assertNotIn("cb/old_tools/helper.py", moves)
+        self.assertNotIn("cb/r1_tools/helper.py", moves)
 
     def test_apply_and_undo_roundtrip(self):
         moves = archive.plan(list(self.rows.values()), self.root)
@@ -409,6 +409,21 @@ class InventoryTest(unittest.TestCase):
         self.assertNotEqual(rows["cb/out/run0/build.py"]["status"], "dead")
         moves = {r["path"] for r, _ in archive.plan(list(rows.values()), self.root)}
         self.assertNotIn("cb/out/run0/build.py", moves)
+
+    def test_spaced_names_hooks_uploads_and_plain_duplicates(self):
+        write(self.root, "tools/go.bat", 'python "%~dp0..\\run10\\fix rig.py"\r\n')
+        write(self.root, "run10/fix rig.py", '"""fix rig"""\n')
+        write(self.root, ".git/hooks/pre-commit", "#!/bin/sh\npython run10/val.py\n")
+        write(self.root, "run10/val.py", '"""val"""\n')
+        write(self.root, "uploads/run.bat", "python tools2\\dupb.py\r\n")
+        write(self.root, "tools1/dupa.py", '"""same bytes"""\nx = 1\n')
+        write(self.root, "tools2/dupb.py", '"""same bytes"""\nx = 1\n')
+        rows = {r["path"]: r for r in inventory.build(self.root, self.reg, rules=RULES)}
+        for rel in ("run10/fix rig.py", "run10/val.py", "tools2/dupb.py"):
+            self.assertGreater(rows[rel]["mentioned_by"], 0, rel)
+        self.assertEqual(rows["tools1/dupa.py"]["status"], "duplicate")
+        moves = {r["path"] for r, _ in archive.plan(list(rows.values()), self.root)}
+        self.assertFalse(moves & {"run10/fix rig.py", "run10/val.py", "tools1/dupa.py", "tools2/dupb.py"}, moves)
 
     def test_markdown_lists_all_rows(self):
         md = inventory.to_markdown(list(self.rows.values()))

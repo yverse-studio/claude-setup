@@ -22,6 +22,8 @@ from cxylib import sha256
 SCRIPT_EXT = (".py", ".mjs", ".js", ".sh", ".ps1")
 TEXT_EXT = SCRIPT_EXT + (".md", ".json", ".txt", ".tsv", ".html", ".htm", ".bat", ".cmd", ".yml", ".yaml", ".toml", ".cfg", ".ini", ".rpy")
 SKIP_DIRS = {"node_modules", "__pycache__", ".git", "uploads", "_archive"}   # _archive: already archived
+# callers are read in uploads/ and .git/hooks/ too (a hook or an uploaded .bat can run a script); only scripts there never move
+TEXT_SKIP_DIRS = {"node_modules", "__pycache__", "_archive"}
 DEAD_HOURS = 12
 ROUND_RE = re.compile(r"(^|/)(gate_?r?\d+\w*|r\d+\w*|run\d+\w*|v\d+\w*|patch\w*|lane[A-Z]\w*|build\d+|"
                       r"verdict\w*|reports?\w*|_gate\w*|gates?|stress\w*|test_\w+|clearance_repro|freeze|"
@@ -70,7 +72,10 @@ LOADED_BY_FOLDER_RE = re.compile(r"(^|/)(addons|startup|modules|presets|scripts/
 def walk_text(root, limit=None):
     """Every file that reads as text (any extension or none: Makefile, .ts, .vue, .gd, .yml ...), for mentions."""
     for d, dirs, files in os.walk(root):
-        dirs[:] = sorted(x for x in dirs if x not in SKIP_DIRS)
+        dirs[:] = sorted(x for x in dirs if x not in TEXT_SKIP_DIRS)
+        if os.path.basename(d) == ".git":   # only the hooks, never objects/packs
+            dirs[:] = [x for x in dirs if x == "hooks"]
+            files = []
         for f in sorted(files):
             if f.lower().endswith(BINARY_EXT) or ".zip.part" in f or f.startswith("INVENTORY"):
                 continue
@@ -218,6 +223,12 @@ def build(root, registry, now=None, rules=None):
     for p, t in scan.items():
         for b in set(word.findall(t)) & base_names:
             mentions[b].add(p)
+    # names the pattern cannot capture ("fix rig.py", "bake(2).py"): plain substring search
+    odd = [b for b in base_names if re.search(r"[^\w.\-]", b)]
+    for p, t in scan.items():
+        for b in odd:
+            if b in t:
+                mentions[b].add(p)
 
     # a module any other script imports (also `from pkg.mod import`, relative, or via sys.path from another folder)
     importers = {}

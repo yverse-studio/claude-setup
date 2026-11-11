@@ -20,7 +20,7 @@ Output of every command: `OK`, `WARN`, `RED` lines and one `RESULT PASS` / `RESU
 
 Rules it keeps: tools are never edited or moved (old paths keep working for running threads); `archive` never moves
 canonical tools or their folders, files changed in the last `recent_hours`, `protected_areas`, `freeze/` packages,
-anything a proven doc names, a duplicate a staying sibling imports, or a file that changed since the inventory.
+anything a proven doc names, a duplicate a staying sibling imports, a duplicate outside a round or archived folder (listed only), or a file that changed since the inventory.
 Merging two forks of a proven tool is a job for the thread that owns it (compare one result old vs new first).
 
 Tests: `python3 -m unittest discover -s tests` (sample tree in a temp dir).

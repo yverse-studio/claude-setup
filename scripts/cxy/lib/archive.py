@@ -2,6 +2,7 @@
 
 Safety rules (a file stays where it is if any is true):
   - status is not dead/duplicate (canonical, helper, used, active, one-off, unknown always stay)
+  - a duplicate outside a round or archived folder (run12/, gate_r3/, _withdrawn/ ...): listed for a human, never moved
   - any file outside its folder names it (mentioned_by > 0)
   - a sibling in the same folder that stays imports or names it, transitively (moving would break the sibling)
   - the file changed since the reviewed INVENTORY.json was written (sha differs)
@@ -13,6 +14,7 @@ import re
 import shutil
 
 from cxylib import sha256
+from inventory import ARCHIVED_RE, ROUND_RE
 
 MOVE_STATUS = ("dead", "duplicate")
 
@@ -20,7 +22,8 @@ MOVE_STATUS = ("dead", "duplicate")
 def plan(rows, root):
     """Rows that may move: list of (row, reason). A candidate that a staying sibling names stays too,
     repeated until nothing changes (A imported by B, B kept because C imports it -> A stays)."""
-    cand = {r["path"] for r in rows if r["status"] in MOVE_STATUS and not r.get("protect") and not r.get("mentioned_by")}
+    cand = {r["path"] for r in rows if r["status"] in MOVE_STATUS and not r.get("protect") and not r.get("mentioned_by")
+            and (r["status"] == "dead" or ROUND_RE.search(r["path"]) or ARCHIVED_RE.search(r["path"]))}
     by_dir = {}
     for r in rows:
         by_dir.setdefault(os.path.dirname(r["path"]), []).append(r)
