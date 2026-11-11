@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Playtest check: a PR that changes how the game plays must carry a playtest report for the
 // build it ships (roles/playtester.md). Play files = rules, hooks and ads in src/, the GDD and
-// the bot. The newest design/playtests/*.md changed in the PR must name the preview and a commit
+// the bot. The newest design/playtests/*.md (by played commit, then by name) changed in the PR must name the preview and a commit
 // no play file changed after, give pass/fail for all seven areas with a time and an existing
 // file as evidence, hold no pass-through fail, no template placeholder, and end with Not checked.
 // Escape hatch: a commit message in the PR with `playtest-ok: <reason>` waives a missing report, the
@@ -68,7 +68,14 @@ function main() {
   if (!changed.some(isPlayFile)) return console.log('playtest-check: no play file changed, no report needed')
 
   const waiver = lines(git(['log', '--format=%B', `${mergeBase}..HEAD`]) ?? '').find((l) => /^playtest-ok:\s*\S/.test(l))
-  const report = changed.filter(isReport).filter((f) => existsSync(f)).sort().at(-1)
+  // newest played commit wins; a numeric-aware name sort breaks ties and covers reports with no Commit line
+  const playedAt = (f) => {
+    const sha = readFileSync(f, 'utf8').match(/^Commit:\s*([0-9a-f]{7,40})\s*$/m)?.[1]
+    const n = sha && git(['rev-list', '--count', sha])?.trim()
+    return n ? Number(n) : -1
+  }
+  const byName = (a, b) => a.localeCompare(b, 'en', { numeric: true })
+  const report = changed.filter(isReport).filter((f) => existsSync(f)).sort((a, b) => playedAt(a) - playedAt(b) || byName(a, b)).at(-1)
   if (waiver && report) {
     const failed = failRows(readFileSync(report, 'utf8'))
     if (failed.length) fail([`${report}: ${failed.join(', ')} is fail; playtest-ok does not waive a failing row`])

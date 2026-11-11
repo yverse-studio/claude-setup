@@ -130,6 +130,28 @@ test('a play change that came in from the base branch does not make the report s
   })
   assert.equal(r.code, 0, r.out)
 })
+// Several rounds in one PR: the report for the newest played commit wins, not the last file name.
+const shots = (d) => { for (const a of AREAS) put(d, `design/playtests/shots/${a.replaceAll(' ', '-')}.png`) }
+const commitPlay = (d, text) => { put(d, 'src/rules.ts', text); git(d, 'add', '-A'); git(d, 'commit', '-qm', `feat: ${text}`); return git(d, 'rev-parse', '--short', 'HEAD').trim() }
+test('two reports on one date: the one for the newer commit wins, whatever the names sort to', () => {
+  const r = run((d) => {
+    const a = commitPlay(d, 'round 3\n'); put(d, 'design/playtests/2026-11-10-zzz.md', report(a))
+    git(d, 'add', '-A'); git(d, 'commit', '-qm', 'docs: round 3')
+    const b = commitPlay(d, 'round 4\n'); put(d, 'design/playtests/2026-11-10-aaa.md', report(b)); shots(d)
+  })
+  assert.equal(r.code, 0, r.out)
+  assert.match(r.out, /2026-11-10-aaa\.md ok/)
+})
+test('round 10 beats round 9 when both name the same commit', () => {
+  const r = run((d) => {
+    const a = commitPlay(d, 'round 9\n')
+    put(d, 'design/playtests/r9-x.md', report(a, (s) => s.replace('| Full run | pass', '| Full run | fail')))
+    put(d, 'design/playtests/r10-x.md', report(a)); shots(d)
+  })
+  assert.equal(r.code, 0, r.out)
+  assert.match(r.out, /r10-x\.md ok/)
+})
+
 test('outside a git repo, or with an unknown base, it exits 2 not 0', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pt-'))
   try { assert.equal(spawnSync('node', [script], { cwd: dir, encoding: 'utf8' }).status, 2) } finally { rmSync(dir, { recursive: true, force: true }) }
