@@ -77,7 +77,7 @@ def walk_text(root, limit=None):
             dirs[:] = [x for x in dirs if x == "hooks"]
             files = []
         for f in sorted(files):
-            if f.lower().endswith(BINARY_EXT) or ".zip.part" in f or f.startswith("INVENTORY"):
+            if f.lower().endswith(BINARY_EXT) or ".zip.part" in f or f.startswith(("INVENTORY", "ARCHIVE-PLAN")):
                 continue
             p = os.path.join(d, f)
             try:

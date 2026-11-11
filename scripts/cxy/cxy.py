@@ -113,12 +113,13 @@ def cmd_inventory(reg, argv):
 
 
 def cmd_archive(reg, argv):
-    """Dry run: fresh inventory -> INVENTORY.json + the move list. --apply: moves exactly what the saved
-    INVENTORY.json (the reviewed one) lists, refuses when it is missing, older than 12 h or from another root."""
+    """Dry run: fresh inventory -> ARCHIVE-PLAN.json + the move list. --apply: moves exactly what the saved
+    ARCHIVE-PLAN.json (the reviewed one) lists, refuses when it is missing, older than 12 h, from another root, or
+    not the file this dry run wrote (sha in .started; `cxy inventory` writes INVENTORY.* and never touches it)."""
     import archive
     import inventory
     root = os.path.abspath(_opt(argv, "--root", cxylib.PF_ROOT))
-    inv_json = _opt(argv, "--inventory", os.path.join(HERE, "INVENTORY.json"))
+    inv_json = _opt(argv, "--inventory", os.path.join(HERE, "ARCHIVE-PLAN.json"))
     rep = Report()
     undo = _opt(argv, "--undo", None)
     if undo:
@@ -138,7 +139,7 @@ def cmd_archive(reg, argv):
         with open(inv_json + ".root", "w", encoding="utf-8") as fh:
             fh.write(root)
         with open(inv_json + ".started", "w", encoding="utf-8") as fh:
-            fh.write(repr(started))
+            fh.write(f"{started!r}\n{cxylib.sha256(inv_json)}\n")
         moves = archive.plan(rows, root)
         for r, reason in moves:
             print(f"MOVE {r['path']}  ({reason})")
@@ -154,9 +155,13 @@ def cmd_archive(reg, argv):
     with open(inv_json, encoding="utf-8") as fh:
         rows = json.load(fh)
     try:
-        since = float(open(inv_json + ".started", encoding="utf-8").read())
+        since_s, sha = open(inv_json + ".started", encoding="utf-8").read().split()[:2]
+        since = float(since_s)
     except (OSError, ValueError):
-        since = os.path.getmtime(inv_json) - 12 * 3600   # unknown scan start: look back the whole window
+        since, sha = None, None
+    if since is None or sha != cxylib.sha256(inv_json):
+        rep.red(f"{inv_json} is not the list the last `cxy archive` dry run printed (rewritten since): run the dry run again")
+        return rep.finish()
     own = [inv_json, inv_json + ".root", inv_json + ".started", os.path.splitext(inv_json)[0] + ".md"]
     archive.apply(archive.plan(rows, root), root, dest, rep, rows=rows, since=since, exclude=own)
     return rep.finish()

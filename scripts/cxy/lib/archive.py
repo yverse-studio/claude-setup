@@ -47,7 +47,7 @@ def plan(rows, root):
             from inventory import BINARY_EXT
             try:
                 listing[d] = [os.path.join(d, f) for f in os.listdir(os.path.join(root, d) if d else root)
-                              if not f.lower().endswith(BINARY_EXT) and not f.startswith("INVENTORY")
+                              if not f.lower().endswith(BINARY_EXT) and not f.startswith(("INVENTORY", "ARCHIVE-PLAN"))
                               and os.path.isfile(os.path.join(root, d, f))]
             except OSError:
                 listing[d] = []

@@ -214,6 +214,22 @@ class InventoryTest(unittest.TestCase):
         self.assertEqual(app.returncode, 0, app.stdout)
         self.assertFalse(os.path.exists(os.path.join(self.root, "cb/out/run1/build.py")))
 
+    def test_apply_refuses_a_list_rewritten_after_the_dry_run(self):
+        inv = os.path.join(self.root, "plan.json")
+        aged = ("import sys; sys.path[:0] = [%r, %r]; import inventory; inventory.touched = lambda st: st.st_mtime; "
+                "import cxy; sys.exit(cxy.main(sys.argv[1:]))" % (os.path.join(CXY, "lib"), CXY))
+        cli = [sys.executable, "-c", aged]
+        env = self.sample_env()
+        subprocess.run(cli + ["archive", "--root", self.root, "--inventory", inv], capture_output=True, text=True, env=env)
+        # `cxy inventory` onto the same file (or any edit) after the review
+        subprocess.run(cli + ["inventory", "--root", self.root, "--out", os.path.join(self.root, "plan.md")],
+                       capture_output=True, text=True, env=env)
+        app = subprocess.run(cli + ["archive", "--apply", "--root", self.root, "--inventory", inv,
+                                    "--dest", os.path.join(self.root, "_archive", "t")], capture_output=True, text=True, env=env)
+        self.assertEqual(app.returncode, 1, app.stdout)
+        self.assertIn("not the list the last", app.stdout)
+        self.assertTrue(os.path.exists(os.path.join(self.root, "cb/out/run1/build.py")))
+
     def test_package_and_relative_imports_protect_the_module(self):
         write(self.root, "cb/tools/main.py", '"""main.py: tool."""\nfrom lib.util import f\nfrom .rel import g\n')
         write(self.root, "cb/tools/lib/util.py", '"""util.py: same bytes."""\n')

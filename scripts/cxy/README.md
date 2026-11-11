@@ -12,11 +12,13 @@ and `archive_rules.example.json` to `archive_rules.json`, set `CXY_ROOT` if the 
 | `python3 cxy.py list` | every tool command, its pipeline step, runner, script |
 | `python3 cxy.py doctor` | registered scripts exist, Blender / bpy python found |
 | `python3 cxy.py inventory` | every script under the root: canonical, helper, used, fork, one-off, duplicate, dead (+ why it is protected) → `INVENTORY.md` |
-| `python3 cxy.py archive [--apply]` | dry run writes the inventory + move list to review; `--apply` moves exactly that reviewed list to `_archive/<date>-scripts/` with `MANIFEST.tsv`; never deletes or overwrites |
+| `python3 cxy.py archive [--apply]` | dry run writes `ARCHIVE-PLAN.json` + the move list to review; `--apply` moves exactly that reviewed list (refused if rewritten since) to `_archive/<date>-scripts/` with `MANIFEST.tsv`; never deletes or overwrites |
 | `python3 cxy.py archive --undo <MANIFEST.tsv>` | everything back |
 | `python3 cxy.py <tool> [--cxy-dry] [--cxy-factory] args` | runs the registered script with its runner (python3, bpy python, Blender batch, node) |
 
 Output of every command: `OK`, `WARN`, `RED` lines and one `RESULT PASS` / `RESULT RED` line; exit 0 / 1.
+
+What `archive` may move: only `dead` scripts (old round folders, `_withdrawn/`, `archive/` copies nobody names) and duplicates inside such folders.
 
 Rules it keeps: tools are never edited or moved (old paths keep working for running threads); `archive` never moves
 canonical tools or their folders, files changed in the last `recent_hours`, `protected_areas`, `freeze/` packages,
