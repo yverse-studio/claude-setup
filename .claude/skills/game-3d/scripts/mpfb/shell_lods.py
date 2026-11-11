@@ -52,12 +52,22 @@ for old in far:
         if tris(sh) <= t * 1.05: break
         bpy.data.objects.remove(sh)
     print('voxel used', vox)
+    bm2 = bmesh.new(); bm2.from_mesh(sh.data); bmesh.ops.recalc_face_normals(bm2, faces=bm2.faces[:]); bm2.to_mesh(sh.data); bm2.free()  # decimation flips a few faces: dark shards
+    snap = float(os.environ.get('SNAP', 0))  # shards: shell vertices standing out more than this from the near LOD go back onto it
+    if snap:
+        from mathutils.bvhtree import BVHTree
+        dg = bpy.context.evaluated_depsgraph_get(); nb = BVHTree.FromObject(near, dg, deform=False); ns = 0
+        mw = sh.matrix_world; inv = mw.inverted()
+        for v in sh.data.vertices:
+            p = mw @ v.co; loc, nrm, i, d = nb.find_nearest(p)
+            if loc is not None and d > snap and (p - loc).dot(nrm) > 0: v.co = inv @ (loc + nrm * 0.002); ns += 1
+        print('SNAP verts', ns)
     for u in list(sh.data.uv_layers): sh.data.uv_layers.remove(u)
     sh.data.uv_layers.new(name='UVMap')
     bpy.ops.object.mode_set(mode='EDIT'); bpy.ops.mesh.select_all(action='SELECT')
     bpy.ops.uv.smart_project(angle_limit=1.15, island_margin=0.01); bpy.ops.object.mode_set(mode='OBJECT')
     # bake colour from the near LOD
-    img = bpy.data.images.new(old.name + '_bake', TEX[t], TEX[t]); mat = bpy.data.materials.new(old.name + '_mat'); mat.use_nodes = True
+    img = bpy.data.images.new(old.name + '_bake', TEX[t], TEX[t]); img.generated_color = (1, 0, 1, 1); mat = bpy.data.materials.new(old.name + '_mat'); mat.use_nodes = True
     nt = mat.node_tree; tn = nt.nodes.new('ShaderNodeTexImage'); tn.image = img
     nt.links.new(tn.outputs['Color'], nt.nodes['Principled BSDF'].inputs['Base Color']); nt.nodes['Principled BSDF'].inputs['Roughness'].default_value = 0.75
     nt.nodes.active = tn; sh.data.materials.clear(); sh.data.materials.append(mat)
@@ -65,6 +75,17 @@ for old in far:
     sc.render.bake.use_selected_to_active = True; sc.render.bake.cage_extrusion = float(os.environ.get('CAGE', 0.03)); sc.render.bake.max_ray_distance = float(os.environ.get('RAY', 0.08))
     sc.render.bake.use_pass_direct = False; sc.render.bake.use_pass_indirect = False; sc.render.bake.margin = 4
     bpy.ops.object.bake(type='DIFFUSE', pass_filter={'COLOR'})
+    # rays that miss leave the magenta sentinel (round 8: black triangles); grow real colour into them
+    import numpy as np
+    a = np.array(img.pixels[:], dtype=np.float32).reshape(TEX[t], TEX[t], 4)
+    miss = (a[..., 0] > 0.99) & (a[..., 1] < 0.01) & (a[..., 2] > 0.99); print('BAKE misses', int(miss.sum()))
+    for _ in range(64):
+        if not miss.any(): break
+        acc = np.zeros_like(a[..., :3]); n = np.zeros(miss.shape)
+        for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            ok = np.roll(~miss, (dy, dx), (0, 1)); acc += np.where(ok[..., None], np.roll(a[..., :3], (dy, dx), (0, 1)), 0); n += ok
+        fill = miss & (n > 0); a[fill, :3] = acc[fill] / n[fill][:, None]; miss &= ~fill
+    img.pixels[:] = a.ravel().tolist()
     img.filepath_raw = os.path.join(OUT, old.name + '_bake.png'); img.file_format = 'PNG'; img.save()
     img.pack()
     # weights from the near LOD

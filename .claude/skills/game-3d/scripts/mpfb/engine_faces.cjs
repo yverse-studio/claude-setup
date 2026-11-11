@@ -12,13 +12,14 @@ const [, , outdir, tag, ...figs] = process.argv
       const v = hb.getWorldPosition(new hb.position.constructor()); const q = globalThis.__fig.getWorldQuaternion(new hb.quaternion.constructor())
       const fwd = new hb.position.constructor(0, 0, 1).applyQuaternion(q); return { x: v.x, y: v.y + 0.07, z: v.z, fx: fwd.x, fz: fwd.z } })
     await p.close()
+    const body = !!process.env.BODY
     for (const [nm, ang] of [['front', 0], ['34', 0.6]]) {
-      const c = Math.cos(ang), s = Math.sin(ang), dx = h.fx * c - h.fz * s, dz = h.fx * s + h.fz * c, d = 0.55
-      const cam = [h.x + dx * d, h.y + 0.02, h.z + dz * d, h.x, h.y, h.z].map((n) => n.toFixed(3)).join(',')
+      const c = Math.cos(ang), s = Math.sin(ang), dx = h.fx * c - h.fz * s, dz = h.fx * s + h.fz * c, d = body ? 2.4 : 0.55, ty = body ? h.y * 0.55 : h.y
+      const cam = [h.x + dx * d, ty + 0.02, h.z + dz * d, h.x, ty, h.z].map((n) => n.toFixed(3)).join(',')
       const p2 = await b.newPage({ viewport: { width: 900, height: 900 } }); p2.setDefaultTimeout(300000)
       await p2.goto(`${base}&cam=${cam}`); await p2.waitForFunction(() => window.__ready); await p2.waitForTimeout(1500)
       const d64 = await p2.evaluate(() => document.querySelector('canvas').toDataURL('image/png'))
-      require('fs').writeFileSync(`${outdir}/${tag}-${fig}-L${lod}-${nm}.png`, Buffer.from(d64.split(',')[1], 'base64')); await p2.close()
+      require('fs').writeFileSync(`${outdir}/${tag}-${fig}-L${lod}${body ? '-body' : ''}-${nm}.png`, Buffer.from(d64.split(',')[1], 'base64')); await p2.close()
     }
     console.log('ok', f)
   }

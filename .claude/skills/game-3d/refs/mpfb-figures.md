@@ -51,12 +51,17 @@ back, lower LODs, face). Ship: `node optimize-figures.mjs in.glb out.glb <colour
   front rays, `tuck` folds belt loops under the shirt hem and gives exposed waist-skin scraps the waistband colour). Two
   tries that failed: flattening the mouth cavity into a plate (it poked through the lips as fangs) and a smooth that took
   cavity vertices as neighbours (it dragged the lips in). Open at 4.8: brows as soft alpha cards, matte hair, elder rebake.
-- Round 10 (4.5, best): grade faces from the engine, not Blender Workbench (`scripts/mpfb/engine_faces.cjs` against a page
+- Round 10 (4.5): grade faces from the engine, not Blender Workbench (`scripts/mpfb/engine_faces.cjs` against a page
   that swaps any figure into the hero spot); Workbench hid blown-out skin and showed gloss the engine does not have. Our
   optimizer ships one MASK 0.5 material, so MPFB brow cards cut out as hard black dashes: `fix_faces.py brows` recolours
   the brow cell from forehead skin to brown by alpha and cuts at 8 %. `haircontrast` flattens hair texels toward their mean,
   `scalp` paints skin under the hair (ray along the normal hits hair within 3 cm) in the hair colour. Deleting hair cards in
   front of a face can leave an opaque slab of the card behind: check both views after `cheekcards`.
+- Round 11 (4.6, best): hair-card cleanup deletes only whole small islands (`cheekcards`, under 150 verts); deleting single
+  faces opened the hair's inner layer as a dark slab. Scalp paint near the hairline (`SCALPNEAR`) fills white gaps. Shells
+  re-cast with a snapped cage (`shell_lods.py` `SNAP`, `CAGE`, `RAY`) and a magenta sentinel that flags bake misses. Before a
+  gate, render every changed figure at every LOD in the engine (`BODY=1 engine_faces.cjs` for full body). Open: a white ankle
+  shard on two men at all far LODs (not normals, not bake misses).
 - Check holes before a gate: `holes.py file.blend` renders each LOD on magenta and fails on background seen through the figure.
 - meshoptimizer `simplifyWithAttributes` per part tears UV seams worse than Decimate on the joined mesh; do not use it for figures.
 - `Object3D.clone()` of a skinned GLB keeps the skin on the cached skeleton: the figure vanishes. Use `SkeletonUtils.clone`.

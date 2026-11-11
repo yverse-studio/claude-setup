@@ -199,7 +199,9 @@ if {'brows', 'scalp', 'haircontrast', 'cheekcards', 'lipsmear'} & set(OPS):
         for f in body_f:
             c = f.calc_center_median()
             crown = os.environ.get('SCALPF') and c.z > nz + 0.09 and (c.y > lipy + 0.045 or c.z > nz + 0.115)  # far LOD: the whole crown
-            if crown or all(hb2.ray_cast(v.co + v.normal * 0.001, v.normal, 0.03)[0] is not None or v.co.z > nz + float(os.environ.get('SCALPZ', 9)) for v in f.verts):
+            near = float(os.environ.get('SCALPNEAR', 0))  # hairline gaps: skin within this distance of a hair card also takes the hair colour
+            if crown or all(hb2.ray_cast(v.co + v.normal * 0.001, v.normal, 0.03)[0] is not None or v.co.z > nz + float(os.environ.get('SCALPZ', 9))
+                            or (near and v.co.z > nz + 0.07 and hb2.find_nearest(v.co, near)[0] is not None) for v in f.verts):
                 for l in f.loops: l[uvl].uv = best
                 ns += 1
         print('SCALP faces', ns)
@@ -211,6 +213,9 @@ if {'brows', 'scalp', 'haircontrast', 'cheekcards', 'lipsmear'} & set(OPS):
                 if abs(p.x) < 0.095 and p.z < nz + 0.05 and p.z > nz - 0.14:
                     h = bvh.ray_cast(Vector((p.x, -1, p.z)), Vector((0, 1, 0)))
                     if h[0] is not None and p.y < h[0].y + 0.006: kill.append(f); break
+        # whole small strand islands only: cutting faces out of the main hair opened a dark slab of its inner layer (round 10)
+        ki = {isl[f.verts[0].index] for f in kill if cnt[isl[f.verts[0].index]] < 150}
+        kill = [f for f in hair_f if isl[f.verts[0].index] in ki]
         bmesh.ops.delete(bm, geom=kill, context='FACES')
         print('CHEEK hair faces deleted', len(kill))
     if 'lipsmear' in OPS:  # far LOD: lip colour smeared over a collapsed mouth takes the cheek skin instead
