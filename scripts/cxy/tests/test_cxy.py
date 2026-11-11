@@ -250,6 +250,16 @@ class InventoryTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(self.root, "cb/gate_r3/probe.py")), app.stdout)
         self.assertFalse(os.path.exists(os.path.join(self.root, "cb/out/run1/build.py")), app.stdout)
 
+    def test_symlinked_tool_and_its_target_stay(self):
+        write(self.root, "run13/bake.py", '"""bake.py: current version"""\n')
+        os.makedirs(os.path.join(self.root, "tools"), exist_ok=True)
+        os.symlink("../run13/bake.py", os.path.join(self.root, "tools/bake.py"))
+        rows = {r["path"]: r for r in inventory.build(self.root, self.reg, rules=RULES)}
+        self.assertEqual(rows["run13/bake.py"]["protect"], "symlink target")
+        self.assertEqual(rows["tools/bake.py"]["protect"], "symlink")
+        moves = {r["path"] for r, _ in archive.plan(list(rows.values()), self.root)}
+        self.assertFalse(moves & {"run13/bake.py", "tools/bake.py"})
+
     def test_project_docs_named_like_inventory_are_read(self):
         write(self.root, "docs/INVENTORY_SPEC.md", "run `cb/gate_r3/probe.py` before export\n")
         write(self.root, "game/INVENTORY.md", "Rebuild icons: python run12/gen_item_icons.py\n")   # the game's item inventory

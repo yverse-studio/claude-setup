@@ -255,6 +255,8 @@ def build(root, registry, now=None, rules=None, skip=()):
         for wd in set(re.findall(r"\w[\w\-]*", t)):
             words.setdefault(wd, set()).add(p)
     sha_of = {p: sha256(p)[:16] for p in scripts}
+    # a symlink ("tools/rig.py -> ../gate_r4/rig_fix.py") and its target: neither ever moves (moving the target dangles the link)
+    link_targets = {os.path.realpath(p) for p in scripts if os.path.islink(p)}
 
     rows = []
     for p in scripts:
@@ -286,7 +288,8 @@ def build(root, registry, now=None, rules=None, skip=()):
             "mtime": int(st.st_mtime), "touched": int(t_), "age_h": age_h,
             "sha": sha_of[p], "what": summary_line(text),
             "mentioned_by": len(others),
-            "protect": protection(rel, age_h, rules, st.st_size) or (
+            "protect": ("symlink" if os.path.islink(p) else "symlink target" if os.path.realpath(p) in link_targets else "")
+            or protection(rel, age_h, rules, st.st_size) or (
                 "Blender add-on / startup script (loaded by place)"
                 if LOADED_BY_FOLDER_RE.search(rel) or "bl_info" in text or re.search(r"^def register\(", text, re.M) else ""),
             "_abs": os.path.normpath(p),

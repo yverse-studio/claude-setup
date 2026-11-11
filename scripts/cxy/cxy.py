@@ -4,8 +4,8 @@
   python3 cxy.py list                         every command, its PIPELINE step and the script it runs
   python3 cxy.py doctor                       scripts exist, Blender 5.2.3 / bpy python found, PIPELINE paths OK
   python3 cxy.py inventory [--root DIR] [--out FILE.md]    what every script is (canonical/helper/used/active/one-off/duplicate/dead)
-  python3 cxy.py archive [--apply] [--root DIR]            dead + duplicate scripts -> _archive/<date>-scripts/ (dry run writes the
-                                                           INVENTORY.json to review; --apply moves exactly that list)
+  python3 cxy.py archive [--apply] [--root DIR]            dead + duplicate scripts -> _archive/<date>-scripts/ (dry run writes
+                                                           ARCHIVE-PLAN.json to review; --apply moves only that list)
   python3 cxy.py archive --undo <MANIFEST.tsv>             put them back
   python3 cxy.py <command> [--cxy-dry] [--cxy-factory] <args...>   run a pipeline tool (see `list`)
 
