@@ -115,6 +115,19 @@ def _read(path, limit=TEXT_LIMIT):
         return ""
 
 
+BATCH_DIR_RE = re.compile(r"%~[A-Za-z$:]*\d")   # %~dp0bake.py = "the bake.py next to this .bat"
+
+
+def scan_text(text):
+    """Text as callers are matched: Windows names are case-insensitive, %~dp0 counts as a path separator."""
+    return BATCH_DIR_RE.sub("/", text).casefold()
+
+
+def touched(st):
+    """When the file arrived here: ctime too, because an unzipped / cp -p / rsync -a job folder keeps old mtimes."""
+    return max(st.st_mtime, st.st_ctime)
+
+
 def summary_line(text):
     """First docstring or comment line, trimmed to 140 chars."""
     for line in text.splitlines()[:12]:
@@ -196,18 +209,20 @@ def build(root, registry, now=None, rules=None):
         helper_names |= {m + ".py" for m in IMPORT_RE.findall(t)}
         helper_names |= {os.path.basename(m) for m in EXEC_RE.findall(t)}
 
-    base_names = {os.path.basename(p) for p in scripts}
+    # matching runs on casefolded text with %~dp0 stripped (scan_text); names are casefolded too
+    scan = {p: scan_text(t) for p, t in texts.items()}
+    base_names = {os.path.basename(p).casefold() for p in scripts}
     mentions = {b: set() for b in base_names}
     # lookbehind: a match only starts at the start of a name, so a long run of word chars is scanned once, not per offset
     word = re.compile(r"(?<![\w.\-])[\w.\-]+\.(?:py|mjs|js|sh|ps1)")
-    for p, t in texts.items():
+    for p, t in scan.items():
         for b in set(word.findall(t)) & base_names:
             mentions[b].add(p)
 
     # a module any other script imports (also `from pkg.mod import`, relative, or via sys.path from another folder)
     importers = {}
     for p in set(scripts) | set(texts):
-        t = texts.get(p) or _read(p)
+        t = scan.get(p) or scan_text(_read(p))
         for n in imported_names(t):   # every text file: CI yml, bat, toml, Makefile can run `python -m x`
             importers.setdefault(n + ".py", set()).add(p)
         for f in js_imported_files(t):
@@ -215,7 +230,7 @@ def build(root, registry, now=None, rules=None):
 
     # whole-word index over every text file (conservative: any word equal to a script's stem counts as a caller)
     words = {}
-    for p, t in texts.items():
+    for p, t in scan.items():
         for wd in set(re.findall(r"\w[\w\-]*", t)):
             words.setdefault(wd, set()).add(p)
     sha_of = {p: sha256(p)[:16] for p in scripts}
@@ -226,26 +241,28 @@ def build(root, registry, now=None, rules=None):
         st = os.stat(p)
         text = texts.get(p) or _read(p)
         b = os.path.basename(p)
+        bl = b.casefold()
         # mentioned = its file name, an import of it, or its bare stem as a whole word (`python -c "import x"`,
         # `--python-expr`, `import_module("x")`, `require('./lib')` -> lib/index.js) in any other text file outside its
         # folder; a byte-identical copy of it does not count (copies name themselves)
         own_sha = sha_of.get(p)
-        stems = {os.path.splitext(b)[0]}
+        stems = {os.path.splitext(bl)[0]}
         if stems == {"index"}:
-            stems.add(os.path.basename(os.path.dirname(p)))
-        cands = set(mentions.get(b, ())) | set(importers.get(b, ()))
+            stems.add(os.path.basename(os.path.dirname(p)).casefold())
+        cands = set(mentions.get(bl, ())) | set(importers.get(bl, ()))
         for st_ in stems:
             cands |= words.get(st_, set())
         # a file with the same name (a fork naming itself in its docstring) counts only when it points at a path:
         # "../run11/run.py"
         # ... or imports it by a dotted path: `from run13.bake import main`, `-m pkg.bake`
-        path_ref = re.compile(r"[/\\]" + re.escape(b) + r"\b|\w\." + re.escape(os.path.splitext(b)[0]) + r"\b")
+        path_ref = re.compile(r"[/\\]" + re.escape(bl) + r"\b|\w\." + re.escape(os.path.splitext(bl)[0]) + r"\b")
         others = {m for m in cands if m != p and os.path.dirname(m) != os.path.dirname(p) and sha_of.get(m, "") != own_sha
-                  and (os.path.basename(m) != b or path_ref.search(texts.get(m, "")))}
-        age_h = round((now - st.st_mtime) / 3600, 1)
+                  and (os.path.basename(m).casefold() != bl or path_ref.search(scan.get(m, "")))}
+        t_ = touched(st)
+        age_h = round((now - t_) / 3600, 1)
         rows.append({
             "path": rel, "name": b, "bytes": st.st_size, "lines": text.count("\n") + 1,
-            "mtime": int(st.st_mtime), "age_h": age_h,
+            "mtime": int(st.st_mtime), "touched": int(t_), "age_h": age_h,
             "sha": sha_of[p], "what": summary_line(text),
             "mentioned_by": len(others),
             "protect": protection(rel, age_h, rules, st.st_size) or (
@@ -294,7 +311,8 @@ def build(root, registry, now=None, rules=None):
                 continue
             newest = max(sibs, key=lambda r: r["mtime"])
             for r in sibs:
-                if r is not newest:
+                # a round copied in after the newest one was written (old mtime, new ctime) is not "older"
+                if r is not newest and r["touched"] <= newest["mtime"]:
                     superseded[r["_abs"]] = newest["path"]
 
     for r in rows:

@@ -28,8 +28,8 @@ def plan(rows, root):
 
     def text(rel):
         if rel not in texts:
-            from inventory import _read
-            texts[rel] = _read(os.path.join(root, rel))   # UTF-16 aware
+            from inventory import _read, scan_text
+            texts[rel] = scan_text(_read(os.path.join(root, rel)))   # UTF-16 aware
         return texts[rel]
 
     listing = {}
@@ -51,7 +51,7 @@ def plan(rows, root):
         for r in rows:
             if r["path"] not in cand:
                 continue
-            pat = re.compile(r"\b" + re.escape(os.path.splitext(r["name"])[0]) + r"\b")
+            pat = re.compile(r"\b" + re.escape(os.path.splitext(r["name"])[0].casefold()) + r"\b")
             d = os.path.dirname(r["path"])
             # staying siblings: script rows not moving, plus every other text file in the folder (html, bat, yml, ...)
             sibs = [sib["path"] for sib in by_dir[d] if sib is not r and sib["path"] not in cand]
@@ -76,7 +76,7 @@ SCRIPT_EXT = (".py", ".mjs", ".js", ".sh", ".ps1")
 
 def _late_mentions(root, since, exclude=()):
     """Text of every script or doc changed after `since` (the inventory time): they may name a candidate now."""
-    from inventory import walk_text, _read
+    from inventory import walk_text, _read, scan_text
     out = []
     skip = {os.path.abspath(x) for x in exclude}
     for p in walk_text(root):
@@ -85,7 +85,7 @@ def _late_mentions(root, since, exclude=()):
         try:
             st = os.stat(p)
             if max(st.st_mtime, st.st_ctime) > since:   # ctime too: rsync -a / cp -p / unzip keep old mtimes
-                out.append((p, _read(p)))
+                out.append((p, scan_text(_read(p))))
         except OSError:
             continue
     return out
@@ -95,7 +95,7 @@ def _keep_reason(r, root, dest, late, listed, inventoried):
     """Why a planned file must stay after all ('' = it may move). Checked at --apply time."""
     src = os.path.join(root, r["path"])
     d = os.path.dirname(r["path"])
-    stem = re.escape(os.path.splitext(r["name"])[0])
+    stem = re.escape(os.path.splitext(r["name"])[0].casefold())
     hit = next((p for p, t in late if os.path.abspath(p) != os.path.abspath(src) and re.search(r"\b" + stem + r"\b", t)), None)
     if hit:
         return f"named by {os.path.relpath(hit, root)}, changed after the inventory"

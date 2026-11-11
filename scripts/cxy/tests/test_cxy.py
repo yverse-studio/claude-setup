@@ -18,6 +18,10 @@ import cxy
 import cxylib
 import inventory
 
+REAL_TOUCHED = inventory.touched
+# the sample tree fakes ages with utime, which cannot set ctime: tests age by mtime unless they restore REAL_TOUCHED
+inventory.touched = lambda st: st.st_mtime
+
 OLD = time.time() - 3 * 24 * 3600
 RULES = {"recent_hours": 6, "protected_areas": {"live/": "running thread"}, "protected_patterns": {"(^|/)freeze/": "proof"}}
 
@@ -199,7 +203,10 @@ class InventoryTest(unittest.TestCase):
     def test_dry_then_apply_moves_the_reviewed_list(self):
         inv = os.path.join(self.root, "inv.json")
         env = self.sample_env()
-        base = [sys.executable, os.path.join(CXY, "cxy.py"), "archive", "--root", self.root, "--inventory", inv,
+        # the CLI with mtime ages (the sample tree cannot fake ctime)
+        aged = ("import sys; sys.path[:0] = [%r, %r]; import inventory; inventory.touched = lambda st: st.st_mtime; "
+                "import cxy; sys.exit(cxy.main(sys.argv[1:]))" % (os.path.join(CXY, "lib"), CXY))
+        base = [sys.executable, "-c", aged, "archive", "--root", self.root, "--inventory", inv,
                 "--dest", os.path.join(self.root, "_archive", "t")]
         dry = subprocess.run(base, capture_output=True, text=True, env=env)
         self.assertIn("MOVE cb/out/run1/build.py", dry.stdout)
@@ -379,6 +386,29 @@ class InventoryTest(unittest.TestCase):
         rows = {r["path"]: r for r in inventory.build(self.root, self.reg, rules=RULES)}
         for rel in ("run12/bake_hair.py", "old9/rigfix.py", "steps9/01_import.py"):
             self.assertGreater(rows[rel]["mentioned_by"], 0, rel)
+
+    def test_batch_dir_and_case_insensitive_callers(self):
+        write(self.root, "run13/go.bat", 'blender -b a.blend -P "%~dp0bake_job.py"\r\n')
+        write(self.root, "run13/bake_job.py", '"""bake_job.py"""\n')
+        write(self.root, "RUN.BAT", "python run14\\bake.py\r\n")
+        write(self.root, "run14/Bake.py", '"""Bake.py"""\n')
+        rows = {r["path"]: r for r in inventory.build(self.root, self.reg, rules=RULES)}
+        self.assertGreater(rows["run14/Bake.py"]["mentioned_by"], 0)
+        moves = {r["path"] for r, _ in archive.plan(list(rows.values()), self.root)}
+        self.assertNotIn("run13/bake_job.py", moves)
+        self.assertNotIn("run14/Bake.py", moves)
+
+    def test_copied_in_job_folder_counts_by_ctime(self):
+        write(self.root, "cb/out/run0/build.py", '"""build.py: unzipped today, old mtime."""\n')   # ctime = now
+        inventory.touched = REAL_TOUCHED
+        try:
+            rows = {r["path"]: r for r in inventory.build(self.root, self.reg, rules=RULES)}
+        finally:
+            inventory.touched = lambda st: st.st_mtime
+        self.assertLess(rows["cb/out/run0/build.py"]["age_h"], 1)
+        self.assertNotEqual(rows["cb/out/run0/build.py"]["status"], "dead")
+        moves = {r["path"] for r, _ in archive.plan(list(rows.values()), self.root)}
+        self.assertNotIn("cb/out/run0/build.py", moves)
 
     def test_markdown_lists_all_rows(self):
         md = inventory.to_markdown(list(self.rows.values()))
