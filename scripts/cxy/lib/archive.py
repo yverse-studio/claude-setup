@@ -14,7 +14,7 @@ import re
 import shutil
 
 from cxylib import sha256
-from inventory import ARCHIVED_RE, OWN_OUTPUTS, ROUND_RE
+from inventory import ARCHIVED_RE, ROUND_RE, is_own_output
 
 MOVE_STATUS = ("dead", "duplicate")
 
@@ -47,7 +47,7 @@ def plan(rows, root):
             from inventory import BINARY_EXT
             try:
                 listing[d] = [os.path.join(d, f) for f in os.listdir(os.path.join(root, d) if d else root)
-                              if not f.lower().endswith(BINARY_EXT) and f not in OWN_OUTPUTS
+                              if not f.lower().endswith(BINARY_EXT) and not is_own_output(os.path.join(root, d, f))
                               and os.path.isfile(os.path.join(root, d, f))]
             except OSError:
                 listing[d] = []

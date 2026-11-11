@@ -131,8 +131,8 @@ class InventoryTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(self.root, "cb/out/run1/build.py")))
 
     def test_own_inventory_output_is_not_a_mention(self):
-        write(self.root, "cb/INVENTORY.md", "`cb/gate_r3/probe.py` `cb/out/run2/build.py`\n")
-        rows = {r["path"]: r for r in inventory.build(self.root, self.reg, rules=RULES)}
+        out = write(self.root, "cb/INVENTORY.md", "`cb/gate_r3/probe.py` `cb/out/run2/build.py`\n")   # written by --out here
+        rows = {r["path"]: r for r in inventory.build(self.root, self.reg, rules=RULES, skip=[out])}
         self.assertEqual(rows["cb/gate_r3/probe.py"]["status"], "dead")
 
     def test_proven_doc_protects_named_folder(self):
@@ -252,8 +252,12 @@ class InventoryTest(unittest.TestCase):
 
     def test_project_docs_named_like_inventory_are_read(self):
         write(self.root, "docs/INVENTORY_SPEC.md", "run `cb/gate_r3/probe.py` before export\n")
+        write(self.root, "game/INVENTORY.md", "Rebuild icons: python run12/gen_item_icons.py\n")   # the game's item inventory
+        write(self.root, "run12/gen_item_icons.py", '"""icons"""\n')
         rows = {r["path"]: r for r in inventory.build(self.root, self.reg, rules=RULES)}
         self.assertGreater(rows["cb/gate_r3/probe.py"]["mentioned_by"], 0)
+        self.assertGreater(rows["run12/gen_item_icons.py"]["mentioned_by"], 0)
+        self.assertNotIn("run12/gen_item_icons.py", {r["path"] for r, _ in archive.plan(list(rows.values()), self.root)})
 
     def test_package_and_relative_imports_protect_the_module(self):
         write(self.root, "cb/tools/main.py", '"""main.py: tool."""\nfrom lib.util import f\nfrom .rel import g\n')

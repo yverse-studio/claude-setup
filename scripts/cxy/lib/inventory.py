@@ -24,7 +24,9 @@ TEXT_EXT = SCRIPT_EXT + (".md", ".json", ".txt", ".tsv", ".html", ".htm", ".bat"
 SKIP_DIRS = {"node_modules", "__pycache__", ".git", "uploads", "_archive"}   # _archive: already archived
 # callers are read in uploads/ and .git/hooks/ too (a hook or an uploaded .bat can run a script); only scripts there never move
 TEXT_SKIP_DIRS = {"node_modules", "__pycache__", "_archive"}
-# cxy's own outputs list every script by name: never read them as callers (other INVENTORY_*.md files are read)
+# cxy's own outputs (in the cxy folder itself) list every script by name: never read them as callers; a project's own
+# INVENTORY.md elsewhere is read like any file. Outputs written elsewhere (--out, --inventory) are passed as `skip`.
+CXY_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OWN_OUTPUTS = {"INVENTORY.md", "INVENTORY.json", "INVENTORY.json.root", "ARCHIVE-PLAN.md", "ARCHIVE-PLAN.json",
                "ARCHIVE-PLAN.json.root", "ARCHIVE-PLAN.json.started"}
 DEAD_HOURS = 12
@@ -72,6 +74,10 @@ NEVER_MOVE = ("__init__.py", "__main__.py", "conftest.py", "setup.py")
 LOADED_BY_FOLDER_RE = re.compile(r"(^|/)(addons|startup|modules|presets|scripts/startup)/")   # Blender loads these by place
 
 
+def is_own_output(path):
+    return os.path.basename(path) in OWN_OUTPUTS and os.path.dirname(os.path.abspath(path)) == CXY_DIR
+
+
 def walk_text(root, limit=None):
     """Every file that reads as text (any extension or none: Makefile, .ts, .vue, .gd, .yml ...), for mentions."""
     for d, dirs, files in os.walk(root):
@@ -80,7 +86,7 @@ def walk_text(root, limit=None):
             dirs[:] = [x for x in dirs if x == "hooks"]
             files = []
         for f in sorted(files):
-            if f.lower().endswith(BINARY_EXT) or ".zip.part" in f or f in OWN_OUTPUTS:
+            if f.lower().endswith(BINARY_EXT) or ".zip.part" in f or is_own_output(os.path.join(d, f)):
                 continue
             p = os.path.join(d, f)
             try:

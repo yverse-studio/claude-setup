@@ -100,8 +100,9 @@ def cmd_inventory(reg, argv):
     import inventory
     root = _opt(argv, "--root", cxylib.PF_ROOT)
     out = _opt(argv, "--out", os.path.join(HERE, "INVENTORY.md"))
-    rows = inventory.build(root, reg)
-    inventory.save(rows, out, os.path.splitext(out)[0] + ".json")
+    stem = os.path.splitext(out)[0]
+    rows = inventory.build(root, reg, skip=[out, stem + ".json", stem + ".json.root"])   # a rerun never reads its own output
+    inventory.save(rows, out, stem + ".json")
     with open(os.path.splitext(out)[0] + ".json.root", "w", encoding="utf-8") as fh:
         fh.write(os.path.abspath(root))
     rep = Report()
@@ -134,7 +135,8 @@ def cmd_archive(reg, argv):
         return rep.finish()
     if "--apply" not in argv:
         started = time.time()   # texts are read after this moment: --apply rescans everything changed since
-        rows = inventory.build(root, reg)
+        own_files = [inv_json, inv_json + ".root", inv_json + ".started", os.path.splitext(inv_json)[0] + ".md"]
+        rows = inventory.build(root, reg, skip=own_files)
         inventory.save(rows, os.path.splitext(inv_json)[0] + ".md", inv_json)
         with open(inv_json + ".root", "w", encoding="utf-8") as fh:
             fh.write(root)
