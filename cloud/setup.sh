@@ -1143,7 +1143,7 @@ const KAOMOJI = /[◕‿ω꒳ᴗ･˘ᵕ◡╹≧≦∀ヾﾉ✧♡☆✿ʕʔﾟ
 // irgendwas in gesicht springt"). Screenshots and renders run headless. `# yskills asked` on the command lets it through.
 // commandsOf: the commands of a shell line, split outside quotes; heredoc bodies are text, not commands.
 const commandsOf = (cmd) => {
-  const text = cmd.replace(/<<-?\s*(['"]?)(\w+)\1[^\n]*\n[\s\S]*?\n\s*\2\b/g, '')
+  const text = cmd.replace(/@(['"])[^\n]*\n[\s\S]*?\n\1@/g, "''").replace(/<<-?\s*(['"]?)([^\s'"<>;&|()]+)\1[^\n]*\n[\s\S]*?\n\s*\2(?=\s|\)|$)/g, '')
   const out = []
   let cur = ''
   let quote = ''
@@ -1152,10 +1152,10 @@ const commandsOf = (cmd) => {
     if (quote === '"' && ch === '\\' && text[i + 1] === '"') { cur += '\\"'; i++; continue }
     if (quote) { if (ch === quote) quote = '' } else if (ch === '"' || ch === "'") quote = ch
     else if (ch === '#' && /(^|\s)$/.test(cur)) { while (i + 1 < text.length && text[i + 1] !== '\n') i++; continue }
-    else if (';&|(){}\n'.includes(ch)) { out.push(cur); cur = ''; continue }
+    else if (';&|({\n'.includes(ch)) { out.push(cur); cur = ''; continue }
     cur += ch
   }
-  return [...out, cur].map((c) => c.trim().replace(/^\$[\w:]+\s*=\s*/, '')).filter(Boolean)
+  return [...out, cur].map((c) => c.trim().replace(/^}\s+/, '').replace(/^\$[\w:]+\s*=\s*/, '')).filter(Boolean)
 }
 const WINDOW_APPS = /^(explorer|invoke-item|ii|xdg-open|notepad|mspaint|rundll32)$/
 const BROWSERS = /^(chrome|google-chrome|chromium|chromium-browser|msedge|firefox|brave)$/
@@ -1186,17 +1186,29 @@ export function opensWindow(tool, input = {}) {
   return "rule-guard: this opens a window on yskills' screen (docs/pc-claude-user.md, No windows): nothing pops up while Claude works unless he asked. Run it headless (Playwright or `--headless`, `blender -b`, `Start-Process -WindowStyle Hidden`), or, when he asked to see it, end the command with `# yskills asked`."
 }
 // The Archivist documents scripts and workflows; yskills' references are filed by the laptop lane, never by it
-// (roles/archivist.md; yskills 2026-11-11). role: the session's role, as roleContext stored it.
+// (roles/archivist.md; yskills 2026-11-11). role: the session's role, as roleContext stored it. Only where a file
+// lands counts: reading or backing up a reference folder is fine, and so is an index file (.md, .tsv, .json).
 const REF_DIR = /(^|[\\/])(refs?|references?|referenzen|reference-images)([\\/]|$)/i
-const GIT_REF = /:\/\/|(^|[\\/])refs[\\/](heads|tags|remotes|pull)([\\/]|$)/i
 const INDEX_FILE = /\.(md|tsv|csv|json|txt)$/i
-const FILES_IN = /(^|[\s;&|(])(mv|cp|rsync|move|copy|Move-Item|Copy-Item|robocopy|ln|tar|unzip|Expand-Archive|curl|wget)\s/i
+const DEST_FLAG = { tar: /^-C$/, unzip: /^-d$/, curl: /^(-o|--output)$/, wget: /^(-O|-P)$/, 'expand-archive': /^-Destination(Path)?$/i, 'copy-item': /^-Destination$/i, 'move-item': /^-Destination$/i }
+const FILE_VERBS = /^(mv|cp|rsync|move|copy|robocopy|ln|move-item|copy-item|tar|unzip|expand-archive|curl|wget)$/
+function filesIntoRefs(command) {
+  const words = command.split(/\s+/).map((t) => t.replace(/^["']|["']$/g, '')).filter(Boolean)
+  const at = words.findIndex((t) => FILE_VERBS.test(t.toLowerCase()))
+  if (at < 0) return false
+  const verb = words[at].toLowerCase()
+  const args = words.slice(at + 1)
+  const named = DEST_FLAG[verb] ? args.findIndex((t) => DEST_FLAG[verb].test(t)) : -1
+  const plain = args.filter((t) => !t.startsWith('-'))
+  const dest = named >= 0 ? args[named + 1] : DEST_FLAG[verb] && !/-item$/.test(verb) ? '' : plain.at(-1)
+  if (!dest || dest.includes('://') || !REF_DIR.test(dest)) return false
+  return INDEX_FILE.test(dest) ? false : !plain.slice(0, -1).length || named >= 0 || plain.slice(0, -1).some((t) => !INDEX_FILE.test(t))
+}
 export function archivistFiles(tool, input = {}, role = '') {
   if (String(role ?? '').trim() !== 'Archivist') return null
   const path = /^(Write|Edit|NotebookEdit)$/.test(tool) ? String(input.file_path ?? input.notebook_path ?? '') : ''
   const cmd = tool === 'Bash' ? String(input.command ?? '') : ''
-  const refArgs = FILES_IN.test(cmd) ? cmd.split(/\s+/).map((t) => t.replace(/^["']|["']$/g, '')).filter((t) => REF_DIR.test(t) && !GIT_REF.test(t)) : []
-  const files = (REF_DIR.test(path) && !INDEX_FILE.test(path)) || refArgs.some((t) => !INDEX_FILE.test(t))
+  const files = (REF_DIR.test(path) && !INDEX_FILE.test(path)) || commandsOf(cmd).some(filesIntoRefs)
   return files ? 'rule-guard: the Archivist documents scripts, workflows and gate passes and keeps the indexes; it never files reference material (operator roles/archivist.md). Hand this to the coordinator in one line (message_coordinator): references go to the laptop lane. An index entry (.md, .tsv, .json) is fine.' : null
 }
 // A skill idea becomes a PR through the new-skill skill, never a saved account skill (a second rule source outside git,
