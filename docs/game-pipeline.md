@@ -278,3 +278,4 @@ Practice for the scene player, general game audio (ambience as the bed, foley sy
   library with licence and catalog entry, then empty temp.
 - Back up a file before a body change as `<name>_before-<change>.blend`; scale uniformly, never touch bones
   or weights.
+- Threads copy a tool into their round folder and fork it (GameDev 2026-11-10: 563 scripts, `clearance.py` in 5 versions, the registered one the oldest). Call tools through one front door (`scripts/cxy/`, `cxy <tool>`), fix the tool in place, and run `cxy inventory` at chapter end; a fork of a proven tool goes back into the one copy by its owner thread.

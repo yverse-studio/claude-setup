@@ -1,0 +1,6 @@
+{
+  "_doc": "Copy to registry.json in your project's tool folder. command -> the ONE proven script it runs. path is relative to the project root (CXY_ROOT, default: two folders above this file). runner: py = system python3, bpy = python with the bpy wheel (-I), blender = blender -b <first arg .blend> [--factory-startup] -P script -- <rest>, node.",
+  "clearance":   {"step": "2b", "runner": "blender", "factory": true, "path": "tools/clearance.py", "help": "garment clearance table (the fit gate)"},
+  "clip-audit":  {"step": "4a", "runner": "bpy", "path": "tools/clip_audit.py", "help": "which clips are in a .blend and are they clean"},
+  "check":       {"step": "-",  "runner": "py", "path": "tools/pipeline_check.py", "help": "every script the pipeline doc names exists"}
+}

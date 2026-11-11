@@ -1,0 +1,7 @@
+{
+  "_doc": "Copy to archive_rules.json. What `cxy archive` never moves: protected_areas = folders of running threads or proven references (prefix of the path relative to the root), protected_patterns = regex, recent_hours = files changed this recently, protected_docs = any file or folder these docs name in backticks.",
+  "recent_hours": 6,
+  "protected_areas": {"scenes/ch01/": "chapter build thread (running)"},
+  "protected_patterns": {"(^|/)freeze/": "frozen model packages are proof"},
+  "protected_docs": ["PROVEN.md", "PIPELINE.md"]
+}
