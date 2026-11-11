@@ -706,7 +706,8 @@ if [ -n "$ours" ] && [ -z "$PRE_PR_SKIP" ] && [ -f scripts/pre-pr.mjs ]; then
   node scripts/pre-pr.mjs || { echo "pre-push: blocked, fix the failures above (PRE_PR_SKIP=1 to push anyway and say why in the PR)"; exit 1; }
 fi
 own="$(git rev-parse --git-common-dir 2>/dev/null)/hooks/pre-push"
-if [ -x "$own" ]; then exec "$own" "$@"; fi
+# .git/hooks/pre-push can be a copy of this very file; exec-ing it would loop forever (issue #419), so skip an identical one.
+if [ -x "$own" ] && ! [ "$own" -ef "$0" ] && ! cmp -s "$own" "$0"; then exec "$own" "$@"; fi
 exit 0
 PREPUSH
 chmod +x "$HOME/.claude/claude-setup/git-hooks/pre-push"

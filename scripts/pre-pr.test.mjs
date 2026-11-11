@@ -1,8 +1,10 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { readFileSync, mkdtempSync, mkdirSync, copyFileSync, chmodSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { spawnSync } from 'node:child_process'
-import { ciSteps } from './pre-pr.mjs'
+import { ciSteps, cleanEnv as cleanEnvForTest } from './pre-pr.mjs'
 
 test('pre-pr mirrors the CI test line and the three PR checks', () => {
   const yml = readFileSync(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8')
@@ -29,4 +31,31 @@ test('the hook recognises only real yverse-studio remotes', () => {
   assert.equal(ours('https://github.com/yverse-studio-evil/x'), 'no')
   assert.equal(ours('https://evil.example/github.com/yverse-studio/x'), 'no')
   assert.equal(ours('https://github.com/other/yverse-studio/x'), 'no')
+})
+
+test('children of pre-pr never see GIT_DIR and friends (issue #419)', async () => {
+  const { cleanEnv } = await import('./pre-pr.mjs')
+  const env = cleanEnv({ GIT_DIR: '/x', GIT_WORK_TREE: '/y', GIT_INDEX_FILE: 'i', GIT_COMMON_DIR: 'c', GIT_OBJECT_DIRECTORY: 'o', PATH: '/bin', GIT_AUTHOR_NAME: 'a' })
+  assert.deepEqual(Object.keys(env).sort(), ['GIT_AUTHOR_NAME', 'PATH'])
+})
+
+test('the hook does not exec a .git/hooks/pre-push that is a copy of itself (issue #419)', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'hookloop-'))
+  const hook = join(dir, 'global-hook')
+  copyFileSync(new URL('../global/git-hooks/pre-push', import.meta.url), hook)
+  chmodSync(hook, 0o755)
+  const run = (cwd, env) => spawnSync('sh', [hook], { cwd, env: { ...process.env, PRE_PR_SKIP: '1', ...env }, encoding: 'utf8', timeout: 10000 })
+  const repo = join(dir, 'repo')
+  mkdirSync(repo)
+  const g = (...a) => spawnSync('git', a, { cwd: repo, env: cleanEnvForTest(), encoding: 'utf8' })
+  g('init', '-q')
+  mkdirSync(join(repo, '.git/hooks'), { recursive: true })
+  copyFileSync(hook, join(repo, '.git/hooks/pre-push'))
+  chmodSync(join(repo, '.git/hooks/pre-push'), 0o755)
+  const r = run(repo)
+  assert.equal(r.error, undefined) // no timeout = no loop
+  assert.equal(r.status, 0)
+  // a different own hook still runs
+  writeFileSync(join(repo, '.git/hooks/pre-push'), '#!/bin/sh\nexit 7\n')
+  assert.equal(run(repo).status, 7)
 })

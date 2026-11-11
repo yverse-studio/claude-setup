@@ -30,9 +30,15 @@ export function ciSteps(yml) {
   }
 }
 
+// Inside a git hook git exports GIT_DIR and friends; fixture tests that run git in temp dirs would then
+// act on the real repo (issue #419). Children never see them.
+export function cleanEnv(env = process.env) {
+  return Object.fromEntries(Object.entries(env).filter(([k]) => !/^GIT_(DIR|WORK_TREE|INDEX_FILE|OBJECT_DIRECTORY|COMMON_DIR|PREFIX|NAMESPACE|ALTERNATE_OBJECT_DIRECTORIES)$/.test(k)))
+}
+
 const results = []
 function step(name, cmd, argv) {
-  const r = spawnSync(cmd, argv, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })
+  const r = spawnSync(cmd, argv, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], env: cleanEnv() })
   const ok = r.status === 0
   results.push([name, ok])
   const tail = `${r.stdout ?? ''}${r.stderr ?? ''}`.trim().split('\n').slice(-6).join('\n  ')
@@ -41,9 +47,9 @@ function step(name, cmd, argv) {
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const steps = ciSteps(readFileSync(join(root, '.github/workflows/ci.yml'), 'utf8'))
-  try { execFileSync('git', ['rev-parse', '--verify', '-q', base], { cwd: root, stdio: 'ignore' }) } catch {
+  try { execFileSync('git', ['rev-parse', '--verify', '-q', base], { cwd: root, stdio: 'ignore', env: cleanEnv() }) } catch {
     console.log(`note: ${base} not found locally, fetching`)
-    spawnSync('git', ['fetch', '-q', 'origin', base.replace(/^origin\//, '')], { cwd: root, stdio: 'inherit' })
+    spawnSync('git', ['fetch', '-q', 'origin', base.replace(/^origin\//, '')], { cwd: root, stdio: 'inherit', env: cleanEnv() })
   }
   step('check.mjs', 'node', ['scripts/check.mjs'])
   step('floor-guard', 'node', ['.claude/skills/publish/templates/new-project/scripts/floor-guard.mjs', '--base', base])
