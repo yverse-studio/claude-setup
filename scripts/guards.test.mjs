@@ -1084,13 +1084,14 @@ test('rule-guard: an Archivist thread documents, it does not file references', a
   const { archivistFiles } = await import('../global/rule-guard.mjs')
   const a = (tool, input) => archivistFiles(tool, input, 'Archivist\n')
   for (const command of ['mv /mnt/project-files/uploads/a.jpg /mnt/project-files/refs/aussehen/', 'Copy-Item a.png C:\\Users\\Claude\\Documents\\reference\\06\\', 'cp a.png refs/x/',
-    'cp a.png Referenzen/', 'tar xf a.tar -C refs/', 'curl -o refs/a.png https://a.b/a.png', 'cp a.png ./refs', 'cp a.png reference-images/', 'ln -s /x/a.png refs/a.png', 'cp a.png refs/heads/x.png', 'mv a.png refs/tags/', 'cd /x && cp a.png refs/']) assert.match(a('Bash', { command }) ?? '', /laptop lane/, command)
+    'cp a.png Referenzen/', 'tar xf a.tar -C refs/', 'curl -o refs/a.png https://a.b/a.png', 'cp a.png ./refs', 'cp a.png reference-images/', 'ln -s /x/a.png refs/a.png', 'cp a.png refs/heads/x.png', 'mv a.png refs/tags/', 'cd /x && cp a.png refs/', 'cp -t refs/ a.png', 'robocopy . refs\\ a.png', 'curl -sLo refs/a.png https://x/y.png', 'curl https://x/y.png > refs/a.png', 'git mv a.png refs/a.png']) assert.match(a('Bash', { command }) ?? '', /laptop lane/, command)
   assert.match(a('Write', { file_path: '/mnt/project-files/refs/posen/x.png' }) ?? '', /laptop lane/)
   assert.equal(a('Write', { file_path: '/mnt/project-files/refs/README.md' }), null)
   assert.equal(a('Edit', { file_path: '/mnt/project-files/PROVEN.md' }), null)
   assert.equal(a('Bash', { command: 'rm /mnt/project-files/_tmp/old.blend' }), null)
   for (const command of ['git mv docs/refs/a.md docs/refs/b.md', 'curl -sL https://raw.githubusercontent.com/o/r/refs/heads/main/scripts/a.mjs', 'curl -s https://api.github.com/repos/o/r/git/refs/heads/main',
-    'git push origin refs/heads/x && cp a.py scripts/', 'tar czf /backup/refs-2026-11.tgz refs/', 'cp README.md refs', 'cp refs/a.png /backup/']) assert.equal(a('Bash', { command }), null, command)
+    'git push origin refs/heads/x && cp a.py scripts/', 'tar czf /backup/refs-2026-11.tgz refs/', 'cp README.md refs', 'cp refs/a.png /backup/', 'grep -rn "cp " docs/refs/', 'grep -rln move refs/', 'rg -n "copy" refs', 'git commit -m "docs: copy the pose list to refs/"',
+    'gh pr create --title "docs: move refs index" --body "cp a refs/"', 'rsync -a refs/ /mnt/backup/refs/', 'cp -r refs /mnt/backup/refs', 'ls refs/ > refs/INDEX.md']) assert.equal(a('Bash', { command }), null, command)
   assert.equal(archivistFiles('Write', { file_path: '/mnt/project-files/refs/posen/x.png' }, 'Animator'), null)
   assert.equal(archivistFiles('Write', { file_path: '/mnt/project-files/refs/posen/x.png' }, null), null)
 })

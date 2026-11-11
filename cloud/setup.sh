@@ -1143,7 +1143,7 @@ const KAOMOJI = /[◕‿ω꒳ᴗ･˘ᵕ◡╹≧≦∀ヾﾉ✧♡☆✿ʕʔﾟ
 // irgendwas in gesicht springt"). Screenshots and renders run headless. `# yskills asked` on the command lets it through.
 // commandsOf: the commands of a shell line, split outside quotes; heredoc bodies are text, not commands.
 const commandsOf = (cmd) => {
-  const text = cmd.replace(/@(['"])[^\n]*\n[\s\S]*?\n\1@/g, "''").replace(/<<-?\s*(['"]?)([^\s'"<>;&|()]+)\1[^\n]*\n[\s\S]*?\n\s*\2(?=\s|\)|$)/g, '')
+  const text = cmd.replace(/@(['"])[ \t]*\n[\s\S]*?\n\1@/g, "''").replace(/<<-?\s*(['"]?)([^\s'"<>;&|()]+)\1[^\n]*\n[\s\S]*?\n\s*\2(?=\s|\)|$)/g, '')
   const out = []
   let cur = ''
   let quote = ''
@@ -1190,19 +1190,22 @@ export function opensWindow(tool, input = {}) {
 // lands counts: reading or backing up a reference folder is fine, and so is an index file (.md, .tsv, .json).
 const REF_DIR = /(^|[\\/])(refs?|references?|referenzen|reference-images)([\\/]|$)/i
 const INDEX_FILE = /\.(md|tsv|csv|json|txt)$/i
-const DEST_FLAG = { tar: /^-C$/, unzip: /^-d$/, curl: /^(-o|--output)$/, wget: /^(-O|-P)$/, 'expand-archive': /^-Destination(Path)?$/i, 'copy-item': /^-Destination$/i, 'move-item': /^-Destination$/i }
+const DEST_FLAG = { cp: /^(-t|--target-directory)$/, mv: /^(-t|--target-directory)$/, tar: /^-C$/, unzip: /^-d$/, curl: /^(-\w*o|--output)$/, wget: /^(-O|-P)$/, 'expand-archive': /^-Destination(Path)?$/i, 'copy-item': /^-Destination$/i, 'move-item': /^-Destination$/i }
 const FILE_VERBS = /^(mv|cp|rsync|move|copy|robocopy|ln|move-item|copy-item|tar|unzip|expand-archive|curl|wget)$/
+const lands = (dest) => Boolean(dest) && !dest.includes('://') && !/backup/i.test(dest) && REF_DIR.test(dest) && !INDEX_FILE.test(dest)
 function filesIntoRefs(command) {
-  const words = command.split(/\s+/).map((t) => t.replace(/^["']|["']$/g, '')).filter(Boolean)
-  const at = words.findIndex((t) => FILE_VERBS.test(t.toLowerCase()))
-  if (at < 0) return false
-  const verb = words[at].toLowerCase()
-  const args = words.slice(at + 1)
+  const words = (command.match(/"[^"]*"|'[^']*'|\S+/g) ?? []).map((t) => t.replace(/^["']|["']$/g, ''))
+  const out = words.findIndex((t) => /^>>?$/.test(t))
+  if (lands(out >= 0 ? words[out + 1] : (command.match(/(?:^|\s)>>?([^\s>&]+)/) ?? [])[1])) return true
+  const at = /^(git|sudo)$/i.test(words[0] ?? '') ? 1 : 0
+  const verb = (words[at] ?? '').toLowerCase()
+  if (!FILE_VERBS.test(verb)) return false
+  const args = words.slice(at + 1, out >= 0 ? out : undefined)
   const named = DEST_FLAG[verb] ? args.findIndex((t) => DEST_FLAG[verb].test(t)) : -1
-  const plain = args.filter((t) => !t.startsWith('-'))
-  const dest = named >= 0 ? args[named + 1] : DEST_FLAG[verb] && !/-item$/.test(verb) ? '' : plain.at(-1)
-  if (!dest || dest.includes('://') || !REF_DIR.test(dest)) return false
-  return INDEX_FILE.test(dest) ? false : !plain.slice(0, -1).length || named >= 0 || plain.slice(0, -1).some((t) => !INDEX_FILE.test(t))
+  const plain = args.filter((t) => !t.startsWith('-') && !/^\/[A-Za-z]+(:\S*)?$/.test(t))
+  const last = verb === 'robocopy' ? plain[1] : plain.at(-1)
+  const dest = named >= 0 ? args[named + 1] : DEST_FLAG[verb] && !/-item$|^(cp|mv)$/.test(verb) ? '' : last
+  return lands(dest) && (named >= 0 || verb === 'robocopy' || plain.length < 2 || plain.slice(0, -1).some((t) => !INDEX_FILE.test(t)))
 }
 export function archivistFiles(tool, input = {}, role = '') {
   if (String(role ?? '').trim() !== 'Archivist') return null
