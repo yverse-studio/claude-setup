@@ -1,3 +1,5 @@
+> **Move in progress: until gate G12 the tree is still in Documents.** (Remove this line after G12.)
+
 # Laptop folders (Claude user, Windows): the one home of the structure rules
 
 Everything we work on lives under one root folder, each folder holds one kind of thing, each thing exists once.
