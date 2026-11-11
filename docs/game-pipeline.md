@@ -58,7 +58,7 @@ game's `game/art/` and the 18+ `.rpy` files are git-ignored), and are shown to y
 
 ## Blender basics on the laptop
 
-- Blender 5.1 at `C:\Program Files\Blender Foundation\Blender 5.1\blender.exe` (not on PATH).
+- Blender 5.2.3, never 5.1; its exe path is the one line of `Documents\BLENDER_EXE.txt` (not on PATH).
   Run headless: `blender -b <file> --python <script>.py -- <args>`; the Blender MCP `_for_cli`
   tools fail.
 - Cloud Blender (no laptop): `apt-get install libegl1 libgl1-mesa-dri libegl-mesa0 libgles2`,

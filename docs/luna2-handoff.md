@@ -117,5 +117,5 @@ deletes stay with Claude and yskills.
   before showing it; a role never grades its own work; stop at 3 rounds and change the method, not the numbers.
 - Media traps: Pixel clips are 10-bit HLG HDR (bt2020, arib-std-b67): tonemap to SDR (zscale + tonemap) or ask him to
   turn 10-bit HDR off; never a colour grade without his OK.
-- Showing files: one combined compare video/sheet per question (the Review pane shows one file), plus Start-Process.
+- Showing files: one combined compare video/sheet per question (the Review pane shows one file), plus Start-Process, only when he asked to see it (`pc-claude-user.md`, No windows).
 - Waiting is free: a render through laptop-job costs no tokens; agents should not poll in short loops.

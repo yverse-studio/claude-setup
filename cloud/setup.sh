@@ -1141,27 +1141,56 @@ export function persona(root) {
 const KAOMOJI = /[◕‿ω꒳ᴗ･˘ᵕ◡╹≧≦∀ヾﾉ✧♡☆✿ʕʔﾟ▽´`ツДᴥ¬▼□╯ᵔ｡]|\^[_ω.]?\^|[;>][_ω]?[<;]|\(\s*[TＴ][_ω.]?[TＴ]\s*\)|\b(uwu|owo)\b|(^|\s)(:3|;\))(\s|$)|m\(_ _\)m/i
 // Nothing opens on yskills' screen while Claude works, unless he asked (yskills 2026-11-11: "ich will nicht das mir
 // irgendwas in gesicht springt"). Screenshots and renders run headless. `# yskills asked` on the command lets it through.
-const SEG = '(?:^|[;&|(]\\s*)'
-const EXE = (names) => new RegExp(`${SEG}&?\\s*(?:["'][^"'\\n]*?[\\\\/]|["']?(?:[^\\s"']*[\\\\/])?)(?:${names})(?:\\.exe)?["']?(?=\\s|$)([^\\n;|]*)`, 'gim')
+// commandsOf: the commands of a shell line, split outside quotes; heredoc bodies are text, not commands.
+const commandsOf = (cmd) => {
+  const out = []
+  let cur = ''
+  let quote = ''
+  for (const ch of cmd.replace(/<<-?\s*(['"]?)(\w+)\1[^\n]*\n[\s\S]*?\n\s*\2\b/g, '')) {
+    if (quote) { if (ch === quote) quote = '' } else if (ch === '"' || ch === "'") quote = ch
+    else if (';&|(\n'.includes(ch)) { out.push(cur); cur = ''; continue }
+    cur += ch
+  }
+  return [...out, cur].map((c) => c.trim()).filter(Boolean)
+}
+const WINDOW_APPS = /^(explorer|invoke-item|ii|xdg-open|notepad|mspaint|rundll32)$/
+const BROWSERS = /^(chrome|google-chrome|chromium|chromium-browser|msedge|firefox|brave)$/
+const flag = (args, re) => new RegExp(`(^|\\s)(${re})(\\s|$)`, 'i').test(args)
+function opensOne(command, depth = 0) {
+  const m = command.replace(/^(\w+=\S*\s+)+/, '').match(/^(?:"([^"]*)"|'([^']*)'|(\S+))\s*([\s\S]*)$/)
+  if (!m || depth > 3) return false
+  const exe = (m[1] ?? m[2] ?? m[3]).split(/[\\/]/).pop().replace(/\.exe$/i, '').toLowerCase()
+  const args = m[4]
+  const inner = (text) => commandsOf(text.trim().replace(/^(["'])([\s\S]*)\1$/, '$2')).some((c) => opensOne(c, depth + 1))
+  if (/^(npx|sudo|env|time)$/.test(exe)) return inner(args)
+  if (exe === 'cmd' && /(^|\s)\/c\s/i.test(args)) return inner(args.replace(/^[\s\S]*?\/c\s+/i, ''))
+  if (/^(powershell|pwsh)$/.test(exe) && /(^|\s)-(c|command)\s/i.test(args)) return inner(args.replace(/^[\s\S]*?-(c|command)\s+/i, ''))
+  if (exe === 'node' && /laptop-job\.mjs\b[\s\S]*?\s--\s/.test(args)) return inner(args.replace(/^[\s\S]*?\s--\s+/, ''))
+  if (/^(start-process|saps)$/.test(exe)) return !/-WindowStyle\s+Hidden|-NoNewWindow/i.test(args)
+  if (exe === 'start') return !flag(args, '/b')
+  if (WINDOW_APPS.test(exe)) return true
+  if (BROWSERS.test(exe)) return !flag(args, '--headless(=\\S+)?|--version')
+  if (exe === 'blender') return !flag(args.split(/\s--(\s|$)/)[0], '-b|--background|--version|-v|--help|-h|--command|-c')
+  if (exe === 'playwright') return flag(args, '--headed|--ui|open|codegen')
+  if (/^(python\d?|py)$/.test(exe)) return /(^|\s)-m\s+webbrowser\b/.test(args)
+  return false
+}
 export function opensWindow(tool, input = {}) {
   const cmd = tool === 'Bash' ? String(input.command ?? '') : ''
-  if (!cmd || /#\s*yskills asked/i.test(cmd)) return null
-  const some = (re, ok) => [...cmd.matchAll(re)].some((m) => !ok.test(m[1] ?? ''))
-  const opens = some(/\bStart-Process\b([^\n;|]*)/gi, /-WindowStyle\s+Hidden|-NoNewWindow/i)
-    || some(EXE('explorer|Invoke-Item|ii|xdg-open|start'), /^\s*$/)
-    || some(EXE('chrome|msedge|firefox|brave'), /--headless|--version/i)
-    || some(EXE('blender'), /(^|\s)(-b|--background|--version|-v|--help|-h)(\s|$)/)
-  return opens ? "rule-guard: this opens a window on yskills' screen (docs/pc-claude-user.md, No windows): nothing pops up while Claude works unless he asked. Run it headless (Playwright or `--headless`, `blender -b`, `Start-Process -WindowStyle Hidden`), or, when he asked to see it, end the command with `# yskills asked`." : null
+  if (!cmd || /#\s*yskills asked/i.test(cmd) || !commandsOf(cmd).some((c) => opensOne(c))) return null
+  return "rule-guard: this opens a window on yskills' screen (docs/pc-claude-user.md, No windows): nothing pops up while Claude works unless he asked. Run it headless (Playwright or `--headless`, `blender -b`, `Start-Process -WindowStyle Hidden`), or, when he asked to see it, end the command with `# yskills asked`."
 }
 // The Archivist documents scripts and workflows; yskills' references are filed by the laptop lane, never by it
 // (roles/archivist.md; yskills 2026-11-11). role: the session's role, as roleContext stored it.
-const REF_DIR = /(^|[\\/])(refs?|references?)[\\/]/i
+const REF_DIR = /(^|[\\/\s"'=])(refs?|references?|referenzen)[\\/]/i
 const INDEX_FILE = /\.(md|tsv|csv|json|txt)$/i
+const FILES_IN = /(^|[\s;&|(])(mv|cp|rsync|move|copy|Move-Item|Copy-Item|tar|unzip|Expand-Archive|curl|wget)\s/i
 export function archivistFiles(tool, input = {}, role = '') {
-  if (role.trim() !== 'Archivist') return null
+  if (String(role ?? '').trim() !== 'Archivist') return null
   const path = /^(Write|Edit|NotebookEdit)$/.test(tool) ? String(input.file_path ?? input.notebook_path ?? '') : ''
   const cmd = tool === 'Bash' ? String(input.command ?? '') : ''
-  const files = (REF_DIR.test(path) && !INDEX_FILE.test(path)) || (/\b(mv|cp|rsync|move|copy|Move-Item|Copy-Item)\b/i.test(cmd) && REF_DIR.test(cmd))
+  const refArgs = FILES_IN.test(cmd) ? cmd.split(/\s+/).map((t) => t.replace(/^["']|["']$/g, '')).filter((t) => REF_DIR.test(t)) : []
+  const files = (REF_DIR.test(path) && !INDEX_FILE.test(path)) || refArgs.some((t) => !INDEX_FILE.test(t))
   return files ? 'rule-guard: the Archivist documents scripts, workflows and gate passes and keeps the indexes; it never files reference material (operator roles/archivist.md). Hand this to the coordinator in one line (message_coordinator): references go to the laptop lane. An index entry (.md, .tsv, .json) is fine.' : null
 }
 // A skill idea becomes a PR through the new-skill skill, never a saved account skill (a second rule source outside git,

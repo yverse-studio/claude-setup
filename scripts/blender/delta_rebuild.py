@@ -13,8 +13,10 @@ import numpy as np
 LIB = os.environ.get('GAL_LIB', r'C:\Users\Claude\Documents\lib')
 def _blender_default():
     # The laptop's pinned Blender (5.2.3) is named in Documents\BLENDER_EXE.txt; never 5.1.
-    try: return open(r'C:\Users\Claude\Documents\BLENDER_EXE.txt', encoding='utf-8').read().strip().strip('"')
-    except OSError: return r'C:\Program Files\Blender Foundation\Blender 5.2\blender.exe'
+    for f in (r'C:\Users\Claude\Documents\BLENDER_EXE.txt', r'C:\Users\Claude\Documents\StudioLibrary\BLENDER_EXE.txt'):
+        try: return open(f, encoding='utf-8-sig').read().strip().strip('"')
+        except OSError: pass
+    return r'C:\Program Files\Blender Foundation\Blender 5.2\blender.exe'
 BLENDER = os.environ.get('BLENDER') or _blender_default()
 HERE = os.path.dirname(os.path.abspath(__file__))
 TOOLS = os.environ.get('GAL_TOOLS', os.path.join(os.path.dirname(LIB), 'tools', 'laptop'))  # Documents\tools\laptop

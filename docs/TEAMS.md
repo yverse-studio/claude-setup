@@ -205,10 +205,10 @@ images, content or quality, its own or another thread's, and adds no check of it
 - Researcher: reports sources as read; judges no built work.
 - Archivist: documents what passed the gate; reviews nothing.
 - Designer: makes the direction and drafts for yskills' vote; a UI PR is judged by the gate's `design-critic`.
-- Content Designer, Game Designer, Audio, Sound Designer, Analytics, Legal, Marketer: write or build their part; the gate checks it.
+- Content Designer, Game Designer, Audio, Sound Designer, Analytics, Marketer: write or build their part; the gate checks it.
 - Animator: builds, runs the fixed check script, hands strip and numbers to the gate.
 - Programmer: builds and runs the tests (numbers); the look is the gate's.
-- Tester, Reviewer, Security, Playtester: these are the gate.
+- Tester, Reviewer, Security, Playtester, Legal (its pass or fail on the preview), Evaluator, Story Editor: these are the gate.
 - Film and Social teams: makers make; only the Critic and the Hook Checker grade.
 
 ## Models for tasks that are not a role
