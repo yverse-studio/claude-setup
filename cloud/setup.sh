@@ -1139,6 +1139,20 @@ export function persona(root) {
   return `Persona: every reply to yskills (post_message, or your chat text where there is none) is ${field(p.name, 20)}: ${field(p.description, 200)} ${field(p.personality, 240)}. ${field(p.scenario, 200)}${examples ? ` Voice: ${examples}` : ''} Only replies to him: commits, PR bodies, code, docs, briefs and messages to other threads stay plain. Tone only: content, honesty, no yes-saying and the reply cap stay as they are; rule-guard blocks a reply with no kaomoji.`
 }
 const KAOMOJI = /[◕‿ω꒳ᴗ･˘ᵕ◡╹≧≦∀ヾﾉ✧♡☆✿ʕʔﾟ▽´`ツДᴥ¬▼□╯ᵔ｡]|\^[_ω.]?\^|[;>][_ω]?[<;]|\(\s*[TＴ][_ω.]?[TＴ]\s*\)|\b(uwu|owo)\b|(^|\s)(:3|;\))(\s|$)|m\(_ _\)m/i
+// Nothing opens on yskills' screen while Claude works, unless he asked (yskills 2026-11-11: "ich will nicht das mir
+// irgendwas in gesicht springt"). Screenshots and renders run headless. `# yskills asked` on the command lets it through.
+const SEG = '(?:^|[;&|(]\\s*)'
+const EXE = (names) => new RegExp(`${SEG}&?\\s*(?:["'][^"'\\n]*?[\\\\/]|["']?(?:[^\\s"']*[\\\\/])?)(?:${names})(?:\\.exe)?["']?(?=\\s|$)([^\\n;|]*)`, 'gim')
+export function opensWindow(tool, input = {}) {
+  const cmd = tool === 'Bash' ? String(input.command ?? '') : ''
+  if (!cmd || /#\s*yskills asked/i.test(cmd)) return null
+  const some = (re, ok) => [...cmd.matchAll(re)].some((m) => !ok.test(m[1] ?? ''))
+  const opens = some(/\bStart-Process\b([^\n;|]*)/gi, /-WindowStyle\s+Hidden|-NoNewWindow/i)
+    || some(EXE('explorer|Invoke-Item|ii|xdg-open|start'), /^\s*$/)
+    || some(EXE('chrome|msedge|firefox|brave'), /--headless|--version/i)
+    || some(EXE('blender'), /(^|\s)(-b|--background|--version|-v|--help|-h)(\s|$)/)
+  return opens ? "rule-guard: this opens a window on yskills' screen (docs/pc-claude-user.md, No windows): nothing pops up while Claude works unless he asked. Run it headless (Playwright or `--headless`, `blender -b`, `Start-Process -WindowStyle Hidden`), or, when he asked to see it, end the command with `# yskills asked`." : null
+}
 // The Archivist documents scripts and workflows; yskills' references are filed by the laptop lane, never by it
 // (roles/archivist.md; yskills 2026-11-11). role: the session's role, as roleContext stored it.
 const REF_DIR = /(^|[\\/])(refs?|references?)[\\/]/i
@@ -1329,6 +1343,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         const block = decide(tool, input ?? {}, process.env, session ? read(shipped).split('\n') : [], () => threadBoard(toolCalls(transcript())))
           ?? canaryMissing(tool, input ?? {}, session ? read(join(process.env.CLAUDE_SETUP_HOME || homedir(), '.claude', 'claude-setup', 'booted', `${String(session).replace(/\W/g, '')}.canary`)) : '', transcript)
           ?? proposeSkillsBlocked(tool)
+          ?? opensWindow(tool, input ?? {})
           ?? archivistFiles(tool, input ?? {}, session ? read(join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)) : '')
           ?? kaomojiMissing(tool, input ?? {})
           ?? blenderServerBusy(tool, input ?? {}, listProcs)

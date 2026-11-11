@@ -1061,6 +1061,16 @@ test('rule guard: propose_skills is refused and names new-skill; hook matchers s
   assert.match(run.stderr, /new-skill/)
 })
 
+test('rule-guard: nothing opens on his screen unless he asked', async () => {
+  const { opensWindow } = await import('../global/rule-guard.mjs')
+  const w = (command) => opensWindow('Bash', { command })
+  for (const c of ['explorer C:\\Users\\Claude\\Documents', 'Start-Process notepad.exe x.txt', 'cd x; start msedge https://a.b', 'xdg-open out.png',
+    '"C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" scene.blend', '& "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" https://a.b', 'Invoke-Item sheet.png']) assert.match(w(c) ?? '', /No windows/, c)
+  for (const c of ['blender -b x.blend -P a.py', '"C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" --background --python a.py', 'Start-Process -WindowStyle Hidden node a.mjs',
+    'chrome --headless --screenshot=a.png https://a.b', 'grep -rn blender docs', 'npm start', 'git log --oneline', 'explorer C:\\x # yskills asked', 'pip install bpy']) assert.equal(w(c), null, c)
+  assert.equal(opensWindow('Write', { file_path: 'explorer.md' }), null)
+})
+
 test('rule-guard: an Archivist thread documents, it does not file references', async () => {
   const { archivistFiles } = await import('../global/rule-guard.mjs')
   const a = (tool, input) => archivistFiles(tool, input, 'Archivist')
