@@ -40,6 +40,12 @@ back, lower LODs, face). Ship: `node optimize-figures.mjs in.glb out.glb <colour
   round 6 (face cards, seams, lips) 4.2, the best. Still open at 4.8: crotch slits at LOD2/3, LOD3 head patches, mouth-corner
   marks. Next: closed far-LOD shells (voxel remesh plus a bake from LOD0) for LOD2/3, and a per-figure check render of the
   mouth and crotch before the gate. Re-UVing the mouth cavity by distance alone recoloured cheeks (round 7): select by normal.
+- Far-LOD shells (round 8, `scripts/mpfb/shell_lods.py`: solidify, voxel remesh, biggest piece, decimate, smart UV, bake from
+  the near LOD): 8 of 9 figures got clean, closed LOD2/3 (crotch slits, shin and hip wedges gone), but the round scored 3.9.
+  One figure baked black triangles and a forehead hole (bake rays that miss leave black texels: count near-black texels
+  after the bake and fail the figure), a 700-tri head can collapse into a flat card (check the 3/4 view), and the build
+  change shipped with it (inner garment sunk 12 mm) opened skin slivers at a belt. Ship shells per figure and keep the
+  best round's LOD0: never let a far-LOD fix ride along with a near-LOD change in one gate.
 - Check holes before a gate: `holes.py file.blend` renders each LOD on magenta and fails on background seen through the figure.
 - meshoptimizer `simplifyWithAttributes` per part tears UV seams worse than Decimate on the joined mesh; do not use it for figures.
 - `Object3D.clone()` of a skinned GLB keeps the skin on the cached skeleton: the figure vanishes. Use `SkeletonUtils.clone`.
