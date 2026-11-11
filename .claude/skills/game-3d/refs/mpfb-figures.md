@@ -12,19 +12,24 @@ the cloud proxy). MPFB is GPL-3.0 as a tool; the packs are CC0, so the GLBs carr
 `python3.13 build_figure.py recipe.json outdir` -> `<name>.glb` (all LODs, one `game_engine` skeleton of 53 bones, one material, one
 atlas), `.blend`, colour and normal atlas PNGs. Recipe: MPFB macros (`gender`, `age` 0.5 = 25 y, 0.7 = about 50, `height`, `weight`,
 `race`), `skin`, `skin_tint`, `hair`, `hair_tint`, `clothes` (inner first: on equal MakeClothes `z_depth`, later = outer), `lods`
-(default 10k/5k/2k/700), `drop_lod0` for crowd files, `atlas` px. Render check: `render_sheet.py file.blend out.png` (front, 3/4, side,
+(default 10k/5k/2k/700), `drop_lod0` for crowd files, `atlas` px. Render check: `render_sheet.py file.blend out.png`, hole check `holes.py file.blend` (front, 3/4, side,
 back, lower LODs, face). Ship: `node optimize-figures.mjs in.glb out.glb <colourPx> <normalPx|0>` (ETC1S colour, UASTC normal, meshopt).
 
 ## What the script does, and why (each line cost a gate point)
 - Atlas without baking: each part's own 0..1 texture is pasted into one cell, its UVs moved into the cell, tints multiplied in.
 - Body faces under clothes go by ray along the normal (4 cm); a kept margin let skin poke through at every LOD.
 - An inner garment is sunk 12 mm under the outer one, never deleted (deleting left dark holes at the hem; untouched, waistbands poked through).
-- LODs come from the joined, welded mesh with Decimate's vertex group set to a weight map (1 everywhere, 0.25 on head, neck and
-  hands): shared borders collapse together, so no gaps, no neck seam, no spiked heads. Decimating each part on its own (round 1-2)
+- LODs come from the joined mesh with Decimate's vertex group set to a weight map (1 everywhere, 0.25 on head, neck and
+  hands): no neck seam, no spiked heads. Never weld it by distance first: welding tore the eyelids and frayed hems (round 3). Decimating each part on its own (round 1-2)
   opened collars and seams; splitting the head off left a visible seam line at the neck.
 - Max 4 weights, normalised; only deform-bone groups survive (three.js reads JOINTS_0 only).
 
 ## Traps
+- Gate result 2026-11-11 (vacation-game): 3.0 of 4.8 after four rounds; heads and LODs hold, clothing edges do not (slits at hems,
+  skin through trousers, shredded shorts). Distance-based hiding and decimation cannot fix that; the next step is hand-authored
+  body-hide masks per garment (CC4 Hide Body Mesh style) and closed far-LOD shells (voxel remesh plus a texture bake from LOD0).
+- Check holes before a gate: `holes.py file.blend` renders each LOD on magenta and fails on background seen through the figure.
+- meshoptimizer `simplifyWithAttributes` per part tears UV seams worse than Decimate on the joined mesh; do not use it for figures.
 - `Object3D.clone()` of a skinned GLB keeps the skin on the cached skeleton: the figure vanishes. Use `SkeletonUtils.clone`.
 - An FBX can carry `AmbientColor`; three's FBXLoader turns it into a hidden AmbientLight, and cloning the model clones the light
   (the Rocketbox crowd lit a whole street with 7 of them). Grep `AmbientColor` before you trust a scene's light.

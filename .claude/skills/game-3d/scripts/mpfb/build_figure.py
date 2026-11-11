@@ -169,7 +169,7 @@ bpy.ops.object.select_all(action='DESELECT')
 for o, *_ in parts: o.select_set(True)
 bpy.context.view_layer.objects.active = body; bpy.ops.object.join()
 src = body; src.name = NAME + '_src'
-bpy.ops.object.mode_set(mode='EDIT'); bpy.ops.mesh.select_all(action='SELECT'); bpy.ops.mesh.remove_doubles(threshold=0.0001); bpy.ops.object.mode_set(mode='OBJECT')
+# no weld: merging by distance tore eyelids and frayed garment edges (gate round 3)
 pg = src.vertex_groups.new(name='protect')
 idx = {g.name: g.index for g in src.vertex_groups}
 want = {idx[n]: w for n, w in (('head', 1.0), ('neck_01', 1.0), ('hand_l', 0.6), ('hand_r', 0.6)) if n in idx}
