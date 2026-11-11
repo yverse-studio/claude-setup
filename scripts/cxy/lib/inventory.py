@@ -67,7 +67,7 @@ NEVER_MOVE = ("__init__.py", "__main__.py", "conftest.py", "setup.py")
 LOADED_BY_FOLDER_RE = re.compile(r"(^|/)(addons|startup|modules|presets|scripts/startup)/")   # Blender loads these by place
 
 
-def walk_text(root, limit=2_000_000):
+def walk_text(root, limit=None):
     """Every file that reads as text (any extension or none: Makefile, .ts, .vue, .gd, .yml ...), for mentions."""
     for d, dirs, files in os.walk(root):
         dirs[:] = sorted(x for x in dirs if x not in SKIP_DIRS)
@@ -76,10 +76,11 @@ def walk_text(root, limit=2_000_000):
                 continue
             p = os.path.join(d, f)
             try:
-                if os.path.getsize(p) > limit:
+                if os.path.getsize(p) > (limit or TEXT_LIMIT):
                     continue
                 with open(p, "rb") as fh:
-                    if b"\0" in fh.read(4096):
+                    head = fh.read(4096)
+                    if b"\0" in head and head[:2] not in (b"\xff\xfe", b"\xfe\xff"):   # binary, unless UTF-16 text
                         continue
             except OSError:
                 continue
@@ -94,12 +95,22 @@ def walk(root, exts):
                 yield os.path.join(d, f)
 
 
-def _read(path, limit=2_000_000):
+TEXT_LIMIT = 64_000_000   # big notebooks and logs are read too (a missed caller is worse than a slow scan)
+
+
+def _decode(raw):
+    """UTF-16 with a byte-order mark (PowerShell 5 `>` / Out-File on the laptop), else UTF-8."""
+    if raw[:2] in (b"\xff\xfe", b"\xfe\xff"):
+        return raw.decode("utf-16", errors="replace")
+    return raw.decode("utf-8", errors="replace")
+
+
+def _read(path, limit=TEXT_LIMIT):
     try:
         if os.path.getsize(path) > limit:
             return ""
-        with open(path, encoding="utf-8", errors="replace") as fh:
-            return fh.read()
+        with open(path, "rb") as fh:
+            return _decode(fh.read())
     except OSError:
         return ""
 
@@ -187,7 +198,8 @@ def build(root, registry, now=None, rules=None):
 
     base_names = {os.path.basename(p) for p in scripts}
     mentions = {b: set() for b in base_names}
-    word = re.compile(r"[\w.\-]+\.(?:py|mjs|js|sh|ps1)")
+    # lookbehind: a match only starts at the start of a name, so a long run of word chars is scanned once, not per offset
+    word = re.compile(r"(?<![\w.\-])[\w.\-]+\.(?:py|mjs|js|sh|ps1)")
     for p, t in texts.items():
         for b in set(word.findall(t)) & base_names:
             mentions[b].add(p)
@@ -204,7 +216,7 @@ def build(root, registry, now=None, rules=None):
     # whole-word index over every text file (conservative: any word equal to a script's stem counts as a caller)
     words = {}
     for p, t in texts.items():
-        for wd in set(re.findall(r"[A-Za-z_][\w\-]*", t)):
+        for wd in set(re.findall(r"\w[\w\-]*", t)):
             words.setdefault(wd, set()).add(p)
     sha_of = {p: sha256(p)[:16] for p in scripts}
 

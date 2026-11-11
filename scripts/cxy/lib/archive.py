@@ -28,11 +28,8 @@ def plan(rows, root):
 
     def text(rel):
         if rel not in texts:
-            try:
-                with open(os.path.join(root, rel), encoding="utf-8", errors="replace") as fh:
-                    texts[rel] = fh.read()
-            except OSError:
-                texts[rel] = ""
+            from inventory import _read
+            texts[rel] = _read(os.path.join(root, rel))   # UTF-16 aware
         return texts[rel]
 
     listing = {}

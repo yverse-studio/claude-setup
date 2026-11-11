@@ -366,6 +366,20 @@ class InventoryTest(unittest.TestCase):
         rows = {r["path"]: r for r in inventory.build(self.root, self.reg, rules=RULES)}
         self.assertGreater(rows["run13/bake.py"]["mentioned_by"], 0)
 
+    def test_utf16_big_and_digit_named_callers(self):
+        p = os.path.join(self.root, "win/go.ps1")
+        os.makedirs(os.path.dirname(p))
+        with open(p, "wb") as f:
+            f.write("python run12\\bake_hair.py\r\n".encode("utf-16"))   # BOM + UTF-16LE, like PowerShell 5
+        write(self.root, "run12/bake_hair.py", '"""bake_hair.py"""\n')
+        write(self.root, "nb/a.ipynb", '{"cells": ["import rigfix"], "img": "' + "A" * 2_500_000 + '"}')
+        write(self.root, "old9/rigfix.py", '"""rigfix.py"""\n')
+        write(self.root, "cfg/steps.json", '{"steps": ["01_import"]}')
+        write(self.root, "steps9/01_import.py", '"""01_import.py"""\n')
+        rows = {r["path"]: r for r in inventory.build(self.root, self.reg, rules=RULES)}
+        for rel in ("run12/bake_hair.py", "old9/rigfix.py", "steps9/01_import.py"):
+            self.assertGreater(rows[rel]["mentioned_by"], 0, rel)
+
     def test_markdown_lists_all_rows(self):
         md = inventory.to_markdown(list(self.rows.values()))
         for rel in self.rows:
