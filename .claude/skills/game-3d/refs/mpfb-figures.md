@@ -17,17 +17,29 @@ back, lower LODs, face). Ship: `node optimize-figures.mjs in.glb out.glb <colour
 
 ## What the script does, and why (each line cost a gate point)
 - Atlas without baking: each part's own 0..1 texture is pasted into one cell, its UVs moved into the cell, tints multiplied in.
-- Body faces under clothes go by ray along the normal (4 cm); a kept margin let skin poke through at every LOD.
+- Body under clothes (round 5, the fix for hem slits and skin through cloth): covered = a ray along the normal hits a garment
+  within 8 cm, or MPFB's own `Delete.*` group, or skin poking out of a tight garment (garment surface within 2.5 cm, facing the
+  same way, not at a hem; never neck or head). Covered and more than 4 cm from every hem (open garment boundary) is deleted;
+  every covered vertex is sunk under the innermost garment (8 mm at the hem, more inside), and the near-hem ring is sunk a
+  little more per LOD (`lod_sink`). The body runs after garment layering, so it is sunk under the garment as it ships.
+  Deleting everything covered opened slits at every hem (rounds 1-4); measuring depth to the outer shirt instead of the inner
+  waistband let hips show through.
+- Eyes and mouth get decimation weight 0.02 within 4 cm (`eye_radius`, `eye_weight`) on LODs of 5k and more; weight 0
+  blocks decimation entirely, and locking them at 2k or 700 starves the rest of the mesh. Brows and lashes (about 560 tris) get
+  weight 0 down to 2k and are deleted on the 700 LOD: decimating them broke brows into specks (round 5). Garment hems 0.3, UV
+  seams 0.4 (a collapse across a seam smears the print), lips 0.1 on far LODs.
+- Small open loops in a garment (under 25 cm, pockets) are filled with the neighbour UV.
 - An inner garment is sunk 12 mm under the outer one, never deleted (deleting left dark holes at the hem; untouched, waistbands poked through).
 - LODs come from the joined mesh with Decimate's vertex group set to a weight map (1 everywhere, 0.25 on head, neck and
-  hands): no neck seam, no spiked heads. Never weld it by distance first: welding tore the eyelids and frayed hems (round 3). Decimating each part on its own (round 1-2)
+  hands, see eyes and hems above): no neck seam, no spiked heads. Never weld it by distance first: welding tore the eyelids and frayed hems (round 3). Decimating each part on its own (round 1-2)
   opened collars and seams; splitting the head off left a visible seam line at the neck.
 - Max 4 weights, normalised; only deform-bone groups survive (three.js reads JOINTS_0 only).
 
 ## Traps
-- Gate result 2026-11-11 (vacation-game): 3.0 of 4.8 after four rounds; heads and LODs hold, clothing edges do not (slits at hems,
-  skin through trousers, shredded shorts). Distance-based hiding and decimation cannot fix that; the next step is hand-authored
-  body-hide masks per garment (CC4 Hide Body Mesh style) and closed far-LOD shells (voxel remesh plus a texture bake from LOD0).
+- Gate history (vacation-game 2026-11-11): rounds 1-4 stuck at 3.0 of 4.8 on clothing edges; round 5 (hem-margin mask) 3.7;
+  round 6 (face cards, seams, lips) 4.2, the best. Still open at 4.8: crotch slits at LOD2/3, LOD3 head patches, mouth-corner
+  marks. Next: closed far-LOD shells (voxel remesh plus a bake from LOD0) for LOD2/3, and a per-figure check render of the
+  mouth and crotch before the gate. Re-UVing the mouth cavity by distance alone recoloured cheeks (round 7): select by normal.
 - Check holes before a gate: `holes.py file.blend` renders each LOD on magenta and fails on background seen through the figure.
 - meshoptimizer `simplifyWithAttributes` per part tears UV seams worse than Decimate on the joined mesh; do not use it for figures.
 - `Object3D.clone()` of a skinned GLB keeps the skin on the cached skeleton: the figure vanishes. Use `SkeletonUtils.clone`.
