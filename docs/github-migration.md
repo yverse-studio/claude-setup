@@ -4,7 +4,7 @@ Only if GitHub support refuses to unsuspend the account. Nothing here creates an
 
 ## Scripts (`scripts/migration/`, run on the laptop, Node only)
 
-1. `node scripts/migration/inventory.mjs C:\Users\Claude\Documents C:\Users\Claude\_backup-bundles-2026-10-29 --out inventory.json`
+1. `node scripts/migration/inventory.mjs <clones-folder> <bundles-folder> --out inventory.json`
    lists every clone and bundle, runs `git bundle verify`, and names per repo where the newest state is (unpushed commits and dirty files shown).
 2. `node scripts/migration/migrate.mjs --inventory inventory.json --to <new-owner>` is a dry run; add `--run` to create the private repos and push all branches and tags. `--only a,b` limits it.
 

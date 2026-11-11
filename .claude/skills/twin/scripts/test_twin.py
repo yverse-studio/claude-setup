@@ -91,8 +91,8 @@ class Say(unittest.TestCase):
         self.assertIn("real footage", str(e.exception))
 
     def test_musetalk_config_uses_forward_slashes(self):
-        cfg = twin.musetalk_config(r"C:\twin\face\talk.mp4", "out/voice.wav")
-        self.assertIn('video_path: "C:/twin/face/talk.mp4"', cfg)
+        cfg = twin.musetalk_config(r"C:\twin\face\talk.mp4", "out/voice.wav")  # path-lint: fixture
+        self.assertIn('video_path: "C:/twin/face/talk.mp4"', cfg)  # path-lint: fixture
         self.assertTrue(cfg.startswith("task_0:"))
 
 

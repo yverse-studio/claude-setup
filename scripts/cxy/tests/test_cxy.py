@@ -529,8 +529,8 @@ class ReportTest(unittest.TestCase):
 
 class RunnerTest(unittest.TestCase):
     def test_build_argv_per_runner(self):
-        os.environ["CXY_BLENDER"] = "/b/blender"
         os.environ["CXY_BPY"] = "/b/python"
+        orig, cxylib.blender_exe = cxylib.blender_exe, lambda: "/b/blender"
         try:
             py = cxy.build_argv({"runner": "py", "path": "a/t.py"}, ["x"], root="/r")
             self.assertEqual(py[1:], ["/r/a/t.py", "x"])
@@ -541,7 +541,8 @@ class RunnerTest(unittest.TestCase):
             bl2 = cxy.build_argv({"runner": "blender", "path": "a/t.py"}, ["f.blend", "build", "d.npz"], root="/r", factory=False)
             self.assertEqual(bl2, ["/b/blender", "-b", "f.blend", "-P", "/r/a/t.py", "--", "build", "d.npz"])
         finally:
-            del os.environ["CXY_BLENDER"], os.environ["CXY_BPY"]
+            cxylib.blender_exe = orig
+            del os.environ["CXY_BPY"]
 
     def test_tool_flags_pass_through(self):
         # --dry belongs to the tools (clip_fix, assemble); cxy's own flag is --cxy-dry

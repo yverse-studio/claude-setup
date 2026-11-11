@@ -46,6 +46,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     spawnSync('git', ['fetch', '-q', 'origin', base.replace(/^origin\//, '')], { cwd: root, stdio: 'inherit' })
   }
   step('check.mjs', 'node', ['scripts/check.mjs'])
+  step('paths-lint (no hard-coded laptop paths)', 'node', ['--test', 'scripts/paths-lint.test.mjs'])
   step('floor-guard', 'node', ['.claude/skills/publish/templates/new-project/scripts/floor-guard.mjs', '--base', base])
   if (body) step('PR body (Prior art:, Lessons:)', 'node', ['scripts/pr-lessons-check.mjs', body])
   else { results.push(['PR body', null]); console.log('open PR body: not checked here; run again with --body <file> before gh pr create (Prior art: ... -> copy|adapt|build, because ...; Lessons: <repo path>)') }

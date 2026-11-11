@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
+import { studioPath } from './paths.mjs'
 
 const root = join(fileURLToPath(import.meta.url), '..', '..')
 const read = (p) => JSON.parse(readFileSync(join(root, p), 'utf8'))
@@ -912,10 +913,10 @@ test('rule guard: a PR in a repo with a PROGRESS.md warns when ## Jetzt is missi
 // yskills 2026-11-03: the Blender workflow tips are enforced so no progress is lost (one Blender slot, bl_server.py).
 test('rule guard: no second headless Blender while bl_server.py runs; Blender only after the night plan and Fast loop were read', async () => {
   const { blenderStart, blenderServerBusy, blenderDocsMissing } = await import('../global/rule-guard.mjs')
-  const starts = ['blender -b x.blend', '"/c/Program Files/Blender Foundation/Blender 5.1/blender.exe" -b --python a.py', '& "C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe" --background f.blend', 'cd /x && blender.exe -b f.blend', '$BL -b f.blend', '%BL% -b --python j.py', 'Start-Process -FilePath "C:\\B\\blender.exe" -ArgumentList \'-b f.blend\'', 'nohup blender -b f.blend > log 2>&1 &']
+  const starts = ['blender -b x.blend', '"/c/Program Files/Blender Foundation/Blender 5.1/blender.exe" -b --python a.py', '& "C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe" --background f.blend', 'cd /x && blender.exe -b f.blend', '$BL -b f.blend', '%BL% -b --python j.py', 'Start-Process -FilePath "C:\\B\\blender.exe" -ArgumentList \'-b f.blend\'', 'nohup blender -b f.blend > log 2>&1 &'] // path-lint: fixture
   for (const c of starts) assert.ok(blenderStart(c), c)
   for (const c of ['python scripts/blender/pose_precheck.py', 'ls tools/blender/', 'grep -i blender log.txt', 'echo "blender-5.1"', 'git commit -m "fix: blender pose"']) assert.equal(blenderStart(c), null, c)
-  const server = '"C:/Program Files/Blender Foundation/Blender 5.1/blender.exe" -b --factory-startup --python C:/x/qa/bl_server.py -- C:/x/bl_jobs'
+  const server = '"C:/Program Files/Blender Foundation/Blender 5.1/blender.exe" -b --factory-startup --python C:/x/qa/bl_server.py -- C:/x/bl_jobs' // path-lint: fixture
   const busy = (command, procs = `node.exe\n${server}`, tool = 'Bash') => blenderServerBusy(tool, { command }, procs)
   assert.match(busy('blender -b f.blend --python render.py') ?? '', /bl_server\.py läuft.*bl_jobs.*submit_strip\.sh.*NIGHT-CHAIN\.md.*Persistent Blender/s)
   assert.match(busy('& "C:\\B\\blender.exe" --background f.blend', undefined, 'PowerShell') ?? '', /bl_server/, 'PowerShell too')
@@ -929,9 +930,10 @@ test('rule guard: no second headless Blender while bl_server.py runs; Blender on
   assert.equal(listed, 0, 'processes are listed only for a headless Blender start')
 
   const read = (file_path) => JSON.stringify({ type: 'assistant', message: { content: [{ type: 'tool_use', id: file_path, name: 'Read', input: { file_path } }] } })
-  const plan = read('C:\\Users\\Claude\\Documents\\projects\\games\\companyxy\\ch01\\NACHT-FIX-PLAN.md')
+  process.env.STUDIO_ROOT ??= join(tmpdir(), 'studio-root-test') // the resolver has no default root
+  const plan = read(studioPath('companyxy', 'ch01', 'NACHT-FIX-PLAN.md'))
   const cloudPlan = read('/mnt/project-files/NACHT-FIX-PLAN.md')
-  const animator = read('C:/Users/Claude/Documents/GitHub/claude-setup/.claude/skills/operator/roles/animator.md')
+  const animator = read(studioPath('repos', 'claude-setup', '.claude', 'skills', 'operator', 'roles', 'animator.md'))
   assert.match(blenderDocsMissing('Bash', { command: 'blender -b f.blend' }, '') ?? '', /NACHT-FIX-PLAN\.md.* und .*animator\.md/)
   assert.match(blenderDocsMissing('mcp__Blender__execute_blender_code', { code: 'x' }, plan) ?? '', /animator\.md/)
   assert.doesNotMatch(blenderDocsMissing('mcp__Blender__execute_blender_code', { code: 'x' }, plan) ?? '', /NACHT/)

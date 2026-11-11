@@ -32,7 +32,7 @@ reaction stays real.
 ## Recording (once)
 
 The exact ask, the drop folder and the reading script: [`record.md`](record.md). Files land in
-`C:\Users\Claude\Documents\GitHub\twin-raw\`.
+`projects/videos/twin/raw/` (under `STUDIO_ROOT`).
 
 ## The tool (laptop, RTX 4060 8 GB)
 

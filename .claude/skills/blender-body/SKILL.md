@@ -19,7 +19,7 @@ before building**: [`pro-avatars.md`](pro-avatars.md).
 **Where the know-how lives:** this skill (method, rules, technique), [`pro-avatars.md`](pro-avatars.md)
 (how pro avatars are laid out), [`checklists.md`](checklists.md), and `docs/game-pipeline.md` (laptop paths,
 characters, animation, scenes, Ren'Py and the latest lessons). Project specifics (file paths, slider values,
-scene slots) live in the private game repo and the laptop `Documents\START.md`.
+scene slots) live in the private game repo and the studio's `START.md` (root of `STUDIO_ROOT`).
 
 ## Order of attack: pick the best source, then model (2026-10-24)
 

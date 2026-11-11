@@ -34,8 +34,8 @@ so the rules live here only.
    `f="$(mktemp)" && curl -fsSL --retry 3 -o "$f" https://raw.githubusercontent.com/yverse-studio/claude-setup/main/cloud/setup.sh && bash "$f"`
 
 5. **Laptop folders, once per project.** **Project settings > Resources > Devices**: approve
-   `C:\Users\Claude\Documents` (covers `GitHub`, `lib`, `projects`, `tools`) and
-   `C:\Users\Claude\Downloads`, and keep `GitHub` as the default. Then every thread of that
+   the studio root folder (`STUDIO_ROOT`, covers `repos`, `lib`, `projects`, `tools`) and
+   the Downloads folder, and keep the root as the default. Then every thread of that
    project reads and writes there without asking you. This approval is your consent per claude.ai
    project: claude-setup, a repo or a thread cannot grant it, and there is no account-wide "all
    projects" switch (checked 2026-11-10: `list_devices` lists approvals per project, the
@@ -132,7 +132,7 @@ template if it is missing and links it in every status answer.
    older than 24 h moves to `NOW-archive.md` (same table, newest last). A `running` or `waiting`
    line older than 24 h whose thread is resolved or missing on the thread board gets `failed`,
    never a silent delete.
-5. **Not a lock.** The hard claim for the Blender lane stays `GAL_queue\WHO.md` on the laptop (not in
+5. **Not a lock.** The hard claim for the Blender lane stays `_claude/_queue/WHO.md` on the laptop (not in
    this repo; a second job there waits); NOW.md only shows what runs so nobody guesses.
 
 Every brief's `Done when:` includes "NOW.md line set to done" (`.claude/skills/operator/briefs.md`).

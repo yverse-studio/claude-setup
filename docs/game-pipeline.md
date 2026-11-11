@@ -14,20 +14,20 @@ Standing calls for every scene and character (adult main character, base + delta
 ## Where things live
 
 The folder tree, the scene slots and the step-by-step for building a scene by hand live in **one place**:
-`Documents\START.md` on the laptop (the live map; asset folders: `lib\README.md`; references zip `Downloads\CompanyXY-Referenzen.zip` listed there; a copy for cloud threads: `/mnt/project-files/MAP.md` section 3, old to new table).
+`START.md` in the laptop's studio root (`STUDIO_ROOT`; the live map; asset folders: `lib\README.md`; references zip `Downloads\CompanyXY-Referenzen.zip` listed there; a copy for cloud threads: `/mnt/project-files/MAP.md` section 3, old to new table).
 That README is for yskills and is the home of every laptop path; this page only names the main ones and
 links it. Update both in the same turn when a folder changes.
 
 | What | Where |
 |---|---|
-| Asset library | laptop `C:\Users\Claude\Documents\lib\` (not in git; `GameAssetLibrary` was the pre-2026-11-10 name; `Documents\catalog.json` one entry per asset) |
+| Asset library | laptop `lib/` under `STUDIO_ROOT` (not in git; `catalog.json` in the root, one entry per asset) |
 | Female base template (only file in its folder) | `lib\characters\CH_Base\female\Blend\base_female_v4.blend`; tools and work log in `..\_work\` (`sets.py`, `cg_lib.py`, `poses.py`, `body_aware.py`, `HANDOFF.md`) |
 | A character | `lib\characters\CH_<name>\` (Rika: `CH_rika\Blend\rika.blend`; man: `CH_male\male.blend`) |
 | Rooms | `lib\rooms\<room>\<room>.blend` + `_preview.png` (built by `_work\sets.py`, saved by `save_rooms.py`; office_night has `Camera_POV_stand`, `Camera_POV_sit`, `Camera_Side`) |
 | Shots | `projects\games\<game>\<chapter>\<shot>\<shot>.blend` + `compare.png`; overview `projects\games\companyxy\ch01\overview.png` |
 | Animation | `lib\anims\retarget\ANIMATIONEN.md` (+ `retarget.py`, `maps\`); packs in `lib\anims\AN_<name>\` |
 | Two-person rig | `lib\anims\interaction\kiss\` (`README.md`, `kiss.json`, `apply_interaction.py`, `bone_maps\`) |
-| Ren'Py game | private repo `yverse-studio/companyxy-spiel` (`game/` source, `story/<char>/` chapters, `story/briefs/` scene list + briefs); playable build on the laptop `GitHub\CompanyXY-Spiel\CompanyXY-1.0-pc\` (art in `game\art\`, `game\art\loops\`, slots in `game\slots.rpy`) |
+| Ren'Py game | private repo `yverse-studio/companyxy-spiel` (`game/` source, `story/<char>/` chapters, `story/briefs/` scene list + briefs); playable build on the laptop `projects/games/companyxy/build/` (the play copy) (art in `game\art\`, `game\art\loops\`, slots in `game\slots.rpy`) |
 | Story guide + plan | `/mnt/project-files/companyxy/story/storyteller/` (`09-story-plan.md`); Rika's ten chapters: company-xy branch `story-rika-fanservice` |
 | Body building guide + lessons | `/mnt/project-files/companyxy/patches/base-body/` (`GUIDE.md`, `LESSONS.md`); posing `characters/POSEN-ANLEITUNG.md` |
 
@@ -36,15 +36,15 @@ README and the private `nacht-kapitel1.rpy` only.
 
 ### One source, kept clean
 
-Planned 2026-11-05, executed in stages (`rigs\` merged into `lib\anims\interaction\`; scripts live in `Documents\tools\`).
+Planned 2026-11-05, executed in stages (`rigs\` merged into `lib\anims\interaction\`; scripts live in `tools/`).
 
 - One file per character, clip and scene, at its place in the README tree (`lib\characters\`, `lib\anims\`, `projects\games\`).
 - Work happens in a dated copy `<name>_<date>_<reason>.blend` in the same folder and is written back into the target
   file at the end.
-- The copy then goes to `_archive\<date>-<reason>\` or `_trash_<date>\`; it never stays next to the original.
+- The copy then goes to `_claude/_archive/<date>-<reason>/` or `_claude/trash/<date>/`; it never stays next to the original.
 - No version chains (`_v1` ... `_v23`): at most the target, one working copy and one archive state.
 - Render output and check strips live with the shot: `<shot>\render\`, `<shot>\checks\`.
-- Before a thread ends it records in `Documents\docs\handoff\HANDOFF-CURRENT.md` which file is current and where
+- Before a thread ends it records in `docs/handoff/HANDOFF-CURRENT.md` (under `STUDIO_ROOT`) which file is current and where
   work continues.
 - What is not in the README tree does not exist for the next thread.
 
@@ -58,7 +58,7 @@ game's `game/art/` and the 18+ `.rpy` files are git-ignored), and are shown to y
 
 ## Blender basics on the laptop
 
-- Blender 5.1 at `C:\Program Files\Blender Foundation\Blender 5.1\blender.exe` (not on PATH).
+- Blender 5.1 at the path in `tools/BLENDER_EXE.txt` (under `STUDIO_ROOT`; not on PATH).
   Run headless: `blender -b <file> --python <script>.py -- <args>`; the Blender MCP `_for_cli`
   tools fail.
 - Cloud Blender (no laptop): `apt-get install libegl1 libgl1-mesa-dri libegl-mesa0 libgles2`,
@@ -164,7 +164,7 @@ Researcher, Architect (the fix list), Continuity (a column in the shot list) and
 Claude threads do not render these; they only keep this recipe right. Five seamless loops (one per position)
 and five stills (kiss, three endings, after). The exact file names are in the game source, block `init 2`
 of `game/nacht-kapitel1.rpy` (laptop game folder, or `/mnt/project-files/companyxy/game/` for cloud
-threads), and in `Documents\START.md` and `projects\games\companyxy\ch01\` (the night scenes); they stay out of git.
+threads), and in `START.md` and `projects\games\companyxy\ch01\` (the night scenes); they stay out of git.
 
 1. Save a new file as `scenes\companyxy\ch01\<slot>\<slot>.blend`.
 2. File > Link: room `environment\rooms\office_night\office_night.blend` (10th floor, desk, chief chair,
@@ -172,7 +172,7 @@ threads), and in `Documents\START.md` and `projects\games\companyxy\ch01\` (the 
    the man `characters\CH_male\male.blend` (1.90 m in scenes); Object > Library Override > Make to pose.
 3. Cameras already in the room: `Camera_POV_stand` (eye 1.78 m), `Camera_POV_sit` (1.27 m), `Camera_Side`,
    `Camera_Render`. Output 1920x1080.
-4. Pose by hand or from an `MX_*` action; references: `C:\Users\Claude\Downloads\CompanyXY-Referenzen.zip`
+4. Pose by hand or from an `MX_*` action; references: `CompanyXY-Referenzen.zip` in the Downloads folder
    (`INHALT.txt` lists the folders).
 5. Check: nothing inside a body, feet planted, loop's first frame = last frame.
 6. Stills: PNG 1920x1080 into the game's `game\art\`. Loops: render a PNG sequence, then
@@ -274,7 +274,7 @@ Practice for the scene player, general game audio (ambience as the bed, foley sy
   verify full lists, never a truncated print.
 - Renames happen all at once or not at all, with the bone/animation maps updated in the same step; a half
   rename broke the animator's maps (10-21). Adopted models are named after the current character.
-- New downloads land in `Documents\_inbox` (the inbox): unpack, keep only what is needed, sort into the
+- New downloads land in `_claude/_inbox` (the inbox): unpack, keep only what is needed, sort into the
   library with licence and catalog entry, then empty temp.
 - Back up a file before a body change as `<name>_before-<change>.blend`; scale uniformly, never touch bones
   or weights.
