@@ -80,6 +80,9 @@ back, lower LODs, face). Ship: `node optimize-figures.mjs in.glb out.glb <colour
   budget for that one figure (`redec.py T3=900 HEADF3=0.6`); smoothing its face pushed the eyes out, a bigger head share alone
   tore the shoulder. A hard red far lip: `lippatch.py <blend> <LOD index> 64` paints a soft muted-rose patch with a skin margin
   into a free corner of the shared atlas and maps the mouth faces into it (`SPREAD=2.2` keeps the corners inside the rose).
+- Round 19-20: far-LOD face faces that sample dark hair texels at the cheek show a dark sliver: `sliver.py <blend> <LOD index>`.
+  Fairing an alpha-card hairline in texture space (ray-measured edge, smoothed, cut and fill) left spikes where the edited span
+  meets the temples; a stepped hair cap is fixed by a cleaner hair asset, not by alpha surgery.
 - Check holes before a gate: `holes.py file.blend` renders each LOD on magenta and fails on background seen through the figure.
 - meshoptimizer `simplifyWithAttributes` per part tears UV seams worse than Decimate on the joined mesh; do not use it for figures.
 - `Object3D.clone()` of a skinned GLB keeps the skin on the cached skeleton: the figure vanishes. Use `SkeletonUtils.clone`.
