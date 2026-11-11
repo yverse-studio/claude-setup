@@ -46,6 +46,11 @@ back, lower LODs, face). Ship: `node optimize-figures.mjs in.glb out.glb <colour
   after the bake and fail the figure), a 700-tri head can collapse into a flat card (check the 3/4 view), and the build
   change shipped with it (inner garment sunk 12 mm) opened skin slivers at a belt. Ship shells per figure and keep the
   best round's LOD0: never let a far-LOD fix ride along with a near-LOD change in one gate.
+- Round 9 (4.4, best): round-6 near LODs plus shells for 8 of 9 figures plus `scripts/mpfb/fix_faces.py` on the near LOD
+  before the shells bake (`smooth` relaxes the nostril-to-lip-corner crease, `hairline` lowers hair over a notch found with
+  front rays, `tuck` folds belt loops under the shirt hem and gives exposed waist-skin scraps the waistband colour). Two
+  tries that failed: flattening the mouth cavity into a plate (it poked through the lips as fangs) and a smooth that took
+  cavity vertices as neighbours (it dragged the lips in). Open at 4.8: brows as soft alpha cards, matte hair, elder rebake.
 - Check holes before a gate: `holes.py file.blend` renders each LOD on magenta and fails on background seen through the figure.
 - meshoptimizer `simplifyWithAttributes` per part tears UV seams worse than Decimate on the joined mesh; do not use it for figures.
 - `Object3D.clone()` of a skinned GLB keeps the skin on the cached skeleton: the figure vanishes. Use `SkeletonUtils.clone`.
