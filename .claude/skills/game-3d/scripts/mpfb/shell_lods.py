@@ -113,6 +113,18 @@ for old in far:
     sh.data.uv_layers.new(name='UVMap')
     bpy.ops.object.mode_set(mode='EDIT'); bpy.ops.mesh.select_all(action='SELECT')
     bpy.ops.uv.smart_project(angle_limit=float(os.environ.get('UVANG', 1.15)), island_margin=0.01); bpy.ops.object.mode_set(mode='OBJECT')
+    huv = float(os.environ.get('HEADUV', 0))  # round 15: the far head got too few texels (eyes as smudges); unwrap the head on
+    if huv:                                    # its own, scale its islands up and repack, so the face gets huv x its share
+        hb = rig.pose.bones.get('head') or rig.pose.bones.get('neck01'); nz = (rig.matrix_world @ hb.head).z - 0.02
+        mw = sh.matrix_world; head = {p.index for p in sh.data.polygons if (mw @ p.center).z > nz}
+        for p in sh.data.polygons: p.select = p.index in head
+        bpy.ops.object.mode_set(mode='EDIT'); bpy.ops.uv.smart_project(angle_limit=float(os.environ.get('UVANG', 1.15)), island_margin=0.01)
+        bpy.ops.object.mode_set(mode='OBJECT'); uvd = sh.data.uv_layers.active.data
+        for p in sh.data.polygons:
+            if p.index in head:
+                for li in p.loop_indices: uvd[li].uv = uvd[li].uv * huv
+        bpy.ops.object.mode_set(mode='EDIT'); bpy.ops.mesh.select_all(action='SELECT'); bpy.ops.uv.select_all(action='SELECT')
+        bpy.ops.uv.pack_islands(margin=0.01); bpy.ops.object.mode_set(mode='OBJECT'); print('HEADUV faces', len(head))
     # smart UV can fold an island over itself at the shoe and hem; both faces then bake into the same texels (round 12: the
     # white shoe printed onto the trouser hem). Give the overlapping faces their own islands and repack everything.
     for it in range(4):

@@ -75,6 +75,11 @@ back, lower LODs, face). Ship: `node optimize-figures.mjs in.glb out.glb <colour
   gives each red corner the UV of its nearest skin corner on the same face, so the skin gradient carries on and a thin lip stays.
   A shell bake takes the first hit, so see-through hair-card texels bake as a dark blotch with white specks over the forehead:
   `shell_lods.py ALPHACUT=0.5` drops mostly transparent faces from the bake source.
+- Rounds 16-18 (4.7, LOD chain 4.5 to 4.75): a far shell's head gets too few texels for eyes; `shell_lods.py HEADUV=2.5` unwraps
+  the head on its own and scales its islands up before packing. A far head that stays faceted at 700 triangles gets a bigger
+  budget for that one figure (`redec.py T3=900 HEADF3=0.6`); smoothing its face pushed the eyes out, a bigger head share alone
+  tore the shoulder. A hard red far lip: `lippatch.py <blend> <LOD index> 64` paints a soft muted-rose patch with a skin margin
+  into a free corner of the shared atlas and maps the mouth faces into it (`SPREAD=2.2` keeps the corners inside the rose).
 - Check holes before a gate: `holes.py file.blend` renders each LOD on magenta and fails on background seen through the figure.
 - meshoptimizer `simplifyWithAttributes` per part tears UV seams worse than Decimate on the joined mesh; do not use it for figures.
 - `Object3D.clone()` of a skinned GLB keeps the skin on the cached skeleton: the figure vanishes. Use `SkeletonUtils.clone`.

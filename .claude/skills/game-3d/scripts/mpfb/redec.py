@@ -10,7 +10,7 @@ neck = (rig.matrix_world @ rig.data.bones['neck_01'].head_local).z
 def tris(o): return sum(len(p.vertices) - 2 for p in o.data.polygons)
 def part(o, hd): return sum(len(p.vertices) - 2 for p in o.data.polygons if ((o.matrix_world @ p.center).z > neck) == hd)
 HF = float(os.environ.get('HEADF', 0.5))  # share of the budget the head (face + hair) keeps
-for nm, t in (('LOD2', 2000), ('LOD3', 700)):
+for nm, t in (('LOD2', 2000), ('LOD3', int(os.environ.get('T3', 700)))):  # T3: a bigger far budget for one hard head
     old = lods[nm]; name = old.name
     o = near.copy(); o.data = near.data.copy(); bpy.context.collection.objects.link(o)
     bpy.ops.object.select_all(action='DESELECT'); o.select_set(True); bpy.context.view_layer.objects.active = o
