@@ -2,15 +2,21 @@
 // M28 (plan 2026-11-12-M28-short-plan.md): the task ledger. A task's PLAN.md, its plan check and its approval are three fields of the same
 // per-asset ledger file the gate round counter keeps (gate-rounds.mjs); planReady() is the one function lock B (M42) will call.
 // The plan check is written only by the door: team-guard.mjs refuses a wrong plan-check call (planCheckPre, PreToolUse on Agent) and
-// rule-guard.mjs records the verdict from the transcript at the next PreToolUse (planChecksFromTranscript). The CLI has no verb for it, and rule-guard refuses a Bash call
-// that imports this file (taskBashProblem), so the author session has no way to write planCheck.
+// rule-guard.mjs records the verdict from the transcript at every PreToolUse (planChecksFromTranscript; the newest valid check wins).
+// The CLI has no verb for it; `approve` needs the grant the hook leaves after it checked the proof (as the round counter's verbs do).
+// Limits, said once (the round counter's bar, gate.md, Rounds): closed by construction are a plan-check call that is not the rendered brief,
+// not Opus or above, not a fresh agent or not in the foreground, any verb or export that writes planCheck from a caller's value, `approve`
+// without its proof, and a Write, redirect, writer or inline script that holds a literal ledger, grants, guard or transcript path. Not stopped,
+// because the evidence would be fabricated: a transcript, ledger or grant file written another way than by its literal path, a copy of a guard,
+// a script file, a glob or variable that hides a name, a guard run by hand on a transcript the thread wrote. The next step is a writer
+// outside the sandbox (a CI workflow), not a longer list here.
 // CLI: task-ledger.mjs plan <asset> <PLAN.md> | approve <asset> <ref> | status <asset> | brief <asset>
 import { createHash } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { CMSG, cardProof, ledgerDir, readLedger, simpleCommands, transcriptRows, writeLedger } from './gate-rounds.mjs'
+import { CMSG, cardProof, issueGrant, ledgerDir, readLedger, simpleCommands, takeGrant, transcriptRows, writeLedger } from './gate-rounds.mjs'
 
 const OPUS_UP = /opus|fable/i // the checker's tier: Opus or above (docs/TEAMS.md, Models line)
 export const sha = (text) => createHash('sha256').update(text).digest('hex')
@@ -94,9 +100,11 @@ function recordPlanCheck(asset, { result, plan_hash: planHash, brief_hash: brief
   if (!['pass', 'fail'].includes(result)) throw new Error('a plan check result is pass or fail')
   writeLedger(dir, { ...l, planCheck: { result, plan_hash: planHash, brief_hash: briefHash, model, tool_use_id: toolUseId, at: at ?? new Date().toISOString() } })
 }
+// Takes the grant the hook leaves once it has checked the proof (taskBashProblem): a call that never passed the hook has none and is refused here.
 export function recordApproval(asset, { by, ref }, dir = ledgerDir()) {
   const l = readLedger(dir, asset)
   if (!l.plan || l.planCheck?.result !== 'pass' || l.planCheck.plan_hash !== l.plan.hash) throw new Error(`${asset}: approval needs a passed plan check for the current plan (it has none)`)
+  if (!takeGrant(dir, 'approve', asset, ref)) throw new Error('approve: refused: the hook (global/rule-guard.mjs) checks the proof for this verb and leaves a short grant; none was found for this call. Run it as "node ~/.claude/claude-setup/task-ledger.mjs approve <asset> <cmsg id>" in a session where the hook is on.')
   writeLedger(dir, { ...l, approval: { by, ref, plan_hash: l.plan.hash, at: new Date().toISOString() } })
 }
 export function planReady(asset, dir = ledgerDir()) {
@@ -181,6 +189,8 @@ function doorProblem(asset, input, { dir, checklists, agentId }) {
   let brief
   try { brief = planCheckBrief(asset, { dir, checklists }) } catch (e) { return e.message }
   if (sha(String(input.prompt ?? '').trimEnd()) !== sha(brief.trimEnd())) return `the plan check prompt is the rendered brief, byte for byte, never hand-written: node ~/.claude/claude-setup/task-ledger.mjs brief ${asset} prints it (or node scripts/brief.mjs --plan-check ${asset}); pass that text as the prompt`
+  if (input.subagent_type && input.subagent_type !== 'general-purpose') return `the plan check runs as a general-purpose agent, not ${input.subagent_type} (a fork inherits the author's context, a custom agent file can carry any instruction): drop subagent_type`
+  if (input.run_in_background !== false) return 'pass run_in_background: false: a background run returns a launch notice and no verdict, so nothing would be recorded'
   if (!OPUS_UP.test(String(input.model ?? ''))) return `the plan check runs on the Opus tier or above, not ${input.model ?? 'an unnamed model'}: pass \`model\` from the Roster (docs/TEAMS.md, Models line)`
   return null
 }
@@ -224,13 +234,14 @@ function messageAfter(rows, ref, at) {
 const briefSize = (rows) => { for (const r of rows) { if (r.type !== 'user' || (Array.isArray(r.message?.content) && r.message.content.some((c) => c?.type === 'tool_result'))) continue; const m = JSON.stringify(r.message?.content ?? '').replace(/[*_`]/g, '').match(/\bSize:[ \t]*([SML])\b/); if (m) return m[1] } return null }
 
 // The verdict is read from the transcript the harness writes, never from a payload the caller supplies: rule-guard calls this at every
-// PreToolUse with the session's transcript, and an Agent call that opens with `Plan check: <asset>` counts when its prompt is the rendered
-// brief on an Opus tier and its tool_result (matched by tool_use_id) opens with `Plan check pass` or `Plan check fail`. A hand-fed hook
-// payload therefore records nothing, whatever launcher runs it. A run in the background returns no verdict line and records nothing.
-// Not recorded: a subagent's session (agentId), a prompt that is not the rendered brief, a model below Opus, a plan that changed.
-export function planChecksFromTranscript(text, { dir = ledgerDir(), checklists = loadChecklists(), agentId = null } = {}) {
+// PreToolUse with the session's transcript. An Agent call that opens with `Plan check: <asset>` counts when it passes doorProblem (the
+// rendered brief, Opus tier, general-purpose, foreground, not a subagent's) and its tool_result (matched by tool_use_id) opens with `Plan check
+// pass` or `Plan check fail`. The newest such result per asset wins on every call, so a row written by hand into the ledger is overwritten
+// by what the transcript says. A result that is not recorded returns one note with the reason, once per tool_use_id (`seen` keeps the ids).
+export function planChecksFromTranscript(text, { dir = ledgerDir(), checklists = loadChecklists(), agentId = null, seen = new Set() } = {}) {
   if (agentId || !String(text).includes('Plan check: ')) return []
   const uses = new Map()
+  const newest = new Map()
   const notes = []
   for (const r of transcriptRows(text)) {
     for (const c of Array.isArray(r.message?.content) ? r.message.content : []) {
@@ -240,46 +251,45 @@ export function planChecksFromTranscript(text, { dir = ledgerDir(), checklists =
       } else if (c?.type === 'tool_result' && uses.has(c.tool_use_id)) {
         const { asset, input } = uses.get(c.tool_use_id)
         uses.delete(c.tool_use_id)
-        if (readLedger(dir, asset).planCheck?.tool_use_id === c.tool_use_id || doorProblem(asset, input, { dir, checklists, agentId })) continue
         const result = verdictOf(responseText(c.content))
-        if (!result) continue
-        recordPlanCheck(asset, { result, plan_hash: registered(asset, dir).hash, brief_hash: sha(planCheckBrief(asset, { dir, checklists })), model: String(input.model), tool_use_id: c.tool_use_id, at: r.timestamp }, dir)
-        notes.push(`Plan check recorded: ${result} for ${asset}.`)
+        const why = doorProblem(asset, input, { dir, checklists, agentId }) ?? (result ? null : 'its answer has no "Plan check pass" or "Plan check fail" line (a launch notice or a free-text answer)')
+        if (why) { if (!seen.has(c.tool_use_id)) { seen.add(c.tool_use_id); notes.push(`Plan check not recorded for ${asset}: ${why}.`) } continue }
+        newest.set(asset, { result, tool_use_id: c.tool_use_id, at: r.timestamp, input })
       }
     }
+  }
+  for (const [asset, v] of newest) {
+    const plan = registered(asset, dir)
+    const want = { result: v.result, plan_hash: plan.hash, brief_hash: sha(planCheckBrief(asset, { dir, checklists })), model: String(v.input.model), tool_use_id: v.tool_use_id }
+    const have = readLedger(dir, asset).planCheck
+    if (have && Object.entries(want).every(([k, x]) => have[k] === x)) continue
+    recordPlanCheck(asset, { ...want, at: v.at }, dir)
+    notes.push(`Plan check recorded: ${v.result} for ${asset}.`)
   }
   return notes
 }
 
-// Bash, decided by command position (the same tokenizer as the round counter). The CLI has four verbs; an import, an eval or an unknown verb
-// would reach planCheckPost or the ledger, so it is refused. `approve` passes only with its proof from this session's transcript (reviewer item b).
-// ctx: { dir, calls (the session's tool calls), transcript (its text) }.
-const INLINE = /^-(?:[a-zA-Z]*[ep]|-eval|-print|-input-type.*|-import|-require|r)$|^-$/
+// `approve` through the hook: the proof is read from this session's transcript (visible work: a card this session posted; pure code: a message
+// from the principal or the coordinator with that id after the check), then the grant is left for the CLI (recordApproval takes it). Which
+// other commands may name this file is gate-rounds.mjs's rule (bashProblem: `node <path>/task-ledger.mjs <verb>` or a plain read).
+// ctx: { dir, calls (the session's tool calls), transcript (its text), dry }.
 export function taskBashProblem(cmd, ctx = {}) {
-  if (!/task-ledger(?!\.test)/.test(cmd)) return null
-  const { list, bad } = simpleCommands(cmd)
-  if (bad) return 'task ledger: this command has unbalanced quotes and mentions task-ledger, so it cannot be read; write it plainly.'
+  if (!/task-ledger\.mjs/.test(cmd)) return null
+  const { list } = simpleCommands(cmd)
   const name = (a) => String(a).split(/[\\/]/).pop()
   for (const s of list) {
-    const script = s.args.find((a) => name(a) === 'task-ledger.mjs')
-    if (!script) {
-      if (/^(node|nodejs|bun|deno|tsx)$/.test(name(s.a0)) && s.args.some((a) => INLINE.test(a)) && /task-ledger\.mjs/.test(cmd)) return 'task ledger: task-ledger.mjs is not imported or evaluated from a Bash call, the plan check is written only by the door (hooks). Use its CLI: plan, approve, status, brief.'
-      continue
-    }
-    if (/^(nodejs|bun|deno|tsx|ts-node|npx|python3?|ruby|perl)$/.test(name(s.a0))) return 'task ledger: task-ledger.mjs runs with node only (its CLI verbs: plan, approve, status, brief).'
-    if (name(s.a0) !== 'node') continue // cat, grep, ls and the like only read it
-    const at = s.args.indexOf(script)
-    if (at > 0 && s.args.slice(0, at).some((a) => INLINE.test(a))) return 'task ledger: task-ledger.mjs is run as a script with its CLI verbs only (plan, approve, status, brief), no import or eval flag.'
-    const [verb, asset, ref] = s.args.slice(at + 1)
-    if (!['plan', 'approve', 'status', 'brief'].includes(verb)) return `task ledger: "${verb ?? ''}" is no verb of task-ledger.mjs (plan, approve, status, brief); the plan check is written only by the door (the Agent hooks), never by hand.`
-    if (verb !== 'approve') continue
+    const at = s.a0 === 'node' ? s.args.findIndex((a) => name(a) === 'task-ledger.mjs') : -1
+    if (at < 0 || s.args[at + 1] !== 'approve') continue
+    const [, asset, ref] = s.args.slice(at + 1)
     if (list.length !== 1 || /\$\(|`/.test(cmd)) return 'task ledger: approve runs as the only command of the call, without substitution, so its proof can be read.'
-    const l = readLedger(ctx.dir ?? ledgerDir(), asset)
+    const dir = ctx.dir ?? ledgerDir()
+    const l = readLedger(dir, asset)
     if (!l.plan || l.planCheck?.result !== 'pass') return null // the CLI refuses that itself, with its own reason
     const rows = transcriptRows(ctx.transcript ?? '')
     const size = briefSize(rows) ?? 'L' // an unreadable brief counts as the stricter kind
     const why = approvalProblem({ visible: visibleWork(read(l.plan.path), size), ref, calls: ctx.calls ?? [], humanAfter: (r) => messageAfter(rows, r, l.planCheck.at) })
     if (why) return `task ledger: ${why}.`
+    if (!ctx.dry) issueGrant(dir, 'approve', asset, ref)
   }
   return null
 }

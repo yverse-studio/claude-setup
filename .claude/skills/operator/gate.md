@@ -211,6 +211,9 @@ How to undo a merge, by kind of change (write the line into the PR's "undo" line
   2. **Rounds 4 to 6** run only after a **Fable director** (`docs/TEAMS.md`, Models line) re-planned: the coordinator starts a
      Fable thread, it runs `node ~/.claude/claude-setup/gate-rounds.mjs direct <asset> --plan <file>` (the hook records it only
      from a Fable session) and the builders follow its plan. A round 4 without it is refused.
+     The brief is `Role: Designer · Kit: <the project's kit> · Size: S` with the Fable `Model:` (Roster row, Designer; `Models` line), plus
+     `Round: 4` and `Asset: <name>`; the Designer reads the three gate reports and writes exact instructions: what to change, with
+     numbers, and what to stop doing.
   3. **Round 7 and later** run only after **one card to yskills** (what it does, why it fails, 2 or 3 ideas, one recommended;
      `request_decision`), recorded with `gate-rounds.mjs card <asset> --ref <cmsg id>`; the hook checks that this session
      posted that card. The card opens 3 more rounds; the thread goes on with the recommended option. Money, secrets, public
@@ -230,6 +233,11 @@ How to undo a merge, by kind of change (write the line into the PR's "undo" line
      ran rounds before the ledger existed is imported once: `gate-rounds.mjs init <asset> --round <n>`. Nobody edits the file by
      hand (the hook refuses it). A defect that fails the same check twice still gets a diagnosis before the next fix
      (`character-workflow.md`, step 4); three failed rounds on one asset still mean a re-plan, now the Fable director.
+  Three bypasses closed (security review of 2026-11-12, tests `bypass 1` to `bypass 3` in `scripts/gate-rounds.test.mjs`): the proofs for init, direct, card,
+  picture and waive sit in the CLI too (it refuses them without the short one-use grant the hook leaves after it checked the proof), and a command that names
+  `gate-rounds.mjs` other than as `node <path>/gate-rounds.mjs <verb>` or a plain read is refused; a verdict counts only from a Tester or Reviewer session or
+  when a real reviewer agent (code-reviewer, evaluator, security-reviewer and the like) of the session returned that headline as the opening of its own result, from a prompt that did not hold it (a builder cannot pass or merge its own work); the session's role stamp and brief lock in the temp dir are protected like the ledger path; the human answer on a card is read from
+  the wake's own wrapper, never from tags quoted in a relay or a result.
   Limits, said plainly: the ledger lives in the project's shared folder (one project's threads share it); a session without
   hooks (the project chat) cannot be stopped itself, but every thread it starts checks its brief, and no merge works without a
   counted pass. `CLAUDE_SETUP_RULE_GUARD=off` is the one off switch; nobody sets it. It stops careless and honest-mistake

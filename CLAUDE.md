@@ -41,10 +41,10 @@ Claude's job. `docs/MAP.md` names the one home of each rule; everywhere else lin
   `PLAN.md` or PR before its first card. [guard: hook global/rule-guard.mjs]
 - Plan first: a non-trivial change gets research once, a placement check (`docs/MAP.md`) and a
   short plan before the first file, then exactly that plan (`operator` SKILL.md, Plan first). [advisory]
-- Work for the future: before building, search our repos, claude-setup and proven public setups
-  for what exists and start from it; what a thread learns or builds goes into
-  claude-setup in a reusable form, linked from `docs/MAP.md`. Every PR body carries a
-  `Prior art:` line too. [guard: test scripts/pr-lessons-check.test.mjs]
+- Work for the future: research first (how others do it), then reuse, copy or reverse-engineer,
+  build only if needed; lessons go to claude-setup (`docs/MAP.md`).
+  Brief and PR body: `Prior art:` with real sources (repo, path, URL, #n) and the decision.
+  [guard: hook global/team-guard.mjs, test scripts/pr-lessons-check.test.mjs]
 - Own the whole task: build, verify, PR, fix CI; done = the goal works.
 - Never "can't": try every route (another tool, a workflow with the org token, the laptop via RC)
   first; a truly impossible step goes to yskills as one line plus exact steps, with a `Tried:` line, the rest goes on. A refusal is never reworded or split (`docs/permissions.md`). [guard: hook global/rule-guard.mjs]

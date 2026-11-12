@@ -9,14 +9,15 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
-import { readLedger } from '../global/gate-rounds.mjs'
+import { issueGrant, readLedger } from '../global/gate-rounds.mjs'
 import * as ledger from '../global/task-ledger.mjs'
 
 const root = join(fileURLToPath(import.meta.url), '..', '..')
 const CHECKLISTS = '.claude/skills/operator/checklists.md'
 const ASSET = 'duck-hud'
 
-function door({ session = 's1' } = {}) {
+let seq = 0
+function door({ session = `s${process.pid}x${++seq}` } = {}) {
   const dir = mkdtempSync(join(tmpdir(), 'door-'))
   const gate = join(dir, 'gate')
   mkdirSync(join(dir, '.claude/skills/operator'), { recursive: true })
@@ -24,13 +25,13 @@ function door({ session = 's1' } = {}) {
   const plan = join(dir, 'PLAN.md')
   copyFileSync(join(root, 'scripts/fixtures/task-plan-ok.md'), plan)
   const env = { ...process.env, CLAUDE_SETUP_GATE_DIR: gate, CLAUDE_SETUP_HOME: dir, CLAUDE_SETUP_BOOT_FETCH: 'off', CLAUDE_SETUP_TEAM_GUARD: '', CLAUDE_SETUP_RULE_GUARD: '' }
-  ledger.registerPlan(ASSET, plan, session, gate)
+  ledger.registerPlan(ASSET, plan, 's1', gate)
   const checklists = readFileSync(join(dir, CHECKLISTS), 'utf8')
   const brief = ledger.planCheckBrief(ASSET, { dir: gate, checklists })
   const run = (script, mode, payload) => spawnSync(process.execPath, [join(root, 'global', script), ...(mode ? [mode] : [])], { input: JSON.stringify({ cwd: dir, session_id: session, ...payload }), encoding: 'utf8', env })
-  const pre = (input, extra = {}) => run('team-guard.mjs', 'pre', { hook_event_name: 'PreToolUse', tool_name: 'Agent', tool_input: input, ...extra })
+  const pre = (input, extra = {}) => run('team-guard.mjs', 'pre', { hook_event_name: 'PreToolUse', tool_name: 'Agent', tool_input: { run_in_background: false, ...input }, ...extra })
   // An Agent call and its tool_result as the harness writes them, and the next tool call (a status read) whose PreToolUse records the verdict.
-  const rowsFor = (text, { input = { prompt: brief, model: 'opus' }, id = 'u1', shape = (x) => x } = {}) => [
+  const rowsFor = (text, { input = { prompt: brief, model: 'opus', run_in_background: false }, id = 'u1', shape = (x) => x } = {}) => [
     { type: 'assistant', timestamp: '2026-11-12T10:00:00Z', message: { content: [{ type: 'tool_use', id, name: 'Agent', input }] } },
     { type: 'user', timestamp: '2026-11-12T10:05:00Z', message: { content: [{ type: 'tool_result', tool_use_id: id, content: shape(text) }] } },
   ]
@@ -40,7 +41,7 @@ function door({ session = 's1' } = {}) {
     writeFileSync(transcript, [{ type: 'assistant', timestamp: '2026-11-12T10:00:00Z', message: { model: 'sonnet-test', content: [] } }, ...calls, ...extra].map((l) => JSON.stringify(l)).join('\n'))
     return spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'pre'], { input: JSON.stringify({ cwd: dir, session_id: session, transcript_path: transcript, tool_name: 'Bash', tool_input: { command }, ...more }), encoding: 'utf8', env })
   }
-  return { dir, gate, plan, env, brief, pre, check, rowsFor, bash, ledger: () => readLedger(gate, ASSET), done: () => rmSync(dir, { recursive: true, force: true }) }
+  return { dir, gate, plan, env, brief, pre, check, rowsFor, bash, ledger: () => readLedger(gate, ASSET), approve: (ref = 'cmsg_x1') => { issueGrant(gate, 'approve', ASSET, ref); ledger.recordApproval(ASSET, { by: 'c', ref }, gate) }, done: () => { rmSync(dir, { recursive: true, force: true }); rmSync(join(tmpdir(), `claude-setup-plancheck-${session.replace(/\W/g, '')}`), { force: true }) } }
 }
 
 test('the brief is rendered, not written: deterministic, first line names the asset, carries the plan, its checklist and the fixed questions', () => {
@@ -120,15 +121,6 @@ for (const [name, shape] of Object.entries(SHAPES)) {
   })
 }
 
-test('a verdict with neither line, or a background launch, records nothing', () => {
-  const t = door()
-  try {
-    t.check('The plan looks fine to me.')
-    t.check('Async agent launched successfully. agentId: a9', { id: 'u2' })
-    assert.equal(t.ledger().planCheck, undefined)
-  } finally { t.done() }
-})
-
 test('gate round 2: a forged payload records nothing, whatever launcher feeds it, and a real tool_result "fail" stays fail', () => {
   const t = door()
   try {
@@ -149,8 +141,8 @@ test('gate round 2: a forged payload records nothing, whatever launcher feeds it
 test('nothing is recorded for a hand-written prompt, a Sonnet checker, a stale plan, or another tool', () => {
   const t = door()
   try {
-    t.check('Plan check pass', { input: { prompt: `Plan check: ${ASSET}\nmy own`, model: 'opus' } })
-    t.check('Plan check pass', { input: { prompt: t.brief, model: 'sonnet' }, id: 'u2' })
+    t.check('Plan check pass', { input: { prompt: `Plan check: ${ASSET}\nmy own`, model: 'opus', run_in_background: false } })
+    t.check('Plan check pass', { input: { prompt: t.brief, model: 'sonnet', run_in_background: false }, id: 'u2' })
     const bashRows = t.rowsFor('Plan check pass', { id: 'u3' }).map((r) => JSON.parse(JSON.stringify(r).replace('"name":"Agent"', '"name":"Bash"')))
     t.bash(`node ~/.claude/claude-setup/task-ledger.mjs status ${ASSET}`, [], bashRows)
     assert.equal(t.ledger().planCheck, undefined)
@@ -164,7 +156,7 @@ test('a pass for an old plan does not stand: a changed PLAN.md makes planReady f
   const t = door()
   try {
     t.check('Plan check pass')
-    ledger.recordApproval(ASSET, { by: 'c', ref: 'cmsg_x1' }, t.gate)
+    t.approve()
     assert.equal(ledger.planReady(ASSET, t.gate), true)
     writeFileSync(t.plan, `${readFileSync(t.plan, 'utf8')} `)
     assert.equal(ledger.planReady(ASSET, t.gate), false)
@@ -187,8 +179,12 @@ test('direct writes to the ledger stay refused for the new fields: Write, tee, r
       `tee ${file} < x.json`, `echo '{}' > ${file}`, `node -e "require('fs').writeFileSync('${file}','{}')"`,
       `node -e "import('/root/.claude/claude-setup/task-ledger.mjs').then(m=>m.planCheckPost({}))"`, `node --input-type=module -e "import '/root/.claude/claude-setup/task-ledger.mjs'"`,
       `node -p "require('/root/.claude/claude-setup/task-ledger.mjs')"`, `node - <<'EOF'\nimport('/root/.claude/claude-setup/task-ledger.mjs')\nEOF`,
-      'node ~/.claude/claude-setup/task-ledger.mjs planCheck duck-hud pass', 'node global/task-ledger.mjs check duck-hud pass',
     ]) assert.equal(t.bash(c).status, 2, c)
+    for (const verb of ['planCheck', 'check', 'record']) {
+      const r = spawnSync(process.execPath, [join(root, 'global/task-ledger.mjs'), verb, ASSET, 'pass'], { encoding: 'utf8', env: t.env })
+      assert.notEqual(r.status, 0, `the CLI has no verb ${verb}`)
+    }
+    assert.equal(t.ledger().planCheck, undefined)
     for (const c of [`node ~/.claude/claude-setup/task-ledger.mjs plan ${ASSET} ${t.plan}`, `node ~/.claude/claude-setup/task-ledger.mjs status ${ASSET}`, `node ~/.claude/claude-setup/task-ledger.mjs brief ${ASSET}`, 'cat ~/.claude/claude-setup/task-ledger.mjs | head -5', 'node --test scripts/task-ledger.test.mjs']) assert.equal(t.bash(c).status, 0, c)
   } finally { t.done() }
 })
@@ -222,7 +218,7 @@ test('reviewer item b: approve goes through approvalProblem in the hook (visible
     writeFileSync(p.plan, readFileSync(p.plan, 'utf8').replace('Topic: HUD/UI', 'Topic: none').replace('MAIN: reference card cmsg_01AbCdEf12345', 'MAIN: reference card'))
     ledger.registerPlan(ASSET, p.plan, 's1', p.gate)
     const brief = ledger.planCheckBrief(ASSET, { dir: p.gate, checklists: '' })
-    p.check('Plan check pass', { input: { prompt: brief, model: 'opus' } })
+    p.check('Plan check pass', { input: { prompt: brief, model: 'opus', run_in_background: false } })
     assert.equal(p.ledger().planCheck?.result, 'pass')
     const size = { type: 'user', timestamp: '2026-11-12T09:59:00Z', message: { content: 'Role: Programmer · Kit: setup · Size: M' } }
     const early = { type: 'user', timestamp: '2020-01-01T00:00:00Z', message: { content: '<message id="cmsg_COORD1" from="human" trust="principal">go</message>' } }
@@ -266,26 +262,6 @@ test('task-ledger CLI: brief prints the rendered brief; the guard files list and
   } finally { t.done() }
 })
 
-test('gate round 1 and 2, second layer: an installed guard is run by its hook only, through any launcher, glob or flag', () => {
-  const t = door()
-  try {
-    for (const c of [
-      `echo '{"hook_event_name":"PostToolUse","tool_name":"Agent"}' | node ~/.claude/claude-setup/context-guard.mjs`,
-      'node ~/.claude/claude-setup/context-guard.mjs < forged.json', 'node global/context-guard.mjs < forged.json', 'node ~/.claude/claude-setup/team-guard.mjs pre < x.json',
-      'node ~/.claude/claude-setup/compact-guard.mjs', 'node ~/.claude/claude-setup/rule-guard.mjs pre < x.json', 'bash -c "node ~/.claude/claude-setup/context-guard.mjs < f.json"',
-      'npx node ~/.claude/claude-setup/context-guard.mjs < f.json', 'npm exec -- node ~/.claude/claude-setup/context-guard.mjs < f.json', 'stdbuf -o0 node ~/.claude/claude-setup/context-guard.mjs < f.json',
-      'setsid node ~/.claude/claude-setup/context-guard.mjs < f.json', 'node ~/.claude/claude-setup/context-guar?.mjs < f.json', 'node ~/.claude/claude-setup/context-guard.{mjs,x} < f.json',
-      'node --import file:///root/.claude/claude-setup/context-guard.mjs?x -e 1', 'node ~/.claude/claude-setup/context-guard.mjs --check < f.json', 'node ~/.claude/claude-setup/context-guard.mjs -c < f.json', 'node ~/.claude/claude-setup/context-guard.mjs rule-guard.mjs read', 'npx node --check ~/.claude/claude-setup/context-guard.mjs', 'node --check a.mjs ~/.claude/claude-setup/context-guard.mjs', `node -e "require('fs').appendFileSync('/root/.claude/projects/-home-user/s.jsonl','x')"`, 'node ~/.claude/claude-setup/*-guard.mjs < f.json',
-    ]) assert.equal(t.bash(c).status, 2, c)
-    for (const c of ['node ~/.claude/claude-setup/rule-guard.mjs read https://docs.claude.com/x', 'cat ~/.claude/claude-setup/context-guard.mjs | head -3', 'node --check global/context-guard.mjs', 'node --check ~/.claude/claude-setup/rule-guard.mjs', 'git commit -m "fix: context-guard door"', 'node --test scripts/guards.test.mjs']) assert.equal(t.bash(c).status, 0, c)
-    assert.equal(t.bash('echo x >> ~/.claude/projects/-home-user/abc.jsonl').status, 2, 'the session transcript is written by the harness only')
-    for (const tool of ['Write', 'Edit']) {
-      const r = spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'pre'], { input: JSON.stringify({ cwd: t.dir, session_id: 's', tool_name: tool, tool_input: { file_path: '/root/.claude/projects/-home-user/abc.jsonl', content: 'x', old_string: 'a', new_string: 'b' } }), encoding: 'utf8', env: t.env })
-      assert.equal(r.status, 2, `${tool} on a transcript`)
-    }
-  } finally { t.done() }
-})
-
 test('gate round 1, item 2: every installed guard file is refused to Write, Edit and redirects, context-guard included', () => {
   const t = door()
   try {
@@ -303,7 +279,7 @@ test('gate round 1, item 4: planReady also needs the recorded checker to be Opus
   const t = door()
   try {
     t.check('Plan check pass')
-    ledger.recordApproval(ASSET, { by: 'c', ref: 'cmsg_x1' }, t.gate)
+    t.approve()
     assert.equal(ledger.planReady(ASSET, t.gate), true)
     const l = t.ledger()
     writeFileSync(join(t.gate, `${ASSET}.json`), JSON.stringify({ ...l, planCheck: { ...l.planCheck, model: 'sonnet' } }))
@@ -316,4 +292,108 @@ test('gate round 1, item 3: the three transcript readings of the task ledger use
   assert.doesNotMatch(src, /JSON\.parse/, 'task-ledger.mjs parses no transcript line itself')
   assert.match(src, /transcriptRows/)
   assert.doesNotMatch(readFileSync(join(root, 'global/rule-guard.mjs'), 'utf8'), /const (messageAfter|briefSize)\b/)
+})
+
+test('director item 3: the door is an allow-list on the call shape: general-purpose (or no subagent_type), run_in_background exactly false, one test per rule', () => {
+  const t = door()
+  try {
+    const ok = { prompt: t.brief, model: 'opus' }
+    assert.equal(t.pre(ok).status, 0)
+    assert.equal(t.pre({ ...ok, subagent_type: 'general-purpose' }).status, 0)
+    for (const type of ['fork', 'code-reviewer', 'my-agent']) {
+      const r = t.pre({ ...ok, subagent_type: type })
+      assert.equal(r.status, 2, type)
+      assert.match(r.stderr, /general-purpose/)
+    }
+    for (const bg of [true, undefined, 'false']) {
+      const r = t.pre({ ...ok, run_in_background: bg })
+      assert.equal(r.status, 2, String(bg))
+      assert.match(r.stderr, /run_in_background: false/)
+    }
+  } finally { t.done() }
+})
+
+test('director item 3 (transcript side): a fork, a background call or a custom agent in the transcript is never recorded, and each says why', () => {
+  const t = door()
+  try {
+    const out = [
+      t.check('Plan check pass', { input: { prompt: t.brief, model: 'opus', run_in_background: true }, id: 'b1' }),
+      t.check('Plan check pass', { input: { prompt: t.brief, model: 'opus', run_in_background: false, subagent_type: 'fork' }, id: 'b2' }),
+    ]
+    assert.equal(t.ledger().planCheck, undefined)
+    assert.match(out[0].stdout, /Plan check not recorded for duck-hud: pass run_in_background: false/)
+    assert.match(out[1].stdout, /general-purpose/)
+  } finally { t.done() }
+})
+
+test('director item 6: a result that is not recorded says so once, with the reason', () => {
+  const t = door()
+  try {
+    const said = (r) => (r.stdout ? JSON.parse(r.stdout).hookSpecificOutput.additionalContext : '')
+    const first = t.check('Looks fine to me.', { id: 'n1' })
+    assert.match(said(first), /Plan check not recorded for duck-hud: its answer has no "Plan check pass" or "Plan check fail" line/)
+    const again = t.check('Looks fine to me.', { id: 'n1' })
+    assert.doesNotMatch(said(again), /not recorded/, 'once per tool_use_id')
+    writeFileSync(t.plan, `${readFileSync(t.plan, 'utf8')} `)
+    assert.match(t.check('Plan check pass', { id: 'n2' }).stdout, /changed after it was registered/)
+  } finally { t.done() }
+})
+
+test('director item 2: pass, then a failing check, then more tool calls: the ledger stays fail; a pass written by hand with the real tool_use_id is fail again after the next call', () => {
+  const t = door()
+  try {
+    const rows = [...t.rowsFor('Plan check pass', { id: 'p1' }), ...t.rowsFor('Plan check fail\n3. no', { id: 'p2' })]
+    for (let i = 0; i < 4; i++) t.bash(`node ~/.claude/claude-setup/task-ledger.mjs status ${ASSET}`, [], rows)
+    assert.equal(t.ledger().planCheck.result, 'fail')
+    const l = t.ledger()
+    writeFileSync(join(t.gate, `${ASSET}.json`), JSON.stringify({ ...l, planCheck: { ...l.planCheck, result: 'pass' } }))
+    assert.equal(ledger.planReady(ASSET, t.gate), false, 'not approved yet, but the row is forged')
+    t.bash(`node ~/.claude/claude-setup/task-ledger.mjs status ${ASSET}`, [], rows)
+    assert.equal(t.ledger().planCheck.result, 'fail')
+  } finally { t.done() }
+})
+
+test('director item 4: the name rule covers task-ledger.mjs: only "node <path>/task-ledger.mjs <verb>" or a plain read may name it', () => {
+  const t = door()
+  try {
+    const f = '/root/.claude/claude-setup/task-ledger.mjs'
+    for (const c of [
+      `taskset -c 0 node -e "import('${f}').then(m=>m.recordApproval('x',{ref:'c'}))"`, `strace -o /dev/null node ${f} approve x cmsg_1`, `bun ${f} status x`,
+      `node -e "import('${f}')"`, `node -p "require('${f}')"`, `cp ${f} /tmp/tl.mjs`, `node --import ${f} -e 1`, `node - <<'EOF'\nimport('${f}')\nEOF`,
+      `setsid node ${f} approve x cmsg_1`, `ln -s ${f} /tmp/x.mjs`,
+    ]) assert.equal(t.bash(c).status, 2, c)
+    for (const c of [`cat ${f}`, `grep -n recordApproval ${f}`, `node ${f} status ${ASSET}`, `node ${f} brief ${ASSET}`, 'node --test scripts/task-ledger.test.mjs', 'git commit -m "fix: task-ledger.mjs reads the plan"', `head -20 ${f} | wc -l`]) assert.equal(t.bash(c).status, 0, c)
+  } finally { t.done() }
+})
+
+test('director item 5: approve takes a grant: the hook leaves it after the proof, the CLI refuses without it, and uses it once', () => {
+  const card = [
+    { type: 'assistant', timestamp: '2026-11-12T10:01:00Z', message: { content: [{ type: 'tool_use', id: 'c1', name: 'mcp__hearthbot__request_decision', input: {} }] } },
+    { type: 'user', timestamp: '2026-11-12T10:01:01Z', message: { content: [{ type: 'tool_result', tool_use_id: 'c1', content: 'posted cmsg_CARD1' }] } },
+  ]
+  const t = door()
+  try {
+    t.check('Plan check pass')
+    const cli = (ref) => spawnSync(process.execPath, [join(root, 'global/task-ledger.mjs'), 'approve', ASSET, ref], { encoding: 'utf8', env: t.env })
+    assert.match(cli('cmsg_CARD1').stderr, /grant/, 'straight through the CLI: no grant')
+    const refused = t.bash(`node ~/.claude/claude-setup/task-ledger.mjs approve ${ASSET} cmsg_MADEUP`, card)
+    assert.equal(refused.status, 2)
+    assert.match(cli('cmsg_MADEUP').stderr, /grant/, 'a refused proof leaves no grant')
+    assert.equal(t.bash(`node ~/.claude/claude-setup/task-ledger.mjs approve ${ASSET} cmsg_CARD1`, card).status, 0)
+    assert.equal(cli('cmsg_CARD1').status, 0, 'the hook ran first: the grant is there')
+    assert.equal(ledger.planReady(ASSET, t.gate), true)
+    assert.match(cli('cmsg_CARD1').stderr, /grant/, 'used once')
+  } finally { t.done() }
+})
+
+// The probe of the director's plan (gate/pr474-probe.mjs): ordinary commands a thread runs in this repo every day. A pattern rule gets a table of them.
+const ORDINARY = [
+  'node --test scripts/guards.test.mjs', 'node --test scripts/rule-guard.test.mjs', 'git ls-files | xargs grep -l team-guard', 'npm test -- scripts/team-guard.test.mjs',
+  'node global/rule-guard.mjs pre < /tmp/payload.json', 'node global/team-guard.mjs start < /tmp/payload.json', 'node ~/.claude/claude-setup/team-guard.mjs version',
+  'bash -c "grep -n decide global/rule-guard.mjs"', 'timeout 60 node scripts/check.mjs --only rule-guard', 'python3 tools/count.py global/context-guard.mjs',
+  'node ~/.claude/claude-setup/rule-guard.mjs read https://example.com', 'node --check global/task-ledger.mjs', 'env node scripts/pre-pr.mjs --body b.md --title "fix: team-guard reads the brief"',
+]
+test('director item 7: thirteen ordinary commands that name a guard pass the hook', () => {
+  const t = door()
+  try { for (const c of ORDINARY) assert.equal(t.bash(c).status, 0, c) } finally { t.done() }
 })

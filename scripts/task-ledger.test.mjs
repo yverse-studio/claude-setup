@@ -6,7 +6,7 @@ import { spawnSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
 import { join } from 'node:path'
-import { readLedger, writeLedger } from '../global/gate-rounds.mjs'
+import { issueGrant, readLedger, writeLedger } from '../global/gate-rounds.mjs'
 import { approvalProblem, planCheckBrief, planChecksFromTranscript, planReady, recordApproval, registerPlan, visibleWork } from '../global/task-ledger.mjs'
 
 const root = join(fileURLToPath(import.meta.url), '..', '..')
@@ -20,9 +20,11 @@ const setup = () => {
 const hashOf = (dir, asset) => readLedger(dir, asset).plan.hash
 // The plan check is written only from the transcript (M28 PR 2): the test plays rule-guard with the Agent call and its tool_result.
 const hook = (dir, asset, prompt, text, id = 'u1') => planChecksFromTranscript([
-  { type: 'assistant', message: { content: [{ type: 'tool_use', id, name: 'Agent', input: { prompt, model: 'opus' } }] } },
+  { type: 'assistant', message: { content: [{ type: 'tool_use', id, name: 'Agent', input: { prompt, model: 'opus', run_in_background: false } }] } },
   { type: 'user', message: { content: [{ type: 'tool_result', tool_use_id: id, content: text }] } },
 ].map((r) => JSON.stringify(r)).join('\n'), { dir, checklists: '' })
+// `approve` needs the grant the hook leaves after it checked the proof; the fixture leaves it itself.
+const approved = (asset, a, dir) => { issueGrant(dir, 'approve', asset, a.ref); return recordApproval(asset, a, dir) }
 const checked = (dir, asset, result = 'pass') => hook(dir, asset, planCheckBrief(asset, { dir, checklists: '' }), `Plan check ${result}`)
 
 test('planReady is false for a new asset, after registerPlan alone, and after a plan check without approval', () => {
@@ -33,7 +35,7 @@ test('planReady is false for a new asset, after registerPlan alone, and after a 
     assert.equal(planReady('duck-hud', t.dir), false)
     checked(t.dir, 'duck-hud')
     assert.equal(planReady('duck-hud', t.dir), false)
-    recordApproval('duck-hud', { by: 'coordinator', ref: 'cmsg_x1' }, t.dir)
+    approved('duck-hud', { by: 'coordinator', ref: 'cmsg_x1' }, t.dir)
     assert.equal(planReady('duck-hud', t.dir), true)
   } finally { t.done() }
 })
@@ -51,25 +53,25 @@ test('recordApproval refuses when the plan check is missing, failed, or belongs 
   const t = setup()
   try {
     registerPlan('duck-hud', t.plan, 's1', t.dir)
-    assert.throws(() => recordApproval('duck-hud', { by: 'c', ref: 'cmsg_x1' }, t.dir), /plan check/)
+    assert.throws(() => approved('duck-hud', { by: 'c', ref: 'cmsg_x1' }, t.dir), /plan check/)
     checked(t.dir, 'duck-hud', 'fail')
-    assert.throws(() => recordApproval('duck-hud', { by: 'c', ref: 'cmsg_x1' }, t.dir), /plan check/)
+    assert.throws(() => approved('duck-hud', { by: 'c', ref: 'cmsg_x1' }, t.dir), /plan check/)
     checked(t.dir, 'duck-hud', 'pass')
     const l = readLedger(t.dir, 'duck-hud')
     writeLedger(t.dir, { ...l, planCheck: { ...l.planCheck, plan_hash: 'old' } })
-    assert.throws(() => recordApproval('duck-hud', { by: 'c', ref: 'cmsg_x1' }, t.dir), /plan check/)
+    assert.throws(() => approved('duck-hud', { by: 'c', ref: 'cmsg_x1' }, t.dir), /plan check/)
   } finally { t.done() }
 })
 
 test('the door records nothing for an asset without a registered plan, nor for a plan edited since it was registered', () => {
   const t = setup()
   try {
-    assert.deepEqual(hook(t.dir, 'duck-hud', 'Plan check: duck-hud\nx', 'Plan check pass'), [])
+    assert.match(hook(t.dir, 'duck-hud', 'Plan check: duck-hud\nx', 'Plan check pass').join(), /no registered plan/)
     assert.equal(readLedger(t.dir, 'duck-hud').planCheck, undefined)
     registerPlan('duck-hud', t.plan, 's1', t.dir)
     const prompt = planCheckBrief('duck-hud', { dir: t.dir, checklists: '' })
     writeFileSync(t.plan, `${readFileSync(t.plan, 'utf8')} `)
-    assert.deepEqual(hook(t.dir, 'duck-hud', prompt, 'Plan check pass'), [])
+    assert.match(hook(t.dir, 'duck-hud', prompt, 'Plan check pass').join(), /changed/, 'the note names the reason')
     assert.equal(readLedger(t.dir, 'duck-hud').planCheck, undefined)
   } finally { t.done() }
 })
@@ -79,7 +81,7 @@ test('editing PLAN.md after approval makes planReady false, re-registering alone
   try {
     registerPlan('duck-hud', t.plan, 's1', t.dir)
     checked(t.dir, 'duck-hud')
-    recordApproval('duck-hud', { by: 'c', ref: 'cmsg_x1' }, t.dir)
+    approved('duck-hud', { by: 'c', ref: 'cmsg_x1' }, t.dir)
     assert.equal(planReady('duck-hud', t.dir), true)
     writeFileSync(t.plan, `${readFileSync(t.plan, 'utf8')} `)
     assert.equal(planReady('duck-hud', t.dir), false, 'one character changed')
@@ -95,7 +97,7 @@ test('a plan registered by a relative path is still found from another working d
     process.chdir(t.dir)
     registerPlan('duck-hud', 'PLAN.md', 's1', t.dir)
     checked(t.dir, 'duck-hud')
-    recordApproval('duck-hud', { by: 'c', ref: 'cmsg_x1' }, t.dir)
+    approved('duck-hud', { by: 'c', ref: 'cmsg_x1' }, t.dir)
     process.chdir(tmpdir())
     assert.equal(planReady('duck-hud', t.dir), true, 'the stored path is absolute')
   } finally { process.chdir(here); t.done() }
@@ -145,5 +147,21 @@ test('the CLI has plan, approve and status, and no verb that writes the plan che
     assert.equal(JSON.parse(run('status', 'duck-hud').stdout).planReady, false)
     assert.notEqual(run('check', 'duck-hud', 'pass').status, 0, 'no verb writes planCheck')
     assert.notEqual(run('approve', 'duck-hud', 'cmsg_x1').status, 0, 'approve refuses without a passed plan check')
+  } finally { t.done() }
+})
+
+test('approve takes a grant: recordApproval without the hook\'s grant is refused, with it the approval is written once', () => {
+  const t = setup()
+  try {
+    registerPlan('duck-hud', t.plan, 's1', t.dir)
+    checked(t.dir, 'duck-hud')
+    assert.throws(() => recordApproval('duck-hud', { by: 'c', ref: 'cmsg_x1' }, t.dir), /grant/)
+    assert.equal(planReady('duck-hud', t.dir), false)
+    issueGrant(t.dir, 'approve', 'duck-hud', 'cmsg_x1')
+    recordApproval('duck-hud', { by: 'c', ref: 'cmsg_x1' }, t.dir)
+    assert.equal(planReady('duck-hud', t.dir), true)
+    assert.throws(() => recordApproval('duck-hud', { by: 'c', ref: 'cmsg_x1' }, t.dir), /grant/, 'a grant is used once')
+    issueGrant(t.dir, 'approve', 'duck-hud', 'cmsg_x1')
+    assert.throws(() => recordApproval('duck-hud', { by: 'c', ref: 'cmsg_other' }, t.dir), /grant/, 'a grant belongs to its ref')
   } finally { t.done() }
 })

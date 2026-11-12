@@ -28,8 +28,10 @@ import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 // rule-guard sits beside this file (GUARD_FILES); without it only the model-tier check is skipped.
 let roleOf = () => null
-try { ({ roleOf } = await import('./rule-guard.mjs')) } catch { /* no rule-guard here */ }
-// M28 plan-check door: an Agent call opening with `Plan check: <asset>` must be the rendered brief on an Opus tier; the verdict is recorded by context-guard.
+let openThreads = () => []
+let toolCalls = () => []
+try { ({ roleOf, openThreads, toolCalls } = await import('./rule-guard.mjs')) } catch { /* no rule-guard here */ }
+// M28 plan-check door: an Agent call opening with `Plan check: <asset>` must be the rendered brief on an Opus tier; rule-guard records the verdict from the transcript.
 let planCheckPre = () => null
 try { ({ planCheckPre } = await import('./task-ledger.mjs')) } catch { /* no task ledger here: the check is simply not recorded */ }
 
@@ -192,9 +194,19 @@ export function stamped(text) {
 }
 
 // Every size (yskills 2026-11-03: research before guessing, a small task too).
+// Prior art (yskills 2026-11-12: "erst schauen was gut funktioniert, dann klauen oder reverse engineeren, dann selber bauen"): the line records real
+// findings, not a gesture: a named source (URL, owner/repo or path, #n, a file name, a `name`) and the decision (copy, adapt, reuse, extend, build);
+// or `none, because <why nothing could exist>`; or `to find: <where the Researcher looks>` when the Researcher has not run yet.
+// scripts/pr-lessons-check.mjs holds the same rule for the PR body; scripts/pr-lessons-check.test.mjs runs one corpus through both.
+const PA_SOURCE = /https?:\/\/\S+|[\w.-]+\/[\w.-]+|#\d+|\b[\w-]+\.(?:md|mjs|json|ts|js|yml|sh)\b|`[^`\n]{3,}`/
+const PA_DECISION = /\b(copy|copied|adapt(?:ed|s)?|reuse[ds]?|build|built|extend(?:ed|s)?|reverse-engineer\w*)\b/i
+export function priorArtOk(line) {
+  const t = String(line).replace(/\*\*/g, '').trim()
+  return /^none, because .{10,}$/i.test(t) || /\bto find:\s*\S{5,}/i.test(t) || (t.length >= 20 && PA_SOURCE.test(t) && PA_DECISION.test(t))
+}
 export function needsPriorArt(text) {
-  const plain = text.replace(/[*_`]/g, '')
-  return /\bSize:[ \t]*[SML]\b/i.test(plain) &&!/^[ \t>-]*Prior art:[ \t]*[^<\s][^\n]{9,}$/im.test(plain)
+  const line = String(text).split('\n').map((l) => l.replace(/^[ \t>-]*(?:\*\*)?Prior art:(?:\*\*)?[ \t]*/i, (m) => (/Prior art:/i.test(m) ? '\u0000' : m))).find((l) => l.startsWith('\u0000'))
+  return /\bSize:[ \t]*[SML]\b/i.test(String(text).replace(/[*_`]/g, '')) && !(line && priorArtOk(line.slice(1)))
 }
 
 const briefText = (input) => Object.values(input).filter((v) => typeof v === 'string').join('\n')
@@ -303,13 +315,17 @@ export function badTopic(text, checklists) {
   return names.some((n) => n.toLowerCase() === topic.toLowerCase()) ? null : `Topic: ${topic} is no topic in ${CHECKLISTS}: pick one of ${names.join(', ')}`
 }
 
+// Skill folders of claude-setup that get mistaken for kits.
+const SKILL_NAMES = /^(game-3d|social-team|video-studio|storyteller|blender-body|media-editing|roblox|studio|twin|store|store-publish|market|sell|seo|legal|publish|scaffold|toolbox|ui-review|impeccable|operator)$/
 export function badTeam(text, teams) {
   const plain = text.replace(/[*_`]/g, '')
   const rows = teams ? kitRows(teams) : []
   if (!rows.length) return null
   const kit = plain.match(/\bKit:[ \t]*([\w-]+)/i)?.[1].toLowerCase()
   const row = rows.find((r) => r.kit === kit)
-  if (!row) return `Kit: ${kit} is no kit in docs/TEAMS.md (Kits): pick one of ${rows.map((r) => r.kit).join(', ')} by what the task makes (Spawn rule 1)`
+  // A skill name is not a kit (2026-11-12: game-3d, social-team): the kit is what the task makes, the skill goes on the Skills: line.
+  const skill = /^[a-z][\w-]*$/.test(kit) && kit !== 'none' && SKILL_NAMES.test(kit) ? ` (\`${kit}\` is a skill: put it on the Skills: line and pick the kit by what the task makes, e.g. game-3d is a game, social-team is social)` : ''
+  if (!row) return `Kit: ${kit} is no kit in docs/TEAMS.md (Kits)${skill}: pick one of ${rows.map((r) => r.kit).join(', ')} by what the task makes (Spawn rule 1)`
   const size = plain.match(/\bSize:[ \t]*([SML])\b/i)?.[1].toUpperCase()
   if (['video', 'social'].includes(kit) && size === 'S') return `a ${kit} brief is size M (one video or post) or L (a batch, series or launch video), never S (docs/TEAMS.md, Spawn rule 2)`
   const role = roleOf(plain, teams)
@@ -331,8 +347,23 @@ export function badTitle(title, text, teams) {
   return new RegExp(`^\\s*${role.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*·\\s*\\S`, 'i').test(title) ? null : role.name
 }
 
+// Persistent role threads, partly (research 2026-11-12; yskills picked "partly, per plan or PR"): a role thread is
+// reused for the next job of the same plan or PR, so a start while that role has an open thread must say why it is new.
+// A resolved or done thread is not reusable; a Tester at L and every Reviewer are always fresh.
+// The board is the last full thread listing of the transcript (rule-guard's openThreads: any nesting, filtered listings skipped, threads resolved since dropped).
+export const boardThreads = (transcript) => openThreads(toolCalls(String(transcript)))
+export const openSameRole = (board, role) => board.filter((t) => new RegExp(`^\\s*${role.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*·`, 'i').test(t.title)).map((t) => t.title)
+export function reuseBlock(text, teams, board) {
+  const plain = text.replace(/[*_`]/g, '')
+  const role = teams && board?.length && roleOf(plain, teams)
+  if (!role?.row || role.name === 'Reviewer' || (role.name === 'Tester' && /\bSize:[ \t]*L\b/i.test(plain))) return null
+  const open = openSameRole(board, role.name)
+  if (!open.length || /^[ \t>-]*Reuse:[ \t]*none\b[^\n]*\([ \t]*[^)<\s][^)\n]*\)/im.test(plain)) return null
+  return `${role.name} thread already open: "${open[0]}". Run list_threads again first (the board goes stale when threads resolve themselves); if it is still open, give the work to it with message_thread (same plan or PR; docs/TEAMS.md, Reuse rule), or add \`Reuse: none (<why: other plan or PR, long context, parallel read job>)\` to the brief and retry`
+}
+
 // unread: the boot files a thread start still needs (empty when read or when no transcript was given).
-export function decide(tool, input = {}, dirs = [], unread = [], teams = '', checklists = '') {
+export function decide(tool, input = {}, dirs = [], unread = [], teams = '', checklists = '', board = []) {
   const kind = AGENT.test(tool) ? 'Agent' : THREAD_START.test(tool) ? 'thread' : null
   if (kind === 'thread' && unread.length) return { block: `team-guard: read the rules before starting a thread: ${unread.join(' and ')} (in ~/.claude/claude-setup/ or the claude-setup repo; docs/MAP.md, Start here). 2026-10-26 a coordinator skipped them and guessed every model. Read them, then retry.` }
   if (kind === 'thread' && !stamped(briefText(input))) return { block: 'team-guard: every thread brief starts with the stamp line `Role: <one role from docs/TEAMS.md Roster> · Kit: <kit> · Size: <S|M|L>` (operator/briefs.md); a small task with no role says `Role: none`. The thread loads its playbook from it. Add the line, then retry.' }
@@ -350,10 +381,12 @@ export function decide(tool, input = {}, dirs = [], unread = [], teams = '', che
     if (title) found.push(`a ${title} thread is titled \`${title} · <what>\` (claude-setup docs/TEAMS.md, Roster "Runs as"), e.g. "${title} · Bienen-Video"; fix the title`)
     const lines = missingLines(text)
     if (lines.length) found.push(`the brief misses ${lines.join(', ')} (claude-setup .claude/skills/operator/briefs.md, Every thread brief starts with)`)
-    if (needsPriorArt(text)) found.push('add a line `Prior art: <our repos, skills, plugins, public setups checked> -> copy | adapt | build, because <why>` (or `to find: <where the Researcher looks>`; CLAUDE.md, Work for the future)')
+    if (needsPriorArt(text)) found.push('add a line `Prior art: <the sources checked, named: owner/repo, path, URL, #PR> -> copy | adapt | reuse | build, because <why>` (a gesture like \"looked around\" fails; or `none, because <why nothing could exist>`, or `to find: <where the Researcher looks>`; CLAUDE.md, Work for the future)')
     if (needsTester(text)) found.push('a size L Programmer thread starts only after its Tester thread (claude-setup docs/TEAMS.md, Sizes): start `Tester · <app>` first, then put a line `Tester: <its thread id or title>` in this brief')
     const wrong = wrongModel(text, input.model, teams)
     if (wrong) found.push(`the ${wrong.role} runs on ${wrong.allowed.join(' or ')} (claude-setup docs/TEAMS.md, Roster), not ${wrong.tier}. Pass that model. For an exception the row names (e.g. "Opus writes the weekly plan") add \`Model: <tier> (<why>)\` to the brief; if yskills named this model, say "yskills named <model>"`)
+    const reuse = reuseBlock(text, teams, board)
+    if (reuse) found.push(reuse)
     if (found.length) return { block: `team-guard: ${found.length === 1 ? found[0] : `${found.length} problems in this brief: ${found.map((f, i) => `(${i + 1}) ${f}`).join(' ')}`}. Copy the fixed template claude-setup docs/templates/thread-brief.md, fill every line once, then retry.` }
   }
   const own = kind === 'Agent' && downgraded(input, dirs)
@@ -422,7 +455,8 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
       const unread = read ? need.filter((f) => !read.has(f)) : []
       const teams = THREAD_START.test(tool) ? text(join(cwd, 'docs', 'TEAMS.md')) || text(join(dir, 'docs', 'TEAMS.md')) : ''
       const checklists = THREAD_START.test(tool) ? text(join(cwd, CHECKLISTS)) || text(join(dir, CHECKLISTS)) : ''
-      const out = decide(tool, input, [join(cwd, '.claude', 'agents'), join(home, '.claude', 'agents')], unread, teams, checklists)
+      const board = THREAD_START.test(tool) && transcript ? boardThreads(text(transcript)) : []
+      const out = decide(tool, input, [join(cwd, '.claude', 'agents'), join(home, '.claude', 'agents')], unread, teams, checklists, board)
       if (!out.block) out.block = planCheckPre(tool, input ?? {}, { agentId, checklists: text(join(cwd, CHECKLISTS)) || text(join(dir, CHECKLISTS)) })
       if (out.block) { process.stderr.write(out.block); process.exitCode = 2 }
     } catch {

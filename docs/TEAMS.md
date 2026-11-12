@@ -50,19 +50,17 @@ Coordinator only (a thread: Coordinator or thread, above).
 4. **Every start names its model.** The coordinator's thread start (`mcp__hearthbot__start_thread`, older `start_thread_session`) and `create_session` pass `model` (the
    full id from the Models line); every `Agent` call passes `model` (`haiku`, `sonnet`, `opus`). A
    brief's `Model:` line is text only and sets nothing; without the parameter a thread gets the
-   project default and a subagent inherits its parent (tested 2026-10-26: a subagent of an Opus
-   thread ran on Opus although `CLAUDE_CODE_SUBAGENT_MODEL` was sonnet; with `model: haiku` it ran
-   on Haiku). The `team-guard` hook (`global/team-guard.mjs`) blocks an `Agent` call or thread
+   project default and a subagent inherits its parent (tested 2026-10-26: an Opus thread's subagent ran on Opus; with `model: haiku` on Haiku). The `team-guard` hook (`global/team-guard.mjs`) blocks an `Agent` call or thread
    start without `model`, and a thread start before this session read this file (and `CLAUDE.md`
    where no checkout loaded it); a worker's summary does not count (2026-10-26: one found no copy
    and the coordinator guessed every model).
-5. **Agent files load only on the laptop.** A cloud project thread offers only the built-in agent
-   types (`general-purpose`, `Explore`, `Plan`; tested 2026-10-26: `code-reviewer` was "not found").
+5. **Agent files load only on the laptop.** A cloud project thread has only `general-purpose`, `Explore`, `Plan` (2026-10-26: `code-reviewer` "not found").
    There, a named agent such as `code-reviewer` or `design-critic` runs as `general-purpose` with
    its `model` and the prompt "Read `.claude/agents/<name>.md` of claude-setup and act as it on:
    ...".
 6. **The brief** starts with the block in `operator/briefs.md` and names the role's playbook and
    what the step before handed over.
+7. **Reuse**: see the Reuse rule below.
 
 Models: best fitting model per task, cheapest that fits. Fable (claude-fable-5-2) plans a hard task (yskills 2026-11-12): hard = size L, a new product's architecture, art direction or game core loop, a schema, auth, money or data change, or still stuck after a Sonnet round and an Opus checkpoint; plus what yskills names and the project chat (coordinator), which yskills sets by hand. It writes a short plan (goal, constraints, files, done-test) and one checkpoint; Sonnet and Haiku build it. Never on routine work; if Fable is out of credits or unavailable, Opus takes it without asking. Opus (claude-opus-5-5), the one Opus rule: the Planner; taste (Designer, Game Designer, a pick between variants, the video Critic, the story team's taste roles); every gate at every size (yskills 2026-11-03: every gate role and reviewer agent file); a full audit; senior-builder jobs judged by the image (Animator posing, IK, scene systems: `Model: opus (why)`); one checkpoint subagent per S or M task (before committing to an approach, or before "done", or when stuck twice); and the one escalation a roster row names (conflicting findings, a concept or weekly-plan pick, one diagnosis); nothing else. Sonnet (claude-sonnet-5-5) only for cheap, mechanical work: builds and fixes against a given plan, research, renders, edits; never architecture, planning or a gate (yskills 2026-11-03). Haiku (claude-haiku-5-5) for a simple reading job, a lookup, a watch, a CI poll. A thread never picks Fable itself. Effort medium unless yskills asks for more. When a newer model ships, use the newest of each tier. A model yskills names is used as named.
 
@@ -115,14 +113,14 @@ The company. Runs as: where the role lives. Model: the tier (the id is in the Mo
 | Planner ([`planner.md`](../.claude/skills/operator/roles/planner.md)) | the grill cards, the stress test, `PLAN.md` and `features.json` | sizes M and L, step 1 to 3 | a thread `Planner · <topic>` | Opus; Fable on a hard task (Models line) |
 | Researcher ([`researcher.md`](../.claude/skills/operator/roles/researcher.md)) | what exists already (ours first), what the best do, prices, tools, proof people pay | step 2 | subagents, one page each | Sonnet; Haiku to read; Opus to weigh conflicting findings |
 | Archivist ([`archivist.md`](../.claude/skills/operator/roles/archivist.md)) | documents gate-passed scripts, workflows and recipes, keeps the indexes, cleans up by the project's cleanup rule; never files or reviews yskills' reference images (those go straight to the laptop reference folder, [`laptop-folders.md`](laptop-folders.md)), never decides content, never steers threads | a pipeline project with gates; only big workflows and lessons are relayed to it | a thread | Sonnet |
-| Designer ([`designer.md`](../.claude/skills/operator/roles/designer.md)) | the look before any screen: references, palette, type, 2-3 drafts, the vote card; reviews every UI PR | size L, step 4; every UI PR | a thread; `design-critic` subagent per UI PR | Opus; Fable for a new product's art direction |
+| Designer ([`designer.md`](../.claude/skills/operator/roles/designer.md)) | the look before any screen: references, palette, type, 2-3 drafts, the vote card; reviews every UI PR | size L, step 4; every UI PR | a thread; `design-critic` subagent per UI PR | Opus; Fable: art direction, gate director |
 | Content Designer ([`content-designer.md`](../.claude/skills/operator/roles/content-designer.md)) | every word a user reads, German and English | step 4 of a site or app; a PR with a new flow | subagent of the Designer | Sonnet |
 | Game Designer ([`game-designer.md`](../.claude/skills/operator/roles/game-designer.md)) | how a game plays: core loop, run length, difficulty, ad hooks | step 4 of a game; a PR that changes play | a thread at game start; subagent for a small play change | Opus; Fable for a new game's core loop |
 | Audio ([`audio.md`](../.claude/skills/operator/roles/audio.md)) | how a game sounds, licence-clean and small | after the Game Designer's doc; a PR with a new sound moment | subagent of the Game Designer | Sonnet |
 | Sound Designer ([`sound-designer.md`](../.claude/skills/operator/roles/sound-designer.md)) | builds and mixes all sound | picture locked; new scene or cut | a thread | Sonnet |
 | Analytics ([`analytics.md`](../.claude/skills/operator/roles/analytics.md)) | what is measured and why, the weekly numbers line | step 4 of a site, app or game; a PR with a new user action | subagent of the Planner | Sonnet |
 | Animator ([`animator.md`](../.claude/skills/operator/roles/animator.md)) | poses and animates frozen rigged figures: key poses, loops, scene clips, contact; runs the fixed check script and hands strip and numbers to the gate | size M or L of a `game` or `story` scene or clip, after the models are frozen | a thread `Animator · <scene>`; `animator` agent file | Sonnet for given numbers; Opus for posing, IK, scene systems |
-| Programmer ([`programmer.md`](../.claude/skills/operator/roles/programmer.md)) | one slice or fix as one PR, tests first, green CI; runs the S and M gate, its verdict from a fresh Opus reviewer | every size, step 5 | a thread per slice, max three at once | Sonnet; one Opus checkpoint subagent |
+| Programmer ([`programmer.md`](../.claude/skills/operator/roles/programmer.md)) | one slice or fix as one PR, tests first, green CI; runs the S and M gate, its verdict from a fresh Opus reviewer | every size, step 5 | a fresh thread per slice or PR (follow-ups on its PR go to it), max three at once | Sonnet; one Opus checkpoint subagent |
 | Tester ([`tester.md`](../.claude/skills/operator/roles/tester.md)) | QA: the gate, grades the preview against the criteria; never built it | step 6 | S, M: the author thread; L: a fresh thread | Opus |
 | Reviewer ([`reviewer.md`](../.claude/skills/operator/roles/reviewer.md)) | reads the diff for bugs, mess, missing tests | every gate | subagent of the gate | Opus |
 | Security ([`security.md`](../.claude/skills/operator/roles/security.md)) | the diff and the preview attacked like an outsider | user input, auth, money, secrets; before launch | subagent of the gate | Opus, effort high on money, auth, secrets |
@@ -192,6 +190,21 @@ non-trivial change in any kit, `setup` included, starts with research, a placeme
 (`operator` SKILL.md, Plan first). Research asked for (SOTA, best practice): a Researcher subagent, named on the brief's `Researcher:` line. A kind not in the table is sized as `site`. Several ideas in one message become one chain each; chains that
 share no file run at once, the rest queue in `PROGRESS.md`. The `Done:` line ends with one short
 line per role saying what it found or checked, and the skills actually used (`briefs.md`, Skills).
+
+## Reuse rule
+
+yskills 2026-11-12, role threads "like a real team"; research
+[`research/2026-11-12-persistent-role-threads-sota.md`](research/2026-11-12-persistent-role-threads-sota.md), verdict partly, yskills chose per plan or PR. A role thread
+serves one plan or PR and gets that plan's follow-up work (revise, fix within the same PR, the next part of a plan for a Planner, Designer or Animator) by `message_thread`, not a new start; a thread that posted its `Done:` is resolved and not reused, one that waits on review or yskills is; its
+memory is its files (`PLAN.md`, `PROGRESS.md`, `NOW.md`), and after a compaction it re-reads its role card and brief.
+Always fresh: the L gate `Tester`, every reviewer (an `Agent` subagent anyway), a new plan or PR, a thread idle over 1 h (CLAUDE.md, Tokens) or with
+a long history, because a long context degrades and a woken thread re-pays its cache. A second thread of a writer role
+only for a parallel slice on other files (max three Programmers) and a second reader only for a parallel read job;
+it closes at its `Done:`. Work goes to the thread whose title role matches; a job no role fits becomes a new
+Roster row (a PR), never another role's job. Before every `start_thread` the coordinator relists its board; an
+open thread of that role means `message_thread`, or the brief says `Reuse: none (<why>)`. [guard: hook
+global/team-guard.mjs]. Not adopted from the proposal: nine standing threads per project (no source supports a
+thread as long memory) and "waiting costs no tokens" (unproven; an idle thread rewrites its cache after 5 min).
 
 ## Who checks
 

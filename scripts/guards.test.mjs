@@ -299,7 +299,7 @@ test('team guard: blocks Agent and thread starts without model, passes with one'
     assert.match(m('').stderr, /Prior art:/, 'an M brief without prior art is blocked')
     assert.match(m('', 'S').stderr, /Prior art:/, 'an S brief too (yskills 2026-11-03: research before guessing)')
     assert.equal(m('\nPrior art: <what was checked>').status, 2, 'the placeholder does not count')
-    assert.equal(m('\nPrior art: BMAD and our operator roles checked; adapt ours, because hearthbot threads').status, 0)
+    assert.equal(m('\nPrior art: bmad-code-org/BMAD-METHOD and our operator roles checked; adapt ours, because hearthbot threads').status, 0)
     assert.equal(start('Bash', { command: 'ls' }), 0)
     assert.equal(start('mcp__hearthbot__post_message', { text: 'x' }), 0)
     assert.equal(runTeam('pre', { cwd, tool_name: 'Agent', tool_input: { prompt: 'x' } }, { CLAUDE_SETUP_TEAM_GUARD: 'off' }).status, 0)
@@ -310,7 +310,7 @@ test('team guard: blocks Agent and thread starts without model, passes with one'
 test('team guard: an Animator thread starts on the game and story kits, on Sonnet, not on site or setup', async () => {
   const { decide } = await import('../global/team-guard.mjs')
   const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
-  const brief = (kit, size = 'M') => ({ brief: `Role: Animator · Kit: ${kit} · Size: ${size}\nPrior art: scene kit and our blender-body skill checked; adapt, because the key-pose library exists${FULL}\nSheet: n/a scene animation, no body or outfit model change`, title: 'Animator · fenster', model: 'claude-x-1' })
+  const brief = (kit, size = 'M') => ({ brief: `Role: Animator · Kit: ${kit} · Size: ${size}\nPrior art: docs/game-pipeline.md and our blender-body skill checked; adapt, because the key-pose library exists${FULL}\nSheet: n/a scene animation, no body or outfit model change`, title: 'Animator · fenster', model: 'claude-x-1' })
   for (const kit of ['game', 'story']) assert.deepEqual(decide('mcp__hearthbot__start_thread', brief(kit), [], [], teams), {}, `Animator passes on ${kit}`)
   for (const kit of ['site', 'app', 'setup']) assert.match(decide('mcp__hearthbot__start_thread', brief(kit), [], [], teams).block ?? '', /not on the `\w+` kit's team/, `Animator is skipped on ${kit}`)
   assert.match(decide('mcp__hearthbot__start_thread', { ...brief('game'), model: 'claude-opus-x' }, [], [], teams).block ?? '', /runs on sonnet/, 'the Animator runs on Sonnet')
@@ -322,7 +322,7 @@ test('team guard: an Animator thread starts on the game and story kits, on Sonne
 test('team guard: a size L Programmer brief needs a Tester line first', () => {
   const cwd = mkdtempSync(join(tmpdir(), 'team-'))
   try {
-    const start = (brief) => runTeam('pre', { cwd, tool_name: 'mcp__hearthbot__start_thread', tool_input: { brief: `${brief}${FULL}\nPrior art: checked our app template; adapt it, because it has auth`, model: 'claude-x-1' } })
+    const start = (brief) => runTeam('pre', { cwd, tool_name: 'mcp__hearthbot__start_thread', tool_input: { brief: `${brief}${FULL}\nPrior art: checked templates/new-project; adapt it, because it has auth`, model: 'claude-x-1' } })
     const r = start('Role: Programmer · Kit: app · Size: L\nModel: x')
     assert.equal(r.status, 2)
     assert.match(r.stderr, /Tester/)
@@ -677,7 +677,7 @@ test('rule guard: a thread checks its spawn brief against TEAMS.md and sends a b
   const spawn = (brief) => `<wake reason="spawn"><message>${brief}</message></wake>`
   assert.match(await briefCheck(spawn(`Role: Programmer · Kit: setup · Size: M${FULL}`), root), /^Title check[\s\S]*`Programmer · `[\s\S]*rename_thread/)
   assert.equal(await briefCheck(spawn(`Role: Programmer · Kit: setup · Size: S${FULL}`), root), '', 'size S needs no role title (yskills 2026-10-27)')
-  assert.equal(await briefCheck(spawn(`Role: none · Kit: setup · Size: S${FULL}`), root), '', 'no role, no title rule')
+  assert.match(await briefCheck(spawn(`Role: none · Kit: setup · Size: S${FULL}`), root), /Brief check[\s\S]*names no role of the Roster/, 'no role is refused (yskills 2026-11-12), not waved through')
   assert.match(await briefCheck(spawn(`Role: Designer · Kit: content · Size: S${FULL}`), root), /Brief check[\s\S]*Kit: content is no kit[\s\S]*message_coordinator/)
   assert.match(await briefCheck(spawn('Make a bee video.'), root), /no `Role: · Kit: · Size:` stamp/)
   assert.match(await briefCheck(spawn('Role: Programmer · Kit: setup · Size: S\nFix it.'), root), /brief lines missing: Model:/)
@@ -774,11 +774,15 @@ test('team guard: an Agent call cannot run a gate agent below its file model', a
 test('team guard: a thread start runs its role on the tier its Roster row names', async () => {
   const { decide, wrongModel } = await import('../global/team-guard.mjs')
   const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
-  const brief = (role, size) => `Role: ${role} · Kit: setup · Size: ${size}${FULL}\nPrior art: claude-setup guards checked -> adapt, because they exist`
+  const brief = (role, size) => `Role: ${role} · Kit: setup · Size: ${size}${FULL}\nPrior art: claude-setup/global guards checked -> adapt, because they exist`
   assert.ok(wrongModel(brief('Planner', 'M'), 'sonnet', teams))
   assert.equal(wrongModel(brief('Planner', 'M'), 'opus', teams), null)
   assert.equal(wrongModel(brief('Planner', 'M'), 'fable', teams), null, 'the row names Fable')
   assert.ok(wrongModel(brief('Programmer', 'M'), 'opus', teams), 'an Opus checkpoint subagent is no Opus thread')
+  // gate.md Rounds 2: the Fable gate director runs as a Designer thread (11-12: that start was refused for lack of a row).
+  assert.equal(wrongModel(brief('Designer', 'S'), 'fable', teams), null, 'the Designer row names Fable for the gate director')
+  assert.ok(wrongModel(brief('Designer', 'S'), 'sonnet', teams), 'a Designer is never Sonnet')
+  assert.match(teams, /\| Designer .*Fable: art direction, gate director/, 'the Designer row names the gate director')
   // yskills 2026-11-03: gates always Opus, at every size.
   for (const size of ['S', 'M', 'L']) {
     assert.equal(wrongModel(brief('Tester', size), 'opus', teams), null, `Tester ${size} on Opus`)
@@ -841,7 +845,7 @@ test('check.mjs duplicate rules: a wrapped sentence in two files is found, a poi
 test('team guard: a Roster exception passes with its reason in the brief', async () => {
   const { wrongModel } = await import('../global/team-guard.mjs')
   const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
-  const brief = 'Role: Social Lead · Kit: social · Size: M\nPrior art: social-team skill checked -> adapt, because it exists'
+  const brief = 'Role: Social Lead · Kit: social · Size: M\nPrior art: social-team/SKILL.md checked -> adapt, because it exists'
   assert.ok(wrongModel(brief, 'opus', teams))
   assert.equal(wrongModel(`${brief}\nModel: opus (the weekly plan)`, 'opus', teams), null)
   assert.ok(wrongModel(`${brief}\nModel: haiku (cheaper)`, 'haiku', teams), 'a tier the row never names stays blocked')
@@ -892,7 +896,7 @@ test('rule guard: read turns a page into plain text', async () => {
 test('team guard: kit, size, role and brief lines are checked against TEAMS.md', async () => {
   const { decide, badTeam, missingLines } = await import('../global/team-guard.mjs')
   const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
-  const start = (stamp, model = 'sonnet') => decide('mcp__hearthbot__start_thread', { instructions: `${stamp}${FULL}\nPrior art: video-studio and storyteller checked -> adapt, because they are ours`, model }, [], [], teams).block ?? ''
+  const start = (stamp, model = 'sonnet') => decide('mcp__hearthbot__start_thread', { instructions: `${stamp}${FULL}\nPrior art: video-studio/SKILL.md and storyteller checked -> adapt, because they are ours`, model }, [], [], teams).block ?? ''
   assert.match(start('Role: Designer · Kit: content · Size: S'), /no kit/)
   assert.match(start('Role: Producer · Kit: video · Size: S'), /never S/)
   assert.match(start('Role: Game Designer · Kit: story · Size: M', 'opus'), /not on the `story` kit/)
@@ -905,7 +909,7 @@ test('team guard: kit, size, role and brief lines are checked against TEAMS.md',
   assert.equal(start('Role: Designer · Kit: story (Ren\'Py) · Size: L', 'opus'), '', 'Designer for renders; "Game Designer" in Skipped is another role')
   assert.equal(start('Role: Programmer (debug) · Kit: setup · Size: M'), '')
   // Test project 2026-10-27: the bee video thread was not titled `Producer · <video>`.
-  const titled = (title) => decide('mcp__hearthbot__start_thread', { title, instructions: `Role: Producer · Kit: video · Size: M${FULL}\nPrior art: video-studio -> adapt, because it is ours`, model: 'sonnet' }, [], [], teams).block ?? ''
+  const titled = (title) => decide('mcp__hearthbot__start_thread', { title, instructions: `Role: Producer · Kit: video · Size: M${FULL}\nPrior art: video-studio/SKILL.md -> adapt, because it is ours`, model: 'sonnet' }, [], [], teams).block ?? ''
   assert.match(titled('Bienen-Video'), /Producer thread is titled `Producer · <what>`/)
   assert.equal(titled('Producer · Bienen-Video'), '')
   assert.equal(decide('mcp__hearthbot__start_thread', { title: 'Fix login', instructions: `Role: Programmer · Kit: app · Size: S${FULL}`, model: 'sonnet' }, [], [], teams).block, undefined, 'size S needs no role title')
@@ -1281,7 +1285,7 @@ test('team guard: a bad brief is refused once with every problem and a template 
   const tpl = readFileSync(join(root, 'docs/templates/thread-brief.md'), 'utf8')
   const block = tpl.match(/```\n([\s\S]*?)```/)?.[1] ?? ''
   assert.ok(block, 'the template has one fenced brief block')
-  const filled = block.replace(/<[^>\n]+>/g, (m) => (m === '<S|M|L>' ? 'M' : /^<kit/.test(m) ? 'setup' : /^<Role/.test(m) ? 'Programmer' : /^<Reviewer thread/.test(m) ? 'Reviewer · x' : 'something concrete for this task'))
+  const filled = block.replace(/<[^>\n]+>/g, (m) => (m === '<S|M|L>' ? 'M' : /^<kit/.test(m) ? 'setup' : /^<Role/.test(m) ? 'Programmer' : /^<Reviewer thread/.test(m) ? 'Reviewer · x' : /^<sources/.test(m) ? 'obra/superpowers' : 'something concrete for this task'))
   assert.deepEqual(missingLines(filled), [], 'a filled template has every must-have line')
   assert.ok(stamped(filled) && !needsPriorArt(filled) && !needsTester(filled))
   const unfilled = missingLines(block)
@@ -1362,4 +1366,79 @@ test('team guard: every Programmer or Animator brief on a game or story kit name
   assert.equal(missingLines(brief('Make the HUD.', 'Animator', 'story')).length, 2, 'Animator on the story kit too')
   assert.deepEqual(missingLines(brief('Fix the login page copy.', 'Programmer', 'app')), [], 'only game and story kits')
   assert.deepEqual(missingLines(brief('Write the cast sheet and body plan for Mira.', 'Planner', 'game')), [], 'the cast stage itself writes the sheet')
+})
+
+// yskills 2026-11-12 (persistent role threads, research 2026-11-12): a role thread is reused within one plan or PR,
+// so a thread start while the same role has an open thread on the board must say why it is new.
+const BOARD = (rows) => `<child-session-output nonce="x">{"sessions":[${rows.map(([title, state, resolved]) => `{"created_at":"2026-11-12T08:00:00Z","last_activity_at":"2026-11-12T08:10:00Z",${resolved ? '"resolved":true,' : ''}"state":"${state}","thread_id":"cmsg_${rows.findIndex((r) => r[0] === title)}","title":"${title}"}`).join(',')}],"total":${rows.length}}</child-session-output>`
+
+const JSONL = (text, input = {}, id = 't1') => `${JSON.stringify({ message: { content: [{ type: 'tool_use', id, name: 'mcp__hearthbot__list_threads', input }] } })}\n${JSON.stringify({ message: { content: [{ type: 'tool_result', tool_use_id: id, content: [{ type: 'text', text }] }] } })}\n`
+
+test('team guard: the coordinator reuses an open role thread instead of starting a second one', async () => {
+  const { decide, boardThreads, openSameRole } = await import('../global/team-guard.mjs')
+  const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
+  const board = boardThreads(JSONL(BOARD([['Programmer · fix the login', 'working'], ['Planner · old plan', 'done', true], ['Animator · scene 1', 'review_ready'], ['Tester · PR 12', 'working']])))
+  assert.deepEqual(openSameRole(board, 'Programmer'), ['Programmer · fix the login'])
+  assert.deepEqual(openSameRole([{ title: 'Programmer·a', state: 'working' }, { title: 'Game Designer · x', state: 'working' }], 'Designer'), [], 'no prefix collision')
+  assert.deepEqual(openSameRole([{ title: 'Programmer·a', state: 'working' }], 'Programmer'), ['Programmer·a'], 'the dot may sit tight')
+  const odd = (text) => boardThreads(JSONL(text)).map((t) => t.title)
+  assert.deepEqual(odd(JSON.stringify({ threads: [{ thread_id: 'a', state: 'working', title: 'Programmer · fix {x}', produced: [{ id: 1 }] }] }, null, 2)), ['Programmer · fix {x}'], 'braces, a nested array, pretty print and a threads key')
+  assert.deepEqual(boardThreads(JSONL(BOARD([['Programmer · a', 'working']]), { state: 'done' })), [], 'a filtered listing is no board')
+  assert.deepEqual(boardThreads(`${JSONL(BOARD([['Programmer · a', 'working']]))}${JSON.stringify({ message: { content: [{ type: 'tool_use', id: 'r1', name: 'mcp__hearthbot__set_thread_resolved', input: { thread_id: 'cmsg_0' } }] } })}\n`), [], 'resolved since the listing')
+  assert.deepEqual(openSameRole(board, 'Planner'), [], 'a resolved thread is not reusable')
+  assert.deepEqual(openSameRole(board, 'Animator'), ['Animator · scene 1'], 'review_ready counts as open')
+  const start = (role, extra = '', size = 'M') => decide('mcp__hearthbot__start_thread', { brief: `Role: ${role} · Kit: setup · Size: ${size}${FULL}${extra}`, title: `${role} · next slice`, model: 'claude-x-1' }, [], [], teams, '', board)
+  assert.match(start('Programmer').block ?? '', /Programmer · fix the login.*message_thread/s, 'an open Programmer thread: message it instead')
+  assert.deepEqual(start('Programmer', '\nReuse: none (parallel slice on other files, plan 2)'), {}, 'a stated reason lets a second one start')
+  assert.match(start('Programmer', '\nReuse: none').block ?? '', /Reuse:/, 'a bare none is no reason')
+  assert.deepEqual(start('Programmer', '\nReuse: none (new PR)'), {}, 'a short real reason passes (TEAMS.md names "a new plan or PR")')
+  assert.match(start('Programmer', '\nReuse: none ()').block ?? '', /Reuse:/, 'empty parentheses are no reason')
+  assert.match(start('Programmer').block ?? '', /list_threads again/, 'the block says to relist a stale board')
+  assert.match(start('Programmer', '\nReuse: none (<why this is a new thread>)').block ?? '', /Reuse:/, 'the template placeholder is no reason')
+  assert.deepEqual(start('Planner'), {}, 'no open Planner thread: start as before')
+  assert.deepEqual(start('Tester', '', 'L'), {}, 'the L gate Tester is always fresh (docs/TEAMS.md, Reuse rule)')
+  const withReviewer = boardThreads(JSONL(BOARD([['Reviewer · Gate PR 1', 'working']])))
+  assert.deepEqual(decide('mcp__hearthbot__start_thread', { brief: `Role: Reviewer · Kit: setup · Size: M${FULL}`, title: 'Reviewer · Gate PR 2', model: 'claude-x-1' }, [], [], teams, '', withReviewer), {}, 'every reviewer is fresh (docs/TEAMS.md, Reuse rule: Always fresh)')
+  assert.deepEqual(decide('mcp__hearthbot__start_thread', { brief: `Role: Programmer · Kit: setup · Size: M${FULL}`, title: 'Programmer · x', model: 'claude-x-1' }, [], [], teams, '', []), {}, 'no board read: as before')
+})
+
+test('team guard: the hook reads the last thread board of the transcript', () => {
+  const cwd = mkdtempSync(join(tmpdir(), 'team-'))
+  try {
+    const transcript = join(cwd, 't.jsonl')
+    mkdirSync(join(cwd, 'docs'))
+    cpSync(join(root, 'docs/TEAMS.md'), join(cwd, 'docs/TEAMS.md'))
+    const read = `${JSON.stringify({ message: { content: [{ type: 'tool_use', name: 'Read', input: { file_path: 'claude-setup/CLAUDE.md docs/TEAMS.md' } }] } })}\n`
+    writeFileSync(transcript, read + JSONL(BOARD([['Programmer · fix the login', 'working']])))
+    const start = (extra = '') => runTeam('pre', { cwd, transcript_path: transcript, tool_name: 'mcp__hearthbot__start_thread', tool_input: { brief: `Role: Programmer · Kit: setup · Size: S${FULL}${extra}`, model: 'claude-x-1' } }, { CLAUDE_SETUP_HOME: cwd })
+    assert.equal(start().status, 2)
+    assert.match(start().stderr, /message_thread/)
+    assert.equal(start('\nReuse: none (other plan, the old thread is long)').status, 0)
+  } finally { rmSync(cwd, { recursive: true, force: true }) }
+})
+
+
+// 2026-11-12: a skill name as the Kit (game-3d, social-team) got the bare kit list; now the error says it is a skill.
+test('team guard: a skill name as the Kit gets a hint and the valid kit list', async () => {
+  const { badTeam } = await import('../global/team-guard.mjs')
+  const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
+  const msg = badTeam('Role: Programmer · Kit: game-3d · Size: M', teams) ?? ''
+  assert.match(msg, /game-3d.*is a skill: put it on the Skills: line/)
+  assert.match(msg, /pick one of [\w, -]*game/, 'the valid kits are listed')
+  assert.doesNotMatch(badTeam('Role: Programmer · Kit: nonsense · Size: M', teams) ?? '', /is a skill/, 'an unknown word gets no skill hint')
+})
+
+// transition rule 6 (2026-11-12): gate images and PLAN-REVIEW.md live under gate/<asset>/, only the ledger itself is protected.
+test('gate folder: files under gate/<asset>/ are free to write, the ledger and grants are not', async () => {
+  const { gateStep } = await import('../global/gate-rounds.mjs')
+  const dir = '/tmp/ledger-x'
+  const step = (tool, input) => gateStep(tool, input, { dir })
+  assert.equal(step('Write', { file_path: '/mnt/project-files/gate/o_r_7/r1/front.png' }), null)
+  assert.equal(step('Write', { file_path: '/mnt/project-files/gate/o_r_7/PLAN-REVIEW.md' }), null)
+  assert.equal(step('Write', { file_path: `${dir}/o_r_7/r2/side.png` }), null)
+  assert.match(step('Write', { file_path: '/mnt/project-files/gate/o_r_7.json' }) ?? '', /written only by gate-rounds/)
+  assert.match(step('Write', { file_path: `${dir}/o_r_7.json` }) ?? '', /written only by gate-rounds/)
+  assert.match(step('Edit', { file_path: `${dir}/grants/card.o_r_7.json` }) ?? '', /written only by gate-rounds/)
+  assert.equal(step('Bash', { command: 'mkdir -p /mnt/project-files/gate/o_r_7/r1 && cp /tmp/a.png /mnt/project-files/gate/o_r_7/r1/a.png' }), null)
+  assert.match(step('Bash', { command: 'rm /mnt/project-files/gate/o_r_7.json' }) ?? '', /written only by gate-rounds/)
 })

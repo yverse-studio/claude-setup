@@ -7,9 +7,9 @@
 // CLI: gate-rounds.mjs status|check|init|direct|card|picture|waive <asset> ...   (usage text below)
 // Fail closed: a gate-shaped call whose check throws is refused. CLAUDE_SETUP_RULE_GUARD=off turns the hook (not the CLI) off.
 import { execFileSync } from 'node:child_process'
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { join } from 'node:path'
+import { basename, join, normalize } from 'node:path'
 
 export const THRESHOLD = 4.5
 export const IMPORTANT_THRESHOLD = 4.8
@@ -41,6 +41,44 @@ export function writeLedger(dir, ledger) {
   renameSync(`${f}.${process.pid}.tmp`, f)
 }
 export const lastRound = (l) => l.rounds.at(-1)?.n ?? 0
+
+// ---- grants (security review 2026-11-12, finding 1): the proofs for init, direct, card, picture and waive are read by the hook, and the
+// CLI refuses those verbs without the short grant the hook leaves after it checked them. A call that bypasses the hook (a copy of this
+// file, node -e, an import) reaches the CLI without a grant and is refused there too, so the filename in argv is no longer the lock.
+export const GRANTED = ['init', 'direct', 'card', 'picture', 'waive']
+export const GRANT_SECONDS = 120
+const grantFile = (dir, verb, asset) => join(dir, 'grants', `${verb}.${basename(fileOf(dir, asset))}`)
+// The hook reads the command before the shell expands it, the CLI after: both sides key the grant on the same form (gate round 1 of the #450 re-land).
+export const grantKey = (ref, home = homedir()) => { const v = String(ref ?? '').trim().replace(/^(['"])(.*)\1$/, '$2'); return v ? normalize(v.replace(/^(?:~|\$HOME|\$\{HOME\})(?=\/|$)/, home)) : '' }
+export function issueGrant(dir, verb, asset, ref, now = Date.now()) {
+  mkdirSync(join(dir, 'grants'), { recursive: true })
+  writeFileSync(grantFile(dir, verb, asset), `${JSON.stringify({ verb, asset: String(asset).toLowerCase(), ref: grantKey(ref), exp: now + GRANT_SECONDS * 1000 })}\n`)
+}
+export function takeGrant(dir, verb, asset, ref, now = Date.now()) {
+  const f = grantFile(dir, verb, asset)
+  let g
+  try { g = JSON.parse(readFileSync(f, 'utf8')) } catch { return false }
+  try { unlinkSync(f) } catch { /* already taken */ }
+  return g.exp > now && g.verb === verb && g.asset === String(asset).toLowerCase() && g.ref === grantKey(ref)
+}
+
+// ---- who may post a verdict (finding 2): a verdict is counted only from a gate session (role Tester, Reviewer, Evaluator) or when the
+// headline came out of a fresh reviewer subagent of this session (gate.md: S and M run in the author thread with one fresh code-reviewer).
+// A Programmer that types its own "Gate 5/5" has neither, so it can neither pass nor merge itself.
+const norm = (t) => String(t).replace(/[*_`#>\s]+/g, ' ').trim().toLowerCase()
+const GATE_ROLE = /^(tester|reviewer|evaluator)$/i // exact Roster name from the role stamp, never a prefix (security review 2026-11-12)
+// Real reviewer agents only (an invented subagent_type does not vouch), the verdict must open the reviewer's own result, and the prompt the
+// builder gave it must not already contain that verdict (security review 2026-11-12, finding 2: a self-attested proof).
+const REVIEWER = /^(code-reviewer|evaluator|security-reviewer|typescript-reviewer|vue-reviewer|database-reviewer|design-critic|legal-reviewer|red-team)$/
+export function reviewerProof(body, calls = []) {
+  const line = norm(String(body).split('\n').find((l) => l.trim()) ?? '')
+  const lead = (t) => norm(String(t).split('\n').find((l) => l.trim()) ?? '')
+  return !!line && calls.some((c) => /^(Agent|Task)$/.test(c.name) && REVIEWER.test(String(c.input?.subagent_type ?? '')) && lead(c.result) === line && !norm(c.input?.prompt ?? '').includes(line))
+}
+export function authorProblem(body, ctx = {}) {
+  if (GATE_ROLE.test(ctx.role ?? '') || reviewerProof(body, ctx.calls ?? [])) return null
+  return `gate verdict: a verdict counts only from a gate session (role Tester or Reviewer) or when its headline came out of a fresh reviewer subagent of this session (code-reviewer or evaluator). This session is ${ctx.role ? `the ${String(ctx.role).slice(0, 30)}` : 'not a gate role'} and no reviewer subagent returned this headline, so a builder cannot pass or merge its own work (gate.md, Rounds).`
+}
 
 // "Gate 4.2/5 (L, round 3) [important]" or "Gate 5/5 (S, round 1)" or "Gate fail, round 2".
 // Only a line that STARTS with "Gate <score>/5", "Gate fail" or "Gate pass" is a verdict; "the gate flagged ... round 1" is talk.
@@ -123,7 +161,7 @@ export function gateBrief(brief, { model = null, dir = ledgerDir() } = {}) {
 }
 
 // ---- proofs the hook reads from the session's transcript
-// The one transcript reader of the task ledger (task-ledger.mjs: ranInSession, messageAfter, briefSize): the rows of the JSONL, bad lines skipped.
+// The one transcript reader of the task ledger (task-ledger.mjs): the rows of the JSONL, bad lines skipped.
 export const transcriptRows = (text) => String(text).split('\n').map((l) => { try { return JSON.parse(l) } catch { return null } }).filter(Boolean)
 export const CMSG = /#?(cmsg_\w+)/ // one pattern for a card or message id; task-ledger.mjs reuses it
 const cmsg = CMSG
@@ -271,17 +309,6 @@ export function simpleCommands(text, depth = 0) {
 }
 
 const GUARDS = 'rule-guard|team-guard|context-guard|compact-guard|attempt-guard|gate-rounds|task-ledger' // every installed guard file (team-guard.mjs GUARD_FILES)
-const LAUNCHERS = /^(node|nodejs|bun|deno|tsx|ts-node|npx|npm|pnpm|yarn|env|stdbuf|setsid|nice|ionice|timeout|xargs|nohup|time|script|python3?|sh|bash)$/
-const GUARD_NAME = /(?:context|compact|attempt|team|rule)[-_]?guar|claude-setup\/\S*[?*{]/
-// The two hand uses of a guard: `node --check <guard>` (the flag before the file, nothing after it) and `node rule-guard.mjs read <url>` (the verb right after the script).
-const guardHandUse = (s) => {
-  if (base(s.a0) !== 'node') return false
-  const i = s.args.findIndex((a) => GUARD_NAME.test(a))
-  if (i < 0) return false
-  const guard = base(s.args[i])
-  if (s.args.length === 2 && i === 1 && /^(--check|-c)$/.test(s.args[0]) && /^[\w.-]+-guard\.mjs$|^gate-rounds\.mjs$/.test(guard)) return true
-  return i === 0 && guard === 'rule-guard.mjs' && s.args[1] === 'read' && s.args.length >= 3
-}
 const GUARD_FILE = new RegExp(`\\.claude[\\\\/]claude-setup[\\\\/](?:${GUARDS})\\.mjs$`)
 const CLI_VERBS = ['status', 'check', 'init', 'direct', 'card', 'picture', 'waive', 'merge', 'post']
 const MERGE_DOOR = /pulls\/[^\s/]*\/merge|mergePullRequest|enablePullRequestAutoMerge/
@@ -297,23 +324,28 @@ function ghProblem(s) {
 
 // The literal ledger or guard path only: a word that holds the ledger dir (or .claude/claude-setup/gate, project-files/gate) or an installed
 // guard file, as a redirect target or an argument of a writer. Shell tricks around it are a named Limit (gate.md, Rounds).
+// The session stamps the guards write in the temp dir: the role (who may post a verdict, hands-off) and the brief lock.
+const STAMP = /claude-setup-(?:role|spawnrole|badbrief|model|brief|artifacts)-/
+const READ_ONLY = new Set(['cat', 'grep', 'rg', 'ls', 'head', 'tail', 'wc', 'diff', 'git', 'stat', 'file', 'less', 'echo', 'printf', 'find', 'test', 'cd', 'sed', 'awk'])
+// `node <script>` whose first non-flag argument is gate-rounds.mjs, with no flag that runs other code first.
+const isCounterCall = (s) => s.a0 === 'node' && !s.args.some((a) => /^(-e|-p|--eval|--print|--import|-r|--require|--input-type|--loader|--experimental-loader)/.test(a)) && ['gate-rounds.mjs', 'task-ledger.mjs'].includes(base(s.args.find((a) => !a.startsWith('-')) ?? ''))
 function bashProblem(cmd, dir, ctx) {
   const { list, bad } = simpleCommands(cmd)
   if (bad && /\bgh\b|gate/.test(cmd)) return 'gate ledger: this command has unbalanced quotes and mentions gh or gate, so it cannot be read; write it plainly (gate.md, Rounds).'
-  const dirRe = dir ? new RegExp(`${dir.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\/+$/, '')}(?:/|$)`) : null
-  const named = (w) => !/\s/.test(w) && (dirRe?.test(w) || /(?:project-files|\.claude\/claude-setup)\/gate(?:\/|$)/.test(w) || GUARD_FILE.test(w) || /\.claude\/projects\/\S*\.jsonl$/.test(w)) // a session transcript is written by the harness only
+  // Only the ledger itself is protected: the dir, a file directly in it and grants/. Files below gate/<asset>/ (images, PLAN-REVIEW.md) are free (transition rule 6).
+  const dirRe = dir ? new RegExp(`^(?:[-\\w]*=)?${dir.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\/+$/, '')}(?:/(?:grants(?:/.*)?|[^/]*))?$`) : null
+  const named = (w) => !/\s/.test(w) && (STAMP.test(w) || dirRe?.test(w) || /^(?:[-\w]*=)?(?:.*\/)?(?:project-files|\.claude\/claude-setup)\/gate(?:\/(?:grants(?:\/.*)?|[^/]*))?$/.test(w) || GUARD_FILE.test(w) || /\.claude\/projects\/\S*\.jsonl$/.test(w)) // a session transcript is written by the harness only
   const msg = 'gate ledger: the round counter is written only by gate-rounds.mjs (gate.md, Rounds), never by hand; the installed guards change only through a claude-setup PR.'
   if (list.some((s) => s.env) && list.some((s) => s.a0 === 'node' && s.args.some((a) => ['gate-rounds.mjs', 'task-ledger.mjs'].includes(base(a))))) return 'gate ledger: CLAUDE_SETUP_* variables (the ledger dir, the guard switch) are not set in a call that runs the counter or the task ledger; they would point it at another ledger (gate.md, Rounds).'
+  // Finding 1: the counter is run as `node <path>/gate-rounds.mjs <verb>` and nothing else. Any other command that names the file and is
+  // not a plain read (a copy, node -e, an import, a symlink) is refused, so the proofs cannot be walked around by renaming the script.
+  if (/(?:gate-rounds|task-ledger)\.mjs/.test(cmd) && !list.every((s) => isCounterCall(s) || READ_ONLY.has(base(s.a0).toLowerCase()))) return 'gate ledger: gate-rounds.mjs and task-ledger.mjs are run only as "node ~/.claude/claude-setup/<file> <verb> <asset> ..." (gate.md, Rounds); copying them, importing it or running it through node -e is refused, because the proofs live in this hook and in the CLI.'
   for (const s of list) {
     if (s.a0 === 'gh') { const r = ghProblem(s); if (r) return r }
     if (s.redirs.some((r) => !/\s/.test(r) && (named(r) || GUARD_FILE.test(r)))) return msg
-    // An inline script (node -e, python -c) that holds the ledger folder or an installed guard path writes it as well as a redirect does.
+    // An inline script (node -e, python -c) that holds the ledger folder, an installed guard or a transcript path writes it as well as a redirect does (plan 2026-11-12 M28, test 4).
     const inline = /^(node|nodejs|python3?|bun|deno|ruby|perl)$/.test(base(s.a0)) && s.args.some((a) => /^-(?:[a-zA-Z]*[ecp]|-eval|-print)$/.test(a))
-    if (inline && s.args.some((a) => (dir && a.includes(dir.replace(/\/+$/, '') + '/')) || /(?:project-files|\.claude\/claude-setup)\/gate\//.test(a) || /\.claude\/projects\/\S*\.jsonl/.test(a) || GUARD_FILE.test(a) || new RegExp(`\\.claude[\\\\/]claude-setup[\\\\/](?:${GUARDS})\\.mjs`).test(a))) return msg
-    // Second layer (the verdict itself is read from the transcript, not from a payload): an installed guard is run by its hook only. The name is
-    // matched unanchored in any argument of a launcher, so a glob or a wrapper (npx, setsid, stdbuf) does not hide it; `node --check` and
-    // `rule-guard.mjs read <url>` are the hand uses.
-    if (LAUNCHERS.test(base(s.a0)) && s.args.some((a) => GUARD_NAME.test(a)) && !guardHandUse(s)) return 'gate ledger: an installed guard is run by its hook only, never by hand (it takes any payload); the hand uses are "node --check <guard>" and "rule-guard.mjs read <url>".'
+    if (inline && s.args.some((a) => (dir && a.includes(`${dir.replace(/\/+$/, '')}/`)) || /(?:project-files|\.claude\/claude-setup)\/gate\//.test(a) || /\.claude\/projects\/\S*\.jsonl/.test(a) || new RegExp(`\\.claude[\\\\/]claude-setup[\\\\/](?:${GUARDS})\\.mjs`).test(a))) return msg
     const script = s.a0 === 'node' ? s.args.find((a) => base(a) === 'gate-rounds.mjs') ?? s.args.find((a) => !a.startsWith('-')) : null
     if (script && base(script) === 'gate-rounds.mjs') {
       const at = s.args.indexOf(script)
@@ -325,6 +357,12 @@ function bashProblem(cmd, dir, ctx) {
       if (verb === 'direct' && !/fable/i.test(ctx.model ?? '')) return `gate ledger: only a Fable session records the director, this one runs on ${ctx.model ?? 'an unknown model'}. Ask the coordinator for a Fable thread (docs/TEAMS.md, Models line).`
       if (['card', 'picture', 'waive'].includes(verb) && !(ref && cardProof(ref, ctx.calls ?? []))) return `gate ledger: "${verb}" needs --ref <cmsg id> of a request_decision card this session posted (it was not found in this session).`
       if (verb === 'waive' && !(ctx.humanAfter?.(ref))) return 'gate ledger: waive needs yskills\' own answer on that card in this session; none arrived yet.'
+      if (verb === 'post') {
+        const body = read(s.args[s.args.indexOf('--body-file') + 1] ?? '')
+        const why = authorProblem(body, ctx)
+        if (why) return why
+      }
+      if (!ctx.dry && GRANTED.includes(verb)) issueGrant(dir, verb, s.args[at + 2], verb === 'init' ? s.args[s.args.indexOf('--round') + 1] : verb === 'direct' ? s.args[s.args.indexOf('--plan') + 1] : ref)
       continue
     }
     const writes = WRITERS.has(s.a0.toLowerCase()) || (s.a0 === 'sed' && s.args.some((x) => /^-[a-zA-Z]*i|^--in-place/.test(x)))
@@ -343,12 +381,14 @@ const assetOf = (input) => {
 
 // PreToolUse. ctx: { dir, model, calls (the session's tool calls), humanAfter(ref), dry }. Returns a reason or null. dry: check only; the
 // hook runs it first and commits (dry false) only when no other guard refused, so a refused post is never counted.
+// A Write or Edit target that is the ledger: a file directly in the ledger dir (or the project-files/gate folder) or under grants/.
+const ledgerFile = (file, dir) => [dir, '/mnt/project-files/gate'].some((d) => { const root = `${String(d).replace(/\/+$/, '')}/`; if (!file.startsWith(root) && !file.includes('project-files/gate/')) return false; const rel = file.includes('project-files/gate/') && !file.startsWith(root) ? file.split('project-files/gate/').pop() : file.slice(root.length); return !rel.includes('/') || rel.startsWith('grants/') })
 export function gateStep(tool, input = {}, ctx = {}) {
   const dir = ctx.dir ?? ledgerDir()
   const file = String(input.file_path ?? '')
-  if (/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) && /\.claude\/projects\/.*\.jsonl$/.test(file.replace(/\\/g, '/'))) return 'gate ledger: a session transcript is written by the harness only, never by hand.'
-  if (/^(Write|Edit)$/.test(tool) && (file.includes('project-files/gate/') || (file.startsWith(`${dir}/`) && file.endsWith('.json')))) return 'gate ledger: the round counter is written only by gate-rounds.mjs (gate.md, Rounds), never by hand.'
-  if (/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) && GUARD_FILE.test(file)) return 'gate ledger: the installed guards are changed only through claude-setup (a PR), never in place.'
+  if (/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) && STAMP.test(file)) return 'gate ledger: the role stamp and the brief lock of a session are written only by the hooks (security review 2026-11-12), never by hand.'
+  if (/^(Write|Edit)$/.test(tool) && ledgerFile(file, dir)) return 'gate ledger: the round counter is written only by gate-rounds.mjs (gate.md, Rounds), never by hand.'
+  if (/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) && (GUARD_FILE.test(file) || /\.claude\/projects\/.*\.jsonl$/.test(file.replace(/\\/g, '/')))) return 'gate ledger: the installed guards are changed only through claude-setup (a PR), never in place.'
   if (tool === 'Bash' || tool === 'PowerShell') return bashProblem(String(input.command ?? ''), dir, ctx)
   if (tool === 'mcp__github__create_pull_request') {
     const text = `${input.title ?? ''}\n${input.body ?? ''}`
@@ -358,8 +398,10 @@ export function gateStep(tool, input = {}, ctx = {}) {
   if (!asset) return null
   if (MERGES.test(tool)) return mergeProblem(readLedger(dir, asset))
   if (!POSTS.test(tool)) return null
-  const head = parseHeadline(input.body ?? input.comment ?? '')
-  return head ? verdictProblem(dir, asset, head, ctx.dry) : null
+  const text = input.body ?? input.comment ?? ''
+  const head = parseHeadline(text)
+  if (!head) return null
+  return authorProblem(text, ctx) ?? verdictProblem(dir, asset, head, ctx.dry)
 }
 
 // ---- CLI
@@ -385,6 +427,10 @@ export function cli(argv, env = process.env) {
   const fail = (t) => ({ code: 2, text: t })
   if (cmd === 'status') return { code: 0, text: JSON.stringify(l, null, 2) }
   if (cmd === 'check') return roundProblem(l, Number(rest[0])) ? fail(roundProblem(l, Number(rest[0]))) : { code: 0, text: 'ok' }
+  if (GRANTED.includes(cmd)) {
+    const key = cmd === 'init' ? flag(rest, '--round') : cmd === 'direct' ? flag(rest, '--plan') : flag(rest, '--ref')
+    if (!takeGrant(dir, cmd, asset, key)) return fail(`${cmd}: refused: the hook (global/rule-guard.mjs) checks the proof for this verb and leaves a short grant; none was found for this call. Run it as "node ~/.claude/claude-setup/gate-rounds.mjs ${cmd} <asset> ..." in a session where the hook is on (gate.md, Rounds).`)
+  }
   if (cmd === 'init') {
     const n = Number(flag(rest, '--round'))
     if (l.rounds.length || !(n >= 1)) return fail('init: only for an asset without a ledger, with --round <n> (1 or more: the rounds that already ran)')

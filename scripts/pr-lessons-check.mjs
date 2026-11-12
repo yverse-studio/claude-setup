@@ -11,7 +11,10 @@ const PATHS = new RegExp(`^Lessons: ${PATH}(?:\\s*,\\s*${PATH})*\\s*$`)
 const NONE = /^Lessons: none, because .{10,}$/
 export const MESSAGE = 'PR body needs a line `Lessons: <path to the home that changed>` or `Lessons: none, because <why the next thread would not repeat it>` (docs/MAP.md, Where a lesson goes)'
 
-const PRIOR = /^Prior art: (?=.*\b(cop(y|ied)|adapt(ed)?|reuse[ds]?|buil[dt]|extend(ed|s)?)\b).{20,}$/i
+// Same rule as global/team-guard.mjs priorArtOk (one corpus tests both): a named source and a decision, 20+ characters.
+const PRIOR_SOURCE = /https?:\/\/\S+|[\w.-]+\/[\w.-]+|#\d+|\b[\w-]+\.(?:md|mjs|json|ts|js|yml|sh)\b|`[^`\n]{3,}`/
+const PRIOR_DECISION = /\b(cop(y|ied)|adapt(ed|s)?|reuse[ds]?|buil[dt]|extend(ed|s)?|reverse-engineer\w*)\b/i
+const PRIOR = { test: (l) => /^Prior art: /.test(l) && l.length >= 32 && PRIOR_SOURCE.test(l) && PRIOR_DECISION.test(l) }
 const PRIOR_NONE = /^Prior art: none, because .{10,}$/
 export const PRIOR_MESSAGE = 'PR body needs a line `Prior art: <what exists that was checked: our repos, skills, plugins, public setups> -> copy | adapt | build, because <why>` or `Prior art: none, because <why nothing could exist>` (CLAUDE.md, Work for the future)'
 
