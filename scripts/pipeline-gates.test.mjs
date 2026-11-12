@@ -84,7 +84,7 @@ test('point 7: a preview older than its final render is stale and is regenerated
 const BODY = { _inventory: { BT: ['BT_petite'], CH: ['CH_rika'] } }
 const INV = bodyInventory(BODY)
 const LICENCE = '# Licence\n- Source: https://example.org/pack\n- Licence: CC-BY 4.0\n- Commercial use: yes\n- Adult use: yes\n- Attribution: Example Studio\n'
-const REPORT = { type: 'garment', rows: { BT_petite: { preview: 'preview/BT_petite.png', number: { min_mm: 2.1, inside_pct: 0 } }, char_rika: { preview: 'preview/char_rika.png', number: { min_mm: 1.8, inside_pct: 0 } } }, catalog: { bases_fitted: ['BT_petite', 'char_rika'], md5: { 'files/CL_x.blend': 'abc' } } }
+const REPORT = { type: 'garment', rows: { BT_petite: { preview: 'preview/BT_petite.png', number: { min_mm: 2.1, inside_pct: 0 } }, char_rika: { preview: 'preview/char_rika.png', number: { min_mm: 1.8, inside_pct: 0 } } }, catalog: { bases_fitted: ['BT_petite', 'char_rika'], md5: { 'files/CL_x.blend': 'd41d8cd98f00b204e9800998ecf8427e' } } }
 function asset(mutate = () => {}) {
   const dir = mkdtempSync(join(tmpdir(), 'intake-'))
   for (const d of ['source', 'files', 'preview']) mkdirSync(join(dir, d))
@@ -151,7 +151,7 @@ test('intake: a report that is only a file list fails', () => {
 
 test('intake: every base of the inventory needs a row, a preview and a number', () => {
   assert.match(problems(report({ rows: { BT_petite: REPORT.rows.BT_petite } })), /base char_rika: no row/)
-  assert.match(problems((d) => rmSync(join(d, 'preview', 'char_rika.png'))), /base char_rika: preview .* does not exist/)
+  assert.match(problems((d) => rmSync(join(d, 'preview', 'char_rika.png'))), /base char_rika: preview .* is not an image file/)
   assert.match(problems(report({ rows: { ...REPORT.rows, char_rika: { preview: 'preview/char_rika.png' } } })), /garment needs number/)
 })
 
@@ -164,6 +164,32 @@ test('intake: a garment or hair number must be a real clearance: numeric, 0 mm o
 
 test('intake: a repeated licence line must pass too, the first one does not win (gate #483 r3, N4)', () => {
   assert.match(problems((d) => writeFileSync(join(d, 'LICENCE.md'), `${LICENCE}- Adult use: no\n`)), /"Adult use: no".*_quarantine/)
+})
+
+test('intake: a second licence line with a note or a placeholder cannot hide a no (gate #483 r4, blocker)', () => {
+  for (const second of ['Adult use: no (see <file>)', 'Adult use: <unknown>', 'Adult use: no']) {
+    assert.match(problems((d) => writeFileSync(join(d, 'LICENCE.md'), `${LICENCE}- ${second}\n`)), /"Adult use: .*_quarantine/, second)
+  }
+})
+
+test('intake: a folder, an empty file or a non-image is no preview (gate #483 r4)', () => {
+  assert.match(problems((d) => { rmSync(join(d, 'preview', 'char_rika.png')); mkdirSync(join(d, 'preview', 'char_rika.png')) }), /base char_rika: preview .* is not an image file/)
+  assert.match(problems((d) => writeFileSync(join(d, 'preview', 'char_rika.png'), '')), /base char_rika: preview .* is not an image file/)
+  assert.match(problems((d) => { writeFileSync(join(d, 'preview', 'char_rika.txt'), 'x'); writeFileSync(join(d, 'intake.json'), JSON.stringify({ ...REPORT, rows: { ...REPORT.rows, char_rika: { preview: 'preview/char_rika.txt', number: { min_mm: 1, inside_pct: 0 } } } })) }), /base char_rika: preview .* is not an image file/)
+})
+
+test('intake: the catalog is type-checked, bases_fitted an array of names and md5 an object of hashes (gate #483 r4)', () => {
+  assert.match(problems(report({ catalog: { bases_fitted: 'BT_petite char_rika', md5: REPORT.catalog.md5 } })), /bases_fitted must be an array/)
+  assert.match(problems(report({ catalog: { bases_fitted: [1, 2], md5: REPORT.catalog.md5 } })), /bases_fitted must be an array/)
+  assert.match(problems(report({ catalog: { bases_fitted: REPORT.catalog.bases_fitted, md5: ['d41d8cd98f00b204e9800998ecf8427e'] } })), /md5 is empty/)
+  assert.match(problems(report({ catalog: { bases_fitted: REPORT.catalog.bases_fitted, md5: { 'files/CL_x.blend': 'abc' } } })), /no md5 hash/)
+})
+
+test('intake: a prop is a type the skill promises, so the check accepts it (visual-only with a reason) and keeps the rest (gate #483 r4)', () => {
+  const prop = (why) => report({ type: 'prop', rows: Object.fromEntries(INV.map((k) => [k, { preview: `preview/${k}.png`, visual: true, why }])) })
+  assert.equal(problems(prop('held in the right hand on every base, 4 views checked')), '')
+  assert.match(problems(prop('ok')), /visual: true with a why/)
+  assert.match(problems(report({ type: 'weapon' })), /type "weapon" is none of garment, hair, eyes, face, prop/)
 })
 
 test('intake: a bold licence label cannot hide its value (gate #483 r2, F1)', () => {

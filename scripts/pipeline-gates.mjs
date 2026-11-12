@@ -112,8 +112,9 @@ export function stalePreviews(root) {
 const LICENCE_FIELDS = ['Source', 'Licence', 'Commercial use', 'Adult use', 'Attribution']
 const USE_OK = /^(yes|ja)[\s.!]*$/i // Adult use and Commercial use are allow-lists: only a bare yes or ja passes (a restriction after it, "yes?", "?", "not specified", anything else is quarantine; gate #483 r3, N1)
 const allFields = (text, label) => [...text.matchAll(new RegExp(`^[ \\t>*-]*\\**${label}\\**:\\**[ \\t]*(.*)$`, 'gim'))].map((m) => m[1].trim()) // a repeated line must pass too, the first one does not win (N4)
-const TYPES = ['garment', 'hair', 'eyes', 'face'] // steps.md; eyes and faces may say "visual" with a reason where no metric exists
+const TYPES = ['garment', 'hair', 'eyes', 'face', 'prop'] // steps.md; eyes, faces and props may say "visual" with a reason where no metric exists
 const NUMBER_TYPES = ['garment', 'hair']
+const isImage = (p) => /\.(png|jpe?g|webp)$/i.test(p) && existsSync(p) && statSync(p).isFile() && statSync(p).size > 0 // a folder or an empty file is no preview (gate #483 r4)
 export const bodyInventory = (report) => report?._inventory?.BT && report?._inventory?.CH ? [...report._inventory.BT, ...report._inventory.CH.map((k) => `char_${String(k).replace(/^CH_/, '')}`)] : []
 export function intakeProblems(dir, inventory = []) {
   const out = []
@@ -125,7 +126,7 @@ export function intakeProblems(dir, inventory = []) {
   else {
     const text = readFileSync(licence, 'utf8')
     for (const f of LICENCE_FIELDS) if (placeholder(field(text, f))) out.push(`LICENCE.md has no real "${f}:" line`)
-    for (const f of ['Commercial use', 'Adult use']) for (const v of allFields(text, f)) if (!placeholder(v) && !USE_OK.test(v)) out.push(`LICENCE.md says "${f}: ${v}": only a bare yes or ja passes, the asset goes to inbox/_quarantine/, never into lib/`)
+    for (const f of ['Commercial use', 'Adult use']) for (const v of allFields(text, f)) if (!USE_OK.test(v)) out.push(`LICENCE.md says "${f}: ${v}": only a bare yes or ja passes, the asset goes to inbox/_quarantine/, never into lib/`)
   }
   if (!inventory.length) out.push('no body inventory: pass --inventory <measure.json> (the fit_garment.py output with _inventory {BT, CH}); the list of bases is never typed into intake.json')
   if (!existsSync(at('intake.json'))) return [...out, 'no intake.json: the report is a file list, not a processed asset (rows, catalog)']
@@ -140,7 +141,7 @@ export function intakeProblems(dir, inventory = []) {
     const row = rows[k]
     if (!row) { out.push(`base ${k}: no row (fit and number or visual check)`); continue }
     const shot = row.preview && at(row.preview)
-    if (!shot || !existsSync(shot)) out.push(`base ${k}: preview ${row.preview ?? '(none)'} does not exist`)
+    if (!shot || !isImage(shot)) out.push(`base ${k}: preview ${row.preview ?? '(none)'} is not an image file (png, jpg, jpeg or webp, not empty)`)
     else if (made.some((m) => m > statSync(shot).mtimeMs)) out.push(`base ${k}: preview is older than the asset files, render it again`)
     const n = row.number
     const clear = n && typeof n === 'object' && Number.isFinite(n.min_mm) && Number.isFinite(n.inside_pct)
@@ -149,9 +150,12 @@ export function intakeProblems(dir, inventory = []) {
     else if (!needNumber && clear && (n.min_mm < 0 || n.inside_pct !== 0)) out.push(`base ${k}: a ${r.type} number must be min_mm >= 0 and inside_pct 0, got ${JSON.stringify(n)}`)
     else if (!needNumber && TYPES.includes(r.type) && !clear && !visualOk) out.push(`base ${k}: needs number {min_mm, inside_pct}, or visual: true with a why of 10+ characters`)
   }
-  const fitted = r.catalog?.bases_fitted ?? []
-  if (inventory.some((k) => !fitted.includes(k))) out.push(`catalog.bases_fitted lacks ${inventory.filter((k) => !fitted.includes(k)).join(', ')}`)
-  if (!r.catalog?.md5 || !Object.keys(r.catalog.md5).length) out.push('catalog.md5 is empty: one hash per fitted file')
+  const fitted = Array.isArray(r.catalog?.bases_fitted) && r.catalog.bases_fitted.every((k) => typeof k === 'string') ? r.catalog.bases_fitted : null
+  if (!fitted) out.push('catalog.bases_fitted must be an array of base names')
+  else if (inventory.some((k) => !fitted.includes(k))) out.push(`catalog.bases_fitted lacks ${inventory.filter((k) => !fitted.includes(k)).join(', ')}`)
+  const md5 = r.catalog?.md5
+  if (!md5 || typeof md5 !== 'object' || Array.isArray(md5) || !Object.keys(md5).length) out.push('catalog.md5 is empty: one hash per fitted file')
+  else if (Object.values(md5).some((h) => !/^[0-9a-f]{32}$/i.test(String(h)))) out.push('catalog.md5 holds a value that is no md5 hash (32 hex characters)')
   return out
 }
 
