@@ -135,11 +135,13 @@ test('intake: Adult use or Commercial use "no", or an unclear answer, goes to qu
   assert.equal(problems((d) => writeFileSync(join(d, 'LICENCE.md'), LICENCE.replace('Attribution: Example Studio', 'Attribution: none required'))), '', 'no attribution needed is fine')
 })
 
-test('intake: Adult use is an allow-list, only yes or ja passes', () => {
-  for (const value of ['?', 'not specified', 'maybe', 'see website', 'permitted?']) {
-    assert.match(problems((d) => writeFileSync(join(d, 'LICENCE.md'), LICENCE.replace('Adult use: yes', `Adult use: ${value}`))), /"Adult use: .*_quarantine/, value)
+test('intake: Adult use and Commercial use are allow-lists, only yes or ja passes', () => {
+  for (const field of ['Adult use', 'Commercial use']) {
+    for (const value of ['?', 'not specified', 'keine Angabe', 'maybe', 'see website', 'permitted?', 'yes?', 'Yes ?']) {
+      assert.match(problems((d) => writeFileSync(join(d, 'LICENCE.md'), LICENCE.replace(`${field}: yes`, `${field}: ${value}`))), new RegExp(`"${field}: .*_quarantine`), `${field}: ${value}`)
+    }
+    for (const value of ['yes', 'Yes, no restrictions', 'ja']) assert.equal(problems((d) => writeFileSync(join(d, 'LICENCE.md'), LICENCE.replace(`${field}: yes`, `${field}: ${value}`))), '', `${field}: ${value}`)
   }
-  for (const value of ['yes', 'Yes, no restrictions', 'ja']) assert.equal(problems((d) => writeFileSync(join(d, 'LICENCE.md'), LICENCE.replace('Adult use: yes', `Adult use: ${value}`))), '', value)
 })
 
 test('intake: a report that is only a file list fails', () => {
