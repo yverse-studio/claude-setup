@@ -5,12 +5,14 @@
 // Usage: node scripts/brief.mjs --role <Role> --kit <kit> --size <S|M|L> --item <M<n>|new> --threads <text> --prior-art <text>
 //          --done <text> --stop <text> [--what <title words>] [--start <files>] [--skills <text>] [--sheet <path|n/a why>]
 //          [--look-lock <card link>] [--topic <checklist topic, Reviewer only>] [--tester <thread>] [--researcher <text>] [--gate <reviewer thread>] [--json]
+//        node scripts/brief.mjs --plan-check <asset>   the checker's brief for a registered PLAN.md (rendered by global/task-ledger.mjs; the plan-check door accepts only these bytes)
 //        node scripts/brief.mjs --lines   one line per Roster role: its kits, model and playbook (for the coordinator's index)
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { CHECKLISTS, GATE_BUILDER_ROLES, GATE_LINE, badRole, badTeam, badTopic, decide, kitNames, rosterNames } from '../global/team-guard.mjs'
 import { GATE_ROLES, roleOf } from '../global/rule-guard.mjs'
+import { planCheckBrief } from '../global/task-ledger.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const TIERS = ['fable', 'opus', 'sonnet', 'haiku']
@@ -78,6 +80,9 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     if (i < 0) return undefined
     if (args[i + 1] === undefined || args[i + 1].startsWith('--')) { console.error(`brief: --${name} needs a value`); process.exit(2) }
     return args[i + 1]
+  }
+  if (args.includes('--plan-check')) {
+    try { process.stdout.write(`${planCheckBrief(flag('plan-check')).trimEnd()}\n`); process.exit(0) } catch (e) { console.error(`brief: ${e.message}`); process.exit(2) }
   }
   if (args.includes('--lines')) { console.log(roleLines().join('\n')); process.exit(0) }
   try {

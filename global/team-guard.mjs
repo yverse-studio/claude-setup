@@ -29,6 +29,9 @@ import { dirname, join } from 'node:path'
 // rule-guard sits beside this file (GUARD_FILES); without it only the model-tier check is skipped.
 let roleOf = () => null
 try { ({ roleOf } = await import('./rule-guard.mjs')) } catch { /* no rule-guard here */ }
+// M28 plan-check door: an Agent call opening with `Plan check: <asset>` must be the rendered brief on an Opus tier; the verdict is recorded by context-guard.
+let planCheckPre = () => null
+try { ({ planCheckPre } = await import('./task-ledger.mjs')) } catch { /* no task ledger here: the check is simply not recorded */ }
 
 export const POINTER = 'Team rule (claude-setup docs/TEAMS.md): route every task on its own (task picks the kit, not the project; then size S/M/L), call only the roles it needs, as thread or subagent as the roster says, and pass `model` from the role\'s row on every thread start and Agent call.'
 export const PM_FILE = '.claude/skills/operator/roles/project-manager.md'
@@ -369,7 +372,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
   process.stdin.on('data', (c) => { raw += c })
   process.stdin.on('end', () => {
     try {
-      const { tool_name: tool = '', tool_input: input, cwd = process.cwd(), transcript_path: transcript, session_id: session, source, model } = JSON.parse(raw || '{}')
+      const { tool_name: tool = '', tool_input: input, cwd = process.cwd(), transcript_path: transcript, session_id: session, source, model, agent_id: agentId } = JSON.parse(raw || '{}')
       const mark = (kind) => join(dir, 'booted', `${String(session).replace(/\W/g, '')}.${kind}`)
       const say = (context) => process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: context } }))
       if (mode === 'start') {
@@ -420,6 +423,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
       const teams = THREAD_START.test(tool) ? text(join(cwd, 'docs', 'TEAMS.md')) || text(join(dir, 'docs', 'TEAMS.md')) : ''
       const checklists = THREAD_START.test(tool) ? text(join(cwd, CHECKLISTS)) || text(join(dir, CHECKLISTS)) : ''
       const out = decide(tool, input, [join(cwd, '.claude', 'agents'), join(home, '.claude', 'agents')], unread, teams, checklists)
+      if (!out.block) out.block = planCheckPre(tool, input ?? {}, { agentId, checklists: text(join(cwd, CHECKLISTS)) || text(join(dir, CHECKLISTS)) })
       if (out.block) { process.stderr.write(out.block); process.exitCode = 2 }
     } catch {
       // A guard must never break a tool call.

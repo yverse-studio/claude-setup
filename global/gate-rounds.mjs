@@ -123,7 +123,8 @@ export function gateBrief(brief, { model = null, dir = ledgerDir() } = {}) {
 }
 
 // ---- proofs the hook reads from the session's transcript
-const cmsg = /#?(cmsg_\w+)/
+export const CMSG = /#?(cmsg_\w+)/ // one pattern for a card or message id; task-ledger.mjs reuses it
+const cmsg = CMSG
 export function cardProof(ref, calls) {
   const id = String(ref).match(cmsg)?.[1]
   return !!id && calls.some((c) => /request_decision|post_widget/.test(c.name) && c.result.includes(id))
@@ -288,10 +289,13 @@ function bashProblem(cmd, dir, ctx) {
   const dirRe = dir ? new RegExp(`${dir.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\/+$/, '')}(?:/|$)`) : null
   const named = (w) => !/\s/.test(w) && (dirRe?.test(w) || /(?:project-files|\.claude\/claude-setup)\/gate(?:\/|$)/.test(w) || GUARD_FILE.test(w))
   const msg = 'gate ledger: the round counter is written only by gate-rounds.mjs (gate.md, Rounds), never by hand; the installed guards change only through a claude-setup PR.'
-  if (list.some((s) => s.env) && list.some((s) => s.a0 === 'node' && s.args.some((a) => base(a) === 'gate-rounds.mjs'))) return 'gate ledger: CLAUDE_SETUP_* variables (the ledger dir, the guard switch) are not set in a call that runs the counter; they would point it at another ledger (gate.md, Rounds).'
+  if (list.some((s) => s.env) && list.some((s) => s.a0 === 'node' && s.args.some((a) => ['gate-rounds.mjs', 'task-ledger.mjs'].includes(base(a))))) return 'gate ledger: CLAUDE_SETUP_* variables (the ledger dir, the guard switch) are not set in a call that runs the counter or the task ledger; they would point it at another ledger (gate.md, Rounds).'
   for (const s of list) {
     if (s.a0 === 'gh') { const r = ghProblem(s); if (r) return r }
     if (s.redirs.some((r) => !/\s/.test(r) && (named(r) || GUARD_FILE.test(r)))) return msg
+    // An inline script (node -e, python -c) that holds the ledger folder or an installed guard path writes it as well as a redirect does.
+    const inline = /^(node|nodejs|python3?|bun|deno|ruby|perl)$/.test(base(s.a0)) && s.args.some((a) => /^-(?:[a-zA-Z]*[ecp]|-eval|-print)$/.test(a))
+    if (inline && s.args.some((a) => (dir && a.includes(dir.replace(/\/+$/, '') + '/')) || /(?:project-files|\.claude\/claude-setup)\/gate\//.test(a) || /\.claude[\\/]claude-setup[\\/](?:rule-guard|team-guard|gate-rounds|task-ledger)\.mjs/.test(a))) return msg
     const script = s.a0 === 'node' ? s.args.find((a) => base(a) === 'gate-rounds.mjs') ?? s.args.find((a) => !a.startsWith('-')) : null
     if (script && base(script) === 'gate-rounds.mjs') {
       const at = s.args.indexOf(script)
