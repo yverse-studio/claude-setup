@@ -26,7 +26,7 @@ One session, about 35 min. Same day, same room, same look as your normal TikToks
 - File name: `face-base-01`.
 
 **3. Drop it**
-- Folder on the laptop: `projects/videos/twin/raw/` under `STUDIO_ROOT`
+- Folder on the laptop: `lib/footage/<date>-twin/source/` under `STUDIO_ROOT`
 - AirDrop or cable to the laptop, or Google Drive and download there. **Not WhatsApp** (it ruins the quality).
 - Then one line in the chat: "twin files are in".
 

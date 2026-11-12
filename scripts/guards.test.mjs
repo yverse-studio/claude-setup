@@ -322,6 +322,19 @@ test('team guard: an unknown or wrong role is refused with the roles that kit ac
   assert.deepEqual(rolesForKit(teams, 'nonsense'), [])
 })
 
+// Asset intake PR: the Character TD is a Roster role on the game and story kits (yskills 2026-11-12: fitting is a 3D modeller's job).
+test('team guard: a Character TD thread starts on game and story, needs the Gate and Sheet lines, a typo in the role blocks', async () => {
+  const { decide } = await import('../global/team-guard.mjs')
+  const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
+  const brief = (kit, { role = 'Character TD', size = 'M', gate = true, sheet = true } = {}) => ({ brief: `Role: ${role} · Kit: ${kit} · Size: ${size}\nPrior art: docs/clothing-pipeline.md and .claude/skills/asset-intake checked; adapt, because the fit rules exist${FULL.replace(/\nGate:[^\n]*/, '')}${gate ? '\nGate: Reviewer · gate asset intake before owner' : ''}${sheet ? '\nSheet: n/a intake of a download, no new body or look' : ''}`, title: `${role} · hoodie`, model: 'claude-x-1' })
+  for (const kit of ['game', 'story']) assert.deepEqual(decide('mcp__hearthbot__start_thread', brief(kit), [], [], teams), {}, `Character TD passes on ${kit}`)
+  for (const kit of ['site', 'app', 'setup']) assert.match(decide('mcp__hearthbot__start_thread', brief(kit), [], [], teams).block ?? '', /not on the `\w+` kit's team/, `Character TD is skipped on ${kit}`)
+  assert.match(decide('mcp__hearthbot__start_thread', brief('game', { gate: false }), [], [], teams).block ?? '', /Gate:/, 'size M without the Gate line is refused')
+  assert.match(decide('mcp__hearthbot__start_thread', brief('game', { sheet: false }), [], [], teams).block ?? '', /Sheet:/, 'a modelling role names its sheet or says n/a')
+  assert.match(decide('mcp__hearthbot__start_thread', brief('game', { role: 'Character TDX' }), [], [], teams).block ?? '', /no role in docs\/TEAMS\.md/, 'a typo in the role name still blocks')
+  assert.match(decide('mcp__hearthbot__start_thread', { ...brief('game'), model: 'claude-haiku-x' }, [], [], teams).block ?? '', /runs on/, 'Haiku is not a Character TD tier')
+})
+
 test('team guard: an Animator thread starts on the game and story kits, on Sonnet, not on site or setup', async () => {
   const { decide } = await import('../global/team-guard.mjs')
   const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
@@ -460,6 +473,7 @@ test('team guard: the registered matchers catch Agent and the thread-start tools
 
 test('rule guard: blocks the rules that were text only, passes the normal calls', async () => {
   const { decide, commitSubjects, promptContext, REPLY_MAX_CHARS } = await import('../global/rule-guard.mjs')
+  const { STOP_WORD } = await import('../global/gate-rounds.mjs')
   const blocked = [
     ['mcp__github__update_pull_request', { reviewers: ['yskills'] }],
     ['mcp__github__issue_write', { method: 'update', assignees: ['YSkills'] }],
@@ -500,8 +514,8 @@ test('rule guard: blocks the rules that were text only, passes the normal calls'
   assert.equal(decide('Artifact', { file_path: '/tmp/hq.html' }, {}, ['/tmp/hq.html']), null, 'republishing an Artifact this session updated by url')
   assert.match(decide('Artifact', { type_url: 'u', title: 'x', file_path: '/tmp/hq.html' }, {}, ['/tmp/hq.html']) ?? '', /only Artifact/)
   assert.match(promptContext('schau mal https://www.tiktok.com/@a/video/1'), /watch\.py/)
-  assert.match(promptContext('<wake><message trigger="true" from="human">Stopp!</message></wake>'), /said stop/)
-  assert.equal(promptContext('stop the server on port 8787 please'), '')
+  assert.match(promptContext('<wake><message trigger="true" from="human">Stopp!</message></wake>', STOP_WORD), /said stop/)
+  assert.equal(promptContext('stop the server on port 8787 please', STOP_WORD), '')
 })
 
 test('rule guard: hook entry blocks with exit 2, notes a video, and the off switch works', () => {
@@ -1416,6 +1430,16 @@ test('gate fixes: no sheet demand for HUD or camera work, every app browser tool
   assert.equal(dupeCheckMissing('Bash', { command: `curl -L -o a.zip https://sketchfab.com/3d-models/school-uniform-${uid}/download` }, seen(`python clothes_dupe.py ${uid}`)), null, 'the bare id counts')
   assert.equal(dupeCheckMissing('Bash', { command: 'curl -L -o a.zip https://myprefab.com/items/1' }, ''), null, 'myprefab.com is not fab.com')
   assert.match(dupeCheckMissing('Bash', { command: 'curl -L -o a.zip https://www.fab.com/listings/0123456789abcdef-0123-4567-89ab-0123456789ab' }, '') ?? '', /clothes_dupe/)
+})
+
+test('team guard: Programmer, Animator and Character TD briefs need the Sheet line however Role and Kit are separated', async () => {
+  const { missingLines } = await import('../global/team-guard.mjs')
+  for (const role of ['Programmer', 'Animator', 'Character TD']) {
+    for (const head of [`Role: ${role} / Kit: game / Size: M`, `Role: ${role} - Kit: story - Size: M`, `Role: ${role}\nKit: game\nSize: M`]) {
+      assert.ok(missingLines(`${head}${FULL}\nFit the outfit.`).some((l) => /Sheet/.test(l)), head)
+    }
+  }
+  assert.ok(!missingLines(`Role: Programmer / Kit: setup / Size: M${FULL}`).some((l) => /Sheet/.test(l)), 'other kits need no sheet')
 })
 
 test('gate fixes: Sheet: must be a .md path and Look-Lock: a link or card, "later" does not count', async () => {

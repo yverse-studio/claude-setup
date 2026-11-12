@@ -264,13 +264,16 @@ const ASKS_RESEARCH = /\b(SOTA|state of the art|research (on|about|into|what)|re
 // Gate rounds 1 to 6 chased verbs and body words and every round found more. So there is no classifier: every Programmer or Animator brief
 // on a game or story kit names its approved cast sheet and look lock, or declares in one line that it is no body, face or outfit job:
 // `Sheet: n/a <why>` (10+ characters). A false "n/a" on a real modelling job is visible in the brief; a missing line is refused.
-const needsSheet = (plain) => /^[ \t>-]*Role:[ \t]*(Programmer|Animator)\b/im.test(plain) && /\bKit:[ \t]*(game|story)\b/i.test(plain)
+// The one list of roles whose game and story brief names a cast sheet (scripts/brief.mjs imports it: a third copy of this list let the generator drop Character TD).
+export const SHEET_ROLES = ['Programmer', 'Animator', 'Character TD']
+export const needsSheetRole = (role) => SHEET_ROLES.some((r) => r.toLowerCase() === String(role).trim().toLowerCase())
+const needsSheet = (plain) => new RegExp(`^[ \\t>-]*Role:[ \\t]*(${SHEET_ROLES.join('|')})\\b`, 'im').test(plain) && /\bKit:[ \t]*(game|story)\b/i.test(plain)
   && !/^[ \t>-]*Sheet:[ \t]*n\/a[ \t]+\S[^\n]{9,}$/im.test(plain)
 // CompanyXY 2026-11-12 (yskills 13:23, point 5): gates were planned only after the owner complained. A builder, designer or animator brief
 // at size M or L names the Reviewer thread that gates its work before the owner sees it; the gate roles themselves need no such line.
 // A Gate line names a reviewer thread (`Gate: Reviewer · fit round 2 before owner`), or says in 10+ characters why the slice has no owner-facing
 // result (`Gate: n/a no owner-facing result, a CI script only`); the same shape as `Sheet: n/a`. `none`, `later` or `skipped` do not count.
-export const GATE_BUILDER_ROLES = '(?:Planner|Programmer|Designer|Animator|Story Writer|Game Designer|Content Designer|Sound Designer)'
+export const GATE_BUILDER_ROLES = '(?:Planner|Programmer|Designer|Animator|Character TD|Story Writer|Game Designer|Content Designer|Sound Designer)'
 export const GATE_LINE = /^[ \t>-]*Gate:[ \t]*(?:(?:Reviewer|Tester)\b[^\n]*\bbefore owner\b[^\n]*|n\/a[ \t]+\S[^\n]{9,})$/im
 const needsGate = (plain) => new RegExp(`^[ \\t>-]*Role:[ \\t]*${GATE_BUILDER_ROLES}\\b`, 'im').test(plain) && /\bSize:[ \t]*[ML]\b/i.test(plain)
 const small = (plain) => /\bSize:[ \t]*S\b/i.test(plain)
@@ -322,6 +325,8 @@ export function classify(text) {
 // a video at size S, a Game Designer on a Ren'Py story, a Designer cutting a video).
 export const kitRows = (teams) => section(teams, 'Kits', 'Models for tasks').split('\n').filter((l) => /^\| `/.test(l))
   .map((l) => { const c = cells(l); return { kit: c[1].match(/`([\w-]+)`/)[1], team: c[3], skipped: c[4] } })
+// A Roster subsection whose heading names kits in backticks (`### 3D parts (kits `game`, `story`)`) holds roles that fit those kits only.
+const sectionKits = (teams, name) => { const h = section(teams, 'Roster', 'Kits').split(/\n### /).slice(1).find((x) => x.includes(`| ${name} (`)); return h ? [...h.split('\n')[0].matchAll(/`([\w-]+)`/g)].map((m) => m[1]).filter((k) => kitRows(teams).some((r) => r.kit === k)) : [] }
 const rosterOf = (teams, part) => section(teams, 'Roster', 'Kits').split(/\n### /).find((s) => s.startsWith(part)) ?? ''
 // A role named in a Kits cell: one comma, semicolon or bracket item that is the role, maybe with words after ("Designer for renders", not "Game Designer").
 const named = (cell, role) => cell.replace(/`/g, '').split(/[,;()]/).map((i) => i.trim().replace(/^(and|then|plus) /i, '').toLowerCase()).some((i) => i === role.toLowerCase() || i.startsWith(`${role.toLowerCase()} `))
@@ -342,7 +347,8 @@ export function rolesForKit(teams, kit) {
     const film = rosterOf(teams, 'Film').includes(`| ${n} (`)
     const social = rosterOf(teams, 'Social').includes(`| ${n} (`)
     const story = rosterOf(teams, 'Story').includes(`| ${n} (`)
-    return ['Reviewer', 'Researcher'].includes(n) || (story ? row.kit === 'story' : social ? row.kit === 'social' : film ? media : media ? named(row.team, n) : !skips(row.skipped, n))
+    const only = sectionKits(teams, n)
+    return ['Reviewer', 'Researcher'].includes(n) || (only.length ? only.includes(row.kit) : story ? row.kit === 'story' : social ? row.kit === 'social' : film ? media : media ? named(row.team, n) : !skips(row.skipped, n))
   })
 }
 
@@ -392,8 +398,9 @@ export function badTeam(text, teams) {
   const film = rosterOf(teams, 'Film').includes(`| ${role.name} (`)
   const social = rosterOf(teams, 'Social').includes(`| ${role.name} (`)
   const story = rosterOf(teams, 'Story').includes(`| ${role.name} (`)
+  const only = sectionKits(teams, role.name)
   const media = ['video', 'social'].includes(kit)
-  const fits = ['Reviewer', 'Researcher'].includes(role.name) || (story ? kit === 'story' : social ? kit === 'social' : film ? media : media ? named(row.team, role.name) : !skips(row.skipped, role.name))
+  const fits = ['Reviewer', 'Researcher'].includes(role.name) || (only.length ? only.includes(kit) : story ? kit === 'story' : social ? kit === 'social' : film ? media : media ? named(row.team, role.name) : !skips(row.skipped, role.name))
   return fits ? null : `the ${role.name} is not on the \`${kit}\` kit's team (docs/TEAMS.md, Kits: team "${row.team}", skipped "${row.skipped}"); pick one of ${rolesForKit(teams, kit).join(', ')}`
 }
 

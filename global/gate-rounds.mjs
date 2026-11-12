@@ -43,6 +43,23 @@ export function writeLedger(dir, ledger) {
 }
 export const lastRound = (l) => l.rounds.at(-1)?.n ?? 0
 
+// ---- who sent a transcript row (M53, gate round 11 of #474): the text says who wrote it, the origin says who delivered it. A thread can
+// schedule its own prompt (CronCreate, ScheduleWakeup, send_later); the harness then writes that text as an isMeta user row, word for word.
+// Nothing a thread can schedule or type carries the projects server's origin. One definition each; rule-guard and task-ledger use these.
+// A scheduled or notification-driven row: a cron or wakeup (turnOrigin scheduled, wakeupSource), or a send_later notification (live 2026-11-12:
+// turnOrigin task_notification, origin task-notification with no projects-relay subkind). None of them is a person or the coordinator.
+export const selfScheduled = (r) => r?.turnOrigin === 'scheduled' || r?.turnOrigin === 'task_notification' || !!r?.wakeupSource
+  || (r?.origin?.kind === 'task-notification' && r.origin.subkind !== 'projects-relay')
+export const fromProjects = (r) => {
+  const o = r?.type === 'attachment' ? r.attachment?.origin : r?.origin
+  return o?.kind === 'task-notification' && o?.subkind === 'projects-relay' && !selfScheduled(r)
+}
+// yskills' "stop", "stopp", "pause", "halt" (the stop note of the prompt hook, and no answer to a card).
+// yskills' own message: the app writes it with origin {kind: 'human'} (real row, M53 slice 2: a tap on a card, scripts/fixtures/m53/real-human-rows.jsonl).
+// A thread's scheduled prompt carries none; the scheduled markers veto even a row that claims it.
+export const fromHuman = (r) => r?.type === 'user' && r.origin?.kind === 'human' && r.turnOrigin === 'human' && !selfScheduled(r)
+export const STOP_WORD = /^\W*(stop+|stopp+|pause|halt)\W*$/i
+
 // ---- grants (security review 2026-11-12, finding 1): the proofs for init, direct, card, picture and waive are read by the hook, and the
 // CLI refuses those verbs without the short grant the hook leaves after it checked them. A call that bypasses the hook (a copy of this
 // file, node -e, an import) reaches the CLI without a grant and is refused there too, so the filename in argv is no longer the lock.
@@ -81,7 +98,7 @@ const REVIEWER = /^(code-reviewer|evaluator|security-reviewer|typescript-reviewe
 export function reviewerProof(body, calls = []) {
   const line = norm(String(body).split('\n').find((l) => l.trim()) ?? '')
   const lead = (t) => norm(String(t).split('\n').find((l) => l.trim()) ?? '')
-  return !!line && calls.some((c) => /^(Agent|Task)$/.test(c.name) && REVIEWER.test(String(c.input?.subagent_type ?? '')) && lead(c.result) === line && !norm(c.input?.prompt ?? '').includes(line))
+  return !!line && calls.some((c) => /^(Agent|Task)$/.test(c.name) && REVIEWER.test(String(c.input?.subagent_type ?? '')) && (lead(c.result) === line || (c.report && lead(c.report) === line)) && !norm(c.input?.prompt ?? '').includes(line))
 }
 export function authorProblem(body, ctx = {}) {
   if (GATE_ROLE.test(ctx.role ?? '') || reviewerProof(body, ctx.calls ?? [])) return null
@@ -187,12 +204,9 @@ export const rowText = (r) => {
   return typeof c === 'string' ? c : Array.isArray(c) ? c.map((x) => (x?.type === 'text' ? x.text ?? '' : '')).join('\n') : ''
 }
 const typed = (r) => r?.type === 'user' && !(Array.isArray(r.message?.content) && r.message.content.some((c) => c?.type === 'tool_result'))
-export const principalRow = (r) => typed(r) && WAKE.test(rowText(r))
-export const coordinatorRow = (r) => {
-  const text = rowText(r)
-  const harness = r?.type === 'attachment' ? r.attachment?.type === 'queued_command' : typed(r) && r.isMeta === true
-  return harness ? BARE_RELAY.test(text) || COORDINATOR_RELAY.test(text) : typed(r) && COORDINATOR_RELAY.test(text)
-}
+// M53: the text is who wrote it, the origin is who delivered it, so both are read and the thread's own scheduled prompt (same text, no origin) is neither.
+export const principalRow = (r) => fromHuman(r) && typed(r) && WAKE.test(rowText(r))
+export const coordinatorRow = (r) => fromProjects(r) && (BARE_RELAY.test(rowText(r)) || COORDINATOR_RELAY.test(rowText(r)))
 const cmsg = CMSG
 export function cardProof(ref, calls) {
   const id = String(ref).match(cmsg)?.[1]
@@ -375,6 +389,8 @@ function ghProblem(s) {
 // guard file, as a redirect target or an argument of a writer. Shell tricks around it are a named Limit (gate.md, Rounds).
 // The session stamps the guards write in the temp dir: the role (who may post a verdict, hands-off) and the brief lock.
 const STAMP = /claude-setup-(?:role|spawnrole|badbrief|model|brief|artifacts)-/
+// The session transcripts (M53): every origin proof reads them, so a thread never writes one by hand.
+const TRANSCRIPT = /\.claude[\\/]projects[\\/](?:.*[\\/])?[^\\/]*\.jsonl$/
 // A path compared lexically (security review 2026-11-12, round 2, finding 1): .., ./ and // collapse and backslashes read as slashes, so
 // <dir>/x/../ledger.json is the ledger. A NAME= prefix of a word is kept.
 const lexical = (p) => posix.normalize(String(p).replace(/\\/g, '/'))
@@ -423,9 +439,9 @@ function bashProblem(cmd, dir, ctx) {
   // Only the ledger itself is protected: the dir, a file directly in it and grants/. Files below gate/<asset>/ (images, PLAN-REVIEW.md) are free (transition rule 6).
   const dirRe = dir ? new RegExp(`^(?:[-\\w]*=)?${lexical(dir).replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\/+$/, '')}(?:/(?:grants(?:/.*)?|[^/]*))?$`) : null
   // each word is tested as typed and with its .., ./ and // collapsed (finding 1): <dir>/x/../ledger.json names the ledger
-  const named = (w) => !/\s/.test(w) && [w, lexicalWord(w)].some((x) => STAMP.test(x) || dirRe?.test(x) || /^(?:[-\w]*=)?(?:.*\/)?(?:project-files|\.claude\/claude-setup)\/gate(?:\/(?:grants(?:\/.*)?|[^/]*))?$/.test(x) || GUARD_FILE.test(x) || /\.claude\/projects\/\S*\.jsonl$/.test(x)) // a session transcript is written by the harness only
-  const msg = 'gate ledger: the round counter is written only by gate-rounds.mjs (gate.md, Rounds), never by hand; the installed guards change only through a claude-setup PR.'
   if (list.some((s) => s.env) && list.some((s) => s.a0 === 'node' && s.args.some((a) => ['gate-rounds.mjs', 'task-ledger.mjs'].includes(base(a))))) return 'gate ledger: CLAUDE_SETUP_* variables (the ledger dir, the guard switch) are not set in a call that runs the counter or the task ledger; they would point it at another ledger (gate.md, Rounds).'
+  const named = (w) => !/\s/.test(w) && [w, lexicalWord(w)].some((x) => STAMP.test(x) || dirRe?.test(x) || /^(?:[-\w]*=)?(?:.*\/)?(?:project-files|\.claude\/claude-setup)\/gate(?:\/(?:grants(?:\/.*)?|[^/]*))?$/.test(x) || GUARD_FILE.test(x) || TRANSCRIPT.test(x))
+  const msg = 'gate ledger: the round counter is written only by gate-rounds.mjs (gate.md, Rounds), never by hand; the installed guards change only through a claude-setup PR, and a session transcript (~/.claude/projects/**/*.jsonl) is never written by hand (M53).'
   // Finding 1: the counter is run as `node <path>/gate-rounds.mjs <verb>` and nothing else. Any other command that names the file and is
   // not a plain read (a copy, node -e, an import, a symlink) is refused, so the proofs cannot be walked around by renaming the script.
   if (/(?:gate-rounds|task-ledger)\.mjs/.test(cmd) && !list.every((s) => isCounterCall(s) || readsOnly(s))) return 'gate ledger: gate-rounds.mjs and task-ledger.mjs are run only as "node ~/.claude/claude-setup/<file> <verb> <asset> ..." (gate.md, Rounds); copying them, importing it or running it through node -e is refused, because the proofs live in this hook and in the CLI.'
@@ -448,7 +464,7 @@ function bashProblem(cmd, dir, ctx) {
       if (verb === 'init' && !(Number(s.args[s.args.indexOf('--round') + 1]) >= 1)) return 'gate ledger: init imports the rounds that already ran: --round <n> with n of 1 or more (gate.md, Rounds).'
       if (verb === 'direct' && !/fable/i.test(ctx.model ?? '')) return `gate ledger: only a Fable session records the director, this one runs on ${ctx.model ?? 'an unknown model'}. Ask the coordinator for a Fable thread (docs/TEAMS.md, Models line).`
       if (['card', 'picture', 'waive'].includes(verb) && !(ref && cardProof(ref, ctx.calls ?? []))) return `gate ledger: "${verb}" needs --ref <cmsg id> of a request_decision card this session posted (it was not found in this session).`
-      if (verb === 'waive' && !(ctx.humanAfter?.(ref))) return 'gate ledger: waive needs yskills\' own answer on that card in this session; none arrived yet.'
+      if (verb === 'waive' && !(ctx.humanAfter?.(ref))) return 'gate ledger: waive needs yskills\' tap on the FIRST option of that card in this session (the card lists the option that frees the gate first); none arrived yet, or he tapped another option.'
       if (verb === 'record' && namedProblem(s.args[at + 2])) return namedProblem(s.args[at + 2])
       let body = null // the content this check read: a record grant carries its digest (finding 2)
       if (verb === 'post' || verb === 'record') {
@@ -489,9 +505,10 @@ export function gateStep(tool, input = {}, ctx = {}) {
   const dir = ctx.dir ?? ledgerDir()
   const file = String(input.file_path ?? '')
   if (/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) && STAMP.test(file)) return 'gate ledger: the role stamp and the brief lock of a session are written only by the hooks (security review 2026-11-12), never by hand.'
-  if (/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) && ledgerFile(file, dir)) return 'gate ledger: the round counter is written only by gate-rounds.mjs (gate.md, Rounds), never by hand.'
+  const target = file || String(input.notebook_path ?? '')
+  if (/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) && TRANSCRIPT.test(lexical(target))) return 'gate ledger: a session transcript (~/.claude/projects/**/*.jsonl) is never written by hand: the origin proofs of the role lock, waive and approve read it (M53, plan section 7).'
+  if (/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) && ledgerFile(file, dir)) return 'gate ledger: the round counter is written only by gate-rounds.mjs (gate.md, Rounds), never by hand; a verdict the hook missed is counted by its gate role with "gate-rounds.mjs record <name> --body-file <f>" (a PR: "gate-rounds.mjs post <owner/repo#n> --body-file <f>").'
   if (/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) && GUARD_FILE.test(file)) return 'gate ledger: the installed guards are changed only through claude-setup (a PR), never in place.'
-  if (/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) && /\.claude\/projects\/.*\.jsonl$/.test(file.replace(/\\/g, '/'))) return 'gate ledger: a session transcript is written only by the harness, never by hand (the proofs are read from it).'
   if (tool === 'Bash' || tool === 'PowerShell') return bashProblem(String(input.command ?? ''), dir, ctx)
   if (tool === 'mcp__github__create_pull_request') {
     const text = `${input.title ?? ''}\n${input.body ?? ''}`

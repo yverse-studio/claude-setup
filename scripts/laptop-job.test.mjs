@@ -7,8 +7,8 @@ import { mkdtempSync, readdirSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { MAX_BLENDER, MAX_RENDERS, acquireSlot, blenderCount, releaseSlot } from './laptop-slots.mjs'
-import { parseAcMinutes, parseArgs, powerProblems, gpuProblem, ramShort, heartbeatProblem, progressProblem } from './laptop-job.mjs'
+import { MAX_BLENDER, MAX_RENDERS, acquireSlot, blenderCount, ledgerCli, ledgerList, ledgerSignIn, ledgerSignOut, releaseSlot } from './laptop-slots.mjs'
+import { parseAcMinutes, parseArgs, powerProblems, gpuProblem, ramShort, heartbeatProblem, progressProblem, heavyApp, ramNeedGb, claimRam } from './laptop-job.mjs'
 
 const script = fileURLToPath(new URL('./laptop-job.mjs', import.meta.url))
 const run = (flags, ...cmd) => spawnSync('node', [script, '--no-gpu', ...flags, '--', ...cmd], { encoding: 'utf8', env: { ...process.env, LAPTOP_JOB_LOG: process.platform === 'win32' ? 'NUL' : '/dev/null' } })
@@ -169,4 +169,64 @@ test('heartbeat: a Blender job must name a progress file, and a stale progress f
   assert.equal(heartbeatProblem({ now: start + 25 * MIN, started: start, mtimeMs: null, heartbeatMin: 10 }), null, 'grace for a heavy first frame')
   assert.equal(heartbeatProblem({ now: start + 15 * MIN, started: start, mtimeMs: start - 900 * MIN, heartbeatMin: 10 }), null, 'a file left by the earlier run gets the first-frame grace on a resume')
   assert.equal(parseArgs(['--progress-file', 'p.json', '--heartbeat-min', '7', '--', 'x']).opt.heartbeatMin, 7)
+})
+
+test('RAM ledger: sign in, list, sign out, and a dead pid drops out', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'ledger-'))
+  ledgerSignIn({ who: 'pov render', app: 'blender', pid: 111, dir })
+  ledgerSignIn({ who: 'vn-test', app: 'renpy', pid: 222, dir })
+  assert.deepEqual(ledgerList({ dir, alive: () => true }).map((r) => r.who).sort(), ['pov render', 'vn-test'])
+  ledgerSignOut('vn-test', 222, dir)
+  assert.deepEqual(ledgerList({ dir, alive: () => true }).map((r) => r.who), ['pov render'])
+  assert.deepEqual(ledgerList({ dir, alive: () => false }), [])
+  assert.deepEqual(ledgerList({ dir, alive: () => true }), [])
+})
+test('RAM ledger: Blender and Ren\'Py commands are heavy, others are not', () => {
+  assert.equal(heavyApp(['blender', '-b']), 'blender')
+  assert.equal(heavyApp(['renpy.exe', 'game']), 'renpy')
+  assert.equal(heavyApp(['node', 'x.js']), null)
+  assert.equal(heavyApp(['node', 'build.mjs', 'renpy-assets']), null)
+  assert.equal(heavyApp(['tools/renpy-8/renpy.exe', 'game']), 'renpy')
+})
+test('RAM ledger: a Ren\'Py job signs in while it runs and out when it ends', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'ledger-run-'))
+  const r = spawnSync('node', [script, '--no-gpu', '--name', 'vn', '--', 'node', '-e', `const s=require('fs'),p=require('path');console.log('LEDGER '+s.readdirSync(p.join(process.env.LAPTOP_JOB_LOCK_DIR,'ledger')).join())`, 'renpy'], { encoding: 'utf8', env: { ...process.env, LAPTOP_JOB_LOCK_DIR: dir, LAPTOP_JOB_LOG: '/dev/null' } })
+  assert.match(r.stdout, /LEDGER vn-\d+\.json/)
+  assert.deepEqual(readdirSync(join(dir, 'ledger')), [])
+})
+
+test('RAM ledger CLI: a hand sign-in with a live pid survives the list, out removes it, bad input is refused', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'ledger-cli-'))
+  assert.equal(ledgerCli(['in', 'vn-play', 'renpy', String(process.pid)], dir), 'signed in vn-play')
+  assert.match(ledgerCli(['list'], dir), /vn-play \(renpy, pid \d+\)/)
+  assert.equal(ledgerCli(['out', 'vn-play', String(process.pid)], dir), 'signed out vn-play')
+  assert.equal(ledgerCli(['list'], dir), 'empty')
+  assert.throws(() => ledgerCli(['in', 'x', 'renpy'], dir), /usage/)
+  assert.throws(() => ledgerCli(['in', 'x', 'excel', '5'], dir), /usage/)
+  assert.throws(() => ledgerCli(['in', 'x', 'renpy', '1.5'], dir), /usage/)
+  assert.throws(() => ledgerCli(['in', 'x', 'renpy', '0'], dir), /usage/)
+  assert.throws(() => ledgerCli(['in', 'x', 'renpy', '99999999'], dir), /usage/)
+})
+
+test('RAM ledger: two jobs with one name do not sign each other out', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'ledger-same-'))
+  ledgerSignIn({ who: 'pov', app: 'blender', pid: 1, dir })
+  ledgerSignIn({ who: 'pov', app: 'blender', pid: 2, dir })
+  ledgerSignOut('pov', 1, dir)
+  assert.deepEqual(ledgerList({ dir, alive: () => true }).map((r) => r.pid), [2])
+})
+
+test('a Blender or RenPy job claims 4 GB in the RAM ledger by default, other jobs nothing, --ram-gb wins', () => {
+  assert.equal(ramNeedGb(parseArgs(['--', 'blender', '-b']).opt, ['blender', '-b'], {}), 4)
+  assert.equal(ramNeedGb(parseArgs(['--', 'node', 'x.js']).opt, ['node', 'x.js'], {}), 0)
+  assert.equal(ramNeedGb(parseArgs(['--ram-gb', '1.5', '--', 'node', 'x.js']).opt, ['node', 'x.js'], {}), 1.5)
+  assert.equal(ramNeedGb(parseArgs(['--ram-gb', '0', '--', 'blender']).opt, ['blender'], {}), 0)
+})
+test('claimRam: fits -> null, does not fit -> the WAIT text with the holders, broken ledger -> warns and lets the job run', () => {
+  const { opt } = parseArgs(['--name', 'pov', '--', 'blender'])
+  assert.equal(claimRam(opt, ['blender'], 'job:pov:1', () => ({ ok: true })), null)
+  const wait = claimRam(opt, ['blender'], 'job:pov:1', () => ({ ok: false, available: 1.2, live: [{ owner: 'animator-3', gb: 4 }] }))
+  assert.match(wait, /need 4 GB, available 1.2 GB; claims: animator-3 4 GB/)
+  assert.equal(claimRam(opt, ['blender'], 'job:pov:1', () => { throw new Error('no STUDIO_ROOT') }), null)
+  assert.equal(claimRam(parseArgs(['--', 'node']).opt, ['node'], 'x', () => { throw new Error('must not be called') }), null)
 })
