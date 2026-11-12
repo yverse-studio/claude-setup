@@ -1,25 +1,32 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { buildIndex, buildCard, ruleRows, CARD_MAX } from './coordinator-card.mjs'
+import { readFileSync } from 'node:fs'
+import { buildIndex, buildCard, ruleRows, briefBlock, CARD_MAX } from './coordinator-card.mjs'
 
 test('the card builds, stays under CARD_MAX characters and has its parts', () => {
   const card = buildCard({ hash: 'abc1234', date: '2026-11-08' })
   assert.ok(card.length < CARD_MAX, String(card.length))
   assert.match(card, /^Coordinator card \(claude-setup abc1234, 2026-11-08\)/)
-  for (const s of ['Pre-flight', 'Spawn rule', 'One home per rule', 'Roster']) assert.ok(card.includes(s), s)
+  for (const s of ['Before every reply', 'Thread brief', 'Models', 'Roster', 'Kits', 'COORDINATOR-RULES-INDEX.md']) assert.ok(card.includes(s), s)
 })
 
 test('the pre-flight carries the masterplan duty (roles/project-manager.md, Masterplan)', () => {
   const card = buildCard({ hash: 'x', date: 'd' })
-  const pre = card.split('## Spawn rule')[0]
-  for (const s of ['PLAN.json', 'plan.mjs', 'Stand', 'write_custom_view', 'roles/project-manager.md', 'Item: M<n>']) assert.ok(pre.includes(s), s)
+  const pre = card.split('## Thread brief')[0]
+  for (const s of ['PLAN.json', 'plan.mjs', 'Stand', 'write_custom_view']) assert.ok(pre.includes(s), s)
 })
 
-test('the index lines are rule → home, cut at 60 characters', () => {
+test('the card holds the one brief template, copied from docs/templates/thread-brief.md, with its Threads line', () => {
   const card = buildCard({ hash: 'x', date: 'd' })
-  const lines = card.split('## Where is rule X?')[1].split('\n').filter((l) => l.startsWith('- '))
-  assert.ok(lines.length > 5)
-  for (const l of lines) assert.match(l, /^- .{1,60} → /)
+  const md = readFileSync(new URL('../docs/templates/thread-brief.md', import.meta.url), 'utf8')
+  assert.ok(card.includes(briefBlock(md)), 'the card carries the template block unchanged')
+  assert.match(card, /^Threads: <list_threads checked/m)
+  assert.throws(() => briefBlock('no block here'))
+})
+
+test('rules a hook already enforces are not repeated on the card (M27 step 6)', () => {
+  const card = buildCard({ hash: 'x', date: 'd' })
+  for (const gone of ['## Spawn rule', 'Hand off only at a trigger', 'Escalation: stuck twice', '3 failed gate rounds', 'One home per rule']) assert.ok(!card.includes(gone), gone)
 })
 
 test('ruleRows reads the table', () => {
@@ -35,7 +42,7 @@ test('the rules index holds every row, unclipped, under 20,000 characters', () =
 
 test('the pre-flight carries the vacation-game fixes (facts, role check, dependencies, play before look)', () => {
   const card = buildCard({ hash: 'x', date: 'd' })
-  for (const s of ['only from a source read this turn', "thread title's role", 'Depends on: #n', 'real moment', 'Controls and World life']) assert.ok(card.includes(s), s)
+  for (const s of ['only from a source read this turn', "same role and topic as the thread's title", 'Depends on: #n', 'real moment', 'Controls and World life']) assert.ok(card.includes(s), s)
 })
 
 test('a flag is never taken as the output path (#439: --help wrote a file named --help)', async () => {
