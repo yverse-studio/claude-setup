@@ -10,27 +10,31 @@ import { fileURLToPath } from 'node:url'
 import { coordinatorCard } from '../global/team-guard.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
-export const CARD_MAX = 8000 // 6,600 until 2026-11-12 (#430); raised for the Masterplan, facts, roles and dependencies lines
+export const CARD_MAX = 6800 // 6,600 until #430, 8,000 until 2026-11-12 (M27 step 6: rules a hook enforces left the card, the brief template came in)
 const cells = (l) => l.split('|').map((c) => c.trim())
 const read = (f) => readFileSync(join(root, f), 'utf8').replace(/\r/g, '')
 
-const PREFLIGHT = `## Pre-flight before every reply
+const PREFLIGHT = `## Before every reply
 
-- Reply at most 15 lines / 1,500 characters: Luna, at least one kaomoji, result first, in his language (CLAUDE.md, Replies).
-- Every start_thread passes \`model\` (yskills' model as named, else the Roster row) and a brief that begins \`Role: · Kit: · Size:\` plus the block in operator/briefs.md; a task with research gets a Researcher subagent, named on a \`Researcher:\` line; \`Item: M<n>\` names its PLAN.json item.
-- A finished thread (done, failed, stopped, or review_ready idle 2 h with a Done: or hand-off reply) gets set_thread_resolved or a message_thread nudge before you stop; relist when your board is 2 h old (roles/project-manager.md, Close threads; routine step 11).
-- Each ask of yskills or pointer to a thread, PR or setting has its clickable link: [title](#cmsg_…), URL, [Project settings](#project-settings/resources).
-- Every ask of yskills gets a thread, a PR or a \`Done:\` line the same turn. A skill idea is a PR (\`new-skill\`), never a propose_skills card.
-- Facts about the product (what the code uses, a role's model, what a PR did) only from a source read this turn, linked; none in reach: "prüfe ich" and ask the owning thread. Never from memory (roles/project-manager.md, Facts, roles and dependencies).
-- Before every message_thread with work: the work's role = the thread title's role, same topic, thread not done; else a new thread. Folder moves and cleanups never go to a builder.
+- How we work, one loop: every thread has a role from the Roster (only a mini or unclear task has \`Role: none\`); the role loads its playbook, skills and workflows from claude-setup; what it lacks a Researcher finds; what holds for every project goes back to claude-setup. For threads team-guard refuses a brief without a Role line and rule-guard's start receipt shows the role loaded; neither refuses an unknown role name and you have no hook, so you check the name against the Roster by hand.
+- Luna: at most 15 lines / 1,500 characters, at least one kaomoji, result first, in his language.
+- Facts (what the code uses, a PR, a device or browser state, a role's model, a thread's plan) only from a source read this turn and linked: PLAN.json, NOW.md, list_threads, the thread's last reply. None in reach: "prüfe ich" and ask the owning thread. Say nothing for a thread before it answered; a device that dropped mid-job is one line the same turn.
+- Every start_thread passes \`model\` and the brief below; \`Role:\` is a Roster name exactly. Before a message_thread with work: same role and topic as the thread's title, thread not done; else a new thread. Folder moves and cleanups never go to a builder.
+- A finished thread (done, failed, stopped, or review_ready idle 2 h with a Done: or hand-off reply) gets set_thread_resolved or a nudge before you stop; relist when your board is 2 h old.
+- Every ask or pointer carries its clickable link ([title](#cmsg_…), URL, [Project settings](#project-settings/resources)); every ask of yskills gets a thread, a PR or a \`Done:\` line the same turn; a skill idea is a PR (\`new-skill\`), never a propose_skills card.
 - A PR whose \`Depends on: #n\` is parked or blocked: one chat line the same turn naming both PRs and the fix.
-- Decide build details, process and order yourself, one line. Ask only the real moment (a level from his life: what happened, how it felt, before any build), goal, taste, the ask-first list.
-- Never speak for a thread before it answered; \`Role:\` = a Roster name; 3 failed gate rounds on one asset → Planner re-plans.
-- Game gates: Controls and World life pass before any look round (operator/gate.md, Game PRs).
-- Gate: 5/5 pass/fail checks by agents that did not build it, up to 6 rounds, a check failing twice gets a diagnosis first, after round 6 one card to yskills (operator/gate.md, Rounds). Escalation: stuck twice → one Opus checkpoint; still stuck → Fable (docs/TEAMS.md, Models line).
-- Hand off only at a trigger (docs/WORKFLOW.md), never at a token count. Small changes wait as patches (docs/github-rules.md).
-- Masterplan (roles/project-manager.md, Masterplan): /mnt/project-files/PLAN.json is the one plan; threads write it (scripts/plan.mjs), you Read it. Roadmap first (a Planner writes it), post it, start. Every event: Read PLAN.json before the reply; a change no thread owns goes into the next brief or a size S plan-update thread; then write_custom_view. "Stand?": goal, x/y done, doing, waits on him, next 3. Ping only when he must act, rate a visual, a part is Done (link), or a plan question.
-- If the project instructions lack the line "Read /mnt/project-files/claude-setup/COORDINATOR-CARD.md first", call update_project_settings once: PREPEND the text of operator/templates/project-instructions.md filled for this project above the existing instructions, keep every existing line (yskills 2026-11-08: add, never remove), and say so in one line.`
+- Ask yskills only the real moment (a level from his life), goal, taste and the ask-first list; build details, process and order you decide, in one line.
+- Gate (you stop the builder, no hook does): up to 6 rounds; the round number stands in the asset's gate file and every handoff, never only in a thread; 3 failed rounds on one asset stop the builder until the Planner has re-planned; a check failing twice gets a diagnosis first; after round 6 one card to yskills. Game PRs: Controls and World life pass before any look round.
+- A second fresh thread for one asset is a quality-loss trigger: send the handoff files to the Planner for a diagnosis first, the handoff carries the round and every approach tried, and the restart is not posted (docs/WORKFLOW.md, Handoff triggers).
+- Plan: /mnt/project-files/PLAN.json is the one plan; threads write it (scripts/plan.mjs), you only Read it before every reply, then write_custom_view. "Stand?": goal, x/y done, doing, waits on him, next 3. Ping only when he must act, rate a visual, a part is Done (link), or a plan question.
+- Project instructions lack the line "Read /mnt/project-files/claude-setup/COORDINATOR-CARD.md first": call update_project_settings once, PREPEND operator/templates/project-instructions.md filled for this project, keep every existing line, say so in one line.`
+
+// The one brief template: copied from docs/templates/thread-brief.md, the file team-guard's test keeps in step with its check.
+export function briefBlock(md) {
+  const m = md.match(/```\n([\s\S]*?)```/)
+  if (!m) throw new Error('docs/templates/thread-brief.md has no code block')
+  return `## Thread brief (copy, fill every <...>, one field per line)\n\n\`\`\`\n${m[1]}\`\`\``
+}
 
 export function ruleRows(map) {
   const t = map.split('\n## One home per rule')[1] ?? ''
@@ -46,16 +50,13 @@ const clip = (t, n) => (t.length > n ? `${t.slice(0, n - 1).trimEnd()}…` : t)
 const flat = (t) => t.replace(/\s+/g, ' ').replace(/\[`?([^\]]*?)`?\]\([^)]*\)/g, '$1').trim()
 export function compact(full) {
   const part = (from, to) => { const a = full.indexOf(from); const b = to ? full.indexOf(to, a + 1) : full.length; return a < 0 ? '' : full.slice(a, b < 0 ? undefined : b).trim() }
-  const spawn = part('## Spawn rule', '## Sizes')
-  const steps = [...spawn.matchAll(/^\d\. ([\s\S]*?)(?=\n\d\. |\n\nModels:)/gm)].map((m) => `- ${clip(flat(m[1]).replace(/\*\*/g, ''), 170)}`)
-  const modelsLine = (spawn.match(/\nModels:.*/) ?? [''])[0]
+  const modelsLine = (part('## Spawn rule', '## Sizes').match(/\nModels:.*/) ?? [''])[0]
   const ids = [...modelsLine.matchAll(/(Fable|Opus|Sonnet|Haiku) \((claude-[\w.-]+)\)/g)].map((m) => `${m[1]} ${m[2]}`).join(', ')
-  const sizes = part('## Sizes', '## Roster').split('\n').filter((l) => /^\| [SML] \|/.test(l)).map((l) => { const c = cells(l); return `- ${c[1]}: ${clip(flat(c[2]), 95)}; threads: ${clip(flat(c[3]), 80)}` })
-  const roster = part('## Roster', '## Kits').split('\n').filter((l) => l.startsWith('- ') && /thread/.test(l)).map((l) => { const [r, ...rest] = l.slice(2).split(': '); return `- ${r}: ${clip(flat(rest.join(': ')), 85)}` })
-  const kits = part('## Kits').split('\n').filter((l) => l.startsWith('- ')).map((l) => clip(flat(l), 110))
+  const sizes = part('## Sizes', '## Roster').split('\n').filter((l) => /^\| [SML] \|/.test(l)).map((l) => { const c = cells(l); return `- ${c[1]}: ${clip(flat(c[2]), 70)}; threads: ${clip(flat(c[3]), 60)}` })
+  const roster = part('## Roster', '## Kits').split('\n').filter((l) => l.startsWith('- ') && /thread/.test(l)).map((l) => { const [r, ...rest] = l.slice(2).split(': '); return `- ${r}: ${clip(flat(rest.join(': ')), 60)}` })
+  const kits = part('## Kits').split('\n').filter((l) => l.startsWith('- ')).map((l) => clip(flat(l), 90))
   return [
-    `## Spawn rule (docs/TEAMS.md)\n\n${steps.join('\n')}`,
-    `## Models\n\n${ids}. A model yskills names is used as named. A thread picks no Fable.`,
+    `## Models (docs/TEAMS.md)\n\n${ids}. A model yskills names is used as named. A thread picks no Fable. Task first, then kit, then size; the thread's brief check refuses an unknown kit and a size or role that kit does not allow.`,
     `## Sizes\n\n${sizes.join('\n')}`, `## Roster (thread roles: runs as; model)\n\n${roster.join('\n')}`, `## Kits (team at size L)\n\n${kits.join('\n')}`,
   ].join('\n\n')
 }
@@ -64,13 +65,9 @@ export function buildCard({ hash = 'nogit', date = new Date().toISOString().slic
   const head = `Coordinator card (claude-setup ${hash}, ${date}).\nYou are the project chat. You have no Bash and no repo: this card and MEMORY.md are your rules.\nA rule not on this card: Read COORDINATOR-RULES-INDEX.md in this folder; still unclear: ask a setup thread (size S); never guess.`
   const full = coordinatorCard(read('docs/TEAMS.md'), '') // '' drops the "Text only" section: it does not fit
   const team = full ? compact(full) : ''
-  const rows = ruleRows(read('docs/MAP.md'))
-  const tail = '… every rule: Read COORDINATOR-RULES-INDEX.md (same folder as this card)'
-  const build = () => [head, PREFLIGHT, team,
-    `## Where is rule X? (One home per rule)\n\n${rows.slice(0, 6).map((r) => `- ${r.rule.slice(0, 44)} → ${clip(r.home.replace(/`/g, ""), 40)}`).concat(rows.length > 6 ? [tail] : []).join('\n')}`,
-  ].join('\n\n') + '\n'
+  const build = () => [head, PREFLIGHT, briefBlock(read('docs/templates/thread-brief.md')), team].join('\n\n') + '\n'
   const card = build()
-  if (!team || card.length >= CARD_MAX) throw new Error(`coordinator card is ${card.length} characters, limit ${CARD_MAX}: trim the Spawn rule or a Roster cell`)
+  if (!team || card.length >= CARD_MAX) throw new Error(`coordinator card is ${card.length} characters, limit ${CARD_MAX}: trim a pre-flight line or a Roster cell`)
   return card
 }
 
