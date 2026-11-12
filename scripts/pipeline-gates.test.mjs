@@ -135,6 +135,13 @@ test('intake: Adult use or Commercial use "no", or an unclear answer, goes to qu
   assert.equal(problems((d) => writeFileSync(join(d, 'LICENCE.md'), LICENCE.replace('Attribution: Example Studio', 'Attribution: none required'))), '', 'no attribution needed is fine')
 })
 
+test('intake: Adult use is an allow-list, only yes or ja passes', () => {
+  for (const value of ['?', 'not specified', 'maybe', 'see website', 'permitted?']) {
+    assert.match(problems((d) => writeFileSync(join(d, 'LICENCE.md'), LICENCE.replace('Adult use: yes', `Adult use: ${value}`))), /"Adult use: .*_quarantine/, value)
+  }
+  for (const value of ['yes', 'Yes, no restrictions', 'ja']) assert.equal(problems((d) => writeFileSync(join(d, 'LICENCE.md'), LICENCE.replace('Adult use: yes', `Adult use: ${value}`))), '', value)
+})
+
 test('intake: a report that is only a file list fails', () => {
   assert.match(problems((d) => rmSync(join(d, 'intake.json'))), /file list/)
   assert.match(problems((d) => writeFileSync(join(d, 'intake.json'), JSON.stringify({ type: 'garment', files: ['a.fbx', 'b.png'] }))), /no rows/)

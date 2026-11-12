@@ -1431,6 +1431,16 @@ test('gate fixes: no sheet demand for HUD or camera work, every app browser tool
   assert.match(dupeCheckMissing('Bash', { command: 'curl -L -o a.zip https://www.fab.com/listings/0123456789abcdef-0123-4567-89ab-0123456789ab' }, '') ?? '', /clothes_dupe/)
 })
 
+test('team guard: Programmer, Animator and Character TD briefs need the Sheet line however Role and Kit are separated', async () => {
+  const { missingLines } = await import('../global/team-guard.mjs')
+  for (const role of ['Programmer', 'Animator', 'Character TD']) {
+    for (const head of [`Role: ${role} / Kit: game / Size: M`, `Role: ${role} - Kit: story - Size: M`, `Role: ${role}\nKit: game\nSize: M`]) {
+      assert.ok(missingLines(`${head}${FULL}\nFit the outfit.`).some((l) => /Sheet/.test(l)), head)
+    }
+  }
+  assert.ok(!missingLines(`Role: Programmer / Kit: setup / Size: M${FULL}`).some((l) => /Sheet/.test(l)), 'other kits need no sheet')
+})
+
 test('gate fixes: Sheet: must be a .md path and Look-Lock: a link or card, "later" does not count', async () => {
   const { missingLines } = await import('../global/team-guard.mjs')
   const b = (extra) => `Role: Programmer · Kit: game · Size: M${FULL}\nFit the character outfit.\n${extra}`
