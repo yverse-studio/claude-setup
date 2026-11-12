@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
 import { join } from 'node:path'
 import { readLedger, writeLedger } from '../global/gate-rounds.mjs'
-import { approvalProblem, planCheckBrief, planCheckPost, planReady, recordApproval, registerPlan, visibleWork } from '../global/task-ledger.mjs'
+import { approvalProblem, planCheckBrief, planChecksFromTranscript, planReady, recordApproval, registerPlan, visibleWork } from '../global/task-ledger.mjs'
 
 const root = join(fileURLToPath(import.meta.url), '..', '..')
 const FIXTURE = join(root, 'scripts/fixtures/task-plan-ok.md')
@@ -18,12 +18,11 @@ const setup = () => {
   return { dir, plan, done: () => rmSync(dir, { recursive: true, force: true }) }
 }
 const hashOf = (dir, asset) => readLedger(dir, asset).plan.hash
-// The plan check is written only through the door's PostToolUse function (M28 PR 2): the test plays the hook, with the Agent call in a transcript.
-const hook = (dir, asset, prompt, text) => {
-  const transcript = join(dir, 'transcript.jsonl')
-  writeFileSync(transcript, `${JSON.stringify({ type: 'assistant', message: { content: [{ type: 'tool_use', name: 'Agent', input: { prompt, model: 'opus' } }] } })}\n`)
-  return planCheckPost({ hook_event_name: 'PostToolUse', tool_name: 'Agent', tool_input: { prompt, model: 'opus' }, tool_response: text, transcript_path: transcript }, { dir, checklists: '' })
-}
+// The plan check is written only from the transcript (M28 PR 2): the test plays rule-guard with the Agent call and its tool_result.
+const hook = (dir, asset, prompt, text, id = 'u1') => planChecksFromTranscript([
+  { type: 'assistant', message: { content: [{ type: 'tool_use', id, name: 'Agent', input: { prompt, model: 'opus' } }] } },
+  { type: 'user', message: { content: [{ type: 'tool_result', tool_use_id: id, content: text }] } },
+].map((r) => JSON.stringify(r)).join('\n'), { dir, checklists: '' })
 const checked = (dir, asset, result = 'pass') => hook(dir, asset, planCheckBrief(asset, { dir, checklists: '' }), `Plan check ${result}`)
 
 test('planReady is false for a new asset, after registerPlan alone, and after a plan check without approval', () => {
@@ -65,12 +64,12 @@ test('recordApproval refuses when the plan check is missing, failed, or belongs 
 test('the door records nothing for an asset without a registered plan, nor for a plan edited since it was registered', () => {
   const t = setup()
   try {
-    assert.match(hook(t.dir, 'duck-hud', 'Plan check: duck-hud\nx', 'Plan check pass').note, /no registered plan/)
+    assert.deepEqual(hook(t.dir, 'duck-hud', 'Plan check: duck-hud\nx', 'Plan check pass'), [])
     assert.equal(readLedger(t.dir, 'duck-hud').planCheck, undefined)
     registerPlan('duck-hud', t.plan, 's1', t.dir)
     const prompt = planCheckBrief('duck-hud', { dir: t.dir, checklists: '' })
     writeFileSync(t.plan, `${readFileSync(t.plan, 'utf8')} `)
-    assert.match(hook(t.dir, 'duck-hud', prompt, 'Plan check pass').note, /changed/)
+    assert.deepEqual(hook(t.dir, 'duck-hud', prompt, 'Plan check pass'), [])
     assert.equal(readLedger(t.dir, 'duck-hud').planCheck, undefined)
   } finally { t.done() }
 })

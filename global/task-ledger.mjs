@@ -2,7 +2,7 @@
 // M28 (plan 2026-11-12-M28-short-plan.md): the task ledger. A task's PLAN.md, its plan check and its approval are three fields of the same
 // per-asset ledger file the gate round counter keeps (gate-rounds.mjs); planReady() is the one function lock B (M42) will call.
 // The plan check is written only by the door: team-guard.mjs refuses a wrong plan-check call (planCheckPre, PreToolUse on Agent) and
-// context-guard.mjs records the verdict (planCheckPost, PostToolUse). The CLI has no verb for it, and rule-guard refuses a Bash call
+// rule-guard.mjs records the verdict from the transcript at the next PreToolUse (planChecksFromTranscript). The CLI has no verb for it, and rule-guard refuses a Bash call
 // that imports this file (taskBashProblem), so the author session has no way to write planCheck.
 // CLI: task-ledger.mjs plan <asset> <PLAN.md> | approve <asset> <ref> | status <asset> | brief <asset>
 import { createHash } from 'node:crypto'
@@ -86,13 +86,13 @@ export function registerPlan(asset, planPath, session, dir = ledgerDir()) {
   const l = readLedger(dir, asset)
   writeLedger(dir, { ...l, plan: { path: resolve(planPath), hash: sha(text), author_session: session ?? null, at: new Date().toISOString() } })
 }
-// Written only by planCheckPost below (not exported): the hash must be the registered plan's, the result pass or fail.
-function recordPlanCheck(asset, { result, plan_hash: planHash, brief_hash: briefHash, model }, dir = ledgerDir()) {
+// Written only by planChecksFromTranscript below (not exported): the hash must be the registered plan's, the result pass or fail.
+function recordPlanCheck(asset, { result, plan_hash: planHash, brief_hash: briefHash, model, tool_use_id: toolUseId = null, at = null }, dir = ledgerDir()) {
   const l = readLedger(dir, asset)
   if (!l.plan) throw new Error(`${asset} has no registered plan`)
   if (planHash !== l.plan.hash) throw new Error(`plan check for ${planHash}, which is not the registered plan of ${asset}`)
   if (!['pass', 'fail'].includes(result)) throw new Error('a plan check result is pass or fail')
-  writeLedger(dir, { ...l, planCheck: { result, plan_hash: planHash, brief_hash: briefHash, model, at: new Date().toISOString() } })
+  writeLedger(dir, { ...l, planCheck: { result, plan_hash: planHash, brief_hash: briefHash, model, tool_use_id: toolUseId, at: at ?? new Date().toISOString() } })
 }
 export function recordApproval(asset, { by, ref }, dir = ledgerDir()) {
   const l = readLedger(dir, asset)
@@ -193,7 +193,7 @@ export function planCheckPre(tool, input = {}, { dir = ledgerDir(), checklists =
   return why ? `team-guard: ${why} (docs/templates/task-plan.md, plan check).` : null
 }
 
-// The text of a tool response in any shape the harness may use: a string, content blocks, or a result/output/text field, nested.
+// The text of a tool result in any shape: a string, content blocks, or a result/output/text field, nested.
 export function responseText(r, depth = 0) {
   if (r == null || depth > 5) return ''
   if (typeof r === 'string') return r
@@ -208,12 +208,6 @@ export function verdictOf(text) {
   return found.includes('fail') ? 'fail' : found[0] ?? null
 }
 
-// The Agent call really happened in this session: its tool_use (with this exact prompt) is in the transcript the harness writes. A payload built
-// by hand and passed to planCheckPost therefore records nothing unless the real call is there.
-function ranInSession(transcriptPath, prompt) {
-  const want = sha(String(prompt ?? '').trimEnd())
-  return transcriptRows(read(String(transcriptPath ?? ''))).some((r) => (Array.isArray(r.message?.content) ? r.message.content : []).some((c) => c?.type === 'tool_use' && AGENT.test(c.name ?? '') && sha(String(c.input?.prompt ?? '').trimEnd()) === want))
-}
 // A message in this session after a time: a user-side row that is no tool result (a thread cannot write one), from the principal or the
 // coordinator, holding exactly that id (pure-code approval).
 const FROM = /trust=\\?"principal\\?"|<relay\b[^>]*\bfrom=\\?"coordinator\\?"/
@@ -229,22 +223,32 @@ function messageAfter(rows, ref, at) {
 // The brief's Size (S, M or L) from the session's first user message that names one; null when none does.
 const briefSize = (rows) => { for (const r of rows) { if (r.type !== 'user' || (Array.isArray(r.message?.content) && r.message.content.some((c) => c?.type === 'tool_result'))) continue; const m = JSON.stringify(r.message?.content ?? '').replace(/[*_`]/g, '').match(/\bSize:[ \t]*([SML])\b/); if (m) return m[1] } return null }
 
-// PostToolUse (context-guard.mjs): records the checker's verdict. The real payload of an Agent call was not captured in the cloud session
-// that built this, so the parser is tolerant (see responseText) and a launch without final text (a background run) records nothing and says so.
-// Not recorded: another event or tool, a subagent's call, a prompt that is not the rendered brief, a model below Opus, a plan that changed.
-export function planCheckPost(payload = {}, { dir = ledgerDir(), checklists = loadChecklists(payload.cwd) } = {}) {
-  const { hook_event_name: event, tool_name: tool, tool_input: input = {}, agent_id: agentId } = payload
-  const asset = AGENT.test(tool ?? '') ? checkAsset(input.prompt) : null
-  if (!asset) return { note: null }
-  if (event !== 'PostToolUse') return { note: `Plan check not recorded: only a PostToolUse event of the Agent call writes it (this was ${event ?? 'none'}).` }
-  const why = doorProblem(asset, input, { dir, checklists, agentId })
-  if (why) return { note: `Plan check not recorded: ${why}.` }
-  if (!ranInSession(payload.transcript_path, input.prompt)) return { note: `Plan check not recorded: this session's transcript holds no Agent call with the rendered brief of ${asset}.` }
-  const result = verdictOf(responseText(payload.tool_response ?? payload.tool_result ?? payload.tool_output))
-  if (!result) return { note: `Plan check: nothing was recorded for ${asset}: the checker's answer has no "Plan check pass" or "Plan check fail" line (a background run returns no answer: start it in the foreground, run_in_background false).` }
-  const plan = registered(asset, dir)
-  recordPlanCheck(asset, { result, plan_hash: plan.hash, brief_hash: sha(planCheckBrief(asset, { dir, checklists })), model: String(input.model) }, dir)
-  return { note: `Plan check recorded: ${result} for ${asset}.`, result }
+// The verdict is read from the transcript the harness writes, never from a payload the caller supplies: rule-guard calls this at every
+// PreToolUse with the session's transcript, and an Agent call that opens with `Plan check: <asset>` counts when its prompt is the rendered
+// brief on an Opus tier and its tool_result (matched by tool_use_id) opens with `Plan check pass` or `Plan check fail`. A hand-fed hook
+// payload therefore records nothing, whatever launcher runs it. A run in the background returns no verdict line and records nothing.
+// Not recorded: a subagent's session (agentId), a prompt that is not the rendered brief, a model below Opus, a plan that changed.
+export function planChecksFromTranscript(text, { dir = ledgerDir(), checklists = loadChecklists(), agentId = null } = {}) {
+  if (agentId || !String(text).includes('Plan check: ')) return []
+  const uses = new Map()
+  const notes = []
+  for (const r of transcriptRows(text)) {
+    for (const c of Array.isArray(r.message?.content) ? r.message.content : []) {
+      if (c?.type === 'tool_use' && AGENT.test(c.name ?? '')) {
+        const asset = checkAsset(c.input?.prompt)
+        if (asset) uses.set(c.id, { asset, input: c.input })
+      } else if (c?.type === 'tool_result' && uses.has(c.tool_use_id)) {
+        const { asset, input } = uses.get(c.tool_use_id)
+        uses.delete(c.tool_use_id)
+        if (readLedger(dir, asset).planCheck?.tool_use_id === c.tool_use_id || doorProblem(asset, input, { dir, checklists, agentId })) continue
+        const result = verdictOf(responseText(c.content))
+        if (!result) continue
+        recordPlanCheck(asset, { result, plan_hash: registered(asset, dir).hash, brief_hash: sha(planCheckBrief(asset, { dir, checklists })), model: String(input.model), tool_use_id: c.tool_use_id, at: r.timestamp }, dir)
+        notes.push(`Plan check recorded: ${result} for ${asset}.`)
+      }
+    }
+  }
+  return notes
 }
 
 // Bash, decided by command position (the same tokenizer as the round counter). The CLI has four verbs; an import, an eval or an unknown verb

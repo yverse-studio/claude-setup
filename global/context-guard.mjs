@@ -4,8 +4,6 @@
 // tell Claude once to work leaner; at HANDOFF (a backstop only: the real handoff triggers are in
 // docs/WORKFLOW.md, Handoff triggers), to check them, and again every REFIRE tokens after that.
 // Silent otherwise; never blocks.
-// Also the PostToolUse door of the plan check (M28, global/task-ledger.mjs): it runs on every tool call, so it records the verdict of an
-// Agent call that ran the rendered plan-check brief. A new hook entry in settings would not reach a cached cloud image; this one does.
 import { closeSync, existsSync, openSync, readFileSync, readSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -41,27 +39,18 @@ function tail(path) {
   } finally { closeSync(fd) }
 }
 
-// The plan-check verdict: an Agent call only, through the ledger file that sits beside this guard (missing: nothing happens).
-async function planDoor(payload) {
-  if (!/^(Agent|Task)$/.test(payload.tool_name ?? '')) return ''
-  try { return (await import('./task-ledger.mjs')).planCheckPost(payload).note ?? '' } catch (e) { return `Plan check: could not record (${String(e.message).slice(0, 80)}).` }
-}
-
 let raw = ''
 process.stdin.setEncoding('utf8')
 process.stdin.on('data', (c) => { raw += c })
-process.stdin.on('end', async () => {
+process.stdin.on('end', () => {
   try {
-    const payload = JSON.parse(raw || '{}')
-    const { session_id: id = 'unknown', transcript_path: path } = payload
-    const door = await planDoor(payload)
-    const say = (msg) => { const all = [door, msg].filter(Boolean).join('\n'); if (all) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PostToolUse', additionalContext: all } })) }
-    if (!path || !existsSync(path)) return say('')
+    const { session_id: id = 'unknown', transcript_path: path } = JSON.parse(raw || '{}')
+    if (!path || !existsSync(path)) return
     const stateFile = join(tmpdir(), `claude-context-guard-${String(id).replace(/[^\w-]/g, '')}.json`)
     const state = existsSync(stateFile) ? JSON.parse(readFileSync(stateFile, 'utf8')) : { fired: [] }
     const seen = usages(tail(path))
     const now = seen.at(-1)
-    if (!now) return say('')
+    if (!now) return
     const k = (n) => `${Math.round(n / 1000)}k`
     // Absolute floors: a cold start already carries ~100k+ in project threads, so growth since the
     // first call hides the real size. Warn once at WARN, check the handoff triggers at HANDOFF, then again every REFIRE.
@@ -76,7 +65,7 @@ process.stdin.on('end', async () => {
       state.fired.push('warn')
     }
     writeFileSync(stateFile, JSON.stringify(state))
-    say(msg)
+    if (msg) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PostToolUse', additionalContext: msg } }))
   } catch {
     // A guard must never break a tool call.
   }

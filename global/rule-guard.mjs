@@ -781,6 +781,15 @@ export async function gateBlock(tool, input, transcript, model, dry = false) {
     return problem ? `rule-guard: ${problem}` : null
   } catch (e) { return `rule-guard: gate ledger check failed (${String(e.message).slice(0, 80)}); refused, fail closed (operator/gate.md, Rounds).` }
 }
+// The plan check's verdict (M28, global/task-ledger.mjs): read from the session's transcript at every PreToolUse, not from any payload.
+async function recordPlanChecks(transcript, agentId, cwd) {
+  try {
+    const text = transcript()
+    if (!text.includes('Plan check: ')) return ''
+    const task = await loadCounter('task-ledger.mjs')
+    return task.planChecksFromTranscript(text, { checklists: task.loadChecklists(cwd), agentId }).join('\n')
+  } catch { return '' }
+}
 // The start proof of a thread names the guard version it runs and any guard file that is missing (plan M47).
 async function guardLine() {
   try { return (await import(new URL('./team-guard.mjs', import.meta.url))).guardVersion(dirname(fileURLToPath(import.meta.url))) } catch { return '' }
@@ -827,6 +836,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         const shipped = join(tmpdir(), `claude-setup-artifacts-${String(session).replace(/\W/g, '')}`)
         const transcript = () => (transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : '')
         const sessionTranscript = () => [transcriptPath, agentTranscript(transcriptPath, agentId)].filter((p) => p && existsSync(p)).map(read).join('\n')
+        const planNote = await recordPlanChecks(transcript, agentId, cwd) // before the gates: `approve` reads the check this just recorded
         let block = (await gateBlock(tool, input ?? {}, transcript, sessionModel(transcript()), true))
           ?? decide(tool, input ?? {}, process.env, session ? read(shipped).split('\n') : [], () => threadBoard(toolCalls(transcript())))
           ?? canaryMissing(tool, input ?? {}, session ? read(join(process.env.CLAUDE_SETUP_HOME || homedir(), '.claude', 'claude-setup', 'booted', `${String(session).replace(/\W/g, '')}.canary`)) : '', transcript)
@@ -843,7 +853,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         if (!block && session && tool === 'Artifact' && input?.url && input.file_path) writeFileSync(shipped, `${input.file_path}\n`, { flag: 'a' })
         if (block) { process.stderr.write(block); process.exitCode = 2 }
         else {
-          const note = jetztWarning(tool, input ?? {}, cwd)
+          const note = [planNote, jetztWarning(tool, input ?? {}, cwd)].filter(Boolean).join('\n')
           if (note) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', additionalContext: note } }))
         }
       } catch {

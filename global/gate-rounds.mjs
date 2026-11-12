@@ -271,6 +271,8 @@ export function simpleCommands(text, depth = 0) {
 }
 
 const GUARDS = 'rule-guard|team-guard|context-guard|compact-guard|attempt-guard|gate-rounds|task-ledger' // every installed guard file (team-guard.mjs GUARD_FILES)
+const LAUNCHERS = /^(node|nodejs|bun|deno|tsx|ts-node|npx|npm|pnpm|yarn|env|stdbuf|setsid|nice|ionice|timeout|xargs|nohup|time|script|python3?|sh|bash)$/
+const GUARD_NAME = /(?:context|compact|attempt|team|rule)[-_]?guar|claude-setup\/\S*[?*{]/
 const GUARD_FILE = new RegExp(`\\.claude[\\\\/]claude-setup[\\\\/](?:${GUARDS})\\.mjs$`)
 const CLI_VERBS = ['status', 'check', 'init', 'direct', 'card', 'picture', 'waive', 'merge', 'post']
 const MERGE_DOOR = /pulls\/[^\s/]*\/merge|mergePullRequest|enablePullRequestAutoMerge/
@@ -290,7 +292,7 @@ function bashProblem(cmd, dir, ctx) {
   const { list, bad } = simpleCommands(cmd)
   if (bad && /\bgh\b|gate/.test(cmd)) return 'gate ledger: this command has unbalanced quotes and mentions gh or gate, so it cannot be read; write it plainly (gate.md, Rounds).'
   const dirRe = dir ? new RegExp(`${dir.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\/+$/, '')}(?:/|$)`) : null
-  const named = (w) => !/\s/.test(w) && (dirRe?.test(w) || /(?:project-files|\.claude\/claude-setup)\/gate(?:\/|$)/.test(w) || GUARD_FILE.test(w))
+  const named = (w) => !/\s/.test(w) && (dirRe?.test(w) || /(?:project-files|\.claude\/claude-setup)\/gate(?:\/|$)/.test(w) || GUARD_FILE.test(w) || /\.claude\/projects\/\S*\.jsonl$/.test(w)) // a session transcript is written by the harness only
   const msg = 'gate ledger: the round counter is written only by gate-rounds.mjs (gate.md, Rounds), never by hand; the installed guards change only through a claude-setup PR.'
   if (list.some((s) => s.env) && list.some((s) => s.a0 === 'node' && s.args.some((a) => ['gate-rounds.mjs', 'task-ledger.mjs'].includes(base(a))))) return 'gate ledger: CLAUDE_SETUP_* variables (the ledger dir, the guard switch) are not set in a call that runs the counter or the task ledger; they would point it at another ledger (gate.md, Rounds).'
   for (const s of list) {
@@ -299,10 +301,10 @@ function bashProblem(cmd, dir, ctx) {
     // An inline script (node -e, python -c) that holds the ledger folder or an installed guard path writes it as well as a redirect does.
     const inline = /^(node|nodejs|python3?|bun|deno|ruby|perl)$/.test(base(s.a0)) && s.args.some((a) => /^-(?:[a-zA-Z]*[ecp]|-eval|-print)$/.test(a))
     if (inline && s.args.some((a) => (dir && a.includes(dir.replace(/\/+$/, '') + '/')) || /(?:project-files|\.claude\/claude-setup)\/gate\//.test(a) || GUARD_FILE.test(a) || new RegExp(`\\.claude[\\\\/]claude-setup[\\\\/](?:${GUARDS})\\.mjs`).test(a))) return msg
-    // A guard script run by hand takes any payload, so a transcript_path of the caller's choosing (reviewer, #474 round 1): only the hook runs it.
-    // `rule-guard.mjs read <url>` is the one hand use (CLAUDE.md, Cloud threads).
-    const guardRun = /^(node|nodejs|bun|deno|tsx)$/.test(base(s.a0)) ? s.args.find((a) => /-guard\.mjs$/.test(a)) : null
-    if (guardRun && !(base(guardRun) === 'rule-guard.mjs' && s.args[s.args.indexOf(guardRun) + 1] === 'read')) return `gate ledger: ${base(guardRun)} is run by its hook only, never by hand (it takes any payload); the one hand use is "rule-guard.mjs read <url>".`
+    // Second layer (the verdict itself is read from the transcript, not from a payload): an installed guard is run by its hook only. The name is
+    // matched unanchored in any argument of a launcher, so a glob or a wrapper (npx, setsid, stdbuf) does not hide it; `node --check` and
+    // `rule-guard.mjs read <url>` are the hand uses.
+    if (LAUNCHERS.test(base(s.a0)) && s.args.some((a) => GUARD_NAME.test(a)) && !s.args.some((a) => /^(--check|-c)$/.test(a)) && !(s.args.some((a) => /rule-guard\.mjs$/.test(a)) && s.args.includes('read'))) return 'gate ledger: an installed guard is run by its hook only, never by hand (it takes any payload); the hand uses are "node --check <guard>" and "rule-guard.mjs read <url>".'
     const script = s.a0 === 'node' ? s.args.find((a) => base(a) === 'gate-rounds.mjs') ?? s.args.find((a) => !a.startsWith('-')) : null
     if (script && base(script) === 'gate-rounds.mjs') {
       const at = s.args.indexOf(script)

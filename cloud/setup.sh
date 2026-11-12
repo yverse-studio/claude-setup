@@ -53,8 +53,6 @@ cat > "$HOME/.claude/claude-setup/context-guard.mjs" <<'GUARD'
 // tell Claude once to work leaner; at HANDOFF (a backstop only: the real handoff triggers are in
 // docs/WORKFLOW.md, Handoff triggers), to check them, and again every REFIRE tokens after that.
 // Silent otherwise; never blocks.
-// Also the PostToolUse door of the plan check (M28, global/task-ledger.mjs): it runs on every tool call, so it records the verdict of an
-// Agent call that ran the rendered plan-check brief. A new hook entry in settings would not reach a cached cloud image; this one does.
 import { closeSync, existsSync, openSync, readFileSync, readSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -90,27 +88,18 @@ function tail(path) {
   } finally { closeSync(fd) }
 }
 
-// The plan-check verdict: an Agent call only, through the ledger file that sits beside this guard (missing: nothing happens).
-async function planDoor(payload) {
-  if (!/^(Agent|Task)$/.test(payload.tool_name ?? '')) return ''
-  try { return (await import('./task-ledger.mjs')).planCheckPost(payload).note ?? '' } catch (e) { return `Plan check: could not record (${String(e.message).slice(0, 80)}).` }
-}
-
 let raw = ''
 process.stdin.setEncoding('utf8')
 process.stdin.on('data', (c) => { raw += c })
-process.stdin.on('end', async () => {
+process.stdin.on('end', () => {
   try {
-    const payload = JSON.parse(raw || '{}')
-    const { session_id: id = 'unknown', transcript_path: path } = payload
-    const door = await planDoor(payload)
-    const say = (msg) => { const all = [door, msg].filter(Boolean).join('\n'); if (all) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PostToolUse', additionalContext: all } })) }
-    if (!path || !existsSync(path)) return say('')
+    const { session_id: id = 'unknown', transcript_path: path } = JSON.parse(raw || '{}')
+    if (!path || !existsSync(path)) return
     const stateFile = join(tmpdir(), `claude-context-guard-${String(id).replace(/[^\w-]/g, '')}.json`)
     const state = existsSync(stateFile) ? JSON.parse(readFileSync(stateFile, 'utf8')) : { fired: [] }
     const seen = usages(tail(path))
     const now = seen.at(-1)
-    if (!now) return say('')
+    if (!now) return
     const k = (n) => `${Math.round(n / 1000)}k`
     // Absolute floors: a cold start already carries ~100k+ in project threads, so growth since the
     // first call hides the real size. Warn once at WARN, check the handoff triggers at HANDOFF, then again every REFIRE.
@@ -125,7 +114,7 @@ process.stdin.on('end', async () => {
       state.fired.push('warn')
     }
     writeFileSync(stateFile, JSON.stringify(state))
-    say(msg)
+    if (msg) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PostToolUse', additionalContext: msg } }))
   } catch {
     // A guard must never break a tool call.
   }
@@ -1094,6 +1083,8 @@ export function simpleCommands(text, depth = 0) {
 }
 
 const GUARDS = 'rule-guard|team-guard|context-guard|compact-guard|attempt-guard|gate-rounds|task-ledger' // every installed guard file (team-guard.mjs GUARD_FILES)
+const LAUNCHERS = /^(node|nodejs|bun|deno|tsx|ts-node|npx|npm|pnpm|yarn|env|stdbuf|setsid|nice|ionice|timeout|xargs|nohup|time|script|python3?|sh|bash)$/
+const GUARD_NAME = /(?:context|compact|attempt|team|rule)[-_]?guar|claude-setup\/\S*[?*{]/
 const GUARD_FILE = new RegExp(`\\.claude[\\\\/]claude-setup[\\\\/](?:${GUARDS})\\.mjs$`)
 const CLI_VERBS = ['status', 'check', 'init', 'direct', 'card', 'picture', 'waive', 'merge', 'post']
 const MERGE_DOOR = /pulls\/[^\s/]*\/merge|mergePullRequest|enablePullRequestAutoMerge/
@@ -1113,7 +1104,7 @@ function bashProblem(cmd, dir, ctx) {
   const { list, bad } = simpleCommands(cmd)
   if (bad && /\bgh\b|gate/.test(cmd)) return 'gate ledger: this command has unbalanced quotes and mentions gh or gate, so it cannot be read; write it plainly (gate.md, Rounds).'
   const dirRe = dir ? new RegExp(`${dir.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\/+$/, '')}(?:/|$)`) : null
-  const named = (w) => !/\s/.test(w) && (dirRe?.test(w) || /(?:project-files|\.claude\/claude-setup)\/gate(?:\/|$)/.test(w) || GUARD_FILE.test(w))
+  const named = (w) => !/\s/.test(w) && (dirRe?.test(w) || /(?:project-files|\.claude\/claude-setup)\/gate(?:\/|$)/.test(w) || GUARD_FILE.test(w) || /\.claude\/projects\/\S*\.jsonl$/.test(w)) // a session transcript is written by the harness only
   const msg = 'gate ledger: the round counter is written only by gate-rounds.mjs (gate.md, Rounds), never by hand; the installed guards change only through a claude-setup PR.'
   if (list.some((s) => s.env) && list.some((s) => s.a0 === 'node' && s.args.some((a) => ['gate-rounds.mjs', 'task-ledger.mjs'].includes(base(a))))) return 'gate ledger: CLAUDE_SETUP_* variables (the ledger dir, the guard switch) are not set in a call that runs the counter or the task ledger; they would point it at another ledger (gate.md, Rounds).'
   for (const s of list) {
@@ -1122,10 +1113,10 @@ function bashProblem(cmd, dir, ctx) {
     // An inline script (node -e, python -c) that holds the ledger folder or an installed guard path writes it as well as a redirect does.
     const inline = /^(node|nodejs|python3?|bun|deno|ruby|perl)$/.test(base(s.a0)) && s.args.some((a) => /^-(?:[a-zA-Z]*[ecp]|-eval|-print)$/.test(a))
     if (inline && s.args.some((a) => (dir && a.includes(dir.replace(/\/+$/, '') + '/')) || /(?:project-files|\.claude\/claude-setup)\/gate\//.test(a) || GUARD_FILE.test(a) || new RegExp(`\\.claude[\\\\/]claude-setup[\\\\/](?:${GUARDS})\\.mjs`).test(a))) return msg
-    // A guard script run by hand takes any payload, so a transcript_path of the caller's choosing (reviewer, #474 round 1): only the hook runs it.
-    // `rule-guard.mjs read <url>` is the one hand use (CLAUDE.md, Cloud threads).
-    const guardRun = /^(node|nodejs|bun|deno|tsx)$/.test(base(s.a0)) ? s.args.find((a) => /-guard\.mjs$/.test(a)) : null
-    if (guardRun && !(base(guardRun) === 'rule-guard.mjs' && s.args[s.args.indexOf(guardRun) + 1] === 'read')) return `gate ledger: ${base(guardRun)} is run by its hook only, never by hand (it takes any payload); the one hand use is "rule-guard.mjs read <url>".`
+    // Second layer (the verdict itself is read from the transcript, not from a payload): an installed guard is run by its hook only. The name is
+    // matched unanchored in any argument of a launcher, so a glob or a wrapper (npx, setsid, stdbuf) does not hide it; `node --check` and
+    // `rule-guard.mjs read <url>` are the hand uses.
+    if (LAUNCHERS.test(base(s.a0)) && s.args.some((a) => GUARD_NAME.test(a)) && !s.args.some((a) => /^(--check|-c)$/.test(a)) && !(s.args.some((a) => /rule-guard\.mjs$/.test(a)) && s.args.includes('read'))) return 'gate ledger: an installed guard is run by its hook only, never by hand (it takes any payload); the hand uses are "node --check <guard>" and "rule-guard.mjs read <url>".'
     const script = s.a0 === 'node' ? s.args.find((a) => base(a) === 'gate-rounds.mjs') ?? s.args.find((a) => !a.startsWith('-')) : null
     if (script && base(script) === 'gate-rounds.mjs') {
       const at = s.args.indexOf(script)
@@ -1254,7 +1245,7 @@ cat > "$HOME/.claude/claude-setup/task-ledger.mjs" <<'TASK'
 // M28 (plan 2026-11-12-M28-short-plan.md): the task ledger. A task's PLAN.md, its plan check and its approval are three fields of the same
 // per-asset ledger file the gate round counter keeps (gate-rounds.mjs); planReady() is the one function lock B (M42) will call.
 // The plan check is written only by the door: team-guard.mjs refuses a wrong plan-check call (planCheckPre, PreToolUse on Agent) and
-// context-guard.mjs records the verdict (planCheckPost, PostToolUse). The CLI has no verb for it, and rule-guard refuses a Bash call
+// rule-guard.mjs records the verdict from the transcript at the next PreToolUse (planChecksFromTranscript). The CLI has no verb for it, and rule-guard refuses a Bash call
 // that imports this file (taskBashProblem), so the author session has no way to write planCheck.
 // CLI: task-ledger.mjs plan <asset> <PLAN.md> | approve <asset> <ref> | status <asset> | brief <asset>
 import { createHash } from 'node:crypto'
@@ -1338,13 +1329,13 @@ export function registerPlan(asset, planPath, session, dir = ledgerDir()) {
   const l = readLedger(dir, asset)
   writeLedger(dir, { ...l, plan: { path: resolve(planPath), hash: sha(text), author_session: session ?? null, at: new Date().toISOString() } })
 }
-// Written only by planCheckPost below (not exported): the hash must be the registered plan's, the result pass or fail.
-function recordPlanCheck(asset, { result, plan_hash: planHash, brief_hash: briefHash, model }, dir = ledgerDir()) {
+// Written only by planChecksFromTranscript below (not exported): the hash must be the registered plan's, the result pass or fail.
+function recordPlanCheck(asset, { result, plan_hash: planHash, brief_hash: briefHash, model, tool_use_id: toolUseId = null, at = null }, dir = ledgerDir()) {
   const l = readLedger(dir, asset)
   if (!l.plan) throw new Error(`${asset} has no registered plan`)
   if (planHash !== l.plan.hash) throw new Error(`plan check for ${planHash}, which is not the registered plan of ${asset}`)
   if (!['pass', 'fail'].includes(result)) throw new Error('a plan check result is pass or fail')
-  writeLedger(dir, { ...l, planCheck: { result, plan_hash: planHash, brief_hash: briefHash, model, at: new Date().toISOString() } })
+  writeLedger(dir, { ...l, planCheck: { result, plan_hash: planHash, brief_hash: briefHash, model, tool_use_id: toolUseId, at: at ?? new Date().toISOString() } })
 }
 export function recordApproval(asset, { by, ref }, dir = ledgerDir()) {
   const l = readLedger(dir, asset)
@@ -1445,7 +1436,7 @@ export function planCheckPre(tool, input = {}, { dir = ledgerDir(), checklists =
   return why ? `team-guard: ${why} (docs/templates/task-plan.md, plan check).` : null
 }
 
-// The text of a tool response in any shape the harness may use: a string, content blocks, or a result/output/text field, nested.
+// The text of a tool result in any shape: a string, content blocks, or a result/output/text field, nested.
 export function responseText(r, depth = 0) {
   if (r == null || depth > 5) return ''
   if (typeof r === 'string') return r
@@ -1460,12 +1451,6 @@ export function verdictOf(text) {
   return found.includes('fail') ? 'fail' : found[0] ?? null
 }
 
-// The Agent call really happened in this session: its tool_use (with this exact prompt) is in the transcript the harness writes. A payload built
-// by hand and passed to planCheckPost therefore records nothing unless the real call is there.
-function ranInSession(transcriptPath, prompt) {
-  const want = sha(String(prompt ?? '').trimEnd())
-  return transcriptRows(read(String(transcriptPath ?? ''))).some((r) => (Array.isArray(r.message?.content) ? r.message.content : []).some((c) => c?.type === 'tool_use' && AGENT.test(c.name ?? '') && sha(String(c.input?.prompt ?? '').trimEnd()) === want))
-}
 // A message in this session after a time: a user-side row that is no tool result (a thread cannot write one), from the principal or the
 // coordinator, holding exactly that id (pure-code approval).
 const FROM = /trust=\\?"principal\\?"|<relay\b[^>]*\bfrom=\\?"coordinator\\?"/
@@ -1481,22 +1466,32 @@ function messageAfter(rows, ref, at) {
 // The brief's Size (S, M or L) from the session's first user message that names one; null when none does.
 const briefSize = (rows) => { for (const r of rows) { if (r.type !== 'user' || (Array.isArray(r.message?.content) && r.message.content.some((c) => c?.type === 'tool_result'))) continue; const m = JSON.stringify(r.message?.content ?? '').replace(/[*_`]/g, '').match(/\bSize:[ \t]*([SML])\b/); if (m) return m[1] } return null }
 
-// PostToolUse (context-guard.mjs): records the checker's verdict. The real payload of an Agent call was not captured in the cloud session
-// that built this, so the parser is tolerant (see responseText) and a launch without final text (a background run) records nothing and says so.
-// Not recorded: another event or tool, a subagent's call, a prompt that is not the rendered brief, a model below Opus, a plan that changed.
-export function planCheckPost(payload = {}, { dir = ledgerDir(), checklists = loadChecklists(payload.cwd) } = {}) {
-  const { hook_event_name: event, tool_name: tool, tool_input: input = {}, agent_id: agentId } = payload
-  const asset = AGENT.test(tool ?? '') ? checkAsset(input.prompt) : null
-  if (!asset) return { note: null }
-  if (event !== 'PostToolUse') return { note: `Plan check not recorded: only a PostToolUse event of the Agent call writes it (this was ${event ?? 'none'}).` }
-  const why = doorProblem(asset, input, { dir, checklists, agentId })
-  if (why) return { note: `Plan check not recorded: ${why}.` }
-  if (!ranInSession(payload.transcript_path, input.prompt)) return { note: `Plan check not recorded: this session's transcript holds no Agent call with the rendered brief of ${asset}.` }
-  const result = verdictOf(responseText(payload.tool_response ?? payload.tool_result ?? payload.tool_output))
-  if (!result) return { note: `Plan check: nothing was recorded for ${asset}: the checker's answer has no "Plan check pass" or "Plan check fail" line (a background run returns no answer: start it in the foreground, run_in_background false).` }
-  const plan = registered(asset, dir)
-  recordPlanCheck(asset, { result, plan_hash: plan.hash, brief_hash: sha(planCheckBrief(asset, { dir, checklists })), model: String(input.model) }, dir)
-  return { note: `Plan check recorded: ${result} for ${asset}.`, result }
+// The verdict is read from the transcript the harness writes, never from a payload the caller supplies: rule-guard calls this at every
+// PreToolUse with the session's transcript, and an Agent call that opens with `Plan check: <asset>` counts when its prompt is the rendered
+// brief on an Opus tier and its tool_result (matched by tool_use_id) opens with `Plan check pass` or `Plan check fail`. A hand-fed hook
+// payload therefore records nothing, whatever launcher runs it. A run in the background returns no verdict line and records nothing.
+// Not recorded: a subagent's session (agentId), a prompt that is not the rendered brief, a model below Opus, a plan that changed.
+export function planChecksFromTranscript(text, { dir = ledgerDir(), checklists = loadChecklists(), agentId = null } = {}) {
+  if (agentId || !String(text).includes('Plan check: ')) return []
+  const uses = new Map()
+  const notes = []
+  for (const r of transcriptRows(text)) {
+    for (const c of Array.isArray(r.message?.content) ? r.message.content : []) {
+      if (c?.type === 'tool_use' && AGENT.test(c.name ?? '')) {
+        const asset = checkAsset(c.input?.prompt)
+        if (asset) uses.set(c.id, { asset, input: c.input })
+      } else if (c?.type === 'tool_result' && uses.has(c.tool_use_id)) {
+        const { asset, input } = uses.get(c.tool_use_id)
+        uses.delete(c.tool_use_id)
+        if (readLedger(dir, asset).planCheck?.tool_use_id === c.tool_use_id || doorProblem(asset, input, { dir, checklists, agentId })) continue
+        const result = verdictOf(responseText(c.content))
+        if (!result) continue
+        recordPlanCheck(asset, { result, plan_hash: registered(asset, dir).hash, brief_hash: sha(planCheckBrief(asset, { dir, checklists })), model: String(input.model), tool_use_id: c.tool_use_id, at: r.timestamp }, dir)
+        notes.push(`Plan check recorded: ${result} for ${asset}.`)
+      }
+    }
+  }
+  return notes
 }
 
 // Bash, decided by command position (the same tokenizer as the round counter). The CLI has four verbs; an import, an eval or an unknown verb
@@ -2338,6 +2333,15 @@ export async function gateBlock(tool, input, transcript, model, dry = false) {
     return problem ? `rule-guard: ${problem}` : null
   } catch (e) { return `rule-guard: gate ledger check failed (${String(e.message).slice(0, 80)}); refused, fail closed (operator/gate.md, Rounds).` }
 }
+// The plan check's verdict (M28, global/task-ledger.mjs): read from the session's transcript at every PreToolUse, not from any payload.
+async function recordPlanChecks(transcript, agentId, cwd) {
+  try {
+    const text = transcript()
+    if (!text.includes('Plan check: ')) return ''
+    const task = await loadCounter('task-ledger.mjs')
+    return task.planChecksFromTranscript(text, { checklists: task.loadChecklists(cwd), agentId }).join('\n')
+  } catch { return '' }
+}
 // The start proof of a thread names the guard version it runs and any guard file that is missing (plan M47).
 async function guardLine() {
   try { return (await import(new URL('./team-guard.mjs', import.meta.url))).guardVersion(dirname(fileURLToPath(import.meta.url))) } catch { return '' }
@@ -2384,6 +2388,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         const shipped = join(tmpdir(), `claude-setup-artifacts-${String(session).replace(/\W/g, '')}`)
         const transcript = () => (transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : '')
         const sessionTranscript = () => [transcriptPath, agentTranscript(transcriptPath, agentId)].filter((p) => p && existsSync(p)).map(read).join('\n')
+        const planNote = await recordPlanChecks(transcript, agentId, cwd) // before the gates: `approve` reads the check this just recorded
         let block = (await gateBlock(tool, input ?? {}, transcript, sessionModel(transcript()), true))
           ?? decide(tool, input ?? {}, process.env, session ? read(shipped).split('\n') : [], () => threadBoard(toolCalls(transcript())))
           ?? canaryMissing(tool, input ?? {}, session ? read(join(process.env.CLAUDE_SETUP_HOME || homedir(), '.claude', 'claude-setup', 'booted', `${String(session).replace(/\W/g, '')}.canary`)) : '', transcript)
@@ -2400,7 +2405,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         if (!block && session && tool === 'Artifact' && input?.url && input.file_path) writeFileSync(shipped, `${input.file_path}\n`, { flag: 'a' })
         if (block) { process.stderr.write(block); process.exitCode = 2 }
         else {
-          const note = jetztWarning(tool, input ?? {}, cwd)
+          const note = [planNote, jetztWarning(tool, input ?? {}, cwd)].filter(Boolean).join('\n')
           if (note) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', additionalContext: note } }))
         }
       } catch {
