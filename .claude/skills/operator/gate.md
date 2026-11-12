@@ -226,7 +226,10 @@ How to undo a merge, by kind of change (write the line into the PR's "undo" line
      (`character-workflow.md`, step 4); three failed rounds on one asset still mean a re-plan, now the Fable director.
   Limits, said plainly: the ledger lives in the project's shared folder (one project's threads share it); a session without
   hooks (the project chat) cannot be stopped itself, but every thread it starts checks its brief, and no gate post or merge
-  works without the ledger. `CLAUDE_SETUP_RULE_GUARD=off` is the one off switch; nobody sets it.
+  works without the ledger. `CLAUDE_SETUP_RULE_GUARD=off` is the one off switch; nobody sets it. It stops careless and
+  honest-mistake releases, not an agent that writes its own script around the hook; the hook does not know who posts a
+  verdict (rounds 1 to 3 are free, so a poster can claim a pass), and a PR merged by a person in the GitHub UI is outside it.
+  The next step if that proves too weak is a counter a CI workflow writes (a PR label) that the hook only reads.
 - **Picture card first** (vacation-game 2026-11-12: a hub nobody asked for was built and nearly merged): a new hub, start
   screen, main menu or art style is shown to yskills as ONE card of pictures (2 or 3 directions, references from current
   games of that kind, per `roles/designer.md`, Vote cards) before any build; the brief and the PR body carry
