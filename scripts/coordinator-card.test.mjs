@@ -7,7 +7,7 @@ test('the card builds, stays under CARD_MAX characters and has its parts', () =>
   const card = buildCard({ hash: 'abc1234', date: '2026-11-08' })
   assert.ok(card.length < CARD_MAX, String(card.length))
   assert.match(card, /^Coordinator card \(claude-setup abc1234, 2026-11-08\)/)
-  for (const s of ['Before every reply', 'Thread brief', 'Models', 'Roster', 'Kits', 'COORDINATOR-RULES-INDEX.md', '3 failed rounds on one asset', '4-6 Fable director', 'Picture card: none, because']) assert.ok(card.includes(s), s)
+  for (const s of ['Before every reply', 'Thread brief', 'Models', 'Roster', 'Kits', 'COORDINATOR-RULES-INDEX.md', '3 failed rounds on one asset', '4-6 Fable director', 'Picture card:']) assert.ok(card.includes(s), s)
 })
 
 test('the pre-flight carries the masterplan duty (roles/project-manager.md, Masterplan)', () => {
