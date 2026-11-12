@@ -1183,7 +1183,7 @@ function runsOthers(s) {
     }
   }
   if (s.a0 === 'git') {
-    for (const a of s.args) { const m = /^alias\.[^=]+=!(.*)$/s.exec(a); if (m) out.push(m[1]) }
+    for (const a of s.args) { const m = /^alias\.[^=]+=!(.*)$/is.exec(a); if (m) out.push(m[1]) }
   }
   return out
 }
@@ -1634,7 +1634,8 @@ export function planChecksFromTranscript(text, { dir = ledgerDir(), checklists =
     const have = readLedger(dir, asset).planCheck
     if (have && Object.entries(want).every(([k, x]) => have[k] === x)) continue
     // Another session's newer result stays: write over a row only when it came from this transcript or is older than this result.
-    if (have && !mine.has(have.tool_use_id) && !(Date.parse(v.at) > Date.parse(have.at))) continue
+    // A row with no readable time counts as stale.
+    if (have && !mine.has(have.tool_use_id) && Number.isFinite(Date.parse(have.at)) && !(Date.parse(v.at) > Date.parse(have.at))) continue
     recordPlanCheck(asset, { ...want, at: v.at }, dir)
     notes.push(`Plan check recorded: ${v.result} for ${asset}.`)
   }

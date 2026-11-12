@@ -323,7 +323,7 @@ function runsOthers(s) {
     }
   }
   if (s.a0 === 'git') {
-    for (const a of s.args) { const m = /^alias\.[^=]+=!(.*)$/s.exec(a); if (m) out.push(m[1]) }
+    for (const a of s.args) { const m = /^alias\.[^=]+=!(.*)$/is.exec(a); if (m) out.push(m[1]) }
   }
   return out
 }

@@ -379,6 +379,10 @@ test('round 4, M1: an old session\'s pass does not overwrite a newer fail from a
     t.bash(`node ~/.claude/claude-setup/task-ledger.mjs status ${ASSET}`, [], rowsA)
     assert.equal(t.ledger().planCheck.result, 'fail', 'A\'s next call leaves B\'s newer fail')
     assert.equal(t.ledger().planCheck.tool_use_id, 'b1')
+    const l = t.ledger() // a row with a foreign id and no readable time is overwritten
+    writeFileSync(join(t.gate, `${ASSET}.json`), JSON.stringify({ ...l, planCheck: { ...l.planCheck, tool_use_id: 'x9', result: 'pass', at: 'garbage' } }))
+    t.bash(`node ~/.claude/claude-setup/task-ledger.mjs status ${ASSET}`, [], rowsB)
+    assert.equal(t.ledger().planCheck.result, 'fail')
   } finally { t.done() }
 })
 
@@ -413,7 +417,7 @@ test('round 4, H1: find -exec and a git alias run code, so what they run is read
     const f = '/root/.claude/claude-setup/task-ledger.mjs'
     for (const c of [
       `find . -maxdepth 0 -exec node -e "import('${f}')" \\;`, `find /tmp -execdir node -e "import('${f}')" ';'`,
-      `git -c alias.z='!node -e "import(\\"${f}\\")"' z`, `find . -ok cp ${f} /tmp/x.mjs \\;`,
+      `git -c alias.z='!node -e "import(\\"${f}\\")"' z`, `git -c ALIAS.Z='!node -e "import(\\"${f}\\")"' Z`,`find . -ok cp ${f} /tmp/x.mjs \\;`,
     ]) assert.equal(t.bash(c).status, 2, c)
     for (const c of ['find . -name "*.mjs" -exec grep -l task-ledger.mjs {} +', 'find . -name "*.md" -exec wc -l {} \\;', 'git -c core.pager=cat log -1']) assert.equal(t.bash(c).status, 0, c)
   } finally { t.done() }
