@@ -236,13 +236,15 @@ const needsSheet = (plain) => /^[ \t>-]*Role:[ \t]*(Programmer|Animator)\b/im.te
   && !/^[ \t>-]*Sheet:[ \t]*n\/a[ \t]+\S[^\n]{9,}$/im.test(plain)
 // CompanyXY 2026-11-12 (yskills 13:23, point 5): gates were planned only after the owner complained. A builder, designer or animator brief
 // at size M or L names the Reviewer thread that gates its work before the owner sees it; the gate roles themselves need no such line.
-const GATE_BUILDERS = /^(Programmer|Designer|Animator|Game Designer|Content Designer|Sound Designer)$/i
-const needsGate = (plain) => GATE_BUILDERS.test(plain.match(/^[ \t>-]*Role:[ \t]*([^·|,(\n]*)/im)?.[1].trim() ?? '') && /\bSize:[ \t]*[ML]\b/i.test(plain)
-  && !/^[ \t>-]*Gate:[ \t]*[^<\s][^\n]*\bbefore owner\b/im.test(plain)
+// A Gate line names a reviewer thread (`Gate: Reviewer · fit round 2 before owner`), or says in 10+ characters why the slice has no owner-facing
+// result (`Gate: n/a no owner-facing result, a CI script only`); the same shape as `Sheet: n/a`. `none`, `later` or `skipped` do not count.
+export const GATE_BUILDER_ROLES = '(?:Programmer|Designer|Animator|Game Designer|Content Designer|Sound Designer)'
+export const GATE_LINE = /^[ \t>-]*Gate:[ \t]*(?:(?:Reviewer|Tester|Critic|Hook Checker)\b[^\n]*\bbefore owner\b[^\n]*|n\/a[ \t]+\S[^\n]{9,})$/im
+const needsGate = (plain) => new RegExp(`^[ \\t>-]*Role:[ \\t]*${GATE_BUILDER_ROLES}\\b`, 'im').test(plain) && /\bSize:[ \t]*[ML]\b/i.test(plain) && !GATE_LINE.test(plain)
 export function missingLines(text) {
   const plain = text.replace(/[*_`]/g, '')
   const lines = BRIEF_LINES.filter(([, re]) => !re.test(plain)).map(([name]) => name)
-  if (needsGate(plain)) lines.push('Gate: <Reviewer thread> before owner (a builder, designer or animator brief at size M or L)')
+  if (needsGate(plain)) lines.push('Gate: <Reviewer thread> before owner, or `Gate: n/a <why no owner-facing result>` (a builder, designer or animator brief at size M or L)')
   if (needsSheet(plain)) for (const [name, re] of SHEET_LINES) if (!re.test(plain)) lines.push(name)
   if (ASKS_RESEARCH.test(plain) && !/\bRole:[ \t]*Researcher\b/i.test(plain) && !/^[ \t>-]*Researcher:[ \t]*[^<\s]/im.test(plain)) lines.push('Researcher: (the task asks for research)')
   return lines

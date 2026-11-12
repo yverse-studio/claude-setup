@@ -1163,7 +1163,7 @@ test('team guard: a bad brief is refused once with every problem and a template 
   const tpl = readFileSync(join(root, 'docs/templates/thread-brief.md'), 'utf8')
   const block = tpl.match(/```\n([\s\S]*?)```/)?.[1] ?? ''
   assert.ok(block, 'the template has one fenced brief block')
-  const filled = block.replace(/<[^>\n]+>/g, (m) => (m === '<S|M|L>' ? 'M' : /^<kit/.test(m) ? 'setup' : /^<Role/.test(m) ? 'Programmer' : 'something concrete for this task'))
+  const filled = block.replace(/<[^>\n]+>/g, (m) => (m === '<S|M|L>' ? 'M' : /^<kit/.test(m) ? 'setup' : /^<Role/.test(m) ? 'Programmer' : /^<Reviewer thread/.test(m) ? 'Reviewer · x' : 'something concrete for this task'))
   assert.deepEqual(missingLines(filled), [], 'a filled template has every must-have line')
   assert.ok(stamped(filled) && !needsPriorArt(filled) && !needsTester(filled))
   const unfilled = missingLines(block)

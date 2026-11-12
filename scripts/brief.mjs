@@ -9,7 +9,7 @@
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { badRole, badTeam, decide, kitNames, rosterNames } from '../global/team-guard.mjs'
+import { GATE_BUILDER_ROLES, GATE_LINE, badRole, badTeam, decide, kitNames, rosterNames } from '../global/team-guard.mjs'
 import { GATE_ROLES, roleOf } from '../global/rule-guard.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -37,8 +37,10 @@ export function buildBrief({ role, kit, size, item, threads, priorArt, done, sto
   // A gate role's Prior art names the gate rules and the kit's checks (rule-guard briefCheck, GATE_PRIOR): written here, never by hand (CompanyXY 2026-11-12: two Reviewer threads blocked).
   const gateRole = GATE_ROLES.test(role)
   const prior = gateRole ? `.claude/skills/operator/gate.md and the ${kit} kit's checks (docs/TEAMS.md, Kits)${priorArt ? `; ${priorArt}` : ' -> adapt, because the gate rules and checks already exist'}` : priorArt
-  // A builder, designer or animator at M or L names its Reviewer thread; the thread to start is named after the work unless --gate gives it.
-  const gateLine = /^(Programmer|Designer|Animator|Game Designer|Content Designer|Sound Designer)$/.test(role) && size !== 'S' ? `Gate: ${gate ?? `Reviewer · ${what}`} before owner` : null
+  const builder = new RegExp(`^${GATE_BUILDER_ROLES}$`).test(role) && size !== 'S'
+  const named = gate ?? `Reviewer · ${what}`
+  const gateLine = builder ? `Gate: ${/^n\/a/i.test(named) || /\bbefore owner\b/.test(named) ? named : `${named} before owner`}` : null
+  if (gateLine && !GATE_LINE.test(gateLine)) throw new BriefError('--gate names a Reviewer, Tester, Critic or Hook Checker thread and ends "before owner" (given as --gate "Reviewer · <what> before owner"), or reads "n/a <why this slice has no owner-facing result>" with 10+ characters')
   const missing = Object.entries({ item, threads, 'prior-art': prior, done, stop, skills: skillsLine, ...(size === 'S' ? {} : { what }), ...(needsSheet ? { sheet } : {}), ...(role === 'Programmer' && size === 'L' ? { tester } : {}) })
     .filter(([, v]) => !v).map(([k]) => `--${k}`)
   if (needsSheet && sheet && !/^n\/a/i.test(sheet) && !lookLock) missing.push('--look-lock')

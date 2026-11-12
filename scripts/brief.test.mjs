@@ -164,3 +164,27 @@ test('the generator fills the Gate line for builder, designer and animator brief
   assert.doesNotMatch(buildBrief({ teams, role: 'Programmer', kit: 'setup', size: 'S', ...FIELDS }).brief, /\nGate:/)
   assert.doesNotMatch(buildBrief({ teams, role: 'Reviewer', kit: 'setup', size: 'M', ...FIELDS }).brief, /\nGate:/)
 })
+
+// Gate round 2: extra words after the role must not skip the demand; a Gate line must name a reviewer or say why no owner-facing result exists.
+test('the Gate demand cannot be skipped with words after the role, and a Gate line names a reviewer or says why none is needed', () => {
+  const noGate = FULL.replace(/\nGate:[^\n]*/, '')
+  const ask = (roleLine, gate) => decide(START, { brief: `${roleLine} · Kit: setup · Size: M${noGate}${gate ? `\nGate: ${gate}` : ''}`, title: 'Programmer · x', model: SONNET }, [], [], teams)
+  assert.match(ask('Role: Programmer for slice 2').block ?? '', /Gate:/)
+  assert.match(ask('Role: Programmer - slice 2').block ?? '', /Gate:/)
+  for (const bad of ['none before owner', 'skipped, not before owner', 'later', 'n/a', 'n/a no']) assert.match(ask('Role: Programmer', bad).block ?? '', /Gate:/, bad)
+  for (const good of ['Reviewer · fit round 2 before owner', 'Tester · app before owner', 'n/a no owner-facing result, a CI script only']) assert.deepEqual(ask('Role: Programmer', good), {}, good)
+})
+
+test('the generator passes a `--gate n/a <why>` through and refuses a Gate that names no reviewer', () => {
+  const g = (gate) => () => buildBrief({ teams, role: 'Programmer', kit: 'setup', size: 'M', ...FIELDS, gate })
+  assert.match(g('n/a no owner-facing result, a CI script only')().brief, /\nGate: n\/a no owner-facing result, a CI script only\n/)
+  assert.throws(g('none'), (e) => e instanceof BriefError && /--gate/.test(e.message))
+  assert.throws(g('n/a'), (e) => e instanceof BriefError && /--gate/.test(e.message))
+})
+
+test('the Gate line has a home: the brief block in briefs.md and the owner-facing rule in gate.md, both tagged with the hook that enforces them', () => {
+  const briefs = readFileSync(join(root, '.claude/skills/operator/briefs.md'), 'utf8')
+  const gate = readFileSync(join(root, '.claude/skills/operator/gate.md'), 'utf8')
+  assert.match(briefs, /^Gate: <Reviewer thread> before owner[^\n]*\[guard: hook global\/team-guard\.mjs\]/m)
+  assert.match(gate, /Owner-facing results[^\n]*Gate:[^\n]*\[guard: hook global\/team-guard\.mjs\]/)
+})
