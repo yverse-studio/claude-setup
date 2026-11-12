@@ -191,9 +191,19 @@ export function stamped(text) {
 }
 
 // Every size (yskills 2026-11-03: research before guessing, a small task too).
+// Prior art (yskills 2026-11-12: "erst schauen was gut funktioniert, dann klauen oder reverse engineeren, dann selber bauen"): the line records real
+// findings, not a gesture: a named source (URL, owner/repo or path, #n, a file name, a `name`) and the decision (copy, adapt, reuse, extend, build);
+// or `none, because <why nothing could exist>`; or `to find: <where the Researcher looks>` when the Researcher has not run yet.
+// scripts/pr-lessons-check.mjs holds the same rule for the PR body; scripts/pr-lessons-check.test.mjs runs one corpus through both.
+const PA_SOURCE = /https?:\/\/\S+|[\w.-]+\/[\w.-]+|#\d+|\b[\w-]+\.(?:md|mjs|json|ts|js|yml|sh)\b|`[^`\n]{3,}`/
+const PA_DECISION = /\b(copy|copied|adapt(?:ed|s)?|reuse[ds]?|build|built|extend(?:ed|s)?|reverse-engineer\w*)\b/i
+export function priorArtOk(line) {
+  const t = String(line).replace(/\*\*/g, '').trim()
+  return /^none, because .{10,}$/i.test(t) || /\bto find:\s*\S{5,}/i.test(t) || (t.length >= 20 && PA_SOURCE.test(t) && PA_DECISION.test(t))
+}
 export function needsPriorArt(text) {
-  const plain = text.replace(/[*_`]/g, '')
-  return /\bSize:[ \t]*[SML]\b/i.test(plain) &&!/^[ \t>-]*Prior art:[ \t]*[^<\s][^\n]{9,}$/im.test(plain)
+  const line = String(text).split('\n').map((l) => l.replace(/^[ \t>-]*(?:\*\*)?Prior art:(?:\*\*)?[ \t]*/i, (m) => (/Prior art:/i.test(m) ? '\u0000' : m))).find((l) => l.startsWith('\u0000'))
+  return /\bSize:[ \t]*[SML]\b/i.test(String(text).replace(/[*_`]/g, '')) && !(line && priorArtOk(line.slice(1)))
 }
 
 const briefText = (input) => Object.values(input).filter((v) => typeof v === 'string').join('\n')
@@ -302,13 +312,17 @@ export function badTopic(text, checklists) {
   return names.some((n) => n.toLowerCase() === topic.toLowerCase()) ? null : `Topic: ${topic} is no topic in ${CHECKLISTS}: pick one of ${names.join(', ')}`
 }
 
+// Skill folders of claude-setup that get mistaken for kits.
+const SKILL_NAMES = /^(game-3d|social-team|video-studio|storyteller|blender-body|media-editing|roblox|studio|twin|store|store-publish|market|sell|seo|legal|publish|scaffold|toolbox|ui-review|impeccable|operator)$/
 export function badTeam(text, teams) {
   const plain = text.replace(/[*_`]/g, '')
   const rows = teams ? kitRows(teams) : []
   if (!rows.length) return null
   const kit = plain.match(/\bKit:[ \t]*([\w-]+)/i)?.[1].toLowerCase()
   const row = rows.find((r) => r.kit === kit)
-  if (!row) return `Kit: ${kit} is no kit in docs/TEAMS.md (Kits): pick one of ${rows.map((r) => r.kit).join(', ')} by what the task makes (Spawn rule 1)`
+  // A skill name is not a kit (2026-11-12: game-3d, social-team): the kit is what the task makes, the skill goes on the Skills: line.
+  const skill = /^[a-z][\w-]*$/.test(kit) && kit !== 'none' && SKILL_NAMES.test(kit) ? ` (\`${kit}\` is a skill: put it on the Skills: line and pick the kit by what the task makes, e.g. game-3d is a game, social-team is social)` : ''
+  if (!row) return `Kit: ${kit} is no kit in docs/TEAMS.md (Kits)${skill}: pick one of ${rows.map((r) => r.kit).join(', ')} by what the task makes (Spawn rule 1)`
   const size = plain.match(/\bSize:[ \t]*([SML])\b/i)?.[1].toUpperCase()
   if (['video', 'social'].includes(kit) && size === 'S') return `a ${kit} brief is size M (one video or post) or L (a batch, series or launch video), never S (docs/TEAMS.md, Spawn rule 2)`
   const role = roleOf(plain, teams)
@@ -364,7 +378,7 @@ export function decide(tool, input = {}, dirs = [], unread = [], teams = '', che
     if (title) found.push(`a ${title} thread is titled \`${title} · <what>\` (claude-setup docs/TEAMS.md, Roster "Runs as"), e.g. "${title} · Bienen-Video"; fix the title`)
     const lines = missingLines(text)
     if (lines.length) found.push(`the brief misses ${lines.join(', ')} (claude-setup .claude/skills/operator/briefs.md, Every thread brief starts with)`)
-    if (needsPriorArt(text)) found.push('add a line `Prior art: <our repos, skills, plugins, public setups checked> -> copy | adapt | build, because <why>` (or `to find: <where the Researcher looks>`; CLAUDE.md, Work for the future)')
+    if (needsPriorArt(text)) found.push('add a line `Prior art: <the sources checked, named: owner/repo, path, URL, #PR> -> copy | adapt | reuse | build, because <why>` (a gesture like \"looked around\" fails; or `none, because <why nothing could exist>`, or `to find: <where the Researcher looks>`; CLAUDE.md, Work for the future)')
     if (needsTester(text)) found.push('a size L Programmer thread starts only after its Tester thread (claude-setup docs/TEAMS.md, Sizes): start `Tester · <app>` first, then put a line `Tester: <its thread id or title>` in this brief')
     const wrong = wrongModel(text, input.model, teams)
     if (wrong) found.push(`the ${wrong.role} runs on ${wrong.allowed.join(' or ')} (claude-setup docs/TEAMS.md, Roster), not ${wrong.tier}. Pass that model. For an exception the row names (e.g. "Opus writes the weekly plan") add \`Model: <tier> (<why>)\` to the brief; if yskills named this model, say "yskills named <model>"`)

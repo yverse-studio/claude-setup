@@ -47,7 +47,7 @@ test('rosterNames and kitNames read docs/TEAMS.md, no list of their own', () => 
   assert.deepEqual(rosterNames(''), [])
 })
 
-const FIELDS = { item: 'M1', threads: 'list_threads checked, none open on this topic', priorArt: 'claude-setup checked -> adapt, because it exists', done: 'node --test passes', stop: 'two rounds', what: 'x', start: 'CLAUDE.md', sheet: 'n/a no body, face or outfit job' }
+const FIELDS = { item: 'M1', threads: 'list_threads checked, none open on this topic', priorArt: 'yverse-studio/claude-setup checked -> adapt, because it exists', done: 'node --test passes', stop: 'two rounds', what: 'x', start: 'CLAUDE.md', sheet: 'n/a no body, face or outfit job' }
 
 // The property the owner asked for: a generated brief always passes the guard. Every Roster role x kit x size either
 // yields a brief decide() lets through, or the generator refuses it with the same reason badTeam gives; none is silently wrong.
@@ -124,7 +124,7 @@ test('the CLI exits non-zero with the valid list on a bad role, and prints a pas
   const bad = run('--role', 'Architect', '--kit', 'setup', '--size', 'S')
   assert.notEqual(bad.status, 0)
   assert.match(bad.stderr, /Programmer/)
-  const good = run('--role', 'Programmer', '--kit', 'setup', '--size', 'S', '--item', 'M1', '--threads', 'list_threads checked, none open on this topic', '--prior-art', 'x checked -> adapt, because y', '--done', 'tests pass', '--stop', 'two rounds', '--start', 'CLAUDE.md')
+  const good = run('--role', 'Programmer', '--kit', 'setup', '--size', 'S', '--item', 'M1', '--threads', 'list_threads checked, none open on this topic', '--prior-art', 'scripts/brief.mjs checked -> adapt, because y', '--done', 'tests pass', '--stop', 'two rounds', '--start', 'CLAUDE.md')
   assert.equal(good.status, 0, good.stderr)
   assert.match(good.stdout, /^Role: Programmer · Kit: setup · Size: S\n/)
 })

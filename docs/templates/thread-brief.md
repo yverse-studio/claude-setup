@@ -11,7 +11,7 @@ Role: <Role from docs/TEAMS.md Roster> · Kit: <kit from docs/TEAMS.md Kits> · 
 Model: <model id of the role's Roster row>
 Item: <PLAN.json item M<n> or new>
 Threads: <list_threads checked: none open on this topic | continues <title of the open thread>>
-Prior art: <repos, skills, plugins, public setups checked> -> copy | adapt | build, because <why>
+Prior art: <sources named: repo, path, URL, #n> -> copy | adapt | reuse | build, because <why>
 Skills: <role file and skills the thread loads first>
 Sheet: <path of the approved cast sheet .md, or `n/a <why this is no body, face or outfit job>`; every Programmer or Animator brief on a game or story kit>
 Look-Lock: <owner card link of the approved look; not needed with `Sheet: n/a`>
