@@ -912,7 +912,10 @@ const humanAfter = (transcript, ref, counter) => {
   // Finding 3: the principal tag counts only as the message the wake wraps (the wrapper opens the row, then project and thread tags), never
   // as text quoted inside a relay, a cited message or a tool result. principalRow of the counter is the one test of the human's row, the same
   // one task-ledger's approve proof reads (M53 slice 3).
-  const answer = (r) => counter.principalRow(r) && counter.rowText(r).includes(`<system-note>decision_id=${id}</system-note>`) && counter.rowText(r).includes('<system-note>option_index=0</system-note>')
+  // The app writes one decision_id note and one option_index note per tap. The notes are counted, not searched for: a label or question that
+  // carried a raw note (if the app ever stopped escaping `<`) would add a second one and the row would count for nothing (gate 515, finding 1).
+  const notes = (r, key) => [...counter.rowText(r).matchAll(new RegExp(`<system-note>${key}=([^<]*)</system-note>`, 'g'))].map((m) => m[1])
+  const answer = (r) => counter.principalRow(r) && notes(r, 'decision_id').length === 1 && notes(r, 'decision_id')[0] === id && notes(r, 'option_index').length === 1 && notes(r, 'option_index')[0] === '0'
   return at >= 0 && rows.slice(at + 1).some(answer)
 }
 // A cached cloud image can lack the counter (its pasted setup predates it) and its start hook, the old team-guard, never fetches it

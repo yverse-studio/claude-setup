@@ -239,6 +239,7 @@ ones its slice needs:
 | `gamedev-skills/performance-optimization` | frame and asset budgets (engine-neutral) |
 | `gamedev-skills/steam-publish` | SteamPipe, depots, branches, store page (engine exports there are Godot/Unity; our Electron path is §5) |
 | `threejs-game-skills/threejs-gameplay-systems` | Vite + TypeScript scaffold (`assets/threejs-vite-game`), physics choice, genre notes |
+| [`game-ux`](../game-ux/SKILL.md) (ours), [`controls-baseline`](../game-ux/refs/controls-baseline.md) | the controls floor every game ships with, mouse look and pointer lock, first-person camera, HUD, onboarding, idle NPC life, accessibility floor |
 | `refs/low-poly.md`, `refs/asset-sources.md` (ours) | sourced low-poly budgets, shading, rigging and glTF rules; the pick-the-best-source table with licence checks (2026-10-25) |
 | `threejs-game-skills/threejs-aaa-graphics-builder` | `references/visual-scorecard.md`: the 10-point look check the design critic uses with the references |
 | `threejs-game-skills/threejs-qa-release` | Playwright canvas inspector, bot playtest, release checks |
