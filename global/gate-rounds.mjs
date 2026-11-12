@@ -374,7 +374,7 @@ function bashProblem(cmd, dir, ctx) {
       if (!CLI_VERBS.includes(verb) || ['status', 'check'].includes(verb)) continue
       // Round 2, finding 4 of the review: only the installed copy is the counter. A file of that name in a checkout or /tmp can be edited, and merge needs no grant.
       if (!GUARD_FILE.test(script)) return `gate ledger: "${verb}" runs only from the installed copy, "node ~/.claude/claude-setup/gate-rounds.mjs ${verb} ..."; a file of that name anywhere else is not the counter (gate.md, Rounds).`
-      if (verb === 'merge') { const why = mergeProblem(readLedger(dir, s.args[at + 1])); if (why) return why } // the hook checks the pass itself, not only the CLI
+      if (verb === 'merge') { const why = mergeProblem(readLedger(dir, s.args[at + 2])); if (why) return why } // the hook checks the pass itself, not only the CLI
       if (list.length !== 1 || /\$\(|`/.test(cmd)) return `gate ledger: "${verb}" runs as the only command of the call, without substitution, so its proof can be read (gate.md, Rounds).`
       const ref = s.args[s.args.indexOf('--ref') + 1]
       if (verb === 'init' && !(Number(s.args[s.args.indexOf('--round') + 1]) >= 1)) return 'gate ledger: init imports the rounds that already ran: --round <n> with n of 1 or more (gate.md, Rounds).'
@@ -464,7 +464,7 @@ export function cli(argv, env = process.env) {
   if (cmd === 'check') return roundProblem(l, Number(rest[0])) ? fail(roundProblem(l, Number(rest[0]))) : { code: 0, text: 'ok' }
   const bodyText = cmd === 'record' ? read(flag(rest, '--body-file') ?? '') : null // read once: this text is hashed for the grant and then counted
   if (GRANTED.includes(cmd)) {
-    const key =cmd === 'init' ? flag(rest, '--round') : cmd === 'direct' ? flag(rest, '--plan') : cmd === 'record' ? flag(rest, '--body-file') : flag(rest, '--ref')
+    const key = cmd === 'init' ? flag(rest, '--round') : cmd === 'direct' ? flag(rest, '--plan') : cmd === 'record' ? flag(rest, '--body-file') : flag(rest, '--ref')
     if (!takeGrant(dir, cmd, asset, key, Date.now(), bodyText)) return fail(`${cmd}: refused: the hook (global/rule-guard.mjs) checks the proof for this verb and leaves a short grant; none was found for this call (a record body that changed after the hook read it counts as none). Run it as "node ~/.claude/claude-setup/gate-rounds.mjs ${cmd} <asset> ..." in a session where the hook is on (gate.md, Rounds).`)
   }
   if (cmd === 'init') {

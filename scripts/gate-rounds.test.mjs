@@ -581,7 +581,10 @@ test('finding 4 (review): only the installed copy is the counter; the hook check
   s.gate(1, '3.0')
   for (const c of ['node /home/user/claude-setup/global/gate-rounds.mjs merge o/r#5', 'node /tmp/x/gate-rounds.mjs merge o/r#5', 'node global/gate-rounds.mjs merge o/r#5']) assert.match(s.hook('Bash', { command: c }).stderr, /runs only from the installed copy/, c)
   assert.equal(s.hook('Bash', { command: 'node global/gate-rounds.mjs status o/r#5' }).status, 0, 'reading status from a checkout stays fine')
-  assert.match(s.hook('Bash', { command: 'node ~/.claude/claude-setup/gate-rounds.mjs merge yverse-studio/vacation-game#13' }).stderr, /no gate round is counted/, 'a merge without a counted pass is refused by the hook itself')
+  assert.match(s.hook('Bash', { command: 'node ~/.claude/claude-setup/gate-rounds.mjs merge yverse-studio/vacation-game#13' }).stderr, /scored 3/, 'a merge under the threshold is refused by the hook itself')
+  const ok = session('sonnet-test'); ok.gate(1, '4.8')
+  assert.equal(ok.hook('Bash', { command: `node ~/.claude/claude-setup/gate-rounds.mjs merge ${ASSET} --squash` }).status, 0, 'a counted pass lets the CLI merge through the hook')
+  assert.match(session('sonnet-test').hook('Bash', { command: `node ~/.claude/claude-setup/gate-rounds.mjs merge ${ASSET}` }).stderr, /no gate round is counted/, 'no round, no merge')
   assert.match(s.hook('Bash', { command: 'HOME=/tmp/fake node ~/.claude/claude-setup/gate-rounds.mjs merge o/r#5' }).stderr, /variables/)
   for (const c of [`sort -o <D>/o_r_7.json /tmp/f`, `curl -so <D>/o_r_7.json file:///tmp/f`, `wget -O <D>/o_r_7.json x`, `patch <D>/o_r_7.json p.diff`, `perl -pi -e s/a/b/ <D>/o_r_7.json`, 'printf tester | sort -o /tmp/claude-setup-role-abc']) {
     assert.equal(s.hook('Bash', { command: c.replaceAll('<D>', join(s.dir, 'gate')) }).status, 2, c)
