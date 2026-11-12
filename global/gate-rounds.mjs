@@ -55,6 +55,9 @@ export const fromProjects = (r) => {
   return o?.kind === 'task-notification' && o?.subkind === 'projects-relay' && !selfScheduled(r)
 }
 // yskills' "stop", "stopp", "pause", "halt" (the stop note of the prompt hook, and no answer to a card).
+// yskills' own message: the app writes it with origin {kind: 'human'} (real row, M53 slice 2: a tap on a card, scripts/fixtures/m53/real-human-rows.jsonl).
+// A thread's scheduled prompt carries none; the scheduled markers veto even a row that claims it.
+export const fromHuman = (r) => r?.type === 'user' && r.origin?.kind === 'human' && r.turnOrigin === 'human' && !selfScheduled(r)
 export const STOP_WORD = /^\W*(stop+|stopp+|pause|halt)\W*$/i
 
 // ---- grants (security review 2026-11-12, finding 1): the proofs for init, direct, card, picture and waive are read by the hook, and the

@@ -9,10 +9,10 @@ import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
 import { appendFileSync, cpSync, existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
-import { fromProjects, selfScheduled, STOP_WORD } from '../global/gate-rounds.mjs'
+import { fromHuman, fromProjects, selfScheduled, STOP_WORD } from '../global/gate-rounds.mjs'
 
 const root = join(fileURLToPath(import.meta.url), '..', '..')
 const real = readFileSync(join(root, 'scripts/fixtures/m53/real-rows.jsonl'), 'utf8').trim().split('\n').map((l) => JSON.parse(l))
@@ -122,21 +122,46 @@ test('the prompt hook lifts the lock on a relay only when the transcript row of 
   assert.equal(run({ ...CRON, message: { role: 'user', content: leadIn(FIX) } }), 2, 'a self-scheduled prompt with the same text')
 })
 
-test('a self-scheduled prompt is never yskills: waive needs a principal wake the thread did not schedule', () => {
-  assert.equal(waives([userRow(PRINCIPAL(), { ...CRON })]), false, 'cron row with a principal wake')
-  assert.equal(waives([withText(SEND_LATER, PRINCIPAL())]), false, 'send_later row with a principal wake')
-  assert.equal(waives([userRow(PRINCIPAL(), { isMeta: true, promptSource: 'system', turnOrigin: 'scheduled', wakeupSource: 'schedule_wakeup' })]), false)
-  assert.equal(waives([userRow(PRINCIPAL('ok nimm es'))]), true, 'a plain principal wake after the card (the interim rule; slice 2 pins the origin)')
-  assert.equal(waives([userRow(PRINCIPAL('ok nimm es'), { origin: PROJECTS, promptSource: 'system' })]), true, 'a principal wake the projects server delivered')
-  // a scheduled prompt that lands mid-turn is a queued_command attachment: humanAfter reads user rows only, so it never counts
-  assert.equal(waives([{ type: 'attachment', attachment: { type: 'queued_command', prompt: PRINCIPAL(), commandMode: 'prompt', isMeta: true } }]), false)
-  assert.equal(waives([userRow(PRINCIPAL(), { ...CRON }), userRow(PRINCIPAL('ok'))]), true, 'a real answer later still counts')
+// Slice 2: the real row of yskills' tap on a card (scripts/fixtures/m53/real-human-rows.jsonl, ids scrubbed; card id cmsg_CARD123) carries origin
+// {kind: 'human'}, turnOrigin 'human', promptSource 'sdk' and a decision_id system-note: that is what a waive must see after the card.
+const HUMAN = readFileSync(join(root, 'scripts/fixtures/m53/real-human-rows.jsonl'), 'utf8').trim().split('\n').map((l) => JSON.parse(l))[0]
+const TAP = withText(HUMAN, HUMAN.message.content)
+const tapOf = (card) => withText(HUMAN, HUMAN.message.content.replaceAll('cmsg_CARD123', card))
+const asText = (row, text) => withText(row, text)
+
+test('the real card answer: a human origin that is no scheduled row, and a decision_id naming the card', () => {
+  assert.equal(HUMAN.origin.kind, 'human')
+  assert.equal(selfScheduled(TAP), false, 'a real principal row is never self-scheduled (slice 1 gate N2: else every waive would be refused)')
+  assert.equal(fromHuman(TAP), true)
+  assert.equal(fromHuman({ ...TAP, origin: undefined }), false, 'the same text without the origin is typed by a thread')
+  assert.equal(fromHuman({ ...TAP, turnOrigin: 'scheduled' }), false, 'a scheduled row that claims the origin (synthetic)')
+  assert.equal(fromHuman({ ...TAP, wakeupSource: 'schedule_wakeup' }), false)
+  assert.equal(fromHuman(realRow('wake')), false, 'a harness status wake is not yskills')
+  assert.equal(fromHuman(realRow('coordinator-relay', 1)), false, 'a coordinator relay is not yskills')
+  assert.equal(fromHuman(undefined), false)
 })
 
-test('a stop or pause word after the card is no waive (interim id test, #479 step 3)', () => {
-  assert.equal(waives([userRow(PRINCIPAL('stop'))]), false)
-  assert.equal(waives([userRow(PRINCIPAL('Pause!'))]), false)
-  assert.equal(waives([userRow(PRINCIPAL('stop'), { origin: PROJECTS }), userRow(PRINCIPAL('ja, mach'))]), true)
+test('waive: only the real answer to that card counts, nothing a thread can schedule, type or quote', () => {
+  assert.equal(waives([TAP]), true, 'the real tap on cmsg_CARD123')
+  assert.equal(waives([tapOf('cmsg_OTHER999')]), false, 'a real tap on another card')
+  assert.equal(waives([userRow(PRINCIPAL('ok nimm es'))]), false, 'a principal wake without the human origin (a thread\'s own text) is no answer')
+  assert.equal(waives([userRow(PRINCIPAL('ok nimm es'), { origin: PROJECTS, promptSource: 'system' })]), false, 'a wake the projects server delivered as a relay is not yskills\' message')
+  assert.equal(waives([{ ...TAP, origin: undefined }]), false, 'the real text without its origin')
+  assert.equal(waives([{ ...TAP, turnOrigin: 'scheduled', wakeupSource: 'schedule_wakeup' }]), false, 'cron row with the real text (synthetic)')
+  assert.equal(waives([asText(SEND_LATER, TAP.message.content)]), false, 'send_later row with the real text (synthetic)')
+  assert.equal(waives([userRow(PRINCIPAL(), { ...CRON })]), false, 'cron row with a principal wake')
+  assert.equal(waives([{ type: 'attachment', attachment: { type: 'queued_command', prompt: TAP.message.content, commandMode: 'prompt', isMeta: true } }]), false, 'a scheduled prompt that lands mid-turn is an attachment and never counts')
+  assert.equal(waives([{ ...TAP, message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'u9', content: TAP.message.content }] } }]), false, 'the answer quoted in a tool result')
+  assert.equal(waives([asText(TAP, `a quoted wake:\n${TAP.message.content}`)]), false, 'the wake quoted inside another message (no ^ anchor)')
+  assert.equal(waives([{ ...TAP, turnOrigin: 'scheduled' }, TAP]), true, 'a forged row first, the real answer later still counts')
+})
+
+test('waive: a stop, a pause and any other message of yskills after the card is no answer to it (#479 step 3)', () => {
+  const typed = (text) => ({ ...TAP, message: { role: 'user', content: PRINCIPAL(text) } }) // human origin, but a typed message: no decision_id
+  assert.equal(waives([typed('stop')]), false)
+  assert.equal(waives([typed('Pause!')]), false)
+  assert.equal(waives([typed('ok nimm es')]), false, 'another message after the card')
+  assert.equal(waives([typed('stop'), TAP]), true)
 })
 
 // Mutations: each rule of the slice, broken once in a copy of global/, must let its forged row through (the test above would then fail).
@@ -150,16 +175,15 @@ function mutated(file, from, to) {
   return join(dir, 'rule-guard.mjs')
 }
 const FORGED_RELAY = { ...CRON, message: { role: 'user', content: queued(FIX) } }
-const FORGED_WAKE = userRow(PRINCIPAL(), { ...CRON })
 test('mutation 1: dropping fromProjects from the relay call site lets a cron relay lift the lock', () => {
   const guard = mutated('rule-guard.mjs', 'return (await loadCounter()).fromProjects }', 'return () => true }')
   assert.equal(lifts(FORGED_RELAY, guard), true)
   assert.equal(lifts(FORGED_RELAY), false, 'the real guard refuses')
 })
-test('mutation 2: dropping selfScheduled from humanAfter lets a cron principal wake waive', () => {
-  const guard = mutated('rule-guard.mjs', '!self(r) && ', '')
-  assert.equal(waives([FORGED_WAKE], guard), true)
-  assert.equal(waives([FORGED_WAKE]), false)
+test('mutation 2: dropping fromHuman from humanAfter lets a row without the human origin waive', () => {
+  const guard = mutated('rule-guard.mjs', 'counter.fromHuman(r) && ', '')
+  assert.equal(waives([{ ...TAP, origin: undefined }], guard), true)
+  assert.equal(waives([{ ...TAP, origin: undefined }]), false)
 })
 test('mutation 3: accepting turnOrigin scheduled lets the cron relay and the cron wake through', () => {
   const guard = mutated('gate-rounds.mjs', "r?.turnOrigin === 'scheduled' || ", '')
@@ -167,11 +191,24 @@ test('mutation 3: accepting turnOrigin scheduled lets the cron relay and the cro
   assert.equal(lifts(cronWithOrigin, guard), true)
   assert.equal(lifts(cronWithOrigin), false)
 })
-test('mutation 4: a WAKE pattern without ^ accepts a principal wake quoted inside another row', () => {
-  const quoted = userRow(`the scheduled text: ${PRINCIPAL()}`)
+test('mutation 4: a WAKE pattern without ^ accepts the real answer quoted inside another row', () => {
+  const quoted = { ...TAP, message: { role: 'user', content: `the scheduled text: ${TAP.message.content}` } }
   const guard = mutated('rule-guard.mjs', 'const WAKE = /^\\s*<wake', 'const WAKE = /\\s*<wake')
   assert.equal(waives([quoted], guard), true)
   assert.equal(waives([quoted]), false)
+})
+test('mutation 6: dropping the decision_id check lets any message of yskills waive, a stop word too', () => {
+  const guard = mutated('rule-guard.mjs', ' && text(r).includes(`<system-note>decision_id=${id}</system-note>`)', '')
+  const stop = { ...TAP, message: { role: 'user', content: PRINCIPAL('stop') } }
+  assert.equal(waives([stop], guard), true)
+  assert.equal(waives([stop]), false)
+  assert.equal(waives([tapOf('cmsg_OTHER999')], guard), true)
+})
+test('mutation 7: a fromHuman without the turn check accepts a scheduled row that claims the origin', () => {
+  const guard = mutated('gate-rounds.mjs', " && r.turnOrigin === 'human' && !selfScheduled(r)", '')
+  const claimed = { ...TAP, turnOrigin: 'scheduled', wakeupSource: 'schedule_wakeup' }
+  assert.equal(waives([claimed], guard), true)
+  assert.equal(waives([claimed]), false)
 })
 
 // The base assumption of the whole check: the thread cannot write its own transcript (plan section 7).
@@ -189,11 +226,42 @@ test('the session transcript is never written by hand, one refusal per tool', ()
     ['Bash', { command: `sed -i 's/a/b/' ${file}` }],
     ['Bash', { command: `cp /tmp/forged.jsonl ${file}` }],
   ]) {
-    const out = pre(tool, tool === 'NotebookEdit' ? { ...input, file_path: file } : input)
+    const out = pre(tool, input) // NotebookEdit carries only notebook_path: the branch of gateStep that reads it (slice 1 gate)
     assert.equal(out.status, 2, `${tool} ${input.command ?? ''}`)
     assert.match(out.stderr, /transcript/)
   }
   assert.equal(pre('Bash', { command: `cat ${file}` }).status, 0, 'reading it stays free')
   assert.equal(pre('Bash', { command: `grep -c relay ${file}` }).status, 0)
   assert.equal(pre('Write', { file_path: '/home/user/project/notes.jsonl', content: '{}' }).status, 0, 'any other .jsonl is a plain file')
+})
+
+// The gate reads an agent's report from the subagent transcript (withReports): that file is a transcript too, so the same rule refuses it.
+test('a subagent transcript (<session>/subagents/agent-*.jsonl) is never written by hand either', () => {
+  const file = '/root/.claude/projects/-home-user/776f7c81/subagents/agent-ab12.jsonl'
+  const pre = (tool_name, tool_input) => hookIn(GUARD, 'pre', { session_id: `forgeds${process.pid}x${++n}`, transcript_path: join(mkdtempSync(join(tmpdir(), 'fr-s-')), 't.jsonl'), tool_name, tool_input })
+  for (const [tool, input] of [['Write', { file_path: file, content: '{}' }], ['Edit', { file_path: file, old_string: 'a', new_string: 'b' }], ['NotebookEdit', { notebook_path: file, new_source: 'x' }], ['Bash', { command: `echo '{}' >> ${file}` }]]) {
+    assert.equal(pre(tool, input).status, 2, tool)
+  }
+  assert.equal(pre('Bash', { command: `cat ${file}` }).status, 0, 'reading stays free')
+})
+
+// Slice 1 gate N1: a counter that cannot load means no row counts (the lock stays, a waive is refused) and the stop word is not dropped silently.
+const withBrokenCounter = (guard) => {
+  const dir = dirname(guard)
+  writeFileSync(join(dir, 'gate-rounds.mjs'), 'export const broken = (\n') // a SyntaxError on import, not a missing file (that one reinstalls)
+  return guard
+}
+const REAL_RELAY = () => withText(realRow('coordinator-relay', 1), leadIn(FIX))
+test('a counter that cannot load: a real coordinator relay lifts nothing, a card is not waived', () => {
+  assert.equal(lifts(REAL_RELAY(), withBrokenCounter(mutated('rule-guard.mjs', 'const origin = await projectsOrigin()', 'const origin = await projectsOrigin()'))), false)
+  assert.equal(waives([userRow(PRINCIPAL('ok nimm es'))], withBrokenCounter(mutated('rule-guard.mjs', 'const origin = await projectsOrigin()', 'const origin = await projectsOrigin()'))), false)
+})
+test('mutation 5: a counter-load fallback that accepts every row lets the relay lift', () => {
+  const guard = withBrokenCounter(mutated('rule-guard.mjs', 'catch { return () => false } }', 'catch { return () => true } }'))
+  assert.equal(lifts(REAL_RELAY(), guard), true)
+})
+test('a counter that cannot load says so on a prompt: the stop word is not dropped without a word', () => {
+  const guard = withBrokenCounter(mutated('rule-guard.mjs', 'const origin = await projectsOrigin()', 'const origin = await projectsOrigin()'))
+  const out = hookIn(guard, 'prompt', { session_id: `nostop${process.pid}`, prompt: PRINCIPAL('Stopp!') })
+  assert.match(out.stdout, /stop word is not checked/i)
 })

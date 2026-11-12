@@ -956,6 +956,9 @@ export const fromProjects = (r) => {
   return o?.kind === 'task-notification' && o?.subkind === 'projects-relay' && !selfScheduled(r)
 }
 // yskills' "stop", "stopp", "pause", "halt" (the stop note of the prompt hook, and no answer to a card).
+// yskills' own message: the app writes it with origin {kind: 'human'} (real row, M53 slice 2: a tap on a card, scripts/fixtures/m53/real-human-rows.jsonl).
+// A thread's scheduled prompt carries none; the scheduled markers veto even a row that claims it.
+export const fromHuman = (r) => r?.type === 'user' && r.origin?.kind === 'human' && r.turnOrigin === 'human' && !selfScheduled(r)
 export const STOP_WORD = /^\W*(stop+|stopp+|pause|halt)\W*$/i
 
 // ---- grants (security review 2026-11-12, finding 1): the proofs for init, direct, card, picture and waive are read by the hook, and the
@@ -2764,10 +2767,11 @@ export function handsOff(tool, input = {}, role = '', root = '') {
 
 // Gate round counter (global/gate-rounds.mjs, operator/gate.md Rounds): a gate post, a merge, a ledger write or a director/card record is
 // checked against the asset's ledger. Fail closed: a check that throws refuses the call (research 2026-11-12: a crashing hook does not block).
-// M53 slice 1 (interim): a row the thread scheduled itself never counts, and a stop or pause word is no answer to a card. The positive origin rule
-// for yskills' own rows follows in slice 2, after one real principal row is captured. `counter` is the loaded gate-rounds module.
+// M53 slice 2: a waive needs yskills' own answer to that card: a row the app wrote with the human origin (fromHuman of the counter; a scheduled or
+// typed-by-a-thread row never has it) that opens with the principal wake and names the card in its decision_id note (the real tap row,
+// scripts/fixtures/m53/real-human-rows.jsonl). Any other message of yskills after the card, a stop or pause word included, answers nothing.
+// `counter` is the loaded gate-rounds module.
 const humanAfter = (transcript, ref, counter) => {
-  const self = counter.selfScheduled
   const id = String(ref).match(/cmsg_\w+/)?.[0]
   const rows = transcript.split('\n').map((l) => { try { return JSON.parse(l) } catch { return null } }).filter(Boolean)
   const at = rows.findIndex((r) => id && JSON.stringify(r.message?.content ?? '').includes(id))
@@ -2775,14 +2779,18 @@ const humanAfter = (transcript, ref, counter) => {
   // as text quoted inside a relay, a cited message or a tool result.
   const text = (r) => typeof r.message?.content === 'string' ? r.message.content : (Array.isArray(r.message?.content) ? r.message.content.map((c) => (c?.type === 'text' ? c.text ?? '' : '')).join('\n') : '')
   const WAKE = /^\s*<wake\b[^>]*>\s*(?:<project\b[^>]*>\s*)?(?:<thread\b[^>]*>\s*)?<message\b(?=[^>]*\bfrom="human")(?=[^>]*\btrust="principal")/
-  const said = (r) => (text(r).match(/<message\b[^>]*>([\s\S]*?)<\/message>/)?.[1] ?? '').trim()
-  const human = (r) => r.type === 'user' && !self(r) && !(Array.isArray(r.message?.content) && r.message.content.some((c) => c?.type === 'tool_result')) && WAKE.test(text(r)) && !counter.STOP_WORD.test(said(r))
-  return at >= 0 && rows.slice(at + 1).some(human)
+  const answer = (r) => counter.fromHuman(r) && !(Array.isArray(r.message?.content) && r.message.content.some((c) => c?.type === 'tool_result')) && WAKE.test(text(r)) && text(r).includes(`<system-note>decision_id=${id}</system-note>`)
+  return at >= 0 && rows.slice(at + 1).some(answer)
 }
 // A cached cloud image can lack the counter (its pasted setup predates it) and its start hook, the old team-guard, never fetches it
 // (each session restarts from the cache): the first call that needs it installs it with the refresh that now sits in this dir (2026-11-12).
 // The counter's one origin check; a counter that cannot load means no row counts: the lock stays, a waive is refused (M53).
 const stopWord = async () => { try { return (await loadCounter()).STOP_WORD } catch { return null } }
+// A counter that cannot load must not drop a stop word without a word (slice 1 gate): say the check was skipped.
+const stopNote = async (prompt) => {
+  const word = await stopWord()
+  return word ? promptContext(prompt, word) : [promptContext(prompt), 'rule-guard: the gate counter did not load, so a stop word is not checked here: if this message says stop or pause, stop at once.'].filter(Boolean).join('\n')
+}
 const projectsOrigin = async () => { try { return (await loadCounter()).fromProjects } catch { return () => false } }
 async function loadCounter() {
   const url = new URL('./gate-rounds.mjs', import.meta.url)
@@ -2876,7 +2884,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           const guard = isStart ? await guardLine() : ''
           const card = isStart ? await cardLine() : ''
           if (isStart) await countStart({ session, brief, checkNow, modelNote, guard, card })
-          const context = [checkNow, relayNote, isStart ? await gateBriefContext(brief, model) : '', guard, card, modelNote, await roleContext(brief, cwd, session), promptContext(prompt, await stopWord()), persona(setupRoot(cwd))].filter(Boolean).join('\n')
+          const context = [checkNow, relayNote, isStart ? await gateBriefContext(brief, model) : '', guard, card, modelNote, await roleContext(brief, cwd, session), await stopNote(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
           if (context) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: context } }))
           return
         }
