@@ -532,6 +532,29 @@ test('record: a Critic counts a verdict for a named asset (no PR), a builder and
   assert.match(critic.run('record', NAMED, '--body-file', join(critic.dir, 'none.md')).text, /must start with the verdict headline/)
 })
 
+test('record: a missed round 1, 2 and 3 of a named asset is counted in order, one verdict each (#491)', () => {
+  const NAMED = 'masterplan'
+  const reviewer = session('sonnet-test', [], 'Reviewer')
+  const body = join(reviewer.dir, 'v.md')
+  const rounds = [[1, 'Gate 3.8/5 FAIL (M, round 1)'], [2, 'Gate 4.0/5 FAIL (M, round 2)'], [3, '**Gate 4,6/5 (M, round 3)** PASS']]
+  for (const [n, head] of rounds) {
+    writeFileSync(body, `${head}\n1 finding\n`)
+    assert.equal(reviewer.hook('Bash', { command: `node ~/.claude/claude-setup/gate-rounds.mjs record ${NAMED} --body-file ${body}` }).status, 0, `hook, round ${n}`)
+    const out = reviewer.run('record', NAMED, '--body-file', body)
+    assert.equal(out.code, 0, `${out.text} (round ${n})`)
+    assert.equal(readLedger(join(reviewer.dir, 'gate'), NAMED).rounds.length, n, `the ledger reads ${n}`)
+  }
+  const l = readLedger(join(reviewer.dir, 'gate'), NAMED)
+  assert.deepEqual(l.rounds.map((r) => [r.n, r.score, r.pass]), [[1, 3.8, false], [2, 4, false], [3, 4.6, true]])
+  // a hand edit is refused and the refusal names the verb that does the job
+  assert.match(reviewer.hook('Write', { file_path: join(reviewer.dir, 'gate', `${NAMED}.json`), content: '{}' }).stderr, /gate-rounds\.mjs record <name>/)
+  // the same round again with another score, and a round that skips ahead, count nothing
+  writeFileSync(body, 'Gate 2.0/5 (M, round 3)\n')
+  assert.match(reviewer.run('record', NAMED, '--body-file', body).text, /already in the ledger/)
+  writeFileSync(body, 'Gate 4.0/5 (M, round 5)\n')
+  assert.match(reviewer.run('record', NAMED, '--body-file', body).text, /skips ahead/)
+})
+
 test('every gate role the hooks know may post a verdict: gate-rounds uses the same list as rule-guard (#482)', async () => {
   const { GATE_ROLES } = await import('../global/rule-guard.mjs')
   for (const r of ['Tester', 'Reviewer', 'Evaluator', 'Critic', 'Hook Checker', 'Playtester', 'Story Editor']) assert.equal(authorProblem('Gate 5/5 (S, round 1)', { role: r }), null, r)
