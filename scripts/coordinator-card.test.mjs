@@ -37,3 +37,13 @@ test('the pre-flight carries the vacation-game fixes (facts, role check, depende
   const card = buildCard({ hash: 'x', date: 'd' })
   for (const s of ['only from a source read this turn', "thread title's role", 'Depends on: #n', 'real moment', 'Controls and World life']) assert.ok(card.includes(s), s)
 })
+
+test('a flag is never taken as the output path (#439: --help wrote a file named --help)', async () => {
+  const { spawnSync } = await import('node:child_process')
+  const { mkdtempSync, readdirSync } = await import('node:fs')
+  const { tmpdir } = await import('node:os')
+  const dir = mkdtempSync(`${tmpdir()}/card-`)
+  const r = spawnSync('node', [new URL('./coordinator-card.mjs', import.meta.url).pathname, '--help'], { cwd: dir, encoding: 'utf8' })
+  assert.equal(r.status, 2)
+  assert.deepEqual(readdirSync(dir), [])
+})
