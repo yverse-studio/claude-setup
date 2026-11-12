@@ -775,6 +775,7 @@ export function updateLock(session, check) {
 export const COORDINATOR_RELAY = /^\s*(?:<system-note>[^<]*<\/system-note>\s*)*(?:<system-reminder>\s*)?A message from this project[’']s coordinator session[^\n]*\n\s*<coordinator-relay>\s*<relay\b[^>]*\bfrom=\\?"coordinator"/
 // M50: a relay that reaches a working thread is a `queued_command` attachment, whose text starts with the bare `<relay from="coordinator"` (live
 // 2026-11-12: the lead-in line is added only when the harness shows it). The bare form counts only as such an attachment, an entry only the harness writes.
+const BRIEF_LINE = /^[ \t>*_`-]*(Role|Kit|Gate|Prior art|Model|Skills|Done when|Stop when|Start|Threads|Item|Plan|Acceptance):/im // a relay that corrects the brief; other relays do not count toward the card
 const BARE_RELAY = /^\s*<relay\b[^>]*\bfrom=\\?"coordinator"/
 // The coordinator often sends only the lines the start brief lacked (#479 part 2: VacationGame's Critic, our Director), so the relay is read
 // together with the earlier coordinator relays and the spawn brief from the transcript: the newest relay's lines come first and win,
@@ -788,7 +789,8 @@ export function coordinatorRelays(transcript) {
       const content = entry.message?.content
       const text = entry.type === 'attachment' && entry.attachment?.type === 'queued_command' ? String(entry.attachment.prompt ?? '')
         : entry.type === 'user' ? (typeof content === 'string' ? content : (content ?? []).map((c) => c?.text ?? '').join('\n')) : ''
-      if (entry.type === 'attachment' ? BARE_RELAY.test(text) || COORDINATOR_RELAY.test(text) : COORDINATOR_RELAY.test(text)) relays.push(text)
+      // A bare relay is the harness's own entry: a queued_command attachment, or a user entry with isMeta (live 2026-11-12, gate round 1 of #490); a typed one never counts.
+      if (entry.type === 'attachment' || entry.isMeta === true ? BARE_RELAY.test(text) || COORDINATOR_RELAY.test(text) : COORDINATOR_RELAY.test(text)) relays.push(text)
     } catch { /* not a JSON line */ }
   }
   return relays
@@ -810,7 +812,7 @@ async function relayRebrief(session, prompt, cwd, model, transcript = '') {
   updateLock(session, await briefCheck(text, cwd, model, true))
   const stamp = join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)
   if (existsSync(lockFile(session))) {
-    if (coordinatorRelays(transcript).filter((t) => t.trim() !== prompt.trim()).length < 2) return ''
+    if (coordinatorRelays(transcript).filter((t) => t.trim() !== prompt.trim() && BRIEF_LINE.test(t)).length < 2) return ''
     const note = 'Three relays did not lift the lock: post one card to yskills with request_decision that names the lines still missing, then stay idle; a complete relay lifts the lock at any time.'
     if (!read(lockFile(session)).includes('request_decision')) writeFileSync(lockFile(session), `${read(lockFile(session)).slice(0, 300)}\n${note}`)
     return note
@@ -823,7 +825,7 @@ async function relayRebrief(session, prompt, cwd, model, transcript = '') {
 export function lockBlock(tool, session) {
   const f = session ? lockFile(session) : ''
   if (!f || !existsSync(f) || LOCK_FREE.test(tool)) return null
-  return `rule-guard: this thread's brief breaks the team rules, so it does no work (docs/TEAMS.md, Coordinator or thread): ${read(f).slice(0, 480)}\nSend the reason and the corrected Role, Kit and Size to the coordinator (message_coordinator) and wait for a new brief.`
+  return `rule-guard: this thread's brief breaks the team rules, so it does no work (docs/TEAMS.md, Coordinator or thread): ${read(f).slice(0, 700)}\nSend the reason and the corrected Role, Kit and Size to the coordinator (message_coordinator) and wait for a new brief.`
 }
 // docs/hands-off.md: a role never writes the files another role owns.
 export function handsOff(tool, input = {}, role = '', root = '') {
