@@ -56,10 +56,13 @@ test('a flag is never taken as the output path (#439: --help wrote a file named 
   assert.deepEqual(readdirSync(dir), [])
 })
 
-test('the first rule is the one loop (yskills 2026-11-12): role, playbook, Researcher gap, learnings back; its hooks exist', () => {
+test('the first rule is the one loop (yskills 2026-11-12): role, playbook, Researcher gap, learnings back; its hooks behave', async () => {
   const card = buildCard({ hash: 'x', date: 'd' })
   const first = card.split('## Before every reply\n\n')[1].split('\n')[0]
-  for (const s of ['every thread has a role', 'Role: none', 'playbook, skills and workflows', 'Researcher finds', 'back to claude-setup', 'start receipt', 'brief check']) assert.ok(first.includes(s), s)
-  assert.match(readFileSync(new URL('../global/rule-guard.mjs', import.meta.url), 'utf8'), /export function threadReceipt/)
-  assert.match(readFileSync(new URL('../global/team-guard.mjs', import.meta.url), 'utf8'), /Role:/)
+  for (const s of ['every thread has a role', 'Role: none', 'playbook, skills and workflows', 'Researcher finds', 'back to claude-setup', 'start receipt', 'Roster by hand']) assert.ok(first.includes(s), s)
+  const { stamped } = await import('../global/team-guard.mjs')
+  assert.equal(stamped('Role: Programmer · Kit: setup · Size: S'), true)
+  assert.equal(stamped('Role: none · Kit: setup · Size: S'), true, 'a mini or unclear task may name no role')
+  assert.equal(stamped('Kit: setup · Size: S'), false, 'a brief without a Role line is refused')
+  assert.match(readFileSync(new URL('../global/rule-guard.mjs', import.meta.url), 'utf8'), /export function threadReceipt\(role, brief/)
 })
