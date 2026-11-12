@@ -44,19 +44,25 @@ export function diagnoseRed({ failed, baseOk }) {
 export function baseCheckOk(failed = [], run = spawnSync) {
   const dir = join(tmpdir(), `pre-pr-base-${process.pid}`)
   try {
-    execFileSync('git', ['worktree', 'add', '--detach', '-q', dir, base], { cwd: root, stdio: 'ignore' })
+    execFileSync('git', ['worktree', 'add', '--detach', '-q', dir, base], { cwd: root, stdio: 'ignore', env: cleanEnv() })
     const cmds = [['node', ['scripts/check.mjs']]]
     if (failed.includes('tests (CI line)')) {
       const tests = ciSteps(readFileSync(join(dir, '.github/workflows/ci.yml'), 'utf8')).tests
       if (tests) { const [cmd, ...argv] = tests.split(/\s+/); cmds.push([cmd, argv]) }
     }
-    return cmds.every(([cmd, argv]) => run(cmd, argv, { cwd: dir, stdio: 'ignore' }).status === 0)
-  } catch { return null } finally { spawnSync('git', ['worktree', 'remove', '--force', dir], { cwd: root, stdio: 'ignore' }) }
+    return cmds.every(([cmd, argv]) => run(cmd, argv, { cwd: dir, stdio: 'ignore', env: cleanEnv() }).status === 0)
+  } catch { return null } finally { spawnSync('git', ['worktree', 'remove', '--force', dir], { cwd: root, stdio: 'ignore', env: cleanEnv() }) }
+}
+
+// Inside a git hook git exports GIT_DIR and friends; fixture tests that run git in temp dirs would then
+// act on the real repo (issue #419). Children never see them.
+export function cleanEnv(env = process.env) {
+  return Object.fromEntries(Object.entries(env).filter(([k]) => !/^GIT_(DIR|WORK_TREE|INDEX_FILE|OBJECT_DIRECTORY|COMMON_DIR|PREFIX|NAMESPACE|ALTERNATE_OBJECT_DIRECTORIES)$/.test(k)))
 }
 
 const results = []
 function step(name, cmd, argv) {
-  const r = spawnSync(cmd, argv, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })
+  const r = spawnSync(cmd, argv, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], env: cleanEnv() })
   const ok = r.status === 0
   results.push([name, ok])
   const tail = `${r.stdout ?? ''}${r.stderr ?? ''}`.trim().split('\n').slice(-6).join('\n  ')
@@ -65,9 +71,9 @@ function step(name, cmd, argv) {
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const steps = ciSteps(readFileSync(join(root, '.github/workflows/ci.yml'), 'utf8'))
-  try { execFileSync('git', ['rev-parse', '--verify', '-q', base], { cwd: root, stdio: 'ignore' }) } catch {
+  try { execFileSync('git', ['rev-parse', '--verify', '-q', base], { cwd: root, stdio: 'ignore', env: cleanEnv() }) } catch {
     console.log(`note: ${base} not found locally, fetching`)
-    spawnSync('git', ['fetch', '-q', 'origin', base.replace(/^origin\//, '')], { cwd: root, stdio: 'inherit' })
+    spawnSync('git', ['fetch', '-q', 'origin', base.replace(/^origin\//, '')], { cwd: root, stdio: 'inherit', env: cleanEnv() })
   }
   step('check.mjs', 'node', ['scripts/check.mjs'])
   step('paths-lint (no hard-coded laptop paths)', 'node', ['--test', 'scripts/paths-lint.test.mjs'])
