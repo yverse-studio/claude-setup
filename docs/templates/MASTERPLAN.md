@@ -5,6 +5,10 @@ Copy to `/mnt/project-files/MASTERPLAN.md` when a project has more task rows tha
 Goal and order: <the owner's order of work, with its date>.
 Last full check against files: <date, who, which files were read>.
 
+## The workflow (fixed order, no step is skipped)
+
+<The project's steps in order, one line each, and what closes each step. Example for a character in a render game: 1 base body (the owner decides, asked on a card) · 2 body gated · 3 outfit from the wardrobe, fitted per base · 4 stills · 5 animations · 6 into the game. A step starts only when the one before it is done.>
+
 ## Rules (short; the home is the Masterplan rule)
 
 1. Tick on gate pass: status, score and gate file in the same step. No pass without a gate file; a fail writes the round and the score.
