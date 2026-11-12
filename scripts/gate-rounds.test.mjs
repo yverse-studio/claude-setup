@@ -265,7 +265,7 @@ test('ordinary work is never blocked, a verdict is read from the opening line on
 const VERDICT = 'Gate 4/5 (M, round 4)'
 const MUST_BLOCK_AT_ROUND_1 = [
   'gh api -X PUT repos/{owner}/{repo}/pulls/1/merge', 'bash <<< "gh pr merge 1"', "sh <<<'gh pr merge 1'", 'bash <<EOF 2>&1 | tee /tmp/log\ngh pr merge 1\nEOF', 'timeout --signal KILL 30 gh pr merge 1',
-  'timeout --kill-after 5 30 gh pr merge 1', 'sudo --user root gh pr merge 1', 'sudo -Eu root gh pr merge 1', 'env --unset FOO gh pr merge 1',
+  'timeout --kill-after 5 30 gh pr merge 1', 'sudo --user root gh pr merge 1', 'sudo -Eu root gh pr merge 1', 'sudo -uroot gh pr merge 1', 'env -uS gh pr merge 1', 'env --unset FOO gh pr merge 1',
   'echo ${x:-$(gh pr merge 7)}',
   'gh pr merge 7 -R o/r --squash', 'gh pr merge', 'cd repo && gh pr merge 7', 'env gh pr merge 7', 'GH_REPO=o/r gh pr merge 7', 'gh pr merge "7"',
   'gh pr merge feature-branch', '/usr/bin/gh pr merge 7', 'gh api -X PUT repos/o/r/pulls/7/merge', 'n=7; gh api -X PUT repos/o/r/pulls/$n/merge',

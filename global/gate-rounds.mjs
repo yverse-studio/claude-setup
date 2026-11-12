@@ -225,6 +225,8 @@ export function parseShell(text, depth = 0) {
 
 const KEYWORDS = new Set(['if', 'then', 'else', 'elif', 'do', 'while', 'until', '!'])
 const LONG_VALUE = new Set(['--signal', '--kill-after', '--user', '--group', '--host', '--prompt', '--chdir', '--close-from', '--role', '--type', '--unset', '--other-user', '--login-class'])
+// getopt: in a short cluster the first value-taking letter ends it; the value is the rest of the word, or the next word when nothing follows
+const needsValue = (f, opts) => { if (!/^-[A-Za-z]/.test(f)) return false; for (let k = 1; k < f.length; k++) if (opts.includes(f[k])) return k === f.length - 1; return false }
 const WRAP_VALUE = { sudo: 'ugCDRThprtU', env: 'uCS' } // one-letter options of a wrapper that take a value
 const SETUP_VAR = /^CLAUDE_SETUP_[A-Z_]+=/
 function simple(c) {
@@ -233,7 +235,7 @@ function simple(c) {
     while (a.length && /^[A-Za-z_]\w*=/.test(a[0])) { env ||= SETUP_VAR.test(a[0]); a.shift() }
     const w = a.length ? base(a[0]) : ''
     if (KEYWORDS.has(w)) { a.shift(); continue }
-    if (WRAPPERS.has(w)) { a.shift(); while (a.length && (a[0].startsWith('-') || /^[A-Za-z_]\w*=/.test(a[0]))) { env ||= SETUP_VAR.test(a[0]); const f = a.shift(); if ((/^-[A-Za-z]+$/.test(f) && (WRAP_VALUE[w] ?? '').includes(f.at(-1))) || LONG_VALUE.has(f)) a.shift() } continue }
+    if (WRAPPERS.has(w)) { a.shift(); while (a.length && (a[0].startsWith('-') || /^[A-Za-z_]\w*=/.test(a[0]))) { env ||= SETUP_VAR.test(a[0]); const f = a.shift(); if (needsValue(f, WRAP_VALUE[w] ?? '') || LONG_VALUE.has(f)) a.shift() } continue }
     if (w === 'timeout' || w === 'nice') { // own flags (some take a value), timeout also its duration
       a.shift()
       while (a.length && a[0].startsWith('-')) { const v = /^-[ksn]$/.test(a[0]) || LONG_VALUE.has(a[0]) || a[0] === '--adjustment'; a.shift(); if (v) a.shift() }
