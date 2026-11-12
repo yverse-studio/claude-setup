@@ -773,14 +773,18 @@ export const lastRound = (l) => l.rounds.at(-1)?.n ?? 0
 
 // "Gate 4.2/5 (L, round 3) [important]" or "Gate 5/5 (S, round 1)" or "Gate fail, round 2".
 // Only a line that STARTS with "Gate <score>/5", "Gate fail" or "Gate pass" is a verdict; "the gate flagged ... round 1" is talk.
-const HEADLINE = /^[\s>*_#-]*Gate\s+(?:(\d(?:[.,]\d+)?)\s*\/\s*5|fail(?:ed)?|pass(?:ed)?)\b[^\n]*?\b(?:round|runde)\s+(\d+)/i
+const HEADLINE = /^[\s*_#-]*Gate\s+(?:(\d(?:[.,]\d+)?)\s*\/\s*5|(fail(?:ed)?)|(pass(?:ed)?))\b(?:[^\n]*?\b(?:round|runde)\s+(\d+))?/i
+// A verdict opens the post (the first non-empty line, never a quoted older one); without a number it is the next round (parseHeadline's round null).
 export function parseHeadline(text) {
-  const m = String(text).split('\n').map((l) => ({ l, m: l.match(HEADLINE) })).find((x) => x.m)
+  const line = String(text).split('\n').find((l) => l.trim())
+  const m = line?.match(HEADLINE)
   if (!m) return null
-  return { round: Number(m.m[2]), score: m.m[1] === undefined ? null : Number(m.m[1].replace(',', '.')), important: /\b(important|risky|wichtig)\b/i.test(m.l) }
+  const score = m[1] !== undefined ? Number(m[1].replace(',', '.')) : m[3] ? 5 : null
+  return { round: m[4] === undefined ? null : Number(m[4]), score, important: /\b(important|risky|wichtig)\b/i.test(line) }
 }
 const lastPass = (l) => !!l.rounds.at(-1)?.pass
-const firstPass = (l) => l.rounds.find((r) => r.pass)?.n ?? null
+// The first round of the passing run that ends the ledger: polish rounds count from there, not from an older pass.
+const firstPass = (l) => { let n = null; for (const r of [...l.rounds].reverse()) { if (!r.pass) break; n = r.n } return n }
 export const POLISH_ROUNDS = 2 // after a PASS at most 2 more rounds toward 5/5 (gate.md, Scored gates)
 
 // null = the round may happen; else the reason. A round right after a passing round needs no director or card (a mergeable
@@ -812,8 +816,8 @@ export function mergeProblem(l) {
 
 // ---- picture card: a new hub, start screen or style is shown as pictures from current games before anything is built.
 // Only a NEW one: "new hub", "neuer Startbildschirm", "redesign the main menu"; "fix: main menu button", "push to Docker Hub" and "keep the art style" pass.
-const THING = '(?:hub|start ?screen|startbildschirm|title ?screen|titelbildschirm|main ?menu|hauptmen[üu]|art ?style|visual ?style|style|stil|look)'
-const NEW_LOOK = new RegExp(`\\b(?:new|neu(?:e|er|es|en)?|redesign(?:ed)?|rebuild|invent(?:ed)?)\\s+(?:\\w+\\s+){0,2}${THING}\\b|\\bredesign\\s+(?:the\\s+)?${THING}\\b`, 'i')
+const THING = '(?:hub|start ?screen|startbildschirm|title ?screen|titelbildschirm|main ?menu|hauptmen[üu]|art ?style|visual ?style)'
+const NEW_LOOK = new RegExp(`\\b(?:new|neu(?:e|er|es|en)?)\\s+(?:\\w+\\s+){0,1}${THING}\\b|\\bredesign(?:ed)?\\s+(?:the\\s+)?${THING}\\b`, 'i')
 export const needsPicture = (text) => NEW_LOOK.test(String(text).replace(/docker hub|github hub/gi, ''))
 const PICTURE_LINE = /^[ \t>*_-]*Picture card:[ \t*_`]*(?:\[[^\]]*\]\()?(#?cmsg_\w+|https?:\/\/[^\s)]*cmsg_\w+[^\s)]*)/im
 export const pictureRef = (text) => String(text).match(PICTURE_LINE)?.[1] ?? null // a real card id, not any URL
@@ -823,9 +827,9 @@ const num = (brief, key) => { const m = String(brief).replace(/[*_`]/g, '').matc
 // Thread side (UserPromptSubmit): the spawn brief's Round / Asset / Picture card lines against the ledger. '' = fine.
 export function gateBrief(brief, { model = null, dir = ledgerDir() } = {}) {
   const roundText = num(brief, 'Round')
-  const asset = num(brief, 'Asset')?.toLowerCase()
+  const asset = num(brief, 'Asset')?.toLowerCase() ?? null
   const out = []
-  if (roundText !== null || /\bgate round\b/i.test(brief)) {
+  if (roundText !== null || asset !== null) {
     const round = Number(roundText?.match(/^\d+/)?.[0])
     if (!roundText || !round) out.push('a gate-round brief needs a `Round: <n>` line')
     else if (!asset) out.push('`Round:` needs an `Asset: <owner/repo#pr | name>` line, the count belongs to the asset')
@@ -848,6 +852,16 @@ export function cardProof(ref, calls) {
   return !!id && calls.some((c) => /request_decision|post_widget/.test(c.name) && c.result.includes(id))
 }
 
+function verdictProblem(dir, asset, head, dry) {
+  const l = readLedger(dir, asset)
+  const round = head.round ?? lastRound(l) + 1
+  const bad = roundProblem(l, round)
+  if (bad) return `gate round counter: ${bad}`
+  const same = l.rounds.find((r) => r.n === round)
+  if (same && same.score !== head.score) return `gate round counter: round ${round} of ${asset} is already in the ledger with score ${same.score ?? 'none'}; a round is scored once (gate.md, Rounds). The next verdict is round ${round + 1}.`
+  if (!dry) writeLedger(dir, recordRound(l, { ...head, round }))
+  return null
+}
 const POSTS = /^mcp__github__(add_issue_comment|pull_request_review_write|update_pull_request|add_reply_to_pull_request_comment|add_comment_to_pending_review)$/
 const MERGES = /^mcp__github__(merge_pull_request|enable_pr_auto_merge)$/
 const assetOf = (input) => {
@@ -864,6 +878,17 @@ export function gateStep(tool, input = {}, ctx = {}) {
   if (/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) && /\.claude[\\/]claude-setup[\\/](gate-rounds|rule-guard|team-guard)\.mjs$/.test(file)) return 'gate ledger: the installed guards are changed only through claude-setup (a PR), never in place.'
   if (tool === 'Bash' || tool === 'PowerShell') {
     const cmd = String(input.command ?? '')
+    // gh api .../pulls/<n>/merge is a merge door too.
+    const apiMerge = cmd.match(/\bgh\s+api\b[^\n]*?repos\/([\w.-]+\/[\w.-]+)\/pulls\/(\d+)\/merge/)
+    if (apiMerge) return mergeProblem(readLedger(dir, `${apiMerge[1].toLowerCase()}#${apiMerge[2]}`))
+    // A verdict posted with gh counts like one posted with the tool.
+    const ghPost = cmd.match(/\bgh\s+pr\s+(?:comment|review)\s+(?:-\S+\s+)*(\d+)\b/)
+    const ghHead = ghPost && parseHeadline(cmd.match(/(?:--body|-b)[ =]\s*(['"])([\s\S]*?)\1/)?.[2] ?? '')
+    if (ghHead) {
+      const repo = cmd.match(/(?:-R|--repo)[ =]\s*(?:[\w.-]+\/)?([\w.-]+\/[\w.-]+)/)?.[1]
+      const ids = repo ? [`${repo.toLowerCase()}#${ghPost[1]}`] : ledgersOfPr(dir, ghPost[1]).map((x) => x.asset)
+      for (const id of ids.length ? ids : []) { const bad = verdictProblem(dir, id, ghHead, ctx.dry); if (bad) return bad }
+    }
     // gh pr merge goes through the same ledger as the merge tool.
     if (/\bgh\s+pr\s+merge\b/.test(cmd)) {
       if (/[;&|`\n<>]|\$\(/.test(cmd) || (cmd.match(/\/pull\/\d+/g) ?? []).length > 1) return 'gate ledger: run "gh pr merge" as one plain command (no chains, pipes, substitution or a second PR), so its ledger can be checked (gate.md, Rounds).'
@@ -875,7 +900,13 @@ export function gateStep(tool, input = {}, ctx = {}) {
       const why = ledgers.map(mergeProblem).find(Boolean)
       if (why) return why // no early success: the gate-file checks below still run
     }
-    if (!/gate-rounds|project-files[\\/]gate|[\\/]claude-setup[\\/](?:gate\b|rule-guard|team-guard)/.test(cmd) && !cmd.includes(dir)) return null
+    // Only a command that RUNS the counter or WRITES the ledger or the installed guards is held to the plain form; reading, git, tests and
+    // the page reader pass (a false block here stops ordinary claude-setup work).
+    const WRITES = /(?:>|\btee\b|\bsed\s+-\S*i|\b(?:rm|mv|cp|ln|truncate|dd|install|touch|chmod|perl|python3?|ruby|node)\b|Set-Content|Out-File|Remove-Item|Move-Item|Copy-Item|Add-Content)/
+    const ledger = (cmd.includes(dir) || /project-files[\\/]gate[\\/]/.test(cmd)) && WRITES.test(cmd)
+    const guards = /\.claude[\\/]claude-setup[\\/](?:rule-guard|team-guard|gate-rounds)\.mjs/.test(cmd) && /(?:>|\btee\b|\bsed\s+-\S*i|\b(?:rm|mv|cp|ln|truncate|dd|install|perl|python3?|ruby)\b|Set-Content|Out-File|Remove-Item|Move-Item|Copy-Item|Add-Content)/.test(cmd) && !/rule-guard\.mjs\s+read\b/.test(cmd)
+    const runs = /\bnode\s+(?:-\S+\s+)*[\w~./-]*gate-rounds\.mjs\b/.test(cmd) || /\b(?:-e|--eval|-p|--print)\b[^\n]*gate-rounds|import\s*\([^)]*gate-rounds|require\([^)]*gate-rounds/.test(cmd)
+    if (!ledger && !guards && !runs) return null
     // One plain command in one known form: no pipes, chains, substitution, redirects, node -e or imports (a parser differential is a bypass).
     const plain = /^\s*node\s+[\w~./-]*gate-rounds\.mjs\s+(status|check|init|direct|card|picture|waive)\s+[\w./#-]+(?:\s+(?:--(?:plan|ref|round)\s+[\w./#:@-]+|[\w.]+))*\s*$/.exec(cmd)
     if (!plain) return 'gate ledger: run the round counter only as one plain command, "node ~/.claude/claude-setup/gate-rounds.mjs <status|check|init|direct|card|picture|waive> <asset> [--plan f|--ref id|--round n]", and never touch the gate files another way (gate.md, Rounds).'
@@ -895,14 +926,7 @@ export function gateStep(tool, input = {}, ctx = {}) {
   if (MERGES.test(tool)) return mergeProblem(readLedger(dir, asset))
   if (!POSTS.test(tool)) return null
   const head = parseHeadline(input.body ?? input.comment ?? '')
-  if (!head) return null
-  const l = readLedger(dir, asset)
-  const bad = roundProblem(l, head.round)
-  if (bad) return `gate round counter: ${bad}`
-  const same = l.rounds.find((r) => r.n === head.round)
-  if (same && same.score !== head.score) return `gate round counter: round ${head.round} of ${asset} is already in the ledger with score ${same.score ?? 'none'}; a round is scored once (gate.md, Rounds). The next verdict is round ${head.round + 1}.`
-  if (!ctx.dry) writeLedger(dir, recordRound(l, head))
-  return null
+  return head ? verdictProblem(dir, asset, head, ctx.dry) : null
 }
 
 // ---- CLI

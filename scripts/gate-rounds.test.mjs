@@ -253,3 +253,29 @@ test('gh pr merge: URL form, flags before the number and a missing number are al
   for (const c of ['gh pr merge 99 && echo x', 'echo $(gh pr merge 99)', 'gh pr merge 99; gh pr merge 13']) assert.match(s.hook('Bash', { command: c }).stderr, /one plain command/, c)
   assert.match(s.hook('Bash', { command: `gh pr merge 99 && rm -rf ${s.env.CLAUDE_SETUP_GATE_DIR}` }).stderr, /one plain command/)
 })
+
+test('review round 2: ordinary work is never blocked, and the doors it found are closed', () => {
+  const s = session(); const post = (body) => s.hook('mcp__github__add_issue_comment', { ...PR, body })
+  // false blocks
+  for (const c of ['node ~/.claude/claude-setup/rule-guard.mjs read https://example.com', 'node --test scripts/gate-rounds.test.mjs', 'git add global/gate-rounds.mjs && git commit -m "fix: x"', 'git diff -- global/gate-rounds.mjs', 'cat /mnt/project-files/gateway-notes.md', `cat ${s.env.CLAUDE_SETUP_GATE_DIR}/x.json`]) assert.equal(s.hook('Bash', { command: c }).status, 0, c)
+  for (const t of ['The new screenshots look right at 390px and 1440px', 'Take a new look at the spacing', 'feat: new button style for the shop', 'docs: new code style section', 'add a new CSS style for errors']) assert.equal(needsPicture(t), false, t)
+  assert.equal(gateBrief('Fix the gate round counter false block in global/gate-rounds.mjs', {}), '', 'a brief ABOUT the counter is no gate-round brief')
+  s.gate(1, '3.0'); s.gate(2, '3.0'); s.gate(3, '3.5')
+  assert.equal(post('> Gate 3/5 (S, round 2)\n\nFixed the two findings above.').status, 0, 'a quoted old verdict is talk')
+  assert.equal(post('Gate 3.5/5 (S, round 3)\nhistory: Gate 3/5 (S, round 1)').status, 0, 'only the opening line is the verdict')
+  assert.equal(readLedger(join(s.dir, 'gate'), ASSET).rounds.length, 3)
+  // doors
+  const v = session(); v.hook('mcp__github__add_issue_comment', { ...PR, body: 'Gate 4.2/5 (L)' })
+  assert.equal(readLedger(join(v.dir, 'gate'), ASSET).rounds.length, 1, 'a verdict without a round is the next round')
+  assert.equal(v.hook('mcp__github__merge_pull_request', MERGE).status, 2)
+  assert.match(v.hook('Bash', { command: 'gh api -X PUT repos/yverse-studio/vacation-game/pulls/13/merge' }).stderr, /no merge below the threshold/)
+  const g = session()
+  g.hook('Bash', { command: `gh pr comment 13 -R yverse-studio/vacation-game --body 'Gate 3.0/5 (S, round 1)'` })
+  assert.equal(readLedger(join(g.dir, 'gate'), ASSET).rounds.length, 1, 'a verdict posted with gh is counted')
+  assert.equal(g.hook('Bash', { command: `gh pr comment 13 -R yverse-studio/vacation-game --body 'Gate 5/5 (S, round 1)'` }).status, 2, 'and cannot be rescored')
+  // pass handling
+  const p = session(); p.hook('mcp__github__add_issue_comment', { ...PR, body: 'Gate pass (S, round 1)' })
+  assert.equal(p.hook('mcp__github__merge_pull_request', MERGE).status, 0, '"Gate pass" is a pass')
+  const q = session(); q.gate(1, '4.6'); q.gate(2, '3.0'); q.gate(3, '4.6')
+  assert.equal(q.gate(4, '4.6').status, 0, 'polish counts from the latest passing run')
+})
