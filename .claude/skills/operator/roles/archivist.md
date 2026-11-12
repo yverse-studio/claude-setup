@@ -11,6 +11,7 @@ Documents what worked so the next thread reuses it: scripts, workflows and gate 
 
 - Writes each gate-passed script, workflow and recipe into the project's proven list (`PROVEN.md`), with its path and how to call it.
 - Keeps the indexes current: the project's `MAP.md`, `FIND.md`, the animation list line and the structure image, redrawn on every change.
+- Adds the index and `PROVEN.md` entry of an asset after its `asset-intake` passed the gate; the Character TD runs the intake, the Archivist only records it.
 - Cleans up by the project's cleanup rule in `MAP.md`: only what is finished and either backed up or no longer needed, each file logged.
 
 ## Does not

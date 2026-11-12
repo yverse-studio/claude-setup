@@ -261,13 +261,16 @@ const ASKS_RESEARCH = /\b(SOTA|state of the art|research (on|about|into|what)|re
 // Gate rounds 1 to 6 chased verbs and body words and every round found more. So there is no classifier: every Programmer or Animator brief
 // on a game or story kit names its approved cast sheet and look lock, or declares in one line that it is no body, face or outfit job:
 // `Sheet: n/a <why>` (10+ characters). A false "n/a" on a real modelling job is visible in the brief; a missing line is refused.
-const needsSheet = (plain) => /^[ \t>-]*Role:[ \t]*(Programmer|Animator)\b/im.test(plain) && /\bKit:[ \t]*(game|story)\b/i.test(plain)
+// The one list of roles whose game and story brief names a cast sheet (scripts/brief.mjs imports it: a third copy of this list let the generator drop Character TD).
+export const SHEET_ROLES = ['Programmer', 'Animator', 'Character TD']
+export const needsSheetRole = (role) => SHEET_ROLES.some((r) => r.toLowerCase() === String(role).trim().toLowerCase())
+const needsSheet = (plain) => needsSheetRole(plain.match(/^[ \t>-]*Role:[ \t]*([^\n·|,(]*)/im)?.[1] ?? '') && /\bKit:[ \t]*(game|story)\b/i.test(plain)
   && !/^[ \t>-]*Sheet:[ \t]*n\/a[ \t]+\S[^\n]{9,}$/im.test(plain)
 // CompanyXY 2026-11-12 (yskills 13:23, point 5): gates were planned only after the owner complained. A builder, designer or animator brief
 // at size M or L names the Reviewer thread that gates its work before the owner sees it; the gate roles themselves need no such line.
 // A Gate line names a reviewer thread (`Gate: Reviewer · fit round 2 before owner`), or says in 10+ characters why the slice has no owner-facing
 // result (`Gate: n/a no owner-facing result, a CI script only`); the same shape as `Sheet: n/a`. `none`, `later` or `skipped` do not count.
-export const GATE_BUILDER_ROLES = '(?:Planner|Programmer|Designer|Animator|Story Writer|Game Designer|Content Designer|Sound Designer)'
+export const GATE_BUILDER_ROLES = '(?:Planner|Programmer|Designer|Animator|Character TD|Story Writer|Game Designer|Content Designer|Sound Designer)'
 export const GATE_LINE = /^[ \t>-]*Gate:[ \t]*(?:(?:Reviewer|Tester)\b[^\n]*\bbefore owner\b[^\n]*|n\/a[ \t]+\S[^\n]{9,})$/im
 const needsGate = (plain) => new RegExp(`^[ \\t>-]*Role:[ \\t]*${GATE_BUILDER_ROLES}\\b`, 'im').test(plain) && /\bSize:[ \t]*[ML]\b/i.test(plain)
 const small = (plain) => /\bSize:[ \t]*S\b/i.test(plain)
