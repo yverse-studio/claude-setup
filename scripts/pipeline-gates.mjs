@@ -6,7 +6,7 @@
 //   look <look_states.json>    point 5  every look state sets every look switch
 //   drivers <drivers.json>     point 5  no driver with a dead or unresolved variable (dump: scripts/blender/dump_drivers.py)
 //   previews <dir> [--fix]     point 7  thumb.jpg older than a final render in its folder
-//   intake <asset dir>         asset-intake: a downloaded asset is processed, not listed (licence, source, a row and preview per base)
+//   intake <asset dir> --inventory <measure.json>   asset-intake: a downloaded asset is processed, not listed (licence, source, a row and preview per base of the body's _inventory)
 // Each prints OK or RED lines and exits 1 on any RED.
 import { spawnSync } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
@@ -105,11 +105,15 @@ export function stalePreviews(root) {
 }
 
 // asset-intake (.claude/skills/asset-intake): `lib/<typ>/<kategorie>/<PREFIX>_<name>/` holds source/, LICENCE.md, intake.json and the previews.
-// intake.json: {type, inventory: [base keys], rows: {<key>: {preview, number | visual + why}}, catalog: {bases_fitted, md5}}.
-// `inventory` is the body's `_inventory` (BT_ presets, char_<name> per CH_ key), never typed by hand. A report that is only a file list has no rows and fails.
+// intake.json: {type, rows: {<key>: {preview, number | visual + why}}, catalog: {bases_fitted, md5}}. The list of bases is NOT in it: the caller passes the
+// body's `_inventory` (BT_ presets and char_<name> per CH_ key, as fit_garment.py writes it into measure.json), so an author cannot shorten it.
+// A report that is only a file list has no rows and fails.
 const LICENCE_FIELDS = ['Source', 'Licence', 'Commercial use', 'Adult use', 'Attribution']
-const NUMBER_TYPES = ['garment', 'hair'] // clearance.py gives a number; eyes and faces may say "visual" with a reason where no metric exists
-export function intakeProblems(dir) {
+const NO = /^(no|nein|false|n\/a|none|forbidden|prohibited|not allowed|unclear|unknown|\?)\b/i // a "no" or an unclear answer to a use field parks the asset in inbox/_quarantine/
+const TYPES = ['garment', 'hair', 'eyes', 'face'] // steps.md; eyes and faces may say "visual" with a reason where no metric exists
+const NUMBER_TYPES = ['garment', 'hair']
+export const bodyInventory = (report) => report?._inventory?.BT && report?._inventory?.CH ? [...report._inventory.BT, ...report._inventory.CH.map((k) => `char_${String(k).replace(/^CH_/, '')}`)] : []
+export function intakeProblems(dir, inventory = []) {
   const out = []
   const at = (...p) => join(dir, ...p)
   const files = existsSync(at('source')) ? readdirSync(at('source')) : []
@@ -119,27 +123,31 @@ export function intakeProblems(dir) {
   else {
     const text = readFileSync(licence, 'utf8')
     for (const f of LICENCE_FIELDS) if (placeholder(field(text, f))) out.push(`LICENCE.md has no real "${f}:" line`)
+    for (const f of ['Commercial use', 'Adult use']) if (!placeholder(field(text, f)) && NO.test(field(text, f))) out.push(`LICENCE.md says "${f}: ${field(text, f)}": the asset goes to inbox/_quarantine/, never into lib/`)
   }
-  if (!existsSync(at('intake.json'))) return [...out, 'no intake.json: the report is a file list, not a processed asset (inventory, rows, catalog)']
+  if (!inventory.length) out.push('no body inventory: pass --inventory <measure.json> (the fit_garment.py output with _inventory {BT, CH}); the list of bases is never typed into intake.json')
+  if (!existsSync(at('intake.json'))) return [...out, 'no intake.json: the report is a file list, not a processed asset (rows, catalog)']
   let r
   try { r = JSON.parse(readFileSync(at('intake.json'), 'utf8')) } catch { return [...out, 'intake.json is not valid JSON'] }
-  const inv = Array.isArray(r.inventory) ? r.inventory : []
   const rows = r.rows && typeof r.rows === 'object' ? r.rows : {}
-  if (!inv.length) out.push('intake.json has no inventory: list every BT_ preset and char_<name> key of the body')
+  if (!TYPES.includes(r.type)) out.push(`intake.json type "${r.type}" is none of ${TYPES.join(', ')} (steps.md)`)
   if (!Object.keys(rows).length) out.push('intake.json has no rows: a file list is not an intake, test and fit every base')
   const made = existsSync(at('files')) ? readdirSync(at('files')).map((n) => statSync(at('files', n)).mtimeMs) : []
-  for (const k of inv) {
+  const needNumber = NUMBER_TYPES.includes(r.type)
+  for (const k of inventory) {
     const row = rows[k]
     if (!row) { out.push(`base ${k}: no row (fit and number or visual check)`); continue }
     const shot = row.preview && at(row.preview)
     if (!shot || !existsSync(shot)) out.push(`base ${k}: preview ${row.preview ?? '(none)'} does not exist`)
     else if (made.some((m) => m > statSync(shot).mtimeMs)) out.push(`base ${k}: preview is older than the asset files, render it again`)
-    const hasNumber = row.number !== undefined && row.number !== null && row.number !== ''
+    const n = row.number
+    const clear = n && typeof n === 'object' && Number.isFinite(n.min_mm) && Number.isFinite(n.inside_pct)
     const visualOk = row.visual === true && typeof row.why === 'string' && row.why.length >= 10
-    if (!hasNumber && !(visualOk && !NUMBER_TYPES.includes(r.type))) out.push(`base ${k}: ${NUMBER_TYPES.includes(r.type) ? `a ${r.type} needs a number (clearance)` : 'needs a number, or visual: true with a why of 10+ characters'}`)
+    if (needNumber && !(clear && n.min_mm >= 0 && n.inside_pct === 0)) out.push(`base ${k}: a ${r.type} needs number {min_mm >= 0, inside_pct 0} (clearance.py), got ${JSON.stringify(n) ?? 'none'}`)
+    else if (!needNumber && TYPES.includes(r.type) && !clear && !visualOk) out.push(`base ${k}: needs number {min_mm, inside_pct}, or visual: true with a why of 10+ characters`)
   }
   const fitted = r.catalog?.bases_fitted ?? []
-  if (inv.some((k) => !fitted.includes(k))) out.push(`catalog.bases_fitted lacks ${inv.filter((k) => !fitted.includes(k)).join(', ')}`)
+  if (inventory.some((k) => !fitted.includes(k))) out.push(`catalog.bases_fitted lacks ${inventory.filter((k) => !fitted.includes(k)).join(', ')}`)
   if (!r.catalog?.md5 || !Object.keys(r.catalog.md5).length) out.push('catalog.md5 is empty: one hash per fitted file')
   return out
 }
@@ -158,13 +166,13 @@ function main([cmd, ...args]) {
     fit: () => fitReportProblems(json(args[0])),
     look: () => lookStateProblems(json(args[0])),
     drivers: () => driverProblems(json(args[0])),
-    intake: () => intakeProblems(args[0]),
+    intake: () => { const i = args.indexOf('--inventory'); return intakeProblems(args[0], i >= 0 ? bodyInventory(json(args[i + 1])) : []) },
     previews: () => stalePreviews(args[0]).map((s) => {
       if (args.includes('--fix')) { const r = refreshPreview(s.final); return r.ok ? null : `${s.dir}: could not refresh thumb.jpg (${r.why})` }
       return `${s.dir}: thumb.jpg is older than ${s.finals.join(', ')} (run with --fix)`
     }).filter(Boolean),
   }
-  if (!jobs[cmd] || !args.length) { console.error('usage: pipeline-gates.mjs sheet|fit|look|drivers|previews|intake <file or dir> [--fix]'); return 2 }
+  if (!jobs[cmd] || !args.length) { console.error('usage: pipeline-gates.mjs sheet|fit|look|drivers|previews|intake <file or dir> [--fix | --inventory <measure.json>] [--fix]'); return 2 }
   const problems = jobs[cmd]()
   for (const p of problems) console.log(`RED ${p}`)
   console.log(problems.length ? `RESULT RED ${cmd}: ${problems.length} problem(s)` : `OK ${cmd}`)
