@@ -29,7 +29,7 @@ function session(model = 'sonnet-test', extra = [], role = 'Tester') {
   const bare = (...args) => cli(args, env)
   const run = (...args) => {
     const [cmd, asset, ...rest] = args
-    if (GRANTED.includes(cmd)) issueGrant(join(dir, 'gate'), cmd, asset, cmd === 'init' ? rest[rest.indexOf('--round') + 1] : cmd === 'direct' ? rest[rest.indexOf('--plan') + 1] : rest[rest.indexOf('--ref') + 1])
+    if (GRANTED.includes(cmd)) issueGrant(join(dir, 'gate'), cmd, asset, cmd === 'init' ? rest[rest.indexOf('--round') + 1] : cmd === 'direct' ? rest[rest.indexOf('--plan') + 1] : cmd === 'record' ? rest[rest.indexOf('--body-file') + 1] : rest[rest.indexOf('--ref') + 1])
     return cli(args, env)
   }
   return { dir, env, hook, gate, run, bare, transcript, id }
@@ -492,7 +492,7 @@ test('record: a Critic counts a verdict for a named asset (no PR), a builder and
   const body = join(critic.dir, 'v.md')
   const say = (n, score) => writeFileSync(body, `Gate ${score}/5 (S, round ${n})\n1 frame check\n`)
   const viaHook = (s, n, score) => { say(n, score); return s.hook('Bash', { command: `node ~/.claude/claude-setup/gate-rounds.mjs record ${NAMED} --body-file ${body}` }) }
-  const viaCli = (n, score) => { say(n, score); return critic.bare('record', NAMED, '--body-file', body) }
+  const viaCli = (n, score) => { say(n, score); return critic.run('record', NAMED, '--body-file', body) } // run: with the grant the hook leaves
   // rounds 1 to 3, the director, then the Critic's round 4: the hook passes it, the CLI counts it
   for (const n of [1, 2, 3]) { assert.equal(viaHook(critic, n, '3.0').status, 0, `hook passes the Critic, round ${n}`); assert.equal(viaCli(n, '3.0').code, 0) }
   const plan = join(critic.dir, 'plan.md')
@@ -505,12 +505,20 @@ test('record: a Critic counts a verdict for a named asset (no PR), a builder and
   // a builder session is refused by the hook
   const builder = session('sonnet-test', [], 'Programmer')
   assert.match(viaHook(builder, 1, '5.0').stderr, /builder cannot pass or merge its own work/)
-  // a PR asset belongs to `post`; a body with no headline, or no file, counts nothing
-  say(1, '5.0')
-  assert.match(critic.bare('record', ASSET, '--body-file', body).text, /post/)
+  // no grant, no count: the CLI alone (a copy of the hook's job) is refused (security review: hook-only gate)
+  say(5, '5.0')
+  assert.match(critic.bare('record', NAMED, '--body-file', body).text, /refused: the hook/)
+  assert.equal(readLedger(join(critic.dir, 'gate'), NAMED).rounds.length, 4)
+  // a PR asset, and every spelling that shares a PR ledger's file, belongs to `post` and is refused by the hook and the CLI
+  for (const a of [ASSET, 'yverse-studio/vacation-game 13', 'yverse-studio/vacation-game#013', 'yverse-studio_vacation-game_13']) {
+    assert.match(critic.hook('Bash', { command: `node ~/.claude/claude-setup/gate-rounds.mjs record '${a}' --body-file ${body}` }).stderr, /only a plain named asset/, a)
+    assert.match(critic.run('record', a, '--body-file', body).text, /only a plain named asset/, a)
+  }
+  assert.equal(readLedger(join(critic.dir, 'gate'), ASSET).rounds.length, 0, 'the PR ledger was never touched')
+  // a body with no headline, or no file, counts nothing
   writeFileSync(body, 'no headline here')
-  assert.match(critic.bare('record', NAMED, '--body-file', body).text, /must start with the verdict headline/)
-  assert.match(critic.bare('record', NAMED, '--body-file', join(critic.dir, 'none.md')).text, /must start with the verdict headline/)
+  assert.match(critic.run('record', NAMED, '--body-file', body).text, /must start with the verdict headline/)
+  assert.match(critic.run('record', NAMED, '--body-file', join(critic.dir, 'none.md')).text, /must start with the verdict headline/)
 })
 
 test('every gate role the hooks know may post a verdict: gate-rounds uses the same list as rule-guard (#482)', async () => {

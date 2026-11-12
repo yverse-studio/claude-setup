@@ -907,7 +907,10 @@ export const lastRound = (l) => l.rounds.at(-1)?.n ?? 0
 // ---- grants (security review 2026-11-12, finding 1): the proofs for init, direct, card, picture and waive are read by the hook, and the
 // CLI refuses those verbs without the short grant the hook leaves after it checked them. A call that bypasses the hook (a copy of this
 // file, node -e, an import) reaches the CLI without a grant and is refused there too, so the filename in argv is no longer the lock.
-export const GRANTED = ['init', 'direct', 'card', 'picture', 'waive']
+export const GRANTED = ['init', 'direct', 'card', 'picture', 'waive', 'record']
+// A named asset is plain word characters: no slash, space or #, so it cannot spell a PR ledger (owner/repo#n and "owner/repo n" share one file key).
+export const namedProblem = (asset) => /^[\w.-]+$/.test(String(asset)) && !/_\d+$/.test(String(asset)) ? null : 'record: only a plain named asset (letters, digits, - . _; not ending in _<number>, no owner/repo#n); a PR verdict goes through "post" or the comment tool (gate.md, Rounds)'
+const grantRef = (verb, rest, ref) => verb === 'init' ? rest[rest.indexOf('--round') + 1] : verb === 'direct' ? rest[rest.indexOf('--plan') + 1] : verb === 'record' ? rest[rest.indexOf('--body-file') + 1] : ref
 export const GRANT_SECONDS = 120
 const grantFile = (dir, verb, asset) => join(dir, 'grants', `${verb}.${basename(fileOf(dir, asset))}`)
 // The hook reads the command before the shell expands it, the CLI after: both sides key the grant on the same form (gate round 1 of the #450 re-land).
@@ -1212,12 +1215,13 @@ function bashProblem(cmd, dir, ctx) {
       if (verb === 'direct' && !/fable/i.test(ctx.model ?? '')) return `gate ledger: only a Fable session records the director, this one runs on ${ctx.model ?? 'an unknown model'}. Ask the coordinator for a Fable thread (docs/TEAMS.md, Models line).`
       if (['card', 'picture', 'waive'].includes(verb) && !(ref && cardProof(ref, ctx.calls ?? []))) return `gate ledger: "${verb}" needs --ref <cmsg id> of a request_decision card this session posted (it was not found in this session).`
       if (verb === 'waive' && !(ctx.humanAfter?.(ref))) return 'gate ledger: waive needs yskills\' own answer on that card in this session; none arrived yet.'
+      if (verb === 'record' && namedProblem(s.args[at + 2])) return namedProblem(s.args[at + 2])
       if (verb === 'post' || verb === 'record') {
         const body = read(s.args[s.args.indexOf('--body-file') + 1] ?? '')
         const why = authorProblem(body, ctx)
         if (why) return why
       }
-      if (!ctx.dry && GRANTED.includes(verb)) issueGrant(dir, verb, s.args[at + 2], verb === 'init' ? s.args[s.args.indexOf('--round') + 1] : verb === 'direct' ? s.args[s.args.indexOf('--plan') + 1] : ref)
+      if (!ctx.dry && GRANTED.includes(verb)) issueGrant(dir, verb, s.args[at + 2], grantRef(verb, s.args, ref))
       continue
     }
     const writes = WRITERS.has(s.a0.toLowerCase()) || (s.a0 === 'sed' && s.args.some((x) => /^-[a-zA-Z]*i|^--in-place/.test(x)))
@@ -1284,7 +1288,7 @@ export function cli(argv, env = process.env) {
   if (cmd === 'status') return { code: 0, text: JSON.stringify(l, null, 2) }
   if (cmd === 'check') return roundProblem(l, Number(rest[0])) ? fail(roundProblem(l, Number(rest[0]))) : { code: 0, text: 'ok' }
   if (GRANTED.includes(cmd)) {
-    const key = cmd === 'init' ? flag(rest, '--round') : cmd === 'direct' ? flag(rest, '--plan') : flag(rest, '--ref')
+    const key = cmd === 'init' ? flag(rest, '--round') : cmd === 'direct' ? flag(rest, '--plan') : cmd === 'record' ? flag(rest, '--body-file') : flag(rest, '--ref')
     if (!takeGrant(dir, cmd, asset, key)) return fail(`${cmd}: refused: the hook (global/rule-guard.mjs) checks the proof for this verb and leaves a short grant; none was found for this call. Run it as "node ~/.claude/claude-setup/gate-rounds.mjs ${cmd} <asset> ..." in a session where the hook is on (gate.md, Rounds).`)
   }
   if (cmd === 'init') {
@@ -1299,7 +1303,7 @@ export function cli(argv, env = process.env) {
     return save({ ...l, director: { model: DIRECTOR, plan, round: lastRound(l), at: new Date().toISOString() } })
   }
   if (cmd === 'record') {
-    if (/#\d+$/.test(String(asset))) return fail('record: only a named asset (no owner/repo#n); a PR verdict goes through "post" or the comment tool (gate.md, Rounds)')
+    if (namedProblem(asset)) return fail(namedProblem(asset))
     const file = flag(rest, '--body-file')
     const head = file ? parseHeadline(read(file)) : null
     if (!head) return fail('record: --body-file <f> must start with the verdict headline "Gate <score>/5 (<size>, round <n>)"')
