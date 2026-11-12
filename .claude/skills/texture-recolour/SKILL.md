@@ -13,6 +13,8 @@ yskills 2026-11-12: a flat recolour of a black and white shirt texture (multiply
 1. **Keep the original** when the download's colour already fits the cast sheet palette. A recolour needs a reason in the plan.
 2. **Otherwise shift the hue on a mask**, not the whole texture: Hue/Saturation node (or the texture painted in HSV) with the part's
    ID mask as the factor, so skin, white shirt and tie, buttons and metal keep their colour.
+   Tool: `scripts/recolour.py` (numpy and Pillow): `--list` prints the UV islands of an exported `.obj`, `--islands 0,2 --hue 120 --out <dir>` shifts the hue
+   only inside those islands, keeps value and alpha, writes `before_after.png` and exits 1 if one pixel outside the mask changed. Tests: `scripts/test_recolour.py`, run in CI.
 3. **Never multiply** a black and white or greyscale texture with a colour: black stays black, white takes the whole tint, details die.
    A recolour that has to start from grey uses a colour ramp on the mask or a Color blend at low strength, then check it per step 5.
 4. **Where the mask comes from:** the material slots or UV islands of the garment first (one slot per part is the usual case); only if
