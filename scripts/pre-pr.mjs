@@ -39,11 +39,17 @@ export function diagnoseRed({ failed, baseOk }) {
   if (baseOk === null) return `could not check main (no worktree); run node scripts/check.mjs on a fresh ${base} before blaming your branch.`
   return 'main is green: the failures are your branch\'s.'
 }
-function baseCheckOk() {
+// Runs the failing steps' own commands on a clean copy of the base (check.mjs always, the CI test line when the tests failed).
+export function baseCheckOk(failed = [], run = spawnSync) {
   const dir = join(tmpdir(), `pre-pr-base-${process.pid}`)
   try {
     execFileSync('git', ['worktree', 'add', '--detach', '-q', dir, base], { cwd: root, stdio: 'ignore' })
-    return spawnSync('node', ['scripts/check.mjs'], { cwd: dir, stdio: 'ignore' }).status === 0
+    const cmds = [['node', ['scripts/check.mjs']]]
+    if (failed.includes('tests (CI line)')) {
+      const tests = ciSteps(readFileSync(join(dir, '.github/workflows/ci.yml'), 'utf8')).tests
+      if (tests) { const [cmd, ...argv] = tests.split(/\s+/); cmds.push([cmd, argv]) }
+    }
+    return cmds.every(([cmd, argv]) => run(cmd, argv, { cwd: dir, stdio: 'ignore' }).status === 0)
   } catch { return null } finally { spawnSync('git', ['worktree', 'remove', '--force', dir], { cwd: root, stdio: 'ignore' }) }
 }
 
@@ -69,7 +75,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   else { results.push(['PR body', null]); console.log('open PR body: not checked here; run again with --body <file> before gh pr create (Prior art: ... -> copy|adapt|build, because ...; Lessons: <repo path>)') }
   if (!quick && steps.tests) { const [cmd, ...argv] = steps.tests.split(/\s+/); step('tests (CI line)', cmd, argv) }
   const failed = results.filter(([, ok]) => ok === false)
-  if (failed.length) console.log(diagnoseRed({ failed: failed.map(([n]) => n), baseOk: baseCheckOk() }))
+  if (failed.length) console.log(diagnoseRed({ failed: failed.map(([n]) => n), baseOk: baseCheckOk(failed.map(([n]) => n)) }))
   console.log(failed.length ? `pre-pr: ${failed.length} failing: ${failed.map(([n]) => n).join(', ')}. Fix the code, not the check.` : 'pre-pr: clean (CI runs the same steps)')
   process.exit(failed.length ? 1 : 0)
 }

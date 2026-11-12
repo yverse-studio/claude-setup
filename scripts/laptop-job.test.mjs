@@ -165,7 +165,7 @@ test('heartbeat: a Blender job must name a progress file, and a stale progress f
   const start = 1_000_000_000
   assert.equal(heartbeatProblem({ now: start + 5 * MIN, started: start, mtimeMs: start + 4 * MIN, heartbeatMin: 10 }), null)
   assert.match(heartbeatProblem({ now: start + 25 * MIN, started: start, mtimeMs: start + 4 * MIN, heartbeatMin: 10 }), /no progress for 21 min/)
-  assert.match(heartbeatProblem({ now: start + 11 * MIN, started: start, mtimeMs: null, heartbeatMin: 10 }), /never wrote/, 'a job that never wrote it dies too')
-  assert.equal(heartbeatProblem({ now: start + 5 * MIN, started: start, mtimeMs: null, heartbeatMin: 10 }), null, 'grace for the first minutes')
+  assert.match(heartbeatProblem({ now: start + 31 * MIN, started: start, mtimeMs: null, heartbeatMin: 10 }), /never wrote/, 'a job that never wrote it dies too')
+  assert.equal(heartbeatProblem({ now: start + 25 * MIN, started: start, mtimeMs: null, heartbeatMin: 10 }), null, 'grace for a heavy first frame')
   assert.equal(parseArgs(['--progress-file', 'p.json', '--heartbeat-min', '7', '--', 'x']).opt.heartbeatMin, 7)
 })

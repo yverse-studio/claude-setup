@@ -68,9 +68,9 @@ export function progressProblem(cmd, opt) {
   return 'a Blender job needs --progress-file <file> (rewritten after every frame; the watchdog checks it every 10 min) or --no-progress "<reason>"'
 }
 
-export function heartbeatProblem({ now, started, mtimeMs, heartbeatMin }) {
+export function heartbeatProblem({ now, started, mtimeMs, heartbeatMin, firstFrameMin = 30 }) {
   const limit = heartbeatMin * 60000
-  if (mtimeMs === null) return now - started > limit ? `progress file never wrote in ${heartbeatMin} min` : null
+  if (mtimeMs === null) return now - started > firstFrameMin * 60000 ? `progress file never wrote in ${firstFrameMin} min` : null   // the first frame may compile shaders and build the BVH
   return now - Math.max(mtimeMs, started) > limit ? `no progress for ${Math.round((now - mtimeMs) / 60000)} min (progress file not rewritten)` : null
 }
 
@@ -173,7 +173,7 @@ async function main() {
     else if (opt.progressFile) {
       let mtimeMs = null
       try { mtimeMs = statSync(opt.progressFile).mtimeMs } catch { /* not written yet */ }
-      const stale = heartbeatProblem({ now, started, mtimeMs, heartbeatMin: opt.heartbeatMin })
+      const stale = heartbeatProblem({ now, started, mtimeMs, heartbeatMin: opt.heartbeatMin, firstFrameMin: Math.max(30, opt.heartbeatMin) })
       if (stale) kill('HANG', stale)
     }
   }, 10000)

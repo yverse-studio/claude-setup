@@ -564,11 +564,11 @@ const ASKS_RESEARCH = /\b(SOTA|state of the art|research (on|about|into|what)|re
 // Companyxy 2026-11-12 (point 3): about 20 fit rounds because bodies and outfits were built before cast sheets with measures and a
 // look lock existed (docs/preproduction-workflow.md). A modelling job of a Programmer or Animator on a game or story kit names both.
 const SHEET_LINES = [
-  ['Sheet: (approved cast sheet, docs/preproduction-workflow.md)', /^[ \t>-]*Sheet:[ \t]*[^<\s]/im],
-  ['Look-Lock: (owner card of the look)', /^[ \t>-]*Look-Lock:[ \t]*[^<\s]/im],
+  ['Sheet: (approved cast sheet, docs/preproduction-workflow.md)', /^[ \t>-]*Sheet:[ \t]*[^<\n]*\.md\b/im],
+  ['Look-Lock: (owner card of the look)', /^[ \t>-]*Look-Lock:[ \t]*[^<\n]*(https?:\/\/|card)/im],
 ]
 const needsSheet = (plain) => /^[ \t>-]*Role:[ \t]*(Programmer|Animator)\b/im.test(plain) && /\bKit:[ \t]*(game|story)\b/i.test(plain)
-  && /\b(body|bodies|outfit|garment|clothes|clothing|face|fit|fitting|rig|model(l?ing)?)\b/i.test(plain.replace(/^[ \t>-]*(Model|Prior art|Skills|Start|Stop when|Threads|Item|Researcher|Tester):.*$/gim, ''))
+  && /\b(body|bodies|outfit|garment|clothes|clothing|character|cast)\b/i.test(plain.replace(/^[ \t>-]*(Model|Prior art|Skills|Start|Stop when|Threads|Item|Researcher|Tester):.*$/gim, ''))
 export function missingLines(text) {
   const plain = text.replace(/[*_`]/g, '')
   const lines = BRIEF_LINES.filter(([, re]) => !re.test(plain)).map(([name]) => name)
@@ -1403,7 +1403,7 @@ export function blenderDocsMissing(tool, input = {}, transcript = '') {
 }
 // Companyxy 2026-11-12 (point 8): a garment is downloaded only after `clothes_dupe.py <url or id>` said NEW for that source
 // (docs/clothing-pipeline.md, Reuse first). transcript: the session's transcript text (or a function returning it).
-const GARMENT_SOURCE = /https?:\/\/[^\s"']*(sketchfab\.com|booth\.pm|fab\.com|cgtrader\.com|blenderkit\.com|blendkit\.com)[^\s"']*/gi
+const GARMENT_SOURCE = /https?:\/\/(?:[^\s"'/]*\.)?(?:sketchfab\.com|booth\.pm|fab\.com|cgtrader\.com|blenderkit\.com|blendkit\.com)[^\s"']*/gi
 const DOWNLOAD = /\b(curl|wget|Invoke-WebRequest|iwr|Start-BitsTransfer|yt-dlp|aria2c)\b/i
 export function dupeCheckMissing(tool, input = {}, transcript = '') {
   const command = shellCommand(tool, input)
@@ -1411,7 +1411,7 @@ export function dupeCheckMissing(tool, input = {}, transcript = '') {
   const urls = command.match(GARMENT_SOURCE) ?? []
   if (!urls.length) return null
   const ran = (c) => /clothes_dupe\.py/.test(c)
-  const idOf = (u) => u.replace(/[?#].*$/, '').replace(/\/(download|files?)\/?$/i, '').split('/').filter(Boolean).pop() ?? u
+  const idOf = (u) => { const last = u.replace(/[?#].*$/, '').replace(/\/(download|files?)\/?$/i, '').split('/').filter(Boolean).pop() ?? u; const tail = last.split('-').pop(); return tail.length >= 8 ? tail : last }   // sketchfab: name-<uid>
   const earlier = toolCalls(typeof transcript === 'function' ? transcript() : transcript).map((c) => String(c.input?.command ?? '')).filter(ran)
   const before = command.split(/&&|;|\|/).filter(ran).join(' ')
   const unchecked = urls.filter((u) => !(earlier.concat(before).some((c) => c.includes(idOf(u)))))
@@ -1526,7 +1526,7 @@ const teamHooks = [["SessionStart", "startup|clear|compact", "start"], ["Session
 for (const event of new Set(teamHooks.map(([e]) => e))) s.hooks[event] = (s.hooks[event] || []).filter((h) => !JSON.stringify(h).includes("team-brief.mjs") && !JSON.stringify(h).includes("team-guard.mjs"))
 for (const [event, matcher, mode] of teamHooks) s.hooks[event].push({ matcher, hooks: [team(mode)] })
 const rule = (mode) => ({ type: "command", command: `node "${require("os").homedir()}/.claude/claude-setup/rule-guard.mjs" ${mode}`, timeout: 5 })
-for (const [event, matcher, mode] of [["PreToolUse", "Bash|PowerShell|Write|Edit|Artifact|WebFetch|mcp__github__.*|mcp__hearthbot__post_message|mcp__remote-devices__create_artifact|mcp__Blender__.*|mcp__.*(navigate|browser_batch|tabs_create.*|preview_start)|propose_skills|mcp__.*propose_skills", "pre"], ["UserPromptSubmit", "", "prompt"], ["Stop", "", "stop"]]) {
+for (const [event, matcher, mode] of [["PreToolUse", "Bash|PowerShell|Write|Edit|Artifact|WebFetch|mcp__github__.*|mcp__hearthbot__post_message|mcp__remote-devices__create_artifact|mcp__Blender__.*|mcp__.*Claude_Browser__.*|mcp__.*(navigate|browser_batch|tabs_create.*|preview_start)|propose_skills|mcp__.*propose_skills", "pre"], ["UserPromptSubmit", "", "prompt"], ["Stop", "", "stop"]]) {
   s.hooks[event] = (s.hooks[event] || []).filter((h) => !JSON.stringify(h).includes("rule-guard.mjs"))
   s.hooks[event].push({ ...(matcher ? { matcher } : {}), hooks: [rule(mode)] })
 }

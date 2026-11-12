@@ -5,7 +5,7 @@
 // Each job runs through laptop-job.mjs (watchdog, RAM and slot checks). Log: <queueDir>/queue.log; states: .json -> .running -> .done|.fail
 import { spawnSync } from 'node:child_process'
 import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
-import { join, dirname } from 'node:path'
+import { join, dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { refreshPreview } from './pipeline-gates.mjs'
 
@@ -42,7 +42,7 @@ async function main() {
     const last = (r.stdout || '').trim().split('\n').pop() || `exit ${r.status}`
     log(`END ${name}: ${last}`)
     const state = endState(last, r.status)
-    if (state === '.done' && final) { const p = refreshPreview(final); log(p.ok ? `PREVIEW ${name}: ${p.thumb} refreshed` : `PREVIEW ${name}: ${p.why}`) }   // companyxy 2026-11-12: thumb.jpg came from old webms
+    if (state === '.done' && final) { const pv = refreshPreview(resolve(final)); log(pv.ok ? `PREVIEW ${name}: ${pv.thumb} refreshed` : `PREVIEW ${name}: ${pv.why}`) }   // companyxy 2026-11-12: thumb.jpg came from old webms
     renameSync(run, run.replace(/\.running$/, state))
   }
 }

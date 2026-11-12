@@ -39,3 +39,12 @@ test('pre-pr tells a red main from a red branch: main first, as its own PR', asy
   assert.match(diagnoseRed({ failed: ['check.mjs'], baseOk: true }), /your branch/i)
   assert.match(diagnoseRed({ failed: ['tests (CI line)'], baseOk: null }), /could not check main/i)
 })
+
+test('baseCheckOk runs the failing steps on the base too: red tests on main are not blamed on the branch', async () => {
+  const { baseCheckOk } = await import('./pre-pr.mjs')
+  const calls = []
+  const run = (cmd, argv) => { calls.push([cmd, ...argv].join(' ')); return { status: /--test/.test(argv.join(' ')) ? 1 : 0 } }
+  assert.equal(baseCheckOk(['tests (CI line)'], run), false)
+  assert.ok(calls.some((c) => /^node --test /.test(c)), 'the CI test line ran on the base')
+  assert.equal(baseCheckOk(['check.mjs'], run), true)
+})

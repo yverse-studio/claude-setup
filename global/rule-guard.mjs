@@ -656,7 +656,7 @@ export function blenderDocsMissing(tool, input = {}, transcript = '') {
 }
 // Companyxy 2026-11-12 (point 8): a garment is downloaded only after `clothes_dupe.py <url or id>` said NEW for that source
 // (docs/clothing-pipeline.md, Reuse first). transcript: the session's transcript text (or a function returning it).
-const GARMENT_SOURCE = /https?:\/\/[^\s"']*(sketchfab\.com|booth\.pm|fab\.com|cgtrader\.com|blenderkit\.com|blendkit\.com)[^\s"']*/gi
+const GARMENT_SOURCE = /https?:\/\/(?:[^\s"'/]*\.)?(?:sketchfab\.com|booth\.pm|fab\.com|cgtrader\.com|blenderkit\.com|blendkit\.com)[^\s"']*/gi
 const DOWNLOAD = /\b(curl|wget|Invoke-WebRequest|iwr|Start-BitsTransfer|yt-dlp|aria2c)\b/i
 export function dupeCheckMissing(tool, input = {}, transcript = '') {
   const command = shellCommand(tool, input)
@@ -664,7 +664,7 @@ export function dupeCheckMissing(tool, input = {}, transcript = '') {
   const urls = command.match(GARMENT_SOURCE) ?? []
   if (!urls.length) return null
   const ran = (c) => /clothes_dupe\.py/.test(c)
-  const idOf = (u) => u.replace(/[?#].*$/, '').replace(/\/(download|files?)\/?$/i, '').split('/').filter(Boolean).pop() ?? u
+  const idOf = (u) => { const last = u.replace(/[?#].*$/, '').replace(/\/(download|files?)\/?$/i, '').split('/').filter(Boolean).pop() ?? u; const tail = last.split('-').pop(); return tail.length >= 8 ? tail : last }   // sketchfab: name-<uid>
   const earlier = toolCalls(typeof transcript === 'function' ? transcript() : transcript).map((c) => String(c.input?.command ?? '')).filter(ran)
   const before = command.split(/&&|;|\|/).filter(ran).join(' ')
   const unchecked = urls.filter((u) => !(earlier.concat(before).some((c) => c.includes(idOf(u)))))

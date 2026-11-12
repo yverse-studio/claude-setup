@@ -1209,3 +1209,26 @@ test('rule guard: a garment download needs clothes_dupe.py on the same source ea
   assert.equal(dupeCheckMissing('Bash', { command: `git log ${url}` }, ''), null, 'not a download')
   assert.equal(dupeCheckMissing('Write', {}, ''), null)
 })
+
+// Gate review of PR 445: the first versions of these guards had false positives and a matcher gap.
+test('gate fixes: no sheet demand for HUD or camera work, every app browser tool reaches the hook, dupe ids and hosts', async () => {
+  const { missingLines } = await import('../global/team-guard.mjs')
+  const { dupeCheckMissing } = await import('../global/rule-guard.mjs')
+  for (const task of ['Make the NPCs face the player', 'Fix the save data model in Pinia', 'Make the HUD fit on 390px', 'Rig the camera dolly']) {
+    assert.deepEqual(missingLines(`Role: Programmer · Kit: game · Size: M${FULL}\n${task}`), [], task)
+  }
+  assert.equal(missingLines(`Role: Programmer · Kit: game · Size: M${FULL}\nFit the new character outfit`).length, 2)
+  for (const f of ['install.mjs', 'cloud/setup.sh']) assert.match(readFileSync(join(root, f), 'utf8'), /mcp__\.\*Claude_Browser__\.\*\|/, `${f} routes every Claude_Browser tool to rule-guard`)
+  const seen = (command) => JSON.stringify({ message: { content: [{ type: 'tool_use', id: 't1', name: 'Bash', input: { command } }] } })
+  const uid = '0123456789abcdef0123456789abcdef'
+  assert.equal(dupeCheckMissing('Bash', { command: `curl -L -o a.zip https://sketchfab.com/3d-models/school-uniform-${uid}/download` }, seen(`python clothes_dupe.py ${uid}`)), null, 'the bare id counts')
+  assert.equal(dupeCheckMissing('Bash', { command: 'curl -L -o a.zip https://myprefab.com/items/1' }, ''), null, 'myprefab.com is not fab.com')
+  assert.match(dupeCheckMissing('Bash', { command: 'curl -L -o a.zip https://www.fab.com/listings/0123456789abcdef-0123-4567-89ab-0123456789ab' }, '') ?? '', /clothes_dupe/)
+})
+
+test('gate fixes: Sheet: must be a .md path and Look-Lock: a link or card, "later" does not count', async () => {
+  const { missingLines } = await import('../global/team-guard.mjs')
+  const b = (extra) => `Role: Programmer · Kit: game · Size: M${FULL}\nFit the character outfit.\n${extra}`
+  assert.equal(missingLines(b('Sheet: later\nLook-Lock: later')).length, 2)
+  assert.equal(missingLines(b('Sheet: characters/mira/SHEET.md\nLook-Lock: owner card https://claude.ai/c/1')).length, 0)
+})
