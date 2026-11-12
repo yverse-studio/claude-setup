@@ -175,8 +175,7 @@ test('Controls and World life are rows and come first (play before look, gate.md
 
 test('the controls baseline names report rows that exist in AREAS', () => {
   const md = readFileSync(join(root, '.claude/skills/game-ux/refs/controls-baseline.md'), 'utf8')
-  for (const row of ['Controls', 'World life', 'Touch 390']) {
-    assert.ok(AREAS.includes(row), `${row} is not a report row`)
-    assert.ok(md.includes('`' + row + '`'), `controls-baseline.md no longer names ${row}`)
-  }
+  const rows = [...new Set([...md.matchAll(/ into (?:the )?`([^`]+)`/g)].map((m) => m[1]))]
+  assert.ok(rows.length >= 3, `controls-baseline.md names only ${rows.length} report rows`)
+  for (const row of rows) assert.ok(AREAS.includes(row), `${row} is not a report row`)
 })

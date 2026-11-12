@@ -80,7 +80,7 @@ and a start time, or one clip plays longer than 12 s without a switch.
 
 ## 4. Accessibility floor (Game Accessibility Guidelines, Basic tier)
 
-Adjustable FOV with a sensible default (baseline row 7); head bob and screen shake switchable off (mouse smoothing and
+Adjustable FOV with a sensible default (baseline row 4 for the value, row 7 for the menu); head bob and screen shake switchable off (mouse smoothing and
 camera/controller mismatch are known motion-sickness triggers); every control remappable (remap the action, not
 only swap two keys); subtitles for all important speech; contrast and text size readable at the smallest target frame (baseline row 9); settings saved;
 never convey a state by colour alone. Beyond this floor, take the guidelines' Intermediate list per game.
@@ -89,7 +89,7 @@ never convey a state by colour alone. Beyond this floor, take the guidelines' In
 
 - **Pure look math** in a pure module with no renderer import (`applyLook(state, dx, dy, sens, invertY)` returns a new state, pitch
   clamped); Vitest covers clamp, invert, wrap of yaw. No `Math.random`: idle choice takes the game's seeded RNG.
-- **Hooks:** `window.__lookBy(dx, dy)` and `render_game_to_text()` carrying yaw, pitch, position and NPC clips,
+- **Hooks:** `window.__lookBy(dx, dy)` (deltas in mouse counts) and `render_game_to_text()` carrying yaw, pitch, position and NPC clips,
   so a headless test can turn and walk without a real pointer lock. A real lock in headless Chromium is not
   verified here; the Playtester's blind pass uses the drag fallback and says so in `Not checked:`.
 - **Playtester checks:** the table in [`refs/controls-baseline.md`](refs/controls-baseline.md); plus mouse look reaches

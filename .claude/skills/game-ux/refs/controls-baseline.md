@@ -13,7 +13,7 @@ writes its own numbers in `design/GDD.md` (`## Controls`) and tunes them by play
 | 1 | Move relative to camera | WASD and arrows move relative to where the camera looks. Bind the physical key (`KeyboardEvent.code`), never `key`, so AZERTY, QWERTZ and Dvorak keep the same hand shape; show the key name from the layout in prompts (`navigator.keyboard.getLayoutMap()` where it exists, else the code's letter) |
 | 2 | Turn the camera | Mouse look (pointer lock, drag fallback) or right-drag orbit, plus Q/E as a keyboard turn so a player with no mouse is not locked out; context menu suppressed on the canvas |
 | 3 | Rebinding | Every action rebindable in a menu, a new key for the action (not only swapping two), conflicts shown, reset to default, saved. Hints and glyphs update after a rebind (Xbox XAG 107; Game Accessibility Guidelines, Basic) |
-| 4 | Sensitivity and invert | Mouse sensitivity in degrees per mouse count (`movementX` is raw counts with `unadjustedMovement`; without it, refused or unsupported, `movementX` is OS-adjusted, so the deg/count value must be re-tuned): default [judgement] 0.1, range 0.02 to 0.5, with cm per 360 deg at 800 CPI shown by the slider; drag-to-look and touch get their own value in degrees per CSS px (default [judgement] 0.2 to 0.25); invert Y; separate stick sensitivity. FOV is stored as the vertical `camera.fov` (default [judgement] 60 on desktop, about 90 horizontal at 16:9; on portrait derive vertical from at least 70 horizontal, about 102 vertical at 9:16 and 113 at 390x844, cap 115 [judgement]) and shown as horizontal 70 to 110 |
+| 4 | Sensitivity and invert | Mouse sensitivity in degrees per mouse count (`movementX` is raw counts with `unadjustedMovement`; without it, refused or unsupported, `movementX` is OS-adjusted, so the deg/count value must be re-tuned): default [judgement] 0.1, range 0.02 to 0.5, with cm per 360 deg at 800 CPI shown by the slider; drag-to-look and touch get their own value in degrees per CSS px (default [judgement] 0.2 to 0.25); invert Y; separate stick sensitivity. FOV is stored as the vertical `camera.fov` (default [judgement] 60 on desktop, about 90 horizontal at 16:9; on portrait derive vertical from at least 70 horizontal, about 102 vertical at 9:16 and 113 at 390x844, cap 115 [judgement]) and shown as horizontal 70 to 110 (on portrait the slider tops out at the cap: about 72 horizontal at 390x844, 83 at 9:16) |
 | 5 | Auto-camera toggle | A camera that swings back or recentres on its own can be switched off; default on for a walking game, off for anything with aiming |
 | 6 | Gamepad | Gamepad API, `mapping === 'standard'`: left stick move, right stick camera, A confirm or interact, B back, Y secondary, Start pause; scaled radial dead zone, inner 0.15 and outer 0.95 [judgement] (`out = dir * clamp((|v| - inner) / (outer - inner), 0, 1)`); right-stick response curve (exponent 2 [judgement], selectable linear) with its own sensitivity; vibration on/off in the options menu (row 7); a non-standard pad shows a "press the button" mapping step. Hot-plug (`gamepadconnected`) and glyphs follow the last device used |
 | 7 | Options menu | One screen, reachable from the title and in play: Controls (rows 3 to 5), Camera (FOV, bob, shake), Accessibility (reduced motion, text size, subtitles, hold/tap toggles), Audio, Language. Saved locally, one settings object with a load/save/clamp unit test |
@@ -50,7 +50,7 @@ its values are copied.
 
 ## Playtest checks (where they go in the Playtester's report)
 
-`Layout` to `Reduced motion` go into the `Controls` row, the NPC watch (`game-ux` §3) into `World life`, the touch
+`Layout` to `Hold` go into the `Controls` row, the NPC watch (`game-ux` §3) into `World life`, the touch
 check into `Touch 390` (the rows `scripts/playtest-check.mjs` and `gate.md` read).
 
 | Check | Pass when |
@@ -58,7 +58,7 @@ check into `Touch 390` (the rows `scripts/playtest-check.mjs` and `gate.md` read
 | Layout | a dispatched keydown `{code: 'KeyW', key: 'z'}` moves forward; `KeyA`/`KeyD` strafe whatever `key` says |
 | Camera | mouse look or right-drag and Q/E all turn the camera; the context menu does not open |
 | Rebind | one action rebound in the menu works at once, survives a reload, and its hint shows the new key |
-| Sensitivity, invert | `__lookBy(100, 0)` changes yaw by 100 x sensitivity within 1 %; invert flips the pitch sign |
+| Sensitivity, invert | `__lookBy(100, 0)` (mouse counts) changes yaw by 100 x the mouse sensitivity within 1 %; invert flips the pitch sign |
 | Auto-camera | switching it off keeps the view where the player left it for 5 s |
 | Gamepad | with a standard pad (or mocked `navigator.getGamepads`) the left stick walks, the right stick turns, A, B and Start do their jobs; a stick value 0.01 under the GDD's inner dead zone gives no move, vibration off silences the pad |
 | Options | opens from the title and from play, no state lost, every value saved |
