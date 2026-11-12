@@ -797,8 +797,11 @@ function agentReport(path, prompt) {
     try {
       const row = JSON.parse(line)
       if (first === null && row.type === 'user') first = rowText(row)
-      const text = row.type === 'assistant' ? (row.message?.content ?? []).filter((c) => c?.type === 'text').map((c) => c.text).join('\n').trim() : ''
-      if (text) last = text
+      // Live shape (gate round 1 of #506): the agent's final report is a SubagentHandback tool_use (text in input.message); a plain text row is the fallback.
+      const parts = row.type === 'assistant' ? (row.message?.content ?? []) : []
+      const text = parts.filter((c) => c?.type === 'text').map((c) => c.text).join('\n').trim()
+      const hand = parts.filter((c) => c?.type === 'tool_use' && c.name === 'SubagentHandback').map((c) => String(c.input?.message ?? '').trim()).filter(Boolean).at(-1)
+      if (hand || text) last = hand || text
     } catch { /* not a JSON line */ }
   }
   const want = String(prompt ?? '').trim()
