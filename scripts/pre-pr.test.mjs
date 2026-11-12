@@ -48,3 +48,10 @@ test('baseCheckOk runs the failing steps on the base too: red tests on main are 
   assert.ok(calls.some((c) => /^node --test /.test(c)), 'the CI test line ran on the base')
   assert.equal(baseCheckOk(['check.mjs'], run), true)
 })
+
+// cleanup/PLAN.md step 3: the overlap warning (scripts/pr-overlap.mjs) runs inside pre-pr and warns without failing.
+test('pre-pr runs the overlap warning and does not count it as a failure', () => {
+  const src = readFileSync(new URL('./pre-pr.mjs', import.meta.url), 'utf8')
+  assert.match(src, /overlapWarnings\(\{ cwd: root, base \}\)/)
+  assert.doesNotMatch(src, /results\.push\(\['overlap/)
+})
