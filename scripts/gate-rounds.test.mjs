@@ -337,6 +337,8 @@ const MUST_BLOCK_LEDGER = [
   // B7: text that names the counter only passes where it is data; an interpreter reading it from stdin, or a word that is the file, does not
   "python3 - <<'E'\nopen('global/gate-rounds.mjs', 'w').write('x')\nE", "node <<'E'\nrequire('fs').copyFileSync('global/gate-rounds.mjs', '/tmp/c.mjs')\nE", 'echo x | tee global/gate-rounds.mjs', "cat <<'E' > global/gate-rounds.mjs\nx\nE",
   'node < global/gate-rounds.mjs', 'node <(cat global/gate-rounds.mjs)',
+  // security review of the B7 change: a pipe carries the file, or text that imports it, into an interpreter, so a call with a pipe keeps the strict rule
+  'cat global/gate-rounds.mjs | node', 'grep -n x global/gate-rounds.mjs | cut -c1-80', `echo "import('/home/u/.claude/claude-setup/gate-rounds.mjs')" | node`, "cat <<'E' | node\nimport('x/gate-rounds.mjs')\nE", 'grep x global/gate-rounds.mjs | tee /tmp/c.mjs',
   'cat global/gate-rounds.mjs > /tmp/c.mjs', 'git show HEAD:global/gate-rounds.mjs > /tmp/c.mjs', 'rg --pre "cp global/gate-rounds.mjs /tmp/c.mjs" x .', 'less -o /tmp/c.mjs global/gate-rounds.mjs', 'file -C -m global/gate-rounds.mjs',
 ]
 const MUST_PASS = [
@@ -358,7 +360,7 @@ const MUST_PASS = [
   'sed -n 1,40p global/gate-rounds.mjs', 'git log --oneline -- global/gate-rounds.mjs', 'git show HEAD:global/gate-rounds.mjs | head -20', 'grep -rn -i round global/gate-rounds.mjs', 'rg -n grant global/gate-rounds.mjs', 'cat global/gate-rounds.mjs 2>/dev/null | wc -l',
   'node install.mjs', 'bash cloud/setup.sh', 'sed -i s/a/b/ global/gate-rounds.mjs', 'git checkout main -- global/gate-rounds.mjs', 'node -e "console.log(1)"', 'node --check global/gate-rounds.mjs',
   // B7 (2026-11-12): a command that only mentions the counter script, as text or beside an unrelated command, is not a way round it.
-  'grep -c round < global/gate-rounds.mjs', 'grep -c round global/gate-rounds.mjs && node -e "console.log(1)"', 'grep -n x global/gate-rounds.mjs | cut -c1-80', 'echo "gate-rounds.mjs is the counter" > /tmp/n.md',
+  'grep -c round < global/gate-rounds.mjs', 'grep -c round global/gate-rounds.mjs && node -e "console.log(1)"', 'echo "gate-rounds.mjs is the counter" > /tmp/n.md',
   "cat > /tmp/body.md <<'EOF'\nThe counter lives in gate-rounds.mjs.\nEOF", "gh pr comment 7 -R o/r --body-file - <<'EOF'\nSee gate-rounds.mjs.\nEOF",
   'git add global/gate-rounds.mjs && git commit -m "fix: x"', 'node ~/.claude/claude-setup/rule-guard.mjs read https://example.com', 'echo "a > b" | wc -l', 'echo it\'s fine',
 ]
