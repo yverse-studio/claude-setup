@@ -1,9 +1,9 @@
-Paste everything below the line ABOVE the existing text in Project settings > Memory > Project instructions,
-keeping every project-specific line (yskills 2026-11-08: add, never remove), once per
-project (steps: `docs/USING.md`, Start a project). Generate it with
-`node scripts/project-instructions.mjs <name> --about "<one line>"`; this file is that script's
-source, and `{{name}}`, `{{about}}`, `{{repo}}` and `{{kind}}` are filled from `projects/<name>.json`
-or the flags. The rules live only in claude-setup; this text only makes every session load them,
+Filled in and prepended by the project chat itself (coordinator card, pre-flight), above the existing
+Project instructions, keeping every project-specific line (yskills 2026-11-08: add, never remove), once per
+project (steps: `docs/USING.md`, Start a project). `{{name}}`, `{{about}}`, `{{repo}}` and `{{kind}}` are
+filled from `projects/<name>.json` or the project's description; a thread with Bash may use
+`node scripts/project-instructions.mjs <name> --about "<one line>"` to print it, a project chat never
+runs it. The rules live only in claude-setup; this text only makes every session load them,
 so it never changes when a rule does.
 
 ---

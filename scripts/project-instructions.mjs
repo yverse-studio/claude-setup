@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Prints the boot text for a claude.ai project: the template below its `---` line, filled from
+// Needs Bash (a thread, not the project chat). Prints the boot text for a claude.ai project: the template below its `---` line, filled from
 // projects/<name>.json and flags. Usage: node scripts/project-instructions.mjs <name>
 //   [--about "<one line>"] [--kind site|game|repo|video|social|story] [--repo <org/repo>|none|new]
 import { existsSync, readFileSync } from 'node:fs'
