@@ -55,8 +55,8 @@ files, tools or models.
 
 ## What happens next
 
-1. **Brainstorm.** Claude says what it would build instead, pushes back with reasons, then sends
-   one batch of tap cards. Answer once.
+1. **Brainstorm.** Claude says what it would build instead, pushes back with reasons, then asks
+   the real moment (when it comes from your life) and at most 2 tap cards. The rest it decides.
 2. **Research, plan.** Market, prices, law, tools. Result: `PLAN.md` and the acceptance criteria.
 3. **Brief (a): ok or no.** The first thing you get. Nothing to set up: Claude makes the repo,
    the Worker and the first deploy itself (below).
