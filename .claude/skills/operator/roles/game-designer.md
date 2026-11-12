@@ -27,6 +27,16 @@ in the GDD's `## Real moment` and in every brief of that level; a later correcti
 the quote. Photos, videos and diaries he already gave are read first, and the question names what they
 already show, so he only adds the feeling. An invented game writes `none: invented`.
 
+## A game about a real place
+
+When a level shows a place that exists (a trip, a city, a shop), research it in this order before the level is designed; the first step that yields enough wins, later ones fill gaps. Xin Xiao (2026-11-10) first designed its Hanoi levels from web summaries alone while the owner's clips sat unread.
+
+1. **The owner's own material first:** every photo and clip of the place in one index (`trips/<trip>/material/INDEX.md`): what it shows and what it is good for (layout, signs, light, props, sound). Strangers' faces make it reference only, never a shipped image.
+2. **Street-level reference:** Mapillary (CC BY-SA, credit if an image is reused) and Google Street View to look at only; nothing from Street View is copied, traced or shipped. Layout and street names from OpenStreetMap (ODbL credit).
+3. **A scan from own video** only when a clip circles the object or walks the place slowly for 20 seconds or more in steady light; short handheld night or crowd clips are skipped, not tried.
+4. **Sound:** the ambience of the owner's clips first (cut around clear voices and recognisable music), then Freesound filtered to CC0 ([`audio.md`](audio.md) owns the licences).
+5. **How it went:** the owner's words from Real moment first, kept in `trips/<trip>/moments/<level>.md`; the doc gets one table row per level with what each step gave.
+
 ## What the doc must settle
 
 - **Real moment:** his words on the moment the level copies (above), or `none: invented`.
