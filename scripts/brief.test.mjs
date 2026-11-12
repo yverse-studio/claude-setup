@@ -143,7 +143,7 @@ test('a generated gate-role brief names gate.md and the kit checks in Prior art 
   const own = buildBrief({ teams, role: 'Reviewer', kit: 'setup', size: 'S', ...FIELDS, priorArt: 'our review notes -> adapt, because they exist' })
   assert.match(own.brief, /Prior art: [^\n]*gate\.md[^\n]*our review notes/, 'a given Prior art keeps its words and gains gate.md')
   const handWritten = `Role: Reviewer · Kit: setup · Size: S${FULL}`
-  assert.match(await briefCheck(spawn(handWritten), root), /^Gate check/, 'the hand-written brief without gate.md is what blocked the two Reviewer threads')
+  assert.match(await briefCheck(spawn(handWritten), root), /^Brief repair \(no block\)[\s\S]*gate\.md/, 'the hand-written brief without gate.md blocked two Reviewer threads; now it is told to read gate.md')
 })
 
 test('a builder, designer or animator brief at size M or L needs `Gate: <reviewer thread> before owner`; gate roles and size S do not', () => {
