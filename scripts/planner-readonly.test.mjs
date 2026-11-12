@@ -16,7 +16,7 @@ const pre = (id, cwd, tool, input) => spawnSync(process.execPath, [join(root, 'g
 test('a Planner writes only the plan files: source edits, commits, branches and PRs are refused until PLAN.md says PASSED', () => {
   const cwd = mkdtempSync(join(tmpdir(), 'planro-'))
   const planner = as('Planner')
-  for (const [tool, input] of [['Edit', { file_path: '/repo/src/app.mjs' }], ['Write', { file_path: '/repo/scripts/x.mjs' }], ['Bash', { command: 'git commit -am x' }], ['Bash', { command: 'git push -u origin b' }], ['mcp__github__create_pull_request', {}], ['mcp__github__push_files', {}], ['Write', { file_path: '/mnt/project-files/../repo/src/x.mjs' }], ['Bash', { command: 'git -C /repo commit -am x' }], ['Bash', { command: 'echo x > src/a.mjs' }], ['Bash', { command: 'sed -i s/a/b/ src/a.mjs' }], ['Bash', { command: 'gh pr create --fill' }]]) {
+  for (const [tool, input] of [['Edit', { file_path: '/repo/src/app.mjs' }], ['Write', { file_path: '/repo/scripts/x.mjs' }], ['Bash', { command: 'git commit -am x' }], ['Bash', { command: 'git push -u origin b' }], ['mcp__github__create_pull_request', {}], ['mcp__github__push_files', {}], ['Write', { file_path: '/mnt/project-files/../repo/src/x.mjs' }], ['Write', { file_path: '/mnt/project-files/repo/.git/config' }], ['Bash', { command: 'git -C /repo commit -am x' }], ['Bash', { command: 'echo x > src/a.mjs' }], ['Bash', { command: 'sed -i s/a/b/ src/a.mjs' }], ['Bash', { command: 'gh pr create --fill' }]]) {
     const r = pre(planner, cwd, tool, input)
     assert.equal(r.status, 2, `${tool} ${JSON.stringify(input)} refused`)
     assert.match(r.stderr, /read-only until its plan passed the gate/)
@@ -55,7 +55,7 @@ test('the pass line cannot be built from pieces, the shell is an allowlist, plan
     assert.equal(r.status, 2, `${tool} split pass refused`)
     assert.match(r.stderr, /the gate sets `Status: PASSED`/)
   }
-  for (const command of ['node scripts/plan.mjs add id=M1; git commit -am x', 'node scripts/plan.mjs add $(touch src/a)', 'node /mnt/project-files/scripts/plan.mjs add', 'python3 -c "open(1)"', 'curl -o src/a.mjs http://x', 'find . -delete', 'git status && rm -rf src', 'cat PLAN.md | tee src/a.mjs', 'ls & rm -rf src', 'ls &rm src/a']) {
+  for (const command of ['node scripts/plan.mjs add id=M1; git commit -am x', 'node scripts/plan.mjs add $(touch src/a)', 'node /mnt/project-files/scripts/plan.mjs add', 'python3 -c "open(1)"', 'curl -o src/a.mjs http://x', 'find . -delete', 'git status && rm -rf src', 'cat PLAN.md | tee src/a.mjs', 'sed -n w/tmp/x p src/a', 'sort -o src/a src/b', 'find . -fprint src/a', 'git grep -O"touch x" foo', 'ls & rm -rf src', 'ls &rm src/a']) {
     const r = pre(planner, cwd, 'Bash', { command })
     assert.equal(r.status, 2, `${command} refused`)
     assert.match(r.stderr, /read-only until its plan passed the gate/)

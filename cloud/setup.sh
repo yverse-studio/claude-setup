@@ -1633,14 +1633,14 @@ const PLAN_NAMES = /^(PLAN\.md|features\.json|PLAN\.json|HANDOFF\.md)$/
 const PASSED = /Status:[ \t]*PASSED/i
 const real = (f) => { try { return realpathSync(f) } catch { try { return join(realpathSync(dirname(f)), basename(f)) } catch { return f } } } // symlinks resolved, also for a file not yet written
 // Read-only shell: every segment starts with a listed command; no redirect, substitution or write flag. plan.mjs and the page reader run only in their exact form.
-const READ_CMD = /^\s*(cd|cat|ls|head|tail|grep|rg|wc|sort|uniq|cut|tr|pwd|echo|date|stat|file|jq|diff|sed|find|git(\s+-C\s+\S+)?\s+(status|log|diff|show|ls-files|rev-parse|blame|grep|branch\s+(-a|-r|--list)|remote\s+-v))(\s|$)/
+const READ_CMD = /^\s*(cd|cat|ls|head|tail|grep|wc|cut|tr|pwd|echo|date|stat|file|jq|diff|git(\s+-C\s+\S+)?\s+(status|log|diff|show|ls-files|rev-parse|blame|branch\s+(-a|-r|--list)|remote\s+-v))(\s|$)/
 const PLAN_CMD = /^\s*node scripts\/plan\.mjs(\s+[\w .,=:/@+'"-]*)?$/
 const PAGE_CMD = /^\s*node (~|\/root|\/home\/user)\/\.claude\/claude-setup\/rule-guard\.mjs read https?:\/\/[^\s;&|$`<>()'"\\]+\s*$/
 const readOnlyShell = (cmd) => {
   if (PLAN_CMD.test(cmd) || PAGE_CMD.test(cmd)) return true
   const c = cmd.replace(/\d?>&\d|\d?>\s*\/dev\/null/g, '')
   if (/[`<>\n\r]|\$\(|\$\{/.test(c) || /&/.test(c.replace(/&&/g, ''))) return false // a lone & would start a second command
-  return c.split(/\|\||&&|[|;]/).every((seg) => READ_CMD.test(seg) && !/\bsed\b[^|]*\s-[a-z]*i|\bfind\b[^|]*\s-(exec|execdir|delete|fprint|fls|ok)\b|\bgit\b[^|]*\s(--output|-o)\b/.test(seg))
+  return c.split(/\|\||&&|[|;]/).every((seg) => READ_CMD.test(seg) && !/\bgit\b[^|]*\s(--output|-o|-c)\b/.test(seg))
 }
 // The text the plan file will hold after this edit: a split `Status: PA` + `SSED` cannot slip past a per-field match.
 function planAfter(tool, input, file) {
@@ -1658,7 +1658,7 @@ export function plannerReadOnly(tool, input = {}, role = '', cwd = process.cwd()
   const file = real(resolve(cwd, String(input.file_path ?? input.notebook_path ?? ''))) // resolved: `..` and symlinks cannot reach out of the allowed places
   const isEdit = /^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool)
   const inFiles = file.startsWith(real('/mnt/project-files') + '/')
-  const planFile = isEdit && (PLAN_NAMES.test(basename(file)) || inFiles)
+  const planFile = isEdit && !/(^|\/)\.git(\/|$)/.test(file) && (PLAN_NAMES.test(basename(file)) || inFiles) // never a .git folder: its config could run commands
   const cmd = String(input.command ?? '')
   const writes = tool === 'Bash' && !readOnlyShell(cmd)
   const ships = /^mcp__github__(create_pull_request|push_files|create_or_update_file|create_branch|delete_file|merge_pull_request)$/.test(tool)
