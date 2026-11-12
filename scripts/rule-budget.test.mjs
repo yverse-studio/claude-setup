@@ -48,3 +48,14 @@ test('the repo itself is within its frozen baseline', () => {
   const out = execFileSync('node', ['scripts/rule-budget.mjs'], { encoding: 'utf8' })
   assert.match(out, /^rule budget: \d+ unguarded rule lines/)
 })
+
+test('rewording a rule to dodge never/must/always is not a cut: a fall needs the wide prohibition count to fall too', () => {
+  const before = '- Never rename a body.\n- Always back up.'
+  const base = { perFile: { 'a.md': 2 }, wide: { 'a.md': 2 } }
+  assert.equal(compare(measure([['a.md', before]], has), base).length, 0)
+  const reworded = compare(measure([['a.md', '- Do not rename a body.\n- Always back up.']], has), base).join('\n')
+  assert.match(reworded, /a\.md: fell to 1 from 2 but .* fell only 0 \(need 1\).*rewording is not a cut/)
+  const deleted = compare(measure([['a.md', '- Always back up.']], has), base).join('\n')
+  assert.match(deleted, /a\.md: fell to 1 from 2; lock the gain in/)
+  assert.doesNotMatch(deleted, /rewording/)
+})
