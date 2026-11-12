@@ -119,7 +119,8 @@ export const bodyInventory = (report) => report?._inventory?.BT && report?._inve
 export function intakeProblems(dir, inventory = []) {
   const out = []
   const at = (...p) => join(dir, ...p)
-  const files = existsSync(at('source')) ? readdirSync(at('source')) : []
+  const isDir = (...p) => existsSync(at(...p)) && statSync(at(...p)).isDirectory() // a file where a folder belongs is a RED line, not a stack trace (gate #483 r5, S2)
+  const files = isDir('source') ? readdirSync(at('source')) : []
   if (!files.length) out.push('source/ is missing or empty: keep the untouched download once')
   const licence = ['LICENCE.md', 'LICENSE.md', 'licence.txt'].map((n) => at(n)).find(existsSync)
   if (!licence) out.push('no LICENCE.md: a download with no licence note goes to inbox/_quarantine/, not the library')
@@ -132,23 +133,28 @@ export function intakeProblems(dir, inventory = []) {
   if (!existsSync(at('intake.json'))) return [...out, 'no intake.json: the report is a file list, not a processed asset (rows, catalog)']
   let r
   try { r = JSON.parse(readFileSync(at('intake.json'), 'utf8')) } catch { return [...out, 'intake.json is not valid JSON'] }
+  if (!r || typeof r !== 'object' || Array.isArray(r)) return [...out, 'intake.json is not an object (type, rows, catalog)']
   const rows = r.rows && typeof r.rows === 'object' ? r.rows : {}
   if (!TYPES.includes(r.type)) out.push(`intake.json type "${r.type}" is none of ${TYPES.join(', ')} (steps.md)`)
   if (!Object.keys(rows).length) out.push('intake.json has no rows: a file list is not an intake, test and fit every base')
-  const made = existsSync(at('files')) ? readdirSync(at('files')).map((n) => statSync(at('files', n)).mtimeMs) : []
+  const made = isDir('files') ? readdirSync(at('files')).map((n) => statSync(at('files', n)).mtimeMs) : []
   const needNumber = NUMBER_TYPES.includes(r.type)
   for (const k of inventory) {
     const row = rows[k]
     if (!row) { out.push(`base ${k}: no row (fit and number or visual check)`); continue }
-    const shot = row.preview && at(row.preview)
-    if (!shot || !isImage(shot)) out.push(`base ${k}: preview ${row.preview ?? '(none)'} is not an image file (png, jpg, jpeg or webp, not empty)`)
+    // one render per key, inside the asset's own preview/ folder: this one rule also rules out a shared image and a path outside the dir (gate #483 r5, B1)
+    const own = new RegExp(`^preview/${k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\.(png|jpe?g|webp)$`)
+    const shot = typeof row.preview === 'string' && at(row.preview)
+    if (typeof row.preview === 'string' && !own.test(row.preview)) out.push(`base ${k}: preview ${row.preview} must be preview/${k}.png (or .jpg, .jpeg, .webp): one render per base, inside the asset folder`)
+    else if (!shot || !isImage(shot)) out.push(`base ${k}: preview ${row.preview ?? '(none)'} is not an image file (png, jpg, jpeg or webp, not empty)`)
     else if (made.some((m) => m > statSync(shot).mtimeMs)) out.push(`base ${k}: preview is older than the asset files, render it again`)
     const n = row.number
     const clear = n && typeof n === 'object' && Number.isFinite(n.min_mm) && Number.isFinite(n.inside_pct)
-    const visualOk = row.visual === true && typeof row.why === 'string' && row.why.length >= 10
+    const visualOk = row.visual === true && typeof row.why === 'string' && row.why.trim().length >= 10
+    const hasNumber = n !== undefined && n !== null
     if (needNumber && !(clear && n.min_mm >= 0 && n.inside_pct === 0)) out.push(`base ${k}: a ${r.type} needs number {min_mm >= 0, inside_pct 0} (clearance.py), got ${JSON.stringify(n) ?? 'none'}`)
-    else if (!needNumber && clear && (n.min_mm < 0 || n.inside_pct !== 0)) out.push(`base ${k}: a ${r.type} number must be min_mm >= 0 and inside_pct 0, got ${JSON.stringify(n)}`)
-    else if (!needNumber && TYPES.includes(r.type) && !clear && !visualOk) out.push(`base ${k}: needs number {min_mm, inside_pct}, or visual: true with a why of 10+ characters`)
+    else if (!needNumber && hasNumber && !(clear && n.min_mm >= 0 && n.inside_pct === 0)) out.push(`base ${k}: a ${r.type} number must be complete, min_mm >= 0 and inside_pct 0, got ${JSON.stringify(n)}; visual: true does not excuse a bad number`)
+    else if (!needNumber && TYPES.includes(r.type) && !hasNumber && !visualOk) out.push(`base ${k}: needs number {min_mm, inside_pct}, or visual: true with a why of 10+ characters`)
   }
   const fitted = Array.isArray(r.catalog?.bases_fitted) && r.catalog.bases_fitted.every((k) => typeof k === 'string') ? r.catalog.bases_fitted : null
   if (!fitted) out.push('catalog.bases_fitted must be an array of base names')
@@ -173,7 +179,15 @@ function main([cmd, ...args]) {
     fit: () => fitReportProblems(json(args[0])),
     look: () => lookStateProblems(json(args[0])),
     drivers: () => driverProblems(json(args[0])),
-    intake: () => { const i = args.indexOf('--inventory'); return intakeProblems(args[0], i >= 0 ? bodyInventory(json(args[i + 1])) : []) },
+    intake: () => {
+      const i = args.indexOf('--inventory')
+      if (i < 0) return intakeProblems(args[0], [])
+      const f = args[i + 1]
+      if (!f || f.startsWith('--')) return ['--inventory needs the path of the fit measure.json']
+      let inventory
+      try { inventory = bodyInventory(json(f)) } catch (e) { return [`--inventory ${f} cannot be read: ${e.message}`] }
+      return intakeProblems(args[0], inventory)
+    },
     previews: () => stalePreviews(args[0]).map((s) => {
       if (args.includes('--fix')) { const r = refreshPreview(s.final); return r.ok ? null : `${s.dir}: could not refresh thumb.jpg (${r.why})` }
       return `${s.dir}: thumb.jpg is older than ${s.finals.join(', ')} (run with --fix)`

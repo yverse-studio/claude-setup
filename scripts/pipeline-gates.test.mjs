@@ -3,7 +3,9 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { mkdtempSync, mkdirSync, writeFileSync, utimesSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { spawnSync } from 'node:child_process'
 import { sheetProblems, fitReportProblems, lookStateProblems, driverProblems, stalePreviews, refreshPreview, intakeProblems, bodyInventory } from './pipeline-gates.mjs'
 
 const SHEET = `# Character sheet: Mira
@@ -175,7 +177,50 @@ test('intake: a second licence line with a note or a placeholder cannot hide a n
 test('intake: a folder, an empty file or a non-image is no preview (gate #483 r4)', () => {
   assert.match(problems((d) => { rmSync(join(d, 'preview', 'char_rika.png')); mkdirSync(join(d, 'preview', 'char_rika.png')) }), /base char_rika: preview .* is not an image file/)
   assert.match(problems((d) => writeFileSync(join(d, 'preview', 'char_rika.png'), '')), /base char_rika: preview .* is not an image file/)
-  assert.match(problems((d) => { writeFileSync(join(d, 'preview', 'char_rika.txt'), 'x'); writeFileSync(join(d, 'intake.json'), JSON.stringify({ ...REPORT, rows: { ...REPORT.rows, char_rika: { preview: 'preview/char_rika.txt', number: { min_mm: 1, inside_pct: 0 } } } })) }), /base char_rika: preview .* is not an image file/)
+  assert.match(problems((d) => { writeFileSync(join(d, 'preview', 'char_rika.txt'), 'x'); writeFileSync(join(d, 'intake.json'), JSON.stringify({ ...REPORT, rows: { ...REPORT.rows, char_rika: { preview: 'preview/char_rika.txt', number: { min_mm: 1, inside_pct: 0 } } } })) }), /base char_rika: preview preview\/char_rika\.txt must be preview\/char_rika\.png/)
+})
+
+test('intake: a preview is the base\'s own file preview/<key>.<ext>, never a shared or outside image (gate #483 r5, B1)', () => {
+  const row = (preview) => report({ rows: { ...REPORT.rows, char_rika: { preview, number: REPORT.rows.char_rika.number } } })
+  for (const preview of ['preview/BT_petite.png', '../out.png', 'source/s.png', 'preview/../preview/char_rika.png', 'preview/char_rika.png/']) {
+    assert.match(problems((d) => { writeFileSync(join(d, 'out.png'), 'png'); writeFileSync(join(d, 'source', 's.png'), 'png'); row(preview)(d) }), /base char_rika: preview .* must be preview\/char_rika\.png/, preview)
+  }
+  assert.equal(problems((d) => { writeFileSync(join(d, 'preview', 'char_rika.webp'), 'webp'); row('preview/char_rika.webp')(d) }), '')
+})
+
+test('intake: a visual row needs a real reason and no bad number beside it (gate #483 r5, S1)', () => {
+  const rows = (extra) => report({ type: 'eyes', rows: Object.fromEntries(INV.map((k) => [k, { preview: `preview/${k}.png`, visual: true, ...extra }])) })
+  assert.match(problems(rows({ why: ' '.repeat(12) })), /visual: true with a why/)
+  for (const number of [{ min_mm: -5 }, { min_mm: 1 }, { min_mm: 1, inside_pct: 4 }, 'fine']) {
+    assert.match(problems(rows({ why: 'no metric for an eye in a socket', number })), /eyes number must be complete, min_mm >= 0/, JSON.stringify(number))
+  }
+  assert.equal(problems(rows({ why: 'no metric for an eye in a socket', number: { min_mm: 0.4, inside_pct: 0 } })), '')
+})
+
+test('intake: odd files give RED lines, not a stack trace (gate #483 r5, S2)', () => {
+  assert.match(problems((d) => { rmSync(join(d, 'source'), { recursive: true }); writeFileSync(join(d, 'source'), 'x') }), /source\/ is missing or empty/)
+  assert.match(problems((d) => { rmSync(join(d, 'files'), { recursive: true }); writeFileSync(join(d, 'files'), 'x') }), /^$/)
+  for (const bad of ['null', '[]', '"x"']) assert.match(problems((d) => writeFileSync(join(d, 'intake.json'), bad)), /intake.json is not an object/, bad)
+})
+
+const GATE = join(dirname(fileURLToPath(import.meta.url)), 'pipeline-gates.mjs')
+const cli = (...args) => spawnSync(process.execPath, [GATE, 'intake', ...args], { encoding: 'utf8' })
+
+test('intake CLI: OK with the body inventory, RED without it, and a bad --inventory is a RED line (gate #483 r5, S2)', () => {
+  const d = asset()
+  try {
+    const measure = join(d, 'measure.json')
+    writeFileSync(measure, JSON.stringify(BODY))
+    const ok = cli(d, '--inventory', measure)
+    assert.equal(ok.status, 0, ok.stdout + ok.stderr)
+    assert.match(ok.stdout, /^OK intake/m)
+    for (const args of [[d], [d, '--inventory'], [d, '--inventory', join(d, 'nope.json')]]) {
+      const red = cli(...args)
+      assert.equal(red.status, 1, args.join(' '))
+      assert.match(red.stdout, /^RED /m)
+      assert.doesNotMatch(red.stderr, /at .*\.mjs/, 'no stack trace')
+    }
+  } finally { rmSync(d, { recursive: true, force: true }) }
 })
 
 test('intake: the catalog is type-checked, bases_fitted an array of names and md5 an object of hashes (gate #483 r4)', () => {
@@ -200,7 +245,7 @@ test('intake: a bold licence label cannot hide its value (gate #483 r2, F1)', ()
   assert.equal(problems((d) => writeFileSync(join(d, 'LICENCE.md'), LICENCE.replace('- Adult use: yes', '- **Adult use:** yes'))), '')
 })
 
-test('intake: the type is one of garment, hair, eyes, face', () => {
+test('intake: the type is one of garment, hair, eyes, face, prop', () => {
   assert.match(problems(report({ type: 'shoes' })), /type "shoes" is none of/)
   assert.match(problems(report({ type: 'Garment' })), /type "Garment" is none of/)
   assert.match(problems(report({ type: undefined })), /is none of/)
@@ -213,7 +258,7 @@ test('intake: eyes and faces may be visual-only with a reason, garments and hair
   assert.match(problems(visual('hair', 'looks fine in the render here')), /hair needs number/)
   // an eye or face row that carries a number refuses a negative clearance too (gate #483 r2, F4)
   const eyeNum = (n) => report({ type: 'eyes', rows: Object.fromEntries(INV.map((k) => [k, { preview: `preview/${k}.png`, number: n }])) })
-  assert.match(problems(eyeNum({ min_mm: -3, inside_pct: 0 })), /eyes number must be min_mm >= 0/)
+  assert.match(problems(eyeNum({ min_mm: -3, inside_pct: 0 })), /eyes number must be complete, min_mm >= 0/)
   assert.equal(problems(eyeNum({ min_mm: 0.4, inside_pct: 0 })), '')
 })
 

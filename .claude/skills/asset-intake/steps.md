@@ -1,6 +1,6 @@
 # Step 5 per asset type: what "fitted on every base" means
 
-Every key of the body's `_inventory` (the `measure.json` passed as `--inventory`) gets a row in `intake.json`: `{preview, number: {min_mm, inside_pct}}` or, for eyes, faces and props where no metric exists, `{preview, visual: true, why}`. A garment or hair number is a real clearance: `min_mm` 0 or more and `inside_pct` 0. `type` is `garment`, `hair`, `eyes`, `face` or `prop`. A preview is an image file (png, jpg, jpeg, webp), `catalog.bases_fitted` an array of base names and `catalog.md5` an object of 32-hex hashes.
+Every key of the body's `_inventory` (the `measure.json` passed as `--inventory`) gets a row in `intake.json`: `{preview, number: {min_mm, inside_pct}}` or, for eyes, faces and props where no metric exists, `{preview, visual: true, why}`. A garment or hair number is a real clearance: `min_mm` 0 or more and `inside_pct` 0; a number on an eyes, face or prop row must meet it too, and `visual: true` does not excuse a bad one. `type` is `garment`, `hair`, `eyes`, `face` or `prop`. A preview is `preview/<key>.png` (or jpg, jpeg, webp) for its own key, a real image file, one render per base, `catalog.bases_fitted` an array of base names and `catalog.md5` an object of 32-hex hashes.
 Where no number can be measured, say so; never invent one. Always add the 4-view sheet against the MAIN reference.
 
 | Type | Fit | Number per key | Visual-only allowed |
