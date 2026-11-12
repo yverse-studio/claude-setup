@@ -32,15 +32,18 @@ export function measure(files, guardOk) {
     for (const b of blocks(text)) {
       if (/^#/.test(b)) continue
       const g = b.match(GUARD)?.[1]
-      if (g === undefined && WIDE.test(b)) wide[f] = (wide[f] ?? 0) + 1
-      if (!RULE.test(b)) continue
+      const isRule = RULE.test(b)
+      let guarded = false
       if (g !== undefined) {
         const { kind, target } = parseGuard(g)
         if (/^(deny|ask)$/.test(kind) || /\.mjs$/.test(target)) {
-          if (guardOk(kind, target)) continue
-          badGuards.push(`${f}: [guard: ${g.trim()}] names ${target}, which does not exist`)
+          guarded = guardOk(kind, target)
+          if (!guarded && isRule) badGuards.push(`${f}: [guard: ${g.trim()}] names ${target}, which does not exist`)
         }
       }
+      if (guarded) continue
+      if (WIDE.test(b)) wide[f] = (wide[f] ?? 0) + 1
+      if (!isRule) continue
       perFile[f] = (perFile[f] ?? 0) + 1
     }
   }

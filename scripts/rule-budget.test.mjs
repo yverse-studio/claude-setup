@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 import { measure, compare } from './rule-budget.mjs'
 
 const guards = { 'test scripts/x.test.mjs': 1, 'hook global/h.mjs': 1, 'deny Bash(rm *)': 1 }
@@ -58,4 +59,17 @@ test('rewording a rule to dodge never/must/always is not a cut: a fall needs the
   const deleted = compare(measure([['a.md', '- Always back up.']], has), base).join('\n')
   assert.match(deleted, /a\.md: fell to 1 from 2; lock the gain in/)
   assert.doesNotMatch(deleted, /rewording/)
+})
+
+test('a bogus guard tag hides nothing from the wide count', () => {
+  const m = measure([['a.md', '- Do not rename a body. [guard: none]\n- Do not x. [guard: test scripts/x.test.mjs]']], has)
+  assert.equal(m.wide['a.md'], 1)
+  const gone = measure([['a.md', '- Do not rename a body. [guard: test scripts/gone.test.mjs]']], has)
+  assert.equal(gone.wide['a.md'], 1)
+})
+
+test('a baseline without wide does not block a fall; the frozen baseline carries wide', () => {
+  assert.match(compare(measure([['a.md', '- Never a.']], has), { perFile: { 'a.md': 2 } }).join('\n'), /fell to 1 from 2; lock the gain in/)
+  const out = JSON.parse(readFileSync(new URL('../config/rule-budget.json', import.meta.url), 'utf8'))
+  assert.ok(out.wide && Object.keys(out.wide).length > 0)
 })
