@@ -2,9 +2,9 @@
 // The project's one living plan, PLAN.json (roles/project-manager.md, Masterplan). Threads change it only
 // through this script, so the JSON never breaks and the rules hold: done needs evidence, wartet names what it
 // waits on, drop says why, ids are unique. The coordinator only reads the file.
-// Usage: node scripts/plan.mjs check | stand | set <id> key=value... | add key=value... [--file <path>]
+// Usage: node scripts/plan.mjs init goal=<text> | goal <text> | check | stand | set <id> key=value... | add key=value... [--file <path>]
 // Default file: $PLAN_FILE, else /mnt/project-files/PLAN.json.
-import { readFileSync, writeFileSync, renameSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync, renameSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
 export const STATUSES = ['todo', 'doing', 'wartet', 'done', 'drop']
@@ -17,7 +17,7 @@ export function problems(plan) {
   const seen = new Set()
   for (const it of plan.items) {
     const id = it.id ?? '?'
-    if (!/^M\d+$/.test(id)) out.push(`${id}: id is not M<n>`)
+    if (!/^M[1-9]\d*$/.test(id)) out.push(`${id}: id is not M<n>`)
     if (seen.has(id)) out.push(`${id}: id used twice`)
     seen.add(id)
     if (!it.title) out.push(`${id}: title is missing`)
@@ -63,12 +63,21 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const file = fi >= 0 ? args.splice(fi, 2)[1] : process.env.PLAN_FILE || '/mnt/project-files/PLAN.json'
   const [cmd, ...rest] = args
   try {
+    if (!file) throw new Error('--file needs a path')
+    const write = (p) => { const tmp = `${file}.${process.pid}.tmp`; writeFileSync(tmp, `${JSON.stringify(p, null, 2)}\n`); renameSync(tmp, file); console.log(stand(p)) }
+    if (cmd === 'init') {
+      if (existsSync(file)) throw new Error(`${file} exists; change it with set, add or goal`)
+      write(valid({ goal: fieldsOf(rest).goal, updated: today(), items: [], decisions: [] }))
+      process.exit(0)
+    }
+    if (!existsSync(file)) throw new Error(`${file} is missing; start it with: plan.mjs init goal="<the goal>"`)
     const plan = JSON.parse(readFileSync(file, 'utf8')) // read right before the write: other threads write too
-    const write = (p) => { writeFileSync(`${file}.tmp`, `${JSON.stringify(p, null, 2)}\n`); renameSync(`${file}.tmp`, file); console.log(stand(p)) }
-    if (cmd === 'check') { valid(plan); console.log(`${file}: ok, ${plan.items.length} items`) }
+    if (cmd === 'set' && !rest[0]) throw new Error('set needs an item id, e.g. set M3 status=doing')
+    if (cmd === 'goal') write(valid({ ...plan, goal: rest.join(' '), updated: today() }))
+    else if (cmd === 'check') { valid(plan); console.log(`${file}: ok, ${plan.items.length} items`) }
     else if (cmd === 'stand') console.log(stand(plan))
     else if (cmd === 'set') write(setItem(plan, rest[0], fieldsOf(rest.slice(1))))
     else if (cmd === 'add') write(addItem(plan, fieldsOf(rest)))
-    else throw new Error('usage: plan.mjs check | stand | set <id> key=value... | add key=value... [--file <path>]')
+    else throw new Error('usage: plan.mjs init goal=<text> | goal <text> | check | stand | set <id> key=value... | add key=value... [--file <path>]')
   } catch (e) { console.error(`plan: ${e.message}`); process.exit(1) }
 }

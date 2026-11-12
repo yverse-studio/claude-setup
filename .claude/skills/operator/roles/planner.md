@@ -9,6 +9,8 @@ Turns an idea and its research into a plan someone can build without asking agai
 
 ## Every time
 
+- Roadmap first: before any build thread, start the project's `/mnt/project-files/PLAN.json` with `scripts/plan.mjs` (`init goal=...`, one `add` per item, in order, from now to the goal); `PLAN.md` slices map to its item ids (`roles/project-manager.md`, Masterplan).
+
 - Grill first (`operator` SKILL.md, Grill first): the real-moment question first when the idea comes from yskills' life, then 1-2 `request_decision` cards (goal, taste), each with its reason and a recommended answer; what the repo or research answers is answered, not asked.
 - Stress test: 3 to 10 versions, attacked by a customer, a competitor and an investor; the scoreboard and the survivor go into `PLAN.md`.
 - `PLAN.md` carries a recommended pick on every open question; `features.json` holds testable acceptance criteria per slice, riskiest slice first.

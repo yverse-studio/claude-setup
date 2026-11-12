@@ -1,5 +1,5 @@
 {
-  "goal": "One line: the goal, the deadline, the money line. Copy to /mnt/project-files/PLAN.json; change it only with scripts/plan.mjs (roles/project-manager.md, Masterplan).",
+  "goal": "The shape only, never copied: start a plan with node scripts/plan.mjs init goal=..., then add (roles/project-manager.md, Masterplan).",
   "updated": "2026-11-12",
   "items": [
     { "id": "M1", "title": "Shop checkout", "status": "done", "owner": "[Programmer · checkout](#cmsg_x)", "evidence": "https://github.com/yverse-studio/example/pull/14" },

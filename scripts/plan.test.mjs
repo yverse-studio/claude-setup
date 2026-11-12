@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtempSync, writeFileSync, readFileSync } from 'node:fs'
+import { mkdtempSync, writeFileSync, readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { execFileSync } from 'node:child_process'
@@ -43,6 +43,22 @@ test('stand answers in at most 10 lines: goal, count, doing, waits on him, next 
   const s = stand(base())
   assert.ok(s.split('\n').length <= 10, s)
   for (const want of ['Ship X', '1/4 done', 'M2', 'M3', 'his hands', 'M4']) assert.ok(s.includes(want), want)
+})
+
+test('cli: init starts an empty plan, add and stand work on it, no tmp file stays, a missing file says how to start', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'plan-'))
+  const f = join(dir, 'PLAN.json')
+  const cli = new URL('./plan.mjs', import.meta.url).pathname
+  const run = (...a) => execFileSync('node', [cli, ...a, '--file', f], { encoding: 'utf8', stdio: 'pipe' })
+  assert.throws(() => run('stand'), /init goal=/)
+  run('init', 'goal=Ship Y')
+  assert.throws(() => run('init', 'goal=again'), /exists/)
+  assert.match(run('add', 'title=Build shop', 'owner=Programmer'), /0\/1 done/)
+  assert.match(run('goal', 'Ship Y by Friday'), /Ship Y by Friday/)
+  assert.match(run('stand'), /M1 Build shop/)
+  assert.deepEqual(readdirSync(dir), ['PLAN.json'])
+  assert.throws(() => run('set'), /needs an item id/)
+  assert.throws(() => run('add', 'oops'), /not key=value/)
 })
 
 test('cli: set writes the file, check fails on a bad file', () => {
