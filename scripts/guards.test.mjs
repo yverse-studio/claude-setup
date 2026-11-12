@@ -659,22 +659,46 @@ test('rule guard: a thread start installs the guards and boot files an old image
   const dir = mkdtempSync(join(tmpdir(), 'oldimage-'))
   const bin = mkdtempSync(join(tmpdir(), 'fakecurl-'))
   try {
-    for (const f of ['rule-guard.mjs', 'team-guard.mjs', 'gate-rounds.mjs', 'context-guard.mjs', 'compact-guard.mjs', 'attempt-guard.mjs']) cpSync(join(root, 'global', f), join(dir, f))
+    for (const f of ['rule-guard.mjs', 'team-guard.mjs', 'gate-rounds.mjs', 'context-guard.mjs', 'compact-guard.mjs', 'attempt-guard.mjs', 'card-render.mjs']) cpSync(join(root, 'global', f), join(dir, f))
     writeFileSync(join(bin, 'curl'), `#!/bin/sh\nwhile [ $# -gt 0 ]; do\n  if [ "$1" = "-o" ]; then out="$2"; url="$3"; shift 3\n    mkdir -p "$(dirname "$out")"\n    case "$url" in *global/task-ledger.mjs) printf '#!/usr/bin/env node\\n' > "$out" ;; *checklists.md) echo '## Garment' > "$out" ;; esac\n  else shift; fi\ndone\n`, { mode: 0o755 })
     const env = { ...process.env, PATH: `${bin}:${process.env.PATH}`, CLAUDE_SETUP_RULE_GUARD: '' }
     const brief = `<wake reason="spawn"><relay>\nRole: Programmer · Kit: setup · Size: S${FULL}</relay></wake>`
     const run = (prompt, session, transcript = '') => spawnSync(process.execPath, [join(dir, 'rule-guard.mjs'), 'prompt'], { input: JSON.stringify({ prompt, cwd: root, session_id: session, transcript_path: transcript }), encoding: 'utf8', env }).stdout
-    assert.match(run(brief, `old1${process.pid}`), /Guards in this session: [0-9a-f]{8} \(7\/7 installed\)/, 'the spawn start names all guards')
+    assert.match(run(brief, `old1${process.pid}`), /Guards in this session: [0-9a-f]{8} \(8\/8 installed\)/, 'the spawn start names all guards')
     assert.ok(existsSync(join(dir, 'task-ledger.mjs')), 'the guard the old image never listed is installed')
     assert.ok(existsSync(join(dir, '.claude/skills/operator/checklists.md')), 'the boot file the old image never listed is installed')
     rmSync(join(dir, 'task-ledger.mjs'))
     const transcript = join(dir, 't.jsonl')
     writeFileSync(transcript, JSON.stringify({ type: 'user', message: { role: 'user', content: brief } }))
-    assert.match(run('<wake reason="mention"><message>hi</message></wake>', `old2${process.pid}`, transcript), /Guards in this session: [0-9a-f]{8} \(7\/7 installed\)/, 'a thread whose brief is found in the transcript gets the line too')
+    assert.match(run('<wake reason="mention"><message>hi</message></wake>', `old2${process.pid}`, transcript), /Guards in this session: [0-9a-f]{8} \(8\/8 installed\)/, 'a thread whose brief is found in the transcript gets the line too')
     const repo = spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'prompt'], { input: JSON.stringify({ prompt: brief, cwd: root, session_id: `old3${process.pid}` }), encoding: 'utf8', env }).stdout
     assert.match(repo, /Guards in this session/, 'a checkout still names its guards')
     assert.equal(existsSync(join(root, 'global', '.claude')), false, 'run from a git checkout, it writes no boot files into the repo')
   } finally { for (const d of [dir, bin]) rmSync(d, { recursive: true, force: true }) }
+})
+
+// M50 slice B: the first thread start in a project with no card or a stale one writes the whole rulebook folder from the installed copy and says so once.
+test('rule guard: a thread start refreshes a stale coordinator card in its project folder, once, and never fails the start', () => {
+  if (process.platform === 'win32') return
+  const dir = mkdtempSync(join(tmpdir(), 'cardstart-'))
+  const bin = mkdtempSync(join(tmpdir(), 'nocurl-'))
+  const out = mkdtempSync(join(tmpdir(), 'projfiles-'))
+  try {
+    for (const f of readdirSync(join(root, 'global')).filter((x) => x.endsWith('.mjs'))) cpSync(join(root, 'global', f), join(dir, f))
+    mkdirSync(join(dir, 'docs'))
+    for (const f of ['TEAMS.md', 'MAP.md']) cpSync(join(root, 'docs', f), join(dir, 'docs', f))
+    writeFileSync(join(bin, 'curl'), '#!/bin/sh\nexit 0\n', { mode: 0o755 })
+    const env = { ...process.env, PATH: `${bin}:${process.env.PATH}`, CLAUDE_SETUP_RULE_GUARD: '', CLAUDE_SETUP_PROJECT_FILES: out }
+    const brief = `<wake reason="spawn"><relay>\nRole: Programmer · Kit: setup · Size: S${FULL}</relay></wake>`
+    const run = (session) => spawnSync(process.execPath, [join(dir, 'rule-guard.mjs'), 'prompt'], { input: JSON.stringify({ prompt: brief, cwd: root, session_id: session }), encoding: 'utf8', env }).stdout
+    assert.match(run(`card1${process.pid}`), /Card refreshed [0-9a-f]{8}: /, 'the start receipt names the refresh')
+    for (const f of ['COORDINATOR-CARD.md', 'ROSTER.md', 'briefs/programmer.md']) assert.ok(existsSync(join(out, 'claude-setup', f)), f)
+    assert.doesNotMatch(run(`card2${process.pid}`), /Card refreshed/, 'a current card is left alone and the start says nothing')
+    writeFileSync(join(out, 'claude-setup', 'COORDINATOR-CARD.md'), 'Coordinator card (claude-setup 00000000, 2026-11-01).\nold')
+    assert.match(run(`card3${process.pid}`), /Card refreshed/, 'a stale card is refreshed')
+    const checkout = spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'prompt'], { input: JSON.stringify({ prompt: brief, cwd: root, session_id: `card4${process.pid}` }), encoding: 'utf8', env: { ...env, CLAUDE_SETUP_PROJECT_FILES: mkdtempSync(join(tmpdir(), 'projfiles2-')) } }).stdout
+    assert.doesNotMatch(checkout, /Card refreshed/, 'run from a checkout (no docs beside the guards) it renders nothing')
+  } finally { for (const d of [dir, bin, out]) rmSync(d, { recursive: true, force: true }) }
 })
 
 // Plan M47: a thread's start proof names the guard version and any missing guard file.

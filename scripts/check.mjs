@@ -88,6 +88,8 @@ for (const f of (await import('../global/team-guard.mjs')).BOOT_FILES) if (exist
   if (gateRounds?.replace(/\r/g, '').trim() !== readFileSync(join(root, 'global/gate-rounds.mjs'), 'utf8').replace(/\r/g, '').trim()) errors.push('cloud/setup.sh gate rounds differs from global/gate-rounds.mjs')
   const taskLedger = sh.match(/<<'TASK'\r?\n([\s\S]*?)\r?\nTASK\r?\n/)?.[1]
   if (taskLedger?.replace(/\r/g, '').trim() !== readFileSync(join(root, 'global/task-ledger.mjs'), 'utf8').replace(/\r/g, '').trim()) errors.push('cloud/setup.sh task ledger differs from global/task-ledger.mjs')
+  const cardRender = sh.match(/<<'CARD'\r?\n([\s\S]*?)\r?\nCARD\r?\n/)?.[1]
+  if (cardRender?.replace(/\r/g, '').trim() !== readFileSync(join(root, 'global/card-render.mjs'), 'utf8').replace(/\r/g, '').trim()) errors.push('cloud/setup.sh card renderer differs from global/card-render.mjs')
   const team = sh.match(/<<'TEAM'\r?\n([\s\S]*?)\r?\nTEAM\r?\n/)?.[1]
   if (team?.replace(/\r/g, '').trim() !== readFileSync(join(root, 'global/team-guard.mjs'), 'utf8').replace(/\r/g, '').trim()) errors.push('cloud/setup.sh team guard differs from global/team-guard.mjs')
 }

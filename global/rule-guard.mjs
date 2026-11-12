@@ -900,6 +900,15 @@ async function guardLine() {
   const dir = dirname(fileURLToPath(import.meta.url))
   try { const team = await import(new URL('./team-guard.mjs', import.meta.url)); team.fillMissing?.(dir); return team.guardVersion(dir) } catch { return '' }
 }
+// M50 slice B: a thread's start rewrites its project's rulebook folder (card, rules index, ROSTER.md, briefs/) when the card is missing or stale, so no
+// project depends on a hand-started "Setup-Karte einrichten" thread; the line is the start receipt a running coordinator reads. Never stops the start.
+async function cardLine() {
+  try {
+    const { refreshCard } = await import(new URL('./card-render.mjs', import.meta.url))
+    const hash = refreshCard(dirname(fileURLToPath(import.meta.url)))
+    return hash ? `Card refreshed ${hash}: the project folder's COORDINATOR-CARD.md, ROSTER.md and briefs/ now match main; the coordinator reads them again.` : ''
+  } catch { return '' }
+}
 export async function gateBriefContext(brief, model) {
   try { return (await loadCounter()).gateBrief(brief, { model }) } catch { return '' }
 }
@@ -935,7 +944,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           let relayNote = ''
           if (spawned || (lookup && brief !== prompt)) updateLock(session, checkNow)
           else if (existsSync(lockFile(session)) && COORDINATOR_RELAY.test(prompt)) relayNote = await relayRebrief(session, prompt, cwd, model, transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : '')
-          const context = [checkNow, relayNote, spawned || (lookup && brief !== prompt) ? await gateBriefContext(brief, model) : '', spawned || (lookup && brief !== prompt) ? await guardLine() : '', modelOnce(brief, transcriptPath, session), await roleContext(brief, cwd, session), promptContext(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
+          const context = [checkNow, relayNote, spawned || (lookup && brief !== prompt) ? await gateBriefContext(brief, model) : '', spawned || (lookup && brief !== prompt) ? await guardLine() : '', spawned || (lookup && brief !== prompt) ? await cardLine() : '', modelOnce(brief, transcriptPath, session), await roleContext(brief, cwd, session), promptContext(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
           if (context) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: context } }))
           return
         }
