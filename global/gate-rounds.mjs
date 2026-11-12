@@ -140,7 +140,7 @@ function verdictProblem(dir, asset, head, dry) {
 // text, and each fix moved the line). One small tokenizer gives argv lists; text inside quotes, a commit message or an echo is data.
 const base = (p) => String(p).split(/[\\/]/).pop().replace(/\.exe$/i, '')
 const WRAPPERS = new Set(['env', 'command', 'sudo', 'time', 'nohup', 'exec', 'builtin'])
-const READERS = new Set(['cat', 'ls', 'head', 'tail', 'grep', 'rg', 'jq', 'wc', 'stat', 'less', 'diff'])
+const WRITERS = new Set(['rm', 'unlink', 'shred', 'mv', 'tee', 'truncate', 'dd', 'ln', 'install', 'touch', 'chmod', 'chown', 'rsync', 'cp', 'set-content', 'add-content', 'out-file', 'remove-item', 'new-item', 'copy-item', 'move-item', 'del', 'ri'])
 const SHELLS = new Set(['bash', 'sh', 'zsh', 'dash'])
 
 export function parseShell(text, depth = 0) {
@@ -167,6 +167,7 @@ export function parseShell(text, depth = 0) {
       if (bad || j >= text.length) { bad = true; break }
       i = j; continue
     }
+    if (c === '$' && text[i + 1] === '{') { const k = text.indexOf('}', i); if (k > 0) { word += text.slice(i, k + 1); has = true; i = k; continue } }
     if (c === '\\' && text[i + 1] === '\n') { i++; continue }
     if (c === '\\') { word += text[i + 1] ?? ''; has = true; i++; continue }
     if (c === '$' && text[i + 1] === '(') { const k = close(i + 1); if (k < 0) { bad = true; break } word += text.slice(i, k + 1); has = true; inner(text.slice(i + 2, k)); i = k; continue }
@@ -249,27 +250,38 @@ const GUARD_FILE = /\.claude[\\/]claude-setup[\\/](?:rule-guard|team-guard|gate-
 const CLI_VERBS = ['status', 'check', 'init', 'direct', 'card', 'picture', 'waive', 'merge', 'post']
 const MERGE_DOOR = /pulls\/[^\s/]*\/merge|mergePullRequest|enablePullRequestAutoMerge/
 
-function ghProblem(s) {
+function ghProblem(s, cmd) {
   const w = [] // the subcommand words: flags and the value of -R/--repo dropped
   for (let j = 0; j < s.args.length; j++) { const x = s.args[j]; if (/^(-R|--repo)$/.test(x)) j++; else if (!x.startsWith('-')) w.push(x) }
   if ((w[0] === 'pr' && w[1] === 'merge') || (w[0] === 'api' && s.args.some((a) => MERGE_DOOR.test(a)))) return 'gate ledger: a merge goes through the counter (gate.md, Rounds): the merge tool mcp__github__merge_pull_request, or "node ~/.claude/claude-setup/gate-rounds.mjs merge <owner/repo#n> [--squash|--merge|--rebase] [--auto] [--delete-branch]". It refuses a PR without a counted pass.'
   const comments = (w[0] === 'pr' && /^(comment|review|edit)$/.test(w[1])) || (w[0] === 'issue' && w[1] === 'comment') || w[0] === 'api'
   if (!comments) return null
   const texts = [...s.args]
-  s.args.forEach((a, j) => { if (/^(--body-file|-F)$/.test(a) && s.args[j + 1]) texts.push(read(s.args[j + 1])) })
+  let unreadable = false // a body from stdin or a substitution: the hook cannot see it
+  s.args.forEach((a, j) => {
+    const file = /^(--body-file|-F)$/.test(a) ? s.args[j + 1] : a.match(/^--body-file=(.*)$/)?.[1]
+    if (file === '-') unreadable = true
+    else if (file) texts.push(read(file))
+    if (/\$\(|`/.test(a)) unreadable = true
+  })
+  const carried = /<</.test(cmd) // the call's own text carries the body (a heredoc): every raw line is checked
+  if (unreadable && carried) texts.push(cmd)
   const verdict = texts.some((t) => String(t).split('\n').some((l) => HEADLINE.test(l.replace(/^(?:--?[\w-]+=|\w+=)/, ''))))
+  if (unreadable && !carried && !verdict) return 'gate ledger: a gh comment whose body comes from stdin or a substitution cannot be read by the hook; pass the text with --body or --body-file <f> (gate.md, Rounds).'
   return verdict ? 'gate ledger: a verdict headline ("Gate <score>/5 ... round <n>") is posted with the comment tool, or "node ~/.claude/claude-setup/gate-rounds.mjs post <owner/repo#n> --body-file <f>" (it counts the round, then runs gh). A verdict through plain gh is not counted (gate.md, Rounds).' : null
 }
 
 function bashProblem(cmd, dir, ctx) {
   const { list, bad } = simpleCommands(cmd)
   if (bad && /\bgh\b|gate/.test(cmd)) return 'gate ledger: this command has unbalanced quotes and mentions gh or gate, so it cannot be read; write it plainly (gate.md, Rounds).'
-  const inLedgerRaw = (op) => (dir && String(op).includes(dir)) || /project-files\/gate(?:\/|$)/.test(op)
+  const inLedgerRaw = (op) => (dir && String(op).includes(dir)) || /project-files\/gate(?:\/|$)|\.claude\/claude-setup\/gate(?:\/|$)/.test(op)
   const inLedger = (op) => !/\s/.test(op) && inLedgerRaw(op) // a word with spaces is prose, not a path
   const msg = 'gate ledger: the round counter is written only by gate-rounds.mjs (gate.md, Rounds), never by hand; the installed guards change only through a claude-setup PR.'
+  const runsCounter = list.some((s) => s.a0 === 'node' && s.args.some((a) => base(a) === 'gate-rounds.mjs'))
+  if (runsCounter && list.some((s) => s.env)) return 'gate ledger: CLAUDE_SETUP_* variables (the ledger dir, the guard switch) are not set in a call that runs the counter; they would point it at another ledger (gate.md, Rounds).'
+  const relLedger = (a) => /(^|\/)gate\/[^/\s]+\.json$/.test(a)
   for (const s of list) {
-    if (s.env) return 'gate ledger: CLAUDE_SETUP_* variables (the ledger dir, the guard switch) are not set from a command; they would point the counter at another ledger (gate.md, Rounds).'
-    if (s.a0 === 'gh') { const r = ghProblem(s); if (r) return r }
+    if (s.a0 === 'gh') { const r = ghProblem(s, cmd); if (r) return r }
     if (s.redirs.some((r) => inLedgerRaw(r) || GUARD_FILE.test(r))) return msg
     if (s.a0 === 'cd') { if (s.args.some(inLedger)) return msg; continue }
     const script = s.a0 === 'node' ? s.args.find((a) => base(a) === 'gate-rounds.mjs') ?? s.args.find((a) => !a.startsWith('-')) : null
@@ -285,9 +297,10 @@ function bashProblem(cmd, dir, ctx) {
       if (verb === 'waive' && !(ctx.humanAfter?.(ref))) return 'gate ledger: waive needs yskills\' own answer on that card in this session; none arrived yet.'
       continue
     }
-    if (s.a0 === 'echo' || s.a0 === 'printf') continue
-    if (READERS.has(s.a0) || ['node', 'bash', 'sh', 'zsh', 'git'].includes(s.a0)) continue
-    if (s.args.some((a) => inLedger(a) || GUARD_FILE.test(a))) return msg
+    // only a writer is a ledger write; a reader, find, test, du or a cp out of the ledger names it harmlessly
+    const writes = WRITERS.has(s.a0.toLowerCase()) || (s.a0 === 'sed' && s.args.some((a) => /^(-i|--in-place)/.test(a)))
+    const targets = /^(cp|copy-item)$/i.test(s.a0) ? s.args.slice(-1) : s.args
+    if (writes && targets.some((a) => !/\s/.test(a) && (inLedgerRaw(a) || GUARD_FILE.test(a) || relLedger(a)))) return msg
   }
   return null
 }
