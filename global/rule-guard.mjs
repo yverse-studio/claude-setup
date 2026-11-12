@@ -785,6 +785,26 @@ const listProcs = () => {
 const agentTranscript = (transcriptPath, agentId) => (transcriptPath && agentId ? join(transcriptPath.replace(/\.jsonl$/, ''), 'subagents', `agent-${String(agentId).replace(/[^\w-]/g, '')}.jsonl`) : '')
 
 
+// #503: an async Agent call returns only its launch note ("agentId: <id>"); the report is the last text of the agent's own transcript, which the
+// harness writes and a builder cannot (a typed or scheduled "hand-back" row is no proof). The id is a plain token, so it cannot leave subagents/.
+const AGENT_ID = /\bagentId:\s*([A-Za-z0-9-]+)\b/
+function agentReport(path) {
+  let last = ''
+  for (const line of read(path).split('\n')) {
+    try {
+      const row = JSON.parse(line)
+      const text = row.type === 'assistant' ? (row.message?.content ?? []).filter((c) => c?.type === 'text').map((c) => c.text).join('\n').trim() : ''
+      if (text) last = text
+    } catch { /* not a JSON line */ }
+  }
+  return last
+}
+export const withReports = (calls, transcriptPath) => calls.map((c) => {
+  const id = /^(Agent|Task)$/.test(c.name) ? AGENT_ID.exec(c.result)?.[1] : null
+  const path = id ? agentTranscript(transcriptPath, id) : ''
+  return path ? { ...c, report: agentReport(path) } : c
+})
+
 // A thread whose brief breaks the team rules does not work (yskills 2026-11-12: threads started without a Role line ran anyway). The prompt hook
 // leaves a lock; until a corrected brief arrives, every tool except talking to the coordinator is refused.
 export const lockFile = (session) => join(tmpdir(), `claude-setup-badbrief-${String(session).replace(/\W/g, '')}`)
@@ -890,7 +910,7 @@ async function loadCounter() {
     return import(url)
   }
 }
-export async function gateBlock(tool, input, transcript, model, dry = false, role = '') {
+export async function gateBlock(tool, input, transcript, model, dry = false, role = '', transcriptPath = '') {
   if (!/^(Write|Edit|MultiEdit|NotebookEdit|Bash|PowerShell)$|^mcp__github__/.test(tool)) return null
   let mod
   try { mod = await loadCounter() } catch (e) {
@@ -900,7 +920,7 @@ export async function gateBlock(tool, input, transcript, model, dry = false, rol
   }
   try {
     const t = transcript()
-    const why = mod.gateStep(tool, input, { model, dry, role, calls: /gate-rounds\.mjs|\bGate\b/.test(JSON.stringify(input)) ? toolCalls(t) : [], humanAfter: (ref) => humanAfter(t, ref) })
+    const why = mod.gateStep(tool, input, { model, dry, role, calls: /gate-rounds\.mjs|\bGate\b/.test(JSON.stringify(input)) ? withReports(toolCalls(t), transcriptPath) : [], humanAfter: (ref) => humanAfter(t, ref) })
     return why ? `rule-guard: ${why}` : null
   } catch (e) { return `rule-guard: gate ledger check failed (${String(e.message).slice(0, 80)}); refused, fail closed (operator/gate.md, Rounds).` }
 }
@@ -992,7 +1012,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         if (session && existsSync(lockFile(session))) { const t = transcript(); const last = coordinatorRelays(t).at(-1); if (last) await relayRebrief(session, last, cwd, knownModel(session, t), t) }
         let block = lockBlock(tool, session)
           ?? handsOff(tool, input ?? {}, gateRole, setupRoot(cwd))
-          ?? (await gateBlock(tool, input ?? {}, transcript, sessionModel(transcript()), true, gateRole))
+          ?? (await gateBlock(tool, input ?? {}, transcript, sessionModel(transcript()), true, gateRole, transcriptPath))
           ?? decide(tool, input ?? {}, process.env, session ? read(shipped).split('\n') : [], () => threadBoard(toolCalls(transcript())))
           ?? canaryMissing(tool, input ?? {}, session ? read(join(process.env.CLAUDE_SETUP_HOME || homedir(), '.claude', 'claude-setup', 'booted', `${String(session).replace(/\W/g, '')}.canary`)) : '', transcript)
           ?? receiptBlock(tool, input ?? {}, session, cwd, agentId, transcript)
@@ -1004,7 +1024,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           ?? blenderServerBusy(tool, input ?? {}, listProcs)
           ?? blenderDocsMissing(tool, input ?? {}, sessionTranscript)
           ?? (grillMissing(tool, input ?? {}, transcript) ? 'rule-guard: a Planner at size M or L grills first (CLAUDE.md, No fog; operator SKILL.md, Grill first): post the real-moment question (when it comes from his life) and up to 2 request_decision cards (goal, taste), each with your recommended answer, then write the plan on the answers (or the recommendations while he is away).' : null)
-        if (!block) block = await gateBlock(tool, input ?? {}, transcript, sessionModel(transcript()), false, gateRole) // commit the round only now: no other guard refused the post
+        if (!block) block = await gateBlock(tool, input ?? {}, transcript, sessionModel(transcript()), false, gateRole, transcriptPath) // commit the round only now: no other guard refused the post
         if (!block && session && tool === 'Artifact' && input?.url && input.file_path) writeFileSync(shipped, `${input.file_path}\n`, { flag: 'a' })
         if (block) { process.stderr.write(block); process.exitCode = 2 }
         else {
