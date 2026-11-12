@@ -107,6 +107,17 @@ export const bareAgreement = (text) => YES.test(text.replace(/^[\s*_>]+/, '').sp
 
 // Grill first (CLAUDE.md): a Planner at size M or L posts at least one grill card before it writes the plan or opens a PR.
 // Role, size and "just do it" are read from the spawn brief only, never from files the thread read later.
+// M50 PR 3 (research/2026-11-12-planner-vs-plan-mode.md): Claude Code's Plan mode refuses edits until the plan is approved; a thread has no Plan mode, so this is its
+// stand-in. A Planner writes only the plan files (and project-files); no other edit, commit, push, branch or PR until PLAN.md starts with `Status: PASSED`.
+const PLAN_FILE = /(^|[\\/])(PLAN\.md|features\.json|PLAN\.json|HANDOFF\.md)$|[\\/]mnt[\\/]project-files[\\/]/
+export function plannerReadOnly(tool, input = {}, role = '', cwd = process.cwd()) {
+  if (role !== 'Planner') return null
+  const edits = /^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) && !PLAN_FILE.test(String(input.file_path ?? input.notebook_path ?? ''))
+  const ships = /^mcp__github__(create_pull_request|push_files|create_or_update_file|create_branch|delete_file|merge_pull_request)$/.test(tool) || (tool === 'Bash' && /\bgit\s+(commit|push|checkout\s+-b|switch\s+-c|branch)\b/.test(String(input.command ?? '')))
+  if (!edits && !ships) return null
+  if (/^Status:[ \t]*PASSED\b/m.test(read(join(cwd, 'PLAN.md')).slice(0, 400))) return null
+  return 'rule-guard: a Planner is read-only until its plan passed the gate (the stand-in for Plan mode, research/2026-11-12-planner-vs-plan-mode.md): write only PLAN.md, features.json, PLAN.json (scripts/plan.mjs) and the plan report in project-files; no source edit, commit, branch or PR. The gate named in your brief sets `Status: PASSED 5/5` on the first line of PLAN.md; a builder thread does the building.'
+}
 export function grillMissing(tool, input, transcript) {
   const writesPlan = (/^(Write|Edit)$/.test(tool) && /(^|[\\/])PLAN\.md$/.test(String(input.file_path ?? ''))) || tool === 'mcp__github__create_pull_request'
   if (!writesPlan) return false
@@ -954,6 +965,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         if (session && existsSync(lockFile(session))) { const t = transcript(); const last = coordinatorRelays(t).at(-1); if (last) await relayRebrief(session, last, cwd, knownModel(session, t), t) }
         let block = lockBlock(tool, session)
           ?? handsOff(tool, input ?? {}, gateRole, setupRoot(cwd))
+          ?? plannerReadOnly(tool, input ?? {}, gateRole, cwd)
           ?? (await gateBlock(tool, input ?? {}, transcript, sessionModel(transcript()), true, gateRole))
           ?? decide(tool, input ?? {}, process.env, session ? read(shipped).split('\n') : [], () => threadBoard(toolCalls(transcript())))
           ?? canaryMissing(tool, input ?? {}, session ? read(join(process.env.CLAUDE_SETUP_HOME || homedir(), '.claude', 'claude-setup', 'booted', `${String(session).replace(/\W/g, '')}.canary`)) : '', transcript)
