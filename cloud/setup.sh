@@ -1830,12 +1830,14 @@ export function sessionModel(transcript = '', env = process.env) {
 export const GATE_ROLES = /^(Tester|Reviewer|Security|Legal|Playtester|Hook Checker|Critic|Story Editor|Evaluator)$/i
 export const GATE_PRIOR = /^[ \t>-]*Prior art:[^\n]*\bgate\.md\b/im
 
+export const stripTags = (t) => t.replace(/\\[nt]/g, '\n').replace(/<\/?(wake|message|thread|project|relay|coordinator-relay|cited|note|system-note)\b[^>]*>/g, '\n')
+
 export async function briefCheck(prompt, cwd, model = null, any = false) {
   if (!any && !/<(wake|relay)\b[^>]*reason=\\?"spawn/.test(prompt)) return ''
   let guard
   try { guard = await import(new URL('./team-guard.mjs', import.meta.url)) } catch { return '' }
   const teams = read(join(setupRoot(cwd), 'docs', 'TEAMS.md'))
-  const brief = prompt.replace(/\\[nt]/g, '\n').replace(/<\/?(wake|message|thread|project|relay|coordinator-relay|cited|note|system-note)\b[^>]*>/g, '\n')
+  const brief = stripTags(prompt)
   const missing = guard.missingLines(brief)
   const why = !guard.stamped(brief) ? 'no `Role: · Kit: · Size:` stamp line'
     : !roleOf(brief, teams)?.row ? 'the Role line names no role of the Roster (docs/TEAMS.md); "none" or a role of your own is not allowed in a thread'
@@ -2247,9 +2249,25 @@ export function updateLock(session, check) {
 // Reviewer, a rejected Reviewer spawn recovers (#475 gate round 1 and follow-up).
 export const COORDINATOR_RELAY = /^\s*(?:<system-note>[^<]*<\/system-note>\s*)*(?:<system-reminder>\s*)?A message from this project[’']s coordinator session[^\n]*\n\s*<coordinator-relay>\s*<relay\b[^>]*\bfrom=\\?"coordinator"/
 const spawnRoleFile = (session) => join(tmpdir(), `claude-setup-spawnrole-${String(session).replace(/\W/g, '')}`)
-async function relayRebrief(session, prompt, cwd, model) {
+// The coordinator often sends only the lines the start brief lacked (#479 part 2: VacationGame's Critic, our Director), so the relay is read
+// together with the earlier coordinator relays and the spawn brief from the transcript: the newest relay's lines come first and win,
+// older relays and the spawn brief fill the gaps.
+export function relayContext(prompt, transcript) {
+  const relays = []
+  for (const line of String(transcript).split('\n')) {
+    try {
+      const entry = JSON.parse(line)
+      const content = entry.message?.content
+      const text = typeof content === 'string' ? content : (content ?? []).map((c) => c?.text ?? '').join('\n')
+      if (entry.type === 'user' && COORDINATOR_RELAY.test(text) && text.trim() !== prompt.trim()) relays.push(text)
+    } catch { /* not a JSON line */ }
+  }
+  const spawn = spawnPrompt(prompt, String(transcript))
+  return [...relays.reverse(), spawn === prompt ? '' : spawn].filter(Boolean).join('\n')
+}
+async function relayRebrief(session, prompt, cwd, model, context = '') {
   if (!COORDINATOR_RELAY.test(prompt)) return
-  const text = prompt.replace(/\\n/g, '\n')
+  const text = stripTags([prompt, context].filter(Boolean).join('\n'))
   updateLock(session, await briefCheck(text, cwd, model, true))
   const stamp = join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)
   if (existsSync(lockFile(session)) || read(stamp).trim()) return
@@ -2348,7 +2366,9 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           const model = sessionModel(transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : '') ?? (read(join(tmpdir(), `claude-setup-model-${String(session).replace(/[^A-Za-z0-9]/g, '')}`)).trim() || null)
           const checkNow = midWork ? '' : await briefCheck(brief, cwd, model)
           if (spawned || (lookup && brief !== prompt)) updateLock(session, checkNow)
-          else if (existsSync(lockFile(session)) && /\bRole:/.test(prompt)) await relayRebrief(session, prompt, cwd, model)
+          else if (existsSync(lockFile(session)) && COORDINATOR_RELAY.test(prompt)) {
+            await relayRebrief(session, prompt, cwd, model, transcriptPath && existsSync(transcriptPath) ? relayContext(prompt, read(transcriptPath)) : '')
+          }
           const context = [checkNow, spawned || (lookup && brief !== prompt) ? await gateBriefContext(brief, model) : '', spawned || (lookup && brief !== prompt) ? await guardLine() : '', modelOnce(brief, transcriptPath, session), await roleContext(brief, cwd, session), promptContext(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
           if (context) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: context } }))
           return
