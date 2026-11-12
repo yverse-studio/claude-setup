@@ -23,29 +23,34 @@ if ($q -match 'Current AC Power Setting Index: 0x0*[1-9a-f]|Current DC Power Set
   Log 'wifi power saving was reset by something: set back to Maximum Performance'
 }
 
-# 2. Memory. Below 4 GB free: one Windows toast (at most every 30 min) and a log line with the top eaters plus the
-# kernel pools (the Claude desktop app leaks "driver" memory there, docs/pc-claude-user.md). Below 1 GB free the app
-# starts evicting sessions. Never kills anything.
+# 2. Memory. Below 4 GB free: a log line with the top eaters plus the kernel pools (the Claude desktop app is the
+# suspect for "driver" memory there, docs/pc-claude-user.md) and ONE Windows toast per low episode (re-armed at 4 GB
+# free again), none while a laptop-job slot is held. Below 1 GB free the app starts evicting sessions. Kills nothing.
 $os = Get-CimInstance Win32_OperatingSystem
 $freeGB = [math]::Round($os.FreePhysicalMemory / 1MB, 2)
-if ($freeGB -lt 4.0) {
+$warned = $st.PSObject.Properties['warned'] -and $st.warned
+if ($freeGB -ge 4.0) { $warned = $false }
+else {
   $top = Get-Process | Group-Object Name | ForEach-Object { '{0}x{1}={2}MB' -f $_.Name, $_.Count, [int](($_.Group | Measure-Object WorkingSet64 -Sum).Sum / 1MB) } |
     Sort-Object { [int](($_ -split '=')[1] -replace 'MB') } -Descending | Select-Object -First 5
-  $pool = try { (Get-Counter '\Memory\Pool Nonpaged Bytes', '\Memory\Pool Paged Bytes' -ErrorAction Stop).CounterSamples | ForEach-Object { '{0}={1}MB' -f ($_.Path -split '\\')[-1], [int]($_.CookedValue / 1MB) } } catch { @() }
-  Log "LOW RAM free=${freeGB}GB top: $($top -join ' ') pools: $($pool -join ' ')"
-  $last = if ($st.PSObject.Properties['warnAt']) { [datetime]$st.warnAt } else { [datetime]::MinValue }
-  if (((Get-Date) - $last).TotalMinutes -ge 30) {
+  # CIM class, not a perf-counter path: those are localized (de-DE) and would throw.
+  $pool = try { $m = Get-CimInstance Win32_PerfFormattedData_PerfOS_Memory -ErrorAction Stop; 'nonpaged={0}MB paged={1}MB' -f [int]($m.PoolNonpagedBytes / 1MB), [int]($m.PoolPagedBytes / 1MB) } catch { Log "pool read failed: $($_.Exception.Message)"; 'n/a' }
+  Log "LOW RAM free=${freeGB}GB top: $($top -join ' ') pools: $pool"
+  $slotDir = Join-Path $env:TEMP 'claude-laptop-render-slots'
+  $jobRuns = @(Get-ChildItem $slotDir -Filter 'render-*.lock' -ErrorAction SilentlyContinue | Where-Object { Get-Process -Id ([int](Get-Content $_.FullName -ErrorAction SilentlyContinue)) -ErrorAction SilentlyContinue }).Count -gt 0
+  if (-not $warned -and -not $jobRuns) {
     try {
       [void][Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime]
       $xml = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::ToastText02)
       $xml.GetElementsByTagName('text')[0].AppendChild($xml.CreateTextNode("Nur ${freeGB} GB RAM frei")) | Out-Null
-      $xml.GetElementsByTagName('text')[1].AppendChild($xml.CreateTextNode('Claude-App komplett schliessen und neu starten, dann ist der Speicher wieder da.')) | Out-Null
+      $xml.GetElementsByTagName('text')[1].AppendChild($xml.CreateTextNode('Claude-App komplett schliessen und neu starten (Test). Hilft das nicht: Windows neu starten.')) | Out-Null
       $app = '{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\WindowsPowerShell\v1.0\powershell.exe'
       [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier($app).Show([Windows.UI.Notifications.ToastNotification]::new($xml))
+      $warned = $true
     } catch { Log "toast failed: $($_.Exception.Message)" }
-    if ($st.PSObject.Properties['warnAt']) { $st.warnAt = (Get-Date).ToString('o') } else { $st | Add-Member -NotePropertyName warnAt -NotePropertyValue (Get-Date).ToString('o') }
   }
 }
+if ($st.PSObject.Properties['warned']) { $st.warned = $warned } else { $st | Add-Member -NotePropertyName warned -NotePropertyValue $warned }
 
 # 3. Evictions: the app pauses sessions under memory pressure. Count new ones since the last run.
 if (Test-Path $mainLog) {

@@ -122,9 +122,9 @@ yskills (2026-11-03): Remote Control sessions on the laptop dropped mid-turn, "t
 
 Symptom (yskills, more than once): about 10 GB "driver" (kernel pool) memory, 0.57 of 15.7 GB free, a 3D job start blocked by the RAM check in `scripts/laptop-job.mjs`. Process memory in Task Manager looks small, so the suspect is the long-running Claude app and its sessions, not the job.
 
-- **Warning:** `rc-watchdog.ps1` (above) shows a Windows toast when free RAM drops under 4 GB (at most every 30 min) and logs the top 5 processes plus `Pool Nonpaged Bytes` / `Pool Paged Bytes` to `%LOCALAPPDATA%\rc-watchdog\watchdog.log`. Free, costs no tokens, kills nothing. The pool lines are the proof of the leak: read them before blaming an app.
-- **Restart rule:** toast, or under 4 GB free with no job running: quit the Claude app completely (tray icon, Quit) and start it again; sessions resume. A running job is left alone: wait for the job, then restart. Restart the app once a week anyway; a reboot also clears the pool. yskills is asked once at most, with the numbers (see `RAM is per job`).
-- **Install once, no admin** (re-run after a `git pull` to pick up a new script): `powershell -NoProfile -ExecutionPolicy Bypass -File %USERPROFILE%\claude-setup\scripts\laptop\install-rc-watchdog.ps1` [advisory]
+- **Warning:** `rc-watchdog.ps1` (above) shows one Windows toast per low episode when free RAM drops under 4 GB (none while a laptop job holds a slot; re-armed at 4 GB again) and logs the top 5 processes plus the nonpaged/paged pool (CIM `Win32_PerfFormattedData_PerfOS_Memory`, works on de-DE; `check-laptop.ps1` reads the same number) to `%LOCALAPPDATA%\rc-watchdog\watchdog.log`. Free, costs no tokens, kills nothing. The pool lines are the proof of the leak: read them before blaming an app.
+- **Restart rule:** toast, or under 4 GB free with no job running: quit the Claude app completely (tray icon, Quit) and start it again as a test; sessions resume. A kernel pool leak may not shrink from that: then restart Windows. A running job is left alone: wait for the job, then restart. Restart the app once a week anyway; a Windows restart also clears the pool. yskills is asked once at most, with the numbers (see `RAM is per job`).
+- **Install once, no admin** (the task runs the repo file, so a `git pull` is enough for later changes): `powershell -NoProfile -ExecutionPolicy Bypass -File %USERPROFILE%\claude-setup\scripts\laptop\install-rc-watchdog.ps1` [advisory]
 
 ## Update
 
