@@ -303,7 +303,8 @@ function receiptBlock(tool, input, session, cwd, agentId, transcript) {
   const rules = ['CLAUDE.md', 'docs/TEAMS.md'].map((f) => read(join(root, f))).join('\n')
   const brief = spawnPrompt('', t).replace(/<\/?(wake|message|thread|project|relay|coordinator-relay|cited|note|system-note)\b[^>]*>/g, '\n')
   const path = roleOf(brief, read(join(root, 'docs', 'TEAMS.md')))?.path
-  const status = skillStatus(wanted(root, path ? read(join(root, path)) : '', brief), { root, cwd })
+  // No checkout (only the boot copy): nothing can be checked, so the receipt says that instead of a false `none`.
+  const status = existsSync(join(root, 'config', 'plugins.json')) ? skillStatus(wanted(root, path ? read(join(root, path)) : '', brief), { root, cwd }) : { loaded: [], missing: [], unknown: true }
   return receiptMissing(tool, input, threadReceipt(role, brief, t, rules, status), t) ?? (receiptSent(t) ? null : fallbackUnread(status, t))
 }
 
@@ -558,7 +559,8 @@ export function skillStatus(names, { root, home = process.env.CLAUDE_SETUP_HOME 
   const loaded = names.filter(found)
   return { loaded, missing: names.filter((n) => !found(n)).map((n) => ({ name: n, path: fallback(n) })) }
 }
-export function missingNote({ missing }) {
+export function missingNote({ missing, unknown }) {
+  if (unknown) return 'missing: unknown (no claude-setup checkout here; add_repo yverse-studio/claude-setup and read your role skills from it)'
   if (!missing.length) return 'missing: none'
   const files = missing.filter((m) => m.path), bare = missing.filter((m) => !m.path)
   return `missing: ${missing.map((m) => m.name).join(', ')} (${[files.length && `read ${files.map((m) => m.path).join(', ')} instead`, bare.length && `no file for ${bare.map((m) => m.name).join(', ')}`].filter(Boolean).join('; ')})`

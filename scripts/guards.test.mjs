@@ -1142,7 +1142,7 @@ test('rule-guard: a thread\'s first reply carries the hook-built start receipt',
 // yskills 2026-11-12: design skills were not loadable in project threads and the threads only said so when asked. The plugin
 // cache kept an old copy (only `publish`), so the receipt now lists what cannot load and the thread reads the file instead.
 test('rule-guard: a skill that cannot load shows in the receipt and its file is read first', async () => {
-  const { skillStatus, missingNote, threadReceipt, fallbackUnread, roleOf, toolCalls } = await import('../global/rule-guard.mjs')
+  const { skillStatus, missingNote, threadReceipt, fallbackUnread, roleOf } = await import('../global/rule-guard.mjs')
   const home = mkdtempSync(join(tmpdir(), 'skills-home-'))
   try {
     const cache = join(home, '.claude', 'plugins', 'cache', 'setup-skills')
@@ -1167,12 +1167,11 @@ test('rule-guard: a skill that cannot load shows in the receipt and its file is 
     assert.match(fallbackUnread(status, '') ?? '', /impeccable\/SKILL\.md.*design-critic\.md/, 'unread fallback files are named')
     assert.equal(fallbackUnread(status, [reads({ file_path: '/x/.claude/skills/impeccable/SKILL.md' }), reads({ file_path: '/x/.claude/agents/design-critic.md' })].join('\n')), null)
     assert.equal(fallbackUnread({ loaded: [], missing: [] }, ''), null, 'nothing missing, nothing to read')
-    assert.ok(toolCalls)
     assert.equal(roleOf('Role: Designer · Kit: game', readFileSync(join(root, 'docs/TEAMS.md'), 'utf8'))?.name, 'Designer')
   } finally { rmSync(home, { recursive: true, force: true }) }
 })
 
-test('rule-guard: every role names only skills it can load and the hook blocks a first reply until the fallback is read', () => {
+test('rule-guard: the hook blocks a first reply until the fallback files are read, and says so when there is no checkout', () => {
   const dir = mkdtempSync(join(tmpdir(), 'receipt-skills-'))
   const id = `sk${process.pid}`
   const rolefile = join(tmpdir(), `claude-setup-role-${id}`)
@@ -1192,6 +1191,13 @@ test('rule-guard: every role names only skills it can load and the hook blocks a
     assert.equal(run(done, `${receipt}\nHi (◕‿◕)`).status, 0, 'files read, receipt copied: the reply goes out')
     assert.equal(blocked.status, 2)
     assert.match(blocked.stderr, /missing: frontend-design, impeccable, ui-review, design-critic \(read \.claude\/skills\/impeccable\/SKILL\.md, \.claude\/skills\/ui-review\/SKILL\.md, \.claude\/agents\/design-critic\.md instead; no file for frontend-design\)/, 'an empty home says what is missing, with the file to read')
+    // No checkout at or above the cwd (a project thread that did not add_repo): never a false `none`.
+    rmSync(join(dir, 'claude-setup'), { force: true })
+    const bare = mkdtempSync(join(tmpdir(), 'no-setup-'))
+    try {
+      const out = spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'pre'], { input: JSON.stringify({ cwd: bare, session_id: id, transcript_path: join(dir, 't.jsonl'), tool_name: 'mcp__hearthbot__post_message', tool_input: { text: 'Hi (◕‿◕)' } }), encoding: 'utf8', env: { ...process.env, CLAUDE_SETUP_HOME: bare } })
+      assert.equal(out.status, 2); assert.match(out.stderr, /missing: unknown \(no claude-setup checkout/)
+    } finally { rmSync(bare, { recursive: true, force: true }) }
   } finally { rmSync(rolefile, { force: true }); rmSync(dir, { recursive: true, force: true }) }
 })
 
