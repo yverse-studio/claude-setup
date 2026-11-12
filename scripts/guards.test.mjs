@@ -307,6 +307,21 @@ test('team guard: blocks Agent and thread starts without model, passes with one'
 })
 
 // yskills 2026-11-01: an Animator brief was blocked because the role was not in the Roster.
+// yskills 2026-11-12: "Writer", "Storyteller" and "Story Writer" were all refused and the coordinator had to guess. The refusal names the roles the kit accepts.
+test('team guard: an unknown or wrong role is refused with the roles that kit accepts; Story Writer and Story Editor are Roster roles on story', async () => {
+  const { decide, rolesForKit } = await import('../global/team-guard.mjs')
+  const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
+  const brief = (role, kit, size = 'M') => ({ brief: `Role: ${role} · Kit: ${kit} · Size: ${size}\nPrior art: docs/TEAMS.md and .claude/skills/storyteller checked; adapt, because the story team exists${FULL.replace(/\nGate:[^\n]*/, '')}\nGate: Reviewer · story gate before owner`, title: `${role} · kapitel`, model: 'claude-x-1' })
+  const out = (role, kit) => decide('mcp__hearthbot__start_thread', brief(role, kit), [], [], teams).block ?? ''
+  assert.deepEqual(out('Story Writer', 'story'), '', 'Story Writer passes on story')
+  assert.match(out('Storyteller', 'story'), /is no role.*on the story kit pick one of .*Story Writer, Story Editor/, 'an unknown role lists the story kit roles')
+  assert.match(out('Writer', 'story'), /not on the `story` kit's team.*pick one of .*Story Writer/, 'a Roster role from another kit lists the story kit roles')
+  assert.doesNotMatch(out('Storyteller', 'story'), /Hook Checker|Caption Writer/, 'the list is the kit\'s, not the whole Roster')
+  assert.ok(rolesForKit(teams, 'story').includes('Story Editor') && !rolesForKit(teams, 'story').includes('Writer'))
+  assert.ok(!rolesForKit(teams, 'site').includes('Story Writer'), 'Story Writer is skipped on site')
+  assert.deepEqual(rolesForKit(teams, 'nonsense'), [])
+})
+
 test('team guard: an Animator thread starts on the game and story kits, on Sonnet, not on site or setup', async () => {
   const { decide } = await import('../global/team-guard.mjs')
   const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')

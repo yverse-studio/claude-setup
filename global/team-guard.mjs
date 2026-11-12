@@ -281,7 +281,7 @@ const needsSheet = (plain) => /^[ \t>-]*Role:[ \t]*(Programmer|Animator)\b/im.te
 // at size M or L names the Reviewer thread that gates its work before the owner sees it; the gate roles themselves need no such line.
 // A Gate line names a reviewer thread (`Gate: Reviewer · fit round 2 before owner`), or says in 10+ characters why the slice has no owner-facing
 // result (`Gate: n/a no owner-facing result, a CI script only`); the same shape as `Sheet: n/a`. `none`, `later` or `skipped` do not count.
-export const GATE_BUILDER_ROLES = '(?:Programmer|Designer|Animator|Game Designer|Content Designer|Sound Designer)'
+export const GATE_BUILDER_ROLES = '(?:Programmer|Designer|Animator|Story Writer|Game Designer|Content Designer|Sound Designer)'
 export const GATE_LINE = /^[ \t>-]*Gate:[ \t]*(?:(?:Reviewer|Tester)\b[^\n]*\bbefore owner\b[^\n]*|n\/a[ \t]+\S[^\n]{9,})$/im
 const needsGate = (plain) => new RegExp(`^[ \\t>-]*Role:[ \\t]*${GATE_BUILDER_ROLES}\\b`, 'im').test(plain) && /\bSize:[ \t]*[ML]\b/i.test(plain) && !GATE_LINE.test(plain)
 export function missingLines(text) {
@@ -308,6 +308,19 @@ const skips = (cell, role) => cell.replace(/`/g, '').split(/[,;]/).map((i) => i.
 export const rosterNames = (teams) => String(teams).split('\n').filter((l) => /^\| [A-Z][\w ]* \(\[`/.test(l)).map((l) => l.slice(2, l.indexOf(' (')))
 export const kitNames = (teams) => (teams ? kitRows(teams).map((r) => r.kit) : [])
 
+// The one answer to "which role may I name on this kit": a Roster role fits a kit by the same rule badTeam applies (a refusal lists these, so nobody guesses).
+export function rolesForKit(teams, kit) {
+  const row = kitRows(teams).find((r) => r.kit === String(kit).toLowerCase())
+  if (!row) return []
+  const media = ['video', 'social'].includes(row.kit)
+  return rosterNames(teams).filter((n) => {
+    const film = rosterOf(teams, 'Film').includes(`| ${n} (`)
+    const social = rosterOf(teams, 'Social').includes(`| ${n} (`)
+    const story = rosterOf(teams, 'Story').includes(`| ${n} (`)
+    return ['Reviewer', 'Researcher'].includes(n) || (story ? row.kit === 'story' : social ? row.kit === 'social' : film ? media : media ? named(row.team, n) : !skips(row.skipped, n))
+  })
+}
+
 // #453 left this gap: a brief may name any Role. It names a Roster role, or `Role: none` for a mini task (operator/briefs.md).
 export function badRole(text, teams) {
   const names = rosterNames(teams)
@@ -317,7 +330,10 @@ export function badRole(text, teams) {
   // roleOf matches a name by its start: `Programmers` or `Programmer-X` must not pass as the Programmer (a name ends at a space, `·`, `|`, `,` or `(`).
   const line = plain.match(/^[\s>-]*Role:[ \t]*([^\n]*)/m)?.[1].trim() ?? ''
   const exact = role.row && /^$|^[\s·|,(]/.test(line.slice(role.name.length))
-  return exact ? null : `Role: ${role.row ? line.split(/[\s·|,(]/)[0] : role.name} is no role in docs/TEAMS.md (Roster): pick one of ${names.join(', ')}, or \`Role: none\` for a small task with no role`
+  const kit = plain.match(/\bKit:[ \t]*([\w-]+)/i)?.[1]
+  const onKit = kit ? rolesForKit(teams, kit) : []
+  const pick = onKit.length ? `on the ${kit.toLowerCase()} kit pick one of ${onKit.join(', ')}` : `pick one of ${names.join(', ')}`
+  return exact ? null : `Role: ${role.row ? line.split(/[\s·|,(]/)[0] : role.name} is no role in docs/TEAMS.md (Roster): ${pick}, or \`Role: none\` for a small task with no role`
 }
 
 // M48: a Reviewer brief may carry `Topic: <name>`; the names are the `## ` headings of the checklist file (the one source for this guard,
@@ -350,9 +366,10 @@ export function badTeam(text, teams) {
   if (role.name === 'Planner' && size === 'S') return 'a Planner thread runs at size M or L only; size S starts the Programmer (docs/TEAMS.md, Sizes)'
   const film = rosterOf(teams, 'Film').includes(`| ${role.name} (`)
   const social = rosterOf(teams, 'Social').includes(`| ${role.name} (`)
+  const story = rosterOf(teams, 'Story').includes(`| ${role.name} (`)
   const media = ['video', 'social'].includes(kit)
-  const fits = ['Reviewer', 'Researcher'].includes(role.name) || (social ? kit === 'social' : film ? media : media ? named(row.team, role.name) : !skips(row.skipped, role.name))
-  return fits ? null : `the ${role.name} is not on the \`${kit}\` kit's team (docs/TEAMS.md, Kits: team "${row.team}", skipped "${row.skipped}"); start the role that row names`
+  const fits = ['Reviewer', 'Researcher'].includes(role.name) || (story ? kit === 'story' : social ? kit === 'social' : film ? media : media ? named(row.team, role.name) : !skips(row.skipped, role.name))
+  return fits ? null : `the ${role.name} is not on the \`${kit}\` kit's team (docs/TEAMS.md, Kits: team "${row.team}", skipped "${row.skipped}"); pick one of ${rolesForKit(teams, kit).join(', ')}`
 }
 
 // A size M or L thread's title is `<Role> · <what>` (docs/TEAMS.md, Roster "Runs as"); test project 2026-10-27: a bee video thread
