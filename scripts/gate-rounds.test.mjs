@@ -267,7 +267,7 @@ const MUST_BLOCK_AT_ROUND_1 = [
   'gh pr merge 7 -R o/r --squash', 'gh pr merge', 'cd repo && gh pr merge 7', 'env gh pr merge 7', 'GH_REPO=o/r gh pr merge 7', 'gh pr merge "7"',
   'gh pr merge feature-branch', '/usr/bin/gh pr merge 7', 'gh api -X PUT repos/o/r/pulls/7/merge', 'n=7; gh api -X PUT repos/o/r/pulls/$n/merge',
   `gh api graphql -f query='mutation { mergePullRequest(input: {pullRequestId: "x"}) { clientMutationId } }'`, `bash -c 'gh pr merge 7'`, 'x=$(gh pr merge 7)',
-  'gh pr merge 99 -R o/r', 'gh pr merge https://github.com/o/r/pull/7', 'sudo gh pr merge 7 && echo done', 'echo hi | gh pr merge 7', 'echo $(gh pr merge 7)', 'bash -c "echo a" && gh pr merge 7',
+  'gh pr merge 99 -R o/r', 'gh pr merge https://github.com/o/r/pull/7', 'eval "gh pr merge 7"', 'CLAUDE_SETUP_GATE_DIR=/tmp/x node ~/.claude/claude-setup/gate-rounds.mjs merge o/r#7', 'export CLAUDE_SETUP_GATE_DIR=/tmp/x; gh x', 'env CLAUDE_SETUP_RULE_GUARD=off gh pr view 7', 'node --import ./x.mjs ~/.claude/claude-setup/gate-rounds.mjs init o/r#9 --round 0', 'if true; then gh pr merge 7; fi', 'for i in 1; do gh pr merge 7; done', 'while true; do gh pr merge 7; done', '! gh pr merge 7', 'gh \\\npr merge 7', 'timeout 60 gh pr merge 7', 'nice -n 5 gh pr merge 7', 'gh pr -R o/r merge 7', 'gh -R o/r pr merge 7', 'sudo gh pr merge 7 && echo done', 'echo hi | gh pr merge 7', 'echo $(gh pr merge 7)', 'bash -c "echo a" && gh pr merge 7',
 ]
 const MUST_BLOCK_AT_ROUND_3 = [
   `gh pr comment 8 -R o/r --body "${VERDICT}"`, `gh pr comment 8 -R o/r -b "${VERDICT}"`, `gh pr comment 8 --body-file <F>`, `gh pr comment 8 -F <F>`,
@@ -286,7 +286,8 @@ const MUST_PASS = [
   'git commit -m "docs: gh pr merge is checked by the ledger"', 'grep -rn "gh pr merge" docs/', 'echo "gh pr merge 7" >> notes.md', 'git log --grep="Gate 4.2/5"',
   'node --test scripts/gate-rounds.test.mjs 2>&1 | tail -5', 'node scripts/pre-pr.mjs --body /tmp/b.md', 'cat ~/.claude/claude-setup/gate-rounds.mjs | head', 'ls /mnt/project-files/gate/',
   'ls <D>/ 2>/dev/null', 'cat <D>/x.json 2>&1', 'cat /mnt/project-files/gate/a_b_1.json | jq .rounds', 'cat /mnt/project-files/gateway-notes.md',
-  'node ~/.claude/claude-setup/gate-rounds.mjs status o/r#7 | head -5', 'cd /home/user/claude-setup && node global/gate-rounds.mjs status o/r#7', 'node ~/.claude/claude-setup/gate-rounds.mjs check o/r#7 4 && echo ok',
+  'node ~/.claude/claude-setup/gate-rounds.mjs status o/r#7 | head -5', 'grep -rn "CLAUDE_SETUP_RULE_GUARD=off" docs/', 'echo "CLAUDE_SETUP_GATE_DIR=x is the override" >> docs/n.md', 'echo "see project-files/gate/ for ledgers" >> docs/notes.md', 'git commit -m "docs: project-files/gate/ ledger"', 'timeout 60 node --test scripts/gate-rounds.test.mjs', 'if true; then echo hi; fi',
+  'cd /home/user/claude-setup && node global/gate-rounds.mjs status o/r#7', 'node ~/.claude/claude-setup/gate-rounds.mjs check o/r#7 4 && echo ok',
   'gh pr comment 9 -R o/r --body "The gate flagged two things in round 1"', `gh pr comment 9 -R o/r --body "$(cat <<'EOF'\nFixed the review notes.\nEOF\n)"`,
   'gh pr view 7 --json mergeable', 'gh pr create --title "feat: x" --body "Gate 5/5 will follow"', 'git diff origin/main...HEAD -- global/gate-rounds.mjs', 'cp global/gate-rounds.mjs /tmp/x.mjs',
   'node install.mjs', 'bash cloud/setup.sh', 'sed -i s/a/b/ global/gate-rounds.mjs', 'git checkout main -- global/gate-rounds.mjs', 'node -e "console.log(1)"', 'node --check global/gate-rounds.mjs',
