@@ -201,6 +201,11 @@ How to undo a merge, by kind of change (write the line into the PR's "undo" line
   live without them.
 - **Less:** post the blocking findings as one PR review and stop. The builder fixes them; the next
   round re-runs the failed checks with fresh agents on the new head.
+- **A PASS needs no OK from yskills** (yskills 2026-11-12 16:43: "Es braucht mein OK nicht wenn gate bestanden, nur wenn 3 mal
+  falsch und dann nochmal 3 mal mit Fable-Eingriff"). A passed gate (plan review, asset, scene or PR) is the go: the work goes on,
+  the PR merges, and he gets the PASS line with its report, as information. He is asked only by the round-7 card of the counter
+  below, for a taste call (a look, a body, a picture card) and for the `docs/permissions.md` ask-first list; his veto stops
+  anything at once. No thread or coordinator posts a "passt das?" or waits for a release after a PASS.
 - **The hard round counter** (yskills 2026-11-12, vacation-game: a shell PR ran 11 rounds instead of 6, nothing counted, the
   coordinator released rounds itself, the gate asked to merge at 4.2; the one home of the round limit, every other file links
   here; was "up to 6 rounds", 2026-10-26). A hook counts, not text: `global/gate-rounds.mjs` keeps one ledger per asset (a PR
