@@ -74,7 +74,7 @@ test('the card says team-guard refuses an unknown role or kit; the index lists e
   assert.match(card, /team-guard refuses a brief without a Role line, or with an unknown role or kit name/)
   assert.doesNotMatch(card, /neither refuses an unknown role name/)
   const idx = buildIndex({ hash: 'x', date: '2026-11-12' })
-  assert.match(idx, /- Programmer: Kit: [^\n]*setup[^\n]*; Model: sonnet; Skills: \.claude\/skills\/operator\/roles\/programmer\.md/)
+  assert.match(idx, /- Programmer: Kit: [^\n]*setup[^\n]*; Model: sonnet; Runs as: [^\n]*; Skills: \.claude\/skills\/operator\/roles\/programmer\.md/)
   const teams = readFileSync(new URL('../docs/TEAMS.md', import.meta.url), 'utf8')
   for (const l of teams.split('\n').filter((x) => /^\| [A-Z][\w ]* \(\[`/.test(x))) assert.ok(idx.includes(`- ${l.slice(2, l.indexOf(' ('))}: Kit:`), l.slice(0, 30))
 })

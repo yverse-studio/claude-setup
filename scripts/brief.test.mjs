@@ -28,6 +28,18 @@ test('team-guard still blocks an unknown Kit (the half #453 had), so a brief wit
   assert.match(bad.block ?? '', /Kit: content is no kit[\s\S]*setup/)
 })
 
+test('a name that only starts with a Roster role is no role (Programmers, Programmer-X, Designerin)', () => {
+  const run = (role) => decide(START, { brief: `Role: ${role} · Kit: setup · Size: S${FULL}`, title: 'x', model: SONNET }, [], [], teams)
+  for (const bad of ['Programmers', 'Programmer-X', 'ProgrammerFoo', 'Programmer/Hacker']) assert.match(run(bad).block ?? '', /is no role/, bad)
+  for (const good of ['Programmer', 'programmer', 'PROGRAMMER', 'Programmer (setup)']) assert.deepEqual(run(good), {}, good)
+})
+
+test('every Roster table row is parsed by rosterNames, so a new role cannot drop out silently', () => {
+  const roster = teams.slice(teams.indexOf('\n## Roster'), teams.indexOf('\n## Kits'))
+  const rows = roster.split('\n').filter((l) => /^\| [^|]*\(\[`[^|]*\.md`\]/.test(l))
+  assert.equal(rosterNames(teams).length, rows.length, 'every row with a playbook link is a role name')
+})
+
 test('rosterNames and kitNames read docs/TEAMS.md, no list of their own', () => {
   assert.ok(rosterNames(teams).includes('Programmer') && rosterNames(teams).includes('Social Lead'))
   assert.ok(kitNames(teams).includes('setup') && kitNames(teams).includes('story'))
@@ -45,6 +57,8 @@ test('for every Roster role x kit x size the generated brief passes team-guard, 
     let out
     try { out = buildBrief({ role, kit, size, ...FIELDS, tester: 'Tester · x', researcher: 'Researcher, sonnet', teams }) } catch (e) {
       assert.ok(e instanceof BriefError, `${role}/${kit}/${size}: ${e.message}`)
+      // The backstop (decide() after building) is not a reason: a refusal there means the generator built what the guard refuses.
+      assert.doesNotMatch(e.message, /fails team-guard/, `${role}/${kit}/${size} built a brief the guard refuses: ${e.message}`)
       refused++
       continue
     }
@@ -53,6 +67,24 @@ test('for every Roster role x kit x size the generated brief passes team-guard, 
     assert.deepEqual(got, {}, `${role}/${kit}/${size} refused by team-guard: ${got.block}\n${out.brief}`)
   }
   assert.ok(built > 40 && refused > 20, `built ${built}, refused ${refused}`)
+})
+
+test('the lines the guard demands are built or asked for, never dropped: Sheet, Look-Lock, Tester', () => {
+  const { sheet, ...noSheet } = FIELDS
+  const need = (f, re) => assert.throws(() => buildBrief({ teams, role: 'Programmer', kit: 'game', size: 'M', ...f }), (e) => e instanceof BriefError && re.test(e.message) && !/fails team-guard/.test(e.message))
+  need(noSheet, /--sheet/)
+  need({ ...FIELDS, sheet: 'docs/cast.md' }, /--look-lock/)
+  need({ ...FIELDS, sheet: 'n/a' }, /10\+ characters|reason/)
+  assert.throws(() => buildBrief({ teams, role: 'Programmer', kit: 'setup', size: 'L', ...FIELDS }), (e) => /--tester/.test(e.message))
+  const full = buildBrief({ teams, role: 'Programmer', kit: 'game', size: 'M', ...FIELDS, sheet: 'docs/cast.md', lookLock: 'https://example.com/card/1' })
+  assert.match(full.brief, /\nSheet: docs\/cast\.md\nLook-Lock: https:\/\/example\.com\/card\/1\n/)
+  assert.deepEqual(decide(START, { brief: full.brief, title: full.title, model: full.model }, [], [], teams), {})
+  assert.match(buildBrief({ teams, role: 'Programmer', kit: 'setup', size: 'L', ...FIELDS, tester: 'Tester · x' }).brief, /\nTester: Tester · x\n/)
+})
+
+test('a role row that names no model tier is refused, not defaulted; the index prints the raw cell', () => {
+  assert.throws(() => buildBrief({ teams, role: 'Project Manager', kit: 'setup', size: 'M', ...FIELDS }), (e) => e instanceof BriefError && /Project Manager/.test(e.message) && /no model tier/.test(e.message))
+  assert.match(roleLines(teams).find((l) => l.startsWith('Project Manager:')), /Model: as yskills sets it/)
 })
 
 test('the generator refuses an unknown role or kit and lists the valid ones; a missing field is named, never guessed', () => {
@@ -73,6 +105,17 @@ test('roleLines gives one line per Roster role with its kits and model, for the 
   const lines = roleLines(teams)
   assert.ok(lines.length >= 15)
   assert.match(lines.find((l) => l.startsWith('Programmer:')), /Kit: .*setup.*Model: sonnet/)
+})
+
+test('roleLines tells subagent-only roles from thread roles by their Runs-as cell', () => {
+  assert.match(roleLines(teams).find((l) => l.startsWith('Reviewer:')), /Runs as: subagent/)
+})
+
+test('the CLI never takes the next flag as a value, and names a bad --sheet', () => {
+  const run = (...a) => spawnSync(process.execPath, [join(root, 'scripts/brief.mjs'), ...a], { encoding: 'utf8' })
+  const r = run('--role', 'Programmer', '--kit', 'setup', '--size', 'S', '--item', '--threads', 'x')
+  assert.equal(r.status, 2)
+  assert.match(r.stderr, /--item needs a value/)
 })
 
 test('the CLI exits non-zero with the valid list on a bad role, and prints a passing brief otherwise', () => {

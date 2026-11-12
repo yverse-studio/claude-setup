@@ -260,8 +260,13 @@ export const kitNames = (teams) => (teams ? kitRows(teams).map((r) => r.kit) : [
 // #453 left this gap: a brief may name any Role. It names a Roster role, or `Role: none` for a mini task (operator/briefs.md).
 export function badRole(text, teams) {
   const names = rosterNames(teams)
-  const role = names.length ? roleOf(text.replace(/[*_`]/g, ''), teams) : null
-  return role && !role.row ? `Role: ${role.name} is no role in docs/TEAMS.md (Roster): pick one of ${names.join(', ')}, or \`Role: none\` for a small task with no role` : null
+  const plain = text.replace(/[*_`]/g, '')
+  const role = names.length ? roleOf(plain, teams) : null
+  if (!role) return null
+  // roleOf matches a name by its start: `Programmers` or `Programmer-X` must not pass as the Programmer (a name ends at a space, `·`, `|`, `,` or `(`).
+  const line = plain.match(/^[\s>-]*Role:[ \t]*([^\n]*)/m)?.[1].trim() ?? ''
+  const exact = role.row && /^$|^[\s·|,(]/.test(line.slice(role.name.length))
+  return exact ? null : `Role: ${role.row ? line.split(/[\s·|,(]/)[0] : role.name} is no role in docs/TEAMS.md (Roster): pick one of ${names.join(', ')}, or \`Role: none\` for a small task with no role`
 }
 
 export function badTeam(text, teams) {

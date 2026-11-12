@@ -18,7 +18,9 @@ export class BriefError extends Error {}
 
 const modelIds = (teams) => Object.fromEntries([...teams.matchAll(/(Fable|Opus|Sonnet|Haiku) \((claude-[\w.-]+)\)/g)].map((m) => [m[1].toLowerCase(), m[2]]))
 // The tier a thread of this role starts on: the first tier its Roster row names (a later "Fable on a hard task" is the coordinator's call).
-const tierOf = (row) => TIERS.find((t) => (row.match(/Model: ([^;.]*)/)?.[1] ?? '').toLowerCase().includes(t)) ?? 'sonnet'
+const modelCell = (row) => row.match(/Model: (.*?)\.?$/)?.[1] ?? ''
+const tierOf = (row) => TIERS.find((t) => (modelCell(row).split(';')[0]).toLowerCase().includes(t)) // undefined: the row names none (the Project Manager's is set by yskills)
+const runsAs = (row) => row.match(/Runs as: (.*?)\. Model:/)?.[1] ?? ''
 const stub = (role, kit, size) => `Role: ${role} · Kit: ${kit} · Size: ${size}`
 
 export function buildBrief({ role, kit, size, item, threads, priorArt, done, stop, what, start, skills, sheet, lookLock, tester, researcher, teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8') }) {
@@ -35,8 +37,11 @@ export function buildBrief({ role, kit, size, item, threads, priorArt, done, sto
   const missing = Object.entries({ item, threads, 'prior-art': priorArt, done, stop, skills: skillsLine, ...(size === 'S' ? {} : { what }), ...(needsSheet ? { sheet } : {}), ...(role === 'Programmer' && size === 'L' ? { tester } : {}) })
     .filter(([, v]) => !v).map(([k]) => `--${k}`)
   if (needsSheet && sheet && !/^n\/a/i.test(sheet) && !lookLock) missing.push('--look-lock')
+  if (needsSheet && /^n\/a/i.test(sheet ?? '') && !/^n\/a[ \t]+\S[^\n]{9,}$/i.test(sheet)) throw new BriefError('--sheet n/a needs a reason of 10+ characters after it (team-guard: Sheet: n/a <why this is no body, face or outfit job>)')
   if (missing.length) throw new BriefError(`missing, never guessed: ${missing.join(', ')}`)
-  const model = modelIds(teams)[tierOf(info.row)]
+  const tier = tierOf(info.row)
+  if (!tier) throw new BriefError(`the Roster row of ${role} names no model tier ("${modelCell(info.row)}"); the model of this role is not the generator's to pick`)
+  const model = modelIds(teams)[tier]
   const lines = [stub(role, kit, size), `Model: ${model}`, `Item: ${item}`, `Threads: ${threads}`, `Prior art: ${priorArt}`, `Skills: ${skillsLine}`,
     ...(needsSheet ? [`Sheet: ${sheet}`, ...(/^n\/a/i.test(sheet) ? [] : [`Look-Lock: ${lookLock}`])] : []),
     ...(researcher ? [`Researcher: ${researcher}`] : []), ...(role === 'Programmer' && size === 'L' ? [`Tester: ${tester}`] : []),
@@ -53,13 +58,18 @@ export function roleLines(teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf
   return rosterNames(teams).map((role) => {
     const info = roleOf(stub(role, 'setup', 'M'), teams)
     const ok = kitNames(teams).filter((kit) => !badTeam(stub(role, kit, 'M'), teams))
-    return `${role}: Kit: ${ok.length ? ok.join(', ') : 'none at size M (see Kits)'}; Model: ${tierOf(info.row)}; Skills: ${info.path ?? 'its Roster row'}`
+    return `${role}: Kit: ${ok.length ? ok.join(', ') : 'none at size M (see Kits)'}; Model: ${tierOf(info.row) ?? modelCell(info.row)}; Runs as: ${runsAs(info.row).slice(0, 40)}; Skills: ${info.path ?? 'its Roster row'}`
   })
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const args = process.argv.slice(2)
-  const flag = (name) => { const i = args.indexOf(`--${name}`); return i >= 0 ? args[i + 1] : undefined }
+  const flag = (name) => {
+    const i = args.indexOf(`--${name}`)
+    if (i < 0) return undefined
+    if (args[i + 1] === undefined || args[i + 1].startsWith('--')) { console.error(`brief: --${name} needs a value`); process.exit(2) }
+    return args[i + 1]
+  }
   if (args.includes('--lines')) { console.log(roleLines().join('\n')); process.exit(0) }
   try {
     const out = buildBrief({ role: flag('role'), kit: flag('kit'), size: flag('size'), item: flag('item'), threads: flag('threads'), priorArt: flag('prior-art'),
