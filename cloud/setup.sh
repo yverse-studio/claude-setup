@@ -607,7 +607,7 @@ const ASKS_RESEARCH = /\b(SOTA|state of the art|research (on|about|into|what)|re
 // The one list of roles whose game and story brief names a cast sheet (scripts/brief.mjs imports it: a third copy of this list let the generator drop Character TD).
 export const SHEET_ROLES = ['Programmer', 'Animator', 'Character TD']
 export const needsSheetRole = (role) => SHEET_ROLES.some((r) => r.toLowerCase() === String(role).trim().toLowerCase())
-const needsSheet = (plain) => needsSheetRole(plain.match(/^[ \t>-]*Role:[ \t]*([^\n·|,(]*)/im)?.[1] ?? '') && /\bKit:[ \t]*(game|story)\b/i.test(plain)
+const needsSheet = (plain) => new RegExp(`^[ \\t>-]*Role:[ \\t]*(${SHEET_ROLES.join('|')})\\b`, 'im').test(plain) && /\bKit:[ \t]*(game|story)\b/i.test(plain)
   && !/^[ \t>-]*Sheet:[ \t]*n\/a[ \t]+\S[^\n]{9,}$/im.test(plain)
 // CompanyXY 2026-11-12 (yskills 13:23, point 5): gates were planned only after the owner complained. A builder, designer or animator brief
 // at size M or L names the Reviewer thread that gates its work before the owner sees it; the gate roles themselves need no such line.
