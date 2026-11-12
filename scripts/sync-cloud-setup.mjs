@@ -5,7 +5,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-export const EMBEDDED = { GUARD: 'global/context-guard.mjs', COMPACT: 'global/compact-guard.mjs', PREPUSH: 'global/git-hooks/pre-push', ATTEMPT: 'global/attempt-guard.mjs', RULE: 'global/rule-guard.mjs', TEAM: 'global/team-guard.mjs', GATE: 'global/gate-rounds.mjs', TASK: 'global/task-ledger.mjs' }
+export const EMBEDDED = { GUARD: 'global/context-guard.mjs', COMPACT: 'global/compact-guard.mjs', PREPUSH: 'global/git-hooks/pre-push', ATTEMPT: 'global/attempt-guard.mjs', RULE: 'global/rule-guard.mjs', TEAM: 'global/team-guard.mjs', GATE: 'global/gate-rounds.mjs', TASK: 'global/task-ledger.mjs', CARD: 'global/card-render.mjs' }
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 
 export function sync(sh, read = (f) => readFileSync(join(root, f), 'utf8')) {

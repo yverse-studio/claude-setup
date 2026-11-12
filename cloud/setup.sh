@@ -399,7 +399,7 @@ export function rulesLoaded(cwd, home) {
 // The guards update themselves the same way (yskills 2026-10-27: a rule change on main must reach
 // every session without a cloud rebuild): an installed guard is replaced by main's copy when that
 // copy arrived whole and passes `node --check`; a guard added to GUARD_FILES later is installed the same way. A new hook entry still needs install.mjs or a rebuild.
-export const GUARD_FILES = ['context-guard.mjs', 'compact-guard.mjs', 'attempt-guard.mjs', 'team-guard.mjs', 'rule-guard.mjs', 'gate-rounds.mjs', 'task-ledger.mjs']
+export const GUARD_FILES = ['context-guard.mjs', 'compact-guard.mjs', 'attempt-guard.mjs', 'team-guard.mjs', 'rule-guard.mjs', 'gate-rounds.mjs', 'task-ledger.mjs', 'card-render.mjs']
 const parses = (f) => { try { execFileSync(process.execPath, ['--check', f], { stdio: 'ignore', timeout: 2000 }); return true } catch { return false } }
 // Two downloads, so a guard missing on main (renamed, or not merged yet) never costs the boot files,
 // and each keeps its own time limit inside the hook's 5 s.
@@ -452,7 +452,14 @@ export function guardVersion(dir) {
 export const modelFile = (session) => join(tmpdir(), `claude-setup-model-${String(session).replace(/[^A-Za-z0-9]/g, '')}`)
 
 export const BOOT_MAX = 9800 // hook context over 10,000 characters is cut to a preview; scripts/check.mjs keeps both cards under this
-const section = (t, from, to) => { const a = t.indexOf(`\n## ${from}`); const b = t.indexOf(`\n## ${to}`, a + 1); return a < 0 ? '' : t.slice(a + 1, b < 0 ? undefined : b).trim() }
+// Cached per document: ROSTER.md and the brief files ask the same few sections thousands of times (M50 slice B: 5 s uncached, a thread start has 5).
+let sections = { t: null, found: new Map() }
+const section = (t, from, to) => {
+  if (sections.t !== t) sections = { t, found: new Map() }
+  const key = `${from}\0${to}`
+  if (!sections.found.has(key)) { const a = t.indexOf(`\n## ${from}`); const b = t.indexOf(`\n## ${to}`, a + 1); sections.found.set(key, a < 0 ? '' : t.slice(a + 1, b < 0 ? undefined : b).trim()) }
+  return sections.found.get(key)
+}
 const cells = (l) => l.split('|').map((c) => c.trim())
 
 // Where no checkout loaded it, CLAUDE.md itself goes into context: nothing to remember to read (audit 2026-10-27).
@@ -653,7 +660,7 @@ export function classify(text) {
 
 // Kit and size checked against docs/TEAMS.md, not only their format (blind test 2026-10-27: "Kit: content",
 // a video at size S, a Game Designer on a Ren'Py story, a Designer cutting a video).
-const kitRows = (teams) => section(teams, 'Kits', 'Models for tasks').split('\n').filter((l) => /^\| `/.test(l))
+export const kitRows = (teams) => section(teams, 'Kits', 'Models for tasks').split('\n').filter((l) => /^\| `/.test(l))
   .map((l) => { const c = cells(l); return { kit: c[1].match(/`([\w-]+)`/)[1], team: c[3], skipped: c[4] } })
 const rosterOf = (teams, part) => section(teams, 'Roster', 'Kits').split(/\n### /).find((s) => s.startsWith(part)) ?? ''
 // A role named in a Kits cell: one comma, semicolon or bracket item that is the role, maybe with words after ("Designer for renders", not "Game Designer").
@@ -1207,7 +1214,7 @@ export function simpleCommands(text, depth = 0) {
   return { list, bad }
 }
 
-const GUARD_FILE = /\.claude[\\/]claude-setup[\\/](?:rule-guard|team-guard|gate-rounds|task-ledger)\.mjs$/
+const GUARD_FILE = /\.claude[\\/]claude-setup[\\/](?:rule-guard|team-guard|gate-rounds|task-ledger|card-render)\.mjs$/
 const CLI_VERBS = ['status', 'check', 'init', 'direct', 'card', 'picture', 'waive', 'merge', 'post', 'record']
 const MERGE_DOOR = /pulls\/[^\s/]*\/merge|mergePullRequest|enablePullRequestAutoMerge/
 
@@ -1316,7 +1323,7 @@ export function gateStep(tool, input = {}, ctx = {}) {
   const file = String(input.file_path ?? '')
   if (/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) && STAMP.test(file)) return 'gate ledger: the role stamp and the brief lock of a session are written only by the hooks (security review 2026-11-12), never by hand.'
   if (/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) && ledgerFile(file, dir)) return 'gate ledger: the round counter is written only by gate-rounds.mjs (gate.md, Rounds), never by hand.'
-  if (/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) && /\.claude[\\/]claude-setup[\\/](gate-rounds|task-ledger|rule-guard|team-guard)\.mjs$/.test(file)) return 'gate ledger: the installed guards are changed only through claude-setup (a PR), never in place.'
+  if (/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) && /\.claude[\\/]claude-setup[\\/](gate-rounds|task-ledger|card-render|rule-guard|team-guard)\.mjs$/.test(file)) return 'gate ledger: the installed guards are changed only through claude-setup (a PR), never in place.'
   if (tool === 'Bash' || tool === 'PowerShell') return bashProblem(String(input.command ?? ''), dir, ctx)
   if (tool === 'mcp__github__create_pull_request') {
     const text = `${input.title ?? ''}\n${input.body ?? ''}`
@@ -1552,6 +1559,225 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
   process.exitCode = code
 }
 TASK
+
+# Card renderer (M50 slice B): the same file as global/card-render.mjs (scripts/check.mjs keeps them equal); renders the coordinator card, ROSTER.md and briefs/ at a thread's start.
+cat > "$HOME/.claude/claude-setup/card-render.mjs" <<'CARD'
+#!/usr/bin/env node
+// M50 slice B: the renderer of everything the project chat reads, in the boot copy (~/.claude/claude-setup/card-render.mjs), so every thread
+// start can refresh a stale rulebook in ITS project with no checkout: COORDINATOR-CARD.md, COORDINATOR-RULES-INDEX.md, ROSTER.md and
+// briefs/<role>.md. All of it is rendered from docs/TEAMS.md, docs/MAP.md and BRIEF_FIELDS (global/team-guard.mjs); nothing in it is written by hand.
+// scripts/coordinator-card.mjs is the CLI over it, rule-guard calls refreshCard() when a thread starts (docs/MAP.md, Coordinator card).
+import { createHash, randomBytes } from 'node:crypto'
+import { existsSync, lstatSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { BRIEF_FIELDS, GATE_BUILDER_ROLES, GUARD_FILES, badRole, badTeam, coordinatorCard, kitNames, kitRows, rosterNames } from './team-guard.mjs'
+import { GATE_ROLES, roleOf } from './rule-guard.mjs'
+
+export const CARD_MAX = 6800 // 6,600 until #430, 8,000 until 2026-11-12 (M27 step 6: rules a hook enforces left the card, the brief template came in)
+export const INDEX_MAX = 20000
+const cells = (l) => l.split('|').map((c) => c.trim())
+const today = () => new Date().toISOString().slice(0, 10)
+
+const PREFLIGHT = `## Before every reply
+
+- How we work, one loop: every thread has a role from the Roster (only a mini or unclear task has \`Role: none\`); the role loads its playbook, skills and workflows from claude-setup; what it lacks a Researcher finds; what holds for every project goes back to claude-setup. team-guard refuses a brief with no Role line or an unknown role or kit name; rule-guard's start receipt shows the role loaded and ends with \`card #<hash>\`: another hash than this card's header means Read this card again.
+- Luna: at most 15 lines / 1,500 characters, at least one kaomoji, result first, in his language.
+- Facts (code, PR, device, model, plan) only from a source read this turn and linked: PLAN.json, NOW.md, list_threads, a thread's last reply. None in reach: "prüfe ich", ask the owning thread; silent for a thread until it answered; a dropped device is one line the same turn.
+- Every start_thread passes \`model\` and a brief copied from briefs/<role>.md (section Thread brief). Before a message_thread with work: same role and topic as the thread's title, thread not done; else a new thread. Folder moves and cleanups never go to a builder.
+- A finished thread (done, failed, stopped, or review_ready idle 2 h with Done:/hand-off) gets set_thread_resolved or a nudge before you stop; relist when your board is 2 h old.
+- Every ask or pointer carries its clickable link ([title](#cmsg_…), URL, [Project settings](#project-settings/resources)); every ask of yskills gets a thread, a PR or a \`Done:\` line the same turn; a skill idea is a PR (\`new-skill\`), never a propose_skills card.
+- A PR whose \`Depends on: #n\` is parked or blocked: one chat line the same turn naming both PRs and the fix.
+- Ask yskills only the real moment (a level from his life), goal, taste and the ask-first list; build details, process and order you decide, in one line.
+- Hard round counter (hook): 3 rounds at 4.5 (4.8 important), 4-6 Fable director, 7+ a card; no merge below; you release none. 3 failed rounds on one asset: re-plan. A gate round's brief has the Round, Asset and Picture card lines (briefs/reviewer.md). Controls and World life first.
+- A new rule is a PR to claude-setup, never only a Project settings edit.
+- A second fresh thread for one asset is a quality-loss trigger: send the handoff files to the Planner for a diagnosis first, the handoff carries the round and every approach tried, and the restart is not posted (docs/WORKFLOW.md, Handoff triggers).
+- Plan: /mnt/project-files/PLAN.json is the one plan; threads write it (scripts/plan.mjs), you only Read it before every reply, then write_custom_view. "Stand?": goal, x/y done, doing, waits on him, next 3. Ping only when he must act, rate, or a part is Done (link).
+- Project instructions lack the line "Read /mnt/project-files/claude-setup/COORDINATOR-CARD.md first": call update_project_settings once, PREPEND operator/templates/project-instructions.md filled in, keep every existing line, say so in one line.`
+
+export function ruleRows(map) {
+  const t = map.split('\n## One home per rule')[1] ?? ''
+  return t.split('\n').filter((l) => l.startsWith('| ') && !/^\| (Rule|---)/.test(l)).map((l) => {
+    const c = l.split('|').map((x) => x.trim())
+    return { rule: c[1], home: c[2] }
+  })
+}
+
+// team-guard's coordinatorCard() is the source (Spawn rule, Models, Sizes, Roster, Kits, ~9,000 characters);
+// this squeezes it to what a start_thread needs so the whole file stays under CARD_MAX. ROSTER.md holds the same rows unclipped.
+const clip = (t, n) => (t.length > n ? `${t.slice(0, n - 1).trimEnd()}…` : t)
+const flat = (t) => t.replace(/\s+/g, ' ').replace(/\[`?([^\]]*?)`?\]\([^)]*\)/g, '$1').trim()
+export function compact(full) {
+  const part = (from, to) => { const a = full.indexOf(from); const b = to ? full.indexOf(to, a + 1) : full.length; return a < 0 ? '' : full.slice(a, b < 0 ? undefined : b).trim() }
+  const modelsLine = (part('## Spawn rule', '## Sizes').match(/\nModels:.*/) ?? [''])[0]
+  const ids = [...modelsLine.matchAll(/(Fable|Opus|Sonnet|Haiku) \((claude-[\w.-]+)\)/g)].map((m) => `${m[1]} ${m[2]}`).join(', ')
+  const sizes = part('## Sizes', '## Roster').split('\n').filter((l) => /^\| [SML] \|/.test(l)).map((l) => { const c = cells(l); return `- ${c[1]}: ${clip(flat(c[2]), 70)}; threads: ${clip(flat(c[3]), 60)}` })
+  const roster = part('## Roster', '## Kits').split('\n').filter((l) => l.startsWith('- ') && /thread/.test(l)).map((l) => { const [r, ...rest] = l.slice(2).split(': '); return `- ${r}: ${clip(flat(rest.join(': ')), 44)}` })
+  const kits = part('## Kits').split('\n').filter((l) => l.startsWith('- ')).map((l) => clip(flat(l), 90))
+  // A card with an empty Sizes, Roster or Kits section would send the chat to guess (M50 slice B: a test pins this).
+  for (const [name, rows] of [['Sizes', sizes], ['Roster', roster], ['Kits', kits]]) if (!rows.length) throw new Error(`coordinator card: the ${name} section of docs/TEAMS.md has no row`)
+  return [
+    `## Models (docs/TEAMS.md)\n\n${ids}. A model yskills names is used as named. A thread picks no Fable. Task first, then kit, then size; the thread's brief check refuses an unknown kit and a size or role that kit does not allow.`,
+    `## Sizes\n\n${sizes.join('\n')}`, `## Roster (thread roles: runs as; model; all of it in ROSTER.md)\n\n${roster.join('\n')}`, `## Kits (team at size L; roles and sizes per kit in ROSTER.md)\n\n${kits.join('\n')}`,
+  ].join('\n\n')
+}
+
+const BRIEF_SECTION = `## Thread brief
+
+Copy briefs/<role>.md of this folder (one per Roster role, its Model line inside; kits and sizes per role in ROSTER.md), fill every <...>, paste it as the brief, pass its Model as \`model\`. Nothing else is added or written from memory.
+A refusal names every gap at once: send those lines to the same thread with message_thread, never a new thread.
+A device thread passes \`message_id\` (yskills' message or your own project-chat post), never \`project_post_id\` or \`auto_attach=false\`.`
+
+export function buildCard({ teams, hash = 'nogit', date = today() }) {
+  const head = `Coordinator card (claude-setup ${hash}, ${date}).\nYou are the project chat. You have no Bash and no repo: this card and MEMORY.md are your rules.\nA rule not on this card: Read COORDINATOR-RULES-INDEX.md in this folder; still unclear: ask a setup thread (size S); never guess.`
+  const full = coordinatorCard(teams, '') // '' drops the "Text only" section: it does not fit
+  if (!full) throw new Error('coordinator card: docs/TEAMS.md has no Roster or Kits rows')
+  const card = [head, PREFLIGHT, BRIEF_SECTION, compact(full)].join('\n\n') + '\n'
+  if (card.length >= CARD_MAX) throw new Error(`coordinator card is ${card.length} characters, limit ${CARD_MAX}: trim a pre-flight line or a Roster cell`)
+  return card
+}
+
+export function buildIndex({ teams, map, hash = 'nogit', date = today() }) {
+  const head = `Rules index (claude-setup ${hash}, ${date}). Read this when a rule is not on the card;\nthe home is the file to name, never a guess.`
+  const roles = `## Brief lines per role (a filled copy of briefs/<role>.md in this folder (lowercase, dashes) is the brief; ROSTER.md lists the kits and sizes)\n\n${roleLines(teams).map((l) => `- ${l}`).join('\n')}`
+  const out = `${head}\n\n${ruleRows(map).map((r) => `- ${r.rule} → ${r.home}`).join('\n')}\n\n${roles}\n`
+  if (out.length >= INDEX_MAX) throw new Error(`rules index is ${out.length} characters, limit ${INDEX_MAX}`)
+  return out
+}
+
+// ---- roles, kits, models: what a brief file and ROSTER.md say (the same helpers scripts/brief.mjs generates a brief with)
+const TIERS = ['fable', 'opus', 'sonnet', 'haiku']
+const modelIds = (teams) => Object.fromEntries([...teams.matchAll(/(Fable|Opus|Sonnet|Haiku) \((claude-[\w.-]+)\)/g)].map((m) => [m[1].toLowerCase(), m[2]]))
+// The tier a thread of this role starts on: the first tier its Roster row names (a later "Fable on a hard task" is the coordinator's call).
+export const modelCell = (row) => row.match(/Model: (.*?)\.?$/)?.[1] ?? ''
+export const tierOf = (row) => TIERS.find((t) => (modelCell(row).split(';')[0]).toLowerCase().includes(t)) // undefined: the row names none (the Project Manager's is set by yskills)
+const runsAs = (row) => row.match(/Runs as: (.*?)\. Model:/)?.[1] ?? ''
+export const stub = (role, kit, size) => `Role: ${role} · Kit: ${kit} · Size: ${size}`
+// The model a thread of this role starts on at this size: the first tier its Roster row names, Fable for a Planner at size L (team-guard wrongModel).
+export const modelFor = (role, size, teams) => {
+  const tier = role === 'Planner' && size === 'L' ? 'fable' : tierOf(roleOf(stub(role, 'setup', size), teams).row)
+  return tier ? modelIds(teams)[tier] : undefined
+}
+// The sizes a role may start on a kit: the sizes the guard accepts (a Planner never at S).
+let sized = { teams: null, found: new Map() } // one answer per role and kit: the guard parses docs/TEAMS.md on every call
+export const sizesOf = (role, kit, teams) => {
+  if (sized.teams !== teams) sized = { teams, found: new Map() }
+  const key = `${role}\0${kit}`
+  if (!sized.found.has(key)) sized.found.set(key, sizesFor(role, kit, teams))
+  return sized.found.get(key)
+}
+const sizesFor = (role, kit, teams) => ['S', 'M', 'L'].filter((size) => !badRole(stub(role, kit, size), teams) && !badTeam(stub(role, kit, size), teams) && (role !== 'Planner' || size !== 'S'))
+
+// One line per Roster role: the kits it may start on at size M, its tier and its playbook.
+export function roleLines(teams) {
+  return rosterNames(teams).map((role) => {
+    const info = roleOf(stub(role, 'setup', 'M'), teams)
+    const ok = kitNames(teams).filter((kit) => !badTeam(stub(role, kit, 'M'), teams))
+    return `${role}: Kit: ${ok.length ? ok.join(', ') : 'none at size M (see Kits)'}; Model: ${tierOf(info.row) ?? modelCell(info.row)}; Runs as: ${runsAs(info.row).slice(0, 40)}; Skills: ${info.path ?? 'its Roster row'}`
+  })
+}
+
+// ROSTER.md: every Roster role and every kit, unclipped; per kit the thread roles and sizes the guard accepts, per role the kits.
+export function renderRoster({ teams, hash = 'nogit', date = today() }) {
+  const kits = kitRows(teams)
+  const hasBrief = (role) => tierOf(roleOf(stub(role, 'setup', 'M'), teams).row) // the Project Manager (set by yskills) is no thread role
+  const roles = rosterNames(teams).map((role) => {
+    const info = roleOf(stub(role, 'setup', 'M'), teams)
+    const on = kits.map((k) => [k.kit, sizesOf(role, k.kit, teams)]).filter(([, s]) => s.length)
+    if (!hasBrief(role)) return `- **${role}**: runs as: ${flat(runsAs(info.row))}; model: ${modelCell(info.row)}; playbook: ${info.path ?? 'its Roster row'}; no thread brief (never started as a thread)`
+    return `- **${role}**: runs as: ${flat(runsAs(info.row))}; model: ${modelCell(info.row)}; playbook: ${info.path ?? 'its Roster row'}; starts on: ${on.length ? on.map(([k, s]) => `${k} (${s.join(' ')})`).join(', ') : 'no kit (no thread brief)'}`
+  })
+  const kitText = kits.map((k) => {
+    const who = rosterNames(teams).filter(hasBrief).map((role) => [role, sizesOf(role, k.kit, teams)]).filter(([, s]) => s.length)
+    return `### ${k.kit}\n\n- Team at size L: ${flat(k.team)}\n- Skipped: ${flat(k.skipped)}\n- Thread roles (sizes): ${who.map(([r, s]) => `${r} (${s.join(' ')})`).join(', ')}`
+  })
+  return `Roster and kits (claude-setup ${hash}, ${date}), rendered from docs/TEAMS.md and the guard's own role and kit check; never edited by hand.\nA brief names a role from this list on a kit that lists it, at a size it lists; briefs/<role>.md has the brief for each.\n\n## Roles\n\n${roles.join('\n')}\n\n## Kits\n\n${kitText.join('\n\n')}\n`
+}
+
+// ---- briefs/<role>.md: the stamp, then one line per row of BRIEF_FIELDS that holds for the role (a new row of the table appears here by itself),
+// then the four parts of the free task text (taught, never checked).
+const ORDER = ['Model', 'Item', 'Plan', 'Acceptance', 'Threads', 'Prior art', 'Skills', 'Sheet', 'Look-Lock', 'Topic', 'Researcher', 'Gate', 'Tester', 'Done when', 'Stop when', 'Start']
+const GATE_ROUND_LINES = ['Round: <n> (gate rounds only; delete otherwise)', 'Asset: <owner/repo#n> (with Round)', 'Picture card: <link | none, because <why>> (new look only; delete otherwise)']
+const TASK_PARTS = ['Objective: <what finished looks like, one sentence, in the owner\'s words where he gave them>', 'Output: <the files, PR or links the thread hands back, and in what shape>',
+  'Tools and sources: <what to read and use first (repo paths, URLs, #n) and what to leave alone>', 'Boundaries: <what the thread must not touch, and the point where it stops and asks>']
+export function renderBrief(role, teams, fields = BRIEF_FIELDS) {
+  const info = roleOf(stub(role, 'setup', 'M'), teams)
+  if (!tierOf(info.row)) return null // the Project Manager's model is set by yskills: no thread brief
+  const kits = kitNames(teams).filter((kit) => sizesOf(role, kit, teams).length)
+  if (!kits.length) return null
+  const offered = [...new Set(kits.flatMap((kit) => sizesOf(role, kit, teams)))]
+  const kitCell = kits.map((kit) => (sizesOf(role, kit, teams).length < offered.length ? `${kit} (size ${sizesOf(role, kit, teams).join(' or ')} only)` : kit)).join(' | ')
+  const gateRole = GATE_ROLES.test(role)
+  const probes = [stub(role, 'game', 'M'), stub(role, 'setup', 'M')]
+  const rows = new Map(fields.map((f) => [f.key, f]))
+  const keys = [...ORDER.filter((k) => rows.has(k) || k === 'Topic'), ...fields.map((f) => f.key).filter((k) => !ORDER.includes(k))]
+  const at = keys.indexOf('Done when')
+  const keyed = [...keys.filter((k) => ORDER.includes(k)).slice(0, at < 0 ? undefined : at), ...keys.filter((k) => !ORDER.includes(k)), ...keys.filter((k) => ORDER.includes(k)).slice(at < 0 ? keys.length : at)]
+  const lines = [`Role: ${role} · Kit: <${kitCell}> · Size: <${offered.join('|')}>`]
+  for (const key of keyed) {
+    if (key === 'Done when' && gateRole) lines.push(...GATE_ROUND_LINES)
+    const f = rows.get(key)
+    if (key === 'Topic') { if (role === 'Reviewer') lines.push('Topic: <checklist topic> (delete unless a topic gate)'); continue }
+    if (f.applies && !probes.some((p) => f.applies(p))) continue
+    if (key === 'Model') lines.push(`Model: ${role === 'Planner' ? `<${modelFor(role, 'M', teams)} at size M | ${modelFor(role, 'L', teams)} at size L>` : modelFor(role, 'M', teams)}`)
+    else if (key === 'Skills') lines.push(`Skills: ${info.path ?? f.tpl.slice(8)}`)
+    else if (key === 'Prior art' && gateRole) lines.push(`Prior art: .claude/skills/operator/gate.md and the <kit>'s checks (docs/TEAMS.md, Kits) -> adapt, because the gate rules and checks already exist`)
+    else if (key === 'Gate' && !new RegExp(`^${GATE_BUILDER_ROLES}$`).test(role)) continue
+    else lines.push(f.tpl)
+  }
+  return `# Brief file: ${role}\n\nCopy the block, fill every <...>, delete the lines marked delete, start the thread with it as the brief, title \`${role} · <what>\` and \`model\` = the Model line (${modelFor(role, 'M', teams)} at size M). Sizes and kits are checked by team-guard; the block is rendered from BRIEF_FIELDS and docs/TEAMS.md (claude-setup global/card-render.mjs), never edited by hand.\n\n\`\`\`\n${lines.join('\n')}\n\`\`\`\n\nThen write the task itself under the block, in four short parts (taught, not checked):\n\n\`\`\`\n${TASK_PARTS.join('\n')}\n\`\`\`\n`
+}
+export const briefFileName = (role) => `${role.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.md`
+
+// ---- the whole folder, and its refresh
+// Layout of a base: a claude-setup checkout (global/ and docs/) or the installed copy ~/.claude/claude-setup (guards beside docs/).
+const guardDir = (base) => (existsSync(join(base, 'global')) ? join(base, 'global') : base)
+const read = (f) => (existsSync(f) ? readFileSync(f, 'utf8').replace(/\r/g, '') : '')
+// One hash over everything the folder is rendered from, so the card is stale exactly when a guard or TEAMS.md or MAP.md changed.
+export function cardHash(base) {
+  const h = createHash('sha256')
+  for (const f of [...GUARD_FILES.map((g) => join(guardDir(base), g)), join(base, 'docs', 'TEAMS.md'), join(base, 'docs', 'MAP.md')]) h.update(`${f.split(/[\\/]/).pop()}\0${read(f)}`)
+  return h.digest('hex').slice(0, 8)
+}
+export function renderAll({ base, hash = cardHash(base), date = today() }) {
+  const teams = read(join(base, 'docs', 'TEAMS.md'))
+  const files = new Map([['COORDINATOR-CARD.md', buildCard({ teams, hash, date })], ['COORDINATOR-RULES-INDEX.md', buildIndex({ teams, map: read(join(base, 'docs', 'MAP.md')), hash, date })], ['ROSTER.md', renderRoster({ teams, hash, date })]])
+  for (const role of rosterNames(teams)) { const text = renderBrief(role, teams); if (text) files.set(`briefs/${briefFileName(role)}`, text) }
+  return files
+}
+// Writes only what changed (temp name, then rename), so two threads writing at once leave a whole file, and a second run writes nothing.
+export function writeAll(dir, files) {
+  let written = 0
+  // The card is the marker refreshCard reads, so it goes last: a write that fails or is killed halfway leaves the old card and the next start repairs the rest.
+  for (const [name, text] of [...files].sort(([a], [b]) => (a === 'COORDINATOR-CARD.md') - (b === 'COORDINATOR-CARD.md'))) {
+    const to = join(dir, name)
+    if (existsSync(to) && readFileSync(to, 'utf8') === text) continue
+    mkdirSync(join(to, '..'), { recursive: true })
+    // The folder is shared by every thread of the project: never write through a link planted there, and never reuse a guessable temp name.
+    if (lstatSync(join(to, '..')).isSymbolicLink() || (existsSync(to) && lstatSync(to).isSymbolicLink())) throw new Error(`card-render: ${name} is behind a symlink, refused`)
+    const tmp = `${to}.${randomBytes(6).toString('hex')}.new`
+    try { writeFileSync(tmp, text, { flag: 'wx' }); renameSync(tmp, to) } catch (e) { rmSync(tmp, { force: true }); throw e }
+    written++
+  }
+  return written
+}
+// The project's shared folder: /mnt/project-files in a cloud thread. Absent (a laptop session): nothing to refresh.
+export function projectFolder(env = process.env) {
+  for (const d of [env.CLAUDE_SETUP_PROJECT_FILES, '/mnt/project-files', '/mnt/attach/project-files']) if (d && existsSync(d)) return join(d, 'claude-setup')
+  return null
+}
+// A thread's start: rewrites the folder when no card exists or the card's hash is not the one this copy renders. Returns the hash it wrote, or null.
+// A failure never stops the start (the card stays as it was).
+export function refreshCard(base, out = projectFolder()) {
+  try {
+    if (!out || !existsSync(join(base, 'docs', 'TEAMS.md'))) return null
+    const hash = cardHash(base)
+    const have = read(join(out, 'COORDINATOR-CARD.md')).match(/^Coordinator card \(claude-setup (\w+),/)?.[1]
+    if (have === hash && existsSync(join(out, 'ROSTER.md'))) return null
+    writeAll(out, renderAll({ base, hash }))
+    return hash
+  } catch { return null }
+}
+CARD
 
 # Rule guard: the same file as global/rule-guard.mjs (scripts/check.mjs keeps them equal): CLAUDE.md
 # rules that were text only become checks on tool calls and notes on yskills' messages.
@@ -1851,6 +2077,15 @@ function setupRoot(cwd) {
 }
 const fetchRaw = (path) => { try { return execFileSync('curl', ['-fsSL', '--max-time', '3', RAW + path], { encoding: 'utf8', timeout: 4000 }) } catch { return '' } }
 
+// M50 slice B: the hash in the header of the project folder's COORDINATOR-CARD.md, so the receipt says which card this thread's start left there (the coordinator
+// compares it with the card it read, and reads again when they differ). Empty when the project has no card folder.
+function cardOnDisk(env = process.env) {
+  for (const d of [env.CLAUDE_SETUP_PROJECT_FILES, '/mnt/project-files', '/mnt/attach/project-files']) {
+    const hash = d && read(join(d, 'claude-setup', 'COORDINATOR-CARD.md')).match(/^Coordinator card \(claude-setup (\w+),/)?.[1]
+    if (hash) return hash
+  }
+  return ''
+}
 // Wires the receipt: only a thread whose role card was injected (roleContext wrote the role file) and only its own calls, not a subagent's.
 function receiptBlock(tool, input, session, cwd, agentId, transcript) {
   if (tool !== 'mcp__hearthbot__post_message' || !session || agentId) return null
@@ -1864,7 +2099,7 @@ function receiptBlock(tool, input, session, cwd, agentId, transcript) {
   const path = roleOf(brief, read(join(root, 'docs', 'TEAMS.md')))?.path
   // No checkout (only the boot copy): nothing can be checked, so the receipt says that instead of a false `none`.
   const status = existsSync(join(root, 'config', 'plugins.json')) ? skillStatus(wanted(root, path ? read(join(root, path)) : '', brief), { root, cwd }) : { loaded: [], missing: [], unknown: true }
-  return receiptMissing(tool, input, threadReceipt(role, brief, t, rules, status), t) ?? (receiptSent(t) ? null : fallbackUnread(status, t))
+  return receiptMissing(tool, input, threadReceipt(role, brief, t, rules, status, cardOnDisk()), t) ?? (receiptSent(t) ? null : fallbackUnread(status, t))
 }
 
 // M48: a Reviewer brief with a valid `Topic:` is given that topic's checklist plus the Scored gates section of gate.md instead of the code playbook.
@@ -2172,12 +2407,12 @@ export function fallbackUnread(status, transcript) {
   return todo.length ? `rule-guard: a skill your role names cannot load here, so read what stands in for it before your first reply, then say so in it (receipt line: missing): ${todo.join(', ')} of claude-setup (CLAUDE.md, Never "can't").` : null
 }
 
-export function threadReceipt(role, brief, transcript, rules, status = { loaded: [], missing: [] }) {
+export function threadReceipt(role, brief, transcript, rules, status = { loaded: [], missing: [] }, card = '') {
   const tag = (k) => brief.replace(/[*_`]/g, '').match(new RegExp(`${k}:[ \\t]*([A-Za-z0-9-]+)`))?.[1] ?? '?'
   const skills = [...new Set(toolCalls(transcript).filter((c) => c.name === 'Skill').map((c) => String(c.input.skill ?? '')).filter(Boolean))]
   const hash = rules.includes(MARK) ? createHash('sha256').update(rules.replace(/\r/g, '')).digest('hex').slice(0, 7) : 'none'
   const item = brief.replace(/[*_`]/g, '').match(/\bItem:[ \t]*(M\d+|new)/)?.[1] ?? '?' // the coordinator's Masterplan id (roles/project-manager.md, Masterplan)
-  return `Thread · ${role} · ${tag('Kit')} · ${tag('Size')} · item ${item} · skills: ${skills.join(', ') || 'none'} · rules #${hash} · ${missingNote(status)}`
+  return `Thread · ${role} · ${tag('Kit')} · ${tag('Size')} · item ${item} · skills: ${skills.join(', ') || 'none'} · rules #${hash} · ${missingNote(status)}${card ? ` · card #${card}` : ''}`
 }
 
 // Until one reply carried a receipt and went out (a blocked try has a hook error as its result).
@@ -2458,6 +2693,15 @@ async function guardLine() {
   const dir = dirname(fileURLToPath(import.meta.url))
   try { const team = await import(new URL('./team-guard.mjs', import.meta.url)); team.fillMissing?.(dir); return team.guardVersion(dir) } catch { return '' }
 }
+// M50 slice B: a thread's start rewrites its project's rulebook folder (card, rules index, ROSTER.md, briefs/) when the card is missing or stale, so no
+// project depends on a hand-started "Setup-Karte einrichten" thread; the line is the start receipt a running coordinator reads. Never stops the start.
+async function cardLine() {
+  try {
+    const { refreshCard } = await import(new URL('./card-render.mjs', import.meta.url))
+    const hash = refreshCard(dirname(fileURLToPath(import.meta.url)))
+    return hash ? `Card refreshed ${hash}: the project folder's COORDINATOR-CARD.md, ROSTER.md and briefs/ now match main; the coordinator reads them again.` : ''
+  } catch { return '' }
+}
 export async function gateBriefContext(brief, model) {
   try { return (await loadCounter()).gateBrief(brief, { model }) } catch { return '' }
 }
@@ -2493,7 +2737,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           let relayNote = ''
           if (spawned || (lookup && brief !== prompt)) updateLock(session, checkNow)
           else if (existsSync(lockFile(session)) && COORDINATOR_RELAY.test(prompt)) relayNote = await relayRebrief(session, prompt, cwd, model, transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : '')
-          const context = [checkNow, relayNote, spawned || (lookup && brief !== prompt) ? await gateBriefContext(brief, model) : '', spawned || (lookup && brief !== prompt) ? await guardLine() : '', modelOnce(brief, transcriptPath, session), await roleContext(brief, cwd, session), promptContext(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
+          const context = [checkNow, relayNote, spawned || (lookup && brief !== prompt) ? await gateBriefContext(brief, model) : '', spawned || (lookup && brief !== prompt) ? await guardLine() : '', spawned || (lookup && brief !== prompt) ? await cardLine() : '', modelOnce(brief, transcriptPath, session), await roleContext(brief, cwd, session), promptContext(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
           if (context) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: context } }))
           return
         }

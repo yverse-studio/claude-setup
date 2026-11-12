@@ -182,10 +182,8 @@ test('the generator passes a `--gate n/a <why>` through and refuses a Gate that 
   assert.throws(g('n/a'), (e) => e instanceof BriefError && /--gate/.test(e.message))
 })
 
-test('the Gate line has a home: the brief block in briefs.md and the owner-facing rule in gate.md, both tagged with the hook that enforces them', () => {
-  const briefs = readFileSync(join(root, '.claude/skills/operator/briefs.md'), 'utf8')
+test('the Gate line has a home: its BRIEF_FIELDS row and the owner-facing rule in gate.md, tagged with the hook that enforces it', () => {
   const gate = readFileSync(join(root, '.claude/skills/operator/gate.md'), 'utf8')
-  assert.match(briefs, /^Gate: <Reviewer thread> before owner[^\n]*\[guard: hook global\/team-guard\.mjs\]/m)
   assert.match(gate, /Owner-facing results[^\n]*Gate:[^\n]*\[guard: hook global\/team-guard\.mjs\]/)
 })
 

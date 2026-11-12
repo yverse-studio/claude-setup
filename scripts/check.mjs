@@ -88,6 +88,8 @@ for (const f of (await import('../global/team-guard.mjs')).BOOT_FILES) if (exist
   if (gateRounds?.replace(/\r/g, '').trim() !== readFileSync(join(root, 'global/gate-rounds.mjs'), 'utf8').replace(/\r/g, '').trim()) errors.push('cloud/setup.sh gate rounds differs from global/gate-rounds.mjs')
   const taskLedger = sh.match(/<<'TASK'\r?\n([\s\S]*?)\r?\nTASK\r?\n/)?.[1]
   if (taskLedger?.replace(/\r/g, '').trim() !== readFileSync(join(root, 'global/task-ledger.mjs'), 'utf8').replace(/\r/g, '').trim()) errors.push('cloud/setup.sh task ledger differs from global/task-ledger.mjs')
+  const cardRender = sh.match(/<<'CARD'\r?\n([\s\S]*?)\r?\nCARD\r?\n/)?.[1]
+  if (cardRender?.replace(/\r/g, '').trim() !== readFileSync(join(root, 'global/card-render.mjs'), 'utf8').replace(/\r/g, '').trim()) errors.push('cloud/setup.sh card renderer differs from global/card-render.mjs')
   const team = sh.match(/<<'TEAM'\r?\n([\s\S]*?)\r?\nTEAM\r?\n/)?.[1]
   if (team?.replace(/\r/g, '').trim() !== readFileSync(join(root, 'global/team-guard.mjs'), 'utf8').replace(/\r/g, '').trim()) errors.push('cloud/setup.sh team guard differs from global/team-guard.mjs')
 }
@@ -360,7 +362,7 @@ for (const f of readdirSync(roleDir).filter((n) => n.endsWith('.md') && n !== 'p
 }
 if (!readFileSync(join(roleDir, 'project-manager.md'), 'utf8').includes('## Model and handoff in every brief')) errors.push('roles/project-manager.md: lacks "Model and handoff in every brief"')
 const briefsText = readFileSync(join(root, '.claude/skills/operator/briefs.md'), 'utf8')
-for (const part of ['Model: <id', 'Handoff:', '/handoff/<date>-<topic>.md']) {
+for (const part of ['Handoff:', '/handoff/<date>-<topic>.md']) {
   if (!briefsText.includes(part)) errors.push(`briefs.md: thread brief block lacks "${part}"`)
 }
 

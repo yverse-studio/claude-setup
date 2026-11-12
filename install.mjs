@@ -141,6 +141,7 @@ items.push(['global/team-guard.mjs', join('claude-setup', 'team-guard.mjs')])
 items.push(['global/rule-guard.mjs', join('claude-setup', 'rule-guard.mjs')])
 items.push(['global/gate-rounds.mjs', join('claude-setup', 'gate-rounds.mjs')]) // the hard gate round counter rule-guard calls (operator/gate.md, Rounds)
 items.push(['global/task-ledger.mjs', join('claude-setup', 'task-ledger.mjs')]) // a task's plan, plan check and approval beside the round counter (M28)
+items.push(['global/card-render.mjs', join('claude-setup', 'card-render.mjs')]) // renders the coordinator card, ROSTER.md and briefs/ so a thread start refreshes a stale folder (M50 slice B)
 items.push(['global/live-shot.ps1', join('claude-setup', 'live-shot.ps1')])
 items.push(['global/git-hooks/pre-push', join('claude-setup', 'git-hooks', 'pre-push')]) // runs a repo's scripts/pre-pr.mjs before every push
 
