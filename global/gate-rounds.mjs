@@ -95,7 +95,7 @@ const REVIEWER = /^(code-reviewer|evaluator|security-reviewer|typescript-reviewe
 export function reviewerProof(body, calls = []) {
   const line = norm(String(body).split('\n').find((l) => l.trim()) ?? '')
   const lead = (t) => norm(String(t).split('\n').find((l) => l.trim()) ?? '')
-  return !!line && calls.some((c) => /^(Agent|Task)$/.test(c.name) && REVIEWER.test(String(c.input?.subagent_type ?? '')) && lead(c.result) === line && !norm(c.input?.prompt ?? '').includes(line))
+  return !!line && calls.some((c) => /^(Agent|Task)$/.test(c.name) && REVIEWER.test(String(c.input?.subagent_type ?? '')) && (lead(c.result) === line || (c.report && lead(c.report) === line)) && !norm(c.input?.prompt ?? '').includes(line))
 }
 export function authorProblem(body, ctx = {}) {
   if (GATE_ROLE.test(ctx.role ?? '') || reviewerProof(body, ctx.calls ?? [])) return null
