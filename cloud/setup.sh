@@ -387,9 +387,9 @@ const AGENT = /^(Agent|Task)$/
 
 const text = (file) => { try { return readFileSync(file, 'utf8') } catch { return '' } }
 
-// claude-setup's CLAUDE.md loads on its own: a checkout at cwd or a parent of it, or install.mjs's block in ~/.claude/CLAUDE.md (laptop).
+// claude-setup's CLAUDE.md loads on its own: a checkout at cwd, a parent of it or `<cwd>/claude-setup` (a cloud thread starts in /home/user), or install.mjs's block in ~/.claude/CLAUDE.md (laptop).
 export function rulesLoaded(cwd, home) {
-  const files = [join(home, '.claude', 'CLAUDE.md')]
+  const files = [join(home, '.claude', 'CLAUDE.md'), join(cwd, 'claude-setup', 'CLAUDE.md')]
   for (let d = cwd; ; d = dirname(d)) { files.push(join(d, 'CLAUDE.md')); if (dirname(d) === d) break }
   return files.some((f) => text(f).includes(MARK))
 }
