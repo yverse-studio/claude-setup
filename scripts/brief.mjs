@@ -40,7 +40,7 @@ export function buildBrief({ role, kit, size, item, threads, priorArt, done, sto
   const builder = new RegExp(`^${GATE_BUILDER_ROLES}$`).test(role) && size !== 'S'
   const named = gate ?? `Reviewer · ${what}`
   const gateLine = builder ? `Gate: ${/^n\/a/i.test(named) || /\bbefore owner\b/.test(named) ? named : `${named} before owner`}` : null
-  if (gateLine && !GATE_LINE.test(gateLine)) throw new BriefError('--gate names a Reviewer, Tester, Critic or Hook Checker thread and ends "before owner" (given as --gate "Reviewer · <what> before owner"), or reads "n/a <why this slice has no owner-facing result>" with 10+ characters')
+  if (gateLine && !GATE_LINE.test(gateLine)) throw new BriefError('--gate names a Reviewer or Tester thread and ends "before owner" (given as --gate "Reviewer · <what> before owner"), or reads "n/a <why this slice has no owner-facing result>" with 10+ characters')
   const missing = Object.entries({ item, threads, 'prior-art': prior, done, stop, skills: skillsLine, ...(size === 'S' ? {} : { what }), ...(needsSheet ? { sheet } : {}), ...(role === 'Programmer' && size === 'L' ? { tester } : {}) })
     .filter(([, v]) => !v).map(([k]) => `--${k}`)
   if (needsSheet && sheet && !/^n\/a/i.test(sheet) && !lookLock) missing.push('--look-lock')
