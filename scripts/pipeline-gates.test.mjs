@@ -1,10 +1,10 @@
 // Companyxy report 2026-11-12, points 3 to 8: each gate below was red (missing) before scripts/pipeline-gates.mjs existed.
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { mkdtempSync, mkdirSync, writeFileSync, utimesSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, writeFileSync, utimesSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { sheetProblems, fitReportProblems, lookStateProblems, driverProblems, stalePreviews, refreshPreview } from './pipeline-gates.mjs'
+import { sheetProblems, fitReportProblems, lookStateProblems, driverProblems, stalePreviews, refreshPreview, intakeProblems } from './pipeline-gates.mjs'
 
 const SHEET = `# Character sheet: Mira
 ## Story (stage 1)
@@ -77,4 +77,62 @@ test('point 7: a preview older than its final render is stale and is regenerated
   assert.deepEqual(stalePreviews(root), [], 'fresh after the refresh')
   const failed = refreshPreview(final, () => ({ status: 1 }))
   assert.equal(failed.ok, false)
+})
+
+// asset-intake: a downloaded asset is processed, not listed. Each rule has one violating asset beside the happy path.
+const LICENCE = '# Licence\n- Source: https://example.org/pack\n- Licence: CC-BY 4.0\n- Commercial use: yes\n- Adult use: yes\n- Attribution: Example Studio\n'
+const REPORT = { type: 'garment', inventory: ['BT_petite', 'char_rika'], rows: { BT_petite: { preview: 'preview/BT_petite.png', number: { min_mm: 2.1, inside_pct: 0 } }, char_rika: { preview: 'preview/char_rika.png', number: { min_mm: 1.8, inside_pct: 0 } } }, catalog: { bases_fitted: ['BT_petite', 'char_rika'], md5: { 'files/CL_x.blend': 'abc' } } }
+function asset(mutate = () => {}) {
+  const dir = mkdtempSync(join(tmpdir(), 'intake-'))
+  for (const d of ['source', 'files', 'preview']) mkdirSync(join(dir, d))
+  writeFileSync(join(dir, 'source', 'pack.zip'), 'zip')
+  writeFileSync(join(dir, 'files', 'CL_x.blend'), 'blend')
+  writeFileSync(join(dir, 'LICENCE.md'), LICENCE)
+  for (const k of ['BT_petite', 'char_rika']) writeFileSync(join(dir, 'preview', `${k}.png`), 'png')
+  writeFileSync(join(dir, 'intake.json'), JSON.stringify(REPORT))
+  const past = new Date(Date.now() - 60000)
+  utimesSync(join(dir, 'files', 'CL_x.blend'), past, past)
+  mutate(dir)
+  return dir
+}
+const problems = (m) => { const d = asset(m); try { return intakeProblems(d).join('|') } finally { rmSync(d, { recursive: true, force: true }) } }
+
+test('intake: a processed asset with a row and preview per base passes', () => {
+  assert.equal(problems(), '')
+})
+
+test('intake: a missing or empty source/ fails', () => {
+  assert.match(problems((d) => rmSync(join(d, 'source', 'pack.zip'))), /source\/ is missing or empty/)
+})
+
+test('intake: no licence note, or a placeholder field, fails (quarantine)', () => {
+  assert.match(problems((d) => rmSync(join(d, 'LICENCE.md'))), /_quarantine/)
+  assert.match(problems((d) => writeFileSync(join(d, 'LICENCE.md'), LICENCE.replace('CC-BY 4.0', '<licence>'))), /"Licence:"/)
+  assert.match(problems((d) => writeFileSync(join(d, 'LICENCE.md'), LICENCE.replace('- Adult use: yes\n', ''))), /"Adult use:"/)
+})
+
+test('intake: a report that is only a file list fails', () => {
+  assert.match(problems((d) => rmSync(join(d, 'intake.json'))), /file list/)
+  assert.match(problems((d) => writeFileSync(join(d, 'intake.json'), JSON.stringify({ type: 'garment', files: ['a.fbx', 'b.png'] }))), /no inventory.*no rows|no rows/)
+})
+
+test('intake: every base of the inventory needs a row, a preview and a number', () => {
+  assert.match(problems((d) => writeFileSync(join(d, 'intake.json'), JSON.stringify({ ...REPORT, rows: { BT_petite: REPORT.rows.BT_petite } }))), /base char_rika: no row/)
+  assert.match(problems((d) => rmSync(join(d, 'preview', 'char_rika.png'))), /base char_rika: preview .* does not exist/)
+  assert.match(problems((d) => writeFileSync(join(d, 'intake.json'), JSON.stringify({ ...REPORT, rows: { ...REPORT.rows, char_rika: { preview: 'preview/char_rika.png' } } }))), /garment needs a number/)
+})
+
+test('intake: eyes and faces may be visual-only with a reason, garments and hair may not', () => {
+  const visual = (type, why) => (d) => writeFileSync(join(d, 'intake.json'), JSON.stringify({ ...REPORT, type, rows: Object.fromEntries(REPORT.inventory.map((k) => [k, { preview: `preview/${k}.png`, visual: true, why }])) }))
+  assert.equal(problems(visual('eyes', 'no metric for an eye in a socket, 4 views checked')), '')
+  assert.match(problems(visual('eyes', 'ok')), /visual: true with a why/)
+  assert.match(problems(visual('hair', 'looks fine in the render here')), /hair needs a number/)
+})
+
+test('intake: a preview older than the asset files fails', () => {
+  assert.match(problems((d) => { const old = new Date(Date.now() - 3600000); utimesSync(join(d, 'preview', 'BT_petite.png'), old, old) }), /base BT_petite: preview is older/)
+})
+
+test('intake: the catalog must list every fitted base and a hash', () => {
+  assert.match(problems((d) => writeFileSync(join(d, 'intake.json'), JSON.stringify({ ...REPORT, catalog: { bases_fitted: ['BT_petite'], md5: {} } }))), /bases_fitted lacks char_rika.*md5 is empty/)
 })
