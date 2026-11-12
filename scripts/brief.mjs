@@ -10,7 +10,7 @@
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { CHECKLISTS, GATE_BUILDER_ROLES, GATE_LINE, badRole, badTeam, badTopic, decide, kitNames, rosterNames } from '../global/team-guard.mjs'
+import { CHECKLISTS, GATE_BUILDER_ROLES, GATE_LINE, badRole, badTeam, badTopic, decide, kitNames, needsSheetRole, rosterNames } from '../global/team-guard.mjs'
 import { GATE_ROLES, roleOf } from '../global/rule-guard.mjs'
 import { planCheckBrief } from '../global/task-ledger.mjs'
 import { briefFileName, modelCell, modelFor as renderModelFor, renderBrief, roleLines as renderRoleLines, stub, tierOf } from '../global/card-render.mjs'
@@ -34,7 +34,7 @@ export function buildBrief({ role, kit, size, item, plan, acceptance, threads, p
   const badTopicWhy = topic !== undefined && badTopic(`Role: ${role}\nTopic: ${topic}`, checklists)
   if (badTopicWhy) throw new BriefError(badTopicWhy)
   const info = roleOf(stub(role, kit, size), teams)
-  const needsSheet = /^(Programmer|Animator)$/.test(role) && /^(game|story)$/.test(kit)
+  const needsSheet = needsSheetRole(role) && /^(game|story)$/.test(kit)
   const skillsLine = skills ?? (topic ? CHECKLISTS : info.path) // a Topic Reviewer works from its checklist, not the code playbook
   // A gate role's Prior art names the gate rules and the kit's checks (rule-guard briefCheck, GATE_PRIOR): written here, never by hand (CompanyXY 2026-11-12: two Reviewer threads blocked).
   const gateRole = GATE_ROLES.test(role)

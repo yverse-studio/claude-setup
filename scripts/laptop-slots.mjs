@@ -1,9 +1,10 @@
 // Counting lock for laptop Blender jobs. Home of the rule: docs/pc-claude-user.md (Blender limits).
 // One lock file per running render in a shared dir; a file whose pid is dead is stale and reused.
 import { spawnSync } from 'node:child_process'
-import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 export const MAX_RENDERS = 1 // one Blender job at a time (companyxy report 2026-11-12: several parallel jobs on about 3.6 GB free RAM)
 export const MAX_BLENDER = 2 // our one job plus yskills' own Blender
@@ -50,4 +51,45 @@ export function blenderCount(run = (cmd, args) => spawnSync(cmd, args, { encodin
   const r = run('tasklist', ['/FI', 'IMAGENAME eq blender.exe', '/NH'])
   if (r.error || r.status !== 0) return null
   return (r.stdout.match(/blender\.exe/gi) ?? []).length
+}
+
+// RAM ledger (yskills 2026-11-12): whoever starts Blender or Ren'Py signs in and signs out again, so "who holds the RAM"
+// is a list, not a guess. One file per entry; an entry whose pid is dead is stale and dropped when the list is read.
+const ledgerDir = (dir) => join(dir, 'ledger')
+const ledgerFile = (who, pid, dir) => join(ledgerDir(dir), `${who.replace(/[^\w.-]/g, '_')}-${pid}.json`)
+
+export function ledgerSignIn({ who, app, pid = process.pid, dir = slotDir(), now = Date.now() }) {
+  mkdirSync(ledgerDir(dir), { recursive: true })
+  writeFileSync(ledgerFile(who, pid, dir), JSON.stringify({ who, app, pid, at: now }))
+}
+
+// Keyed by name and pid: two jobs with one name never sign each other out.
+export const ledgerSignOut = (who, pid = process.pid, dir = slotDir()) => rmSync(ledgerFile(who, pid, dir), { force: true })
+
+export function ledgerList({ dir = slotDir(), alive = pidAlive } = {}) {
+  let names = []
+  try { names = readdirSync(ledgerDir(dir)) } catch { return [] }
+  const rows = []
+  for (const name of names) {
+    const file = join(ledgerDir(dir), name)
+    let row = null
+    try { row = JSON.parse(readFileSync(file, 'utf8')) } catch { /* half-written: dropped below */ }
+    if (row && alive(row.pid)) rows.push(row)
+    else rmSync(file, { force: true })
+  }
+  return rows
+}
+
+// By hand (a Ren'Py playtest or Blender started outside laptop-job): the pid is the app's own, so the entry lives as long as it does.
+//   node scripts/laptop-slots.mjs ledger in <who> <blender|renpy> <pid> | out <who> <pid> | list
+export function ledgerCli(args, dir = slotDir()) {
+  const [verb, who, app, pid] = args
+  if (verb === 'in' && who && ['blender', 'renpy'].includes(app) && Number.isInteger(Number(pid)) && Number(pid) > 0 && pidAlive(Number(pid))) { ledgerSignIn({ who, app, pid: Number(pid), dir }); return `signed in ${who}` }
+  if (verb === 'out' && who && Number.isInteger(Number(app)) && Number(app) > 0) { ledgerSignOut(who, Number(app), dir); return `signed out ${who}` }
+  if (verb === 'list') return ledgerList({ dir }).map((r) => `${r.who} (${r.app}, pid ${r.pid})`).join('\n') || 'empty'
+  throw new Error('usage: ledger in <who> <blender|renpy> <pid> | ledger out <who> <pid> | ledger list')
+}
+
+if (process.argv[1] === fileURLToPath(import.meta.url) && process.argv[2] === 'ledger') {
+  try { console.log(ledgerCli(process.argv.slice(3))) } catch (e) { console.error(e.message); process.exit(2) }
 }

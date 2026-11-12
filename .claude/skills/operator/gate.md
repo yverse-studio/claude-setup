@@ -51,7 +51,7 @@ replaces check 2, the rest of the table and the sizes stay as they are (clothes 
   preset the figure must carry, with its value. A missing preset or a number outside the style range is a hard-check
   fail at any score, before any clipping fix (2026-11-12: ten rounds on one garment scored clipping only while the
   legs read thinner than the style, and one character passed three gates without her preset; `docs/LESSONS-2026-11-12.md`).
-- **Pipeline gates (hard checks, K.O. at any score; companyxy 2026-11-12, scripts in `scripts/pipeline-gates.mjs`):** (1) every character in the PR has an approved cast sheet: `node scripts/pipeline-gates.mjs sheet <SHEET.md>` is OK (measures, silhouette numbers, owner-card look lock; `docs/preproduction-workflow.md`); no sheet, no body, outfit or fit PR. (2) A fit is measured against every `BT_` preset and every `CH_` key: `node scripts/pipeline-gates.mjs fit <measure.json>` is OK. (3) Look switches: the sheet script's `look_states.json` passes `node scripts/pipeline-gates.mjs look <look_states.json>` (written by `scripts/blender/look_switches.py`), and `node scripts/pipeline-gates.mjs drivers <drivers.json>` passes on the dump of `scripts/blender/dump_drivers.py` (no dead variable, every target resolves). (4) Previews: `node scripts/pipeline-gates.mjs previews <folder>` finds no `thumb.jpg` older than a final render. (5) A downloaded garment shows its `clothes_dupe.py` line in the PR (`docs/clothing-pipeline.md`, Reuse first). Each missing output is a hard-check fail.
+- **Pipeline gates (hard checks, K.O. at any score; companyxy 2026-11-12, scripts in `scripts/pipeline-gates.mjs`):** (1) every character in the PR has an approved cast sheet: `node scripts/pipeline-gates.mjs sheet <SHEET.md>` is OK (measures, silhouette numbers, owner-card look lock; `docs/preproduction-workflow.md`); no sheet, no body, outfit or fit PR. (2) A fit is measured against every `BT_` preset and every `CH_` key: `node scripts/pipeline-gates.mjs fit <measure.json>` is OK. (3) Look switches: the sheet script's `look_states.json` passes `node scripts/pipeline-gates.mjs look <look_states.json>` (written by `scripts/blender/look_switches.py`), and `node scripts/pipeline-gates.mjs drivers <drivers.json>` passes on the dump of `scripts/blender/dump_drivers.py` (no dead variable, every target resolves). (4) Previews: `node scripts/pipeline-gates.mjs previews <folder>` finds no `thumb.jpg` older than a final render. (5) A downloaded garment shows its `clothes_dupe.py` line in the PR (`docs/clothing-pipeline.md`, Reuse first). (6) An asset taken from the inbox: `node scripts/pipeline-gates.mjs intake <asset dir> --inventory <measure.json>` is OK (licence note, source, a row and preview per base; `asset-intake` skill). Each missing output is a hard-check fail.
 - **Contact gate (scenes and clips, mandatory every round, even a camera-only one):** no gate score above 3/5 and no PASS (Scored gates below) without penetration mm per contact pair over all frames, 1:1 close cams on each contact, a material opacity check and a non-POV camera, with the numbers in the verdict (`roles/animator.md`, Contact gate).
 - **Check 2** is shown as `evidence` in the table (the file and the sheet), not n/a.
 - **Size:** a garment move or refit with no new look = M; one that changes the look, and any figure, body, character or scene PR, is L (`character-workflow.md`, step 6).
@@ -201,6 +201,11 @@ How to undo a merge, by kind of change (write the line into the PR's "undo" line
   live without them.
 - **Less:** post the blocking findings as one PR review and stop. The builder fixes them; the next
   round re-runs the failed checks with fresh agents on the new head.
+- **A PASS needs no OK from yskills** (yskills 2026-11-12 16:43: "Es braucht mein OK nicht wenn gate bestanden, nur wenn 3 mal
+  falsch und dann nochmal 3 mal mit Fable-Eingriff"). A passed gate (plan review, asset, scene or PR) is the go: the work goes on,
+  the PR merges, and he gets the PASS line with its report, as information. He is asked only by the round-7 card of the counter
+  below, for a taste call (a look, a body, a picture card) and for the `docs/permissions.md` ask-first list; his veto stops
+  anything at once. No thread or coordinator posts a "passt das?" or waits for a release after a PASS.
 - **The hard round counter** (yskills 2026-11-12, vacation-game: a shell PR ran 11 rounds instead of 6, nothing counted, the
   coordinator released rounds itself, the gate asked to merge at 4.2; the one home of the round limit, every other file links
   here; was "up to 6 rounds", 2026-10-26). A hook counts, not text: `global/gate-rounds.mjs` keeps one ledger per asset (a PR
@@ -221,11 +226,11 @@ How to undo a merge, by kind of change (write the line into the PR's "undo" line
   4. **A merge needs a counted pass** (fail closed; director ruling, PR #444 round 4): the merge is refused when the asset has no [guard: hook global/gate-rounds.mjs]
      ledger or its last round is not a pass (4.5, 4.8 important), whatever the reason. A verdict posted in another shape is never
      counted, so it can never lead to a merge. Only yskills' answer on a card frees a version under the threshold
-     (`gate-rounds.mjs waive <asset> --ref <cmsg id>`, the hook needs his reply in the session).
+     (`gate-rounds.mjs waive <asset> --ref <cmsg id>`; the hook needs his tap on the **first** option of that `request_decision` card, so the card lists the option that frees the merge first; a typed reply or a tap on another option frees nothing).
   5. **Two doors for gh**, because the hook reads no gh comment text: a merge is `mcp__github__merge_pull_request` or [guard: hook global/gate-rounds.mjs]
      `node ~/.claude/claude-setup/gate-rounds.mjs merge <owner/repo#n> [--squash|--merge|--rebase] [--auto] [--delete-branch]`;
-     a verdict is the comment tool or `gate-rounds.mjs post <owner/repo#n> --body-file <f>`; a named asset without a PR (a video, an
-     image set) is counted by `gate-rounds.mjs record <name> --body-file <f>`, run by any gate role (Tester, Reviewer, Evaluator, Critic,
+     a verdict is the comment tool or `gate-rounds.mjs post <owner/repo#n> --body-file <f>`; a named asset without a PR (a plan, a video, an
+     image set), or a round of one that the hook missed, is counted by `gate-rounds.mjs record <name> --body-file <f>` (rounds in order, no hand edit, #491), run by any gate role (Tester, Reviewer, Evaluator, Critic,
      Playtester, Hook Checker, Story Editor, Security, Legal) and never for a PR asset. `gh pr merge` is refused in Bash by
      command position (one tokenizer: quotes, `;`, `&&`, `|`, `$( )`, `bash -c`), so a commit message, a grep pattern or an echo is
      data. A `gh` comment is never refused and never counted: a verdict through plain gh cannot lead to a merge. Bash refuses only the

@@ -156,7 +156,7 @@ const pDeny = json('.claude/settings.json')?.permissions?.deny ?? []
 if (gDeny.join() !== pDeny.join()) errors.push('.claude/settings.json deny list differs from global/settings.json')
 
 // Our own docs: relative markdown links resolve, and phrases that describe a rule we dropped stay out.
-const BANNED = [/merge tap/i, /caveman voice/i,
+const BANNED = [/ram_admin/i, /merge tap/i, /caveman voice/i,
   // Score rule (operator/gate.md, Scored gates; yskills 2026-11-04): a PASS at 4.5, not 5/5, starts a render, and nobody waits for his strip OK.
   /only 5\/5 is rendered/i, /rendered only at 5\/5/i, /only after (his|the owner's) OK/i, /never skips the OK/i, /then yskills approves, then 1080p/i,
   // Handoff only at a trigger (docs/WORKFLOW.md; yskills 2026-11-08): no line may tie a handoff to a token count or a time.

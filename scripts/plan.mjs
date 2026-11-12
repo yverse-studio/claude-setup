@@ -26,6 +26,47 @@ export function problems(plan) {
     if (it.status === 'wartet' && !it.waits_on) out.push(`${id}: wartet needs waits_on (a card, his hands, another item)`)
     if (it.status === 'drop' && !it.why) out.push(`${id}: drop needs why`)
   }
+  return [...out, ...depProblems(plan.items)]
+}
+
+// `deps` = comma list of item ids that must be done first (roles/project-manager.md, Masterplan). Checked on open items only:
+// ids exist, no self-dep, no dep on a dropped item (it never clears), no cycle. Once a plan uses `deps` anywhere, every M<n>
+// (and M<a>-M<b> range) named in an open item's waits_on or next must also be in its deps, so the graph is never hollow.
+const OPEN = (it) => !['done', 'drop'].includes(it.status)
+const idList = (s) => String(s ?? '').split(/[,\s]+/).filter(Boolean)
+const idNum = (id) => Number(String(id).slice(1))
+export function namedIds(text, ids) {
+  const out = new Set()
+  for (const m of String(text ?? '').matchAll(/\bM(\d+)\s*[-–]\s*M(\d+)\b/g)) for (const id of ids) if (idNum(id) >= +m[1] && idNum(id) <= +m[2]) out.add(id)
+  for (const m of String(text ?? '').matchAll(/\bM(\d+)\b/g)) out.add(`M${m[1]}`)
+  return [...out]
+}
+function depProblems(items) {
+  const out = []
+  const byId = new Map(items.map((it) => [it.id, it]))
+  const open = items.filter(OPEN)
+  const adopted = items.some((it) => 'deps' in it)
+  for (const it of open) {
+    const deps = idList(it.deps)
+    for (const d of deps) {
+      if (d === it.id) out.push(`${it.id}: depends on itself`)
+      else if (!byId.has(d)) out.push(`${it.id}: dep ${d} does not exist`)
+      else if (byId.get(d).status === 'drop') out.push(`${it.id}: dep ${d} is dropped and never clears`)
+    }
+    if (!adopted) continue
+    for (const d of namedIds(`${it.waits_on ?? ''} ${it.next ?? ''}`, [...byId.keys()])) {
+      if (d !== it.id && byId.has(d) && OPEN(byId.get(d)) && !deps.includes(d)) out.push(`${it.id}: names ${d} in waits_on/next but not in deps`)
+    }
+  }
+  const state = new Map()
+  const visit = (id, path) => {
+    if (state.get(id) === 1) { out.push(`cycle: ${[...path.slice(path.indexOf(id)), id].join(' -> ')}`); return }
+    if (state.get(id) === 2) return
+    state.set(id, 1)
+    for (const d of idList(byId.get(id)?.deps)) if (byId.has(d) && d !== id && OPEN(byId.get(d))) visit(d, [...path, id])
+    state.set(id, 2)
+  }
+  for (const it of open) visit(it.id, [])
   return out
 }
 

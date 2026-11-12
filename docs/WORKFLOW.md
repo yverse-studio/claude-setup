@@ -63,6 +63,10 @@ included. The rules, probe mode and the round limit and its summary: `operator` 
 
 A fix removes the cause, not the symptom (yskills 2026-11-08): name the rule, check or design that let the defect through, fix there, add the check that would have caught it (`gate.md`: a check failing twice gets this diagnosis first). Baseline first: a migration or mass edit (paths, renames, a refactor over many files) records the before-state test output before its first edit, in the order its plan names; edits made before the baseline are rolled back (2026-11-12: 157 scripts were switched before the comparison tests had run). A workaround (retry, sleep, catch-all, special case, skipped test) only when yskills says so, labelled `Workaround:` in the PR body and deleted when the root fix lands. Lean setup, deep know-how: the know-how goes into its one home (`docs/MAP.md`), never into a second copy, and a thread finds it through MAP.md, the card or the rules index, not by asking.
 
+## Thread starts
+
+Every checked thread start writes one file `brief-log/<date>-<session>.json` in its project's `claude-setup` folder (global/card-render.mjs, `logStart`): project, role, kit, size, guard version, card hash and one outcome: clean, repaired, refused, wrong-model (a restart is needed) or duplicate (reserved). Relays on a refused start are added to its file. `node scripts/brief-stats.mjs [folder] [--days N]` prints the count and the false-start rate (refused, wrong-model, duplicate over all starts). Zero starts from a project means the hook does not run there.
+
 ## Learning
 
 Every correction, every failed gate round with a catchable cause and every test project ends as

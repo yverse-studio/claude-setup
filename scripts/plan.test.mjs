@@ -71,3 +71,22 @@ test('cli: set writes the file, check fails on a bad file', () => {
   writeFileSync(f, JSON.stringify({ ...base(), items: [{ id: 'M1', title: 'x', status: 'done' }] }))
   assert.throws(() => execFileSync('node', [cli, 'check', '--file', f], { stdio: 'pipe' }), /done needs evidence/)
 })
+
+test('deps: unknown id, self-dep, dep on a dropped item and a cycle are problems; a clean chain is not', () => {
+  const p = base()
+  p.items[3] = { ...p.items[3], deps: 'M2' }
+  assert.deepEqual(problems(p), [])
+  const bad = (items) => problems({ goal: 'g', items: items.map((x) => ({ title: 't', status: 'todo', ...x })) }).join('\n')
+  assert.match(bad([{ id: 'M1', deps: 'M9' }]), /M1: dep M9 does not exist/)
+  assert.match(bad([{ id: 'M1', deps: 'M1' }]), /M1: depends on itself/)
+  assert.match(bad([{ id: 'M1', deps: 'M2' }, { id: 'M2', status: 'drop', why: 'x' }]), /M1: dep M2 is dropped/)
+  assert.match(bad([{ id: 'M1', deps: 'M2' }, { id: 'M2', deps: 'M3' }, { id: 'M3', deps: 'M1' }]), /cycle: M1 -> M2 -> M3 -> M1/)
+})
+
+test('deps: once a plan uses deps, an id or a range named in waits_on/next must be in deps; done items are ignored', () => {
+  const bad = (items) => problems({ goal: 'g', items: items.map((x) => ({ title: 't', status: 'todo', ...x })) }).join('\n')
+  const out = bad([{ id: 'M1', deps: 'M2', next: 'after M2-M4' }, { id: 'M2' }, { id: 'M3', status: 'done', evidence: 'x' }, { id: 'M4' }])
+  assert.match(out, /M1: names M4 in waits_on\/next but not in deps/)
+  assert.doesNotMatch(out, /names M3/)
+  assert.deepEqual(problems({ goal: 'g', items: [{ id: 'M1', title: 't', status: 'todo', next: 'after M2' }, { id: 'M2', title: 't', status: 'todo' }] }), [])
+})

@@ -146,6 +146,17 @@ test('a generated gate-role brief names gate.md and the kit checks in Prior art 
   assert.match(await briefCheck(spawn(handWritten), root), /^Brief repair \(no block\)[\s\S]*gate\.md/, 'the hand-written brief without gate.md blocked two Reviewer threads; now it is told to read gate.md')
 })
 
+test('Character TD is a sheet role and a gate builder: the generated game brief asks for Sheet, Look-Lock and Gate, and passes once filled (gate #483 r2, F5)', () => {
+  const { sheet, ...noSheet } = FIELDS
+  assert.throws(() => buildBrief({ teams, role: 'Character TD', kit: 'game', size: 'M', ...noSheet }), (e) => e instanceof BriefError && /--sheet/.test(e.message))
+  const full = buildBrief({ teams, role: 'Character TD', kit: 'game', size: 'M', ...FIELDS, sheet: 'docs/cast.md', lookLock: 'https://example.com/card/1', gate: 'Reviewer · fit round 1 before owner' })
+  assert.match(full.brief, /\nSheet: docs\/cast\.md\nLook-Lock: https:\/\/example\.com\/card\/1\n/)
+  assert.match(full.brief, /\nGate: Reviewer · fit round 1 before owner\n/)
+  assert.deepEqual(decide(START, { brief: full.brief, title: full.title, model: full.model }, [], [], teams), {})
+  const noGate = decide(START, { brief: full.brief.replace(/\nGate:[^\n]*/, ''), title: full.title, model: full.model }, [], [], teams)
+  assert.match(noGate.block ?? '', /Gate:/, 'a Character TD brief at M without the Gate line is refused')
+})
+
 test('a builder, designer or animator brief at size M or L needs `Gate: <reviewer thread> before owner`; gate roles and size S do not', () => {
   const ask = (role, kit, size, extra = '') => decide(START, { brief: `Role: ${role} · Kit: ${kit} · Size: ${size}${FULL.replace(/\nGate:[^\n]*/, '')}${extra}`, title: `${role} · x`, model: SONNET }, [], [], teams)
   for (const [role, kit] of [['Programmer', 'setup'], ['Designer', 'site'], ['Animator', 'game']]) {

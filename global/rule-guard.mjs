@@ -251,11 +251,11 @@ export function pageText(html) {
 }
 
 const VIDEO = /\b(instagram\.com|tiktok\.com|youtube\.com|youtu\.be)\/\S+|\.(mp4|mov|webm)\b/i
-export function promptContext(prompt = '') {
+export function promptContext(prompt = '', stopWord = null) { // stopWord: STOP_WORD of the counter, the one definition (M53)
   const notes = []
   if (VIDEO.test(prompt)) notes.push('rule-guard: this message has a video. CLAUDE.md, Videos: run watch.py of the watch skill first (plain, no WebSearch in its place), then a verdict per video.')
   const said = (prompt.match(/<message[^>]*trigger="true"[^>]*>([\s\S]*?)<\/message>/)?.[1] ?? prompt).trim()
-  if (/^\W*(stop+|stopp+|pause|halt)\W*$/i.test(said)) notes.push('rule-guard: yskills said stop. Stop at once, do not argue, say in one line what was left half done (CLAUDE.md, How to work).')
+  if (stopWord?.test(said)) notes.push('rule-guard: yskills said stop. Stop at once, do not argue, say in one line what was left half done (CLAUDE.md, How to work).')
   return notes.join('\n')
 }
 
@@ -785,6 +785,34 @@ const listProcs = () => {
 const agentTranscript = (transcriptPath, agentId) => (transcriptPath && agentId ? join(transcriptPath.replace(/\.jsonl$/, ''), 'subagents', `agent-${String(agentId).replace(/[^\w-]/g, '')}.jsonl`) : '')
 
 
+// #503: an async Agent call returns only its launch note ("agentId: <id>"); the report is the last text of the agent's own transcript, which the
+// harness writes and a builder cannot (a typed or scheduled "hand-back" row is no proof). The id is a plain token, so it cannot leave subagents/.
+const AGENT_ID = /^\s*Async agent launched[^\n]*\n(?:[^\n]*\n)?\s*agentId:\s*([A-Za-z0-9-]+)\b/i // the harness's launch note opens the result; a report that merely mentions an id does not
+const rowText = (row) => { const c = row.message?.content; return typeof c === 'string' ? c : (c ?? []).map((x) => x?.text ?? '').join('\n') }
+// The report is the last assistant text of an agent transcript that was started with THIS call's prompt (it cannot be another agent's transcript).
+function agentReport(path, prompt) {
+  let first = null
+  let last = ''
+  for (const line of read(path).split('\n')) {
+    try {
+      const row = JSON.parse(line)
+      if (first === null && row.type === 'user') first = rowText(row)
+      // Live shape (gate round 1 of #506): the agent's final report is a SubagentHandback tool_use (text in input.message); a plain text row is the fallback.
+      const parts = row.type === 'assistant' ? (row.message?.content ?? []) : []
+      const text = parts.filter((c) => c?.type === 'text').map((c) => c.text).join('\n').trim()
+      const hand = parts.filter((c) => c?.type === 'tool_use' && c.name === 'SubagentHandback').map((c) => String(c.input?.message ?? '').trim()).filter(Boolean).at(-1)
+      if (hand || text) last = hand || text
+    } catch { /* not a JSON line */ }
+  }
+  const want = String(prompt ?? '').trim()
+  return want && first !== null && first.includes(want) ? last : ''
+}
+export const withReports = (calls, transcriptPath) => calls.map((c) => {
+  const id = /^(Agent|Task)$/.test(c.name) ? AGENT_ID.exec(c.result)?.[1] : null
+  const path = id ? agentTranscript(transcriptPath, id) : ''
+  return path ? { ...c, report: agentReport(path, c.input?.prompt) } : c
+})
+
 // A thread whose brief breaks the team rules does not work (yskills 2026-11-12: threads started without a Role line ran anyway). The prompt hook
 // leaves a lock; until a corrected brief arrives, every tool except talking to the coordinator is refused.
 export const lockFile = (session) => join(tmpdir(), `claude-setup-badbrief-${String(session).replace(/\W/g, '')}`)
@@ -803,14 +831,17 @@ export function updateLock(session, check) {
 // and a gate role only for a thread that holds no stamp yet (relayRebrief; #475, M50).
 export const COORDINATOR_RELAY = /^\s*(?:<system-note>[^<]*<\/system-note>\s*)*(?:<system-reminder>\s*)?A message from this project[’']s coordinator session[^\n]*\n\s*<coordinator-relay>\s*<relay\b[^>]*\bfrom=\\?"coordinator"/
 // M50: a relay that reaches a working thread is a `queued_command` attachment, whose text starts with the bare `<relay from="coordinator"` (live
-// 2026-11-12: the lead-in line is added only when the harness shows it). The bare form counts only as such an attachment, an entry only the harness writes.
+// 2026-11-12: the lead-in line is added only when the harness shows it). M53: either form counts only on a row the projects server delivered
+// (`origin` = fromProjects of the counter): the text is who wrote it, the origin is who delivered it, so a thread's own scheduled prompt
+// (an isMeta row with the same text) is no relay.
 const BRIEF_LINE = /^[ \t>*_`-]*(Role|Kit|Gate|Prior art|Model|Skills|Done when|Stop when|Start|Threads|Item|Plan|Acceptance):/im // a relay that corrects the brief; other relays do not count toward the card
 const BARE_RELAY = /^\s*<relay\b[^>]*\bfrom=\\?"coordinator"/
 // The coordinator often sends only the lines the start brief lacked (#479 part 2: VacationGame's Critic, our Director), so the relay is read
 // together with the earlier coordinator relays and the spawn brief from the transcript: the newest relay's lines come first and win,
 // older relays and the spawn brief fill the gaps.
 // Every coordinator relay of the transcript, oldest first: a user entry, or a queued_command attachment when it reached a working thread.
-export function coordinatorRelays(transcript) {
+// `origin` decides whether the row came from the projects server; without one no row counts (fail closed).
+export function coordinatorRelays(transcript, origin = () => false) {
   const relays = []
   for (const line of String(transcript).split('\n')) {
     try {
@@ -818,16 +849,15 @@ export function coordinatorRelays(transcript) {
       const content = entry.message?.content
       const text = entry.type === 'attachment' && entry.attachment?.type === 'queued_command' ? String(entry.attachment.prompt ?? '')
         : entry.type === 'user' ? (typeof content === 'string' ? content : (content ?? []).map((c) => c?.text ?? '').join('\n')) : ''
-      // A bare relay is the harness's own entry: a queued_command attachment, or a user entry with isMeta (live 2026-11-12, gate round 1 of #490); a typed one never counts.
-      if (entry.type === 'attachment' || entry.isMeta === true ? BARE_RELAY.test(text) || COORDINATOR_RELAY.test(text) : COORDINATOR_RELAY.test(text)) relays.push(text)
+      if (origin(entry) && (BARE_RELAY.test(text) || COORDINATOR_RELAY.test(text))) relays.push(text)
     } catch { /* not a JSON line */ }
   }
   return relays
 }
 // A newer source's stamp line replaces an older one instead of adding to it (a corrected Role must not leave the old Size M behind).
 const withoutOlderStamps = (sources) => { let seen = false; return sources.map((t) => { const had = /^[ \t>*_`-]*Role:/im.test(t); const out = seen ? t.replace(/^[ \t>*_`-]*Role:[^\n]*$/gim, '') : t; seen ||= had; return out }) }
-export function relayContext(prompt, transcript) {
-  const relays = coordinatorRelays(transcript).filter((t) => t.trim() !== prompt.trim())
+export function relayContext(prompt, transcript, origin) {
+  const relays = coordinatorRelays(transcript, origin).filter((t) => t.trim() !== prompt.trim())
   const spawn = spawnPrompt(prompt, String(transcript))
   return withoutOlderStamps([prompt, ...relays.reverse(), spawn === prompt ? '' : spawn].filter(Boolean).map(stripTags)).slice(1).join('\n') // tags off first: a spawn brief's Role sits right behind its wake tag
 }
@@ -836,12 +866,15 @@ export function relayContext(prompt, transcript) {
 // The third refused relay asks for one card; the lock stays and a complete relay still lifts it. Returns that note, or ''.
 async function relayRebrief(session, prompt, cwd, model, transcript = '') {
   if (!COORDINATOR_RELAY.test(prompt) && !BARE_RELAY.test(prompt)) return ''
-  const context = relayContext(prompt, transcript)
+  const origin = await projectsOrigin()
+  if (!coordinatorRelays(transcript, origin).some((t) => t.trim() === prompt.trim())) return '' // no row of the projects server holds this text: a scheduled or typed prompt lifts nothing
+  const context = relayContext(prompt, transcript, origin)
   const text = stripTags([prompt, context].join('\n'))
   updateLock(session, await briefCheck(text, cwd, model, true))
+  await countRelay(session)
   const stamp = join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)
   if (existsSync(lockFile(session))) {
-    if (coordinatorRelays(transcript).filter((t) => t.trim() !== prompt.trim() && BRIEF_LINE.test(t)).length < 2) return ''
+    if (coordinatorRelays(transcript, origin).filter((t) => t.trim() !== prompt.trim() && BRIEF_LINE.test(t)).length < 2) return ''
     const note = 'Three relays did not lift the lock: post one card to yskills with request_decision that names the lines still missing, then stay idle; a complete relay lifts the lock at any time.'
     if (!read(lockFile(session)).includes('request_decision')) writeFileSync(lockFile(session), `${read(lockFile(session)).slice(0, 300)}\n${note}`)
     return note
@@ -867,16 +900,31 @@ export function handsOff(tool, input = {}, role = '', root = '') {
 
 // Gate round counter (global/gate-rounds.mjs, operator/gate.md Rounds): a gate post, a merge, a ledger write or a director/card record is
 // checked against the asset's ledger. Fail closed: a check that throws refuses the call (research 2026-11-12: a crashing hook does not block).
-const humanAfter = (transcript, ref, human) => {
+// M53 slice 2: a waive needs yskills' own answer to that card: a row the app wrote with the human origin (fromHuman of the counter; a scheduled or
+// typed-by-a-thread row never has it) that opens with the principal wake and names the card in its decision_id note (the real tap row,
+// scripts/fixtures/m53/real-human-rows.jsonl). Any other message of yskills after the card, a stop or pause word included, answers nothing, and so does a tap on any option but the first:
+// a waive card lists the option that frees the gate first (gate.md, Rounds), so a "no" frees nothing.
+// `counter` is the loaded gate-rounds module.
+const humanAfter = (transcript, ref, counter) => {
   const id = String(ref).match(/cmsg_\w+/)?.[0]
   const rows = transcript.split('\n').map((l) => { try { return JSON.parse(l) } catch { return null } }).filter(Boolean)
   const at = rows.findIndex((r) => id && JSON.stringify(r.message?.content ?? '').includes(id))
-  // Finding 3: the principal tag counts only as the message the wake wraps, never as text quoted inside a relay, a cited message or a
-  // tool result. The test is gate-rounds' principalRow, the one task-ledger's approve proof uses too (#474 round 11).
-  return at >= 0 && rows.slice(at + 1).some(human)
+  // Finding 3: the principal tag counts only as the message the wake wraps (the wrapper opens the row, then project and thread tags), never
+  // as text quoted inside a relay, a cited message or a tool result. principalRow of the counter is the one test of the human's row, the same
+  // one task-ledger's approve proof reads (M53 slice 3).
+  const answer = (r) => counter.principalRow(r) && counter.rowText(r).includes(`<system-note>decision_id=${id}</system-note>`) && counter.rowText(r).includes('<system-note>option_index=0</system-note>')
+  return at >= 0 && rows.slice(at + 1).some(answer)
 }
 // A cached cloud image can lack the counter (its pasted setup predates it) and its start hook, the old team-guard, never fetches it
 // (each session restarts from the cache): the first call that needs it installs it with the refresh that now sits in this dir (2026-11-12).
+// The counter's one origin check; a counter that cannot load means no row counts: the lock stays, a waive is refused (M53).
+const stopWord = async () => { try { return (await loadCounter()).STOP_WORD } catch { return null } }
+// A counter that cannot load must not drop a stop word without a word (slice 1 gate): say the check was skipped.
+const stopNote = async (prompt) => {
+  const word = await stopWord()
+  return word ? promptContext(prompt, word) : [promptContext(prompt), 'rule-guard: the gate counter did not load, so a stop word is not checked here: if this message says stop or pause, stop at once.'].filter(Boolean).join('\n')
+}
+const projectsOrigin = async () => { try { return (await loadCounter()).fromProjects } catch { return () => false } }
 async function loadCounter(file = 'gate-rounds.mjs') {
   const url = new URL(`./${file}`, import.meta.url)
   try { return await import(url) } catch (e) {
@@ -886,7 +934,7 @@ async function loadCounter(file = 'gate-rounds.mjs') {
     return import(url)
   }
 }
-export async function gateBlock(tool, input, transcript, model, dry = false, role = '') {
+export async function gateBlock(tool, input, transcript, model, dry = false, role = '', transcriptPath = '') {
   if (!/^(Write|Edit|MultiEdit|NotebookEdit|Bash|PowerShell)$|^mcp__github__/.test(tool)) return null
   let mod
   try { mod = await loadCounter() } catch (e) {
@@ -896,7 +944,7 @@ export async function gateBlock(tool, input, transcript, model, dry = false, rol
   }
   try {
     const t = transcript()
-    const why = mod.gateStep(tool, input, { model, dry, role, calls: /gate-rounds\.mjs|\bGate\b/.test(JSON.stringify(input)) ? toolCalls(t) : [], humanAfter: (ref) => humanAfter(t, ref, mod.principalRow) })
+    const why = mod.gateStep(tool, input, { model, dry, role, calls: /gate-rounds\.mjs|\bGate\b/.test(JSON.stringify(input)) ? withReports(toolCalls(t), transcriptPath) : [], humanAfter: (ref) => humanAfter(t, ref, mod) })
     if (why) return `rule-guard: ${why}`
     // The task ledger (M28): `approve` is checked here and leaves its grant; the name rule for the file is gate-rounds.mjs's.
     const cmd = /^(Bash|PowerShell)$/.test(tool) ? String(input?.command ?? '') : ''
@@ -934,6 +982,20 @@ async function cardLine() {
     return hash ? `Card refreshed ${hash}: the project folder's COORDINATOR-CARD.md, ROSTER.md and briefs/ now match main; the coordinator reads them again.` : ''
   } catch { return '' }
 }
+// M50 slice C: every checked start writes one count file in its project's folder (card-render.mjs, logStart); never stops the start.
+export async function countStart({ session, brief, checkNow, modelNote, guard, card }) {
+  try {
+    const { logStart, startOutcome, cardHash } = await import(new URL('./card-render.mjs', import.meta.url))
+    const base = dirname(fileURLToPath(import.meta.url))
+    const plain = brief.replace(/[*_`]/g, '')
+    const field = (re) => plain.match(re)?.[1]?.trim() ?? ''
+    const project = brief.match(/<project\b[^>]*\bname=\\?"([^"\\]+)/)?.[1] ?? brief.match(/<project\b[^>]*\bid=\\?"([^"\\]+)/)?.[1] ?? ''
+    logStart({ session, project, role: field(/\bRole:[ \t]*([^·|\n]+)/i), kit: field(/\bKit:[ \t]*([\w-]+)/i), size: field(/\bSize:[ \t]*([SML])\b/i), guard: guard.match(/Guards in this session: (\w+)/)?.[1] ?? '', card: card.match(/Card refreshed (\w+)/)?.[1] ?? (existsSync(join(base, 'docs', 'TEAMS.md')) ? cardHash(base) : ''), ...startOutcome(checkNow, modelNote) })
+  } catch { /* counting is never a reason to stop a start */ }
+}
+async function countRelay(session) {
+  try { (await import(new URL('./card-render.mjs', import.meta.url))).noteRelay(session, !existsSync(lockFile(session))) } catch { /* same */ }
+}
 export async function gateBriefContext(brief, model) {
   try { return (await loadCounter()).gateBrief(brief, { model }) } catch { return '' }
 }
@@ -969,7 +1031,12 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           let relayNote = ''
           if (spawned || (lookup && brief !== prompt)) updateLock(session, checkNow)
           else if (existsSync(lockFile(session)) && COORDINATOR_RELAY.test(prompt)) relayNote = await relayRebrief(session, prompt, cwd, model, transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : '')
-          const context = [checkNow, relayNote, spawned || (lookup && brief !== prompt) ? await gateBriefContext(brief, model) : '', spawned || (lookup && brief !== prompt) ? await guardLine() : '', spawned || (lookup && brief !== prompt) ? await cardLine() : '', modelOnce(brief, transcriptPath, session), await roleContext(brief, cwd, session), promptContext(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
+          const isStart = spawned || (lookup && brief !== prompt)
+          const modelNote = modelOnce(brief, transcriptPath, session)
+          const guard = isStart ? await guardLine() : ''
+          const card = isStart ? await cardLine() : ''
+          if (isStart) await countStart({ session, brief, checkNow, modelNote, guard, card })
+          const context = [checkNow, relayNote, isStart ? await gateBriefContext(brief, model) : '', guard, card, modelNote, await roleContext(brief, cwd, session), await stopNote(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
           if (context) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: context } }))
           return
         }
@@ -986,10 +1053,10 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         const gateRole = session ? read(join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)).trim() : ''
         const planNote = await recordPlanChecks(transcript, agentId, cwd, session) // before the gates: `approve` reads the check this just recorded
         // M50: a relay that reached the thread mid-turn may never have fired the prompt hook; the transcript has it, so a locked thread re-reads it at its next tool call.
-        if (session && existsSync(lockFile(session))) { const t = transcript(); const last = coordinatorRelays(t).at(-1); if (last) await relayRebrief(session, last, cwd, knownModel(session, t), t) }
+        if (session && existsSync(lockFile(session))) { const t = transcript(); const last = coordinatorRelays(t, await projectsOrigin()).at(-1); if (last) await relayRebrief(session, last, cwd, knownModel(session, t), t) }
         let block = lockBlock(tool, session)
           ?? handsOff(tool, input ?? {}, gateRole, setupRoot(cwd))
-          ?? (await gateBlock(tool, input ?? {}, transcript, sessionModel(transcript()), true, gateRole))
+          ?? (await gateBlock(tool, input ?? {}, transcript, sessionModel(transcript()), true, gateRole, transcriptPath))
           ?? decide(tool, input ?? {}, process.env, session ? read(shipped).split('\n') : [], () => threadBoard(toolCalls(transcript())))
           ?? canaryMissing(tool, input ?? {}, session ? read(join(process.env.CLAUDE_SETUP_HOME || homedir(), '.claude', 'claude-setup', 'booted', `${String(session).replace(/\W/g, '')}.canary`)) : '', transcript)
           ?? receiptBlock(tool, input ?? {}, session, cwd, agentId, transcript)
@@ -1001,7 +1068,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           ?? blenderServerBusy(tool, input ?? {}, listProcs)
           ?? blenderDocsMissing(tool, input ?? {}, sessionTranscript)
           ?? (grillMissing(tool, input ?? {}, transcript) ? 'rule-guard: a Planner at size M or L grills first (CLAUDE.md, No fog; operator SKILL.md, Grill first): post the real-moment question (when it comes from his life) and up to 2 request_decision cards (goal, taste), each with your recommended answer, then write the plan on the answers (or the recommendations while he is away).' : null)
-        if (!block) block = await gateBlock(tool, input ?? {}, transcript, sessionModel(transcript()), false, gateRole) // commit the round only now: no other guard refused the post
+        if (!block) block = await gateBlock(tool, input ?? {}, transcript, sessionModel(transcript()), false, gateRole, transcriptPath) // commit the round only now: no other guard refused the post
         if (!block && session && tool === 'Artifact' && input?.url && input.file_path) writeFileSync(shipped, `${input.file_path}\n`, { flag: 'a' })
         if (block) { process.stderr.write(block); process.exitCode = 2 }
         else {

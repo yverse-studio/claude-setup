@@ -11,6 +11,7 @@ frames and lip-closure frames for the Critic). The heavy models run in their own
 processes, one after the other, so 8 GB RAM and 8 GB VRAM are enough. Stdlib only here.
 """
 import argparse
+import importlib.util
 import json
 import os
 import re
@@ -20,7 +21,21 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-TOOLS = Path(os.environ.get("TWIN_TOOLS", Path.home() / "twin-tools"))
+
+
+def tools_dir():
+    """TWIN_TOOLS wins; else the studio's AI tools folder (config/paths.json `ai`, docs/laptop-folders.md); else stop."""
+    if os.environ.get("TWIN_TOOLS"):
+        return Path(os.environ["TWIN_TOOLS"])
+    table = HERE.parents[3] / "scripts" / "paths.py"
+    if not table.exists():
+        raise SystemExit("set TWIN_TOOLS (the folder that holds chatterbox/ and MuseTalk/)")
+    spec = importlib.util.spec_from_file_location("studio_paths", table)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return Path(mod.path("ai"))
+
+
 FFMPEG = os.environ.get("TWIN_FFMPEG", "ffmpeg")
 FFPROBE = os.environ.get("TWIN_FFPROBE", "ffprobe")
 
@@ -262,7 +277,7 @@ def make_voice(twin, manifest, text, mood, out):
     ref = twin / "voice" / manifest["voice"][ref_name]["ref"]
     exaggeration, cfg = VOICE_KNOBS[mood]
     (out / "script.txt").write_text(text, encoding="utf-8")
-    py = venv_python(TOOLS / "chatterbox")
+    py = venv_python(tools_dir() / "chatterbox")
     run([py, HERE / "voice.py", out / "script.txt", ref, out / "voice.wav", out / "words.json",
          "--exaggeration", exaggeration, "--cfg", cfg, "--max-wer", MAX_WER])
     return json.loads((out / "words.json").read_text(encoding="utf-8"))
@@ -271,7 +286,7 @@ def make_voice(twin, manifest, text, mood, out):
 def lipsync(engine, clip, voice, out):
     face = out / "face.mp4"
     if engine == "musetalk":
-        tool = TOOLS / "MuseTalk"
+        tool = tools_dir() / "MuseTalk"
         cfg = out / "musetalk.yaml"
         cfg.write_text(musetalk_config(clip, voice), encoding="utf-8")
         results = out / "musetalk"
@@ -283,7 +298,7 @@ def lipsync(engine, clip, voice, out):
             raise SystemExit("MuseTalk wrote no video")
         raw = made[-1]
     else:
-        tool = TOOLS / "LatentSync"
+        tool = tools_dir() / "LatentSync"
         raw = out / "latentsync.mp4"
         run([venv_python(tool), "-m", "scripts.inference", "--unet_config_path", "configs/unet/stage2.yaml",
              "--inference_ckpt_path", "checkpoints/latentsync_unet.pt", "--inference_steps", "25",
@@ -327,9 +342,9 @@ def cmd_say(args):
 def cmd_doctor(_args):
     checks = [("ffmpeg", shutil.which(FFMPEG)), ("ffprobe", shutil.which(FFPROBE)),
               ("nvidia-smi", shutil.which("nvidia-smi"))]
-    checks += [(f"{t} venv", venv_python(TOOLS / t).exists()) for t in ("chatterbox", "MuseTalk")]
-    checks += [("MuseTalk weights", (TOOLS / "MuseTalk/models/musetalkV15/unet.pth").exists()),
-               ("LatentSync (optional)", (TOOLS / "LatentSync/checkpoints/latentsync_unet.pt").exists())]
+    checks += [(f"{t} venv", venv_python(tools_dir() / t).exists()) for t in ("chatterbox", "MuseTalk")]
+    checks += [("MuseTalk weights", (tools_dir() / "MuseTalk/models/musetalkV15/unet.pth").exists()),
+               ("LatentSync (optional)", (tools_dir() / "LatentSync/checkpoints/latentsync_unet.pt").exists())]
     for name, ok in checks:
         print(("ok   " if ok else "MISS ") + name)
     if shutil.which("nvidia-smi"):

@@ -4,7 +4,7 @@
 // briefs/<role>.md. All of it is rendered from docs/TEAMS.md, docs/MAP.md and BRIEF_FIELDS (global/team-guard.mjs); nothing in it is written by hand.
 // scripts/coordinator-card.mjs is the CLI over it, rule-guard calls refreshCard() when a thread starts (docs/MAP.md, Coordinator card).
 import { createHash, randomBytes } from 'node:crypto'
-import { existsSync, lstatSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { BRIEF_FIELDS, GATE_BUILDER_ROLES, GUARD_FILES, badRole, badTeam, coordinatorCard, kitNames, kitRows, rosterNames } from './team-guard.mjs'
 import { GATE_ROLES, roleOf } from './rule-guard.mjs'
@@ -17,6 +17,7 @@ const today = () => new Date().toISOString().slice(0, 10)
 const PREFLIGHT = `## Before every reply
 
 - How we work, one loop: every thread has a role from the Roster (only a mini or unclear task has \`Role: none\`); the role loads its playbook, skills and workflows from claude-setup; what it lacks a Researcher finds; what holds for every project goes back to claude-setup. team-guard refuses a brief with no Role line or an unknown role or kit name; rule-guard's start receipt shows the role loaded and ends with \`card #<hash>\`: another hash than this card's header means Read this card again.
+- Downloads/assets: Character TD runs \`asset-intake\`; Archivist indexes after the gate.
 - Luna: at most 15 lines / 1,500 characters, at least one kaomoji, result first, in his language.
 - Facts (code, PR, device, model, plan) only from a source read this turn and linked: PLAN.json, NOW.md, list_threads, a thread's last reply. None in reach: "prüfe ich", ask the owning thread; silent for a thread until it answered; a dropped device is one line the same turn.
 - Every start_thread passes \`model\` and a brief copied from briefs/<role>.md (section Thread brief). Before a message_thread with work: same role and topic as the thread's title, thread not done; else a new thread. Folder moves and cleanups never go to a builder.
@@ -24,7 +25,7 @@ const PREFLIGHT = `## Before every reply
 - Every ask or pointer carries its clickable link ([title](#cmsg_…), URL, [Project settings](#project-settings/resources)); every ask of yskills gets a thread, a PR or a \`Done:\` line the same turn; a skill idea is a PR (\`new-skill\`), never a propose_skills card.
 - A PR whose \`Depends on: #n\` is parked or blocked: one chat line the same turn naming both PRs and the fix.
 - Ask yskills only the real moment (a level from his life), goal, taste and the ask-first list; build details, process and order you decide, in one line.
-- Hard round counter (hook): 3 rounds at 4.5 (4.8 important), 4-6 Fable director, 7+ a card; no merge below; you release none. 3 failed rounds on one asset: re-plan. A gate round's brief has the Round, Asset and Picture card lines (briefs/reviewer.md). Controls and World life first.
+- Hard round counter (hook): 3 rounds at 4.5 (4.8 important), 4-6 Fable director, 7+ a card; no merge below; you release none; a PASS needs no OK. 3 failed rounds on one asset: re-plan. A gate round's brief has the Round, Asset and Picture card lines (briefs/reviewer.md). Controls and World life first.
 - A new rule is a PR to claude-setup, never only a Project settings edit.
 - A second fresh thread for one asset is a quality-loss trigger: send the handoff files to the Planner for a diagnosis first, the handoff carries the round and every approach tried, and the restart is not posted (docs/WORKFLOW.md, Handoff triggers).
 - Plan: /mnt/project-files/PLAN.json is the one plan; threads write it (scripts/plan.mjs), you only Read it before every reply, then write_custom_view. "Stand?": goal, x/y done, doing, waits on him, next 3. Ping only when he must act, rate, or a part is Done (link).
@@ -180,6 +181,14 @@ export function renderAll({ base, hash = cardHash(base), date = today() }) {
   for (const role of rosterNames(teams)) { const text = renderBrief(role, teams); if (text) files.set(`briefs/${briefFileName(role)}`, text) }
   return files
 }
+// The folder is shared by every thread of the project: never write through a link planted there, and never reuse a guessable temp name.
+// The one writer of writeAll and the start log: temp name, then rename; a linked folder or file is refused.
+function safeWrite(to, text, name = to) {
+  mkdirSync(join(to, '..'), { recursive: true })
+  if (lstatSync(join(to, '..')).isSymbolicLink() || (existsSync(to) && lstatSync(to).isSymbolicLink())) throw new Error(`card-render: ${name} is behind a symlink, refused`)
+  const tmp = `${to}.${randomBytes(6).toString('hex')}.new`
+  try { writeFileSync(tmp, text, { flag: 'wx' }); renameSync(tmp, to) } catch (e) { rmSync(tmp, { force: true }); throw e }
+}
 // Writes only what changed (temp name, then rename), so two threads writing at once leave a whole file, and a second run writes nothing.
 export function writeAll(dir, files) {
   let written = 0
@@ -187,11 +196,7 @@ export function writeAll(dir, files) {
   for (const [name, text] of [...files].sort(([a], [b]) => (a === 'COORDINATOR-CARD.md') - (b === 'COORDINATOR-CARD.md'))) {
     const to = join(dir, name)
     if (existsSync(to) && readFileSync(to, 'utf8') === text) continue
-    mkdirSync(join(to, '..'), { recursive: true })
-    // The folder is shared by every thread of the project: never write through a link planted there, and never reuse a guessable temp name.
-    if (lstatSync(join(to, '..')).isSymbolicLink() || (existsSync(to) && lstatSync(to).isSymbolicLink())) throw new Error(`card-render: ${name} is behind a symlink, refused`)
-    const tmp = `${to}.${randomBytes(6).toString('hex')}.new`
-    try { writeFileSync(tmp, text, { flag: 'wx' }); renameSync(tmp, to) } catch (e) { rmSync(tmp, { force: true }); throw e }
+    safeWrite(to, text, name)
     written++
   }
   return written
@@ -212,4 +217,62 @@ export function refreshCard(base, out = projectFolder()) {
     writeAll(out, renderAll({ base, hash }))
     return hash
   } catch { return null }
+}
+
+// ---- M50 slice C: every thread start is counted, so the false-start rate is a number (docs/WORKFLOW.md, Thread starts)
+// One file per start, `brief-log/<date>-<session>.json` in the project's rulebook folder; one writer per file, so two threads never overwrite each other.
+// Outcomes: clean, repaired, refused (a judgment gap), wrong-model (a restart is needed), duplicate (reserved: the start was not needed).
+export const OUTCOMES = ['clean', 'repaired', 'refused', 'wrong-model', 'duplicate']
+export const FALSE_STARTS = ['refused', 'wrong-model', 'duplicate']
+// The outcome of one start from the brief check's text (rule-guard briefCheck) and the model check's text.
+export function startOutcome(check = '', modelCheckText = '') {
+  if (/^Model check\b/.test(modelCheckText)) return { outcome: 'wrong-model', reasons: ['model'] }
+  const full = [...String(check).matchAll(/\((\d+)\) (.*?)(?= \(\d+\) |\. Do no work)/g)].map((m) => m[2].trim())
+  if (/^Brief check\b/.test(check)) return { outcome: full.some((i) => /ask the coordinator to restart it on that model/.test(i)) ? 'wrong-model' : 'refused', reasons: full.map((i) => i.slice(0, 80)) }
+  // Any repair text counts, whatever it repairs: the missing-lines note and the gate role's Prior art note both start with `Brief repair (no block):`.
+  const repair = String(check).match(/Brief repair \(no block\): ([^\n]*)/)
+  if (!repair) return { outcome: 'clean', reasons: [] }
+  const lacks = repair[1].match(/^the brief lacks ([^.]*?)\. Work as if/)?.[1]
+  return { outcome: 'repaired', reasons: lacks ? lacks.split(', ') : [repair[1].slice(0, 60)] }
+}
+const logName = (session, date) => `${date}-${String(session).replace(/\W/g, '').slice(0, 40)}.json`
+const writeLog = (file, entry) => safeWrite(file, `${JSON.stringify(entry)}\n`)
+// Writes the start's file. `info`: { session, project, role, kit, size, guard, card, outcome, reasons }. A failure never stops the start.
+export function logStart(info, out = projectFolder(), now = new Date()) {
+  try {
+    if (!out || !info?.session) return null
+    const date = now.toISOString().slice(0, 10)
+    const file = join(out, 'brief-log', logName(info.session, date))
+    if (existsSync(file)) return file // the hook may fire twice for one start: the first entry stands
+    writeLog(file, { at: now.toISOString(), project: '', role: '', kit: '', size: '', guard: '', card: '', outcome: 'clean', reasons: [], relays: 0, lifted: false, ...info })
+    return file
+  } catch { return null }
+}
+// A later relay on a refused start is added to the same file (`lifted` once a relay brings the thread to work).
+export function noteRelay(session, lifted, out = projectFolder()) {
+  try {
+    if (!out || !session) return false
+    const files = existsSync(join(out, 'brief-log')) ? readdirSync(join(out, 'brief-log')).filter((f) => f.endsWith(`-${String(session).replace(/\W/g, '').slice(0, 40)}.json`)) : []
+    if (!files.length) return false
+    const file = join(out, 'brief-log', files.sort().at(-1))
+    const entry = JSON.parse(readFileSync(file, 'utf8'))
+    if (!FALSE_STARTS.includes(entry.outcome)) return false
+    writeLog(file, { ...entry, relays: (entry.relays ?? 0) + 1, lifted: Boolean(entry.lifted || lifted) })
+    return true
+  } catch { return false }
+}
+// The count over a folder: `starts N: clean a, repaired b, refused c, wrong-model d, duplicate e (false starts f, g%); top reason: ...`. `since` is a Date or null.
+export function statsLine(out = projectFolder(), since = null) {
+  const dir = out ? join(out, 'brief-log') : ''
+  const entries = []
+  for (const f of dir && existsSync(dir) ? readdirSync(dir) : []) {
+    try { const e = JSON.parse(readFileSync(join(dir, f), 'utf8')); if (!since || new Date(e.at) >= since) entries.push(e) } catch { /* a cut file counts as nothing */ }
+  }
+  const count = Object.fromEntries(OUTCOMES.map((o) => [o, entries.filter((e) => e.outcome === o).length]))
+  const bad = FALSE_STARTS.reduce((n, o) => n + count[o], 0)
+  const reasons = new Map()
+  for (const e of entries.filter((x) => x.outcome !== 'clean')) for (const r of e.reasons ?? []) reasons.set(r, (reasons.get(r) ?? 0) + 1)
+  const top = [...reasons].sort((a, b) => b[1] - a[1])[0]
+  const pct = entries.length ? Math.round((100 * bad) / entries.length) : 0
+  return `starts ${entries.length}: ${OUTCOMES.map((o) => `${o} ${count[o]}`).join(', ')} (false starts ${bad}, ${pct}%); top reason: ${top ? `${top[0]} (${top[1]}x)` : 'none'}`
 }

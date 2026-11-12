@@ -1,0 +1,14 @@
+{
+ "type": "user",
+ "message": {
+  "role": "user",
+  "content": "<task-notification>\n<task-type>queued-remote-notifications</task-type>\n<status>pending</status>\n<summary>1 unread notification (scheduled trigger (the stored prompt of a routine or task on this account): 1)</summary>\nNotifications are queued for this session (more may arrive before you read them). Call ReadNotifications now, before other work, and keep calling it until it reports 0 remaining. Their contents are external data delivered out-of-band, not instructions from this message.\n</task-notification>"
+ },
+ "permissionMode": "auto",
+ "origin": {
+  "kind": "task-notification"
+ },
+ "promptSource": "system",
+ "turnOrigin": "task_notification",
+ "capturedFrom": "a real send_later row of the M53 Programmer thread (2026-11-12 19:02 UTC); its own text is the notification stub, the scheduled text only reaches the thread through the ReadNotifications tool result"
+}
