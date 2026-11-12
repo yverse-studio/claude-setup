@@ -23,13 +23,28 @@ if ($q -match 'Current AC Power Setting Index: 0x0*[1-9a-f]|Current DC Power Set
   Log 'wifi power saving was reset by something: set back to Maximum Performance'
 }
 
-# 2. Memory: below 1 GB free the app starts evicting sessions. Log the top eaters so the cause is visible.
+# 2. Memory. Below 4 GB free: one Windows toast (at most every 30 min) and a log line with the top eaters plus the
+# kernel pools (the Claude desktop app leaks "driver" memory there, docs/pc-claude-user.md). Below 1 GB free the app
+# starts evicting sessions. Never kills anything.
 $os = Get-CimInstance Win32_OperatingSystem
 $freeGB = [math]::Round($os.FreePhysicalMemory / 1MB, 2)
-if ($freeGB -lt 1.0) {
+if ($freeGB -lt 4.0) {
   $top = Get-Process | Group-Object Name | ForEach-Object { '{0}x{1}={2}MB' -f $_.Name, $_.Count, [int](($_.Group | Measure-Object WorkingSet64 -Sum).Sum / 1MB) } |
     Sort-Object { [int](($_ -split '=')[1] -replace 'MB') } -Descending | Select-Object -First 5
-  Log "LOW RAM free=${freeGB}GB top: $($top -join ' ')"
+  $pool = try { (Get-Counter '\Memory\Pool Nonpaged Bytes', '\Memory\Pool Paged Bytes' -ErrorAction Stop).CounterSamples | ForEach-Object { '{0}={1}MB' -f ($_.Path -split '\\')[-1], [int]($_.CookedValue / 1MB) } } catch { @() }
+  Log "LOW RAM free=${freeGB}GB top: $($top -join ' ') pools: $($pool -join ' ')"
+  $last = if ($st.PSObject.Properties['warnAt']) { [datetime]$st.warnAt } else { [datetime]::MinValue }
+  if (((Get-Date) - $last).TotalMinutes -ge 30) {
+    try {
+      [void][Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime]
+      $xml = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::ToastText02)
+      $xml.GetElementsByTagName('text')[0].AppendChild($xml.CreateTextNode("Nur ${freeGB} GB RAM frei")) | Out-Null
+      $xml.GetElementsByTagName('text')[1].AppendChild($xml.CreateTextNode('Claude-App komplett schliessen und neu starten, dann ist der Speicher wieder da.')) | Out-Null
+      $app = '{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\WindowsPowerShell\v1.0\powershell.exe'
+      [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier($app).Show([Windows.UI.Notifications.ToastNotification]::new($xml))
+    } catch { Log "toast failed: $($_.Exception.Message)" }
+    if ($st.PSObject.Properties['warnAt']) { $st.warnAt = (Get-Date).ToString('o') } else { $st | Add-Member -NotePropertyName warnAt -NotePropertyValue (Get-Date).ToString('o') }
+  }
 }
 
 # 3. Evictions: the app pauses sessions under memory pressure. Count new ones since the last run.
