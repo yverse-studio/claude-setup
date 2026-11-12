@@ -376,9 +376,11 @@ export async function briefCheck(prompt, cwd, model = null, any = false) {
   const role = guard.stamped(brief) ? roleOf(brief, teams) : null
   const kit = plain.match(/\bKit:[ \t]*([\w-]+)/i)?.[1]?.toLowerCase()
   if (!guard.stamped(brief)) found.push('no `Role: · Kit: · Size:` stamp line')
-  else if (!role?.row) found.push(`the Role line names no role of the Roster (docs/TEAMS.md); "none" or a role of your own is not allowed in a thread${kit && guard.rolesForKit(teams, kit).length ? `; on the \`${kit}\` kit pick one of ${guard.rolesForKit(teams, kit).join(', ')}` : ''}${/director/i.test(plain.match(/^[ \t>-]*Role:[^\n]*/im)?.[0] ?? '') ? '; a gate director round is `Role: Reviewer` on Fable (docs/TEAMS.md, Models; gate.md, Rounds)' : ''}`)
+  else if (!role?.row) found.push(`the Role line names no role of the Roster (docs/TEAMS.md); "none" or a role of your own is not allowed in a thread${kit && guard.rolesForKit(teams, kit).length ? `; on the \`${kit}\` kit pick one of ${guard.rolesForKit(teams, kit).join(', ')}` : ''}`)
   const team = guard.stamped(brief) && guard.badTeam(brief, teams)
-  if (team) found.push(team)
+  // issue #479 part 1: a gate director round is no thread role of its own.
+  const director = /^[ \t>-]*Role:[ \t]*(Fable )?director\b/im.test(plain) ? '; a gate director round is `Role: Reviewer` on Fable (docs/TEAMS.md, Models; gate.md, Rounds)' : ''
+  if (team || director) found.push(`${team || 'the Director is no thread role'}${director}`)
   const topic = guard.badTopic(brief, read(join(setupRoot(cwd), guard.CHECKLISTS)))
   if (topic) found.push(topic)
   const sorted = guard.classify(brief)

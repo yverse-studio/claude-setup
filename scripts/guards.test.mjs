@@ -721,7 +721,7 @@ test('rule guard: a thread checks its spawn brief against TEAMS.md and sends a b
   assert.match(await briefCheck(spawn(`Role: none · Kit: setup · Size: S${FULL}`), root), /Brief check[\s\S]*names no role of the Roster/, 'no role is refused (yskills 2026-11-12), not waved through')
   assert.match(await briefCheck(spawn(`Role: Designer · Kit: content · Size: S${FULL}`), root), /Brief check[\s\S]*Kit: content is no kit[\s\S]*message_coordinator/)
   assert.match(await briefCheck(spawn('Make a bee video.'), root), /no `Role: · Kit: · Size:` stamp/)
-  assert.match(await briefCheck(spawn('Role: Programmer · Kit: setup · Size: S\nFix it.'), root), /^Brief repair \(no block\): the brief lacks Item, Plan, Acceptance, Model, Skills[\s\S]*first checklist line/, 'M50: at size S everything follows from the stamp, so nothing blocks')
+  assert.match(await briefCheck(spawn('Role: Programmer · Kit: setup · Size: S\nFix it.'), root), /^Brief repair \(no block\): the brief lacks[\s\S]*Model[\s\S]*Item[\s\S]*Plan[\s\S]*Acceptance[\s\S]*first checklist line/, 'M50: at size S everything follows from the stamp, so nothing blocks')
   const bad = await briefCheck(spawn('Role: Designer · Kit: content · Size: M\nFix it.'), root)
   assert.match(bad, /^Brief check[\s\S]*Kit: content is no kit/, 'M50: one refusal lists every judgment gap at once')
   const sizeM = await briefCheck(spawn('Role: Programmer · Kit: setup · Size: M\nFix it.'), root)

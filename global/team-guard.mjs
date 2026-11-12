@@ -272,7 +272,7 @@ const gateRolePlain = (plain) => /^[ \t>-]*Role:[ \t]*(Tester|Reviewer|Security|
 const line = (re) => (plain) => re.test(plain)
 const sizeCls = (plain) => (small(plain) ? 'recoverable' : 'judgment')
 export const BRIEF_FIELDS = [
-  { key: 'Item', name: 'Item: (M<n> from PLAN.json, or new)', tpl: 'Item: <PLAN.json item M<n> or new>', ok: line(/^[ \t>-]*Item:[ \t]*(M\d+|new)\b/im), cls: sizeCls, fill: (p) => `Item: ${p.match(/^[ \t>-]*Item:[^\n]*?\b(M\d+)\b/im)?.[1] ?? 'new'}` },
+  { key: 'Item', name: 'Item: (M<n> from PLAN.json, or new)', tpl: 'Item: <PLAN.json item M<n> or new>', ok: line(/^[ \t>-]*Item:[^\n]*?\b(M\d+|new)\b/im), clean: /^[ \t>-]*Item:[ \t]*(M\d+|new)[ \t]*$/im, cls: sizeCls, fill: (p) => `Item: ${p.match(/^[ \t>-]*Item:[^\n]*?\b(M\d+)\b/im)?.[1] ?? 'new'}` },
   { key: 'Plan', name: 'Plan: (the plan file or card this thread builds)', tpl: 'Plan: <plan file or card it builds>', ok: line(/^[ \t>-]*Plan:[ \t]*[^<\s]/im), cls: sizeCls, fill: () => 'Plan: n/a, size S' },
   { key: 'Acceptance', name: 'Acceptance: (what counts as accepted)', tpl: 'Acceptance: <what counts as accepted>', ok: line(/^[ \t>-]*Acceptance:[ \t]*[^<\s]/im), cls: sizeCls, fill: () => 'Acceptance: propose one from the task, say so in your first checklist line' },
   { key: 'Model', name: 'Model:', tpl: 'Model: <model id of the role\'s Roster row>', ok: line(/^[ \t>-]*Model:[ \t]*[^<\s]/im), cls: () => 'derived', fill: () => 'Model: the model this thread runs on' },
@@ -282,12 +282,12 @@ export const BRIEF_FIELDS = [
   { key: 'Start', name: 'Start: (read MEMORY.md first)', tpl: 'Start: read MEMORY.md first, then <the files this task needs>', ok: line(/^[ \t>-]*Start:[^\n]*MEMORY\.md/im), cls: () => 'derived', fill: () => 'Start: read MEMORY.md first' },
   // Companyxy 2026-11-12: finished threads stayed open and work lay twice. The thread lists the threads itself before it builds.
   { key: 'Threads', name: 'Threads: (list_threads checked, none open on this topic)', tpl: 'Threads: <list_threads checked: none open on this topic | continues <title of the open thread>>', ok: line(/^[ \t>-]*Threads:[ \t]*[^<\s][^\n]{8,}$/im), cls: () => 'recoverable', fill: () => 'Threads: call list_threads yourself and reuse an open thread of this topic' },
-  { key: 'Prior art', strict: false, tpl: 'Prior art: <sources named: repo, path, URL, #n> -> copy | adapt | reuse | build, because <why>', ok: (p) => !needsPriorArt(p), cls: (p) => (gateRolePlain(p) ? 'derived' : 'recoverable'), fill: (p) => (gateRolePlain(p) ? 'Prior art: .claude/skills/operator/gate.md and the kit\'s checks -> adapt, because the gate rules exist' : 'Prior art: to find: <where you look before you build>, look before you build') },
+  { key: 'Prior art', strict: false, tpl: 'Prior art: <sources named: repo, path, URL, #n> -> copy | adapt | reuse | build, because <why>', ok: (p) => !needsPriorArt(p), cls: (p) => (gateRolePlain(p) ? 'derived' : 'recoverable'), fill: (p) => (gateRolePlain(p) ? 'Prior art: .claude/skills/operator/gate.md and the kit\'s checks -> adapt, because the gate rules exist' : 'Prior art: to find: the repo and docs first, sources named before you build') },
   { key: 'Gate', name: 'Gate: <Reviewer thread> before owner, or `Gate: n/a <why no owner-facing result>` (a builder, designer or animator brief at size M or L)', tpl: 'Gate: <Reviewer thread> before owner (M or L)', applies: needsGate, ok: line(GATE_LINE), cls: () => 'recoverable', fill: () => 'Gate: ask the coordinator (message_coordinator) for the Reviewer thread, then write `Gate: Reviewer · <what> before owner`' },
   { key: 'Sheet', name: 'Sheet: (approved cast sheet, docs/preproduction-workflow.md)', tpl: 'Sheet: <approved cast sheet .md, or `n/a <why no body, face or outfit job>`; Programmer or Animator on a game or story kit>', applies: needsSheet, ok: line(/^[ \t>-]*Sheet:[ \t]*[^<\n]*\.md\b/im), cls: () => 'judgment' },
   { key: 'Look-Lock', name: 'Look-Lock: (owner card of the look)', tpl: 'Look-Lock: <owner card link of the approved look; not needed with `Sheet: n/a`>', applies: needsSheet, ok: line(/^[ \t>-]*Look-Lock:[ \t]*[^<\n]*(https?:\/\/|card)/im), cls: () => 'judgment' },
   { key: 'Researcher', name: 'Researcher: (the task asks for research)', tpl: 'Researcher: <subagent and model; research tasks only>', applies: (p) => ASKS_RESEARCH.test(p) && !/\bRole:[ \t]*Researcher\b/i.test(p), ok: line(/^[ \t>-]*Researcher:[ \t]*[^<\s]/im), cls: () => 'recoverable', fill: () => 'Researcher: ask the coordinator for a Researcher thread (message_coordinator) and go on meanwhile' },
-  { key: 'Tester', strict: false, tpl: 'Tester: <Tester thread; size L Programmer only>', ok: (p) => !needsTester(p), cls: () => 'judgment' },
+  { key: 'Tester', strict: false, tpl: 'Tester: <Tester thread; size L Programmer only>', applies: (p) => /^[ \t>-]*Role:[ \t]*Programmer\b/im.test(p), ok: (p) => !needsTester(p), cls: () => 'judgment' },
 ]
 export function missingLines(text) {
   const plain = text.replace(/[*_`]/g, '')
@@ -299,6 +299,8 @@ export function classify(text) {
   const out = { judgment: [], recoverable: [], derived: [] }
   const has = (k) => BRIEF_FIELDS.find((f) => f.key === k).ok(plain)
   for (const f of BRIEF_FIELDS) {
+    // A line that is there but in the wrong format (`Item: PLAN.json item M29`) is a derived repair, never a gap.
+    if (f.clean && f.ok(plain) && !f.clean.test(plain)) out.derived.push({ key: f.key, tpl: f.tpl, fill: f.fill(plain) })
     if (!(f.applies?.(plain) ?? true) || f.ok(plain) || (f.key === 'Acceptance' && has('Done when')) || (f.key === 'Done when' && has('Acceptance'))) continue
     const cls = f.cls(plain)
     out[cls].push({ key: f.key, tpl: f.tpl, fill: f.fill?.(plain) })
