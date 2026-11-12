@@ -1221,8 +1221,14 @@ const INTERPRETERS = /^(node(js)?|python[\d.]*|pypy[\d.]*|bun|deno|ruby[\d.]*|pe
 const evalish = (s) => s.args[0] === 'eval' || s.args.some((a) => /^-(?:[a-zA-Z]*[ecpE]|-eval|-print)/.test(a))
 // Stdin may be fed code: a heredoc, a here-string, a pipe or a process substitution anywhere in the call (fail closed: no flag-value parsing).
 const stdinFed = (cmd) => /<<|\||<\(/.test(cmd)
-// The literal ledger folder, an installed guard or a session transcript path anywhere in the text.
-const holdsPath = (text, dir) => (dir && text.includes(`${dir.replace(/\/+$/, '')}/`)) || /(?:project-files|\.claude\/claude-setup)\/gate\//.test(text) || /\.claude\/projects\/\S*\.jsonl/.test(text) || new RegExp(`\\.claude[\\\\/]claude-setup[\\\\/](?:${GUARDS})\\.mjs`).test(text)
+// By stdin an interpreter is inline only when it has no script argument: no argument, "-", an argument under /dev/, or only flags and their
+// values (a script argument ends in a source extension). -m json.tool and -W error <<EOF stay inline; node scripts/x.mjs | head does not.
+const hasScript = (s) => s.args.some((a) => !a.startsWith('-') && !a.startsWith('/dev/') && /\.(?:[cm]?js|ts|py|rb|pl)$/i.test(a)) && !s.args.includes('-')
+// The ledger shape of `named`: the folder itself, a file directly in it, or grants/. Files below gate/<asset>/ are free (transition rule 6).
+const ledgerAt = (base) => new RegExp(`${base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\/+$/, '')}(?:/(?:grants(?:/|(?=[\\s'"]|$))|[^\\s/'"]+(?=[\\s'"]|$))|/?(?=[\\s'"]|$))`)
+const LEDGER_AT = [ledgerAt('project-files/gate'), ledgerAt('.claude/claude-setup/gate')]
+// The literal ledger (folder, direct file, grants/), an installed guard or a session transcript path anywhere in the text.
+const holdsPath = (text, dir) => (dir && ledgerAt(dir).test(text)) || LEDGER_AT.some((re) => re.test(text)) || /\.claude\/projects\/\S*\.jsonl/.test(text) || new RegExp(`\\.claude[\\\\/]claude-setup[\\\\/](?:${GUARDS})\\.mjs`).test(text)
 function bashProblem(cmd, dir, ctx) {
   const { list, bad } = simpleCommands(cmd)
   if (bad && /\bgh\b|gate/.test(cmd)) return 'gate ledger: this command has unbalanced quotes and mentions gh or gate, so it cannot be read; write it plainly (gate.md, Rounds).'
@@ -1240,7 +1246,7 @@ function bashProblem(cmd, dir, ctx) {
     // An inline script (node -e, python -c) that holds the ledger folder, an installed guard or a transcript path writes it as well as a redirect does (plan 2026-11-12 M28, test 4).
     // Inline code is an interpreter with an eval-ish flag or subcommand, or any interpreter in a call that feeds stdin (heredoc, here-string,
     // pipe). For it the path test runs over the whole call text, the stdin body and the pipe's left side included.
-    const inline = INTERPRETERS.test(base(s.a0)) && !isCounterCall(s) && (evalish(s) || stdinFed(cmd))
+    const inline = INTERPRETERS.test(base(s.a0)) && (evalish(s) || (stdinFed(cmd) && !hasScript(s)))
     if (inline && holdsPath(cmd, dir)) return `${msg} Read the ledger with cat, jq or the task-ledger status verb.`
     const script = s.a0 === 'node' ? s.args.find((a) => base(a) === 'gate-rounds.mjs') ?? s.args.find((a) => !a.startsWith('-')) : null
     if (script && base(script) === 'gate-rounds.mjs') {
@@ -1393,9 +1399,9 @@ cat > "$HOME/.claude/claude-setup/task-ledger.mjs" <<'TASK'
 // because the evidence would be fabricated: a transcript, ledger or grant file written another way than by its literal path, a copy of a guard,
 // a script file, a glob or variable that hides a name, a guard run by hand on a transcript the thread wrote, a read-only tool's own write or
 // escape (find -fprintf, git diff --output=, sed w, awk system(), sed e), git config keys other than alias that run code (core.fsmonitor,
-// diff.external, core.sshCommand, core.pager), an alias supplied through the environment (--config-env, GIT_CONFIG_*), xargs as a launcher.
+// diff.external, core.sshCommand, core.pager), an alias supplied through the environment (--config-env, GIT_CONFIG_*), xargs as a launcher, a dummy source-looking argument next to code on stdin (node -r a.js <<EOF).
 // What the Bash branch does read: find -exec and a git alias like bash -c; an interpreter with an eval flag or subcommand, or in a call that
-// feeds stdin (heredoc, here-string, pipe, process substitution), is inline code, and the literal-path test runs over the whole call (accepted
+// feeds stdin (heredoc, here-string, pipe, process substitution) and has no script argument, is inline code, and the literal-path test runs over the whole call (accepted
 // cost: cat <ledger> | python3 -m json.tool is refused; read it with cat, jq or the status verb). The next step is a writer
 // outside the sandbox (a CI workflow), not a longer list here.
 // CLI: task-ledger.mjs plan <asset> <PLAN.md> | approve <asset> <ref> | status <asset> | brief <asset>

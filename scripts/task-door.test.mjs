@@ -505,8 +505,14 @@ const ORDINARY = [
   'node global/rule-guard.mjs pre < /tmp/payload.json', 'node global/team-guard.mjs start < /tmp/payload.json', 'node ~/.claude/claude-setup/team-guard.mjs version',
   'bash -c "grep -n decide global/rule-guard.mjs"', 'timeout 60 node scripts/check.mjs --only rule-guard', 'python3 tools/count.py global/context-guard.mjs',
   'node ~/.claude/claude-setup/rule-guard.mjs read https://example.com', 'node --check global/task-ledger.mjs', 'env node scripts/pre-pr.mjs --body b.md --title "fix: team-guard reads the brief"',
+  // Round 6: an interpreter running a script file in a call with a pipe is not inline code; counter calls piped to head; files below gate/<asset>/ are free.
+  'node ~/.claude/claude-setup/rule-guard.mjs read https://example.com | head -50', 'node ~/.claude/claude-setup/team-guard.mjs version | head -2',
+  'node scripts/x.mjs /mnt/project-files/gate/o_r_1.json || echo missing', 'wc -l /root/.claude/projects/-home-user/abc.jsonl && node scripts/audit.mjs /root/.claude/projects/-home-user/abc.jsonl | tail -5',
+  'python3 -I tools/count.py /root/.claude/projects/-home-user/abc.jsonl | head -3', 'node scripts/shot.mjs --out /mnt/project-files/gate/o_r_7/r1/a.png 2>&1 | tail -2',
+  `node ~/.claude/claude-setup/task-ledger.mjs status ${ASSET} | head -5`, `node ~/.claude/claude-setup/gate-rounds.mjs status o/r#7 | head -5`,
+  `python3 -c "open('/mnt/project-files/gate/o_r_7/r1/a.png','wb')"`,
 ]
-test('director item 7: thirteen ordinary commands that name a guard pass the hook', () => {
+test('director item 7 and round 6: the ordinary commands that name a guard pass the hook', () => {
   const t = door()
   try { for (const c of ORDINARY) assert.equal(t.bash(c).status, 0, c) } finally { t.done() }
 })
