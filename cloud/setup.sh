@@ -1785,7 +1785,7 @@ async function roleContext(prompt, cwd, session) {
   const root = setupRoot(cwd)
   const role = roleOf(prompt, read(join(root, 'docs', 'TEAMS.md')))
   if (!role) return ''
-  writeFileSync(once, role.name)
+  writeFileSync(once, existsSync(lockFile(session)) ? '' : role.name) // a rejected brief gets its card once but an empty stamp (it could name a gate role); a coordinator re-brief stamps it (relayRebrief)
   const topic = role.name === 'Reviewer' ? await topicPlaybook(prompt, root) : null
   if (topic) return roleCard({ ...role, path: `${'.claude/skills/operator/checklists.md'} (${topic.name}) and gate.md, Scored gates` }, topic.text)
   return roleCard(role, role.path ? read(join(root, role.path)) || fetchRaw(role.path) : '')
@@ -2218,13 +2218,19 @@ export function updateLock(session, check) {
   if (BAD_BRIEF.test(check)) writeFileSync(f, check)
   else if (existsSync(f)) { try { unlinkSync(f) } catch { /* gone */ } } // any check that is no brief failure (an M-size note too) lifts it
 }
-// A corrected brief that arrives as a relay lifts the lock; it then stamps its role, as roleContext does for a spawn brief.
+// A corrected brief lifts the lock only when the coordinator itself relays it: the wrapper may follow the harness's own lead-in
+// (system-note, the "A message from this project's coordinator session" reminder), never a wake, message, note or another relay
+// that would quote it. It then stamps the role once, as roleContext does for a spawn brief: a non-empty stamp is never changed,
+// so a builder is never lifted into a gate role, while a gate thread whose first brief failed gets its role (#475 gate round 1).
+export const COORDINATOR_RELAY = /^(?:(?!<\/?(?:wake|message|note|relay|thread)\b)[\s\S])*?<coordinator-relay>\s*<relay\b[^>]*\bfrom=\\?"coordinator"/
 async function relayRebrief(session, prompt, cwd, model) {
+  if (!COORDINATOR_RELAY.test(prompt)) return
   const text = prompt.replace(/\\n/g, '\n')
   updateLock(session, await briefCheck(text, cwd, model, true))
-  if (existsSync(lockFile(session))) return
+  const stamp = join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)
+  if (existsSync(lockFile(session)) || read(stamp).trim()) return
   const role = roleOf(text, read(join(setupRoot(cwd), 'docs', 'TEAMS.md')))
-  if (role) writeFileSync(join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`), role.name)
+  if (role) writeFileSync(stamp, role.name)
 }
 export function lockBlock(tool, session) {
   const f = session ? lockFile(session) : ''
