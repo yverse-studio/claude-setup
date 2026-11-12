@@ -53,7 +53,8 @@ No garment work on a character before yskills has approved her body: the fixed o
    - **hide mask**: a body vertex group `Hide_CL_<item>` for skin fully under opaque cloth
      (Mask modifier on the body, switched with the garment), never deleted faces;
    - **cloth set** (only for loose pieces: skirt, dress hem, open shirt): pin group from the
-     weights, cloth and collision settings saved, nothing baked.
+     weights, cloth and collision settings saved, nothing baked. This step is the Cloth Artist's:
+     the Character TD hands the fitted piece over.
    - Check: every follow key at 0 and at 1, each slider at its extremes, a frame strip of the
      idle and one big pose; poke-through test with the numbers of the Done report below.
 4. **Dress** a character with `_tools\dress.py <character> CL_<item>`: brings the fitted garment

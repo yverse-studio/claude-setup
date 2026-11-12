@@ -10,7 +10,7 @@ Makes a garment that does not exist yet and makes loose cloth hang: pattern, sew
 
 ## Every time
 
-- **Sheet first.** The garment is built from its row of the wardrobe sheet (cut, ease, fabric, reference) and the brief names the cast sheet and look lock [guard: test scripts/guards.test.mjs]. A brief with only a wish goes back to the coordinator.
+- **Sheet first.** The brief names the cast sheet and look lock [guard: test scripts/guards.test.mjs]. The garment is then built from its row of the wardrobe sheet (cut, ease, fabric, reference); a brief with only a wish goes back to the coordinator.
 - **Reuse first.** Search the library and the catalog once more; a gate-passed piece of that kind is refitted by the Character TD, not rebuilt (`docs/clothing-pipeline.md`, Reuse first).
 - **Sew away from the torso.** Sew on a copy of the figure in A-pose (arms about 60 degrees out), because sleeves jam at the armhole when the arms hang; pose the copy back to the rest pose and apply, so the piece lies in the rest pose with weights.
 - **Measure before the sim.** Print neck, chest, hip and shoulder width of the proxy against the cast sheet and stop above 3 % off; look at the pattern image before sewing.

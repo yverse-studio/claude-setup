@@ -335,6 +335,7 @@ test('team guard: Costume Designer, Cloth Artist and Environment Artist start on
   for (const role of ['Costume Designer', 'Cloth Artist']) assert.match(decide('mcp__hearthbot__start_thread', brief(role, 'story', { sheet: false }), [], [], teams).block ?? '', /Sheet:/, `${role} names the cast sheet`)
   assert.deepEqual(decide('mcp__hearthbot__start_thread', brief('Environment Artist', 'story', { sheet: false }), [], [], teams), {}, 'a room has no cast sheet')
   for (const film of ['Producer', 'Director']) assert.match(decide('mcp__hearthbot__start_thread', brief(film, 'story'), [], [], teams).block ?? '', /not on the `story` kit's team/, `the film ${film} stays off the story kit, so no doc may name it there`)
+  assert.match(teams.split('\n').find((l) => l.startsWith('| Character TD (')), /fits garments that exist.*garment fit or download job/, 'the Character TD fits; a new garment is the Cloth Artist\'s')
   assert.doesNotMatch(readFileSync(join(root, 'docs/game-pipeline.md'), 'utf8'), /`(Producer|Director) · CH/, 'the chapter table names only roles a story brief can start')
 })
 
@@ -1464,7 +1465,7 @@ test('gate fixes: Sheet: must be a .md path and Look-Lock: a link or card, "late
   assert.equal(missingLines(b('Sheet: later\nLook-Lock: later')).length, 2)
   assert.equal(missingLines(b('Sheet: characters/mira/SHEET.md\nLook-Lock: owner card https://claude.ai/c/1')).length, 0)
   assert.equal(missingLines(b('Sheet: characters/mira/SHEET.md\nLook-Lock: [Mira look](#cmsg_01D5edTu)')).length, 0, 'a card link inside the project is a #cmsg link (GameDev 2026-11-12: six starts refused on it)')
-  assert.equal(missingLines(b('Sheet: characters/mira/SHEET.md\nLook-Lock: #later')).length, 1)
+  for (const bad of ['#later', '#cmsg_', '#cmsg']) assert.equal(missingLines(b(`Sheet: characters/mira/SHEET.md\nLook-Lock: ${bad}`)).length, 1, `${bad} is no card link`)
 })
 
 // Gate rounds 1 to 6 of PR 445 chased verbs and body words; the rule is now a plain one: no classifier.
