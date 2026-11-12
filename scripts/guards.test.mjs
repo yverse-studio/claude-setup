@@ -595,6 +595,28 @@ test('team guard: refresh replaces an installed guard with main\'s ES module cop
   } finally { process.env.PATH = old; for (const d of [dir, bin]) rmSync(d, { recursive: true, force: true }) }
 })
 
+// Live bug 2026-11-12: a cloud image pasted before the round counter existed never got it, because refresh only
+// updated guards already on disk; rule-guard then said "counter could not load" and refused posts and merges.
+test('team guard: refresh fetches a guard file the image never installed', async () => {
+  const { refresh, GUARD_FILES } = await import('../global/team-guard.mjs')
+  const dir = mkdtempSync(join(tmpdir(), 'refresh-'))
+  const bin = mkdtempSync(join(tmpdir(), 'fakecurl-'))
+  const old = process.env.PATH
+  try {
+    writeFileSync(join(bin, 'curl'), `#!/bin/sh\nwhile [ $# -gt 0 ]; do\n  if [ "$1" = "-o" ]; then out="$2"; url="$3"; shift 3\n    mkdir -p "$(dirname "$out")"\n    case "$url" in *global/*) printf '#!/usr/bin/env node\\n// new\\n' > "$out" ;; *CLAUDE.md) echo '# Working for yskills' > "$out" ;; *) echo doc > "$out" ;; esac\n  else shift; fi\ndone\n`, { mode: 0o755 })
+    writeFileSync(join(dir, 'rule-guard.mjs'), '#!/usr/bin/env node\n// old\n')
+    process.env.PATH = `${bin}:${old}`
+    if (process.platform === 'win32') return
+    refresh(dir)
+    for (const f of GUARD_FILES) assert.ok(existsSync(join(dir, f)), `${f} is installed by the refresh`)
+    assert.match(readFileSync(join(dir, 'rule-guard.mjs'), 'utf8'), /\/\/ new/, 'an installed guard is still replaced')
+    assert.deepEqual(readdirSync(dir).filter((f) => f.includes('.new')), [], 'no download is left behind')
+    rmSync(join(dir, 'context-guard.mjs'), { force: true })
+    refresh(dir, ['rule-guard.mjs'])
+    assert.ok(!existsSync(join(dir, 'context-guard.mjs')), 'a partial refresh (only) fetches only what it was asked for')
+  } finally { process.env.PATH = old; for (const d of [dir, bin]) rmSync(d, { recursive: true, force: true }) }
+})
+
 // Routing test 2026-10-27: `card` runs beside `start`, so it must not build the card with the image's old guard.
 test('team guard: card refreshes first and lets a new team-guard build the card', () => {
   const home = mkdtempSync(join(tmpdir(), 'card-home-'))
