@@ -9,7 +9,7 @@
 import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { basename, join } from 'node:path'
+import { basename, join, normalize } from 'node:path'
 
 export const THRESHOLD = 4.5
 export const IMPORTANT_THRESHOLD = 4.8
@@ -48,16 +48,18 @@ export const lastRound = (l) => l.rounds.at(-1)?.n ?? 0
 export const GRANTED = ['init', 'direct', 'card', 'picture', 'waive']
 export const GRANT_SECONDS = 120
 const grantFile = (dir, verb, asset) => join(dir, 'grants', `${verb}.${basename(fileOf(dir, asset))}`)
+// The hook reads the command before the shell expands it, the CLI after: both sides key the grant on the same form (gate round 1 of the #450 re-land).
+export const grantKey = (ref, home = homedir()) => { const v = String(ref ?? '').trim().replace(/^(['"])(.*)\1$/, '$2'); return v ? normalize(v.replace(/^(?:~|\$HOME|\$\{HOME\})(?=\/|$)/, home)) : '' }
 export function issueGrant(dir, verb, asset, ref, now = Date.now()) {
   mkdirSync(join(dir, 'grants'), { recursive: true })
-  writeFileSync(grantFile(dir, verb, asset), `${JSON.stringify({ verb, asset: String(asset).toLowerCase(), ref: String(ref ?? ''), exp: now + GRANT_SECONDS * 1000 })}\n`)
+  writeFileSync(grantFile(dir, verb, asset), `${JSON.stringify({ verb, asset: String(asset).toLowerCase(), ref: grantKey(ref), exp: now + GRANT_SECONDS * 1000 })}\n`)
 }
 export function takeGrant(dir, verb, asset, ref, now = Date.now()) {
   const f = grantFile(dir, verb, asset)
   let g
   try { g = JSON.parse(readFileSync(f, 'utf8')) } catch { return false }
   try { unlinkSync(f) } catch { /* already taken */ }
-  return g.exp > now && g.verb === verb && g.asset === String(asset).toLowerCase() && g.ref === String(ref ?? '')
+  return g.exp > now && g.verb === verb && g.asset === String(asset).toLowerCase() && g.ref === grantKey(ref)
 }
 
 // ---- who may post a verdict (finding 2): a verdict is counted only from a gate session (role Tester, Reviewer, Evaluator) or when the

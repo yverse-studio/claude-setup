@@ -761,7 +761,15 @@ export function updateLock(session, check) {
   if (!session) return
   const f = lockFile(session)
   if (BAD_BRIEF.test(check)) writeFileSync(f, check)
-  else if (existsSync(f) && check === '') { try { unlinkSync(f) } catch { /* gone */ } }
+  else if (existsSync(f)) { try { unlinkSync(f) } catch { /* gone */ } } // any check that is no brief failure (an M-size note too) lifts it
+}
+// A corrected brief that arrives as a relay lifts the lock; it then stamps its role, as roleContext does for a spawn brief.
+async function relayRebrief(session, prompt, cwd, model) {
+  const text = prompt.replace(/\\n/g, '\n')
+  updateLock(session, await briefCheck(text, cwd, model, true))
+  if (existsSync(lockFile(session))) return
+  const role = roleOf(text, read(join(setupRoot(cwd), 'docs', 'TEAMS.md')))
+  if (role) writeFileSync(join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`), role.name)
 }
 export function lockBlock(tool, session) {
   const f = session ? lockFile(session) : ''
@@ -849,7 +857,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           const model = sessionModel(transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : '') ?? (read(join(tmpdir(), `claude-setup-model-${String(session).replace(/[^A-Za-z0-9]/g, '')}`)).trim() || null)
           const checkNow = await briefCheck(brief, cwd, model)
           if (spawned || (lookup && brief !== prompt)) updateLock(session, checkNow)
-          else if (existsSync(lockFile(session)) && /\bRole:/.test(prompt)) updateLock(session, await briefCheck(prompt.replace(/\\n/g, '\n'), cwd, model, true)) // a corrected brief arrives as a relay
+          else if (existsSync(lockFile(session)) && /\bRole:/.test(prompt)) await relayRebrief(session, prompt, cwd, model)
           const context = [checkNow, spawned || (lookup && brief !== prompt) ? await gateBriefContext(brief, model) : '', spawned ? await guardLine() : '', modelOnce(brief, transcriptPath, session), await roleContext(brief, cwd, session), promptContext(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
           if (context) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: context } }))
           return

@@ -2,8 +2,8 @@
 // Proof for yskills (2026-11-12): round 4 without Fable is refused, round 7 without a card is refused, an incomplete brief is blocked.
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
@@ -432,6 +432,18 @@ test('bypass 1: the CLI proofs do not hang on the filename: a copy, node -e and 
   assert.equal(s.bare('card', ASSET, '--ref', 'cmsg_B').code, 2, 'a grant for another ref does not open this one')
   issueGrant(join(s.dir, 'gate'), 'card', ASSET, 'cmsg_A', Date.now() - 10 * 60 * 1000)
   assert.equal(s.bare('card', ASSET, '--ref', 'cmsg_A').code, 2, 'an old grant is refused')
+})
+
+// Gate round 1 of the #450 re-land: the hook keys the grant on the unexpanded command (~/plan.md), the CLI gets the shell-expanded path.
+test('a grant the hook issues for a ~ path opens the CLI call with the expanded path', () => {
+  const s = session('fable-test')
+  for (const n of [1, 2, 3]) s.gate(n, '3.8')
+  const home = mkdtempSync(join(homedir(), '.gate-plan-'))
+  writeFileSync(join(home, 'plan.md'), 'Goal. '.repeat(50))
+  const tilde = `~/${home.slice(homedir().length + 1)}/plan.md`
+  assert.equal(s.hook('Bash', { command: `node ~/.claude/claude-setup/gate-rounds.mjs direct ${ASSET} --plan ${tilde}` }).status, 0, 'the hook passes the call and leaves the grant')
+  assert.equal(s.bare('direct', ASSET, '--plan', join(home, 'plan.md')).code, 0, 'the CLI finds it under the expanded path')
+  rmSync(home, { recursive: true, force: true })
 })
 
 test('bypass 2: a builder cannot pass or merge its own work: a verdict counts from a gate role or a reviewer subagent only', () => {

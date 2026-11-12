@@ -2,7 +2,7 @@
 // and a role does not write the files another role owns. Run: node --test scripts/role-lock.test.mjs
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { mkdtempSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
@@ -46,6 +46,16 @@ test('a corrected brief lifts the lock, a valid first brief never locks', () => 
   assert.equal(tool(id, 'Bash', { command: 'ls' }).status, 2, 'a re-brief that still lacks lines does not lift it')
   guard('prompt', id, { prompt: `<coordinator-relay><relay from="coordinator"><note>Re-brief:\n${ok}</note></relay></coordinator-relay>` })
   assert.equal(tool(id, 'Bash', { command: 'ls' }).status, 0, 'a complete re-brief lifts it')
+})
+
+// Gate round 1 of the #450 re-land: an M-size re-brief carries a Title check note (no failure), and the lifted thread gets its role stamp.
+test('an M-size re-brief lifts the lock too, and a lifted thread is stamped with its role', () => {
+  const id = `rolelock${process.pid}x${++n}`
+  guard('prompt', id, { prompt: spawn(`Kit: setup · Size: M\n${BLOCKS}`) })
+  assert.equal(tool(id, 'Bash', { command: 'ls' }).status, 2)
+  guard('prompt', id, { prompt: `<coordinator-relay><relay from="coordinator"><note>Re-brief:\nRole: Programmer · Kit: setup · Size: M\nGate: Reviewer thread before owner\n${BLOCKS}</note></relay></coordinator-relay>` })
+  assert.equal(tool(id, 'Bash', { command: 'ls' }).status, 0, 'the Title check note is no brief failure')
+  assert.equal(readFileSync(join(tmpdir(), `claude-setup-role-${id}`), 'utf8'), 'Programmer', 'the role stamp is written on lift')
 })
 
 test('hands off: a Social Lead does not write the script or the hook itself, the Writer and others may', () => {
