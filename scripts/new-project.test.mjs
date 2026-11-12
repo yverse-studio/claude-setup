@@ -297,3 +297,14 @@ test('token-free adopts the vacation-game Worker the registry pins and goes on t
   assert.doesNotMatch(err, /not made by new-project|not registered/)
   assert.ok(tokenFreeRun.calls.some((c) => c.includes('/builds/tokens')))
 })
+
+// 2026-11-10: run 41 failed with 8000008 only because the names stood where the numeric ids belong; run 42
+// sent the ids and connected a repo made the same day with no click. A thread that read "Cloudflare missed
+// the repo" first built a mono-repo plan on it, so the error names the id check before the GitHub click.
+test('an unknown-repo error tells the reader to check the numeric ids before any click', async () => {
+  const { cf } = fakeCf(() => refused)
+  await assert.rejects(
+    connectRepo(cf, { repo, org: 'yverse-studio', name: 'deploy-test', tries: 1, waitMs: 0 }),
+    (err) => /Fix: first check repo_id and owner_id.*numeric.*Only when the ids are right.*settings\/installations/.test(err.message),
+  )
+})
