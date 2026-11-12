@@ -414,15 +414,26 @@ function fetchAll(dir, files, url, seconds) {
   // curl -f writes nothing for a missing file; a cut-off run (ok false) keeps a guard only if it still parses.
   return files.map((f) => ({ f, tmp: tmp(f), got: existsSync(tmp(f)) && statSync(tmp(f)).size > 0, ok }))
 }
+const guardUrl = (f) => (GUARD_FILES.includes(f) ? `${RAW}global/${f}` : RAW + f)
 export function refresh(dir, only = null) {
   const guards = GUARD_FILES.filter((f) => !only || only.includes(f)) // a guard missing on disk is fetched too: an image pasted before a guard existed never had it (2026-11-12)
   const boot = only ? [] : fetchAll(dir, BOOT_FILES, (f) => RAW + f, 2.5)
-  const code = fetchAll(dir, guards, (f) => `${RAW}global/${f}`, 1.5)
-  for (const { f, tmp, got, ok } of [...boot, ...code]) {
+  install(dir, [...boot, ...fetchAll(dir, guards, guardUrl, 1.5)])
+}
+function install(dir, fetched) {
+  for (const { f, tmp, got, ok } of fetched) {
     const whole = got && (f.endsWith('.mjs') ? text(tmp).startsWith('#!/usr/bin/env node') && parses(tmp) : ok && (f !== 'CLAUDE.md' || text(tmp).includes(MARK)))
     if (whole) renameSync(tmp, join(dir, f))
     else rmSync(tmp, { force: true })
   }
+}
+
+// M47 follow-up: a cached image's start hook is its own old team-guard, so it refreshes with its old lists and a guard or boot
+// file added later never arrives. The first fresh code to run (rule-guard on a thread start) fills in by this copy's lists.
+export function fillMissing(dir) {
+  const missing = (list) => list.filter((f) => !existsSync(join(dir, f)))
+  const files = [...missing(GUARD_FILES), ...missing(BOOT_FILES)]
+  if (files.length) install(dir, fetchAll(dir, files, guardUrl, 2)) // one download, so it fits rule-guard's 5 s prompt hook
 }
 
 // The version of the guards this session runs, for the thread's start proof (plan M47: merged must mean live):
@@ -2289,9 +2300,11 @@ export async function gateBlock(tool, input, transcript, model, dry = false, rol
     return why ? `rule-guard: ${why}` : null
   } catch (e) { return `rule-guard: gate ledger check failed (${String(e.message).slice(0, 80)}); refused, fail closed (operator/gate.md, Rounds).` }
 }
-// The start proof of a thread names the guard version it runs and any guard file that is missing (plan M47).
+// The start proof of a thread names the guard version it runs and any guard file that is missing (plan M47); it first installs
+// what this team-guard lists and the disk lacks (M47 follow-up).
 async function guardLine() {
-  try { return (await import(new URL('./team-guard.mjs', import.meta.url))).guardVersion(dirname(fileURLToPath(import.meta.url))) } catch { return '' }
+  const dir = dirname(fileURLToPath(import.meta.url))
+  try { const team = await import(new URL('./team-guard.mjs', import.meta.url)); team.fillMissing?.(dir); return team.guardVersion(dir) } catch { return '' }
 }
 export async function gateBriefContext(brief, model) {
   try { return (await loadCounter()).gateBrief(brief, { model }) } catch { return '' }
@@ -2324,7 +2337,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           const checkNow = await briefCheck(brief, cwd, model)
           if (spawned || (lookup && brief !== prompt)) updateLock(session, checkNow)
           else if (existsSync(lockFile(session)) && /\bRole:/.test(prompt)) await relayRebrief(session, prompt, cwd, model)
-          const context = [checkNow, spawned || (lookup && brief !== prompt) ? await gateBriefContext(brief, model) : '', spawned ? await guardLine() : '', modelOnce(brief, transcriptPath, session), await roleContext(brief, cwd, session), promptContext(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
+          const context = [checkNow, spawned || (lookup && brief !== prompt) ? await gateBriefContext(brief, model) : '', spawned || (lookup && brief !== prompt) ? await guardLine() : '', modelOnce(brief, transcriptPath, session), await roleContext(brief, cwd, session), promptContext(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
           if (context) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: context } }))
           return
         }
