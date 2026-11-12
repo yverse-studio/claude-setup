@@ -1785,7 +1785,7 @@ async function roleContext(prompt, cwd, session) {
   const root = setupRoot(cwd)
   const role = roleOf(prompt, read(join(root, 'docs', 'TEAMS.md')))
   if (!role) return ''
-  writeFileSync(spawnRoleFile(session), role.name)
+  if (/<(wake|relay)\b[^>]*reason=\\?"spawn/.test(prompt) && !existsSync(spawnRoleFile(session))) writeFileSync(spawnRoleFile(session), role.name) // only a real spawn brief, once
   writeFileSync(once, existsSync(lockFile(session)) ? '' : role.name) // a rejected brief gets its card once but an empty stamp (it could name a gate role); a coordinator re-brief stamps it (relayRebrief)
   const topic = role.name === 'Reviewer' ? await topicPlaybook(prompt, root) : null
   if (topic) return roleCard({ ...role, path: `${'.claude/skills/operator/checklists.md'} (${topic.name}) and gate.md, Scored gates` }, topic.text)
@@ -2220,11 +2220,12 @@ export function updateLock(session, check) {
   else if (existsSync(f)) { try { unlinkSync(f) } catch { /* gone */ } } // any check that is no brief failure (an M-size note too) lifts it
 }
 // A corrected brief lifts the lock only when the coordinator itself relays it: the wrapper may follow the harness's own lead-in
-// (an allowlist: system-note blocks, then the fixed "A message from this project's coordinator session" line), so a wrapper inside
+// (an allowlist: system-note blocks, then the one fixed "A message from this project's coordinator session" line and the wrapper
+// straight after it), so a wrapper inside
 // a wake, a PR event, a task notification or another relay never counts (#475 follow-up). It then stamps the role once, as roleContext does for a spawn brief: a non-empty stamp is never changed,
 // and a gate role only when the spawn brief named that same role (spawnRoleFile): a rejected Programmer spawn never becomes a
 // Reviewer, a rejected Reviewer spawn recovers (#475 gate round 1 and follow-up).
-export const COORDINATOR_RELAY = /^\s*(?:<system-note>[^<]*<\/system-note>\s*)*(?:<system-reminder>\s*)?A message from this project[’']s coordinator session(?:[^<]|<cited author="(?:user|coordinator)">)*<coordinator-relay>\s*<relay\b[^>]*\bfrom=\\?"coordinator"/
+export const COORDINATOR_RELAY = /^\s*(?:<system-note>[^<]*<\/system-note>\s*)*(?:<system-reminder>\s*)?A message from this project[’']s coordinator session[^\n]*\n\s*<coordinator-relay>\s*<relay\b[^>]*\bfrom=\\?"coordinator"/
 const spawnRoleFile = (session) => join(tmpdir(), `claude-setup-spawnrole-${String(session).replace(/\W/g, '')}`)
 async function relayRebrief(session, prompt, cwd, model) {
   if (!COORDINATOR_RELAY.test(prompt)) return
