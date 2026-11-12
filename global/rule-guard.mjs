@@ -682,6 +682,34 @@ const listProcs = () => {
 // A subagent's own tool calls live next to the session transcript: <session>/subagents/agent-<id>.jsonl.
 const agentTranscript = (transcriptPath, agentId) => (transcriptPath && agentId ? join(transcriptPath.replace(/\.jsonl$/, ''), 'subagents', `agent-${String(agentId).replace(/[^\w-]/g, '')}.jsonl`) : '')
 
+
+// Gate round counter (global/gate-rounds.mjs, operator/gate.md Rounds): a gate post, a merge, a ledger write or a director/card record is
+// checked against the asset's ledger. Fail closed: a check that throws refuses the call (research 2026-11-12: a crashing hook does not block).
+const humanAfter = (transcript, ref) => {
+  const id = String(ref).match(/cmsg_\w+/)?.[0]
+  const rows = transcript.split('\n').map((l) => { try { return JSON.parse(l) } catch { return null } }).filter(Boolean)
+  const at = rows.findIndex((r) => id && JSON.stringify(r.message?.content ?? '').includes(id))
+  const human = (r) => r.type === 'user' && !(Array.isArray(r.message?.content) && r.message.content.some((c) => c?.type === 'tool_result')) && /<message\b[^>]*\bfrom=\\?"human\\?"[^>]*\btrust=\\?"principal\\?"/.test(JSON.stringify(r.message?.content ?? ''))
+  return at >= 0 && rows.slice(at + 1).some(human)
+}
+export async function gateBlock(tool, input, transcript, model, dry = false) {
+  if (!/^(Write|Edit|MultiEdit|NotebookEdit|Bash|PowerShell)$|^mcp__github__/.test(tool)) return null
+  let mod
+  try { mod = await import(new URL('./gate-rounds.mjs', import.meta.url)) } catch (e) {
+    // Fail closed for gate-shaped calls: a missing or broken counter must not open the gate.
+    const shaped = /^mcp__github__(merge_pull_request|enable_pr_auto_merge)$/.test(tool) || /\bgh\s+pr\s+merge\b/.test(String(input?.command ?? '')) || /gate-rounds|\bGate\b[^\n]*\bround\s+\d/i.test(JSON.stringify(input))
+    return shaped ? `rule-guard: the gate round counter (gate-rounds.mjs) could not load (${String(e.message).slice(0, 60)}); gate posts, merges and ledger calls are refused until it is installed (operator/gate.md, Rounds).` : null
+  }
+  try {
+    const t = transcript()
+    const why = mod.gateStep(tool, input, { model, dry, calls: /gate-rounds\.mjs/.test(JSON.stringify(input)) ? toolCalls(t) : [], humanAfter: (ref) => humanAfter(t, ref) })
+    return why ? `rule-guard: ${why}` : null
+  } catch (e) { return `rule-guard: gate ledger check failed (${String(e.message).slice(0, 80)}); refused, fail closed (operator/gate.md, Rounds).` }
+}
+export async function gateBriefContext(brief, model) {
+  try { return (await import(new URL('./gate-rounds.mjs', import.meta.url))).gateBrief(brief, { model }) } catch { return '' }
+}
+
 if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/').split('/').pop())) {
   const mode = process.argv[2]
   if (mode === 'read') {
@@ -706,7 +734,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           const brief = lookup ? spawnPrompt(prompt, read(transcriptPath)) : prompt
           if (session && (spawned || (lookup && brief !== prompt))) writeFileSync(briefOnce, '')
           const model = sessionModel(transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : '') ?? (read(join(tmpdir(), `claude-setup-model-${String(session).replace(/[^A-Za-z0-9]/g, '')}`)).trim() || null)
-          const context = [await briefCheck(brief, cwd, model), modelOnce(brief, transcriptPath, session), roleContext(brief, cwd, session), promptContext(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
+          const context = [await briefCheck(brief, cwd, model), spawned || (lookup && brief !== prompt) ? await gateBriefContext(brief, model) : '', modelOnce(brief, transcriptPath, session), roleContext(brief, cwd, session), promptContext(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
           if (context) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: context } }))
           return
         }
@@ -720,7 +748,8 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         const shipped = join(tmpdir(), `claude-setup-artifacts-${String(session).replace(/\W/g, '')}`)
         const transcript = () => (transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : '')
         const sessionTranscript = () => [transcriptPath, agentTranscript(transcriptPath, agentId)].filter((p) => p && existsSync(p)).map(read).join('\n')
-        const block = decide(tool, input ?? {}, process.env, session ? read(shipped).split('\n') : [], () => threadBoard(toolCalls(transcript())))
+        let block = (await gateBlock(tool, input ?? {}, transcript, sessionModel(transcript()), true))
+          ?? decide(tool, input ?? {}, process.env, session ? read(shipped).split('\n') : [], () => threadBoard(toolCalls(transcript())))
           ?? canaryMissing(tool, input ?? {}, session ? read(join(process.env.CLAUDE_SETUP_HOME || homedir(), '.claude', 'claude-setup', 'booted', `${String(session).replace(/\W/g, '')}.canary`)) : '', transcript)
           ?? receiptBlock(tool, input ?? {}, session, cwd, agentId, transcript)
           ?? proposeSkillsBlocked(tool)
@@ -731,6 +760,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           ?? blenderServerBusy(tool, input ?? {}, listProcs)
           ?? blenderDocsMissing(tool, input ?? {}, sessionTranscript)
           ?? (grillMissing(tool, input ?? {}, transcript) ? 'rule-guard: a Planner at size M or L grills first (CLAUDE.md, No fog; operator SKILL.md, Grill first): post the real-moment question (when it comes from his life) and up to 2 request_decision cards (goal, taste), each with your recommended answer, then write the plan on the answers (or the recommendations while he is away).' : null)
+        if (!block) block = await gateBlock(tool, input ?? {}, transcript, sessionModel(transcript()), false) // commit the round only now: no other guard refused the post
         if (!block && session && tool === 'Artifact' && input?.url && input.file_path) writeFileSync(shipped, `${input.file_path}\n`, { flag: 'a' })
         if (block) { process.stderr.write(block); process.exitCode = 2 }
         else {

@@ -100,8 +100,8 @@ must exist; the old wording that a render needs 5/5 or his strip OK is banned).
    the eligible version with the highest score goes on (render, bake, merge); on a tie the newer
    one. Nobody waits for yskills' OK: the check strip is posted to him, the
    pick is the go, his veto stops it at once and is final.
-8. **Under 4.5** the normal Rounds below apply (up to 6 rounds, a diagnosis after the same fail
-   twice); the 2 rounds after a PASS come on top of that cap.
+8. **Under 4.5** the hard round counter below applies (3 rounds, a Fable director for 3, then a card); a
+   round after a PASS is numbered in the same counter but needs no director or card.
 
 The verdict names: round, rubric rows with numbers, hard checks, score (and the median runs, if
 any), PASS or not, regressions, the picked version and why.
@@ -197,20 +197,51 @@ How to undo a merge, by kind of change (write the line into the PR's "undo" line
   live without them.
 - **Less:** post the blocking findings as one PR review and stop. The builder fixes them; the next
   round re-runs the failed checks with fresh agents on the new head.
-- **Up to 6 rounds** (yskills 2026-10-26: "6-7 versuche", was 2; the one home of the gate's round
-  limit, every other file links here): the builder fixes and the gate re-runs until 5/5, at most six
-  rounds. A defect that fails the same check twice gets a diagnosis before the next fix
-  (`character-workflow.md`, step 4), not a blind patch.
-- **The count belongs to the asset, not the thread** (2026-11-12: ten rounds on one garment across four fresh
-  threads): the round number stands in the asset's gate file and in every handoff file, and a fresh thread goes on
-  from it. **Three failed rounds on one asset:** the coordinator stops the builder, and there is no round 4 before
-  the Planner has re-planned (reuse an existing piece, another method, or one card to yskills).
-- **Still not 5/5 after round 6:** the Tester sends one message to yskills: what the PR does, why it
-  still fails and the problems in plain words (from the last reports), and two or three ideas to
-  solve it as tap options; the thread goes on with the
-  recommended option and the card lets yskills change course; when the coordinator already
-  answered, carry on with its answer instead of asking again; money, a new service, secrets, public posts, deleting a live project or database and
-  anything irreversible wait for the tap (`CLAUDE.md`, Cards).
+- **The hard round counter** (yskills 2026-11-12, vacation-game: a shell PR ran 11 rounds instead of 6, nothing counted, the
+  coordinator released rounds itself, the gate asked to merge at 4.2; the one home of the round limit, every other file links
+  here; was "up to 6 rounds", 2026-10-26). A hook counts, not text: `global/gate-rounds.mjs` keeps one ledger per asset (a PR
+  `owner/repo#n` or a name) in `/mnt/project-files/gate/`, and `global/rule-guard.mjs` checks it on every gate post, merge and
+  thread brief, so no thread and no coordinator can release a round. Every gate post, pass or fail, starts with the headline
+  `Gate <score>/5 (<size>, round <n>)`, plus `[important]` for auth, payments, data or launch.
+  1. **Rounds 1 to 3** run at the score rule: pass at 4.5, at 4.8 when the PR is important (5/5 for the pass/fail checks).
+  2. **Rounds 4 to 6** run only after a **Fable director** (`docs/TEAMS.md`, Models line) re-planned: the coordinator starts a
+     Fable thread, it runs `node ~/.claude/claude-setup/gate-rounds.mjs direct <asset> --plan <file>` (the hook records it only
+     from a Fable session) and the builders follow its plan. A round 4 without it is refused.
+  3. **Round 7 and later** run only after **one card to yskills** (what it does, why it fails, 2 or 3 ideas, one recommended;
+     `request_decision`), recorded with `gate-rounds.mjs card <asset> --ref <cmsg id>`; the hook checks that this session
+     posted that card. The card opens 3 more rounds; the thread goes on with the recommended option. Money, secrets, public
+     posts and deleting a live project or database still wait for his tap (`CLAUDE.md`, Cards).
+  4. **A merge needs a counted pass** (fail closed; director ruling, PR #444 round 4): the merge is refused when the asset has no [guard: hook global/gate-rounds.mjs]
+     ledger or its last round is not a pass (4.5, 4.8 important), whatever the reason. A verdict posted in another shape is never
+     counted, so it can never lead to a merge. Only yskills' answer on a card frees a version under the threshold
+     (`gate-rounds.mjs waive <asset> --ref <cmsg id>`, the hook needs his reply in the session).
+  5. **Two doors for gh**, because the hook reads no gh comment text: a merge is `mcp__github__merge_pull_request` or [guard: hook global/gate-rounds.mjs]
+     `node ~/.claude/claude-setup/gate-rounds.mjs merge <owner/repo#n> [--squash|--merge|--rebase] [--auto] [--delete-branch]`;
+     a verdict is the comment tool or `gate-rounds.mjs post <owner/repo#n> --body-file <f>`. `gh pr merge` is refused in Bash by
+     command position (one tokenizer: quotes, `;`, `&&`, `|`, `$( )`, `bash -c`), so a commit message, a grep pattern or an echo is
+     data. A `gh` comment is never refused and never counted: a verdict through plain gh cannot lead to a merge. Bash refuses only the
+     literal ledger or guard path (as a redirect target or the argument of a writer such as rm, mv, tee, cp into it, sed -i).
+  6. **Counting:** rounds go up by one per asset and never start over; a fresh thread goes on from the ledger, a brief that [guard: hook global/gate-rounds.mjs]
+     names a gate round carries `Round: <n>` and `Asset: <name>` and the thread checks them against the ledger. An asset that
+     ran rounds before the ledger existed is imported once: `gate-rounds.mjs init <asset> --round <n>`. Nobody edits the file by
+     hand (the hook refuses it). A defect that fails the same check twice still gets a diagnosis before the next fix
+     (`character-workflow.md`, step 4); three failed rounds on one asset still mean a re-plan, now the Fable director.
+  Limits, said plainly: the ledger lives in the project's shared folder (one project's threads share it); a session without
+  hooks (the project chat) cannot be stopped itself, but every thread it starts checks its brief, and no merge works without a
+  counted pass. `CLAUDE_SETUP_RULE_GUARD=off` is the one off switch; nobody sets it. It stops careless and honest-mistake
+  releases, not an agent that writes its own script around the hook: shell writes to the ledger other than the literal path (a cd
+  and a relative name, a variable, `node -e` or a script file, xargs) are not stopped; a verdict through plain gh is not counted (so
+  it never merges); a new PR for the same work is a new asset and starts at round 1; the hook does not know who posts a verdict (rounds 1 to 3 are free, so a poster can claim a pass); a PR merged by
+  a person in the GitHub UI is outside it. The next step is a counter a CI workflow writes (a required status or label) that the
+  hook only reads.
+- **Picture card first** (vacation-game 2026-11-12: a hub nobody asked for was built and nearly merged): a new hub, start [guard: hook global/gate-rounds.mjs]
+  screen, main menu or art style is shown to yskills as ONE card of pictures (2 or 3 directions, references from current
+  games of that kind, per `roles/designer.md`, Vote cards) before any build. The hook does not guess whether a text means a new
+  one or an existing one: a PR (title or body) that names a hub, start screen, title screen, main menu or art or visual style must
+  carry a `Picture card:` line, either the card link (`Picture card: <cmsg link>`) or `Picture card: none, because <reason>` (work
+  on one that exists). `create_pull_request` without it is refused. A thread brief that names one without the line is never
+  stopped for this: the thread gets a note to do no work and tell the coordinator if the brief introduces a new one, or to go on
+  and say so in its first reply if it works on an existing one. Round and Asset checks still stop a brief.
 
 **Important or hard PRs** (auth, payments, database migrations, secrets, anything that can lose
 data or money, the last PR before launch, any PR that needed a second gate round) merge at 5/5
