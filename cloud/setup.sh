@@ -1103,9 +1103,10 @@ export const transcriptRows = (text) => String(text).split('\n').map((l) => { tr
 export const CMSG = /#?(cmsg_\w+)/ // one pattern for a card or message id; task-ledger.mjs reuses it
 // Who wrote a transcript row (#474 round 11). One place for both proofs: rule-guard's humanAfter (card proof) and task-ledger's pure-code
 // approve. A principal message is the wake wrapper the harness writes (the wrapper opens the row, then project and thread tags, then the
-// message from human with trust principal), never text quoted inside a relay, a cited entry, an event or a tool result. A coordinator
-// message is the relay behind the harness lead-in, or the bare queued form where only the harness writes it (a queued_command attachment
-// or an isMeta user row). The row text is the string or the joined text parts, not the JSON of the row. rule-guard.mjs keeps its own copy of
+// message from human with trust principal), never text quoted inside a relay, a cited entry, an event or a tool result, and only on a row
+// the app wrote with the human origin (fromHuman). A coordinator message is the relay behind the harness lead-in or the bare queued form,
+// only on a row the projects server delivered (fromProjects; isMeta alone proves nothing, a thread's own scheduled prompt has it too). rule-guard's
+// coordinatorRelays (the role lock) calls coordinatorRow, so that is one check, not two (M53 slice 3). The row text is the string or the joined text parts, not the JSON of the row. rule-guard.mjs keeps its own copy of
 // COORDINATOR_RELAY for the prompt hook (it loads this file lazily); a test holds the two sources equal.
 export const WAKE = /^\s*<wake\b[^>]*>\s*(?:<project\b[^>]*>\s*)?(?:<thread\b[^>]*>\s*)?<message\b(?=[^>]*\bfrom="human")(?=[^>]*\btrust="principal")/
 export const COORDINATOR_RELAY = /^\s*(?:<system-note>[^<]*<\/system-note>\s*)*(?:<system-reminder>\s*)?A message from this project[’']s coordinator session[^\n]*\n\s*<coordinator-relay>\s*<relay\b[^>]*\bfrom=\\?"coordinator"/
@@ -2971,7 +2972,7 @@ export function updateLock(session, check) {
 export const COORDINATOR_RELAY = /^\s*(?:<system-note>[^<]*<\/system-note>\s*)*(?:<system-reminder>\s*)?A message from this project[’']s coordinator session[^\n]*\n\s*<coordinator-relay>\s*<relay\b[^>]*\bfrom=\\?"coordinator"/
 // M50: a relay that reaches a working thread is a `queued_command` attachment, whose text starts with the bare `<relay from="coordinator"` (live
 // 2026-11-12: the lead-in line is added only when the harness shows it). M53: either form counts only on a row the projects server delivered
-// (`origin` = fromProjects of the counter): the text is who wrote it, the origin is who delivered it, so a thread's own scheduled prompt
+// (the counter's coordinatorRow): the text is who wrote it, the origin is who delivered it, so a thread's own scheduled prompt
 // (an isMeta row with the same text) is no relay.
 const BRIEF_LINE = /^[ \t>*_`-]*(Role|Kit|Gate|Prior art|Model|Skills|Done when|Stop when|Start|Threads|Item|Plan|Acceptance):/im // a relay that corrects the brief; other relays do not count toward the card
 const BARE_RELAY = /^\s*<relay\b[^>]*\bfrom=\\?"coordinator"/
@@ -2979,24 +2980,23 @@ const BARE_RELAY = /^\s*<relay\b[^>]*\bfrom=\\?"coordinator"/
 // together with the earlier coordinator relays and the spawn brief from the transcript: the newest relay's lines come first and win,
 // older relays and the spawn brief fill the gaps.
 // Every coordinator relay of the transcript, oldest first: a user entry, or a queued_command attachment when it reached a working thread.
-// `origin` decides whether the row came from the projects server; without one no row counts (fail closed).
-export function coordinatorRelays(transcript, origin = () => false) {
+// `counter` is the loaded counter: its coordinatorRow is the one test of "a coordinator relay delivered by the projects server" (text and origin)
+// that task-ledger's approve proof reads too. Without a counter no row counts (fail closed).
+export function coordinatorRelays(transcript, counter = null) {
   const relays = []
+  if (!counter) return relays
   for (const line of String(transcript).split('\n')) {
     try {
       const entry = JSON.parse(line)
-      const content = entry.message?.content
-      const text = entry.type === 'attachment' && entry.attachment?.type === 'queued_command' ? String(entry.attachment.prompt ?? '')
-        : entry.type === 'user' ? (typeof content === 'string' ? content : (content ?? []).map((c) => c?.text ?? '').join('\n')) : ''
-      if (origin(entry) && (BARE_RELAY.test(text) || COORDINATOR_RELAY.test(text))) relays.push(text)
+      if (counter.coordinatorRow(entry)) relays.push(counter.rowText(entry))
     } catch { /* not a JSON line */ }
   }
   return relays
 }
 // A newer source's stamp line replaces an older one instead of adding to it (a corrected Role must not leave the old Size M behind).
 const withoutOlderStamps = (sources) => { let seen = false; return sources.map((t) => { const had = /^[ \t>*_`-]*Role:/im.test(t); const out = seen ? t.replace(/^[ \t>*_`-]*Role:[^\n]*$/gim, '') : t; seen ||= had; return out }) }
-export function relayContext(prompt, transcript, origin) {
-  const relays = coordinatorRelays(transcript, origin).filter((t) => t.trim() !== prompt.trim())
+export function relayContext(prompt, transcript, counter) {
+  const relays = coordinatorRelays(transcript, counter).filter((t) => t.trim() !== prompt.trim())
   const spawn = spawnPrompt(prompt, String(transcript))
   return withoutOlderStamps([prompt, ...relays.reverse(), spawn === prompt ? '' : spawn].filter(Boolean).map(stripTags)).slice(1).join('\n') // tags off first: a spawn brief's Role sits right behind its wake tag
 }
@@ -3005,15 +3005,15 @@ export function relayContext(prompt, transcript, origin) {
 // The third refused relay asks for one card; the lock stays and a complete relay still lifts it. Returns that note, or ''.
 async function relayRebrief(session, prompt, cwd, model, transcript = '') {
   if (!COORDINATOR_RELAY.test(prompt) && !BARE_RELAY.test(prompt)) return ''
-  const origin = await projectsOrigin()
-  if (!coordinatorRelays(transcript, origin).some((t) => t.trim() === prompt.trim())) return '' // no row of the projects server holds this text: a scheduled or typed prompt lifts nothing
-  const context = relayContext(prompt, transcript, origin)
+  const counter = await relayCounter()
+  if (!coordinatorRelays(transcript, counter).some((t) => t.trim() === prompt.trim())) return '' // no row of the projects server holds this text: a scheduled or typed prompt lifts nothing
+  const context = relayContext(prompt, transcript, counter)
   const text = stripTags([prompt, context].join('\n'))
   updateLock(session, await briefCheck(text, cwd, model, true))
   await countRelay(session)
   const stamp = join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)
   if (existsSync(lockFile(session))) {
-    if (coordinatorRelays(transcript, origin).filter((t) => t.trim() !== prompt.trim() && BRIEF_LINE.test(t)).length < 2) return ''
+    if (coordinatorRelays(transcript, counter).filter((t) => t.trim() !== prompt.trim() && BRIEF_LINE.test(t)).length < 2) return ''
     const note = 'Three relays did not lift the lock: post one card to yskills with request_decision that names the lines still missing, then stay idle; a complete relay lifts the lock at any time.'
     if (!read(lockFile(session)).includes('request_decision')) writeFileSync(lockFile(session), `${read(lockFile(session)).slice(0, 300)}\n${note}`)
     return note
@@ -3051,7 +3051,10 @@ const humanAfter = (transcript, ref, counter) => {
   // Finding 3: the principal tag counts only as the message the wake wraps (the wrapper opens the row, then project and thread tags), never
   // as text quoted inside a relay, a cited message or a tool result. principalRow of the counter is the one test of the human's row, the same
   // one task-ledger's approve proof reads (M53 slice 3).
-  const answer = (r) => counter.principalRow(r) && counter.rowText(r).includes(`<system-note>decision_id=${id}</system-note>`) && counter.rowText(r).includes('<system-note>option_index=0</system-note>')
+  // The app writes one decision_id note and one option_index note per tap. The notes are counted, not searched for: a label or question that
+  // carried a raw note (if the app ever stopped escaping `<`) would add a second one and the row would count for nothing (gate 515, finding 1).
+  const notes = (r, key) => [...counter.rowText(r).matchAll(new RegExp(`<system-note>${key}=([^<]*)</system-note>`, 'g'))].map((m) => m[1])
+  const answer = (r) => counter.principalRow(r) && notes(r, 'decision_id').length === 1 && notes(r, 'decision_id')[0] === id && notes(r, 'option_index').length === 1 && notes(r, 'option_index')[0] === '0'
   return at >= 0 && rows.slice(at + 1).some(answer)
 }
 // A cached cloud image can lack the counter (its pasted setup predates it) and its start hook, the old team-guard, never fetches it
@@ -3063,7 +3066,7 @@ const stopNote = async (prompt) => {
   const word = await stopWord()
   return word ? promptContext(prompt, word) : [promptContext(prompt), 'rule-guard: the gate counter did not load, so a stop word is not checked here: if this message says stop or pause, stop at once.'].filter(Boolean).join('\n')
 }
-const projectsOrigin = async () => { try { return (await loadCounter()).fromProjects } catch { return () => false } }
+const relayCounter = async () => { try { return await loadCounter() } catch { return null } }
 async function loadCounter(file = 'gate-rounds.mjs') {
   const url = new URL(`./${file}`, import.meta.url)
   try { return await import(url) } catch (e) {
@@ -3192,7 +3195,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         const gateRole = session ? read(join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)).trim() : ''
         const planNote = await recordPlanChecks(transcript, agentId, cwd, session) // before the gates: `approve` reads the check this just recorded
         // M50: a relay that reached the thread mid-turn may never have fired the prompt hook; the transcript has it, so a locked thread re-reads it at its next tool call.
-        if (session && existsSync(lockFile(session))) { const t = transcript(); const last = coordinatorRelays(t, await projectsOrigin()).at(-1); if (last) await relayRebrief(session, last, cwd, knownModel(session, t), t) }
+        if (session && existsSync(lockFile(session))) { const t = transcript(); const last = coordinatorRelays(t, await relayCounter()).at(-1); if (last) await relayRebrief(session, last, cwd, knownModel(session, t), t) }
         let block = lockBlock(tool, session)
           ?? handsOff(tool, input ?? {}, gateRole, setupRoot(cwd))
           ?? (await gateBlock(tool, input ?? {}, transcript, sessionModel(transcript()), true, gateRole, transcriptPath))

@@ -191,9 +191,10 @@ export const transcriptRows = (text) => String(text).split('\n').map((l) => { tr
 export const CMSG = /#?(cmsg_\w+)/ // one pattern for a card or message id; task-ledger.mjs reuses it
 // Who wrote a transcript row (#474 round 11). One place for both proofs: rule-guard's humanAfter (card proof) and task-ledger's pure-code
 // approve. A principal message is the wake wrapper the harness writes (the wrapper opens the row, then project and thread tags, then the
-// message from human with trust principal), never text quoted inside a relay, a cited entry, an event or a tool result. A coordinator
-// message is the relay behind the harness lead-in, or the bare queued form where only the harness writes it (a queued_command attachment
-// or an isMeta user row). The row text is the string or the joined text parts, not the JSON of the row. rule-guard.mjs keeps its own copy of
+// message from human with trust principal), never text quoted inside a relay, a cited entry, an event or a tool result, and only on a row
+// the app wrote with the human origin (fromHuman). A coordinator message is the relay behind the harness lead-in or the bare queued form,
+// only on a row the projects server delivered (fromProjects; isMeta alone proves nothing, a thread's own scheduled prompt has it too). rule-guard's
+// coordinatorRelays (the role lock) calls coordinatorRow, so that is one check, not two (M53 slice 3). The row text is the string or the joined text parts, not the JSON of the row. rule-guard.mjs keeps its own copy of
 // COORDINATOR_RELAY for the prompt hook (it loads this file lazily); a test holds the two sources equal.
 export const WAKE = /^\s*<wake\b[^>]*>\s*(?:<project\b[^>]*>\s*)?(?:<thread\b[^>]*>\s*)?<message\b(?=[^>]*\bfrom="human")(?=[^>]*\btrust="principal")/
 export const COORDINATOR_RELAY = /^\s*(?:<system-note>[^<]*<\/system-note>\s*)*(?:<system-reminder>\s*)?A message from this project[’']s coordinator session[^\n]*\n\s*<coordinator-relay>\s*<relay\b[^>]*\bfrom=\\?"coordinator"/
