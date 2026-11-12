@@ -93,6 +93,17 @@ test('the repo connection is saved first, with the identifiers Cloudflare accept
   assert.deepEqual(builds.calls[1].init.body.git_repository, { ...git, branch: 'main' })
 })
 
+test('a connection Cloudflare saves for another repo stops the run; matching or unnamed ones pass', async () => {
+  const named = (org, name) => ({ ok: true, status: 200, json: { success: true, errors: [], result: { provider_account_name: org, repo_name: name } }, text: '' })
+  const wrong = fakeCf(() => named('yverse-studio', 'other-repo'))
+  await assert.rejects(connectRepo(wrong.cf, { repo, org: 'yverse-studio', name: 'deploy-test', tries: 1 }), /other-repo, not yverse-studio\/deploy-test: check the repo_id/)
+  assert.equal(wrong.calls.length, 1)
+  const right = fakeCf(() => named('Yverse-Studio', 'deploy-test'))
+  assert.equal((await connectRepo(right.cf, { repo, org: 'yverse-studio', name: 'deploy-test', tries: 1 })).repo_id, '123')
+  assert.equal(right.calls[0].init.method, 'PUT')
+  assert.deepEqual(right.calls[0].init.body, { provider_type: 'github', provider_account_name: 'yverse-studio', repo_name: 'deploy-test', provider_account_id: '456', repo_id: '123' })
+})
+
 test('a repo Cloudflare does not know is retried, then the run stops with the answers and the fix', async () => {
   const { cf, calls } = fakeCf(() => refused)
   await assert.rejects(
@@ -307,4 +318,15 @@ test('an unknown-repo error tells the reader to check the numeric ids before any
     connectRepo(cf, { repo, org: 'yverse-studio', name: 'deploy-test', tries: 1, waitMs: 0 }),
     (err) => /Fix: first check repo_id and owner_id.*numeric.*Only when the ids are right.*settings\/installations/.test(err.message),
   )
+})
+
+test('ensureWorker tags a new Worker at creation and adopts a tag-only Worker on a re-run', async () => {
+  const { ensureWorker, WORKER_TAG } = await import('./new-project.mjs')
+  const ok = (result) => ({ ok: true, status: 200, json: { result }, text: '' })
+  const made = fakeCf((path, init) => (init?.method === 'POST' ? ok({ id: 'w1' }) : ok([])))
+  await ensureWorker(made.cf, 'zz-new', 'secret', { adopt: false, provenOnly: false, pinnedId: null })
+  assert.deepEqual(made.calls.find((c) => c.init?.method === 'POST').init.body.tags, [WORKER_TAG])
+  const adopt = fakeCf(() => ok([{ id: 'w2', name: 'zz-new', tags: [WORKER_TAG] }]))
+  assert.equal((await ensureWorker(adopt.cf, 'zz-new', 'secret', { adopt: true, provenOnly: true, pinnedId: null })).id, 'w2')
+  assert.ok(!adopt.calls.some((c) => c.init?.method === 'POST'))
 })
