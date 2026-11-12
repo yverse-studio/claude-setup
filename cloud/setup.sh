@@ -1838,6 +1838,8 @@ export function sessionModel(transcript = '', env = process.env) {
   }
   return model ?? env.ANTHROPIC_MODEL ?? null
 }
+// The model of this session: the transcript's newest reply, else the one SessionStart wrote (the prompt and the tool-call path use this one).
+export const knownModel = (session, transcript) => sessionModel(transcript) ?? (read(join(tmpdir(), `claude-setup-model-${String(session).replace(/[^A-Za-z0-9]/g, '')}`)).trim() || null)
 // Gate roles grade work and need the gate rules (yskills 2026-11-04: "if you don't even get the gate right").
 export const GATE_ROLES = /^(Tester|Reviewer|Security|Legal|Playtester|Hook Checker|Critic|Story Editor|Evaluator)$/i
 export const GATE_PRIOR = /^[ \t>-]*Prior art:[^\n]*\bgate\.md\b/im
@@ -2258,9 +2260,10 @@ export function updateLock(session, check) {
 // straight after it), so a wrapper inside
 // a wake, a PR event, a task notification or another relay never counts (#475 follow-up). It then stamps the role once, as roleContext does for a spawn brief: a non-empty stamp is never changed,
 // and a gate role only for a thread that holds no stamp yet (relayRebrief; #475, M50).
-// M50: a relay that reaches a working thread is a queued_command in the transcript and the hook's prompt, and it starts with the bare
-// `<relay from="coordinator"` (live 2026-11-12: the lead-in line and wrapper are added only when the harness shows it), so both shapes count.
-export const COORDINATOR_RELAY = /^\s*(?:<system-note>[^<]*<\/system-note>\s*)*(?:(?:<system-reminder>\s*)?A message from this project[’']s coordinator session[^\n]*\n\s*<coordinator-relay>\s*)?<relay\b[^>]*\bfrom=\\?"coordinator"/
+export const COORDINATOR_RELAY = /^\s*(?:<system-note>[^<]*<\/system-note>\s*)*(?:<system-reminder>\s*)?A message from this project[’']s coordinator session[^\n]*\n\s*<coordinator-relay>\s*<relay\b[^>]*\bfrom=\\?"coordinator"/
+// M50: a relay that reaches a working thread is a `queued_command` attachment, whose text starts with the bare `<relay from="coordinator"` (live
+// 2026-11-12: the lead-in line is added only when the harness shows it). The bare form counts only as such an attachment, an entry only the harness writes.
+const BARE_RELAY = /^\s*<relay\b[^>]*\bfrom=\\?"coordinator"/
 // The coordinator often sends only the lines the start brief lacked (#479 part 2: VacationGame's Critic, our Director), so the relay is read
 // together with the earlier coordinator relays and the spawn brief from the transcript: the newest relay's lines come first and win,
 // older relays and the spawn brief fill the gaps.
@@ -2273,7 +2276,7 @@ export function coordinatorRelays(transcript) {
       const content = entry.message?.content
       const text = entry.type === 'attachment' && entry.attachment?.type === 'queued_command' ? String(entry.attachment.prompt ?? '')
         : entry.type === 'user' ? (typeof content === 'string' ? content : (content ?? []).map((c) => c?.text ?? '').join('\n')) : ''
-      if (COORDINATOR_RELAY.test(text)) relays.push(text)
+      if (entry.type === 'attachment' ? BARE_RELAY.test(text) || COORDINATOR_RELAY.test(text) : COORDINATOR_RELAY.test(text)) relays.push(text)
     } catch { /* not a JSON line */ }
   }
   return relays
@@ -2289,7 +2292,7 @@ export function relayContext(prompt, transcript) {
 // role, a gate role too; one that holds a stamp keeps it (#475: a builder never becomes the reviewer of its own work).
 // The third refused relay asks for one card; the lock stays and a complete relay still lifts it. Returns that note, or ''.
 async function relayRebrief(session, prompt, cwd, model, transcript = '') {
-  if (!COORDINATOR_RELAY.test(prompt)) return ''
+  if (!COORDINATOR_RELAY.test(prompt) && !BARE_RELAY.test(prompt)) return ''
   const context = relayContext(prompt, transcript)
   const text = stripTags([prompt, context].join('\n'))
   updateLock(session, await briefCheck(text, cwd, model, true))
@@ -2388,7 +2391,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           const lookup = session && !midWork && !spawned && !existsSync(briefOnce) && transcriptPath && existsSync(transcriptPath)
           const brief = lookup ? spawnPrompt(prompt, read(transcriptPath)) : prompt
           if (session && (spawned || (lookup && brief !== prompt))) writeFileSync(briefOnce, '')
-          const model = sessionModel(transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : '') ?? (read(join(tmpdir(), `claude-setup-model-${String(session).replace(/[^A-Za-z0-9]/g, '')}`)).trim() || null)
+          const model = knownModel(session, transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : '')
           const checkNow = midWork ? '' : await briefCheck(brief, cwd, model)
           let relayNote = ''
           if (spawned || (lookup && brief !== prompt)) updateLock(session, checkNow)
@@ -2409,7 +2412,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         const sessionTranscript = () => [transcriptPath, agentTranscript(transcriptPath, agentId)].filter((p) => p && existsSync(p)).map(read).join('\n')
         const gateRole = session ? read(join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)).trim() : ''
         // M50: a relay that reached the thread mid-turn may never have fired the prompt hook; the transcript has it, so a locked thread re-reads it at its next tool call.
-        if (session && existsSync(lockFile(session))) { const t = transcript(); const last = coordinatorRelays(t).at(-1); if (last) await relayRebrief(session, last, cwd, sessionModel(t), t) }
+        if (session && existsSync(lockFile(session))) { const t = transcript(); const last = coordinatorRelays(t).at(-1); if (last) await relayRebrief(session, last, cwd, knownModel(session, t), t) }
         let block = lockBlock(tool, session)
           ?? handsOff(tool, input ?? {}, gateRole, setupRoot(cwd))
           ?? (await gateBlock(tool, input ?? {}, transcript, sessionModel(transcript()), true, gateRole))
