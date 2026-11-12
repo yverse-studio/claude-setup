@@ -123,6 +123,8 @@ export function gateBrief(brief, { model = null, dir = ledgerDir() } = {}) {
 }
 
 // ---- proofs the hook reads from the session's transcript
+// The one transcript reader of the task ledger (task-ledger.mjs: ranInSession, messageAfter, briefSize): the rows of the JSONL, bad lines skipped.
+export const transcriptRows = (text) => String(text).split('\n').map((l) => { try { return JSON.parse(l) } catch { return null } }).filter(Boolean)
 export const CMSG = /#?(cmsg_\w+)/ // one pattern for a card or message id; task-ledger.mjs reuses it
 const cmsg = CMSG
 export function cardProof(ref, calls) {
@@ -268,7 +270,8 @@ export function simpleCommands(text, depth = 0) {
   return { list, bad }
 }
 
-const GUARD_FILE = /\.claude[\\/]claude-setup[\\/](?:rule-guard|team-guard|gate-rounds|task-ledger)\.mjs$/
+const GUARDS = 'rule-guard|team-guard|context-guard|compact-guard|attempt-guard|gate-rounds|task-ledger' // every installed guard file (team-guard.mjs GUARD_FILES)
+const GUARD_FILE = new RegExp(`\\.claude[\\\\/]claude-setup[\\\\/](?:${GUARDS})\\.mjs$`)
 const CLI_VERBS = ['status', 'check', 'init', 'direct', 'card', 'picture', 'waive', 'merge', 'post']
 const MERGE_DOOR = /pulls\/[^\s/]*\/merge|mergePullRequest|enablePullRequestAutoMerge/
 
@@ -295,7 +298,11 @@ function bashProblem(cmd, dir, ctx) {
     if (s.redirs.some((r) => !/\s/.test(r) && (named(r) || GUARD_FILE.test(r)))) return msg
     // An inline script (node -e, python -c) that holds the ledger folder or an installed guard path writes it as well as a redirect does.
     const inline = /^(node|nodejs|python3?|bun|deno|ruby|perl)$/.test(base(s.a0)) && s.args.some((a) => /^-(?:[a-zA-Z]*[ecp]|-eval|-print)$/.test(a))
-    if (inline && s.args.some((a) => (dir && a.includes(dir.replace(/\/+$/, '') + '/')) || /(?:project-files|\.claude\/claude-setup)\/gate\//.test(a) || /\.claude[\\/]claude-setup[\\/](?:rule-guard|team-guard|gate-rounds|task-ledger)\.mjs/.test(a))) return msg
+    if (inline && s.args.some((a) => (dir && a.includes(dir.replace(/\/+$/, '') + '/')) || /(?:project-files|\.claude\/claude-setup)\/gate\//.test(a) || GUARD_FILE.test(a) || new RegExp(`\\.claude[\\\\/]claude-setup[\\\\/](?:${GUARDS})\\.mjs`).test(a))) return msg
+    // A guard script run by hand takes any payload, so a transcript_path of the caller's choosing (reviewer, #474 round 1): only the hook runs it.
+    // `rule-guard.mjs read <url>` is the one hand use (CLAUDE.md, Cloud threads).
+    const guardRun = /^(node|nodejs|bun|deno|tsx)$/.test(base(s.a0)) ? s.args.find((a) => /-guard\.mjs$/.test(a)) : null
+    if (guardRun && !(base(guardRun) === 'rule-guard.mjs' && s.args[s.args.indexOf(guardRun) + 1] === 'read')) return `gate ledger: ${base(guardRun)} is run by its hook only, never by hand (it takes any payload); the one hand use is "rule-guard.mjs read <url>".`
     const script = s.a0 === 'node' ? s.args.find((a) => base(a) === 'gate-rounds.mjs') ?? s.args.find((a) => !a.startsWith('-')) : null
     if (script && base(script) === 'gate-rounds.mjs') {
       const at = s.args.indexOf(script)
@@ -329,7 +336,7 @@ export function gateStep(tool, input = {}, ctx = {}) {
   const dir = ctx.dir ?? ledgerDir()
   const file = String(input.file_path ?? '')
   if (/^(Write|Edit)$/.test(tool) && (file.includes('project-files/gate/') || (file.startsWith(`${dir}/`) && file.endsWith('.json')))) return 'gate ledger: the round counter is written only by gate-rounds.mjs (gate.md, Rounds), never by hand.'
-  if (/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) && /\.claude[\\/]claude-setup[\\/](gate-rounds|task-ledger|rule-guard|team-guard)\.mjs$/.test(file)) return 'gate ledger: the installed guards are changed only through claude-setup (a PR), never in place.'
+  if (/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) && GUARD_FILE.test(file)) return 'gate ledger: the installed guards are changed only through claude-setup (a PR), never in place.'
   if (tool === 'Bash' || tool === 'PowerShell') return bashProblem(String(input.command ?? ''), dir, ctx)
   if (tool === 'mcp__github__create_pull_request') {
     const text = `${input.title ?? ''}\n${input.body ?? ''}`

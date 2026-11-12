@@ -750,22 +750,6 @@ const humanAfter = (transcript, ref) => {
   const human = (r) => r.type === 'user' && !(Array.isArray(r.message?.content) && r.message.content.some((c) => c?.type === 'tool_result')) && /<message\b[^>]*\bfrom=\\?"human\\?"[^>]*\btrust=\\?"principal\\?"/.test(JSON.stringify(r.message?.content ?? ''))
   return at >= 0 && rows.slice(at + 1).some(human)
 }
-// A message in this session after a time: a user-side row that is no tool result (a thread cannot write one), from the principal or the
-// coordinator, holding exactly that id (M28, pure-code approval).
-const messageAfter = (transcript, ref, at) => {
-  const id = String(ref).match(/cmsg_\w+/)?.[0]
-  const since = Date.parse(at ?? '')
-  const from = /trust=\\?"principal\\?"|<relay\b[^>]*\bfrom=\\?"coordinator\\?"/
-  return !!id && Number.isFinite(since) && transcript.split('\n').some((l) => {
-    try {
-      const r = JSON.parse(l)
-      const body = JSON.stringify(r.message?.content ?? '')
-      return r.type === 'user' && !(Array.isArray(r.message?.content) && r.message.content.some((c) => c?.type === 'tool_result')) && new RegExp(`${id}(?!\\w)`).test(body) && from.test(body) && Date.parse(r.timestamp ?? '') >= since
-    } catch { return false }
-  })
-}
-// The brief's Size (S, M or L) from the session's first message that names one; null when none does.
-const briefSize = (transcript) => { for (const l of transcript.split('\n')) { if (!l.includes('Size:')) continue; try { const r = JSON.parse(l); if (r.type !== 'user') continue; const m = JSON.stringify(r.message?.content ?? '').replace(/[*_`]/g, '').match(/\bSize:[ \t]*([SML])\b/); if (m) return m[1] } catch { continue } } return null }
 // A cached cloud image can lack the counter (its pasted setup predates it) and its start hook, the old team-guard, never fetches it
 // (each session restarts from the cache): the first call that needs it installs it with the refresh that now sits in this dir (2026-11-12).
 async function loadCounter(file = 'gate-rounds.mjs') {
@@ -793,7 +777,7 @@ export async function gateBlock(tool, input, transcript, model, dry = false) {
     const cmd = /^(Bash|PowerShell)$/.test(tool) ? String(input?.command ?? '') : ''
     if (!/task-ledger(?!\.test)/.test(cmd)) return null
     const task = await loadCounter('task-ledger.mjs')
-    const problem = task.taskBashProblem(cmd, { dir: mod.ledgerDir(), calls: toolCalls(t), size: briefSize(t), messageAfter: (ref, at) => messageAfter(t, ref, at) })
+    const problem = task.taskBashProblem(cmd, { dir: mod.ledgerDir(), calls: toolCalls(t), transcript: t })
     return problem ? `rule-guard: ${problem}` : null
   } catch (e) { return `rule-guard: gate ledger check failed (${String(e.message).slice(0, 80)}); refused, fail closed (operator/gate.md, Rounds).` }
 }

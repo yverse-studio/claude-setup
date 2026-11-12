@@ -946,6 +946,8 @@ export function gateBrief(brief, { model = null, dir = ledgerDir() } = {}) {
 }
 
 // ---- proofs the hook reads from the session's transcript
+// The one transcript reader of the task ledger (task-ledger.mjs: ranInSession, messageAfter, briefSize): the rows of the JSONL, bad lines skipped.
+export const transcriptRows = (text) => String(text).split('\n').map((l) => { try { return JSON.parse(l) } catch { return null } }).filter(Boolean)
 export const CMSG = /#?(cmsg_\w+)/ // one pattern for a card or message id; task-ledger.mjs reuses it
 const cmsg = CMSG
 export function cardProof(ref, calls) {
@@ -1091,7 +1093,8 @@ export function simpleCommands(text, depth = 0) {
   return { list, bad }
 }
 
-const GUARD_FILE = /\.claude[\\/]claude-setup[\\/](?:rule-guard|team-guard|gate-rounds|task-ledger)\.mjs$/
+const GUARDS = 'rule-guard|team-guard|context-guard|compact-guard|attempt-guard|gate-rounds|task-ledger' // every installed guard file (team-guard.mjs GUARD_FILES)
+const GUARD_FILE = new RegExp(`\\.claude[\\\\/]claude-setup[\\\\/](?:${GUARDS})\\.mjs$`)
 const CLI_VERBS = ['status', 'check', 'init', 'direct', 'card', 'picture', 'waive', 'merge', 'post']
 const MERGE_DOOR = /pulls\/[^\s/]*\/merge|mergePullRequest|enablePullRequestAutoMerge/
 
@@ -1118,7 +1121,11 @@ function bashProblem(cmd, dir, ctx) {
     if (s.redirs.some((r) => !/\s/.test(r) && (named(r) || GUARD_FILE.test(r)))) return msg
     // An inline script (node -e, python -c) that holds the ledger folder or an installed guard path writes it as well as a redirect does.
     const inline = /^(node|nodejs|python3?|bun|deno|ruby|perl)$/.test(base(s.a0)) && s.args.some((a) => /^-(?:[a-zA-Z]*[ecp]|-eval|-print)$/.test(a))
-    if (inline && s.args.some((a) => (dir && a.includes(dir.replace(/\/+$/, '') + '/')) || /(?:project-files|\.claude\/claude-setup)\/gate\//.test(a) || /\.claude[\\/]claude-setup[\\/](?:rule-guard|team-guard|gate-rounds|task-ledger)\.mjs/.test(a))) return msg
+    if (inline && s.args.some((a) => (dir && a.includes(dir.replace(/\/+$/, '') + '/')) || /(?:project-files|\.claude\/claude-setup)\/gate\//.test(a) || GUARD_FILE.test(a) || new RegExp(`\\.claude[\\\\/]claude-setup[\\\\/](?:${GUARDS})\\.mjs`).test(a))) return msg
+    // A guard script run by hand takes any payload, so a transcript_path of the caller's choosing (reviewer, #474 round 1): only the hook runs it.
+    // `rule-guard.mjs read <url>` is the one hand use (CLAUDE.md, Cloud threads).
+    const guardRun = /^(node|nodejs|bun|deno|tsx)$/.test(base(s.a0)) ? s.args.find((a) => /-guard\.mjs$/.test(a)) : null
+    if (guardRun && !(base(guardRun) === 'rule-guard.mjs' && s.args[s.args.indexOf(guardRun) + 1] === 'read')) return `gate ledger: ${base(guardRun)} is run by its hook only, never by hand (it takes any payload); the one hand use is "rule-guard.mjs read <url>".`
     const script = s.a0 === 'node' ? s.args.find((a) => base(a) === 'gate-rounds.mjs') ?? s.args.find((a) => !a.startsWith('-')) : null
     if (script && base(script) === 'gate-rounds.mjs') {
       const at = s.args.indexOf(script)
@@ -1152,7 +1159,7 @@ export function gateStep(tool, input = {}, ctx = {}) {
   const dir = ctx.dir ?? ledgerDir()
   const file = String(input.file_path ?? '')
   if (/^(Write|Edit)$/.test(tool) && (file.includes('project-files/gate/') || (file.startsWith(`${dir}/`) && file.endsWith('.json')))) return 'gate ledger: the round counter is written only by gate-rounds.mjs (gate.md, Rounds), never by hand.'
-  if (/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) && /\.claude[\\/]claude-setup[\\/](gate-rounds|task-ledger|rule-guard|team-guard)\.mjs$/.test(file)) return 'gate ledger: the installed guards are changed only through claude-setup (a PR), never in place.'
+  if (/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) && GUARD_FILE.test(file)) return 'gate ledger: the installed guards are changed only through claude-setup (a PR), never in place.'
   if (tool === 'Bash' || tool === 'PowerShell') return bashProblem(String(input.command ?? ''), dir, ctx)
   if (tool === 'mcp__github__create_pull_request') {
     const text = `${input.title ?? ''}\n${input.body ?? ''}`
@@ -1255,8 +1262,9 @@ import { existsSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { CMSG, cardProof, ledgerDir, readLedger, simpleCommands, writeLedger } from './gate-rounds.mjs'
+import { CMSG, cardProof, ledgerDir, readLedger, simpleCommands, transcriptRows, writeLedger } from './gate-rounds.mjs'
 
+const OPUS_UP = /opus|fable/i // the checker's tier: Opus or above (docs/TEAMS.md, Models line)
 export const sha = (text) => createHash('sha256').update(text).digest('hex')
 const read = (f) => { try { return readFileSync(f, 'utf8') } catch { return '' } }
 
@@ -1346,7 +1354,7 @@ export function recordApproval(asset, { by, ref }, dir = ledgerDir()) {
 export function planReady(asset, dir = ledgerDir()) {
   const l = readLedger(dir, asset)
   const h = l.plan?.hash
-  return !!h && sha(read(l.plan.path)) === h && l.planCheck?.result === 'pass' && l.planCheck.plan_hash === h && l.approval?.plan_hash === h
+  return !!h && sha(read(l.plan.path)) === h && l.planCheck?.result === 'pass' && l.planCheck.plan_hash === h && OPUS_UP.test(String(l.planCheck.model ?? '')) && l.approval?.plan_hash === h
 }
 
 // Which approval proof applies comes from the registered plan's Gate point and the brief's Size, never from an argument the thread passes (plan section 8).
@@ -1368,7 +1376,6 @@ const QUESTIONS = [
   'Is anything under Still needed missing that the method obviously needs?',
   'Was the library searched before building new?',
 ]
-const OPUS_UP = /opus|fable/i
 const AGENT = /^(Agent|Task)$/
 const CHECK_LINE = /^Plan check:[ \t]*(\S[^\n]*?)[ \t]*$/m
 const checkAsset = (prompt) => String(prompt ?? '').split('\n', 1)[0].match(CHECK_LINE)?.[1] ?? null
@@ -1457,11 +1464,22 @@ export function verdictOf(text) {
 // by hand and passed to planCheckPost therefore records nothing unless the real call is there.
 function ranInSession(transcriptPath, prompt) {
   const want = sha(String(prompt ?? '').trimEnd())
-  return read(String(transcriptPath ?? '')).split('\n').some((line) => {
-    if (!line.includes('"tool_use"')) return false
-    try { return (JSON.parse(line).message?.content ?? []).some((c) => c?.type === 'tool_use' && AGENT.test(c.name ?? '') && sha(String(c.input?.prompt ?? '').trimEnd()) === want) } catch { return false }
+  return transcriptRows(read(String(transcriptPath ?? ''))).some((r) => (Array.isArray(r.message?.content) ? r.message.content : []).some((c) => c?.type === 'tool_use' && AGENT.test(c.name ?? '') && sha(String(c.input?.prompt ?? '').trimEnd()) === want))
+}
+// A message in this session after a time: a user-side row that is no tool result (a thread cannot write one), from the principal or the
+// coordinator, holding exactly that id (pure-code approval).
+const FROM = /trust=\\?"principal\\?"|<relay\b[^>]*\bfrom=\\?"coordinator\\?"/
+function messageAfter(rows, ref, at) {
+  const id = String(ref).match(CMSG)?.[1]
+  const since = Date.parse(at ?? '')
+  if (!id || !Number.isFinite(since)) return false
+  return rows.some((r) => {
+    const body = JSON.stringify(r.message?.content ?? '')
+    return r.type === 'user' && !(Array.isArray(r.message?.content) && r.message.content.some((c) => c?.type === 'tool_result')) && new RegExp(`${id}(?!\\w)`).test(body) && FROM.test(body) && Date.parse(r.timestamp ?? '') >= since
   })
 }
+// The brief's Size (S, M or L) from the session's first user message that names one; null when none does.
+const briefSize = (rows) => { for (const r of rows) { if (r.type !== 'user') continue; const m = JSON.stringify(r.message?.content ?? '').replace(/[*_`]/g, '').match(/\bSize:[ \t]*([SML])\b/); if (m) return m[1] } return null }
 
 // PostToolUse (context-guard.mjs): records the checker's verdict. The real payload of an Agent call was not captured in the cloud session
 // that built this, so the parser is tolerant (see responseText) and a launch without final text (a background run) records nothing and says so.
@@ -1483,7 +1501,7 @@ export function planCheckPost(payload = {}, { dir = ledgerDir(), checklists = lo
 
 // Bash, decided by command position (the same tokenizer as the round counter). The CLI has four verbs; an import, an eval or an unknown verb
 // would reach planCheckPost or the ledger, so it is refused. `approve` passes only with its proof from this session's transcript (reviewer item b).
-// ctx: { dir, calls (the session's tool calls), size (the brief's Size), messageAfter(ref, at) }.
+// ctx: { dir, calls (the session's tool calls), transcript (its text) }.
 const INLINE = /^-(?:[a-zA-Z]*[ep]|-eval|-print|-input-type.*|-import|-require|r)$|^-$/
 export function taskBashProblem(cmd, ctx = {}) {
   if (!/task-ledger(?!\.test)/.test(cmd)) return null
@@ -1506,8 +1524,9 @@ export function taskBashProblem(cmd, ctx = {}) {
     if (list.length !== 1 || /\$\(|`/.test(cmd)) return 'task ledger: approve runs as the only command of the call, without substitution, so its proof can be read.'
     const l = readLedger(ctx.dir ?? ledgerDir(), asset)
     if (!l.plan || l.planCheck?.result !== 'pass') return null // the CLI refuses that itself, with its own reason
-    const size = ctx.size ?? 'L' // an unreadable brief counts as the stricter kind
-    const why = approvalProblem({ visible: visibleWork(read(l.plan.path), size), ref, calls: ctx.calls ?? [], humanAfter: (r) => ctx.messageAfter?.(r, l.planCheck.at) ?? false })
+    const rows = transcriptRows(ctx.transcript ?? '')
+    const size = briefSize(rows) ?? 'L' // an unreadable brief counts as the stricter kind
+    const why = approvalProblem({ visible: visibleWork(read(l.plan.path), size), ref, calls: ctx.calls ?? [], humanAfter: (r) => messageAfter(rows, r, l.planCheck.at) })
     if (why) return `task ledger: ${why}.`
   }
   return null
@@ -2288,22 +2307,6 @@ const humanAfter = (transcript, ref) => {
   const human = (r) => r.type === 'user' && !(Array.isArray(r.message?.content) && r.message.content.some((c) => c?.type === 'tool_result')) && /<message\b[^>]*\bfrom=\\?"human\\?"[^>]*\btrust=\\?"principal\\?"/.test(JSON.stringify(r.message?.content ?? ''))
   return at >= 0 && rows.slice(at + 1).some(human)
 }
-// A message in this session after a time: a user-side row that is no tool result (a thread cannot write one), from the principal or the
-// coordinator, holding exactly that id (M28, pure-code approval).
-const messageAfter = (transcript, ref, at) => {
-  const id = String(ref).match(/cmsg_\w+/)?.[0]
-  const since = Date.parse(at ?? '')
-  const from = /trust=\\?"principal\\?"|<relay\b[^>]*\bfrom=\\?"coordinator\\?"/
-  return !!id && Number.isFinite(since) && transcript.split('\n').some((l) => {
-    try {
-      const r = JSON.parse(l)
-      const body = JSON.stringify(r.message?.content ?? '')
-      return r.type === 'user' && !(Array.isArray(r.message?.content) && r.message.content.some((c) => c?.type === 'tool_result')) && new RegExp(`${id}(?!\\w)`).test(body) && from.test(body) && Date.parse(r.timestamp ?? '') >= since
-    } catch { return false }
-  })
-}
-// The brief's Size (S, M or L) from the session's first message that names one; null when none does.
-const briefSize = (transcript) => { for (const l of transcript.split('\n')) { if (!l.includes('Size:')) continue; try { const r = JSON.parse(l); if (r.type !== 'user') continue; const m = JSON.stringify(r.message?.content ?? '').replace(/[*_`]/g, '').match(/\bSize:[ \t]*([SML])\b/); if (m) return m[1] } catch { continue } } return null }
 // A cached cloud image can lack the counter (its pasted setup predates it) and its start hook, the old team-guard, never fetches it
 // (each session restarts from the cache): the first call that needs it installs it with the refresh that now sits in this dir (2026-11-12).
 async function loadCounter(file = 'gate-rounds.mjs') {
@@ -2331,7 +2334,7 @@ export async function gateBlock(tool, input, transcript, model, dry = false) {
     const cmd = /^(Bash|PowerShell)$/.test(tool) ? String(input?.command ?? '') : ''
     if (!/task-ledger(?!\.test)/.test(cmd)) return null
     const task = await loadCounter('task-ledger.mjs')
-    const problem = task.taskBashProblem(cmd, { dir: mod.ledgerDir(), calls: toolCalls(t), size: briefSize(t), messageAfter: (ref, at) => messageAfter(t, ref, at) })
+    const problem = task.taskBashProblem(cmd, { dir: mod.ledgerDir(), calls: toolCalls(t), transcript: t })
     return problem ? `rule-guard: ${problem}` : null
   } catch (e) { return `rule-guard: gate ledger check failed (${String(e.message).slice(0, 80)}); refused, fail closed (operator/gate.md, Rounds).` }
 }

@@ -10,8 +10,9 @@ import { existsSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { CMSG, cardProof, ledgerDir, readLedger, simpleCommands, writeLedger } from './gate-rounds.mjs'
+import { CMSG, cardProof, ledgerDir, readLedger, simpleCommands, transcriptRows, writeLedger } from './gate-rounds.mjs'
 
+const OPUS_UP = /opus|fable/i // the checker's tier: Opus or above (docs/TEAMS.md, Models line)
 export const sha = (text) => createHash('sha256').update(text).digest('hex')
 const read = (f) => { try { return readFileSync(f, 'utf8') } catch { return '' } }
 
@@ -101,7 +102,7 @@ export function recordApproval(asset, { by, ref }, dir = ledgerDir()) {
 export function planReady(asset, dir = ledgerDir()) {
   const l = readLedger(dir, asset)
   const h = l.plan?.hash
-  return !!h && sha(read(l.plan.path)) === h && l.planCheck?.result === 'pass' && l.planCheck.plan_hash === h && l.approval?.plan_hash === h
+  return !!h && sha(read(l.plan.path)) === h && l.planCheck?.result === 'pass' && l.planCheck.plan_hash === h && OPUS_UP.test(String(l.planCheck.model ?? '')) && l.approval?.plan_hash === h
 }
 
 // Which approval proof applies comes from the registered plan's Gate point and the brief's Size, never from an argument the thread passes (plan section 8).
@@ -123,7 +124,6 @@ const QUESTIONS = [
   'Is anything under Still needed missing that the method obviously needs?',
   'Was the library searched before building new?',
 ]
-const OPUS_UP = /opus|fable/i
 const AGENT = /^(Agent|Task)$/
 const CHECK_LINE = /^Plan check:[ \t]*(\S[^\n]*?)[ \t]*$/m
 const checkAsset = (prompt) => String(prompt ?? '').split('\n', 1)[0].match(CHECK_LINE)?.[1] ?? null
@@ -212,11 +212,22 @@ export function verdictOf(text) {
 // by hand and passed to planCheckPost therefore records nothing unless the real call is there.
 function ranInSession(transcriptPath, prompt) {
   const want = sha(String(prompt ?? '').trimEnd())
-  return read(String(transcriptPath ?? '')).split('\n').some((line) => {
-    if (!line.includes('"tool_use"')) return false
-    try { return (JSON.parse(line).message?.content ?? []).some((c) => c?.type === 'tool_use' && AGENT.test(c.name ?? '') && sha(String(c.input?.prompt ?? '').trimEnd()) === want) } catch { return false }
+  return transcriptRows(read(String(transcriptPath ?? ''))).some((r) => (Array.isArray(r.message?.content) ? r.message.content : []).some((c) => c?.type === 'tool_use' && AGENT.test(c.name ?? '') && sha(String(c.input?.prompt ?? '').trimEnd()) === want))
+}
+// A message in this session after a time: a user-side row that is no tool result (a thread cannot write one), from the principal or the
+// coordinator, holding exactly that id (pure-code approval).
+const FROM = /trust=\\?"principal\\?"|<relay\b[^>]*\bfrom=\\?"coordinator\\?"/
+function messageAfter(rows, ref, at) {
+  const id = String(ref).match(CMSG)?.[1]
+  const since = Date.parse(at ?? '')
+  if (!id || !Number.isFinite(since)) return false
+  return rows.some((r) => {
+    const body = JSON.stringify(r.message?.content ?? '')
+    return r.type === 'user' && !(Array.isArray(r.message?.content) && r.message.content.some((c) => c?.type === 'tool_result')) && new RegExp(`${id}(?!\\w)`).test(body) && FROM.test(body) && Date.parse(r.timestamp ?? '') >= since
   })
 }
+// The brief's Size (S, M or L) from the session's first user message that names one; null when none does.
+const briefSize = (rows) => { for (const r of rows) { if (r.type !== 'user') continue; const m = JSON.stringify(r.message?.content ?? '').replace(/[*_`]/g, '').match(/\bSize:[ \t]*([SML])\b/); if (m) return m[1] } return null }
 
 // PostToolUse (context-guard.mjs): records the checker's verdict. The real payload of an Agent call was not captured in the cloud session
 // that built this, so the parser is tolerant (see responseText) and a launch without final text (a background run) records nothing and says so.
@@ -238,7 +249,7 @@ export function planCheckPost(payload = {}, { dir = ledgerDir(), checklists = lo
 
 // Bash, decided by command position (the same tokenizer as the round counter). The CLI has four verbs; an import, an eval or an unknown verb
 // would reach planCheckPost or the ledger, so it is refused. `approve` passes only with its proof from this session's transcript (reviewer item b).
-// ctx: { dir, calls (the session's tool calls), size (the brief's Size), messageAfter(ref, at) }.
+// ctx: { dir, calls (the session's tool calls), transcript (its text) }.
 const INLINE = /^-(?:[a-zA-Z]*[ep]|-eval|-print|-input-type.*|-import|-require|r)$|^-$/
 export function taskBashProblem(cmd, ctx = {}) {
   if (!/task-ledger(?!\.test)/.test(cmd)) return null
@@ -261,8 +272,9 @@ export function taskBashProblem(cmd, ctx = {}) {
     if (list.length !== 1 || /\$\(|`/.test(cmd)) return 'task ledger: approve runs as the only command of the call, without substitution, so its proof can be read.'
     const l = readLedger(ctx.dir ?? ledgerDir(), asset)
     if (!l.plan || l.planCheck?.result !== 'pass') return null // the CLI refuses that itself, with its own reason
-    const size = ctx.size ?? 'L' // an unreadable brief counts as the stricter kind
-    const why = approvalProblem({ visible: visibleWork(read(l.plan.path), size), ref, calls: ctx.calls ?? [], humanAfter: (r) => ctx.messageAfter?.(r, l.planCheck.at) ?? false })
+    const rows = transcriptRows(ctx.transcript ?? '')
+    const size = briefSize(rows) ?? 'L' // an unreadable brief counts as the stricter kind
+    const why = approvalProblem({ visible: visibleWork(read(l.plan.path), size), ref, calls: ctx.calls ?? [], humanAfter: (r) => messageAfter(rows, r, l.planCheck.at) })
     if (why) return `task ledger: ${why}.`
   }
   return null
