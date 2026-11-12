@@ -110,7 +110,8 @@ export function stalePreviews(root) {
 // body's `_inventory` (BT_ presets and char_<name> per CH_ key, as fit_garment.py writes it into measure.json), so an author cannot shorten it.
 // A report that is only a file list has no rows and fails.
 const LICENCE_FIELDS = ['Source', 'Licence', 'Commercial use', 'Adult use', 'Attribution']
-const USE_OK = /^(yes|ja)\b(?!\s*\?)/i // Adult use and Commercial use are allow-lists: only an explicit yes passes; "yes?", "?", "not specified" or anything else is quarantine
+const USE_OK = /^(yes|ja)[\s.!]*$/i // Adult use and Commercial use are allow-lists: only a bare yes or ja passes (a restriction after it, "yes?", "?", "not specified", anything else is quarantine; gate #483 r3, N1)
+const allFields = (text, label) => [...text.matchAll(new RegExp(`^[ \\t>*-]*\\**${label}\\**:\\**[ \\t]*(.*)$`, 'gim'))].map((m) => m[1].trim()) // a repeated line must pass too, the first one does not win (N4)
 const TYPES = ['garment', 'hair', 'eyes', 'face'] // steps.md; eyes and faces may say "visual" with a reason where no metric exists
 const NUMBER_TYPES = ['garment', 'hair']
 export const bodyInventory = (report) => report?._inventory?.BT && report?._inventory?.CH ? [...report._inventory.BT, ...report._inventory.CH.map((k) => `char_${String(k).replace(/^CH_/, '')}`)] : []
@@ -124,7 +125,7 @@ export function intakeProblems(dir, inventory = []) {
   else {
     const text = readFileSync(licence, 'utf8')
     for (const f of LICENCE_FIELDS) if (placeholder(field(text, f))) out.push(`LICENCE.md has no real "${f}:" line`)
-    for (const f of ['Commercial use', 'Adult use']) if (!placeholder(field(text, f)) && !USE_OK.test(field(text, f))) out.push(`LICENCE.md says "${f}: ${field(text, f)}": only an explicit yes passes, the asset goes to inbox/_quarantine/, never into lib/`)
+    for (const f of ['Commercial use', 'Adult use']) for (const v of allFields(text, f)) if (!placeholder(v) && !USE_OK.test(v)) out.push(`LICENCE.md says "${f}: ${v}": only a bare yes or ja passes, the asset goes to inbox/_quarantine/, never into lib/`)
   }
   if (!inventory.length) out.push('no body inventory: pass --inventory <measure.json> (the fit_garment.py output with _inventory {BT, CH}); the list of bases is never typed into intake.json')
   if (!existsSync(at('intake.json'))) return [...out, 'no intake.json: the report is a file list, not a processed asset (rows, catalog)']

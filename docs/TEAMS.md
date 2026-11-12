@@ -43,7 +43,7 @@ Coordinator only (a thread: Coordinator or thread, above).
    ([`gate.md`](../.claude/skills/operator/gate.md), Gate size): one size per task, picked by the
    table, never by the author. A video or post brief's `Size:` stamp still needs a letter: one video or post is `M`, an ad batch, series or a launch video `L`.
 3. **Threads only for roles that own a long job or talk to yskills:** Planner, Designer, Game
-   Designer, Animator, Programmer, Tester (size L), Producer, Editor, Social Lead, Marketer. Every other role
+   Designer, Animator, Character TD, Programmer, Tester (size L), Producer, Editor, Social Lead, Marketer. Every other role
    is an `Agent` subagent of the thread that needs it, fresh for each job. A thread never plays a
    second thread-role; it asks the coordinator with `message_coordinator` (role, topic, files,
    done-when) and goes on with its own job.

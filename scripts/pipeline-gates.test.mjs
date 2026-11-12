@@ -137,10 +137,10 @@ test('intake: Adult use or Commercial use "no", or an unclear answer, goes to qu
 
 test('intake: Adult use and Commercial use are allow-lists, only yes or ja passes', () => {
   for (const field of ['Adult use', 'Commercial use']) {
-    for (const value of ['?', 'not specified', 'keine Angabe', 'maybe', 'see website', 'permitted?', 'yes?', 'Yes ?', 'Non-commercial only', 'CC BY-NC', 'Not permitted', 'personal use only', '-']) {
+    for (const value of ['?', 'not specified', 'keine Angabe', 'maybe', 'see website', 'permitted?', 'yes?', 'Yes ?', 'yes (non-commercial)', 'Yes - personal use only', 'ja, aber nicht kommerziell', 'yes/no', 'Yes, except sexual content', 'Non-commercial only', 'CC BY-NC', 'Not permitted', 'personal use only', '-']) {
       assert.match(problems((d) => writeFileSync(join(d, 'LICENCE.md'), LICENCE.replace(`${field}: yes`, `${field}: ${value}`))), new RegExp(`"${field}: .*_quarantine`), `${field}: ${value}`)
     }
-    for (const value of ['yes', 'Yes, no restrictions', 'ja']) assert.equal(problems((d) => writeFileSync(join(d, 'LICENCE.md'), LICENCE.replace(`${field}: yes`, `${field}: ${value}`))), '', `${field}: ${value}`)
+    for (const value of ['yes', 'Yes.', 'ja']) assert.equal(problems((d) => writeFileSync(join(d, 'LICENCE.md'), LICENCE.replace(`${field}: yes`, `${field}: ${value}`))), '', `${field}: ${value}`)
   }
 })
 
@@ -160,6 +160,10 @@ test('intake: a garment or hair number must be a real clearance: numeric, 0 mm o
     assert.match(problems(report({ rows: { ...REPORT.rows, char_rika: { preview: 'preview/char_rika.png', number } } })), /char_rika: a garment needs number/, JSON.stringify(number))
   }
   assert.match(problems(report({ type: 'hair' })), /^$/)
+})
+
+test('intake: a repeated licence line must pass too, the first one does not win (gate #483 r3, N4)', () => {
+  assert.match(problems((d) => writeFileSync(join(d, 'LICENCE.md'), `${LICENCE}- Adult use: no\n`)), /"Adult use: no".*_quarantine/)
 })
 
 test('intake: a bold licence label cannot hide its value (gate #483 r2, F1)', () => {
