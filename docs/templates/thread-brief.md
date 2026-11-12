@@ -15,6 +15,9 @@ Prior art: <repos, skills, plugins, public setups checked> -> copy | adapt | bui
 Skills: <role file and skills the thread loads first>
 Sheet: <path of the approved cast sheet .md, or `n/a <why this is no body, face or outfit job>`; every Programmer or Animator brief on a game or story kit>
 Look-Lock: <owner card link of the approved look; not needed with `Sheet: n/a`>
+Round: <n> (delete unless a gate round)
+Asset: <owner/repo#n> (with Round)
+Picture card: <link | none, because <why>> (delete unless a look is new)
 Researcher: <subagent and model, only when the task asks for research>
 Tester: <Tester thread, size L Programmer briefs only>
 Gate: <Reviewer thread> before owner (M or L)

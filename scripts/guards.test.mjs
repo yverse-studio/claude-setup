@@ -1233,6 +1233,19 @@ test('team guard: a bad brief is refused once with every problem and a template 
   assert.equal(decide('mcp__hearthbot__start_thread', { title: 'Programmer · Fix it', instructions: filled, model: 'claude-x-1' }, [], [], teams).block, undefined, 'a filled template starts the thread')
 })
 
+// Gate counter follow-up (PR #444): the one brief template carries the Round / Asset / Picture card lines the gate hook reads, so a coordinator copies them instead of finding them out from a refusal.
+test('the brief template carries the Round, Asset and Picture card lines the gate hook reads', async () => {
+  const { gateBrief, namesLook } = await import('../global/gate-rounds.mjs')
+  const block = readFileSync(join(root, 'docs/templates/thread-brief.md'), 'utf8').match(/```\n([\s\S]*?)```/)?.[1] ?? ''
+  for (const key of ['Round', 'Asset', 'Picture card']) assert.match(block, new RegExp(`^${key}: <`, 'm'), `${key} is its own line`)
+  assert.ok(!namesLook(block), 'the template text itself never trips the picture note')
+  const dir = mkdtempSync(join(tmpdir(), 'brief-gate-'))
+  // Filled as laid out: the value and its hint swapped for the answer, the key at the start of its own line.
+  const fill = (b, v) => b.replace(/^(Round|Asset|Picture card): .*$/gm, (_, k) => `${k}: ${v[k]}`)
+  assert.equal(gateBrief(fill(block, { Round: '1', Asset: 'o/r#1', 'Picture card': 'none, because this builds no screen or look' }), { dir }), '', 'a template filled as laid out passes the gate check')
+  assert.match(gateBrief(block, { dir }), /Round/, 'an unfilled Round line is caught, not skipped')
+})
+
 // Companyxy report 2026-11-12, point 2: a Researcher opened the Claude app's built-in browser instead of yskills' own
 // Chrome on the laptop. The app browser is blocked unless the environment says yskills asked for it.
 test('rule guard: the Claude app browser is blocked, Owner-Chrome and others are not', async () => {
