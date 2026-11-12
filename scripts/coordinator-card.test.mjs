@@ -71,7 +71,7 @@ test('the first rule is the one loop (yskills 2026-11-12): role, playbook, Resea
 // and the index carries one ready Role/Kit/Model/Skills line per Roster role (the chat has no Bash to run scripts/brief.mjs).
 test('the card says team-guard refuses an unknown role or kit; the index lists every Roster role with its kits, model and playbook', () => {
   const card = buildCard({ hash: 'x', date: '2026-11-12' })
-  assert.match(card, /team-guard refuses a brief without a Role line, or with an unknown role or kit name/)
+  assert.match(card, /team-guard refuses a brief with no Role line or an unknown role or kit name/)
   assert.doesNotMatch(card, /neither refuses an unknown role name/)
   const idx = buildIndex({ hash: 'x', date: '2026-11-12' })
   assert.match(idx, /- Programmer: Kit: [^\n]*setup[^\n]*; Model: sonnet; Runs as: [^\n]*; Skills: \.claude\/skills\/operator\/roles\/programmer\.md/)

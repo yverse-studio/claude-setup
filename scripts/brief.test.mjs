@@ -6,12 +6,13 @@ import { fileURLToPath } from 'node:url'
 import { join } from 'node:path'
 import { decide, rosterNames, kitNames } from '../global/team-guard.mjs'
 import { buildBrief, BriefError, roleLines } from './brief.mjs'
+import { briefCheck } from '../global/rule-guard.mjs'
 
 const root = join(fileURLToPath(import.meta.url), '..', '..')
 const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
 const SONNET = teams.match(/Sonnet \((claude-[\w.-]+)\)/)[1]
 const START = 'mcp__hearthbot__start_thread'
-const FULL = '\nModel: claude-x-1\nThreads: list_threads checked, none open on this topic\nPrior art: none, because a test brief\nSkills: x\nDone when: node --test passes\nStop when: two rounds\nStart: read MEMORY.md first, then CLAUDE.md'
+const FULL = '\nGate: Reviewer thread before owner\nModel: claude-x-1\nThreads: list_threads checked, none open on this topic\nPrior art: none, because a test brief\nSkills: x\nDone when: node --test passes\nStop when: two rounds\nStart: read MEMORY.md first, then CLAUDE.md'
 
 // The gap #453 left: team-guard checked the kit but never the role name.
 test('team-guard blocks a Role that is neither none nor a Roster name, and says which names exist', () => {
@@ -126,4 +127,40 @@ test('the CLI exits non-zero with the valid list on a bad role, and prints a pas
   const good = run('--role', 'Programmer', '--kit', 'setup', '--size', 'S', '--item', 'M1', '--threads', 'list_threads checked, none open on this topic', '--prior-art', 'x checked -> adapt, because y', '--done', 'tests pass', '--stop', 'two rounds', '--start', 'CLAUDE.md')
   assert.equal(good.status, 0, good.stderr)
   assert.match(good.stdout, /^Role: Programmer · Kit: setup · Size: S\n/)
+})
+
+// CompanyXY 2026-11-12 (yskills' message 13:23, points 4 and 5): fresh Reviewer threads were blocked because their Prior art did not name
+// gate.md and the kit checks, and gates were planned only after the owner complained. The generator writes both; the guard demands the second.
+test('a generated gate-role brief names gate.md and the kit checks in Prior art by itself, and passes the thread-side gate check', async () => {
+  const { priorArt, ...noPrior } = FIELDS
+  const spawn = (b) => `<wake reason="spawn">\n${b}\n</wake>`
+  for (const role of ['Reviewer', 'Tester', 'Security', 'Legal', 'Playtester']) {
+    const kit = role === 'Playtester' ? 'game' : role === 'Legal' ? 'site' : 'setup'
+    const out = buildBrief({ teams, role, kit, size: 'S', ...noPrior })
+    assert.match(out.brief, new RegExp(`\\nPrior art: [^\\n]*\\bgate\\.md\\b[^\\n]*\\b${kit}\\b`), role)
+    assert.equal(await briefCheck(spawn(out.brief), root), '', `${role}: the thread-side gate check passes`)
+  }
+  const own = buildBrief({ teams, role: 'Reviewer', kit: 'setup', size: 'S', ...FIELDS, priorArt: 'our review notes -> adapt, because they exist' })
+  assert.match(own.brief, /Prior art: [^\n]*gate\.md[^\n]*our review notes/, 'a given Prior art keeps its words and gains gate.md')
+  const handWritten = `Role: Reviewer · Kit: setup · Size: S${FULL}`
+  assert.match(await briefCheck(spawn(handWritten), root), /^Gate check/, 'the hand-written brief without gate.md is what blocked the two Reviewer threads')
+})
+
+test('a builder, designer or animator brief at size M or L needs `Gate: <reviewer thread> before owner`; gate roles and size S do not', () => {
+  const ask = (role, kit, size, extra = '') => decide(START, { brief: `Role: ${role} · Kit: ${kit} · Size: ${size}${FULL.replace(/\nGate:[^\n]*/, '')}${extra}`, title: `${role} · x`, model: SONNET }, [], [], teams)
+  for (const [role, kit] of [['Programmer', 'setup'], ['Designer', 'site'], ['Animator', 'game']]) {
+    assert.match(ask(role, kit, 'M', role === 'Animator' ? '\nSheet: n/a scene animation, no body model' : '').block ?? '', /Gate:/, `${role} M without the line is refused`)
+  }
+  assert.deepEqual(ask('Programmer', 'setup', 'S'), {}, 'size S needs none')
+  assert.deepEqual(ask('Programmer', 'setup', 'M', '\nGate: Reviewer · x before owner'), {}, 'with the line it starts')
+  assert.match(ask('Programmer', 'setup', 'M', '\nGate: later').block ?? '', /Gate:/, 'the line says before owner')
+  assert.deepEqual(decide(START, { brief: `Role: Reviewer · Kit: setup · Size: M${FULL.replace(/\nGate:[^\n]*/, '')}`.replace('Prior art: none, because a test brief', 'Prior art: gate.md and the setup checks -> adapt, because they exist'), title: 'Reviewer · x', model: teams.match(/Opus \((claude-[\w.-]+)\)/)[1] }, [], [], teams), {}, 'a gate role is not asked for a Gate line')
+})
+
+test('the generator fills the Gate line for builder, designer and animator briefs at M and L, and only there', () => {
+  const m = buildBrief({ teams, role: 'Programmer', kit: 'setup', size: 'M', ...FIELDS })
+  assert.match(m.brief, /\nGate: Reviewer · x before owner\n/)
+  assert.match(buildBrief({ teams, role: 'Programmer', kit: 'setup', size: 'M', ...FIELDS, gate: 'Reviewer · fit round 2' }).brief, /\nGate: Reviewer · fit round 2 before owner\n/)
+  assert.doesNotMatch(buildBrief({ teams, role: 'Programmer', kit: 'setup', size: 'S', ...FIELDS }).brief, /\nGate:/)
+  assert.doesNotMatch(buildBrief({ teams, role: 'Reviewer', kit: 'setup', size: 'M', ...FIELDS }).brief, /\nGate:/)
 })

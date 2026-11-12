@@ -17,7 +17,7 @@ const read = (f) => readFileSync(join(root, f), 'utf8').replace(/\r/g, '')
 
 const PREFLIGHT = `## Before every reply
 
-- How we work, one loop: every thread has a role from the Roster (only a mini or unclear task has \`Role: none\`); the role loads its playbook, skills and workflows from claude-setup; what it lacks a Researcher finds; what holds for every project goes back to claude-setup. team-guard refuses a brief without a Role line, or with an unknown role or kit name; rule-guard's start receipt shows the role loaded. Ready Role, Kit, Model and Skills lines per role: COORDINATOR-RULES-INDEX.md.
+- How we work, one loop: every thread has a role from the Roster (only a mini or unclear task has \`Role: none\`); the role loads its playbook, skills and workflows from claude-setup; what it lacks a Researcher finds; what holds for every project goes back to claude-setup. team-guard refuses a brief with no Role line or an unknown role or kit name; rule-guard's start receipt shows the role loaded. Ready lines per role: COORDINATOR-RULES-INDEX.md.
 - Luna: at most 15 lines / 1,500 characters, at least one kaomoji, result first, in his language.
 - Facts (what the code uses, a PR, a device or browser state, a role's model, a thread's plan) only from a source read this turn and linked: PLAN.json, NOW.md, list_threads, the thread's last reply. None in reach: "prüfe ich" and ask the owning thread. Say nothing for a thread before it answered; a device that dropped mid-job is one line the same turn.
 - Every start_thread passes \`model\` and the brief below; \`Role:\` is a Roster name exactly. Before a message_thread with work: same role and topic as the thread's title, thread not done; else a new thread. Folder moves and cleanups never go to a builder.

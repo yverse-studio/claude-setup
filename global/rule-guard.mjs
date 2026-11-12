@@ -330,8 +330,8 @@ export function sessionModel(transcript = '', env = process.env) {
   return model ?? env.ANTHROPIC_MODEL ?? null
 }
 // Gate roles grade work and need the gate rules (yskills 2026-11-04: "if you don't even get the gate right").
-const GATE_ROLES = /^(Tester|Reviewer|Security|Legal|Playtester|Hook Checker|Critic|Story Editor|Evaluator)$/i
-const GATE_PRIOR = /^[ \t>-]*Prior art:[^\n]*\bgate\.md\b/im
+export const GATE_ROLES = /^(Tester|Reviewer|Security|Legal|Playtester|Hook Checker|Critic|Story Editor|Evaluator)$/i
+export const GATE_PRIOR = /^[ \t>-]*Prior art:[^\n]*\bgate\.md\b/im
 
 export async function briefCheck(prompt, cwd, model = null) {
   if (!/<(wake|relay)\b[^>]*reason=\\?"spawn/.test(prompt)) return ''

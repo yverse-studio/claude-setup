@@ -17,6 +17,7 @@ Sheet: <path of the approved cast sheet .md, or `n/a <why this is no body, face 
 Look-Lock: <owner card link of the approved look; not needed with `Sheet: n/a`>
 Researcher: <subagent and model, only when the task asks for research>
 Tester: <Tester thread, size L Programmer briefs only>
+Gate: <Reviewer thread> before owner (builder, designer, animator at M or L)
 Done when: <command and expected output, or the screenshot that proves it>
 Stop when: <rounds or attempts, never tokens>
 Start: read MEMORY.md first, then <the files this task needs>

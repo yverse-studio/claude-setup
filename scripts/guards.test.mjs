@@ -276,7 +276,7 @@ test('check.mjs fails when a lessons file is not linked from docs/MAP.md or the 
 // `model:` passes; SessionStart prints the TEAMS.md pointer.
 const teamFile = join(root, 'global/team-guard.mjs')
 // The brief block's must-have lines (operator/briefs.md); a thread start without them is blocked.
-const FULL = '\nThreads: list_threads checked, none open on this topic\nModel: claude-x-1\nSkills: roles/programmer.md\nDone when: node --test passes. Stop when: two rounds.\nStart: read MEMORY.md, then CLAUDE.md\nPrior art: none, because a test brief'
+const FULL = '\nGate: Reviewer thread before owner\nThreads: list_threads checked, none open on this topic\nModel: claude-x-1\nSkills: roles/programmer.md\nDone when: node --test passes. Stop when: two rounds.\nStart: read MEMORY.md, then CLAUDE.md\nPrior art: none, because a test brief'
 const runTeam = (mode, payload, env = {}) => spawnSync(process.execPath, [teamFile, mode], {
   input: JSON.stringify(payload), encoding: 'utf8', timeout: 5000, env: { ...process.env, CLAUDE_CODE_CHILD_SESSION: '', ...env },
 })

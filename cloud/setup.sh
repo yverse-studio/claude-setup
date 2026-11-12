@@ -572,9 +572,15 @@ const SHEET_LINES = [
 // `Sheet: n/a <why>` (10+ characters). A false "n/a" on a real modelling job is visible in the brief; a missing line is refused.
 const needsSheet = (plain) => /^[ \t>-]*Role:[ \t]*(Programmer|Animator)\b/im.test(plain) && /\bKit:[ \t]*(game|story)\b/i.test(plain)
   && !/^[ \t>-]*Sheet:[ \t]*n\/a[ \t]+\S[^\n]{9,}$/im.test(plain)
+// CompanyXY 2026-11-12 (yskills 13:23, point 5): gates were planned only after the owner complained. A builder, designer or animator brief
+// at size M or L names the Reviewer thread that gates its work before the owner sees it; the gate roles themselves need no such line.
+const GATE_BUILDERS = /^(Programmer|Designer|Animator|Game Designer|Content Designer|Sound Designer)$/i
+const needsGate = (plain) => GATE_BUILDERS.test(plain.match(/^[ \t>-]*Role:[ \t]*([^·|,(\n]*)/im)?.[1].trim() ?? '') && /\bSize:[ \t]*[ML]\b/i.test(plain)
+  && !/^[ \t>-]*Gate:[ \t]*[^<\s][^\n]*\bbefore owner\b/im.test(plain)
 export function missingLines(text) {
   const plain = text.replace(/[*_`]/g, '')
   const lines = BRIEF_LINES.filter(([, re]) => !re.test(plain)).map(([name]) => name)
+  if (needsGate(plain)) lines.push('Gate: <Reviewer thread> before owner (a builder, designer or animator brief at size M or L)')
   if (needsSheet(plain)) for (const [name, re] of SHEET_LINES) if (!re.test(plain)) lines.push(name)
   if (ASKS_RESEARCH.test(plain) && !/\bRole:[ \t]*Researcher\b/i.test(plain) && !/^[ \t>-]*Researcher:[ \t]*[^<\s]/im.test(plain)) lines.push('Researcher: (the task asks for research)')
   return lines
@@ -1099,8 +1105,8 @@ export function sessionModel(transcript = '', env = process.env) {
   return model ?? env.ANTHROPIC_MODEL ?? null
 }
 // Gate roles grade work and need the gate rules (yskills 2026-11-04: "if you don't even get the gate right").
-const GATE_ROLES = /^(Tester|Reviewer|Security|Legal|Playtester|Hook Checker|Critic|Story Editor|Evaluator)$/i
-const GATE_PRIOR = /^[ \t>-]*Prior art:[^\n]*\bgate\.md\b/im
+export const GATE_ROLES = /^(Tester|Reviewer|Security|Legal|Playtester|Hook Checker|Critic|Story Editor|Evaluator)$/i
+export const GATE_PRIOR = /^[ \t>-]*Prior art:[^\n]*\bgate\.md\b/im
 
 export async function briefCheck(prompt, cwd, model = null) {
   if (!/<(wake|relay)\b[^>]*reason=\\?"spawn/.test(prompt)) return ''
