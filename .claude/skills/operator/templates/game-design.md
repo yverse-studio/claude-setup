@@ -34,7 +34,7 @@ and how each changes play.
 Per action: screen, sound, length in ms.
 
 ## Screen, people, map
-HUD, first goal and its seconds, idle NPC behaviour (wireframe in `design/UX.md`). A real-place map: `game-3d/refs/real-map-overworld.md`.
+HUD, first goal and its seconds, prompts per device, idle NPC behaviour, reaction to the player and crowd density (wireframe in `design/UX.md`). A real-place map: `game-3d/refs/real-map-overworld.md`.
 
 ## Monetisation hooks
 Where the platform's ads and rewarded offers sit, and the moment that is never interrupted.

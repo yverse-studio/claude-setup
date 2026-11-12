@@ -46,7 +46,7 @@ When a level shows a place that exists (a trip, a city, a shop), research it in 
 - **Progression:** what the player owns after run 1, run 5 and run 20; what unlocks when; the pool of choices (upgrades, items) with counts and how a choice changes play, not a stat.
 - **Difficulty curve:** a table by minute or wave (enemies, speed, pressure) with the target survival or win rate per skill level; the play bot's seeds must land inside it.
 - **Feel and feedback:** per action the response in screen, sound and time (hit stop, shake, number pop, sound cue; the Audio role gives each cue its sound, [`audio.md`](audio.md)) and its length in milliseconds; what gives juice and what is noise.
-- **Screen and people:** HUD, first goal and its seconds, idle NPC behaviour (`game-ux` §2, §3); wireframe in `design/UX.md`.
+- **Screen and people:** HUD, first goal and its seconds, prompts per device, idle NPC behaviour, reaction to the player and crowd density (`game-ux` §2, §3); wireframe in `design/UX.md`.
 - **Monetisation hooks:** where the platform's ads and rewarded offers sit in the loop and which moment is never interrupted (ad placement rules of the platform, `game-3d` §5a). The money path is part of the design, not added at the end.
 - **What it is NOT:** at least two things this game refuses to be (no meta shop, no PvP, no story), so scope has an edge.
 

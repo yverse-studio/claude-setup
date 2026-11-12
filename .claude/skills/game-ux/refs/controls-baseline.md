@@ -1,6 +1,6 @@
 # Controls baseline: what every game ships with
 
-The floor for any game with a player-moved camera or character. `SKILL.md` §1 says how to build it. A project writes
+The floor for any game with a player-moved camera or character. `SKILL.md` §1 says how to build it. No value here belongs to one game: a project writes
 its own numbers in `design/GDD.md` (`## Controls`) and tunes them by playtest; [judgement] marks a starting point
 no human has tested yet.
 
@@ -16,7 +16,7 @@ no human has tested yet.
 | 6 | Gamepad | Gamepad API, `mapping === 'standard'`: left stick move, right stick camera, A confirm or interact, B back, Y secondary, Start pause; scaled radial dead zone, inner 0.15 and outer 0.95 [judgement] (`out = dir * clamp((|v| - inner) / (outer - inner), 0, 1)`); right-stick response curve (exponent 2 [judgement], selectable linear) with its own sensitivity; vibration on/off in the options menu (row 7); a non-standard pad shows a "press the button" mapping step. Hot-plug (`gamepadconnected`) and glyphs follow the last device used |
 | 7 | Options menu | One screen, reachable from the title and in play: Controls (rows 3 to 5), Camera (FOV, bob, shake), Accessibility (reduced motion, text size, subtitles, hold/tap toggles), Audio, Language. Saved locally, one settings object with a load/save/clamp unit test |
 | 8 | Key hints | Quiet, always-on hints at the action itself (the key by the card, the glyph on the prompt), swapped to the active device; the first minute teaches by doing, not by a list |
-| 9 | Accessibility floor | `prefers-reduced-motion` honoured and overridable in the menu; no hold-only action without a toggle; no action needs two hands on keyboard at once without an alternative; nothing told by colour alone; contrast and size readable at the smallest target frame (CrazyGames 907x510, Deck 1280x800, phone 390 px) |
+| 9 | Accessibility floor | `prefers-reduced-motion` honoured and overridable in the menu; no hold-only action without a toggle; no action needs two hands on keyboard at once without an alternative; subtitles for all important speech; nothing told by colour alone; contrast and size readable at the smallest target frame (CrazyGames 907x510, Deck 1280x800, phone 390 px) |
 | 10 | Touch | Left thumb walk, right thumb look or tap-to-move, 44 px targets; same settings object |
 | 11 | Steam Deck | When Steam is a target: the default controller layout reaches all content without changing in-game settings, on-screen glyphs match the active device and never show mouse or keyboard glyphs while a pad is used, text readable at 30 cm, text entry works with a pad only (Steamworks Steam Deck compatibility, read 2026-11-12) |
 | 12 | Run | A run or walk-speed toggle, unless the GDD says why not; walk speed 1.4 to 1.6 m/s [judgement] |
@@ -38,13 +38,15 @@ one PR for all levels, never inside a level's PR; glyph and key names come from 
 
 ## Playtest checks (where they go in the Playtester's report)
 
-`Layout` to `Hold` go into the `Controls` row, the NPC watch (`game-ux` §3) into `World life`, the touch
+`Layout` to `Hold` go into the `Controls` row, the NPC watch (`game-ux` §3, 30 s) into `World life`, the touch
 check into `Touch 390` (the rows `playtest-check.mjs`, in claude-setup `publish/templates/new-game/scripts/`, and `gate.md` read).
 
 | Check | Pass when |
 |---|---|
 | Layout | a dispatched keydown `{code: 'KeyW', key: 'z'}` moves forward; `KeyA`/`KeyD` strafe whatever `key` says |
 | Camera | mouse look or right-drag and Q/E all turn the camera; the context menu does not open |
+| Lock | Esc or a lost pointer lock pauses, a click resumes with no state lost |
+| Reach | mouse or drag look reaches every interactable the GDD lists |
 | Rebind | one action rebound in the menu works at once, survives a reload, and its hint shows the new key |
 | Sensitivity, invert | `__lookBy(100, 0)` (mouse counts) changes yaw by 100 x the mouse sensitivity within 1 %; invert flips the pitch sign |
 | Auto-camera | switching it off keeps the view where the player left it for 5 s |

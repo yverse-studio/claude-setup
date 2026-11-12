@@ -8,12 +8,13 @@ description: "Use when a game has first-person or follow camera, mouse look, HUD
 Between `game-3d` (engine, assets, tests) and the web UI skills (`impeccable`, `ui-review`): how a player moves,
 looks, is told what to do, and what people in the world do idle. Numbers marked [judgement] are tuned by eye;
 change them when a playtest says so. Game Designer writes the answers into `design/GDD.md` (`## Controls`, HUD
-wireframe in `design/UX.md`); Programmer builds §1 to §3; Playtester runs §5.
+wireframe in `design/UX.md`); Programmer builds §1 to §3; Playtester runs §5. HUD checks: game-camera screenshots at 390 and 1440 px
+(`ui-review`, `design-critic`), `impeccable` for DOM overlays, `a11y-architect` for the accessibility pass.
 
 ## 1. Controls and camera
 
 The floor every game ships with, plus its playtest checks: [`refs/controls-baseline.md`](refs/controls-baseline.md)
-(values live only there). One input layer (`src/input.ts`) turns keyboard, mouse, touch and gamepad into intents
+(control values live only there). One input layer (`src/input.ts`) turns keyboard, mouse, touch and gamepad into intents
 (`move`, `look`, `interact`, `pause`); levels and rules read intents, never raw events.
 
 - **First person:** yaw turns the body, pitch only the camera head, clamped to about -70 to +70 degrees (as
@@ -37,7 +38,7 @@ The floor every game ships with, plus its playtest checks: [`refs/controls-basel
   Playtester measures it.
 - **Prompts name the device in use** ("Click", "Tap" or the pad glyph) and read the key from the binding, never from copy.
 - **Diegetic first:** a price on the stall, a goal as a marker in the world; a HUD is what is left, at the screen edges.
-- **Panels:** one open at a time, Esc or a tap outside closes, pause always reachable (`game-3d` §2). UI text from keys.
+- **Panels:** one open at a time, Esc or a tap outside closes, pause always reachable (`game-3d` §2). UI text from keys, never baked into images.
 
 ## 3. People in the scene
 
@@ -49,7 +50,8 @@ A figure in a T-pose or one loop reads as a prop. Minimum per NPC [judgement, tu
 - a job loop for a role (a vendor straightens goods, counts money), a walk or wait loop for passers-by;
 - crowds: instanced skinning, per-instance speed 0.8 to 1.2 [judgement] and phase (`game-3d/refs/crowds-and-lod.md`);
   0.6 m personal space [judgement], give way instead of overlapping (`game-3d/starter/learnings.md`);
-- a vendor or companion reacts within 1 s when the player arrives, stops or leaves.
+- a vendor or companion reacts within 1 s when the player arrives, stops or leaves;
+- the Playtester's 30 s watch: every NPC visibly does something (clip names from the hook).
 
 Test: the play hook exports each NPC's clip name and time; a unit test fails when two NPCs within 3 m share a clip and
 a start time, or a clip plays longer than 12 s without a switch.
