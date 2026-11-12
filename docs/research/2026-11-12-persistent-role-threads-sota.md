@@ -1,0 +1,55 @@
+# Persistent role threads vs fresh threads: SOTA verdict (read 2026-11-12)
+
+Mode: standard. Primary pages read via rule-guard; quotes are as read. Nothing found compares "9 persistent roles" against "fresh per task" head to head. Everything below is indirect.
+
+## Supports persistent roles
+- Claude Code agent teams are built this way: "Teammates work independently, each in its own context window"; idle teammates stay addressable, "the teammate stays running and addressable while hidden"; messaging a stopped in-process teammate "brings it back in the same session, restores any conversation saved for it". https://code.claude.com/docs/en/agent-teams (2026-11-12). Subagents can also be resumed or sent a follow-up message. https://code.claude.com/docs/en/sub-agents
+- Waiting costs nothing by itself: the cache is "refreshed for no additional cost each time the cached content is used"; reads cost 0.1x base input (0.05x on Opus 5.5 / Sonnet 5.5 per footnote). https://platform.claude.com/docs/en/build-with-claude/prompt-caching (2026-11-12). Inference: an idle thread makes no requests, so no tokens; this is not stated in the page.
+- Durable state makes persistence safe: Anthropic "built systems that can resume from where the agent was when the errors occurred" and uses "regular checkpoints". https://www.anthropic.com/engineering/multi-agent-research-system (2025-06; read 2026-11-12). LangGraph keys saved state by thread id and resumes after failures (search summary only, docs page not opened): https://docs.langchain.com/oss/python/langgraph/durable-execution
+- Cognition's principle: share context and full traces; "Actions carry implicit decisions" (conflicts when parallel writers). https://cognition.com/blog/dont-build-multi-agents (2025-06). Supports one owner per concern.
+
+## Supports fresh threads
+- Context rot: "model performance consistently degrades with increasing input length", worse with distractors and low needle-question similarity. https://research.trychroma.com/context-rot (2025-07). Caveat: tested on synthetic tasks, not on role agents.
+- Anthropic: "context windows of all sizes will be subject to context pollution"; compaction can lose "subtle but critical context whose importance only becomes apparent later". https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents (2025-09).
+- Sub-agents get "clean context windows" and return a condensed summary (often 1,000-2,000 tokens). Same page.
+- Cognition 2026-04-22: a reviewer with clean context "gets to skip this extraneous context" and finds more bugs; "work best when the coding and review agents do not share any context beforehand". https://cognition.com/blog/multi-agents-working
+- Multi-turn drift: arXiv 2505.06120 reports models "get lost" and do not recover after a wrong turn (search summary only, paper not opened; the 35% vs 39% drop differs by source).
+- Agent teams limits: "No session resumption with in-process teammates"; "Task status can lag: teammates sometimes fail to mark tasks as completed"; "Shutdown can be slow". https://code.claude.com/docs/en/agent-teams
+
+## Hybrid evidence (strongest)
+- Anthropic's own pattern: "agents summarize completed work phases and store essential information in external memory"; "When context limits approach, agents can spawn fresh subagents with clean contexts while maintaining continuity through careful handoffs"; subagents write to the filesystem and pass "lightweight references". https://www.anthropic.com/engineering/multi-agent-research-system
+- Anthropic: structured note-taking (NOTES.md) lets an agent "read its own notes and continue" after a context reset. Effective-context-engineering page above.
+- Cognition: "multi-agent systems work best today when writes stay single-threaded"; the shape is "a manager splits work, children execute, the manager synthesizes". https://cognition.com/blog/multi-agents-working
+- Cost of multi-agent overall: about 15x chat tokens; coding "involve[s] fewer truly parallelizable tasks than research". Anthropic post above. Agent teams "use significantly more tokens than a single session" and token use "scales with the number of active teammates".
+- Cache TTL: 5 min default, 1 h at extra cost (writes 1.25x / 2x); the 1 h option is meant for "an agentic side-agent takes longer than 5 minutes". Prompt-caching page above. So a role thread woken after more than 5 min re-writes its context at 1.25x; skills re-read each round are only cheap inside the TTL. Subagent frontmatter has `cacheTtl: 1h` (sub-agents doc).
+- Persona/role effect is weak on accuracy: expert personas "do not improve performances" (EMNLP 2024, secondary summary; https://arxiv.org/abs/2311.10054). Roles help through separated tools, context and duties, not through the label.
+
+## Verdict on the 6 points
+1. ~9 fixed role threads via message: partly. Resume and message are supported by Claude Code; but a thread's own context rots, so reuse only within one plan or PR, then fresh. Supported by hybrid evidence, not by any ablation.
+2. One-shot threads for short jobs, resolved at once: yes. Clean context, no rot, no cache-expiry cost; matches Cognition's clean-context reviewer.
+3. Duplicate role only for real parallelism, then closed: yes for read-only work (research, review); not for parallel writers (Cognition, Anthropic on coding).
+4. Work only to matching role: plausible, unverified as a measured effect. I found no study that counts wrong-role work. MAST (arXiv 2503.13657) names specification and inter-agent misalignment as failure classes and says fixes are structural, but I read only a search summary.
+5. Coordinator checks liveness itself via progress file/timestamp: supported in spirit (checkpoints, "task status can lag", a TeammateIdle hook and failed-turn notices exist), but no source recommends a heartbeat file specifically. Unverified as a pattern; cheap and consistent with "check the work is actually done".
+6. Waiting costs no tokens, compaction then re-read role card: first half is inference (true for API billing); second half is supported (Anthropic: compaction is lossy, re-read notes after reset). Add: after a gap over 5 min expect a cache re-write.
+
+## Recommendation
+Partly. Keep named roles as definitions (role card, tools, model), but do not treat a thread as a long memory. Reuse a role thread inside one plan or PR; open a fresh one when the job is new, the context is long, or the role is a reviewer (clean context wins). Put state in files (PROGRESS, NOW, plan) and hand off by file, as Anthropic and Cognition both do. Writers stay single-threaded. Points 2, 3 and 6 (second half) are best supported; 1 and 4 only partly; 5 is sensible but unsourced.
+
+Not checked: ChatDev, AutoGen, CrewAI, OpenHands papers and docs (no source read); MetaGPT role ablation (search found none); MAST and "Lost in Conversation" full papers (summaries only); LangGraph docs page (summary only); any Needle/NoLiMa numbers beyond Chroma's text; real-world heartbeat or hung-agent data beyond Claude Code docs; whether idle threads in this harness bill tokens (inference only).
+
+## Addendum (coordinator ask): one standing agent per role for many jobs vs fresh agent per job, same fixed workflow and skills
+
+Cache (prompt-caching page, read 2026-11-12): caching is by cumulative prefix hash ("a hash of the prefix ending at that block"), order tools, system, messages; "the system automatically finds the longest prefix that a prior request already wrote". So a fresh agent whose tools, system prompt and preloaded skills are byte-identical to the last one reads the same cached entry (0.1x, 0.05x on Sonnet 5.5/Opus 5.5) while within the 5 min TTL (refreshed on each use). Inference: this means "skill loaded once" is not a standing-agent advantage; a stable prefix gives it to fresh agents too. Whether the cache is shared across separate sessions or accounts is unverified (page section on isolation not read). The standing agent's edge is only a growing conversation whose earlier part is cached; its cost: after an idle gap over 5 min the whole accumulated history is re-written at 1.25x (2x for 1 h), which grows with every job. A fresh agent re-writes only the small fixed prefix. Any change before the breakpoint (e.g. a timestamp, a changed skill file) invalidates the entry for both.
+Skills: subagent `skills` frontmatter injects "the full skill content" at startup (https://code.claude.com/docs/en/sub-agents), so re-reading per job is a one-time prefix cost, cheap when cached.
+Accumulation and contamination: Chroma finds degradation with length, and distractors "topically related to the needle, but do not quite answer the question" hurt most (https://research.trychroma.com/context-rot). Inference: a Researcher's previous jobs are exactly this kind of distractor for its next job (same topic type, wrong facts). arXiv 2505.06120 (summary only): models rely on their own earlier attempts and do not recover from wrong turns. Cognition 2026-04-22: clean context "makes the agent smarter" (https://cognition.com/blog/multi-agents-working). Anthropic: use compaction for "extensive back-and-forth" within one task; sub-agents "with clean context windows" for focused jobs (context-engineering page). Compaction across unrelated jobs keeps a lossy summary of jobs the next job does not need, and may drop "subtle but critical" details; no source tests compaction across unrelated sequential jobs (unverified).
+Counter-evidence for standing agents: a standing role could carry lessons across jobs. Anthropic's answer is notes in files, not retained chat ("read its own notes"). Claude Code subagents also have a `memory` frontmatter field (listed in the sub-agents doc; content not read, unverified).
+
+Per sub-idea:
+1. Fixed role threads reused: a standing agent per role is not supported for UNRELATED jobs in sequence. Supported: reuse within one plan/PR (follow-up, revise). For many independent jobs, keep the role as a fixed definition (card + skills + workflow = identical prefix) and spawn fresh per job; you keep cache benefits and drop contamination. Researcher with "same workflow and skills" argues for a stable prefix, which fresh agents share too.
+2. One-shot for short jobs: strongest support.
+3. Duplicate role for parallelism: supported for read-only; with fresh-per-job this is the same mechanism, so it needs no special case.
+4. Matching role: unchanged, unverified effect.
+5. Liveness: a standing agent adds hang/stale risk (agent teams limits: lagging task status, no resume); fresh jobs end with a file and a Done line, so liveness reduces to "did the file appear". Supports checking by file.
+6. Idle costs: idle is free, but waking a standing agent after >5 min costs a re-write of everything accumulated; compaction then re-read the role card is right only if a standing agent is kept at all.
+
+Not checked (addendum): cross-session cache sharing rules; `memory` frontmatter behaviour; any measurement of sequential unrelated jobs in one context (none found).
