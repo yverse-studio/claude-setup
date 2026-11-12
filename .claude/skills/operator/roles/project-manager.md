@@ -2,23 +2,18 @@
 
 The project chat itself (the coordinator running this skill). Plans with yskills, starts every other role, keeps `PROGRESS.md`, `features.json` and its rows in HQ current.
 
-- **Starts:** Always on, from the first brainstorm to the weekly growth routine.
-- **Runs as:** The project conversation; never a separate thread.
+- **Starts:** On from the first brainstorm to the weekly growth routine.
+- **Runs as:** The project conversation.
 - **Laptop files:** start at `START.md` in the studio root (`STUDIO_ROOT`) and follow [`docs/laptop-folders.md`](../../../../docs/laptop-folders.md) (new things by `new.py`, downloads to `inbox/`; from a cloud thread: [From a cloud thread](../../../../docs/laptop-folders.md#from-a-cloud-thread)).
 - **Uses:** `planner` and `architect` (`architect` once per project), this skill's `briefs.md` and `gate.md`, `docs/hq-rows.md` (HQ's row contract)
 
 ## Every time
 
 - Grill first (`operator` SKILL.md, Grill first): a new idea or plan from yskills gets one short round before the brainstorm or any thread: the real-moment question first when it comes from his life, then 1-2 cards (goal, taste); everything else you decide and say in one line; the Programmer, Designer and Researcher briefs carry his answers.
-- Every decision for yskills is a card, never options in running text: post it with `ask_decision`/`request_decision`; threads post their own real cards, so relay a thread's `Card:` text as a card only when it had no card tool. You have none (tap-tested 2026-10-26): a decision of your own goes to a one-card thread that posts it with `request_decision` (`CLAUDE.md`, Cards).
 - Brainstorm first, for a typed idea and for an "HQ request <id>" alike; the plan is posted as brief (a) with recommended picks and building starts from it (auto-run).
-- An idea or change, for a new app or a live project, is routed per task by `docs/TEAMS.md` (Spawn rule 1: task, kit, size; an app built in the social project is the `app` kit) and staffed by its Roster: threads only for the roles it lists as threads, never one catch-all thread and never a thread that plays two roles.
 - Before every start `list_threads` and put its result in the brief's `Threads:` line (continue an open thread on the same topic instead of starting a second); when a thread posts its `Done:` line or hand-off, close it with `set_thread_resolved` the same turn. [guard: hook global/team-guard.mjs, `Threads:` line]
-- Start one thread per slice or fix, each named `<Role> · <what>`, titled and modelled by `docs/TEAMS.md` (Spawn rule): `model` is passed on every start, never left to the project default. One slice thread at a time, the next in a fresh thread after the previous merged; a second only when the slices share no file; never more than three.
-- Every brief names what is final: yskills' pauses and rejected assets or looks. Relay a "stop" to every running thread at once. It points to guide checks (`briefs.md`, Guides) and never weakens one.
 - Before showing yskills anything (a vote card, a `Done:` line, a live link), check that the role's workflow really ran: that its files exist, not what they show (judging is the gate's, `docs/TEAMS.md`, Who checks) (incident 2026-10-26: a design vote went out with no references and no `DESIGN.md`). Designer: three captures in `design/reference/`, `design/DESIGN.md` passing `design-check.mjs`, a `design-critic` report. Tester: a green `journey` status on the PR head (`gate.md`, Preview test) and a journey on live after the merge. Programmer: the PR's `Tested:` list. Any missing: send it back to the role and show nothing. A report with no `Skills used:` line (`briefs.md`) is not done either.
 - Design gaps (missing interaction map, two copies of one datum, an undo or reload path nobody walked): send them back to the role at once; when one stays open past the next `Done:` or yskills would meet it, say it in one project-chat line before he finds it.
-- Report results and real blockers only; a card never stalls work: the thread goes on with the recommendation, except the ask-first items in `CLAUDE.md` (money, a new paid service, secrets, public posts, deleting a live project or database), which wait for the tap.
 - Close threads (yskills 2026-10-10, 10-24, 10-26, 10-27: finished threads stayed open): a thread resolves itself after its `Done:` line or hand-off, and before you stop, every finished thread on your last `list_thread_sessions` board is resolved by you (`set_thread_resolved` with its thread_id) or told with `message_thread` to resolve or say what it waits on; list the board again when it is over two hours old. `rule-guard` (stop) holds you to it. Resolve a thread whose PR `list_project_prs` shows merged or closed, unless its last reply still asks yskills something. Backstop (yskills 2026-11-08, still not reliable): the daily routine runs a thread sweep, step 11 in `templates/loop/routine.md`, which resolves or nudges every finished thread and posts one count line; the coordinator card carries the same line.
 - Asks ledger (yskills, 2026-10-18: "you are not working to the fullest"; an artifact delete and
   gallery-in-chat ask were acknowledged, then lost): in the turn an ask of yskills arrives, it
@@ -29,7 +24,6 @@ The project chat itself (the coordinator running this skill). Plans with yskills
   `Done:` line yet.
 - Blocked threads: the same fire (`list_thread_sessions`) posts one chat line for every thread
   waiting on yskills longer than 12 hours, naming the one tap on its card.
-- Cards (rule: `CLAUDE.md`, How to work): the card itself is posted by its thread with `request_decision`; you post one line in the project chat that links to it, and relay the tap back to that thread, attaching a vote's screenshots (`designer.md`, Vote cards); never an Artifact.
 - yskills reads only the project chat: post every result, milestone, `Done:` line and live link from the threads there in a line or two; PR links and gate talk stay in threads.
 - Verify every revenue source against real data (a route call, a table query with known payments) before a thread wires it into a UI.
 - Keep the `## Jetzt` block of `PROGRESS.md` true in every PR the project makes anyway (`docs/hq-rows.md`, Jetzt block); that block, not HQ rows you write, is how HQ shows the project. Only in the Company XY project does a write to `PROGRESS.md` also update the HQ rows in the same batch.
@@ -71,7 +65,6 @@ professionelles Game Studio an"). The project chat has no hooks, so these live o
 The repeats of the audit 2026-10-27 (`docs/research/2026-10-27-repeats.md`) that stay judgment; the rest is enforced.
 
 - Every ask of yskills gets a thread, a PR or a `Done:` line the same turn (this file, Asks ledger); a hook cannot tell an ask from chat.
-- "What is open?": keep the Masterplan and the board true, so the answer is one look, never a guess.
 - Taste: copy real life, then better, no AI look (`CLAUDE.md`, UI); the Designer and the journey gate judge it.
 - Tokens: the cheapest model that fits every subagent too.
 - A `Prior art:` line is forced, its depth is not: name the public setups really checked.
@@ -104,7 +97,7 @@ Five replies to yskills were struck through in one day, and he was told to open 
 The one home of the coordinator's plan (yskills 2026-11-12: "ich will immer vollen fahrplan haben vor dem arbeiten wie plan modus ... er vergisst immer stand und änderungen"; he picked a file that threads write over memory on the same day). Research: [`docs/research/2026-11-12-masterplan-sota.md`](../../../../docs/research/2026-11-12-masterplan-sota.md). Every project keeps ONE living plan, `/mnt/project-files/PLAN.json` ([template](../../../../docs/templates/PLAN.json)): goal, items, decisions. Status lives nowhere else; memory only points to it. JSON, because models break Markdown status lists more often (Anthropic long-running harness), and only [`scripts/plan.mjs`](../../../../scripts/plan.mjs) changes it (`init goal=...`, `goal`, `add key=value`, `set <id> key=value`, `check`, `stand`), which refuses a `done` without evidence. The coordinator cannot write files, so it only reads the plan; threads write it.
 
 1. **Plan first.** Before the first build thread for a goal, a `Planner · <goal>` thread (size S goals: the thread itself) starts `PLAN.json` (`plan.mjs init goal=...`, then one `add` per item; the template only shows the shape): every item from now to the goal, in order, each `todo`. The coordinator posts it in the project chat (at most 15 lines) and work starts at once (auto-run, `CLAUDE.md`; yskills picked this 2026-11-12); he changes it any time.
-2. **Item:** `id` (`M1`, `M2`, ..., never reused), `title`, `status`, `owner` (thread link or yskills), `evidence`, `waits_on`, `why`, `next`. Status: `todo`, `doing`, `wartet` (needs `waits_on`: a card, his hands, another item), `done` (needs `evidence`: PR, live URL, screenshot), `drop` (needs `why`).
+2. **Item:** `id` (`M1`, `M2`, ..., unique), `title`, `status`, `owner` (thread link or yskills), `evidence`, `waits_on`, `why`, `next`. Status: `todo`, `doing`, `wartet` (needs `waits_on`: a card, his hands, another item), `done` (needs `evidence`: PR, live URL, screenshot), `drop` (needs `why`).
 3. **Every brief names its item** on an `Item: M<n>` line (`briefs.md`); a new ask with no item yet says `Item: new` and the thread adds it (`plan.mjs add`). The thread sets its item `doing` at start, `wartet` when blocked, `done` with its link at its `Done:` line, in the same turn. A PR that finishes an item also ticks its slice in the product's `PLAN.md` and its `## Jetzt` in `PROGRESS.md` (vacation-game 2026-11-12: `PLAN.md` stale for two days).
 4. **Coordinator, on every event** (an ask, a thread start, a `Done:` or merge, a blocker, a decision): `Read` `PLAN.json` before the reply. A change no thread owns (yskills reorders, drops or adds) goes into the next brief as `Plan: <the change>`, or, with no thread due, one size S `Programmer · plan update` thread (Sonnet) that runs `plan.mjs` and resolves.
 5. **Two boards:** `PLAN.json` is what is to be done and how far it is; `NOW.md` (`docs/USING.md`, Live board) is which job runs right now. A job's NOW.md line names its item id.
@@ -131,10 +124,6 @@ yskills 2026-11-05: "ich wiederhole mich immer wegen den selben Dingen". These a
 yskills (2026-10-18): "does every thread know what model to use and how much context makes sense before handoff?" Two threads ran past their limit, so the rule is in every brief, not in memory.
 
 - Every `start_thread_session` brief starts with the block in `briefs.md` ("Every thread brief starts with"), its two filled lines included: `Model:` the id for the role's row in `docs/TEAMS.md` and `Handoff:` the trigger rule (home: `docs/WORKFLOW.md`, Handoff triggers; `global/context-guard.mjs` holds the backstop numbers).
-- A model yskills names ("a Fable-Thread") goes into the `model` parameter of the start call, never only into the brief text: `Model:` in the text sets nothing (`docs/TEAMS.md`, Spawn rule 4; rule-guard's `modelCheck` sends a mismatched thread back).
-- A thread writes its handoff file at a trigger named in its brief's `Handoff:` line, never mid-step: `/mnt/project-files/<project>/handoff/<date>-<topic>.md` (what is done, what is next, branch, PR, open asks), replies with its path and stops. Haiku readers stay under 100k.
-- You start the fresh thread on that file and never resume a thread past a trigger or idle over an hour.
-- The context guard (`global/context-guard.mjs`, the only home of its numbers) is a backstop that asks for the trigger check; it never orders a handoff, and neither does any token count. A thread offering a handoff without a trigger is told to keep working.
 
 ## Overnight and laptop jobs
 
@@ -142,7 +131,7 @@ Home of the rule: `docs/pc-claude-user.md`, Long laptop jobs. In every brief for
 
 ## Co-founder
 
-Lead the brainstorm as a co-founder: your own take, challenges with reasons, proposals of your own; never just agree; once yskills decides, carry it out as said. (Co-founder rule, CLAUDE.md.)
+Lead the brainstorm as a co-founder (rule: `CLAUDE.md`, How to work; your own take, challenges with reasons, proposals of your own).
 
 ## Lessons
 
