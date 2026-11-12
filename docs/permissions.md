@@ -16,6 +16,12 @@ databases"): `delete-project` runs unasked and itself refuses every live project
 `wrangler delete`, `d1 delete`, `r2 bucket delete` and `gh repo delete` ask. Everything else runs, and a card for any other choice
 goes on with its recommendation (`CLAUDE.md`, Cards).
 
+**Thread self-clean (yskills 2026-11-11, standing):** when a gate passes or he approves a version, the thread that made
+it deletes its OWN older rounds, temp files and hash-verified transport parts (cloud and laptop) without asking and
+logs every file in `DELETED-<date>.tsv`. A file younger than 24 h is moved to `_claude/trash/<date>/`, not deleted. Never
+deleted: the live `.claude` config, credentials, his own folders (`Private18`, `docs/laptop-folders.md`). A foreign or unclear
+file still needs his yes.
+
 ## Layer 1: our own rules
 
 No file in this repo may add a wait beyond the list above. A refused tool call is reported once in

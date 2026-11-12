@@ -27,6 +27,7 @@ against that text. So:
    `ui-review`'s `shoot.mjs` (absolute URLs), into `design/reference/` (subfolders are fine; the Direction cites each capture by its path under `design/reference/`), one line each in
    `design/REFERENCES.md`: link and what to take (palette, shapes, HUD, menus, juice). Plus one
    real-life object the world copies (a storybook, a seed packet, a till receipt).
+   **Rips (yskills, standing):** layout and UX may be copied from a reference; graphics, characters and text are always our own, never taken from it. A paid checkout in a reference is looked at, never completed: that click is his.
 2. **`design/DESIGN.md`**, four sections, each traceable to a capture by file name:
    - `## Direction`: three visual pillars in plain words, the real-life model, the captures cited.
    - `## Palette`: a table of at most eight hex colours by role (ground, surface, text, accent,
