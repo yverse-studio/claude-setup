@@ -14,8 +14,8 @@ are tuned by eye, change them when a screenshot or a playtest says so.
 
 ## Who uses it
 
-- **Game Designer:** writes the answers into `design/GDD.md` (Controls and camera, Screen and onboarding,
-  People in the scene: `operator/templates/game-design.md`) and the HUD wireframe as text or HTML in
+- **Game Designer:** writes the answers into `design/GDD.md` (`## Controls`, with the baseline rows; HUD and
+  people notes: `operator/templates/game-design.md`) and the HUD wireframe as text or HTML in
   `design/UX.md`. There is no dedicated in-canvas UI tool: checks are screenshots from the game camera at
   390 and 1440 px (`ui-review`, `design-critic`), `impeccable` for type, contrast and spacing of DOM overlays,
   `a11y-architect` for the accessibility pass.
@@ -29,28 +29,26 @@ options menu, key hints, Deck rules) is [`refs/controls-baseline.md`](refs/contr
 the bullets below are how to build it.
 
 One input layer (`src/input.ts`) turns keyboard, mouse, touch and gamepad into intents (`move`, `look`, `interact`,
-`pause`); chapters and rules read intents, never raw events.
+`pause`); levels and rules read intents, never raw events.
 
-- **First person:** yaw turns the body, pitch only the camera head, pitch clamped to about -80 to +80 degrees,
-  roll never. Eye height 1.55 to 1.7 m, FOV 75 on desktop [judgement], near 0.05. Never draw the player body when
-  the figure is not part of the story (yskills 2026-11-10, vacation-game night market).
+- **First person:** yaw turns the body, pitch only the camera head, pitch clamped to about -70 to +70 degrees (as `game-3d/starter/walkable-room.md`),
+  roll never. Eye height 1.55 to 1.7 m, near 0.05; FOV and its axis: baseline row 4. Never draw the player body when
+  the figure is not part of the story (yskills 2026-11-10).
 - **Mouse look on desktop:** Pointer Lock (`canvas.requestPointerLock()` from a click, never on load). Ask for
   `{ unadjustedMovement: true }` and catch the error to fall back to the OS-adjusted deltas (MDN, web.dev). Read
   `movementX`/`movementY`, no smoothing and no acceleration on the look. Handle `pointerlockchange`: a lost lock
   (Esc is the browser's default release) pauses the game and shows a "click to continue" panel; an iframe needs
-  `allow-pointer-lock` in its sandbox. Where the lock is refused (embed, permission), drag-to-look with the same
-  sensitivity is the fallback, so every build is playable without a lock.
-- **Touch:** drag anywhere to look, tap-to-move or a left stick for walking; the target of a tap is at least 44 px.
-- **Gamepad:** left stick move, right stick look, dead zone 0.15 [judgement], the Gamepad API with a standard mapping.
-- **Move feel:** walk 1.4 to 1.6 m/s, velocity eased with `v += (target - v) * (1 - exp(-10 dt))`, capsule or
+  `allow-pointer-lock` in its sandbox. Where the lock is refused (embed, permission), drag-to-look with its own sensitivity (baseline row 4)
+  is the fallback, so every build is playable without a lock.
+- **Touch and gamepad:** values and mapping live in baseline rows 6 and 10, not here.
+- **Move feel:** walk speed in baseline row 12, velocity eased with `v += (target - v) * (1 - exp(-10 dt))`, capsule or
   grid collision that slides along walls (`game-3d/starter/walkable-room.md`), no head bob by default
   (an option, off) and no camera smoothing on the look.
 - **Third person:** follow camera with a spring arm that shortens on the first hit
   (`game-3d/refs/gamedev-skills/camera-systems`). A hard cut resets the smoothing.
 - **Game feel** on actions (pickups, deals, hits): `game-3d/refs/gamedev-skills/game-feel` and the GDD's
   Feel and feedback lines; feedback inside 100 ms of the input [judgement].
-- **Settings, saved:** look sensitivity, invert Y, FOV (60 to 110), head bob, screen shake, volume, subtitles.
-  They live in one settings object with a unit test for load, save and clamp.
+- **Settings, saved:** baseline row 7: one settings object with a unit test for load, save and clamp.
 
 ## 2. Screen and onboarding
 
@@ -73,8 +71,8 @@ A figure that stands in a T-pose or in one loop reads as a prop. Minimum for eve
 - head and eyes turn to the player inside about 4 m and look away after 2 to 3 s;
 - a job loop for people with a role (a vendor straightens goods, calls out, counts money), a walk or wait loop for
   passers-by, stride speed from the distance walked;
-- crowds: instanced skinning with per-instance speed 0.8 to 1.2 and phase (`game-3d/refs/crowds-and-lod.md`);
-  people keep 0.6 m personal space and give way instead of overlapping (`game-3d/starter/learnings.md`, walkers);
+- crowds: instanced skinning with per-instance speed 0.8 to 1.2 [judgement] and phase (`game-3d/refs/crowds-and-lod.md`);
+  people keep 0.6 m personal space [judgement] and give way instead of overlapping (`game-3d/starter/learnings.md`, walkers);
 - a vendor or companion reacts within 1 s when the player arrives, stops, or leaves.
 
 Test: the play hook exports every NPC's clip name and time; a unit test fails when two NPCs within 3 m share a clip
@@ -82,21 +80,21 @@ and a start time, or one clip plays longer than 12 s without a switch.
 
 ## 4. Accessibility floor (Game Accessibility Guidelines, Basic tier)
 
-Adjustable FOV with a sensible default; head bob and screen shake switchable off (mouse smoothing and
+Adjustable FOV with a sensible default (baseline row 7); head bob and screen shake switchable off (mouse smoothing and
 camera/controller mismatch are known motion-sickness triggers); every control remappable (remap the action, not
-only swap two keys); subtitles for all important speech; contrast and text size readable at 907x510; settings saved;
+only swap two keys); subtitles for all important speech; contrast and text size readable at the smallest target frame (baseline row 9); settings saved;
 never convey a state by colour alone. Beyond this floor, take the guidelines' Intermediate list per game.
 
 ## 5. Test recipe
 
-- **Pure look math** in `src/run/look.ts` (`applyLook(state, dx, dy, sens, invertY)` returns a new state, pitch
-  clamped); Vitest covers clamp, invert, wrap of yaw. No `Math.random`: idle choice takes `ctx.rng`.
+- **Pure look math** in a pure module with no renderer import (`applyLook(state, dx, dy, sens, invertY)` returns a new state, pitch
+  clamped); Vitest covers clamp, invert, wrap of yaw. No `Math.random`: idle choice takes the game's seeded RNG.
 - **Hooks:** `window.__lookBy(dx, dy)` and `render_game_to_text()` carrying yaw, pitch, position and NPC clips,
   so a headless test can turn and walk without a real pointer lock. A real lock in headless Chromium is not
   verified here; the Playtester's blind pass uses the drag fallback and says so in `Not checked:`.
-- **Playtester rows:** mouse look reaches every stall and memory spot; Esc and a lost lock pause and recover; the
-  prompt matches the device; NPCs visibly do something in a 30 s watch (clip names from the hook); the settings
-  change the view; first reward and first goal inside the GDD's seconds.
+- **Playtester checks:** the table in [`refs/controls-baseline.md`](refs/controls-baseline.md); plus mouse look reaches
+  every interactable the GDD lists, Esc and a lost lock pause and recover, NPCs visibly do something in a 30 s watch
+  (clip names from the hook), first reward and first goal inside the GDD's seconds.
 
 ## Sources (read 2026-11-12)
 

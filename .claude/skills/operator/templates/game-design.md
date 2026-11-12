@@ -15,7 +15,8 @@ The verb repeated every few seconds, in one sentence. What closes the loop (the 
 
 ## Controls
 View (first or third person, top-down), camera (mouse or drag look, follow), movement keys and touch,
-what the player can look at or interact with. The genre's standard unless a line says why not.
+what the player can look at or interact with. One line per row of `game-ux/refs/controls-baseline.md` (yes, or a
+written exception) with this game's numbers; the genre's standard unless a line says why not.
 
 ## Session length
 Shortest and longest run in seconds, from the references. How a run ends.
@@ -31,9 +32,6 @@ and how each changes play.
 
 ## Feel and feedback
 Per action: screen, sound, length in ms.
-
-## Controls and camera
-First or third person; one line per row of `game-ux/refs/controls-baseline.md` (yes, or a written exception); the numbers this game starts with. Optional for a 2D game with no camera.
 
 ## Map (only if the map is a real place)
 Outline, elevation, stations at real coordinates, travel: `game-3d/refs/real-map-overworld.md`; the country and the stations are this game's, the method is not.
