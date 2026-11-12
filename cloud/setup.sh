@@ -2068,7 +2068,6 @@ async function roleContext(prompt, cwd, session) {
   const root = setupRoot(cwd)
   const role = roleOf(prompt, read(join(root, 'docs', 'TEAMS.md')))
   if (!role) return ''
-  if (/<(wake|relay)\b[^>]*reason=\\?"spawn/.test(prompt) && !existsSync(spawnRoleFile(session))) writeFileSync(spawnRoleFile(session), role.name) // only a real spawn brief, once
   writeFileSync(once, existsSync(lockFile(session)) ? '' : role.name) // a rejected brief gets its card once but an empty stamp (it could name a gate role); a coordinator re-brief stamps it (relayRebrief)
   const topic = role.name === 'Reviewer' ? await topicPlaybook(prompt, root) : null
   if (topic) return roleCard({ ...role, path: `${'.claude/skills/operator/checklists.md'} (${topic.name}) and gate.md, Scored gates` }, topic.text)
@@ -2089,6 +2088,8 @@ export function sessionModel(transcript = '', env = process.env) {
   }
   return model ?? env.ANTHROPIC_MODEL ?? null
 }
+// The model of this session: the transcript's newest reply, else the one SessionStart wrote (the prompt and the tool-call path use this one).
+export const knownModel = (session, transcript) => sessionModel(transcript) ?? (read(join(tmpdir(), `claude-setup-model-${String(session).replace(/[^A-Za-z0-9]/g, '')}`)).trim() || null)
 // Gate roles grade work and need the gate rules (yskills 2026-11-04: "if you don't even get the gate right").
 export const GATE_ROLES = /^(Tester|Reviewer|Security|Legal|Playtester|Hook Checker|Critic|Story Editor|Evaluator)$/i
 export const GATE_PRIOR = /^[ \t>-]*Prior art:[^\n]*\bgate\.md\b/im
@@ -2496,7 +2497,7 @@ const agentTranscript = (transcriptPath, agentId) => (transcriptPath && agentId 
 // A thread whose brief breaks the team rules does not work (yskills 2026-11-12: threads started without a Role line ran anyway). The prompt hook
 // leaves a lock; until a corrected brief arrives, every tool except talking to the coordinator is refused.
 export const lockFile = (session) => join(tmpdir(), `claude-setup-badbrief-${String(session).replace(/\W/g, '')}`)
-const LOCK_FREE = /^(mcp__hearthbot__(message_coordinator|post_message|no_reply_needed|update_progress_checklist|read_thread|read_messages_by_id|list_threads)|ReadNotifications|Read|Glob|Grep|ToolSearch)$/
+const LOCK_FREE = /^(mcp__hearthbot__(message_coordinator|post_message|no_reply_needed|update_progress_checklist|read_thread|read_messages_by_id|list_threads|request_decision)|ReadNotifications|Read|Glob|Grep|ToolSearch)$/
 const BAD_BRIEF = /^(Brief check|Model check|Gate check)\b/
 export function updateLock(session, check) {
   if (!session) return
@@ -2508,40 +2509,61 @@ export function updateLock(session, check) {
 // (an allowlist: system-note blocks, then the one fixed "A message from this project's coordinator session" line and the wrapper
 // straight after it), so a wrapper inside
 // a wake, a PR event, a task notification or another relay never counts (#475 follow-up). It then stamps the role once, as roleContext does for a spawn brief: a non-empty stamp is never changed,
-// and a gate role only when the spawn brief named that same role (spawnRoleFile): a rejected Programmer spawn never becomes a
-// Reviewer, a rejected Reviewer spawn recovers (#475 gate round 1 and follow-up).
+// and a gate role only for a thread that holds no stamp yet (relayRebrief; #475, M50).
 export const COORDINATOR_RELAY = /^\s*(?:<system-note>[^<]*<\/system-note>\s*)*(?:<system-reminder>\s*)?A message from this project[’']s coordinator session[^\n]*\n\s*<coordinator-relay>\s*<relay\b[^>]*\bfrom=\\?"coordinator"/
-const spawnRoleFile = (session) => join(tmpdir(), `claude-setup-spawnrole-${String(session).replace(/\W/g, '')}`)
+// M50: a relay that reaches a working thread is a `queued_command` attachment, whose text starts with the bare `<relay from="coordinator"` (live
+// 2026-11-12: the lead-in line is added only when the harness shows it). The bare form counts only as such an attachment, an entry only the harness writes.
+const BRIEF_LINE = /^[ \t>*_`-]*(Role|Kit|Gate|Prior art|Model|Skills|Done when|Stop when|Start|Threads|Item|Plan|Acceptance):/im // a relay that corrects the brief; other relays do not count toward the card
+const BARE_RELAY = /^\s*<relay\b[^>]*\bfrom=\\?"coordinator"/
 // The coordinator often sends only the lines the start brief lacked (#479 part 2: VacationGame's Critic, our Director), so the relay is read
 // together with the earlier coordinator relays and the spawn brief from the transcript: the newest relay's lines come first and win,
 // older relays and the spawn brief fill the gaps.
-export function relayContext(prompt, transcript) {
+// Every coordinator relay of the transcript, oldest first: a user entry, or a queued_command attachment when it reached a working thread.
+export function coordinatorRelays(transcript) {
   const relays = []
   for (const line of String(transcript).split('\n')) {
     try {
       const entry = JSON.parse(line)
       const content = entry.message?.content
-      const text = typeof content === 'string' ? content : (content ?? []).map((c) => c?.text ?? '').join('\n')
-      if (entry.type === 'user' && COORDINATOR_RELAY.test(text) && text.trim() !== prompt.trim()) relays.push(text)
+      const text = entry.type === 'attachment' && entry.attachment?.type === 'queued_command' ? String(entry.attachment.prompt ?? '')
+        : entry.type === 'user' ? (typeof content === 'string' ? content : (content ?? []).map((c) => c?.text ?? '').join('\n')) : ''
+      // A bare relay is the harness's own entry: a queued_command attachment, or a user entry with isMeta (live 2026-11-12, gate round 1 of #490); a typed one never counts.
+      if (entry.type === 'attachment' || entry.isMeta === true ? BARE_RELAY.test(text) || COORDINATOR_RELAY.test(text) : COORDINATOR_RELAY.test(text)) relays.push(text)
     } catch { /* not a JSON line */ }
   }
-  const spawn = spawnPrompt(prompt, String(transcript))
-  return [...relays.reverse(), spawn === prompt ? '' : spawn].filter(Boolean).join('\n')
+  return relays
 }
-async function relayRebrief(session, prompt, cwd, model, context = '') {
-  if (!COORDINATOR_RELAY.test(prompt)) return
-  const text = stripTags([prompt, context].filter(Boolean).join('\n'))
+// A newer source's stamp line replaces an older one instead of adding to it (a corrected Role must not leave the old Size M behind).
+const withoutOlderStamps = (sources) => { let seen = false; return sources.map((t) => { const had = /^[ \t>*_`-]*Role:/im.test(t); const out = seen ? t.replace(/^[ \t>*_`-]*Role:[^\n]*$/gim, '') : t; seen ||= had; return out }) }
+export function relayContext(prompt, transcript) {
+  const relays = coordinatorRelays(transcript).filter((t) => t.trim() !== prompt.trim())
+  const spawn = spawnPrompt(prompt, String(transcript))
+  return withoutOlderStamps([prompt, ...relays.reverse(), spawn === prompt ? '' : spawn].filter(Boolean)).slice(1).join('\n')
+}
+// M50: a thread locked since its spawn has no role stamp and built nothing (the lock refuses every tool outside LOCK_FREE), so its first lift may take any
+// role, a gate role too; one that holds a stamp keeps it (#475: a builder never becomes the reviewer of its own work).
+// The third refused relay asks for one card; the lock stays and a complete relay still lifts it. Returns that note, or ''.
+async function relayRebrief(session, prompt, cwd, model, transcript = '') {
+  if (!COORDINATOR_RELAY.test(prompt) && !BARE_RELAY.test(prompt)) return ''
+  const context = relayContext(prompt, transcript)
+  const text = stripTags([prompt, context].join('\n'))
   updateLock(session, await briefCheck(text, cwd, model, true))
   const stamp = join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)
-  if (existsSync(lockFile(session)) || read(stamp).trim()) return
+  if (existsSync(lockFile(session))) {
+    if (coordinatorRelays(transcript).filter((t) => t.trim() !== prompt.trim() && BRIEF_LINE.test(t)).length < 2) return ''
+    const note = 'Three relays did not lift the lock: post one card to yskills with request_decision that names the lines still missing, then stay idle; a complete relay lifts the lock at any time.'
+    if (!read(lockFile(session)).includes('request_decision')) writeFileSync(lockFile(session), `${read(lockFile(session)).slice(0, 300)}\n${note}`)
+    return note
+  }
+  if (read(stamp).trim()) return ''
   const role = roleOf(text, read(join(setupRoot(cwd), 'docs', 'TEAMS.md')))
-  if (role && GATE_ROLES.test(role.name) && read(spawnRoleFile(session)).trim() !== role.name) return updateLock(session, `Brief check (docs/TEAMS.md): a re-brief cannot turn this thread into a ${role.name}; the spawn brief named another role. Ask the coordinator for a fresh ${role.name} thread, then stop.`)
   if (role) writeFileSync(stamp, role.name)
+  return ''
 }
 export function lockBlock(tool, session) {
   const f = session ? lockFile(session) : ''
   if (!f || !existsSync(f) || LOCK_FREE.test(tool)) return null
-  return `rule-guard: this thread's brief breaks the team rules, so it does no work (docs/TEAMS.md, Coordinator or thread): ${read(f).slice(0, 300)}\nSend the reason and the corrected Role, Kit and Size to the coordinator (message_coordinator) and wait for a new brief.`
+  return `rule-guard: this thread's brief breaks the team rules, so it does no work (docs/TEAMS.md, Coordinator or thread): ${read(f).slice(0, 700)}\nSend the reason and the corrected Role, Kit and Size to the coordinator (message_coordinator) and wait for a new brief.`
 }
 // docs/hands-off.md: a role never writes the files another role owns.
 export function handsOff(tool, input = {}, role = '', root = '') {
@@ -2645,13 +2667,12 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           const lookup = session && !midWork && !spawned && !existsSync(briefOnce) && transcriptPath && existsSync(transcriptPath)
           const brief = lookup ? spawnPrompt(prompt, read(transcriptPath)) : prompt
           if (session && (spawned || (lookup && brief !== prompt))) writeFileSync(briefOnce, '')
-          const model = sessionModel(transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : '') ?? (read(join(tmpdir(), `claude-setup-model-${String(session).replace(/[^A-Za-z0-9]/g, '')}`)).trim() || null)
+          const model = knownModel(session, transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : '')
           const checkNow = midWork ? '' : await briefCheck(brief, cwd, model)
+          let relayNote = ''
           if (spawned || (lookup && brief !== prompt)) updateLock(session, checkNow)
-          else if (existsSync(lockFile(session)) && COORDINATOR_RELAY.test(prompt)) {
-            await relayRebrief(session, prompt, cwd, model, transcriptPath && existsSync(transcriptPath) ? relayContext(prompt, read(transcriptPath)) : '')
-          }
-          const context = [checkNow, spawned || (lookup && brief !== prompt) ? await gateBriefContext(brief, model) : '', spawned || (lookup && brief !== prompt) ? await guardLine() : '', modelOnce(brief, transcriptPath, session), await roleContext(brief, cwd, session), promptContext(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
+          else if (existsSync(lockFile(session)) && COORDINATOR_RELAY.test(prompt)) relayNote = await relayRebrief(session, prompt, cwd, model, transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : '')
+          const context = [checkNow, relayNote, spawned || (lookup && brief !== prompt) ? await gateBriefContext(brief, model) : '', spawned || (lookup && brief !== prompt) ? await guardLine() : '', modelOnce(brief, transcriptPath, session), await roleContext(brief, cwd, session), promptContext(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
           if (context) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: context } }))
           return
         }
@@ -2667,6 +2688,8 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         const sessionTranscript = () => [transcriptPath, agentTranscript(transcriptPath, agentId)].filter((p) => p && existsSync(p)).map(read).join('\n')
         const gateRole = session ? read(join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)).trim() : ''
         const planNote = await recordPlanChecks(transcript, agentId, cwd, session) // before the gates: `approve` reads the check this just recorded
+        // M50: a relay that reached the thread mid-turn may never have fired the prompt hook; the transcript has it, so a locked thread re-reads it at its next tool call.
+        if (session && existsSync(lockFile(session))) { const t = transcript(); const last = coordinatorRelays(t).at(-1); if (last) await relayRebrief(session, last, cwd, knownModel(session, t), t) }
         let block = lockBlock(tool, session)
           ?? handsOff(tool, input ?? {}, gateRole, setupRoot(cwd))
           ?? (await gateBlock(tool, input ?? {}, transcript, sessionModel(transcript()), true, gateRole))
