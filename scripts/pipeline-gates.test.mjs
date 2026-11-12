@@ -4,7 +4,7 @@ import { test } from 'node:test'
 import { mkdtempSync, mkdirSync, writeFileSync, utimesSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { sheetProblems, fitReportProblems, lookStateProblems, driverProblems, stalePreviews, refreshPreview, intakeProblems } from './pipeline-gates.mjs'
+import { sheetProblems, fitReportProblems, lookStateProblems, driverProblems, stalePreviews, refreshPreview, intakeProblems, bodyInventory } from './pipeline-gates.mjs'
 
 const SHEET = `# Character sheet: Mira
 ## Story (stage 1)
@@ -80,8 +80,11 @@ test('point 7: a preview older than its final render is stale and is regenerated
 })
 
 // asset-intake: a downloaded asset is processed, not listed. Each rule has one violating asset beside the happy path.
+// The bases come from the body's _inventory (measure.json of fit_garment.py), never from intake.json (gate #483 r1, B2).
+const BODY = { _inventory: { BT: ['BT_petite'], CH: ['CH_rika'] } }
+const INV = bodyInventory(BODY)
 const LICENCE = '# Licence\n- Source: https://example.org/pack\n- Licence: CC-BY 4.0\n- Commercial use: yes\n- Adult use: yes\n- Attribution: Example Studio\n'
-const REPORT = { type: 'garment', inventory: ['BT_petite', 'char_rika'], rows: { BT_petite: { preview: 'preview/BT_petite.png', number: { min_mm: 2.1, inside_pct: 0 } }, char_rika: { preview: 'preview/char_rika.png', number: { min_mm: 1.8, inside_pct: 0 } } }, catalog: { bases_fitted: ['BT_petite', 'char_rika'], md5: { 'files/CL_x.blend': 'abc' } } }
+const REPORT = { type: 'garment', rows: { BT_petite: { preview: 'preview/BT_petite.png', number: { min_mm: 2.1, inside_pct: 0 } }, char_rika: { preview: 'preview/char_rika.png', number: { min_mm: 1.8, inside_pct: 0 } } }, catalog: { bases_fitted: ['BT_petite', 'char_rika'], md5: { 'files/CL_x.blend': 'abc' } } }
 function asset(mutate = () => {}) {
   const dir = mkdtempSync(join(tmpdir(), 'intake-'))
   for (const d of ['source', 'files', 'preview']) mkdirSync(join(dir, d))
@@ -95,10 +98,24 @@ function asset(mutate = () => {}) {
   mutate(dir)
   return dir
 }
-const problems = (m) => { const d = asset(m); try { return intakeProblems(d).join('|') } finally { rmSync(d, { recursive: true, force: true }) } }
+const problems = (m, inv = INV) => { const d = asset(m); try { return intakeProblems(d, inv).join('|') } finally { rmSync(d, { recursive: true, force: true }) } }
+const report = (patch) => (d) => writeFileSync(join(d, 'intake.json'), JSON.stringify({ ...REPORT, ...patch }))
+
+test('intake: bodyInventory reads the _inventory of a fit measure the same way the fit gate does', () => {
+  assert.deepEqual(INV, ['BT_petite', 'char_rika'])
+  assert.deepEqual(bodyInventory({}), [])
+})
 
 test('intake: a processed asset with a row and preview per base passes', () => {
   assert.equal(problems(), '')
+})
+
+test('intake: without the body inventory it fails, and a report that fits fewer bases than the body has fails', () => {
+  assert.match(problems(() => {}, []), /no body inventory/)
+  // the author cannot shorten the list: the body has three bases, intake.json fits two
+  assert.match(problems(() => {}, [...INV, 'BT_tall']), /base BT_tall: no row.*catalog\.bases_fitted lacks BT_tall/)
+  // an inventory typed into intake.json is ignored
+  assert.match(problems(report({ inventory: ['char_rika'] }), [...INV, 'BT_tall']), /base BT_tall: no row/)
 })
 
 test('intake: a missing or empty source/ fails', () => {
@@ -111,22 +128,42 @@ test('intake: no licence note, or a placeholder field, fails (quarantine)', () =
   assert.match(problems((d) => writeFileSync(join(d, 'LICENCE.md'), LICENCE.replace('- Adult use: yes\n', ''))), /"Adult use:"/)
 })
 
+test('intake: Adult use or Commercial use "no", or an unclear answer, goes to quarantine (gate #483 r1, B3)', () => {
+  for (const [field, value] of [['Adult use', 'no'], ['Commercial use', 'No, personal use only'], ['Adult use', 'unclear'], ['Commercial use', 'unknown'], ['Adult use', 'nein']]) {
+    assert.match(problems((d) => writeFileSync(join(d, 'LICENCE.md'), LICENCE.replace(new RegExp(`${field}: yes`), `${field}: ${value}`))), new RegExp(`"${field}: .*_quarantine`), `${field}: ${value}`)
+  }
+  assert.equal(problems((d) => writeFileSync(join(d, 'LICENCE.md'), LICENCE.replace('Attribution: Example Studio', 'Attribution: none required'))), '', 'no attribution needed is fine')
+})
+
 test('intake: a report that is only a file list fails', () => {
   assert.match(problems((d) => rmSync(join(d, 'intake.json'))), /file list/)
-  assert.match(problems((d) => writeFileSync(join(d, 'intake.json'), JSON.stringify({ type: 'garment', files: ['a.fbx', 'b.png'] }))), /no inventory.*no rows|no rows/)
+  assert.match(problems((d) => writeFileSync(join(d, 'intake.json'), JSON.stringify({ type: 'garment', files: ['a.fbx', 'b.png'] }))), /no rows/)
 })
 
 test('intake: every base of the inventory needs a row, a preview and a number', () => {
-  assert.match(problems((d) => writeFileSync(join(d, 'intake.json'), JSON.stringify({ ...REPORT, rows: { BT_petite: REPORT.rows.BT_petite } }))), /base char_rika: no row/)
+  assert.match(problems(report({ rows: { BT_petite: REPORT.rows.BT_petite } })), /base char_rika: no row/)
   assert.match(problems((d) => rmSync(join(d, 'preview', 'char_rika.png'))), /base char_rika: preview .* does not exist/)
-  assert.match(problems((d) => writeFileSync(join(d, 'intake.json'), JSON.stringify({ ...REPORT, rows: { ...REPORT.rows, char_rika: { preview: 'preview/char_rika.png' } } }))), /garment needs a number/)
+  assert.match(problems(report({ rows: { ...REPORT.rows, char_rika: { preview: 'preview/char_rika.png' } } })), /garment needs number/)
+})
+
+test('intake: a garment or hair number must be a real clearance: numeric, 0 mm or more, 0 % inside', () => {
+  for (const number of [{}, 'fine', { min_mm: -12, inside_pct: 40 }, { min_mm: 1, inside_pct: 3 }, { min_mm: '2' }]) {
+    assert.match(problems(report({ rows: { ...REPORT.rows, char_rika: { preview: 'preview/char_rika.png', number } } })), /char_rika: a garment needs number/, JSON.stringify(number))
+  }
+  assert.match(problems(report({ type: 'hair' })), /^$/)
+})
+
+test('intake: the type is one of garment, hair, eyes, face', () => {
+  assert.match(problems(report({ type: 'shoes' })), /type "shoes" is none of/)
+  assert.match(problems(report({ type: 'Garment' })), /type "Garment" is none of/)
+  assert.match(problems(report({ type: undefined })), /is none of/)
 })
 
 test('intake: eyes and faces may be visual-only with a reason, garments and hair may not', () => {
-  const visual = (type, why) => (d) => writeFileSync(join(d, 'intake.json'), JSON.stringify({ ...REPORT, type, rows: Object.fromEntries(REPORT.inventory.map((k) => [k, { preview: `preview/${k}.png`, visual: true, why }])) }))
+  const visual = (type, why) => report({ type, rows: Object.fromEntries(INV.map((k) => [k, { preview: `preview/${k}.png`, visual: true, why }])) })
   assert.equal(problems(visual('eyes', 'no metric for an eye in a socket, 4 views checked')), '')
   assert.match(problems(visual('eyes', 'ok')), /visual: true with a why/)
-  assert.match(problems(visual('hair', 'looks fine in the render here')), /hair needs a number/)
+  assert.match(problems(visual('hair', 'looks fine in the render here')), /hair needs number/)
 })
 
 test('intake: a preview older than the asset files fails', () => {
@@ -134,5 +171,5 @@ test('intake: a preview older than the asset files fails', () => {
 })
 
 test('intake: the catalog must list every fitted base and a hash', () => {
-  assert.match(problems((d) => writeFileSync(join(d, 'intake.json'), JSON.stringify({ ...REPORT, catalog: { bases_fitted: ['BT_petite'], md5: {} } }))), /bases_fitted lacks char_rika.*md5 is empty/)
+  assert.match(problems(report({ catalog: { bases_fitted: ['BT_petite'], md5: {} } })), /bases_fitted lacks char_rika.*md5 is empty/)
 })
