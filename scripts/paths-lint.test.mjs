@@ -67,5 +67,7 @@ test('the Python resolver agrees with the JavaScript one and also stops without 
   assert.notEqual(run({}).status, 0)
   assert.match(run({}).stderr, /set STUDIO_ROOT/)
   const ok = run({ STUDIO_ROOT: '/studio-test' })
-  assert.equal(ok.stdout.trim(), join('/studio-test', 'projects', 'games', 'companyxy', 'ch01'))
+  // Compared with forward slashes: on Windows node's join turns the fake root's leading '/' into '\\', Python keeps it.
+  const slash = (t) => t.replace(/\\/g, '/')
+  assert.equal(slash(ok.stdout.trim()), slash(join('/studio-test', 'projects', 'games', 'companyxy', 'ch01')))
 })
