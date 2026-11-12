@@ -10,20 +10,20 @@ import { fileURLToPath } from 'node:url'
 import { coordinatorCard } from '../global/team-guard.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
-export const CARD_MAX = 6600 // 2026-11-12: +the Masterplan line
+export const CARD_MAX = 8000 // 6,000 until 2026-11-12; raised for the facts, roles and dependencies lines
 const cells = (l) => l.split('|').map((c) => c.trim())
 const read = (f) => readFileSync(join(root, f), 'utf8').replace(/\r/g, '')
 
 const PREFLIGHT = `## Pre-flight before every reply
 
 - Reply at most 15 lines / 1,500 characters: Luna, at least one kaomoji, result first, in his language (CLAUDE.md, Replies).
-- Every start_thread passes \`model\` (yskills' model as named, else the Roster row) and a brief that begins \`Role: · Kit: · Size:\` plus the block in operator/briefs.md; a task with research gets a Researcher subagent, named on a \`Researcher:\` line.
+- Every start_thread passes \`model\` (yskills' model as named, else the Roster row) and a brief that begins \`Role: · Kit: · Size:\` plus the block in operator/briefs.md; a task with research gets a Researcher subagent, named on a \`Researcher:\` line; \`Item: M<n>\` names its PLAN.json item.
 - A finished thread (done, failed, stopped, or review_ready idle 2 h with a Done: or hand-off reply) gets set_thread_resolved or a message_thread nudge before you stop; relist when your board is 2 h old (roles/project-manager.md, Close threads; routine step 11).
 - Each ask of yskills or pointer to a thread, PR or setting has its clickable link: [title](#cmsg_…), URL, [Project settings](#project-settings/resources).
 - Every ask of yskills gets a thread, a PR or a \`Done:\` line the same turn. A skill idea is a PR (\`new-skill\`), never a propose_skills card.
 - Gate: 5/5 pass/fail checks by agents that did not build it, up to 6 rounds, a check failing twice gets a diagnosis first, after round 6 one card to yskills (operator/gate.md, Rounds). Escalation: stuck twice → one Opus checkpoint; still stuck → Fable (docs/TEAMS.md, Models line).
 - Hand off only at a trigger (docs/WORKFLOW.md), never at a token count. Small changes wait as patches (docs/github-rules.md).
-- ## Masterplan (roles/project-manager.md, Masterplan) in MEMORY.md is your one plan: whole roadmap before work, posted, then start. Every event (ask, thread start, Done, blocker, decision): read_memory, change the item, update_memory, then write_custom_view, before the reply. "Stand?": goal, x/y done, doing, waits on him, next 3. Ping only when he must act, rate a visual, a part is Done (link), or a plan question.
+- Masterplan (roles/project-manager.md, Masterplan): /mnt/project-files/PLAN.json is the one plan; threads write it (scripts/plan.mjs), you Read it. Roadmap first (a Planner writes it), post it, start. Every event: Read PLAN.json before the reply; a change no thread owns goes into the next brief or a size S plan-update thread; then write_custom_view. "Stand?": goal, x/y done, doing, waits on him, next 3. Ping only when he must act, rate a visual, a part is Done (link), or a plan question.
 - If the project instructions lack the line "Read /mnt/project-files/claude-setup/COORDINATOR-CARD.md first", call update_project_settings once: PREPEND the text of operator/templates/project-instructions.md filled for this project above the existing instructions, keep every existing line (yskills 2026-11-08: add, never remove), and say so in one line.`
 
 export function ruleRows(map) {

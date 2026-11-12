@@ -12,7 +12,7 @@ test('the card builds, stays under CARD_MAX characters and has its parts', () =>
 test('the pre-flight carries the masterplan duty (roles/project-manager.md, Masterplan)', () => {
   const card = buildCard({ hash: 'x', date: 'd' })
   const pre = card.split('## Spawn rule')[0]
-  for (const s of ['## Masterplan', 'update_memory', 'Stand', 'write_custom_view', 'roles/project-manager.md']) assert.ok(pre.includes(s), s)
+  for (const s of ['PLAN.json', 'plan.mjs', 'Stand', 'write_custom_view', 'roles/project-manager.md', 'Item: M<n>']) assert.ok(pre.includes(s), s)
 })
 
 test('the index lines are rule → home, cut at 60 characters', () => {
