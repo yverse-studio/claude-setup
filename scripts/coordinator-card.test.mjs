@@ -24,9 +24,10 @@ test('the card holds the one brief template, copied from docs/templates/thread-b
   assert.throws(() => briefBlock('no block here'))
 })
 
-test('rules a hook already enforces are not repeated on the card (M27 step 6)', () => {
+test('lines with a hook or no failure on record are off the card, the ones the hook-less chat must keep stay (M27 step 6)', () => {
   const card = buildCard({ hash: 'x', date: 'd' })
-  for (const gone of ['## Spawn rule', 'Hand off only at a trigger', 'Escalation: stuck twice', '3 failed gate rounds', 'One home per rule']) assert.ok(!card.includes(gone), gone)
+  for (const gone of ['## Spawn rule', 'Escalation: stuck twice', '3 failed gate rounds', 'One home per rule']) assert.ok(!card.includes(gone), gone)
+  for (const kept of ['second fresh thread for one asset', 'restart is not posted']) assert.ok(card.includes(kept), kept)
 })
 
 test('ruleRows reads the table', () => {
