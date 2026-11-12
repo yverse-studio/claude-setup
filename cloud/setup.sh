@@ -1022,6 +1022,7 @@ function receiptBlock(tool, input, session, cwd, agentId, transcript) {
   const role = read(join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)).trim()
   if (!role) return null
   const t = transcript()
+  if (!/reason=\\?"spawn/.test(t)) return null // a hooked project chat that was handed a brief is no thread (the canary covers it)
   const root = setupRoot(cwd)
   const rules = ['CLAUDE.md', 'docs/TEAMS.md'].map((f) => read(join(root, f))).join('\n')
   return receiptMissing(tool, input, threadReceipt(role, spawnPrompt('', t), t, rules), t)
@@ -1257,7 +1258,7 @@ export function threadReceipt(role, brief, transcript, rules) {
   const tag = (k) => brief.replace(/[*_`]/g, '').match(new RegExp(`${k}:[ \\t]*([A-Za-z0-9-]+)`))?.[1] ?? '?'
   const skills = [...new Set(toolCalls(transcript).filter((c) => c.name === 'Skill').map((c) => String(c.input.skill ?? '')).filter(Boolean))]
   const hash = rules.includes(MARK) ? createHash('sha256').update(rules.replace(/\r/g, '')).digest('hex').slice(0, 7) : 'none'
-  const item = brief.match(/\bItem:[ \t]*(M\d+)/)?.[1] ?? '?' // the coordinator's Masterplan id (roles/project-manager.md, Masterplan)
+  const item = brief.replace(/[*_`]/g, '').match(/\bItem:[ \t]*(M\d+|new)/)?.[1] ?? '?' // the coordinator's Masterplan id (roles/project-manager.md, Masterplan)
   return `Thread · ${role} · ${tag('Kit')} · ${tag('Size')} · item ${item} · skills: ${skills.join(', ') || 'none'} · rules #${hash}`
 }
 
