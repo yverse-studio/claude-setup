@@ -80,3 +80,12 @@ test('live fixtures: gaps in three categories come in one refusal, the wrong mod
   const out = await check(`Role: Designer · Kit: content · Size: M\nFix it.`, 'claude-haiku-x')
   assert.match(out, /^Brief check[^\n]*in (3|4|5|6) places[\s\S]*Kit: content is no kit[\s\S]*Plan is missing[\s\S]*runs on haiku/)
 })
+
+test('a Planner is a gate-builder role: an M brief without a Gate line is named by missingLines, and its brief file carries the line', async () => {
+  const { missingLines } = await import('../global/team-guard.mjs')
+  const { briefFile } = await import('./brief.mjs')
+  const planner = (gate) => ['Role: Planner · Kit: setup · Size: M', ...(gate ? ['Gate: Reviewer · plan round 1 before owner'] : [])].join('\n')
+  assert.match(missingLines(planner(false)).join('\n'), /Gate:/)
+  assert.doesNotMatch(missingLines(planner(true)).join('\n'), /Gate:/)
+  assert.match(briefFile('Planner'), /^Gate:/m)
+})
