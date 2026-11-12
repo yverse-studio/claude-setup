@@ -42,7 +42,7 @@ test('the unfilled PR template fails, so the hint comment never counts as the li
 
 
 test('prior art: a decision with what was checked passes, a bare or empty line fails', () => {
-  assert.ok(checkPriorArt(body('Prior art: ECC hooks and superpowers checked; adapt the hook pattern, because ours must read hearthbot tools')))
+  assert.ok(checkPriorArt(body('Prior art: ECC hooks and obra/superpowers checked; adapt the hook pattern, because ours must read hearthbot tools')))
   assert.ok(checkPriorArt(body('Prior art: none, because this is a one-line typo fix')))
   assert.equal(checkPriorArt(body('Prior art:')), false)
   assert.equal(checkPriorArt(body('Prior art: looked around')), false)
@@ -68,4 +68,31 @@ test('a scored asset PR links the real frames', async () => {
   assert.ok(checkRender('Scored gates pass at 4.5/5 (render, clip).\nRender: none, because this PR changes the gate text, no asset'), 'a PR about the rule itself')
   assert.equal(checkRender('Gate 4/5, scene.\nRender: none, because'), false, 'none needs its reason')
   assert.ok(checkRender('Gate 5/5: the login form works.'), 'no asset, no render line')
+})
+
+// yskills 2026-11-12: "erst schauen was gut funktioniert, dann klauen oder reverse engineeren, dann selber bauen". One corpus, both homes:
+// the brief check (global/team-guard.mjs) and the PR body check say the same about a Prior art line: real findings, not a gesture.
+test('Prior art: a named source and a decision pass, a gesture fails, in the brief and in the PR body', async () => {
+  const { needsPriorArt } = await import('../global/team-guard.mjs')
+  const good = [
+    'Prior art: obra/superpowers and our gate.md checked -> adapt, because ours reads hearthbot tools',
+    'Prior art: Mario Party map at https://example.com/x studied, copy the node layout, because it reads at a glance',
+    'Prior art: `ralph-loop` Stop hook and #444 ledger -> reuse the counter, because it exists',
+    'Prior art: none, because this is a one-line typo fix',
+  ]
+  const bad = [
+    'Prior art: looked around a bit and found nothing much',
+    'Prior art: ECC hooks and superpowers checked; adapt the hook, because ours differ',
+    'Prior art: checked, build my own, because I want to',
+    'Prior art:',
+  ]
+  for (const l of good) {
+    assert.equal(needsPriorArt(`Role: Programmer · Kit: setup · Size: S\n${l}`), false, `brief: ${l}`)
+    if (!l.includes('example.com')) assert.ok(checkPriorArt(`${l}\n`), `body: ${l}`)
+  }
+  for (const l of bad) {
+    assert.equal(needsPriorArt(`Role: Programmer · Kit: setup · Size: S\n${l}`), true, `brief: ${l}`)
+    assert.equal(checkPriorArt(`${l}\n`), false, `body: ${l}`)
+  }
+  assert.equal(needsPriorArt('Role: Researcher · Kit: setup · Size: S\nPrior art: to find: Researcher reads how Mario Party maps work'), false, 'to find: is the brief for a Researcher that has not run yet')
 })

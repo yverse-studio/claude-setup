@@ -229,6 +229,11 @@ How to undo a merge, by kind of change (write the line into the PR's "undo" line
      ran rounds before the ledger existed is imported once: `gate-rounds.mjs init <asset> --round <n>`. Nobody edits the file by
      hand (the hook refuses it). A defect that fails the same check twice still gets a diagnosis before the next fix
      (`character-workflow.md`, step 4); three failed rounds on one asset still mean a re-plan, now the Fable director.
+  Three bypasses closed (security review of 2026-11-12, tests `bypass 1` to `bypass 3` in `scripts/gate-rounds.test.mjs`): the proofs for init, direct, card,
+  picture and waive sit in the CLI too (it refuses them without the short one-use grant the hook leaves after it checked the proof), and a command that names
+  `gate-rounds.mjs` other than as `node <path>/gate-rounds.mjs <verb>` or a plain read is refused; a verdict counts only from a Tester or Reviewer session or
+  when a fresh reviewer subagent of the session returned that headline (a builder cannot pass or merge its own work); the human answer on a card is read from
+  the wake's own wrapper, never from tags quoted in a relay or a result.
   Limits, said plainly: the ledger lives in the project's shared folder (one project's threads share it); a session without
   hooks (the project chat) cannot be stopped itself, but every thread it starts checks its brief, and no merge works without a
   counted pass. `CLAUDE_SETUP_RULE_GUARD=off` is the one off switch; nobody sets it. It stops careless and honest-mistake

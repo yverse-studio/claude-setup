@@ -299,7 +299,7 @@ test('team guard: blocks Agent and thread starts without model, passes with one'
     assert.match(m('').stderr, /Prior art:/, 'an M brief without prior art is blocked')
     assert.match(m('', 'S').stderr, /Prior art:/, 'an S brief too (yskills 2026-11-03: research before guessing)')
     assert.equal(m('\nPrior art: <what was checked>').status, 2, 'the placeholder does not count')
-    assert.equal(m('\nPrior art: BMAD and our operator roles checked; adapt ours, because hearthbot threads').status, 0)
+    assert.equal(m('\nPrior art: bmad-code-org/BMAD-METHOD and our operator roles checked; adapt ours, because hearthbot threads').status, 0)
     assert.equal(start('Bash', { command: 'ls' }), 0)
     assert.equal(start('mcp__hearthbot__post_message', { text: 'x' }), 0)
     assert.equal(runTeam('pre', { cwd, tool_name: 'Agent', tool_input: { prompt: 'x' } }, { CLAUDE_SETUP_TEAM_GUARD: 'off' }).status, 0)
@@ -310,7 +310,7 @@ test('team guard: blocks Agent and thread starts without model, passes with one'
 test('team guard: an Animator thread starts on the game and story kits, on Sonnet, not on site or setup', async () => {
   const { decide } = await import('../global/team-guard.mjs')
   const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
-  const brief = (kit, size = 'M') => ({ brief: `Role: Animator · Kit: ${kit} · Size: ${size}\nPrior art: scene kit and our blender-body skill checked; adapt, because the key-pose library exists${FULL}\nSheet: n/a scene animation, no body or outfit model change`, title: 'Animator · fenster', model: 'claude-x-1' })
+  const brief = (kit, size = 'M') => ({ brief: `Role: Animator · Kit: ${kit} · Size: ${size}\nPrior art: docs/game-pipeline.md and our blender-body skill checked; adapt, because the key-pose library exists${FULL}\nSheet: n/a scene animation, no body or outfit model change`, title: 'Animator · fenster', model: 'claude-x-1' })
   for (const kit of ['game', 'story']) assert.deepEqual(decide('mcp__hearthbot__start_thread', brief(kit), [], [], teams), {}, `Animator passes on ${kit}`)
   for (const kit of ['site', 'app', 'setup']) assert.match(decide('mcp__hearthbot__start_thread', brief(kit), [], [], teams).block ?? '', /not on the `\w+` kit's team/, `Animator is skipped on ${kit}`)
   assert.match(decide('mcp__hearthbot__start_thread', { ...brief('game'), model: 'claude-opus-x' }, [], [], teams).block ?? '', /runs on sonnet/, 'the Animator runs on Sonnet')
@@ -322,7 +322,7 @@ test('team guard: an Animator thread starts on the game and story kits, on Sonne
 test('team guard: a size L Programmer brief needs a Tester line first', () => {
   const cwd = mkdtempSync(join(tmpdir(), 'team-'))
   try {
-    const start = (brief) => runTeam('pre', { cwd, tool_name: 'mcp__hearthbot__start_thread', tool_input: { brief: `${brief}${FULL}\nPrior art: checked our app template; adapt it, because it has auth`, model: 'claude-x-1' } })
+    const start = (brief) => runTeam('pre', { cwd, tool_name: 'mcp__hearthbot__start_thread', tool_input: { brief: `${brief}${FULL}\nPrior art: checked templates/new-project; adapt it, because it has auth`, model: 'claude-x-1' } })
     const r = start('Role: Programmer · Kit: app · Size: L\nModel: x')
     assert.equal(r.status, 2)
     assert.match(r.stderr, /Tester/)
@@ -621,7 +621,7 @@ test('rule guard: a thread checks its spawn brief against TEAMS.md and sends a b
   const spawn = (brief) => `<wake reason="spawn"><message>${brief}</message></wake>`
   assert.match(await briefCheck(spawn(`Role: Programmer · Kit: setup · Size: M${FULL}`), root), /^Title check[\s\S]*`Programmer · `[\s\S]*rename_thread/)
   assert.equal(await briefCheck(spawn(`Role: Programmer · Kit: setup · Size: S${FULL}`), root), '', 'size S needs no role title (yskills 2026-10-27)')
-  assert.equal(await briefCheck(spawn(`Role: none · Kit: setup · Size: S${FULL}`), root), '', 'no role, no title rule')
+  assert.match(await briefCheck(spawn(`Role: none · Kit: setup · Size: S${FULL}`), root), /Brief check[\s\S]*names no role of the Roster/, 'no role is refused (yskills 2026-11-12), not waved through')
   assert.match(await briefCheck(spawn(`Role: Designer · Kit: content · Size: S${FULL}`), root), /Brief check[\s\S]*Kit: content is no kit[\s\S]*message_coordinator/)
   assert.match(await briefCheck(spawn('Make a bee video.'), root), /no `Role: · Kit: · Size:` stamp/)
   assert.match(await briefCheck(spawn('Role: Programmer · Kit: setup · Size: S\nFix it.'), root), /brief lines missing: Model:/)
@@ -718,7 +718,7 @@ test('team guard: an Agent call cannot run a gate agent below its file model', a
 test('team guard: a thread start runs its role on the tier its Roster row names', async () => {
   const { decide, wrongModel } = await import('../global/team-guard.mjs')
   const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
-  const brief = (role, size) => `Role: ${role} · Kit: setup · Size: ${size}${FULL}\nPrior art: claude-setup guards checked -> adapt, because they exist`
+  const brief = (role, size) => `Role: ${role} · Kit: setup · Size: ${size}${FULL}\nPrior art: claude-setup/global guards checked -> adapt, because they exist`
   assert.ok(wrongModel(brief('Planner', 'M'), 'sonnet', teams))
   assert.equal(wrongModel(brief('Planner', 'M'), 'opus', teams), null)
   assert.equal(wrongModel(brief('Planner', 'M'), 'fable', teams), null, 'the row names Fable')
@@ -789,7 +789,7 @@ test('check.mjs duplicate rules: a wrapped sentence in two files is found, a poi
 test('team guard: a Roster exception passes with its reason in the brief', async () => {
   const { wrongModel } = await import('../global/team-guard.mjs')
   const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
-  const brief = 'Role: Social Lead · Kit: social · Size: M\nPrior art: social-team skill checked -> adapt, because it exists'
+  const brief = 'Role: Social Lead · Kit: social · Size: M\nPrior art: social-team/SKILL.md checked -> adapt, because it exists'
   assert.ok(wrongModel(brief, 'opus', teams))
   assert.equal(wrongModel(`${brief}\nModel: opus (the weekly plan)`, 'opus', teams), null)
   assert.ok(wrongModel(`${brief}\nModel: haiku (cheaper)`, 'haiku', teams), 'a tier the row never names stays blocked')
@@ -840,7 +840,7 @@ test('rule guard: read turns a page into plain text', async () => {
 test('team guard: kit, size, role and brief lines are checked against TEAMS.md', async () => {
   const { decide, badTeam, missingLines } = await import('../global/team-guard.mjs')
   const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
-  const start = (stamp, model = 'sonnet') => decide('mcp__hearthbot__start_thread', { instructions: `${stamp}${FULL}\nPrior art: video-studio and storyteller checked -> adapt, because they are ours`, model }, [], [], teams).block ?? ''
+  const start = (stamp, model = 'sonnet') => decide('mcp__hearthbot__start_thread', { instructions: `${stamp}${FULL}\nPrior art: video-studio/SKILL.md and storyteller checked -> adapt, because they are ours`, model }, [], [], teams).block ?? ''
   assert.match(start('Role: Designer · Kit: content · Size: S'), /no kit/)
   assert.match(start('Role: Producer · Kit: video · Size: S'), /never S/)
   assert.match(start('Role: Game Designer · Kit: story · Size: M', 'opus'), /not on the `story` kit/)
@@ -853,7 +853,7 @@ test('team guard: kit, size, role and brief lines are checked against TEAMS.md',
   assert.equal(start('Role: Designer · Kit: story (Ren\'Py) · Size: L', 'opus'), '', 'Designer for renders; "Game Designer" in Skipped is another role')
   assert.equal(start('Role: Programmer (debug) · Kit: setup · Size: M'), '')
   // Test project 2026-10-27: the bee video thread was not titled `Producer · <video>`.
-  const titled = (title) => decide('mcp__hearthbot__start_thread', { title, instructions: `Role: Producer · Kit: video · Size: M${FULL}\nPrior art: video-studio -> adapt, because it is ours`, model: 'sonnet' }, [], [], teams).block ?? ''
+  const titled = (title) => decide('mcp__hearthbot__start_thread', { title, instructions: `Role: Producer · Kit: video · Size: M${FULL}\nPrior art: video-studio/SKILL.md -> adapt, because it is ours`, model: 'sonnet' }, [], [], teams).block ?? ''
   assert.match(titled('Bienen-Video'), /Producer thread is titled `Producer · <what>`/)
   assert.equal(titled('Producer · Bienen-Video'), '')
   assert.equal(decide('mcp__hearthbot__start_thread', { title: 'Fix login', instructions: `Role: Programmer · Kit: app · Size: S${FULL}`, model: 'sonnet' }, [], [], teams).block, undefined, 'size S needs no role title')
@@ -1229,7 +1229,7 @@ test('team guard: a bad brief is refused once with every problem and a template 
   const tpl = readFileSync(join(root, 'docs/templates/thread-brief.md'), 'utf8')
   const block = tpl.match(/```\n([\s\S]*?)```/)?.[1] ?? ''
   assert.ok(block, 'the template has one fenced brief block')
-  const filled = block.replace(/<[^>\n]+>/g, (m) => (m === '<S|M|L>' ? 'M' : /^<kit/.test(m) ? 'setup' : /^<Role/.test(m) ? 'Programmer' : 'something concrete for this task'))
+  const filled = block.replace(/<[^>\n]+>/g, (m) => (m === '<S|M|L>' ? 'M' : /^<kit/.test(m) ? 'setup' : /^<Role/.test(m) ? 'Programmer' : /^<the sources/.test(m) ? 'obra/superpowers' : 'something concrete for this task'))
   assert.deepEqual(missingLines(filled), [], 'a filled template has every must-have line')
   assert.ok(stamped(filled) && !needsPriorArt(filled) && !needsTester(filled))
   const unfilled = missingLines(block)
