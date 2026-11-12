@@ -2339,7 +2339,7 @@ const withoutOlderStamps = (sources) => { let seen = false; return sources.map((
 export function relayContext(prompt, transcript) {
   const relays = coordinatorRelays(transcript).filter((t) => t.trim() !== prompt.trim())
   const spawn = spawnPrompt(prompt, String(transcript))
-  return withoutOlderStamps([prompt, ...relays.reverse(), spawn === prompt ? '' : spawn].filter(Boolean)).slice(1).join('\n')
+  return withoutOlderStamps([prompt, ...relays.reverse(), spawn === prompt ? '' : spawn].filter(Boolean).map(stripTags)).slice(1).join('\n') // tags off first: a spawn brief's Role sits right behind its wake tag
 }
 // M50: a thread locked since its spawn has no role stamp and built nothing (the lock refuses every tool outside LOCK_FREE), so its first lift may take any
 // role, a gate role too; one that holds a stamp keeps it (#475: a builder never becomes the reviewer of its own work).

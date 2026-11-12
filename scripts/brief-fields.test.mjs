@@ -11,7 +11,7 @@ import { briefCheck } from '../global/rule-guard.mjs'
 const root = join(fileURLToPath(import.meta.url), '..', '..')
 const spawn = (brief) => `<wake reason="spawn"><relay>${brief}</relay></wake>`
 const check = (brief, model = null) => briefCheck(spawn(brief), root, model)
-const LINES = { Item: 'Item: M50', Plan: 'Plan: p.md', Acceptance: 'Acceptance: tests pass', Model: 'Model: claude-sonnet-5-5', Skills: 'Skills: .claude/skills/operator/roles/programmer.md',
+const LINES = { Item: 'Item: M50', Plan: 'Plan: p.md', Acceptance: 'Acceptance: tests pass', Model: 'Model: sonnet', Skills: 'Skills: .claude/skills/operator/roles/programmer.md',
   'Done when': 'Done when: tests pass', 'Stop when': 'Stop when: 3 rounds', Start: 'Start: read MEMORY.md first', Threads: 'Threads: list_threads checked, none open on this topic',
   'Prior art': 'Prior art: obra/superpowers -> adapt, because it exists', Gate: 'Gate: Reviewer · x before owner', Sheet: 'Sheet: sheet.md', 'Look-Lock': 'Look-Lock: card https://x.y/z',
   Researcher: 'Researcher: Opus subagent', Tester: 'Tester: Tester · app' }
@@ -52,11 +52,11 @@ test('the template file, the generated brief files and the refusal carry exactly
 // The live false starts of 2026-11-12 (plan section 1 and the coordinator's two Researcher starts of 16:40).
 const FULL_M = Object.values(LINES).join('\n')
 test('live fixtures: the Researcher start of 16:40 gets one refusal with every error and the template, and its restart passes', async () => {
-  const first = await check(`Role: Researcher · Kit: research · Size: M\nItem: PLAN.json item M29\nThreads: none\nPlan: p.md\nAcceptance: ok\nModel: claude-opus-5-5\nSkills: s\nStart: read MEMORY.md first\nDone when: x\nStop when: y\nPrior art: .claude/skills/operator/gate.md -> adapt, because it exists`)
+  const first = await check(`Role: Researcher · Kit: research · Size: M\nItem: PLAN.json item M29\nThreads: none\nPlan: p.md\nAcceptance: ok\nModel: opus\nSkills: s\nStart: read MEMORY.md first\nDone when: x\nStop when: y\nPrior art: .claude/skills/operator/gate.md -> adapt, because it exists`)
   assert.match(first, /^Brief check[\s\S]*Kit: research is no kit/, 'the kit is refused')
   assert.doesNotMatch(first.split('\n')[0], /Item|Threads/, 'Item and Threads are no refusal: the format is repaired, the thread lists threads itself')
   assert.match(first, /Role: Researcher · Kit: <kit>[\s\S]*Item: <PLAN\.json item/, 'the refusal carries the Researcher template')
-  const second = await check(`Role: Researcher · Kit: setup · Size: M\nItem: PLAN.json item M29\nThreads: none\nPlan: p.md\nAcceptance: ok\nModel: claude-opus-5-5\nSkills: s\nStart: read MEMORY.md first\nDone when: x\nStop when: y\nPrior art: .claude/skills/operator/gate.md -> adapt, because it exists`)
+  const second = await check(`Role: Researcher · Kit: setup · Size: M\nItem: PLAN.json item M29\nThreads: none\nPlan: p.md\nAcceptance: ok\nModel: opus\nSkills: s\nStart: read MEMORY.md first\nDone when: x\nStop when: y\nPrior art: .claude/skills/operator/gate.md -> adapt, because it exists`)
   assert.doesNotMatch(second, /^Brief check/, 'the restart is not refused')
   assert.match(second, /^Brief repair[^\n]*Item[^\n]*Threads|^Brief repair[^\n]*Threads[^\n]*Item/, 'the repairs are named')
   assert.match(second, /Item: M29/, 'Item: PLAN.json item M29 counts as M29')

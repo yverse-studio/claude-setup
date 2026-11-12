@@ -1,9 +1,9 @@
 # Thread brief template
 
 The one fixed shape of a thread brief (companyxy 2026-11-12: almost every start failed the brief check one line at a
-time, an extra round each). Copy the block, fill every `<...>`, one field per line, then start the thread. `team-guard`
-(`global/team-guard.mjs`) checks the same lines and names every missing one in a single refusal; the test
-`scripts/guards.test.mjs` keeps this block and the check in step. The long form with the context rules is in
+time, an extra round each). Copy the block, fill every `<...>`, one field per line, then start the thread. `BRIEF_FIELDS`
+(`global/team-guard.mjs`) is the one table of these lines: only a gap only the coordinator can decide (role, kit, size, and at size M or L Item, Plan,
+Acceptance) is refused, all of them in one refusal with the role's template; the thread repairs the rest. `scripts/brief-fields.test.mjs` keeps this block and the table in step. The long form with the context rules is in
 [`operator/briefs.md`](../../.claude/skills/operator/briefs.md) (Every thread brief starts with).
 
 ```

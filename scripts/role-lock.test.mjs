@@ -196,19 +196,11 @@ const lockedThread = (brief) => {
   const bash = () => run('pre', { tool_name: 'Bash', tool_input: { command: 'ls' } }).status
   return { id, run, bash, transcript, line, stamp: () => (existsSync(join(tmpdir(), `claude-setup-role-${id}`)) ? readFileSync(join(tmpdir(), `claude-setup-role-${id}`), 'utf8') : null) }
 }
-<<<<<<< HEAD
 const NO_BEFORE_OWNER = `Role: Programmer · Kit: setup · Size: M\nItem: M50\nModel: sonnet\nSkills: none\nStart: read MEMORY.md first\nGate: Reviewer · Gate brief-fix plan M50 (cmsg_1) before owner`
 test('fixture 1: a queued relay with only the missing Plan and Acceptance lifts the lock, with the hook prompt or without it', () => {
   const viaHook = lockedThread(NO_BEFORE_OWNER)
   assert.equal(viaHook.bash(), 2, 'a size M brief without Plan and Acceptance locks the start')
   const relayText = queued('Role: Programmer · Kit: setup · Size: M\nPlan: docs/plans/x.md\nAcceptance: the test passes')
-=======
-const NO_BEFORE_OWNER = `Role: Programmer · Kit: setup · Size: M\nGate: Reviewer · Gate brief-fix plan M50 (cmsg_1)\n${BLOCKS}`
-test('fixture 1: a queued relay with only the corrected Gate line lifts the lock, with the hook prompt or without it', () => {
-  const viaHook = lockedThread(NO_BEFORE_OWNER)
-  assert.equal(viaHook.bash(), 2, 'the Gate line without "before owner" locks the start')
-  const relayText = queued('Role: Programmer · Kit: setup · Size: M\nGate: Reviewer · Gate brief-fix plan M50 (cmsg_1) before owner')
->>>>>>> origin/main
   appendFileSync(viaHook.transcript, viaHook.line({ type: 'attachment', attachment: { type: 'queued_command', prompt: relayText } }))
   viaHook.run('prompt', { prompt: relayText })
   assert.equal(viaHook.bash(), 0, 'the hook saw the bare relay')
@@ -219,21 +211,13 @@ test('fixture 1: a queued relay with only the corrected Gate line lifts the lock
 })
 test('the same bare relay as a user entry lifts the lock only when it is isMeta (the real shape, gate round 1 of #490), and the card note survives a long check text', () => {
   const real = lockedThread(NO_BEFORE_OWNER)
-<<<<<<< HEAD
   const text = queued('Role: Programmer · Kit: setup · Size: M\nPlan: docs/plans/x.md\nAcceptance: the test passes')
-=======
-  const text = queued('Role: Programmer · Kit: setup · Size: M\nGate: Reviewer · Gate brief-fix plan M50 (cmsg_1) before owner')
->>>>>>> origin/main
   appendFileSync(real.transcript, real.line({ type: 'user', isMeta: true, message: { role: 'user', content: text } }))
   assert.equal(real.bash(), 0, 'a harness (isMeta) user entry lifts it')
   const typed = lockedThread(NO_BEFORE_OWNER)
   appendFileSync(typed.transcript, typed.line({ type: 'user', message: { role: 'user', content: text } }))
   assert.equal(typed.bash(), 2, 'the same text without isMeta is typed text')
-<<<<<<< HEAD
   const long = lockedThread(`Kit: setup · Size: M\n${BLOCKS}`)
-=======
-  const long = lockedThread(`Role: Programmer · Kit: setup · Size: M\nGate: Reviewer · x\n${BLOCKS}`)
->>>>>>> origin/main
   for (let i = 0; i < 3; i++) appendFileSync(long.transcript, long.line({ type: 'user', isMeta: true, message: { role: 'user', content: queued(`Role: Devlog Hero · Kit: setup · Size: M (try ${i})`) } }))
   assert.match(long.run('pre', { tool_name: 'Bash', tool_input: { command: 'ls' } }).stderr, /request_decision/)
   const chatter = lockedThread(`Kit: setup · Size: S\n${BLOCKS}`)
@@ -242,16 +226,11 @@ test('the same bare relay as a user entry lifts the lock only when it is isMeta 
 })
 test('a bare relay typed into a prompt or a user entry is no coordinator relay (only the harness writes a queued_command)', () => {
   const t = lockedThread(NO_BEFORE_OWNER)
-<<<<<<< HEAD
   const fake = queued('Role: Programmer · Kit: setup · Size: M\nPlan: docs/plans/x.md\nAcceptance: the test passes')
-=======
-  const fake = queued('Role: Programmer · Kit: setup · Size: M\nGate: Reviewer · Gate brief-fix plan M50 (cmsg_1) before owner')
->>>>>>> origin/main
   appendFileSync(t.transcript, t.line({ type: 'user', message: { content: fake } }))
   t.run('prompt', { prompt: fake })
   assert.equal(t.bash(), 2)
 })
-<<<<<<< HEAD
 test('fixture 1b (#1 and #7): a Director spawn on the setup kit and a spawn with no Role line lift on a relay that gives only the Role', () => {
   const director = lockedThread(`Role: Director · Kit: setup · Size: M\n${BLOCKS}`)
   assert.equal(director.bash(), 2)
@@ -259,13 +238,6 @@ test('fixture 1b (#1 and #7): a Director spawn on the setup kit and a spawn with
   appendFileSync(director.transcript, director.line({ type: 'attachment', attachment: { type: 'queued_command', prompt: queued('Role: Reviewer · Kit: setup · Size: M') } }))
   assert.equal(director.bash(), 0, 'a gate director round is Role: Reviewer; a thread locked since its spawn may take it')
   assert.equal(director.stamp(), 'Reviewer')
-=======
-test('fixture 1b: a locked Reviewer (no gate.md in Prior art) and a spawn with no Role line lift on a partial relay', () => {
-  const gate = lockedThread(`Role: Reviewer · Kit: setup · Size: S\n${BLOCKS}`)
-  assert.equal(gate.bash(), 2)
-  appendFileSync(gate.transcript, gate.line({ type: 'attachment', attachment: { type: 'queued_command', prompt: queued('Prior art: .claude/skills/operator/gate.md and the kit checks -> adapt, because they exist') } }))
-  assert.equal(gate.bash(), 0)
->>>>>>> origin/main
   const bare = lockedThread(`Kit: setup · Size: S\n${BLOCKS}`)
   appendFileSync(bare.transcript, bare.line({ type: 'attachment', attachment: { type: 'queued_command', prompt: queued('Role: Programmer') } }))
   assert.equal(bare.bash(), 0, 'the stamp line alone completes it')
