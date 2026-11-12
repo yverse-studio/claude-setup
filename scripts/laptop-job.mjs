@@ -2,10 +2,10 @@
 // Runs one long laptop job (render, bake, batch) under a watchdog. Home of the rule: docs/pc-claude-user.md (Long laptop jobs).
 // Runs the command directly (no shell): wrap a .cmd or .bat as `cmd /c x.bat`.
 // node scripts/laptop-job.mjs [--name n] [--timeout-min 60] [--idle-min 15] [--gpu-max-used-mb 1500] [--no-gpu] -- <command> [args]
-// Blender limits (yskills 2026-10-26): at most 2 jobs run at once and at most 3 Blender instances exist; extra jobs wait (--queue-min, default 180), yskills' own Blender is counted but never blocked.
+// Blender limits (yskills 2026-10-26): at most 1 job runs at once (global lock) and at most 2 Blender instances exist (ours plus his own); extra jobs wait (--queue-min, default 180), yskills' own Blender is counted but never blocked.
 // Always ends with ONE line on stdout: `JOB OK|FAIL|HANG|TIMEOUT|BLOCKED|STOPPED <name>: <why>`; exit 0 only for OK.
 import { spawn, spawnSync } from 'node:child_process'
-import { appendFileSync, existsSync, readFileSync } from 'node:fs'
+import { appendFileSync, existsSync, readFileSync, statSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { freemem } from 'node:os'
 import { MAX_BLENDER, MAX_RENDERS, acquireSlot, blenderCount, releaseSlot, slotsHeld } from './laptop-slots.mjs'
@@ -20,7 +20,7 @@ export function parseArgs(argv) {
   const cut = argv.indexOf('--')
   const flags = cut < 0 ? argv : argv.slice(0, cut)
   const cmd = cut < 0 ? [] : argv.slice(cut + 1)
-  const opt = { name: 'job', timeoutMin: 60, idleMin: 15, gpuMaxUsedMb: 1500, gpu: true, queueMin: 180 }
+  const opt = { name: 'job', timeoutMin: 60, idleMin: 15, gpuMaxUsedMb: 1500, gpu: true, queueMin: 180, heartbeatMin: 10, progressFile: null, noProgress: null }
   for (let i = 0; i < flags.length; i++) {
     const f = flags[i]
     if (f === '--no-gpu') opt.gpu = false
@@ -29,6 +29,9 @@ export function parseArgs(argv) {
     else if (f === '--idle-min') opt.idleMin = Number(flags[++i])
     else if (f === '--queue-min') opt.queueMin = Number(flags[++i])
     else if (f === '--gpu-max-used-mb') opt.gpuMaxUsedMb = Number(flags[++i])
+    else if (f === '--progress-file') opt.progressFile = flags[++i]
+    else if (f === '--heartbeat-min') opt.heartbeatMin = Number(flags[++i])
+    else if (f === '--no-progress') opt.noProgress = flags[++i]
   }
   return { opt, cmd }
 }
@@ -54,6 +57,21 @@ export function gpuProblem(maxUsedMb, run = (cmd, args) => spawnSync(cmd, args, 
   if (used <= maxUsedMb) return null
   const blender = /blender\.exe/i.test(run('tasklist', ['/FI', 'IMAGENAME eq blender.exe']).stdout ?? '')
   return `GPU busy: ${used} of ${total} MB in use${blender ? ' (Blender is open)' : ''}`
+}
+
+// Heartbeat (companyxy report 2026-11-12, point 6): a Blender job names a progress file it rewrites after every frame
+// (or batch step); the watchdog kills the job when that file's mtime is older than --heartbeat-min (default 10), so a
+// crashed render is found in 10 minutes, not after hours. The job resumes by skipping frames already on disk (Overwrite off).
+// --no-progress "<reason>" lifts the need for a one-frame still or a bake that has no steps.
+export function progressProblem(cmd, opt) {
+  if (!/blender/i.test(cmd.join(' ')) || opt.progressFile || opt.noProgress) return null
+  return 'a Blender job needs --progress-file <file> (rewritten after every frame; the watchdog checks it every 10 min) or --no-progress "<reason>"'
+}
+
+export function heartbeatProblem({ now, started, mtimeMs, heartbeatMin, firstFrameMin = 30 }) {
+  const limit = heartbeatMin * 60000
+  if (mtimeMs === null || mtimeMs < started) return now - started > firstFrameMin * 60000 ? `progress file never wrote in ${firstFrameMin} min` : null   // the first frame may compile shaders and build the BVH
+  return now - mtimeMs > limit ? `no progress for ${Math.round((now - mtimeMs) / 60000)} min (progress file not rewritten)` : null
 }
 
 const statusLine = (state, name, why) => `JOB ${state} ${name}: ${why}`
@@ -117,6 +135,8 @@ async function waitForSlot(opt, cmd) {
 async function main() {
   const { opt, cmd } = parseArgs(process.argv.slice(2))
   if (!cmd.length) finish(statusLine('FAIL', opt.name, 'no command after --'), 2)
+  const noProgress = progressProblem(cmd, opt)
+  if (noProgress) finish(statusLine('FAIL', opt.name, noProgress), 2)
   const win = process.platform === 'win32'
   if (win) {
     const power = powerProblems()
@@ -150,6 +170,12 @@ async function main() {
     if (stopState() === 'now') kill('STOPPED', 'STOP file says now')
     else if (now - started > opt.timeoutMin * 60000) kill('TIMEOUT', `over ${opt.timeoutMin} min`)
     else if (now - lastOutput > opt.idleMin * 60000) kill('HANG', `no output for ${opt.idleMin} min`)
+    else if (opt.progressFile) {
+      let mtimeMs = null
+      try { mtimeMs = statSync(opt.progressFile).mtimeMs } catch { /* not written yet */ }
+      const stale = heartbeatProblem({ now, started, mtimeMs, heartbeatMin: opt.heartbeatMin, firstFrameMin: Math.max(30, opt.heartbeatMin) })
+      if (stale) kill('HANG', stale)
+    }
   }, 10000)
   let finished = false
   const done = (code, why) => {

@@ -5,8 +5,8 @@ import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-export const MAX_RENDERS = 2
-export const MAX_BLENDER = 3
+export const MAX_RENDERS = 1 // one Blender job at a time (companyxy report 2026-11-12: several parallel jobs on about 3.6 GB free RAM)
+export const MAX_BLENDER = 2 // our one job plus yskills' own Blender
 export const slotDir = () => process.env.LAPTOP_JOB_LOCK_DIR ?? join(tmpdir(), 'claude-laptop-render-slots')
 
 export const pidAlive = (pid) => {

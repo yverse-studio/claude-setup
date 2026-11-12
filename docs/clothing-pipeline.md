@@ -21,6 +21,8 @@ Rule that follows: **fit per base, never per character.** Characters differ only
 
 ## Reuse first
 
+**Before any download:** `python tools/laptop/clothes_dupe.py <url or id>` (laptop copy of the wardrobe check; HAVE or NEW per source, exit 1 on HAVE). A download command for sketchfab, booth, fab, cgtrader or blenderkit is blocked until that call ran for the same source in the session [guard: hook global/rule-guard.mjs, `dupeCheckMissing`]; the PR quotes its output line (companyxy 2026-11-12: garments were fetched twice).
+
 Before a garment is built or fixed (yskills 2026-11-12: "zieh ihr einfach ein outfit aus unseren outfits an oder pass an"):
 search the library (`clothes\CL_*`, the catalog, the project's live list) for a gate-passed piece of that kind and
 refit it to the figure (Moving or re-dressing, below). A new garment needs a line in the plan: what was searched and why
@@ -71,6 +73,8 @@ run in full, including the poke-through check of step 3.
 - A brief that says otherwise does not change this rule (`briefs.md`, Every thread brief starts with).
 
 ## Done report (required numbers)
+
+**Every body and character state, not two (companyxy 2026-11-12: fit files followed only Rika's and Saki's keys, Yumeka and Lily clipped 16 to 35 %).** `fit_garment.py` bakes a follow key for every `CH_*` key, and its measure output carries `_inventory` (`BT` presets, `CH` keys). The gate runs `node scripts/pipeline-gates.mjs fit <measure.json>`: every piece needs a state per `BT_` preset and a `char_<name>` per `CH_` key, none deeper than the 4 mm offset. [guard: test scripts/pipeline-gates.test.mjs]
 
 The done report of every garment fit or move lists, **per piece**, the **clearance**: the signed
 distance from each garment vertex to the body surface (positive = outside), as the smallest value in
