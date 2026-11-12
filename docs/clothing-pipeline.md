@@ -19,6 +19,18 @@ character is built: [`character-workflow.md`](character-workflow.md).
 
 Rule that follows: **fit per base, never per character.** Characters differ only by key values.
 
+## Reuse first
+
+Before a garment is built or fixed (yskills 2026-11-12: "zieh ihr einfach ein outfit aus unseren outfits an oder pass an"):
+search the library (`clothes\CL_*`, the catalog, the project's live list) for a gate-passed piece of that kind and
+refit it to the figure (Moving or re-dressing, below). A new garment needs a line in the plan: what was searched and why
+nothing fits. The first check of any fit is the silhouette row of the gate (`gate.md`, Asset PRs), not the clipping.
+
+## Body first
+
+No garment work on a character before yskills has approved her body: the fixed order is
+`docs/character-workflow.md` (Body, then outfits).
+
 ## The pipeline
 
 1. **Source** (`clothes\CL_<item>\source\`): the download or self-built file, untouched, plus the

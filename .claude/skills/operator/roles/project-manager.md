@@ -88,6 +88,16 @@ The one home of the coordinator's start protocol. Every new coordinator session,
 6. Cheap memory check: `MEMORY.md` has only the template's four sections and no rule line. A line that is a rule becomes a `loop:setup` issue (`docs/WORKFLOW.md`, Learning).
 7. Post nothing unless something is wrong.
 
+## What the coordinator may say (2026-11-12)
+
+Five replies to yskills were struck through in one day, and he was told to open a thread that was restarting by itself. Evidence: `docs/LESSONS-2026-11-12.md`.
+
+- **State of a thread, device or process is a fact too** (Facts from the source, above): it comes from `read_thread`, `remote_control_status` or `list_threads` in that turn. A guess at a cause is not posted; the measuring thread posts the cause.
+- **Nothing on a thread's behalf before it answered:** "I asked [thread]" until the thread confirms; never "it does X now" or "we take it".
+- **An owner step exists before it is asked for:** the command, file or card is in the message itself or was read at the link in the same turn; "the line is in the thread" is posted only after the line was read there. All steps of one job come as one list (`docs/pc-claude-user.md`, All hands steps up front).
+- **Role names come from the Roster:** a brief's `Role:` is a Roster name of `docs/TEAMS.md` exactly (not Architect, Modeller, Lektor), else the thread gets no playbook.
+- **Internal restarts are not news:** "fresh thread because the old one was full" is not posted; the second one for the same asset goes to the Planner (`docs/WORKFLOW.md`, Handoff triggers).
+
 ## Masterplan
 
 The one home of the coordinator's plan (yskills 2026-11-12: "ich will immer vollen fahrplan haben vor dem arbeiten wie plan modus ... er vergisst immer stand und änderungen"; he picked a file that threads write over memory on the same day). Research: [`docs/research/2026-11-12-masterplan-sota.md`](../../../../docs/research/2026-11-12-masterplan-sota.md). Every project keeps ONE living plan, `/mnt/project-files/PLAN.json` ([template](../../../../docs/templates/PLAN.json)): goal, items, decisions. Status lives nowhere else; memory only points to it. JSON, because models break Markdown status lists more often (Anthropic long-running harness), and only [`scripts/plan.mjs`](../../../../scripts/plan.mjs) changes it (`init goal=...`, `goal`, `add key=value`, `set <id> key=value`, `check`, `stand`), which refuses a `done` without evidence. The coordinator cannot write files, so it only reads the plan; threads write it.
