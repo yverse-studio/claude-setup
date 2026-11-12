@@ -7,7 +7,7 @@ import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
-import { cli, gateBrief, namesLook, pictureOk, mergeProblem, parseHeadline, readLedger, recordRound, roundProblem, issueGrant, GRANTED, reviewerProof, authorProblem } from '../global/gate-rounds.mjs'
+import { cli, gateBrief, namesLook, pictureOk, mergeProblem, parseHeadline, readLedger, recordRound, roundProblem, issueGrant, GRANTED, reviewerProof, authorProblem, GATE_ROLE } from '../global/gate-rounds.mjs'
 
 const root = join(fileURLToPath(import.meta.url), '..', '..')
 const PR = { owner: 'yverse-studio', repo: 'vacation-game', issue_number: 13 }
@@ -29,7 +29,7 @@ function session(model = 'sonnet-test', extra = [], role = 'Tester') {
   const bare = (...args) => cli(args, env)
   const run = (...args) => {
     const [cmd, asset, ...rest] = args
-    if (GRANTED.includes(cmd)) issueGrant(join(dir, 'gate'), cmd, asset, cmd === 'init' ? rest[rest.indexOf('--round') + 1] : cmd === 'direct' ? rest[rest.indexOf('--plan') + 1] : rest[rest.indexOf('--ref') + 1])
+    if (GRANTED.includes(cmd)) issueGrant(join(dir, 'gate'), cmd, asset, cmd === 'init' ? rest[rest.indexOf('--round') + 1] : cmd === 'direct' ? rest[rest.indexOf('--plan') + 1] : cmd === 'record' ? rest[rest.indexOf('--body-file') + 1] : rest[rest.indexOf('--ref') + 1])
     return cli(args, env)
   }
   return { dir, env, hook, gate, run, bare, transcript, id }
@@ -484,4 +484,47 @@ test('bypass 3: the human check reads the outer wake wrapper, never quoted tags'
   const real = '<wake reason="mention"><project id="p"><thread ts="t"><message trigger="true" from="human" trust="principal" author="y">ok nimm es</message></thread></project></wake>'
   assert.equal(session('sonnet-test', [use, card, { type: 'user', message: { content: real } }]).hook('Bash', cmd).status, 0)
   assert.equal(session('sonnet-test', [use, card, { type: 'user', message: { content: [{ type: 'text', text: real }] } }]).hook('Bash', cmd).status, 0, 'text parts too')
+})
+
+test('record: a Critic counts a verdict for a named asset (no PR), a builder and a PR asset are refused (#482)', () => {
+  const NAMED = 'devlog-01'
+  const critic = session('sonnet-test', [], 'Critic')
+  const body = join(critic.dir, 'v.md')
+  const say = (n, score) => writeFileSync(body, `Gate ${score}/5 (S, round ${n})\n1 frame check\n`)
+  const viaHook = (s, n, score) => { say(n, score); return s.hook('Bash', { command: `node ~/.claude/claude-setup/gate-rounds.mjs record ${NAMED} --body-file ${body}` }) }
+  const viaCli = (n, score) => { say(n, score); return critic.run('record', NAMED, '--body-file', body) } // run: with the grant the hook leaves
+  // rounds 1 to 3, the director, then the Critic's round 4: the hook passes it, the CLI counts it
+  for (const n of [1, 2, 3]) { assert.equal(viaHook(critic, n, '3.0').status, 0, `hook passes the Critic, round ${n}`); assert.equal(viaCli(n, '3.0').code, 0) }
+  const plan = join(critic.dir, 'plan.md')
+  writeFileSync(plan, 'goal, constraints, what changes, done-test. '.repeat(8))
+  assert.equal(critic.run('direct', NAMED, '--plan', plan).code, 0)
+  assert.equal(viaHook(critic, 4, '3.5').status, 0)
+  assert.equal(viaCli(4, '3.5').code, 0)
+  assert.equal(readLedger(join(critic.dir, 'gate'), NAMED).rounds.length, 4, 'the ledger reads 4')
+  assert.equal(critic.bare('check', NAMED, '5').code, 0, 'round 5 may run')
+  // a builder session is refused by the hook
+  const builder = session('sonnet-test', [], 'Programmer')
+  assert.match(viaHook(builder, 1, '5.0').stderr, /builder cannot pass or merge its own work/)
+  // no grant, no count: the CLI alone (a copy of the hook's job) is refused (security review: hook-only gate)
+  say(5, '5.0')
+  assert.match(critic.bare('record', NAMED, '--body-file', body).text, /refused: the hook/)
+  assert.equal(readLedger(join(critic.dir, 'gate'), NAMED).rounds.length, 4)
+  // a PR asset, and every spelling that shares a PR ledger's file, belongs to `post` and is refused by the hook and the CLI
+  for (const a of [ASSET, 'yverse-studio/vacation-game 13', 'yverse-studio/vacation-game#013', 'yverse-studio_vacation-game_13']) {
+    assert.match(critic.hook('Bash', { command: `node ~/.claude/claude-setup/gate-rounds.mjs record '${a}' --body-file ${body}` }).stderr, /only a plain named asset/, a)
+    assert.match(critic.run('record', a, '--body-file', body).text, /only a plain named asset/, a)
+  }
+  assert.equal(readLedger(join(critic.dir, 'gate'), ASSET).rounds.length, 0, 'the PR ledger was never touched')
+  // a body with no headline, or no file, counts nothing
+  writeFileSync(body, 'no headline here')
+  assert.match(critic.run('record', NAMED, '--body-file', body).text, /must start with the verdict headline/)
+  assert.match(critic.run('record', NAMED, '--body-file', join(critic.dir, 'none.md')).text, /must start with the verdict headline/)
+})
+
+test('every gate role the hooks know may post a verdict: gate-rounds uses the same list as rule-guard (#482)', async () => {
+  const { GATE_ROLES } = await import('../global/rule-guard.mjs')
+  for (const r of ['Tester', 'Reviewer', 'Evaluator', 'Critic', 'Hook Checker', 'Playtester', 'Story Editor']) assert.equal(authorProblem('Gate 5/5 (S, round 1)', { role: r }), null, r)
+  for (const r of ['Programmer', 'Designer', 'Planner', 'Critic Intern', 'Tester2']) assert.notEqual(authorProblem('Gate 5/5 (S, round 1)', { role: r }), null, r)
+  const names = (re) => re.source.replace(/^\^\(|\)\$$/g, '').toLowerCase().split('|').sort()
+  assert.deepEqual(names(GATE_ROLE), names(GATE_ROLES), 'a role added to one list only turns this red')
 })
