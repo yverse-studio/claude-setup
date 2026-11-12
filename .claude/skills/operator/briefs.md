@@ -88,6 +88,7 @@ Sheet: <path of the approved cast sheet .md> and Look-Lock: <owner card link of 
 Researcher: <the Researcher subagent and its model, e.g. `general-purpose, sonnet, writes research/<date>-<topic>.md`> (a task that asks for research only; docs/TEAMS.md, Kits; team-guard blocks one without).
 Tester: <the `Tester · <app>` thread> (size L Programmer briefs only; docs/TEAMS.md, Tester first; team-guard blocks one without).
 Gate: <Reviewer thread> before owner, or `Gate: n/a <why this slice has no owner-facing result>` (10+ characters), in every Programmer, Designer, Animator, Game Designer, Content Designer or Sound Designer brief at size M or L; the Reviewer is its own thread with its own brief from the coordinator, see `gate.md` (Owner-facing results). `node scripts/brief.mjs` writes it. [guard: hook global/team-guard.mjs]
+Reuse: none (<why this is a new thread: other plan or PR, long or idle context, parallel slice or read job>) (only when the board has an open thread of this role; otherwise message that thread, docs/TEAMS.md, Reuse rule; team-guard blocks one without).
 Literal mode: yskills' words are orders, done as said. No "yes, but", no offers, no alternatives
 when they ask for one thing; impossible or unsafe = one plain line, then the nearest thing done.
 Done when: <a check the thread can run: command and expected output, or the screenshot/number that proves it>, plus "NOW.md line set to done" (`docs/USING.md`, Live board). Stop when: <budget in rounds or attempts, never tokens;

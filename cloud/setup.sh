@@ -371,7 +371,9 @@ import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 // rule-guard sits beside this file (GUARD_FILES); without it only the model-tier check is skipped.
 let roleOf = () => null
-try { ({ roleOf } = await import('./rule-guard.mjs')) } catch { /* no rule-guard here */ }
+let openThreads = () => []
+let toolCalls = () => []
+try { ({ roleOf, openThreads, toolCalls } = await import('./rule-guard.mjs')) } catch { /* no rule-guard here */ }
 
 export const POINTER = 'Team rule (claude-setup docs/TEAMS.md): route every task on its own (task picks the kit, not the project; then size S/M/L), call only the roles it needs, as thread or subagent as the roster says, and pass `model` from the role\'s row on every thread start and Agent call.'
 export const PM_FILE = '.claude/skills/operator/roles/project-manager.md'
@@ -671,8 +673,23 @@ export function badTitle(title, text, teams) {
   return new RegExp(`^\\s*${role.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*·\\s*\\S`, 'i').test(title) ? null : role.name
 }
 
+// Persistent role threads, partly (research 2026-11-12; yskills picked "partly, per plan or PR"): a role thread is
+// reused for the next job of the same plan or PR, so a start while that role has an open thread must say why it is new.
+// The board is the last thread listing of the transcript; a resolved or done thread is not reusable, a Tester at L is always fresh.
+// The board is the last full thread listing of the transcript (rule-guard's openThreads: any nesting, filtered listings skipped, threads resolved since dropped).
+export const boardThreads = (transcript) => openThreads(toolCalls(String(transcript)))
+export const openSameRole = (board, role) => board.filter((t) => new RegExp(`^\\s*${role.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*·`, 'i').test(t.title)).map((t) => t.title)
+export function reuseBlock(text, teams, board) {
+  const plain = text.replace(/[*_`]/g, '')
+  const role = teams && board?.length && roleOf(plain, teams)
+  if (!role?.row || (role.name === 'Tester' && /\bSize:[ \t]*L\b/i.test(plain))) return null
+  const open = openSameRole(board, role.name)
+  if (!open.length || /^[ \t>-]*Reuse:[ \t]*none\b[^\n]*\([^)<\n][^)\n]{7,}\)/im.test(plain)) return null
+  return `${role.name} thread already open: "${open[0]}". Give the work to it with message_thread (same plan or PR; docs/TEAMS.md, Reuse rule), or add \`Reuse: none (<why: other plan or PR, long context, parallel read job>)\` to the brief and retry`
+}
+
 // unread: the boot files a thread start still needs (empty when read or when no transcript was given).
-export function decide(tool, input = {}, dirs = [], unread = [], teams = '', checklists = '') {
+export function decide(tool, input = {}, dirs = [], unread = [], teams = '', checklists = '', board = []) {
   const kind = AGENT.test(tool) ? 'Agent' : THREAD_START.test(tool) ? 'thread' : null
   if (kind === 'thread' && unread.length) return { block: `team-guard: read the rules before starting a thread: ${unread.join(' and ')} (in ~/.claude/claude-setup/ or the claude-setup repo; docs/MAP.md, Start here). 2026-10-26 a coordinator skipped them and guessed every model. Read them, then retry.` }
   if (kind === 'thread' && !stamped(briefText(input))) return { block: 'team-guard: every thread brief starts with the stamp line `Role: <one role from docs/TEAMS.md Roster> · Kit: <kit> · Size: <S|M|L>` (operator/briefs.md); a small task with no role says `Role: none`. The thread loads its playbook from it. Add the line, then retry.' }
@@ -694,6 +711,8 @@ export function decide(tool, input = {}, dirs = [], unread = [], teams = '', che
     if (needsTester(text)) found.push('a size L Programmer thread starts only after its Tester thread (claude-setup docs/TEAMS.md, Sizes): start `Tester · <app>` first, then put a line `Tester: <its thread id or title>` in this brief')
     const wrong = wrongModel(text, input.model, teams)
     if (wrong) found.push(`the ${wrong.role} runs on ${wrong.allowed.join(' or ')} (claude-setup docs/TEAMS.md, Roster), not ${wrong.tier}. Pass that model. For an exception the row names (e.g. "Opus writes the weekly plan") add \`Model: <tier> (<why>)\` to the brief; if yskills named this model, say "yskills named <model>"`)
+    const reuse = reuseBlock(text, teams, board)
+    if (reuse) found.push(reuse)
     if (found.length) return { block: `team-guard: ${found.length === 1 ? found[0] : `${found.length} problems in this brief: ${found.map((f, i) => `(${i + 1}) ${f}`).join(' ')}`}. Copy the fixed template claude-setup docs/templates/thread-brief.md, fill every line once, then retry.` }
   }
   const own = kind === 'Agent' && downgraded(input, dirs)
@@ -762,7 +781,8 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
       const unread = read ? need.filter((f) => !read.has(f)) : []
       const teams = THREAD_START.test(tool) ? text(join(cwd, 'docs', 'TEAMS.md')) || text(join(dir, 'docs', 'TEAMS.md')) : ''
       const checklists = THREAD_START.test(tool) ? text(join(cwd, CHECKLISTS)) || text(join(dir, CHECKLISTS)) : ''
-      const out = decide(tool, input, [join(cwd, '.claude', 'agents'), join(home, '.claude', 'agents')], unread, teams, checklists)
+      const board = THREAD_START.test(tool) && transcript ? boardThreads(text(transcript)) : []
+      const out = decide(tool, input, [join(cwd, '.claude', 'agents'), join(home, '.claude', 'agents')], unread, teams, checklists, board)
       if (out.block) { process.stderr.write(out.block); process.exitCode = 2 }
     } catch {
       // A guard must never break a tool call.
@@ -1893,6 +1913,16 @@ export function threadBoard(calls) {
     blocked: rows.filter((t) => t.state === 'blocked' && !t.resolved).map(pick),
     told,
   }
+}
+
+// The threads still open on the last full listing (working, blocked, review_ready, not resolved, not resolved since): team-guard's
+// Reuse check (docs/TEAMS.md, Reuse rule). Same listing rules as threadBoard; null when the session never listed its threads.
+const OPEN_STATES = new Set(['working', 'blocked', 'review_ready'])
+export function openThreads(calls) {
+  const i = calls.findLastIndex((c) => LIST.test(c.name) && c.result && !c.input.state && !c.input.since && !c.input.cursor)
+  if (i < 0) return []
+  const resolved = new Set(calls.slice(i + 1).filter((c) => /set_thread_resolved$/.test(c.name)).map((c) => c.input.thread_id ?? c.input.thread))
+  return threadRows(calls[i].result).filter((t) => !t.resolved && OPEN_STATES.has(t.state) && !resolved.has(t.thread_id)).map((t) => ({ id: t.thread_id, title: String(t.title ?? ''), state: t.state }))
 }
 
 // The coordinator (yskills 2026-10-27: "coordinators look after their threads"): before it stops, every
