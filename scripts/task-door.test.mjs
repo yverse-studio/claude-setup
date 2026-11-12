@@ -438,10 +438,19 @@ test('director ruling on (b): an interpreter that takes its code from stdin hold
       ]) assert.equal(t.bash(c).status, 2, c)
     }
     const l = paths[0]
+    assert.equal(t.bash(`cat ${l} | python3 -m json.tool`).status, 2, 'accepted cost: a pipe into an interpreter with the literal path is refused')
+    assert.match(t.bash(`cat ${l} | python3 -m json.tool`).stderr, /cat, jq or the task-ledger status verb/)
     for (const c of [
-      `cat ${l}`, `echo "see ${l}"`, `cat <<'EOF' > /tmp/notes.md\nthe ledger is ${l}\nEOF`, `cat ${l} | jq .`, `cat ${l} | python3 -m json.tool`,
+      `cat ${l}`, `echo "see ${l}"`, `cat <<'EOF' > /tmp/notes.md\nthe ledger is ${l}\nEOF`, `cat ${l} | jq .`,
       `node scripts/x.mjs ${paths[2]}`, `cp ${l} /tmp/x.json`, `node - <<'EOF'\nconsole.log(1)\nEOF`, `echo hi | node -e "console.log(1)"`,
     ]) assert.equal(t.bash(c).status, 0, c)
+    // Widened: a flag's value, a versioned name, perl -E, deno eval, bun eval. Each refused with the literal path, each passes without.
+    const wide = (p) => [
+      `python3 -W error <<EOF\nopen('${p}','w')\nEOF`, `node -r x <<EOF\nrequire('fs').writeFileSync('${p}','{}')\nEOF`, `python3.12 <<EOF\nopen('${p}','w')\nEOF`,
+      `perl -E 'open F, ">${p}"'`, `deno eval "Deno.writeTextFileSync('${p}','{}')"`, `bun eval "require('fs').writeFileSync('${p}','{}')"`,
+    ]
+    for (const p of paths) for (const c of wide(p)) assert.equal(t.bash(c).status, 2, c)
+    for (const c of wide('/tmp/out.txt')) assert.equal(t.bash(c).status, 0, c)
   } finally { t.done() }
 })
 

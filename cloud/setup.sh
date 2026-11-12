@@ -1209,9 +1209,11 @@ const STAMP = /claude-setup-(?:role|spawnrole|badbrief|model|brief|artifacts)-/
 const READ_ONLY = new Set(['cat', 'grep', 'rg', 'ls', 'head', 'tail', 'wc', 'diff', 'git', 'stat', 'file', 'less', 'echo', 'printf', 'find', 'test', 'cd', 'sed', 'awk'])
 // `node <script>` whose first non-flag argument is gate-rounds.mjs, with no flag that runs other code first.
 const isCounterCall = (s) => s.a0 === 'node' && !s.args.some((a) => /^(-e|-p|--eval|--print|--import|-r|--require|--input-type|--loader|--experimental-loader)/.test(a)) && ['gate-rounds.mjs', 'task-ledger.mjs'].includes(base(s.args.find((a) => !a.startsWith('-')) ?? ''))
-const INTERPRETERS = /^(node|nodejs|python3?|bun|deno|ruby|perl)$/
-// The code comes from stdin: "-" as the script, or no script argument at all (-m <module> and a script file are not stdin).
-const fromStdin = (s) => s.args.includes('-') || !s.args.some((a) => !a.startsWith('-')) // (a module or a flag's value counts as an argument: python3 -m json.tool is not stdin)
+const INTERPRETERS = /^(node(js)?|python[\d.]*|pypy[\d.]*|bun|deno|ruby[\d.]*|perl[\d.]*)$/
+// Eval-ish: an eval/print flag, or an eval subcommand (deno eval, bun eval).
+const evalish = (s) => s.args[0] === 'eval' || s.args.some((a) => /^-(?:[a-zA-Z]*[ecpE]|-eval|-print)(?:=|$)/.test(a))
+// Stdin may be fed code: a heredoc, a here-string or a pipe anywhere in the call (fail closed: no flag-value parsing).
+const stdinFed = (cmd) => /<<|\|/.test(cmd)
 // The literal ledger folder, an installed guard or a session transcript path anywhere in the text.
 const holdsPath = (text, dir) => (dir && text.includes(`${dir.replace(/\/+$/, '')}/`)) || /(?:project-files|\.claude\/claude-setup)\/gate\//.test(text) || /\.claude\/projects\/\S*\.jsonl/.test(text) || new RegExp(`\\.claude[\\\\/]claude-setup[\\\\/](?:${GUARDS})\\.mjs`).test(text)
 function bashProblem(cmd, dir, ctx) {
@@ -1229,10 +1231,10 @@ function bashProblem(cmd, dir, ctx) {
     if (s.a0 === 'gh') { const r = ghProblem(s); if (r) return r }
     if (s.redirs.some((r) => !/\s/.test(r) && (named(r) || GUARD_FILE.test(r)))) return msg
     // An inline script (node -e, python -c) that holds the ledger folder, an installed guard or a transcript path writes it as well as a redirect does (plan 2026-11-12 M28, test 4).
-    // Inline code is an interpreter given an eval/print flag, or reading its code from stdin (no script argument, or "-"): a heredoc, a
-    // here-string or the right side of a pipe. For it the path test runs over the whole call text, the stdin body and the pipe's left side included.
-    const inline = INTERPRETERS.test(base(s.a0)) && (s.args.some((a) => /^-(?:[a-zA-Z]*[ecp]|-eval|-print)(?:=|$)/.test(a)) || fromStdin(s))
-    if (inline && holdsPath(cmd, dir)) return msg
+    // Inline code is an interpreter with an eval-ish flag or subcommand, or any interpreter in a call that feeds stdin (heredoc, here-string,
+    // pipe). For it the path test runs over the whole call text, the stdin body and the pipe's left side included.
+    const inline = INTERPRETERS.test(base(s.a0)) && (evalish(s) || stdinFed(cmd))
+    if (inline && holdsPath(cmd, dir)) return `${msg} Read the ledger with cat, jq or the task-ledger status verb.`
     const script = s.a0 === 'node' ? s.args.find((a) => base(a) === 'gate-rounds.mjs') ?? s.args.find((a) => !a.startsWith('-')) : null
     if (script && base(script) === 'gate-rounds.mjs') {
       const at = s.args.indexOf(script)
