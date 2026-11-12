@@ -1045,8 +1045,8 @@ function bashProblem(cmd, dir, ctx) {
   let standing = false, near = false // after a cd into the ledger, or into a folder above it, later writers are suspect
   for (const s of list) {
     if (s.a0 === 'gh') { const r = ghProblem(s, cmd, list); if (r) return r }
-    if (s.redirs.some((r) => inLedgerRaw(r) || GUARD_FILE.test(r))) return msg
     if (s.a0 === 'cd') { if (s.args.some(inLedger)) { standing = true; near = true } else if (s.args.some(nearLedger)) near = true; continue }
+    if (s.redirs.some((r) => standing || inLedgerRaw(r) || GUARD_FILE.test(r) || (near && (relLedger(r) || /^(rule-guard|team-guard|gate-rounds)\.mjs$/.test(base(r)))))) return msg
     const script = s.a0 === 'node' ? s.args.find((a) => base(a) === 'gate-rounds.mjs') ?? s.args.find((a) => !a.startsWith('-')) : null
     if (script && base(script) === 'gate-rounds.mjs') {
       const at = s.args.indexOf(script)
