@@ -64,6 +64,14 @@ professionelles Game Studio an"). The project chat has no hooks, so these live o
 - **Dependencies at once:** on every board read, a PR with a `Depends on: #n` line (`roles/programmer.md`)
   whose #n is parked, blocked or failing gets one project-chat line the same turn naming both PRs and the
   fix (unpark #n, or cut the dependency); its `PLAN.json` item gets `wartet` with `waits_on` #n (Masterplan, below).
+  A parked PR never keeps another waiting (`gate.md`, Game PRs): vacation-game 2026-11-12, shell #13
+  held the market and the airport merge for a day.
+- **Play link per merge (games):** after every merge the project chat gets one line with the live or
+  preview link and at most five lines of what changed, so yskills plays instead of reads.
+- **Access once, at the start:** laptop folders, logins and downloads are asked for in the first brief
+  batch of a project, never per thread; a thread that lacks one uses the sensible default and says so
+  in one line (vacation-game 2026-11-10: three threads each asked for laptop access, and a token was
+  asked for that the token-free path did not need).
 
 ## Text only (no hook can judge it)
 

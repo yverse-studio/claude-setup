@@ -62,6 +62,18 @@ changes play, the playtest report (`roles/playtester.md`) passes its Controls an
 before any look round (design-critic, a scored look gate, a vote card) starts on that build; a look
 round on a build whose report fails or is missing is not run. `playtest-check.mjs` holds the rows.
 
+- **Playable first** (yskills 2026-11-12, "fühlt sich nicht wie ein Game Studio an"): a new level or
+  chapter ships first as a grey-box PR: free first-person controls, moving people, a goal and a fail
+  state, no look work. Its gate is the playtest report, never a look score, and it merges. Look PRs
+  come after and go through the look rounds below.
+- **Look rounds: at most 3 per PR.** The bar is set once per project (in `PLAN.json` decisions), not per
+  PR. After round 3 the Tester posts one card with the old | new sheet and three options (go on, lower
+  the bar, park); the thread goes on with the recommended one. This is the one exception to the
+  6-round limit under Rounds, which stays for every other check.
+- **A parked PR blocks nothing:** a PR parked at the gate after a round does not hold other PRs. The
+  PM (`project-manager.md`, Dependencies at once) cuts the dependency or merges the smallest
+  independent PR first; at most two chapters are in progress at once.
+
 ## Scored gates (the score rule)
 
 The one home of the score rule (yskills 2026-11-04: "4.5, then 2 more tries for 5/5, render the
