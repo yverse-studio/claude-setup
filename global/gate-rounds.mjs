@@ -351,9 +351,10 @@ const READ_ONLY = new Set(['cat', 'grep', 'rg', 'ls', 'head', 'tail', 'wc', 'dif
 const isCounterCall = (s) => s.a0 === 'node' && !s.args.some((a) => /^(-e|-p|--eval|--print|--import|-r|--require|--input-type|--loader|--experimental-loader)/.test(a)) && ['gate-rounds.mjs', 'task-ledger.mjs'].includes(base(s.args.find((a) => !a.startsWith('-')) ?? ''))
 const INTERPRETERS = /^(node(js)?|python[\d.]*|pypy[\d.]*|bun|deno|ruby[\d.]*|perl[\d.]*)$/
 // Eval-ish: an eval/print flag, or an eval subcommand (deno eval, bun eval).
-const evalish = (s) => s.args[0] === 'eval' || s.args.some((a) => /^-(?:[a-zA-Z]*[ecpE]|-eval|-print)(?:=|$)/.test(a))
-// Stdin may be fed code: a heredoc, a here-string or a pipe anywhere in the call (fail closed: no flag-value parsing).
-const stdinFed = (cmd) => /<<|\|/.test(cmd)
+// The flag may carry its code attached (python3 -c"..."), so any text may follow it.
+const evalish = (s) => s.args[0] === 'eval' || s.args.some((a) => /^-(?:[a-zA-Z]*[ecpE]|-eval|-print)/.test(a))
+// Stdin may be fed code: a heredoc, a here-string, a pipe or a process substitution anywhere in the call (fail closed: no flag-value parsing).
+const stdinFed = (cmd) => /<<|\||<\(/.test(cmd)
 // The literal ledger folder, an installed guard or a session transcript path anywhere in the text.
 const holdsPath = (text, dir) => (dir && text.includes(`${dir.replace(/\/+$/, '')}/`)) || /(?:project-files|\.claude\/claude-setup)\/gate\//.test(text) || /\.claude\/projects\/\S*\.jsonl/.test(text) || new RegExp(`\\.claude[\\\\/]claude-setup[\\\\/](?:${GUARDS})\\.mjs`).test(text)
 function bashProblem(cmd, dir, ctx) {

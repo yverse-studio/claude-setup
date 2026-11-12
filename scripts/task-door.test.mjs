@@ -446,6 +446,7 @@ test('director ruling on (b): an interpreter that takes its code from stdin hold
     ]) assert.equal(t.bash(c).status, 0, c)
     // Widened: a flag's value, a versioned name, perl -E, deno eval, bun eval. Each refused with the literal path, each passes without.
     const wide = (p) => [
+      `python3 -c"open('${p}','w')"`, `node -pe"require('fs').writeFileSync('${p}','{}')"`, `node <(echo "require('fs').writeFileSync('${p}','{}')")`,
       `python3 -W error <<EOF\nopen('${p}','w')\nEOF`, `node -r x <<EOF\nrequire('fs').writeFileSync('${p}','{}')\nEOF`, `python3.12 <<EOF\nopen('${p}','w')\nEOF`,
       `perl -E 'open F, ">${p}"'`, `deno eval "Deno.writeTextFileSync('${p}','{}')"`, `bun eval "require('fs').writeFileSync('${p}','{}')"`,
     ]
