@@ -79,6 +79,16 @@ export function refresh(dir, only = null) {
   }
 }
 
+// The version of the guards this session runs, for the thread's start proof (plan M47: merged must mean live):
+// a short hash over the installed GUARD_FILES, and the names of any missing one.
+export function guardVersion(dir) {
+  const have = GUARD_FILES.filter((f) => existsSync(join(dir, f)))
+  const hash = createHash('sha256')
+  for (const f of have) hash.update(`${f}\0${text(join(dir, f))}`)
+  const missing = GUARD_FILES.filter((f) => !have.includes(f))
+  return `Guards in this session: ${hash.digest('hex').slice(0, 8)} (${have.length}/${GUARD_FILES.length} installed${missing.length ? `, MISSING ${missing.join(', ')}: tell the coordinator` : ''}).`
+}
+
 export const modelFile = (session) => join(tmpdir(), `claude-setup-model-${String(session).replace(/[^A-Za-z0-9]/g, '')}`)
 
 export const BOOT_MAX = 9800 // hook context over 10,000 characters is cut to a preview; scripts/check.mjs keeps both cards under this

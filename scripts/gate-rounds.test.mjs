@@ -127,7 +127,11 @@ test('a counter that cannot load refuses gate-shaped calls (fail closed), other 
   const s = session()
   const dir = mkdtempSync(join(tmpdir(), 'broken-'))
   for (const f of ['rule-guard.mjs', 'team-guard.mjs']) writeFileSync(join(dir, f), readFileSync(join(root, 'global', f)))
-  const run = (tool, input) => spawnSync(process.execPath, [join(dir, 'rule-guard.mjs'), 'pre'], { input: JSON.stringify({ cwd: s.dir, session_id: 's', transcript_path: s.transcript, tool_name: tool, tool_input: input }), encoding: 'utf8', env: s.env })
+  // The guard now tries to fetch a missing counter; a curl that always fails keeps this test off the network.
+  const bin = mkdtempSync(join(tmpdir(), 'nocurl-'))
+  writeFileSync(join(bin, 'curl'), '#!/bin/sh\nexit 22\n', { mode: 0o755 })
+  const env = { ...s.env, PATH: `${bin}:${process.env.PATH}` }
+  const run = (tool, input) => spawnSync(process.execPath, [join(dir, 'rule-guard.mjs'), 'pre'], { input: JSON.stringify({ cwd: s.dir, session_id: 's', transcript_path: s.transcript, tool_name: tool, tool_input: input }), encoding: 'utf8', env })
   assert.match(run('mcp__github__merge_pull_request', { owner: 'a', repo: 'b', pullNumber: 1 }).stderr, /could not load/)
   assert.match(run('mcp__github__add_issue_comment', { ...PR, body: 'Gate 5/5 (S, round 1)' }).stderr, /could not load/)
   assert.equal(run('mcp__github__add_issue_comment', { ...PR, body: 'thanks' }).status, 0)

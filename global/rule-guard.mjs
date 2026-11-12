@@ -27,6 +27,7 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { isIP } from 'node:net'
 import { homedir, tmpdir } from 'node:os'
 import { dirname, join, relative } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 const OWNER = 'yskills'
 const MARK = '# Working for yskills' // first line of claude-setup's CLAUDE.md
@@ -733,10 +734,21 @@ const humanAfter = (transcript, ref) => {
   const human = (r) => r.type === 'user' && !(Array.isArray(r.message?.content) && r.message.content.some((c) => c?.type === 'tool_result')) && /<message\b[^>]*\bfrom=\\?"human\\?"[^>]*\btrust=\\?"principal\\?"/.test(JSON.stringify(r.message?.content ?? ''))
   return at >= 0 && rows.slice(at + 1).some(human)
 }
+// A cached cloud image can lack the counter (its pasted setup predates it) and its start hook, the old team-guard, never fetches it
+// (each session restarts from the cache): the first call that needs it installs it with the refresh that now sits in this dir (2026-11-12).
+async function loadCounter() {
+  const url = new URL('./gate-rounds.mjs', import.meta.url)
+  try { return await import(url) } catch (e) {
+    if (e?.code !== 'ERR_MODULE_NOT_FOUND') throw e
+    const { refresh } = await import(new URL('./team-guard.mjs', import.meta.url))
+    refresh(dirname(fileURLToPath(import.meta.url)), ['gate-rounds.mjs'])
+    return import(url)
+  }
+}
 export async function gateBlock(tool, input, transcript, model, dry = false) {
   if (!/^(Write|Edit|MultiEdit|NotebookEdit|Bash|PowerShell)$|^mcp__github__/.test(tool)) return null
   let mod
-  try { mod = await import(new URL('./gate-rounds.mjs', import.meta.url)) } catch (e) {
+  try { mod = await loadCounter() } catch (e) {
     // Fail closed for gate-shaped calls: a missing or broken counter must not open the gate.
     const shaped = /^mcp__github__(merge_pull_request|enable_pr_auto_merge)$/.test(tool) || /\bgh\s+pr\s+merge\b/.test(String(input?.command ?? '')) || /gate-rounds|\bGate\b[^\n]*\bround\s+\d/i.test(JSON.stringify(input))
     return shaped ? `rule-guard: the gate round counter (gate-rounds.mjs) could not load (${String(e.message).slice(0, 60)}); gate posts, merges and ledger calls are refused until it is installed (operator/gate.md, Rounds).` : null
@@ -747,8 +759,12 @@ export async function gateBlock(tool, input, transcript, model, dry = false) {
     return why ? `rule-guard: ${why}` : null
   } catch (e) { return `rule-guard: gate ledger check failed (${String(e.message).slice(0, 80)}); refused, fail closed (operator/gate.md, Rounds).` }
 }
+// The start proof of a thread names the guard version it runs and any guard file that is missing (plan M47).
+async function guardLine() {
+  try { return (await import(new URL('./team-guard.mjs', import.meta.url))).guardVersion(dirname(fileURLToPath(import.meta.url))) } catch { return '' }
+}
 export async function gateBriefContext(brief, model) {
-  try { return (await import(new URL('./gate-rounds.mjs', import.meta.url))).gateBrief(brief, { model }) } catch { return '' }
+  try { return (await loadCounter()).gateBrief(brief, { model }) } catch { return '' }
 }
 
 if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/').split('/').pop())) {
@@ -775,7 +791,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           const brief = lookup ? spawnPrompt(prompt, read(transcriptPath)) : prompt
           if (session && (spawned || (lookup && brief !== prompt))) writeFileSync(briefOnce, '')
           const model = sessionModel(transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : '') ?? (read(join(tmpdir(), `claude-setup-model-${String(session).replace(/[^A-Za-z0-9]/g, '')}`)).trim() || null)
-          const context = [await briefCheck(brief, cwd, model), spawned || (lookup && brief !== prompt) ? await gateBriefContext(brief, model) : '', modelOnce(brief, transcriptPath, session), roleContext(brief, cwd, session), promptContext(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
+          const context = [await briefCheck(brief, cwd, model), spawned || (lookup && brief !== prompt) ? await gateBriefContext(brief, model) : '', spawned ? await guardLine() : '', modelOnce(brief, transcriptPath, session), roleContext(brief, cwd, session), promptContext(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
           if (context) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: context } }))
           return
         }
