@@ -2,7 +2,7 @@
 // The thread brief generator (docs/templates/thread-brief.md): builds the brief block from a role, a kit and a size, reading the
 // Roster and Kits from docs/TEAMS.md, so what it prints always passes team-guard. It refuses what the guard would refuse (an unknown
 // role or kit, a role the kit does not allow) and names every field you did not give; it guesses none (CLAUDE.md, No fog).
-// Usage: node scripts/brief.mjs --role <Role> --kit <kit> --size <S|M|L> --item <M<n>|new> --threads <text> --prior-art <text>
+// Usage: node scripts/brief.mjs --role <Role> --kit <kit> --size <S|M|L> --item <M<n>|new> --plan <file or card> --acceptance <text> --threads <text> --prior-art <text>
 //          --done <text> --stop <text> [--what <title words>] [--start <files>] [--skills <text>] [--sheet <path|n/a why>]
 //          [--look-lock <card link>] [--topic <checklist topic, Reviewer only>] [--tester <thread>] [--researcher <text>] [--gate <reviewer thread>] [--json]
 //        node scripts/brief.mjs --plan-check <asset>   the checker's brief for a registered PLAN.md (rendered by global/task-ledger.mjs; the plan-check door accepts only these bytes)
@@ -23,9 +23,14 @@ const modelIds = (teams) => Object.fromEntries([...teams.matchAll(/(Fable|Opus|S
 const modelCell = (row) => row.match(/Model: (.*?)\.?$/)?.[1] ?? ''
 const tierOf = (row) => TIERS.find((t) => (modelCell(row).split(';')[0]).toLowerCase().includes(t)) // undefined: the row names none (the Project Manager's is set by yskills)
 const runsAs = (row) => row.match(/Runs as: (.*?)\. Model:/)?.[1] ?? ''
+// The model a thread of this role starts on at this size: the first tier its Roster row names, Fable for a Planner at size L (team-guard wrongModel).
+export const modelFor = (role, size, teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')) => {
+  const tier = role === 'Planner' && size === 'L' ? 'fable' : tierOf(roleOf(stub(role, 'setup', size), teams).row)
+  return tier ? modelIds(teams)[tier] : undefined
+}
 const stub = (role, kit, size) => `Role: ${role} · Kit: ${kit} · Size: ${size}`
 
-export function buildBrief({ role, kit, size, item, threads, priorArt, done, stop, what, start, skills, sheet, lookLock, tester, researcher, gate, topic, checklists = readFileSync(join(root, CHECKLISTS), 'utf8'), teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8') }) {
+export function buildBrief({ role, kit, size, item, plan, acceptance, threads, priorArt, done, stop, what, start, skills, sheet, lookLock, tester, researcher, gate, topic, checklists = readFileSync(join(root, CHECKLISTS), 'utf8'), teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8') }) {
   const roles = rosterNames(teams)
   const kits = kitNames(teams)
   if (!roles.includes(role)) throw new BriefError(`Role: ${role} is no role in docs/TEAMS.md (Roster); valid: ${roles.join(', ')}`)
@@ -45,15 +50,15 @@ export function buildBrief({ role, kit, size, item, threads, priorArt, done, sto
   const named = gate ?? `Reviewer · ${what}`
   const gateLine = builder ? `Gate: ${/^n\/a/i.test(named) || /\bbefore owner\b/.test(named) ? named : `${named} before owner`}` : null
   if (gateLine && !GATE_LINE.test(gateLine)) throw new BriefError('--gate names a Reviewer or Tester thread and ends "before owner" (given as --gate "Reviewer · <what> before owner"), or reads "n/a <why this slice has no owner-facing result>" with 10+ characters')
-  const missing = Object.entries({ item, threads, 'prior-art': prior, done, stop, skills: skillsLine, ...(size === 'S' ? {} : { what }), ...(needsSheet ? { sheet } : {}), ...(role === 'Programmer' && size === 'L' ? { tester } : {}) })
+  const missing = Object.entries({ item, plan, acceptance, threads, 'prior-art': prior, done, stop, skills: skillsLine, ...(size === 'S' ? {} : { what }), ...(needsSheet ? { sheet } : {}), ...(role === 'Programmer' && size === 'L' ? { tester } : {}) })
     .filter(([, v]) => !v).map(([k]) => `--${k}`)
   if (needsSheet && sheet && !/^n\/a/i.test(sheet) && !lookLock) missing.push('--look-lock')
   if (needsSheet && /^n\/a/i.test(sheet ?? '') && !/^n\/a[ \t]+\S[^\n]{9,}$/i.test(sheet)) throw new BriefError('--sheet n/a needs a reason of 10+ characters after it (team-guard: Sheet: n/a <why this is no body, face or outfit job>)')
   if (missing.length) throw new BriefError(`missing, never guessed: ${missing.join(', ')}`)
   const tier = tierOf(info.row)
   if (!tier) throw new BriefError(`the Roster row of ${role} names no model tier ("${modelCell(info.row)}"); the model of this role is not the generator's to pick`)
-  const model = modelIds(teams)[tier]
-  const lines = [stub(role, kit, size), `Model: ${model}`, `Item: ${item}`, `Threads: ${threads}`, `Prior art: ${prior}`, `Skills: ${skillsLine}`,
+  const model = modelFor(role, size, teams)
+  const lines = [stub(role, kit, size), `Model: ${model}`, `Item: ${item}`, `Plan: ${plan}`, `Acceptance: ${acceptance}`, `Threads: ${threads}`, `Prior art: ${prior}`, `Skills: ${skillsLine}`,
     ...(needsSheet ? [`Sheet: ${sheet}`, ...(/^n\/a/i.test(sheet) ? [] : [`Look-Lock: ${lookLock}`])] : []),
     ...(topic ? [`Topic: ${topic}`] : []), ...(gateLine ? [gateLine] : []), ...(researcher ? [`Researcher: ${researcher}`] : []), ...(role === 'Programmer' && size === 'L' ? [`Tester: ${tester}`] : []),
     `Done when: ${done}`, `Stop when: ${stop}`, `Start: read MEMORY.md first${start ? `, then ${start}` : ''}`]
@@ -73,6 +78,35 @@ export function roleLines(teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf
   })
 }
 
+// M30 (plan section 5): the coordinator has no Bash, so each Roster role gets a rendered brief file it reads and fills (scripts/coordinator-card.mjs
+// writes them beside the card). What the Roster and Kits decide is already in the file; every `<...>` is for the coordinator; the kit list is the
+// one the guard accepts at size M, so a filled file passes team-guard.
+export function briefFile(role, teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')) {
+  const info = roleOf(stub(role, 'setup', 'M'), teams)
+  const tier = tierOf(info.row)
+  if (!tier) return null // the Project Manager's model is set by yskills: no thread brief
+  const sizesOf = (kit) => ['S', 'M', 'L'].filter((size) => !badRole(stub(role, kit, size), teams) && !badTeam(stub(role, kit, size), teams) && (role !== 'Planner' || size !== 'S'))
+  const kits = kitNames(teams).filter((kit) => sizesOf(kit).length)
+  if (!kits.length) return null
+  const offered = [...new Set(kits.flatMap(sizesOf))]
+  const kitCell = kits.map((kit) => (sizesOf(kit).length < offered.length ? `${kit} (size ${sizesOf(kit).join(' or ')} only)` : kit)).join(' | ')
+  const gateRole = GATE_ROLES.test(role)
+  const builder = new RegExp(`^${GATE_BUILDER_ROLES}$`).test(role)
+  const lines = [`Role: ${role} · Kit: <${kitCell}> · Size: <${offered.join('|')}>`, `Model: ${role === 'Planner' ? `<${modelFor(role, 'M', teams)} at size M | ${modelFor(role, 'L', teams)} at size L>` : modelFor(role, 'M', teams)}`,
+    'Item: <PLAN.json item M<n>, or new>', 'Plan: <plan file or card it builds>', 'Acceptance: <what counts as accepted>',
+    'Threads: <list_threads checked: none open on this topic | continues <title of the open thread>>',
+    `Prior art: ${gateRole ? `.claude/skills/operator/gate.md and the <kit>'s checks (docs/TEAMS.md, Kits) -> adapt, because the gate rules and checks already exist` : '<sources named: repo, path, URL, #n> -> copy | adapt | reuse | build, because <why>'}`,
+    `Skills: ${info.path ?? '<role file and skills>'}`,
+    ...(/^(Programmer|Animator)$/.test(role) ? ['Sheet: <approved cast sheet .md, or `n/a <why no body, face or outfit job>`> (game and story kits; delete on other kits)', 'Look-Lock: <owner card link of the approved look> (delete with `Sheet: n/a`)'] : []),
+    ...(role === 'Reviewer' ? ['Topic: <checklist topic> (delete unless a topic gate)'] : []),
+    ...(builder ? ['Gate: <Reviewer thread> before owner (size M or L; or `n/a <why no owner-facing result>`)'] : []),
+    ...(role === 'Programmer' ? ['Tester: <Tester thread> (size L only; delete otherwise)'] : []),
+    'Done when: <command and expected output, or the screenshot that proves it>', 'Stop when: <rounds or attempts, never tokens>', 'Start: read MEMORY.md first, then <the files this task needs>']
+  return `# Brief file: ${role}\n\nCopy the block, fill every <...>, delete the lines marked delete, start the thread with it as the brief, title \`${role} · <what>\` and \`model\` = the Model line. Sizes and kits are checked by team-guard; the block is rendered from docs/TEAMS.md by scripts/brief.mjs.\n\n\`\`\`\n${lines.join('\n')}\n\`\`\`\n`
+}
+
+export const briefFileName = (role) => `${role.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.md`
+
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const args = process.argv.slice(2)
   const flag = (name) => {
@@ -86,7 +120,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   }
   if (args.includes('--lines')) { console.log(roleLines().join('\n')); process.exit(0) }
   try {
-    const out = buildBrief({ role: flag('role'), kit: flag('kit'), size: flag('size'), item: flag('item'), threads: flag('threads'), priorArt: flag('prior-art'),
+    const out = buildBrief({ role: flag('role'), kit: flag('kit'), size: flag('size'), item: flag('item'), plan: flag('plan'), acceptance: flag('acceptance'), threads: flag('threads'), priorArt: flag('prior-art'),
       done: flag('done'), stop: flag('stop'), what: flag('what'), start: flag('start'), skills: flag('skills'), sheet: flag('sheet'), lookLock: flag('look-lock'),
       tester: flag('tester'), researcher: flag('researcher'), gate: flag('gate'), topic: flag('topic') })
     console.log(args.includes('--json') ? JSON.stringify(out) : out.brief)

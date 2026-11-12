@@ -12,7 +12,7 @@ const root = join(fileURLToPath(import.meta.url), '..', '..')
 const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
 const SONNET = teams.match(/Sonnet \((claude-[\w.-]+)\)/)[1]
 const START = 'mcp__hearthbot__start_thread'
-const FULL = '\nGate: Reviewer thread before owner\nModel: claude-x-1\nThreads: list_threads checked, none open on this topic\nPrior art: none, because a test brief\nSkills: x\nDone when: node --test passes\nStop when: two rounds\nStart: read MEMORY.md first, then CLAUDE.md'
+const FULL = '\nGate: Reviewer thread before owner\nItem: M30\nPlan: docs/plans/x.md\nAcceptance: node --test passes\nModel: claude-x-1\nThreads: list_threads checked, none open on this topic\nPrior art: none, because a test brief\nSkills: x\nDone when: node --test passes\nStop when: two rounds\nStart: read MEMORY.md first, then CLAUDE.md'
 
 // The gap #453 left: team-guard checked the kit but never the role name.
 test('team-guard blocks a Role that is neither none nor a Roster name, and says which names exist', () => {
@@ -47,7 +47,7 @@ test('rosterNames and kitNames read docs/TEAMS.md, no list of their own', () => 
   assert.deepEqual(rosterNames(''), [])
 })
 
-const FIELDS = { item: 'M1', threads: 'list_threads checked, none open on this topic', priorArt: 'yverse-studio/claude-setup checked -> adapt, because it exists', done: 'node --test passes', stop: 'two rounds', what: 'x', start: 'CLAUDE.md', sheet: 'n/a no body, face or outfit job' }
+const FIELDS = { item: 'M1', plan: 'gate.md', acceptance: 'tests pass', threads: 'list_threads checked, none open on this topic', priorArt: 'yverse-studio/claude-setup checked -> adapt, because it exists', done: 'node --test passes', stop: 'two rounds', what: 'x', start: 'CLAUDE.md', sheet: 'n/a no body, face or outfit job' }
 
 // The property the owner asked for: a generated brief always passes the guard. Every Roster role x kit x size either
 // yields a brief decide() lets through, or the generator refuses it with the same reason badTeam gives; none is silently wrong.
@@ -124,7 +124,7 @@ test('the CLI exits non-zero with the valid list on a bad role, and prints a pas
   const bad = run('--role', 'Architect', '--kit', 'setup', '--size', 'S')
   assert.notEqual(bad.status, 0)
   assert.match(bad.stderr, /Programmer/)
-  const good = run('--role', 'Programmer', '--kit', 'setup', '--size', 'S', '--item', 'M1', '--threads', 'list_threads checked, none open on this topic', '--prior-art', 'scripts/brief.mjs checked -> adapt, because y', '--done', 'tests pass', '--stop', 'two rounds', '--start', 'CLAUDE.md')
+  const good = run('--role', 'Programmer', '--kit', 'setup', '--size', 'S', '--item', 'M1', '--plan', 'gate.md', '--acceptance', 'tests pass', '--threads', 'list_threads checked, none open on this topic', '--prior-art', 'scripts/brief.mjs checked -> adapt, because y', '--done', 'tests pass', '--stop', 'two rounds', '--start', 'CLAUDE.md')
   assert.equal(good.status, 0, good.stderr)
   assert.match(good.stdout, /^Role: Programmer · Kit: setup · Size: S\n/)
 })
@@ -187,4 +187,30 @@ test('the Gate line has a home: the brief block in briefs.md and the owner-facin
   const gate = readFileSync(join(root, '.claude/skills/operator/gate.md'), 'utf8')
   assert.match(briefs, /^Gate: <Reviewer thread> before owner[^\n]*\[guard: hook global\/team-guard\.mjs\]/m)
   assert.match(gate, /Owner-facing results[^\n]*Gate:[^\n]*\[guard: hook global\/team-guard\.mjs\]/)
+})
+
+// M30: the coordinator has no Bash, so each role's brief is a rendered file it fills; a filled file must pass team-guard at every size it offers.
+test('a rendered brief file per role passes team-guard once its <...> are filled, at every size and model it offers', async () => {
+  const { briefFile, briefFileName, modelFor } = await import('./brief.mjs')
+  const { rosterNames } = await import('../global/team-guard.mjs')
+  const roles = rosterNames(teams).filter((r) => briefFile(r, teams))
+  assert.ok(roles.length >= 10 && !roles.includes('Project Manager'), 'the roles with a model tier have a file, the project chat has none')
+  for (const role of roles) {
+    const block = briefFile(role, teams).match(/```\n([\s\S]*?)```/)[1]
+    const cell = block.match(/Kit: <([^>]+)>/)[1].split(' | ')
+    const offered = block.match(/Size: <([^>]+)>/)[1].split('|')
+    for (const [name, only] of cell.map((c) => [c.match(/^[\w-]+/)[0], c.match(/size ([SML]( or [SML])*) only/)?.[1].split(' or ')])) for (const size of only ?? offered) {
+      const kit = name
+      const model = modelFor(role, size, teams)
+      const filled = block.split('\n').filter((l) => !/^(Look-Lock|Topic):/.test(l) && (size === 'L' || !/^Tester:/.test(l)))
+        .map((l) => l.replace(/^Sheet: .*/, 'Sheet: n/a this slice is no body, face or outfit job').replace(/Size: <[^>]+>/, `Size: ${size}`).replace(/Kit: <[^>]+>/, `Kit: ${kit}`)
+          .replace(/^Model: .*/, `Model: ${model}`).replace(/^Gate: .*/, 'Gate: Reviewer · x before owner')
+          .replace(/<[^>\n]+>/g, (m) => (/PLAN\.json/.test(m) ? 'M30' : /^<sources/.test(m) ? 'obra/superpowers' : 'something concrete for this task'))).join('\n')
+      const out = decide(START, { brief: filled, title: `${role} · x`, model }, [], [], teams)
+      assert.equal(out.block, undefined, `${role} at ${size}: ${out.block}`)
+    }
+    assert.match(briefFileName(role), /^[a-z0-9-]+\.md$/)
+  }
+  assert.equal(modelFor('Planner', 'L', teams), teams.match(/Fable \((claude-[\w.-]+)\)/)[1])
+  assert.match(briefFile('Planner', teams), /Model: <claude-opus[\w.-]* at size M \| claude-fable[\w.-]* at size L>/, 'the Planner file offers the model per size')
 })

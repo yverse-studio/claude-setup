@@ -276,7 +276,7 @@ test('check.mjs fails when a lessons file is not linked from docs/MAP.md or the 
 // `model:` passes; SessionStart prints the TEAMS.md pointer.
 const teamFile = join(root, 'global/team-guard.mjs')
 // The brief block's must-have lines (operator/briefs.md); a thread start without them is blocked.
-const FULL = '\nGate: Reviewer thread before owner\nThreads: list_threads checked, none open on this topic\nModel: claude-x-1\nSkills: roles/programmer.md\nDone when: node --test passes. Stop when: two rounds.\nStart: read MEMORY.md, then CLAUDE.md\nPrior art: none, because a test brief'
+const FULL = '\nGate: Reviewer thread before owner\nItem: M30\nPlan: docs/plans/x.md\nAcceptance: node --test passes\nThreads: list_threads checked, none open on this topic\nModel: claude-x-1\nSkills: roles/programmer.md\nDone when: node --test passes. Stop when: two rounds.\nStart: read MEMORY.md, then CLAUDE.md\nPrior art: none, because a test brief'
 const runTeam = (mode, payload, env = {}) => spawnSync(process.execPath, [teamFile, mode], {
   input: JSON.stringify(payload), encoding: 'utf8', timeout: 5000, env: { ...process.env, CLAUDE_CODE_CHILD_SESSION: '', ...env },
 })
@@ -706,7 +706,7 @@ test('rule guard: a thread checks its spawn brief against TEAMS.md and sends a b
   assert.match(await briefCheck(spawn(`Role: none · Kit: setup · Size: S${FULL}`), root), /Brief check[\s\S]*names no role of the Roster/, 'no role is refused (yskills 2026-11-12), not waved through')
   assert.match(await briefCheck(spawn(`Role: Designer · Kit: content · Size: S${FULL}`), root), /Brief check[\s\S]*Kit: content is no kit[\s\S]*message_coordinator/)
   assert.match(await briefCheck(spawn('Make a bee video.'), root), /no `Role: · Kit: · Size:` stamp/)
-  assert.match(await briefCheck(spawn('Role: Programmer · Kit: setup · Size: S\nFix it.'), root), /brief lines missing: Model:/)
+  assert.match(await briefCheck(spawn('Role: Programmer · Kit: setup · Size: S\nFix it.'), root), /brief lines missing: Item:[\s\S]*Plan:[\s\S]*Acceptance:[\s\S]*Model:/)
   assert.equal(await briefCheck('Role: Designer · Kit: content · Size: S', root), '', 'only the spawn wake')
   assert.match(await briefCheck(JSON.stringify(spawn(`Role: Programmer (debug) · Kit: setup · Size: M${FULL}`)), root), /^Title check/, 'an escaped wake, a role with a note')
   assert.equal(await briefCheck(spawn(`Role: Programmer · Kit: setup · Size: S${FULL}\nDone when: <b>x</b> and a < b`), root), '', 'other tags stay')
@@ -947,13 +947,13 @@ test('team guard: kit, size, role and brief lines are checked against TEAMS.md',
   assert.equal(badTeam('Role: Tester · Kit: app · Size: L', teams), null)
   assert.ok(missingLines('Model: <id for this role>\nSkills: <role doc>').includes('Model:'), 'an unfilled Model placeholder does not count')
   assert.ok(!missingLines('Done when:\n  node --test passes').includes('Done when:'), 'the value may start on the next line')
-  assert.deepEqual(missingLines('Role: Producer · Kit: video · Size: M\nMake a bee video.'), ['Model:', 'Skills:', 'Done when:', 'Stop when:', 'Start: (read MEMORY.md first)', 'Threads: (list_threads checked, none open on this topic)'])
+  assert.deepEqual(missingLines('Role: Producer · Kit: video · Size: M\nMake a bee video.'), ['Item: (M<n> from PLAN.json, or new)', 'Plan: (the plan file or card this thread builds)', 'Acceptance: (what counts as accepted)', 'Model:', 'Skills:', 'Done when:', 'Stop when:', 'Start: (read MEMORY.md first)', 'Threads: (list_threads checked, none open on this topic)'])
   assert.deepEqual(missingLines(`Role: Planner · Kit: setup · Size: M${FULL}\nDone when: SOTA research on plan tracking is summarized`), ['Researcher: (the task asks for research)'], 'a research task names its Researcher')
   assert.deepEqual(missingLines(`Role: Planner · Kit: setup · Size: M${FULL}\nDone when: research on best practice summarized\nResearcher: general-purpose, sonnet`), [])
   assert.deepEqual(missingLines(`Role: Programmer · Kit: app · Size: S${FULL}\nFollow best practices for tests.`), [], 'an order to follow best practice is no research ask')
   assert.deepEqual(missingLines(`Role: Researcher · Kit: app · Size: M${FULL}\nFind the SOTA for offline sync.`), [], 'the Researcher itself names none')
   assert.deepEqual(missingLines(`Role: Programmer · Kit: app · Size: S${FULL}\nShortest reply. No extra subagents, research, screenshots or re-reads.`), [], 'the brief block itself is no research ask')
-  assert.deepEqual(missingLines('Done when: <a check>. Stop when: <budget>'), ['Model:', 'Skills:', 'Done when:', 'Stop when:', 'Start: (read MEMORY.md first)', 'Threads: (list_threads checked, none open on this topic)'], 'unfilled placeholders do not count')
+  assert.deepEqual(missingLines('Done when: <a check>. Stop when: <budget>'), ['Item: (M<n> from PLAN.json, or new)', 'Plan: (the plan file or card this thread builds)', 'Acceptance: (what counts as accepted)', 'Model:', 'Skills:', 'Done when:', 'Stop when:', 'Start: (read MEMORY.md first)', 'Threads: (list_threads checked, none open on this topic)'], 'unfilled placeholders do not count')
 })
 
 // Luna (yskills 2026-10-27): every reply to him carries a kaomoji; nothing else is touched.
@@ -1311,7 +1311,7 @@ test('team guard: a bad brief is refused once with every problem and a template 
   const tpl = readFileSync(join(root, 'docs/templates/thread-brief.md'), 'utf8')
   const block = tpl.match(/```\n([\s\S]*?)```/)?.[1] ?? ''
   assert.ok(block, 'the template has one fenced brief block')
-  const filled = block.replace(/<[^>\n]+>/g, (m) => (m === '<S|M|L>' ? 'M' : /^<kit/.test(m) ? 'setup' : /^<Role/.test(m) ? 'Programmer' : /^<Reviewer thread/.test(m) ? 'Reviewer · x' : /^<sources/.test(m) ? 'obra/superpowers' : 'something concrete for this task'))
+  const filled = block.replace(/<[^>\n]+>/g, (m) => (m === '<S|M|L>' ? 'M' : /^<kit/.test(m) ? 'setup' : /^<Role/.test(m) ? 'Programmer' : /^<Reviewer thread/.test(m) ? 'Reviewer · x' : /^<sources/.test(m) ? 'obra/superpowers' : /^<PLAN\.json item/.test(m) ? 'M30' : 'something concrete for this task'))
   assert.deepEqual(missingLines(filled), [], 'a filled template has every must-have line')
   assert.ok(stamped(filled) && !needsPriorArt(filled) && !needsTester(filled))
   const unfilled = missingLines(block)
@@ -1467,4 +1467,37 @@ test('gate folder: files under gate/<asset>/ are free to write, the ledger and g
   assert.match(step('Edit', { file_path: `${dir}/grants/card.o_r_7.json` }) ?? '', /written only by gate-rounds/)
   assert.equal(step('Bash', { command: 'mkdir -p /mnt/project-files/gate/o_r_7/r1 && cp /tmp/a.png /mnt/project-files/gate/o_r_7/r1/a.png' }), null)
   assert.match(step('Bash', { command: 'rm /mnt/project-files/gate/o_r_7.json' }) ?? '', /written only by gate-rounds/)
+})
+
+// M30: a brief names its Masterplan item, its plan and what counts as accepted; the Planner of a size L task runs on Fable; Reviewer and Researcher serve every kit.
+test('team guard (M30): a brief without Item, Plan or Acceptance names each missing line', async () => {
+  const { missingLines } = await import('../global/team-guard.mjs')
+  const brief = `Role: Programmer · Kit: setup · Size: S${FULL}`
+  assert.deepEqual(missingLines(brief), [])
+  for (const [line, re] of [['Item:', /\nItem:[^\n]*/], ['Plan:', /\nPlan:[^\n]*/], ['Acceptance:', /\nAcceptance:[^\n]*/]]) {
+    assert.ok(missingLines(brief.replace(re, '')).some((m) => m.startsWith(line)), `${line} is required`)
+    assert.ok(missingLines(brief.replace(re, `\n${line} <placeholder>`)).some((m) => m.startsWith(line)), `${line} placeholder does not count`)
+  }
+  assert.ok(missingLines(brief.replace(/\nItem:[^\n]*/, '\nItem: soon')).some((m) => m.startsWith('Item:')), 'Item is M<n> or new')
+  assert.deepEqual(missingLines(brief.replace(/\nItem:[^\n]*/, '\nItem: new')), [])
+})
+
+test('team guard (M30): a Planner at size L runs on Fable only; M still allows Opus; a stated reason passes', async () => {
+  const { wrongModel } = await import('../global/team-guard.mjs')
+  const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
+  const id = (tier) => teams.match(new RegExp(`${tier} \\((claude-[\\w.-]+)\\)`, 'i'))[1]
+  const brief = (size) => `Role: Planner · Kit: setup · Size: ${size}`
+  assert.ok(wrongModel(brief('L'), id('Opus'), teams), 'Opus is refused for a Planner at L')
+  assert.equal(wrongModel(brief('L'), id('Fable'), teams), null)
+  assert.ok(wrongModel(brief('L'), id('Sonnet'), teams))
+  assert.equal(wrongModel(brief('M'), id('Opus'), teams), null, 'M stays on Opus')
+  assert.equal(wrongModel(`${brief('L')}\nModel: opus (Fable is out of credits)`, id('Opus'), teams), null, 'the Models line lets Opus take over, said in the brief')
+})
+
+test('team guard (M30): a Reviewer or Researcher thread starts on every kit, a Programmer still not on video', async () => {
+  const { badTeam } = await import('../global/team-guard.mjs')
+  const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
+  for (const kit of ['video', 'social', 'setup', 'game']) for (const role of ['Reviewer', 'Researcher']) assert.equal(badTeam(`Role: ${role} · Kit: ${kit} · Size: M`, teams), null, `${role} on ${kit}`)
+  assert.ok(badTeam('Role: Programmer · Kit: video · Size: M', teams))
+  assert.ok(badTeam('Role: Planner · Kit: social · Size: M', teams))
 })
