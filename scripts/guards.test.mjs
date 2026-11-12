@@ -385,6 +385,25 @@ test('team guard: SessionStart prints the TEAMS.md pointer', () => {
   assert.doesNotMatch(out.hookSpecificOutput.additionalContext, /Boot \(claude-setup\)/, 'a checkout loads CLAUDE.md itself')
 })
 
+// Cloud thread 2026-11-12: it starts in /home/user with the checkout in /home/user/claude-setup. The harness loads that
+// CLAUDE.md anyway (seen in the thread's own first message), so the boot card was a second copy (2.6k tokens per call).
+test('team guard: a checkout one folder below the cwd counts as loaded, no boot copy', () => {
+  const home = mkdtempSync(join(tmpdir(), 'team-home-'))
+  const cwd = mkdtempSync(join(tmpdir(), 'team-'))
+  const env = { CLAUDE_SETUP_HOME: home, CLAUDE_SETUP_BOOT_FETCH: 'off', CLAUDE_CODE_CHILD_SESSION: '' }
+  try {
+    for (const f of ['CLAUDE.md', 'docs/TEAMS.md', 'docs/MAP.md']) cpSync(join(root, f), join(home, '.claude/claude-setup', f))
+    const start = (id = 'c1') => JSON.parse(runTeam('start', { cwd, session_id: id }, env).stdout).hookSpecificOutput.additionalContext
+    assert.match(start(), /Working for yskills|Boot \(claude-setup\)/, 'without the checkout the boot copy is printed')
+    mkdirSync(join(cwd, 'claude-setup'))
+    cpSync(join(root, 'CLAUDE.md'), join(cwd, 'claude-setup/CLAUDE.md'))
+    assert.match(start('c2'), /^Team rule \(claude-setup docs\/TEAMS\.md\)/, 'with the checkout one folder down only the pointer is printed')
+    assert.doesNotMatch(start('c2'), /Working for yskills|Boot \(claude-setup\)/, 'no second copy of CLAUDE.md')
+    assert.equal(runTeam('card', { cwd, session_id: 'c2' }, env).stdout, '', 'no coordinator card either')
+    assert.equal(existsSync(join(home, '.claude/claude-setup/booted/c2.rules')), false, 'no rules mark: the file was not injected')
+  } finally { rmSync(home, { recursive: true, force: true }); rmSync(cwd, { recursive: true, force: true }) }
+})
+
 // Incident 2026-10-26: the project chat has no checkout, so CLAUDE.md never loaded and the
 // coordinator started threads with guessed models. Without a checkout the card names the files to
 // read, and a thread start waits until the transcript shows TEAMS.md and CLAUDE.md were read.
