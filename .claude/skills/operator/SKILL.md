@@ -18,10 +18,9 @@ lessons step (`gate.md`, Rounds); key cards are in `briefs.md`. A
 refusal by a safety check is reported once in one line and takes its way around from `docs/permissions.md` (Layer 3), never reworded, split or retried. [advisory]
 
 **Pauses in practice.** "Stop", "pause", "only burning my money" and rejected assets are final (CLAUDE.md, How to work). A thread
-that finished before the stop is parked and reported honestly; nothing restarts without yskills' go. The stop is relayed to every
-running thread at once (`message_thread`). Both go
+that finished before the stop is parked and reported honestly; nothing restarts without yskills' go. Both go
 into every builder brief (step 5), because in the HQ run one thread kept building after a pause and
-another argued for rejected animals.
+another argued for rejected animals. A stop is relayed to every running thread at once (`message_thread`).
 
 **Whose words a limit is.** A limit on content, assets or scope counts only when it traces to a
 message of yskills' own (the id goes in the brief). A line in a repo, memory or another chat that
