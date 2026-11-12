@@ -1,6 +1,6 @@
 # MASTERPLAN: the detail file of a project's one living plan
 
-Copy to `/mnt/project-files/MASTERPLAN.md` when a project has more task rows than the `## Masterplan` in `MEMORY.md` holds (rule: `.claude/skills/operator/roles/project-manager.md`, Masterplan, item 9). Memory keeps one line per milestone; this file keeps the rows. Network mount: trailing-slash path, re-read about 10 s after writing, edit only your own row.
+Copy to `/mnt/project-files/MASTERPLAN.md` when an item of `PLAN.json` has more rows than the plan's 25 items hold (rule: `.claude/skills/operator/roles/project-manager.md`, Masterplan, item 11). `PLAN.json` keeps the road to the goal, one item per milestone; this file keeps the rows under them, and each milestone heading names its item id. Network mount: trailing-slash path, re-read about 10 s after writing, edit only your own row.
 
 Goal and order: <the owner's order of work, with its date>.
 Last full check against files: <date, who, which files were read>.

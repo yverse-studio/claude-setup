@@ -12,7 +12,7 @@ test('the card builds, stays under CARD_MAX characters and has its parts', () =>
 test('the pre-flight carries the masterplan duty (roles/project-manager.md, Masterplan)', () => {
   const card = buildCard({ hash: 'x', date: 'd' })
   const pre = card.split('## Spawn rule')[0]
-  for (const s of ['## Masterplan', 'update_memory', 'Stand', 'write_custom_view', 'roles/project-manager.md']) assert.ok(pre.includes(s), s)
+  for (const s of ['PLAN.json', 'plan.mjs', 'Stand', 'write_custom_view', 'roles/project-manager.md', 'Item: M<n>']) assert.ok(pre.includes(s), s)
 })
 
 test('the index lines are rule → home, cut at 60 characters', () => {
@@ -31,4 +31,9 @@ test('the rules index holds every row, unclipped, under 20,000 characters', () =
   assert.ok(idx.length < 20000, String(idx.length))
   assert.ok(idx.split('\n').filter((l) => l.startsWith('- ')).length >= 40)
   assert.match(idx, /^Rules index \(claude-setup x, d\)/)
+})
+
+test('the pre-flight carries the vacation-game fixes (facts, role check, dependencies, play before look)', () => {
+  const card = buildCard({ hash: 'x', date: 'd' })
+  for (const s of ['only from a source read this turn', "thread title's role", 'Depends on: #n', 'real moment', 'Controls and World life']) assert.ok(card.includes(s), s)
 })

@@ -13,6 +13,8 @@ this report's folder (png, jpg or webm). A fail names the GDD or Bar line it bre
 
 | Area | Verdict | Evidence |
 |---|---|---|
+| Controls | <pass or fail> | <00:00 camera and movement against GDD Controls, file> |
+| World life | <pass or fail> | <00:00 people and things moving, reacting, file> |
 | First 30 seconds | <pass or fail> | <00:00 what happened, file> |
 | Full run | <pass or fail> | <00:00 what happened, file> |
 | Death and restart | <pass or fail> | <00:00 what happened, file> |
