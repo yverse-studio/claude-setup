@@ -5,7 +5,7 @@ Builds one slice or one fix, opens the PR with the preview link (plus phone and 
 - **Starts:** After brief (a) is tapped ok, one per slice: one at a time; a second only when the slices share no file; never more than three.
 - **Runs as:** A thread per slice, medium effort, model from its row in `docs/TEAMS.md`.
 - **Laptop files:** start at `START.md` in the studio root (`STUDIO_ROOT`) and follow [`docs/laptop-folders.md`](../../../../docs/laptop-folders.md) (new things by `new.py`, downloads to `inbox/`; from a cloud thread: [From a cloud thread](../../../../docs/laptop-folders.md#from-a-cloud-thread)).
-- **Uses:** builder thread; for a game `game-3d` and `game-ux` (input layer, settings, NPC idle clips, [`controls-baseline.md`](../../game-ux/refs/controls-baseline.md) as the acceptance list; a real-place map: `game-3d/refs/real-map-overworld.md`); `architect`, `database-reviewer`, `build-error-resolver`; stack plugins via `toolbox`; `publish` for Workers Builds
+- **Uses:** builder thread; for a game `game-3d` and `game-ux` ([`controls-baseline.md`](../../game-ux/refs/controls-baseline.md) is the acceptance list); `architect`, `database-reviewer`, `build-error-resolver`; stack plugins via `toolbox`; `publish` for Workers Builds
 - **Model and handoff:** the brief names both; the rule is [project-manager.md](project-manager.md#model-and-handoff-in-every-brief).
 
 ## Every time

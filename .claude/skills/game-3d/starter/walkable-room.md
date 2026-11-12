@@ -4,7 +4,7 @@ From the HQ office research (`/mnt/project-files/claude-setup/hq-office/office-r
 
 ## Camera and controller
 
-- 2026-10-07 (office-research): numbers [judgement]: eye 1.55 m, near 0.05, far 60, FOV and walk speed: `game-ux` §1 and its controls baseline (one home), velocity smoothing `v += (target - v) * (1 - exp(-10 dt))`, no look smoothing on touch, no head bob (at most 1 cm sway at 2 Hz), pitch clamped to +-70 deg, device pixel ratio capped at 2.
+- 2026-10-07 (office-research): numbers [judgement]: eye 1.55 m, near 0.05, far 60, FOV and walk speed: `game-ux` §1 and its controls baseline (one home), velocity smoothing `v += (target - v) * (1 - exp(-10 dt))`, no look smoothing on touch, head bob: `game-ux` §1 Move feel, pitch clamped to +-70 deg, device pixel ratio capped at 2.
 - 2026-10-07 (office-research): one custom controller for both devices: drag or touch to look, WASD or a left virtual joystick to move, a right-half drag to look. `PointerLockControls` is desktop-only; a 40-line own joystick avoids a dependency. Tap-to-walk (A* on the same grid) only as a separate mode, never together with the joystick.
 - 2026-10-07 (office-research, hq-office HANDOFF): third person with a wall-aware follow camera is more forgiving than first person in a small room (Unpacking uses a fixed isometric camera); keep a first-person switch if cheap.
 
