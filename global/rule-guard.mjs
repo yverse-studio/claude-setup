@@ -669,14 +669,19 @@ const agentTranscript = (transcriptPath, agentId) => (transcriptPath && agentId 
 // checked against the asset's ledger. Fail closed: a check that throws refuses the call (research 2026-11-12: a crashing hook does not block).
 const humanAfter = (transcript, ref) => {
   const id = String(ref).match(/cmsg_\w+/)?.[0]
-  const lines = transcript.split('\n')
-  const at = lines.findIndex((l) => id && l.includes(id))
-  return at >= 0 && lines.slice(at + 1).some((l) => l.includes('"type":"user"') && l.includes('trust=\\"principal\\"'))
+  const rows = transcript.split('\n').map((l) => { try { return JSON.parse(l) } catch { return null } }).filter(Boolean)
+  const at = rows.findIndex((r) => id && JSON.stringify(r.message?.content ?? '').includes(id))
+  const human = (r) => r.type === 'user' && !(Array.isArray(r.message?.content) && r.message.content.some((c) => c?.type === 'tool_result')) && JSON.stringify(r.message?.content ?? '').includes('trust=\\"principal\\"')
+  return at >= 0 && rows.slice(at + 1).some(human)
 }
 export async function gateBlock(tool, input, transcript, model) {
   if (!/^(Write|Edit|Bash)$|^mcp__github__/.test(tool)) return null
   let mod
-  try { mod = await import(new URL('./gate-rounds.mjs', import.meta.url)) } catch { return null }
+  try { mod = await import(new URL('./gate-rounds.mjs', import.meta.url)) } catch (e) {
+    // Fail closed for gate-shaped calls: a missing or broken counter must not open the gate.
+    const shaped = tool === 'mcp__github__merge_pull_request' || /gate-rounds|\bGate\b[^\n]*\bround\s+\d/i.test(JSON.stringify(input))
+    return shaped ? `rule-guard: the gate round counter (gate-rounds.mjs) could not load (${String(e.message).slice(0, 60)}); gate posts, merges and ledger calls are refused until it is installed (operator/gate.md, Rounds).` : null
+  }
   try {
     const t = transcript()
     const why = mod.gateStep(tool, input, { model, calls: /gate-rounds\.mjs/.test(JSON.stringify(input)) ? toolCalls(t) : [], humanAfter: (ref) => humanAfter(t, ref) })

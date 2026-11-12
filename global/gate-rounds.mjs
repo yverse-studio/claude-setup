@@ -4,7 +4,7 @@
 // The counter is a ledger file per asset (a PR or any named asset) in the project's shared folder, so a fresh thread goes on
 // from it. rule-guard calls gateStep (PreToolUse) and gateBrief (UserPromptSubmit); this file is also the CLI threads use.
 //   rounds 1-3: judged at 4.5 (4.8 when important)   rounds 4-6: only with a Fable director   round 7+: only with a card to yskills
-// CLI: gate-rounds.mjs status|check|record|init|direct|card|picture|waive <asset> ...   (usage text below)
+// CLI: gate-rounds.mjs status|check|init|direct|card|picture|waive <asset> ...   (usage text below)
 // Fail closed: a gate-shaped call whose check throws is refused. CLAUDE_SETUP_RULE_GUARD=off turns the hook (not the CLI) off.
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
@@ -110,16 +110,21 @@ export function cardProof(ref, calls) {
 // PreToolUse. ctx: { dir, model, calls (the session's tool calls), humanAfter(ref) }. Returns a reason or null; records a passing round.
 export function gateStep(tool, input = {}, ctx = {}) {
   const dir = ctx.dir ?? ledgerDir()
-  const asset = input.owner && input.repo ? `${input.owner}/${input.repo}#${input.pullNumber ?? input.issue_number ?? input.pull_number ?? ''}` : null
+  const pr = Number(input.pullNumber ?? input.issue_number ?? input.pull_number)
+  const asset = input.owner && input.repo ? `${String(input.owner).toLowerCase()}/${String(input.repo).toLowerCase()}#${Number.isInteger(pr) && pr > 0 ? pr : ''}` : null
   if (/^(Write|Edit)$/.test(tool) && /[\\/]gate[\\/][^\\/]+\.json$/.test(String(input.file_path ?? ''))) return 'gate ledger: the round counter is written only by gate-rounds.mjs (gate.md, Rounds), never by hand.'
+  if (/^(Write|Edit)$/.test(tool) && /\.claude[\\/]claude-setup[\\/](gate-rounds|rule-guard|team-guard)\.mjs$/.test(String(input.file_path ?? ''))) return 'gate ledger: the installed guards are changed only through claude-setup (a PR), never in place.'
   if (tool === 'Bash') {
     const cmd = String(input.command ?? '')
-    const cli = cmd.match(/gate-rounds\.mjs\s+(direct|card|picture|waive)\s+(\S+)(?:.*--ref\s+(\S+))?/)
-    if (!cli && /gate[\\/][^\s'"]+\.json/.test(cmd) && !/gate-rounds\.mjs/.test(cmd) && /(>|\btee\b|\bsed\s+-i|\bmv\b|\bcp\b|\brm\b|node\s+-e|python)/.test(cmd)) return 'gate ledger: the round counter is written only by gate-rounds.mjs (gate.md, Rounds), never by hand.'
-    if (!cli) return null
-    const [, verb, , ref] = cli
+    const mentions = /gate-rounds|gate[\\/][^\s'"]+\.json/.test(cmd)
+    if (!mentions) return null
+    // One plain command in one known form: no pipes, chains, substitution, redirects, node -e or imports (a parser differential is a bypass).
+    const plain = /^\s*node\s+\S*gate-rounds\.mjs\s+(status|check|init|direct|card|picture|waive)\s+[\w./#-]+(?:\s+(?:--(?:plan|ref|round)\s+[\w./#:@-]+|[\w.]+))*\s*$/.exec(cmd)
+    if (!plain) return 'gate ledger: run the round counter only as one plain command, "node ~/.claude/claude-setup/gate-rounds.mjs <status|check|init|direct|card|picture|waive> <asset> [--plan f|--ref id|--round n]", and never touch the gate files another way (gate.md, Rounds).'
+    const verb = plain[1]
+    const ref = cmd.match(/--ref\s+(\S+)/)?.[1]
     if (verb === 'direct' && !/fable/i.test(ctx.model ?? '')) return `gate ledger: only a Fable session records the director, this one runs on ${ctx.model ?? 'an unknown model'}. Ask the coordinator for a Fable thread (docs/TEAMS.md, Models line).`
-    if (verb !== 'direct' && !(ref && cardProof(ref, ctx.calls ?? []))) return `gate ledger: "${verb}" needs --ref <cmsg id> of a request_decision card this session posted (it was not found in this session).`
+    if (['card', 'picture', 'waive'].includes(verb) && !(ref && cardProof(ref, ctx.calls ?? []))) return `gate ledger: "${verb}" needs --ref <cmsg id> of a request_decision card this session posted (it was not found in this session).`
     if (verb === 'waive' && !(ctx.humanAfter?.(ref))) return 'gate ledger: waive needs yskills\' own answer on that card in this session; none arrived yet.'
     return null
   }
@@ -135,6 +140,8 @@ export function gateStep(tool, input = {}, ctx = {}) {
   const l = readLedger(dir, asset)
   const bad = roundProblem(l, head.round)
   if (bad) return `gate round counter: ${bad}`
+  const same = l.rounds.find((r) => r.n === head.round)
+  if (same && same.score !== head.score) return `gate round counter: round ${head.round} of ${asset} is already in the ledger with score ${same.score ?? 'none'}; a round is scored once (gate.md, Rounds). The next verdict is round ${head.round + 1}.`
   writeLedger(dir, recordRound(l, head))
   return null
 }
@@ -143,7 +150,6 @@ export function gateStep(tool, input = {}, ctx = {}) {
 const USAGE = `usage: gate-rounds.mjs <cmd> <asset> [...]   asset = owner/repo#pr or a name
   status                      print the ledger
   check <round>               exit 2 with the reason if that round may not run
-  record <round> <score> [--important]
   init --round <n>            import the rounds that ran before the ledger existed (once)
   direct --plan <file>        record the Fable director (the hook allows it only from a Fable session)
   card --ref <cmsg id>        record the card to yskills (the hook checks this session posted it)
@@ -160,10 +166,6 @@ export function cli(argv, env = process.env) {
   const fail = (t) => ({ code: 2, text: t })
   if (cmd === 'status') return { code: 0, text: JSON.stringify(l, null, 2) }
   if (cmd === 'check') return roundProblem(l, Number(rest[0])) ? fail(roundProblem(l, Number(rest[0]))) : { code: 0, text: 'ok' }
-  if (cmd === 'record') {
-    const bad = roundProblem(l, Number(rest[0]))
-    return bad ? fail(bad) : save(recordRound(l, { round: Number(rest[0]), score: Number(rest[1]), important: rest.includes('--important') }))
-  }
   if (cmd === 'init') {
     const n = Number(flag(rest, '--round'))
     if (l.rounds.length || !(n >= 0)) return fail('init: only for an asset without a ledger, with --round <n>')
