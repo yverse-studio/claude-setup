@@ -352,15 +352,14 @@ const STAMP = /claude-setup-(?:role|spawnrole|badbrief|model|brief|artifacts)-/
 const READ_ONLY = new Set(['cat', 'grep', 'rg', 'ls', 'head', 'tail', 'wc', 'diff', 'git', 'stat', 'file', 'less', 'echo', 'printf', 'find', 'test', 'cd', 'sed', 'awk'])
 // `node <script>` whose first non-flag argument is gate-rounds.mjs, with no flag that runs other code first.
 const isCounterCall = (s) => s.a0 === 'node' && !s.args.includes('-') && !s.args.some((a) => /^(-e|-p|--eval|--print|--import|-r|--require|--input-type|--loader|--experimental-loader)/.test(a)) && ['gate-rounds.mjs', 'task-ledger.mjs'].includes(base(s.args.find((a) => !a.startsWith('-')) ?? ''))
-const INTERPRETERS = /^(node(js)?|python[\d.]*|pypy[\d.]*|bun|deno|ruby[\d.]*|perl[\d.]*)$/
+const INTERPRETERS = /^(node(js)?|python[\d.]*|pypy[\d.]*|bun|deno)$/
 // The eval flag of each interpreter family, among the command's own flags (those before its first non-flag argument, so a script's own flags
 // are not read). The code may be attached (python3 -c"...", node -pe"...", --eval=...), so any text may follow. node/bun/deno: -e, -p and
-// clusters like -pe, --eval, --print; python/pypy: -c after clusters of flags without a value; perl/ruby: -e, -E and clusters like -ne.
+// clusters like -pe, --eval, --print; python/pypy: -c after clusters of flags without a value.
 // The subcommand `eval` (deno eval, bun eval) is eval too. Code on stdin and a flag after a non-flag argument (node -r a.js -e ...) are Limits.
 const EVAL_FLAGS = [
   [/^(?:node(?:js)?|bun|deno)$/, /^-(?:[a-zA-Z]*[ep]|-eval|-print)/],
   [/^(?:python[\d.]*|pypy[\d.]*)$/, /^-[bBdEhIiOPqRsSuvVxX]*c/],
-  [/^(?:perl[\d.]*|ruby[\d.]*)$/, /^-[a-zA-Z]*[eE]/],
 ]
 const evalish = (s) => {
   const flags = []

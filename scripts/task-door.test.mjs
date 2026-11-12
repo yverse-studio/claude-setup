@@ -434,7 +434,7 @@ test('reviewer round 4: --eval=<code> and --print=<code> are inline scripts, and
   } finally { t.done() }
 })
 
-test('round 7: inline code is an interpreter\'s own eval flag, nothing else: 19 ordinary commands pass, 15 eval forms with a literal ledger, grants or transcript path are refused', () => {
+test('round 7: inline code is an interpreter\'s own eval flag, nothing else: 19 ordinary commands pass, 12 eval forms with a literal ledger, grants or transcript path are refused', () => {
   const t = door()
   try {
     const L = join(t.gate, `${ASSET}.json`)
@@ -456,15 +456,48 @@ test('round 7: inline code is an interpreter\'s own eval flag, nothing else: 19 
       `node -e "require('fs').writeFileSync('${p}','{}')"`, `node -p "require('fs').writeFileSync('${p}','{}')"`, `node -pe"require('fs').writeFileSync('${p}','{}')"`,
       `node --eval="require('fs').writeFileSync('${p}','{}')"`, `node --print="require('fs').writeFileSync('${p}','{}')"`,
       `python3 -c "open('${p}','w')"`, `python3 -c"open('${p}','w')"`, `python3.12 -c "open('${p}','w')"`,
-      `perl -e 'open F, ">${p}"'`, `perl -E 'open F, ">${p}"'`, `ruby -e "File.write('${p}','{}')"`,
       `deno eval "Deno.writeTextFileSync('${p}','{}')"`, `bun eval "require('fs').writeFileSync('${p}','{}')"`,
       `git -c Alias.z='!node -e "require(\\"fs\\").writeFileSync(\\"${p}\\",\\"{}\\")"' z`, `find . -maxdepth 0 -exec node -e "require('fs').writeFileSync('${p}','{}')" \;`,
     ]
-    assert.equal(refused(L).length, 15)
+    assert.equal(refused(L).length, 12)
     for (const p of [L, G, T]) for (const c of refused(p)) assert.equal(t.bash(c).status, 2, c)
     for (const c of refused('/tmp/out.txt')) assert.equal(t.bash(c).status, 0, c)
     // A shell's heredoc body is read like bash -c, so a redirect into the ledger in it is still refused; code on stdin for an interpreter is a Limit.
     for (const c of [`bash <<EOF\necho '{}' > ${L}\nEOF`, `sh <<'EOF'\necho '{}' > ${G}\nEOF`]) assert.equal(t.bash(c).status, 2, c)
+  } finally { t.done() }
+})
+
+// Reviewer's flag probe (round 8, gate/pr474-probe-flags.mjs): ordinary flag forms with a ledger path as input must pass, eval forms must be refused.
+const probePass = (L) => [
+  `node --experimental-strip-types x.ts ${L}`, `node --enable-source-maps x.mjs ${L}`, `node --env-file=.env x.mjs ${L}`, `node --expose-gc x.mjs ${L}`,
+  `node --preserve-symlinks x.mjs ${L}`, `node --test-name-pattern=door --test x.test.mjs ${L}`, `node --max-old-space-size=4096 x.mjs ${L}`, `node -r ./setup.cjs x.mjs ${L}`,
+  `node --require ./setup.cjs x.mjs ${L}`, `node --import ./reg.mjs x.mjs ${L}`, `node -C development x.mjs ${L}`, `node --title=probe x.mjs ${L}`, `node -c x.mjs ${L}`,
+  `node --prof x.mjs ${L}`, `node --permission x.mjs ${L}`, `node --experimental-vm-modules x.mjs ${L}`, `node --trace-warnings x.mjs ${L}`, `node --pending-deprecation x.mjs ${L}`,
+  `node --stack-trace-limit=50 x.mjs ${L}`, `node --inspect x.mjs ${L}`, `node --es-module-specifier-resolution=node x.mjs ${L}`, `node --throw-deprecation x.mjs ${L}`,
+  `python3 -m json.tool ${L}`, `python3 -u x.py ${L}`, `python3 -X dev x.py ${L}`, `python3 -Xdev x.py ${L}`, `python3 -W error x.py ${L}`, `python3 -Werror::DeprecationWarning x.py ${L}`,
+  `python3 -m pytest -x -k cache ${L}`, `python3 -B -E -s x.py ${L}`, `python3 -OO x.py ${L}`, `python3 -I x.py -c ${L}`, `python3 -mjson.tool ${L}`, `python3 -q x.py ${L}`,
+  `python3 -Wdefault x.py ${L}`, `python3 -Xfaulthandler x.py ${L}`, `python3 -Xpycache_prefix=/tmp x.py ${L}`, `python3 -mpytest tests ${L}`, `python3 -mcProfile x.py ${L}`, `python3 -m cProfile x.py ${L}`,
+  `pypy3 x.py ${L}`, `bun run x.ts ${L}`, `bun x.ts ${L}`, `bun --hot x.ts ${L}`, `bun -b x.ts ${L}`, `bun test ${L}`, `bun --preload ./p.ts x.ts ${L}`, `bun --define a=b x.ts ${L}`, `bun --env-file=.env x.ts ${L}`,
+  `deno run -A x.ts ${L}`, `deno run --allow-read x.ts ${L}`, `deno test ${L}`, `deno -A x.ts ${L}`, `deno --allow-env x.ts ${L}`, `deno task build ${L}`,
+]
+const probeRefuse = (L) => [
+  `node -e "x('${L}')"`, `node -p "x('${L}')"`, `node -pe "x('${L}')"`, `node --eval "x('${L}')"`, `node --eval="x('${L}')"`, `node --print "x('${L}')"`, `node --input-type=module -e "x('${L}')"`,
+  `node --no-warnings -e "x('${L}')"`, `python3 -c "x('${L}')"`, `python3 -Ic "x('${L}')"`, `python3 -u -c "x('${L}')"`, `python3.12 -c "x('${L}')"`, `pypy3 -c "x('${L}')"`,
+  `bun -e "x('${L}')"`, `bun --eval "x('${L}')"`, `bun -p "x('${L}')"`, `bun eval "x('${L}')"`, `deno eval "x('${L}')"`, `nodejs -e "x('${L}')"`,
+]
+test('round 8: the reviewer\'s flag probe is a table: 55 ordinary interpreter flag forms pass and 19 eval forms are refused, with a ledger and a transcript path; perl and ruby are not in the rule', () => {
+  const t = door()
+  try {
+    const L = join(t.gate, `${ASSET}.json`)
+    const T = '/root/.claude/projects/-home-user/abc.jsonl'
+    assert.equal(probePass(L).length, 55)
+    assert.equal(probeRefuse(L).length, 19)
+    for (const p of [L, T]) {
+      for (const c of probePass(p)) assert.equal(t.bash(c).status, 0, c)
+      for (const c of probeRefuse(p)) assert.equal(t.bash(c).status, 2, c)
+    }
+    // perl and ruby are not in the interpreter list: nothing here runs them, so -r<lib>, -M<module> and -E <encoding> are not read as eval flags.
+    for (const p of [L, T]) for (const c of [`ruby -rtime tools/audit.rb ${p}`, `perl -MTime::HiRes tools/x.pl ${p}`, `ruby -E UTF-8 tools/x.rb ${p}`, `perl -e "print 1" ${p}`]) assert.equal(t.bash(c).status, 0, c)
   } finally { t.done() }
 })
 
