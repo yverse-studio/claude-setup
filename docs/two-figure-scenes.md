@@ -194,7 +194,7 @@ scene tools solve it (VaM, sandbox games, pose editors, Blender pose-library add
 ## Recipe: the mund scene from zero (state 2026-10-26)
 
 A fresh agent follows this with claude-setup plus the laptop handoffs, no questions. Handoffs (read-only sources, in
-`Documents\`): `lib\anims\interaction\HANDOFF.md` (sections 6-8 gate, image language, engineering lessons; 9a vision;
+`Documents\`): `lib\anims\_engine\HANDOFF.md` (sections 6-8 gate, image language, engineering lessons; 9a vision;
 9e order), `lib\characters\CH_rika\Blend\HANDOFF.md` ("Rig v2"), `projects\games\companyxy\ch01\INTEGRATION.md` (player).
 
 1. Models: Rika `characters\CH_rika\Blend\rika.blend` (Rig v2), the man `characters\CH_male\male.blend` (v2.2, 1.90 m,
