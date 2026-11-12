@@ -2218,10 +2218,11 @@ export function updateLock(session, check) {
   if (BAD_BRIEF.test(check)) writeFileSync(f, check)
   else if (existsSync(f)) { try { unlinkSync(f) } catch { /* gone */ } } // any check that is no brief failure (an M-size note too) lifts it
 }
-// A corrected brief lifts the lock only when the coordinator itself relays it (not a quote, not another thread). It then stamps
-// the role once, as roleContext does for a spawn brief: an existing stamp is never changed, and a relay never makes a gate role
-// (security review of the #473 round-2 fix: a re-brief must not lift a builder into the verdict author).
-export const COORDINATOR_RELAY = /^\s*<coordinator-relay>\s*<relay\b[^>]*\bfrom=\\?"coordinator"/
+// A corrected brief lifts the lock only when the coordinator itself relays it: the wrapper may follow the harness's own lead-in
+// (system-note, the "A message from this project's coordinator session" reminder), never a wake, message, note or another relay
+// that would quote it. It then stamps the role once, as roleContext does for a spawn brief: a non-empty stamp is never changed,
+// so a builder is never lifted into a gate role, while a gate thread whose first brief failed gets its role (#475 gate round 1).
+export const COORDINATOR_RELAY = /^(?:(?!<\/?(?:wake|message|note|relay|thread)\b)[\s\S])*?<coordinator-relay>\s*<relay\b[^>]*\bfrom=\\?"coordinator"/
 async function relayRebrief(session, prompt, cwd, model) {
   if (!COORDINATOR_RELAY.test(prompt)) return
   const text = prompt.replace(/\\n/g, '\n')
@@ -2229,7 +2230,7 @@ async function relayRebrief(session, prompt, cwd, model) {
   const stamp = join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)
   if (existsSync(lockFile(session)) || read(stamp).trim()) return
   const role = roleOf(text, read(join(setupRoot(cwd), 'docs', 'TEAMS.md')))
-  if (role && !GATE_ROLES.test(role.name)) writeFileSync(stamp, role.name)
+  if (role) writeFileSync(stamp, role.name)
 }
 export function lockBlock(tool, session) {
   const f = session ? lockFile(session) : ''
