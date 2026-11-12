@@ -310,7 +310,7 @@ test('team guard: blocks Agent and thread starts without model, passes with one'
 test('team guard: an Animator thread starts on the game and story kits, on Sonnet, not on site or setup', async () => {
   const { decide } = await import('../global/team-guard.mjs')
   const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
-  const brief = (kit, size = 'M') => ({ brief: `Role: Animator · Kit: ${kit} · Size: ${size}\nPrior art: scene kit and our blender-body skill checked; adapt, because the key-pose library exists${FULL}`, title: 'Animator · fenster', model: 'claude-x-1' })
+  const brief = (kit, size = 'M') => ({ brief: `Role: Animator · Kit: ${kit} · Size: ${size}\nPrior art: scene kit and our blender-body skill checked; adapt, because the key-pose library exists${FULL}\nSheet: n/a scene animation, no body or outfit model change`, title: 'Animator · fenster', model: 'claude-x-1' })
   for (const kit of ['game', 'story']) assert.deepEqual(decide('mcp__hearthbot__start_thread', brief(kit), [], [], teams), {}, `Animator passes on ${kit}`)
   for (const kit of ['site', 'app', 'setup']) assert.match(decide('mcp__hearthbot__start_thread', brief(kit), [], [], teams).block ?? '', /not on the `\w+` kit's team/, `Animator is skipped on ${kit}`)
   assert.match(decide('mcp__hearthbot__start_thread', { ...brief('game'), model: 'claude-opus-x' }, [], [], teams).block ?? '', /runs on sonnet/, 'the Animator runs on Sonnet')
@@ -1182,19 +1182,6 @@ test('rule guard: the Claude app browser is blocked, Owner-Chrome and others are
   assert.equal(decide('mcp__plugin_playwright_playwright__browser_navigate', { url: 'https://example.com' }, {}), null, 'headless Playwright passes')
 })
 
-// Companyxy report 2026-11-12, point 3: bodies and outfits were built before cast sheets with measures and a look lock
-// existed (about 20 fit rounds). A modelling brief on a game or story kit names its approved sheet and look lock.
-test('team guard: a body, outfit or fit brief on a game kit needs a Sheet: and a Look-Lock: line', async () => {
-  const { missingLines } = await import('../global/team-guard.mjs')
-  const brief = (more) => `Role: Programmer · Kit: game · Size: L${FULL}\n${more}`
-  assert.deepEqual(missingLines(brief('Fit the school outfit to Mira.')), ['Sheet: (approved cast sheet, docs/preproduction-workflow.md)', 'Look-Lock: (owner card of the look)'])
-  assert.deepEqual(missingLines(brief('Fit the school outfit to Mira.\nSheet: characters/mira/SHEET.md\nLook-Lock: https://claude.ai/card/1 2026-11-12')), [])
-  assert.deepEqual(missingLines(brief('Fit the outfit.\nSheet: <path>\nLook-Lock: <card>')).length, 2, 'placeholders do not count')
-  assert.deepEqual(missingLines(brief('Fix the login page copy.')), [], 'no modelling, no sheet')
-  assert.deepEqual(missingLines(`Role: Planner · Kit: game · Size: M${FULL}\nWrite the cast sheet and body plan for Mira.`), [], 'the cast stage itself writes the sheet')
-  assert.deepEqual(missingLines(`Role: Programmer · Kit: app · Size: M${FULL}\nFit the outfit.`), [], 'only game and story kits')
-})
-
 // Companyxy report 2026-11-12, point 8: garments were downloaded twice because nothing checked the wardrobe first.
 test('rule guard: a garment download needs clothes_dupe.py on the same source earlier in the session', async () => {
   const { dupeCheckMissing } = await import('../global/rule-guard.mjs')
@@ -1214,9 +1201,6 @@ test('rule guard: a garment download needs clothes_dupe.py on the same source ea
 test('gate fixes: no sheet demand for HUD or camera work, every app browser tool reaches the hook, dupe ids and hosts', async () => {
   const { missingLines } = await import('../global/team-guard.mjs')
   const { dupeCheckMissing } = await import('../global/rule-guard.mjs')
-  for (const task of ['Make the NPCs face the player', 'Fix the save data model in Pinia', 'Make the HUD fit on 390px', 'Rig the camera dolly']) {
-    assert.deepEqual(missingLines(`Role: Programmer · Kit: game · Size: M${FULL}\n${task}`), [], task)
-  }
   assert.equal(missingLines(`Role: Programmer · Kit: game · Size: M${FULL}\nFit the new character outfit`).length, 2)
   for (const f of ['install.mjs', 'cloud/setup.sh']) assert.match(readFileSync(join(root, f), 'utf8'), /mcp__\.\*Claude_Browser__\.\*\|/, `${f} routes every Claude_Browser tool to rule-guard`)
   const seen = (command) => JSON.stringify({ message: { content: [{ type: 'tool_use', id: 't1', name: 'Bash', input: { command } }] } })
@@ -1233,31 +1217,17 @@ test('gate fixes: Sheet: must be a .md path and Look-Lock: a link or card, "late
   assert.equal(missingLines(b('Sheet: characters/mira/SHEET.md\nLook-Lock: owner card https://claude.ai/c/1')).length, 0)
 })
 
-test('gate round 2: needsSheet matches garment and figure jobs, not everyday game work', async () => {
+// Gate rounds 1 to 6 of PR 445 chased verbs and body words; the rule is now a plain one: no classifier.
+test('team guard: every Programmer or Animator brief on a game or story kit names its cast sheet and look lock, or declares n/a', async () => {
   const { missingLines } = await import('../global/team-guard.mjs')
-  const need = (task, kit = 'game') => missingLines(`Role: Programmer · Kit: ${kit} · Size: M${FULL}\n${task}`).length
-  for (const task of ['Make the character jump higher', 'Fix the character controller camera', 'Fix the cast list UI', 'Fix the body text font on the menu', 'Add an outfit shop screen']) assert.equal(need(task), 0, task)
-  for (const task of ['Refit the dress on Luna', 'Fix the skirt clipping on the hips', 'Sculpt the new face for Mira', 'Fit the new character outfit', 'Rig and weight-paint the body']) assert.equal(need(task), 2, task)
-})
-
-test('gate round 3: needsSheet ignores the Done line and UI work, catches coat, put-on and weights, accepts a declared n/a', async () => {
-  const { missingLines } = await import('../global/team-guard.mjs')
-  const need = (task, done = 'Done when: the change is merged and the build is green') => missingLines(`Role: Programmer · Kit: game · Size: M${FULL.replace(/Done when:[^\n]*Stop when:/, `${done}. Stop when:`)}\n${task}`).length
-  for (const task of ['Add an outfit shop screen', 'Make the outfit shop screen scroll on mobile', 'Change the dress-up menu button colour', 'Move the wardrobe button to the top bar', 'Create a uniform loading spinner', 'Swap the clothing tab order', 'Model the save data for outfits in Pinia', 'Fit the body text into the dialog box']) assert.equal(need(task), 0, task)
-  for (const task of ['Tailor the coat for Kai', 'Put the lingerie set on Nova', 'Fix the hands mesh weights on Mira', 'Give Luna a new hairstyle and earrings, fit them to her head', 'Refit the dress on Luna', 'Fix the skirt clipping on the hips']) assert.equal(need(task), 2, task)
-  assert.equal(need('Fit the outfit to the new UI preview screen\nSheet: n/a this is a screen layout job, no model changes'), 0, 'a declared exception passes')
-})
-
-test('gate round 4: a task sentence starting with Model is not a brief line, figure and garment builds need a sheet', async () => {
-  const { missingLines } = await import('../global/team-guard.mjs')
-  const need = (task) => missingLines(`Role: Programmer · Kit: game · Size: M${FULL}\n${task}`).length
-  for (const task of ['Model a red dress for Lena', 'Model the new body for Nova', 'Please model a red dress for Lena', 'Build the new body for Nova from the base mesh', "Make Nova's body taller and slimmer", 'Make Kai a new jacket', 'Fix the stockings poking through the boots', 'Fit the bikini to Nova', 'Create a new hairstyle for Mira']) assert.equal(need(task), 2, task)
-  for (const task of ['Make the NPCs face the player', 'Make the HUD fit on 390px', 'Create a uniform loading spinner', 'Add an outfit shop screen', 'Make the outfit shop screen scroll on mobile', 'Build the new inventory screen with a clothing tab']) assert.equal(need(task), 0, task)
-})
-
-test('gate round 5: a garment word outside a UI task triggers on its own, whatever the verb', async () => {
-  const { missingLines } = await import('../global/team-guard.mjs')
-  const need = (task) => missingLines(`Role: Programmer · Kit: game · Size: M${FULL}\n${task}`).length
-  for (const task of ["Change Lena's outfit to the beach look", "Swap Nova's uniform for the summer version", 'Give Lena a longer skirt; measure it against every BT_ preset', 'Add a sweater to Kai and export the VRM', 'Put a hoodie on Kai', 'Lengthen the dress hem for Lena', 'Give Mira new sneakers']) assert.equal(need(task), 2, task)
-  for (const task of ['Play a sound on outfit change', 'Fix the saved-outfit crash on load', 'Translate the clothing names to German', 'Add a jacket icon to the inventory', 'Fix the outfit unlock tests', 'Fix the hair shader flicker']) assert.equal(need(task), 0, task)
+  const brief = (more, role = 'Programmer', kit = 'game') => `Role: ${role} · Kit: ${kit} · Size: L${FULL}\n${more}`
+  const both = ['Sheet: (approved cast sheet, docs/preproduction-workflow.md)', 'Look-Lock: (owner card of the look)']
+  for (const task of ['Fit the school outfit to Mira.', "Make Nova's legs longer", 'Put a hoodie on Kai', 'Make the HUD fit on 390px', 'Rig the camera dolly']) assert.deepEqual(missingLines(brief(task)), both, task)
+  assert.deepEqual(missingLines(brief('Fit the school outfit to Mira.\nSheet: characters/mira/SHEET.md\nLook-Lock: https://claude.ai/card/1 2026-11-12')), [])
+  assert.equal(missingLines(brief('Fit the outfit.\nSheet: <path>\nLook-Lock: <card>')).length, 2, 'placeholders do not count')
+  assert.equal(missingLines(brief('Make the HUD fit on 390px.\nSheet: n/a this is a HUD layout job, no model changes')).length, 0, 'a declared exception passes')
+  assert.equal(missingLines(brief('Make the HUD.\nSheet: n/a no')).length, 2, 'a one-word reason does not')
+  assert.equal(missingLines(brief('Make the HUD.', 'Animator', 'story')).length, 2, 'Animator on the story kit too')
+  assert.deepEqual(missingLines(brief('Fix the login page copy.', 'Programmer', 'app')), [], 'only game and story kits')
+  assert.deepEqual(missingLines(brief('Write the cast sheet and body plan for Mira.', 'Planner', 'game')), [], 'the cast stage itself writes the sheet')
 })
