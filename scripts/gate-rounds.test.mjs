@@ -334,6 +334,9 @@ const MUST_BLOCK_LEDGER = [
   // finding 3: find, sed, awk and git can write or run code, so a call that names the counter file through them is refused
   'find ~/.claude/claude-setup -name gate-rounds.mjs -exec cp {} /tmp/x.mjs ;', 'find . -name gate-rounds.mjs -delete', `awk 'BEGIN{system("cp global/gate-rounds.mjs /tmp/y.mjs")}'`, `awk '{print > "/tmp/y.mjs"}' global/gate-rounds.mjs`,
   `sed -n 'w /tmp/y.mjs' global/gate-rounds.mjs`, 'sed -i s/a/b/w\\ /tmp/g global/gate-rounds.mjs', 'git -c core.pager=false show HEAD:global/gate-rounds.mjs', 'git show HEAD:global/gate-rounds.mjs --output=/tmp/c.mjs', 'git config alias.x !cp global/gate-rounds.mjs /tmp/c.mjs',
+  // B7: text that names the counter only passes where it is data; an interpreter reading it from stdin, or a word that is the file, does not
+  "python3 - <<'E'\nopen('global/gate-rounds.mjs', 'w').write('x')\nE", "node <<'E'\nrequire('fs').copyFileSync('global/gate-rounds.mjs', '/tmp/c.mjs')\nE", 'echo x | tee global/gate-rounds.mjs', "cat <<'E' > global/gate-rounds.mjs\nx\nE",
+  'node < global/gate-rounds.mjs', 'node <(cat global/gate-rounds.mjs)',
   'cat global/gate-rounds.mjs > /tmp/c.mjs', 'git show HEAD:global/gate-rounds.mjs > /tmp/c.mjs', 'rg --pre "cp global/gate-rounds.mjs /tmp/c.mjs" x .', 'less -o /tmp/c.mjs global/gate-rounds.mjs', 'file -C -m global/gate-rounds.mjs',
 ]
 const MUST_PASS = [
@@ -354,6 +357,9 @@ const MUST_PASS = [
   'rm <D>/airport/r1/a.png', 'touch <D>/airport/PLAN.md', 'rm <D>/airport/../airport/x.png', 'cat <D>/sub/../o_r_7.json',
   'sed -n 1,40p global/gate-rounds.mjs', 'git log --oneline -- global/gate-rounds.mjs', 'git show HEAD:global/gate-rounds.mjs | head -20', 'grep -rn -i round global/gate-rounds.mjs', 'rg -n grant global/gate-rounds.mjs', 'cat global/gate-rounds.mjs 2>/dev/null | wc -l',
   'node install.mjs', 'bash cloud/setup.sh', 'sed -i s/a/b/ global/gate-rounds.mjs', 'git checkout main -- global/gate-rounds.mjs', 'node -e "console.log(1)"', 'node --check global/gate-rounds.mjs',
+  // B7 (2026-11-12): a command that only mentions the counter script, as text or beside an unrelated command, is not a way round it.
+  'grep -c round < global/gate-rounds.mjs', 'grep -c round global/gate-rounds.mjs && node -e "console.log(1)"', 'grep -n x global/gate-rounds.mjs | cut -c1-80', 'echo "gate-rounds.mjs is the counter" > /tmp/n.md',
+  "cat > /tmp/body.md <<'EOF'\nThe counter lives in gate-rounds.mjs.\nEOF", "gh pr comment 7 -R o/r --body-file - <<'EOF'\nSee gate-rounds.mjs.\nEOF",
   'git add global/gate-rounds.mjs && git commit -m "fix: x"', 'node ~/.claude/claude-setup/rule-guard.mjs read https://example.com', 'echo "a > b" | wc -l', 'echo it\'s fine',
 ]
 

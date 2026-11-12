@@ -371,6 +371,12 @@ function readsOnly(s) {
 }
 // `node <script>` whose first non-flag argument is gate-rounds.mjs, with no flag that runs other code first.
 const isCounterCall = (s) => s.a0 === 'node' && !s.args.some((a) => /^(-e|-p|--eval|--print|--import|-r|--require|--input-type|--loader|--experimental-loader)/.test(a)) && base(s.args.find((a) => !a.startsWith('-')) ?? '') === 'gate-rounds.mjs'
+// A command names the counter when a word of it (name, argument, redirect target) holds the file name, or an interpreter reads a body that does.
+// The words of echo and printf, and the heredoc of a text sink (cat, tee, echo, printf, gh, git), are data: B7, a read beside an unrelated command or a PR text is no way round the counter.
+const COUNTER = /gate-rounds\.mjs/
+const TEXT_WORDS = new Set(['echo', 'printf'])
+const TEXT_BODY = new Set(['cat', 'tee', 'echo', 'printf', 'gh', 'git'])
+const namesCounter = (s) => (TEXT_WORDS.has(s.a0) ? s.redirs : [s.a0, ...s.args, ...s.redirs]).some((w) => COUNTER.test(w)) || (!!s.body && !TEXT_BODY.has(s.a0) && COUNTER.test(s.body))
 function bashProblem(cmd, dir, ctx) {
   const { list, bad } = simpleCommands(cmd)
   if (bad && /\bgh\b|gate/.test(cmd)) return 'gate ledger: this command has unbalanced quotes and mentions gh or gate, so it cannot be read; write it plainly (gate.md, Rounds).'
@@ -382,7 +388,9 @@ function bashProblem(cmd, dir, ctx) {
   if (list.some((s) => s.env) && list.some((s) => s.a0 === 'node' && s.args.some((a) => base(a) === 'gate-rounds.mjs'))) return 'gate ledger: CLAUDE_SETUP_* variables (the ledger dir, the guard switch) are not set in a call that runs the counter; they would point it at another ledger (gate.md, Rounds).'
   // Finding 1: the counter is run as `node <path>/gate-rounds.mjs <verb>` and nothing else. Any other command that names the file and is
   // not a plain read (a copy, node -e, an import, a symlink) is refused, so the proofs cannot be walked around by renaming the script.
-  if (/gate-rounds\.mjs/.test(cmd) && !list.every((s) => isCounterCall(s) || readsOnly(s))) return 'gate ledger: gate-rounds.mjs is run only as "node ~/.claude/claude-setup/gate-rounds.mjs <verb> <asset> ..." (gate.md, Rounds); copying it, importing it or running it through node -e is refused, because the proofs live in this hook and in the CLI.'
+  // `node < gate-rounds.mjs` and `node <(...)` feed the file as input; the parser drops that word, so the raw text decides there.
+  const asInput = COUNTER.test(cmd) && /<\(|(?:^|[^<])<\s*\S*gate-rounds\.mjs/.test(cmd) && !list.every(readsOnly)
+  if (asInput || (list.some(namesCounter) && !list.every((s) => !namesCounter(s) || isCounterCall(s) || readsOnly(s)))) return 'gate ledger: gate-rounds.mjs is run only as "node ~/.claude/claude-setup/gate-rounds.mjs <verb> <asset> ..." (gate.md, Rounds); copying it, importing it or running it through node -e is refused, because the proofs live in this hook and in the CLI.'
   for (const s of list) {
     if (s.a0 === 'gh') { const r = ghProblem(s); if (r) return r }
     if (s.redirs.some((r) => !/\s/.test(r) && (named(r) || GUARD_FILE.test(r)))) return msg
