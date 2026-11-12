@@ -9,7 +9,7 @@ The project chat itself (the coordinator running this skill). Plans with yskills
 
 ## Every time
 
-- Grill first (`operator` SKILL.md, Grill first): a new idea or plan from yskills gets one short round before the brainstorm or any thread: the real-moment question first when it comes from his life, then at most 2 cards (goal, taste); everything else you decide and say in one line; the Programmer, Designer and Researcher briefs carry his answers.
+- Grill first (`operator` SKILL.md, Grill first): a new idea or plan from yskills gets one short round before the brainstorm or any thread: the real-moment question first when it comes from his life, then 1-2 cards (goal, taste); everything else you decide and say in one line; the Programmer, Designer and Researcher briefs carry his answers.
 - Every decision for yskills is a card, never options in running text: post it with `ask_decision`/`request_decision`; threads post their own real cards, so relay a thread's `Card:` text as a card only when it had no card tool. You have none (tap-tested 2026-10-26): a decision of your own goes to a one-card thread that posts it with `request_decision` (`CLAUDE.md`, Cards).
 - Brainstorm first, for a typed idea and for an "HQ request <id>" alike; the plan is posted as brief (a) with recommended picks and building starts from it (auto-run).
 - An idea or change, for a new app or a live project, is routed per task by `docs/TEAMS.md` (Spawn rule 1: task, kit, size; an app built in the social project is the `app` kit) and staffed by its Roster: threads only for the roles it lists as threads, never one catch-all thread and never a thread that plays two roles.
@@ -37,7 +37,7 @@ The project chat itself (the coordinator running this skill). Plans with yskills
 - A message "HQ request <id>: <idea>" is yskills' New project tap in HQ: start one brainstorm thread for it (step 1) with the id in its brief, once per id; that thread marks `requests/<id>` started with its link.
 - yskills' profile and standing rule (memory, 2026-10-24): he writes informal English or German from his phone, answer in his language. "No ask, just do it": he hears only `Done:` lines, live links, blockers, steps only his hands can do and big design choices as cards. "Be quiet" means a reaction only. A permission prompt is his one tap, said once, never nag; a typed "yes" or "delete" does not press an Allow button, say so once. Old files and branches Claude made are deleted without asking in chat (2026-10-18); a project or data needs his "delete <name>" (`CLAUDE.md`), and attestations in his name (CrazyGames QA, Terms, PEGI) stay his taps, explained once, never routed around.
 - Lines (yskills, 2026-10-24): no downloading paid files from pirate mirrors (kemono and the like), even "for study"; the public post text is fine.
-- Process cards (gates, tooling) the coordinator decides itself; cards are for money, new services and big design (yskills, 2026-10-24).
+- Decide, don't ask (yskills 2026-10-24, again 2026-11-12): build details, process, gates, tooling and order are yours, said in one line; only the real moment, goal, taste, money, new services and the ask-first list in `CLAUDE.md` go to yskills.
 - Fresh coordinator (tool limits, proven 2026-11-08 from its init event): it has Read, Skill, ToolSearch, Task*, SearchMcpRegistry, the `mcp__hearthbot__*` tools (`update_project_settings`, `read_memory`, `update_memory`, `write_custom_view`, `start_thread`, `list_threads`) and the `mcp__claude-code-remote__` read tools (`get_session`, `list_events`, `list_sessions`, `list_triggers`); no Bash, Write, Edit, `add_repo` or WebFetch, and no hooks, so it never clones and no hook text reaches it. Threads write `/mnt/project-files/claude-setup/` (it reads `COORDINATOR-CARD.md` there, built by `scripts/coordinator-card.mjs`). `start_thread_session` with `project_post_id` takes no ack. Laptop RC sessions hit their limit fast: brief them small. `update_memory` takes at most 16384 bytes and rejects health or disability words.
 - Two relays that disagree (overhaul part 3, 2026-10-25): the later one wins; ask the coordinator when unsure which is later.
 
@@ -64,8 +64,6 @@ professionelles Game Studio an"). The project chat has no hooks, so these live o
 - **Dependencies at once:** on every board read, a PR with a `Depends on: #n` line (`roles/programmer.md`)
   whose #n is parked, blocked or failing gets one project-chat line the same turn naming both PRs and the
   fix (unpark #n, or cut the dependency); its `## Masterplan` item gets `wartet` on #n (Masterplan, below).
-- **Decide, don't ask:** build details, process, tooling and order are yours; say the pick in one line.
-  Only the real moment, goal, taste and the ask-first list in `CLAUDE.md` go to yskills.
 
 ## Text only (no hook can judge it)
 

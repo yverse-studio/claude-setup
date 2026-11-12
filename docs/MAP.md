@@ -132,9 +132,6 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 |---|---|---|
 | Org, accounts, where secrets live | `CLAUDE.md` (The world) | `publish` skill, `docs/WORKFLOW.md` (PC work) |
 | Coordinator card (what the project chat reads, its pre-flight) | `scripts/coordinator-card.mjs` (output `/mnt/project-files/claude-setup/COORDINATOR-CARD.md`) | `roles/project-manager.md`, `operator/templates/project-instructions.md` |
-| Coordinator answers facts from a source read this turn, checks one thread = one role before every `message_thread`, flags PR dependencies at once, decides build details itself (vacation-game 2026-11-12) | `operator/roles/project-manager.md` (Facts, roles and dependencies) | coordinator card (pre-flight), `roles/programmer.md` (`Depends on:` line) |
-| Game PRs: Controls and World life pass before any look round | `operator/gate.md` (Game PRs: play before look), checked by `publish/templates/new-game/scripts/playtest-check.mjs` | `roles/playtester.md`, template `playtest-report.md`, coordinator card |
-| Real moment first (a level from yskills' life starts with his own words on how it felt) and the GDD's Controls | `operator/roles/game-designer.md` (Real moment first), checked by `game-3d/scripts/gdd-check.mjs` | `CLAUDE.md` (No fog), operator `SKILL.md` (Grill first), `roles/planner.md`, template `game-design.md` |
 | Live board (who is doing what: one `NOW.md` per project, a line per job, 24 h archive) | `docs/USING.md` (Live board), template `docs/templates/NOW.md` | `CLAUDE.md` (How to work), `operator/briefs.md` (Done when), the laptop's `_claude/_queue/WHO.md` (name `who` in `config/paths.json`) stays a separate lane lock |
 | Masterplan (the coordinator's one living plan: roadmap first, item status, update on every event, the "Stand?" answer, pings, the Custom view) | `roles/project-manager.md` (Masterplan), shape in `operator/templates/project-memory.md` | coordinator card (pre-flight), `docs/research/2026-11-12-masterplan-sota.md` |
 | Close finished threads (resolve or nudge, the daily sweep) | `roles/project-manager.md` (Close threads) | coordinator card, `templates/loop/routine.md` (step 11), `global/rule-guard.mjs` (stop) |
@@ -193,6 +190,9 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 | How a video or ad is made (roles, pipeline, video lessons) | `video-studio` skill | operator `SKILL.md`, `roles/marketer.md`, `market` |
 | Free sound library (CC0 SFX and music, manifest with licence proof, BPM, loudness) | `video-studio/sound/README.md`, checked by `video-studio/scripts/sound_library.py` | `video-studio/roles/sound.md`, `sound-kit.md` |
 | How posts go out, auto-post guardrails, comments and DMs, brand accounts | `social-team` skill | operator `SKILL.md`, `video-studio`, `market` §6, `docs/USING.md` |
+| Coordinator answers facts from a source read this turn, checks one thread = one role before every `message_thread`, flags PR dependencies at once, decides build details itself (vacation-game 2026-11-12) | `operator/roles/project-manager.md` (Facts, roles and dependencies) | coordinator card (pre-flight), `roles/programmer.md` (`Depends on:` line) |
+| Game PRs: Controls and World life pass before any look round | `operator/gate.md` (Game PRs: play before look), checked by `publish/templates/new-game/scripts/playtest-check.mjs` | `roles/playtester.md`, template `playtest-report.md`, coordinator card |
+| Real moment first (a level from yskills' life starts with his own words on how it felt) and the GDD's Controls | `operator/roles/game-designer.md` (Real moment first), checked by `game-3d/scripts/gdd-check.mjs` | `CLAUDE.md` (No fog), operator `SKILL.md` (Grill first), `roles/planner.md`, template `game-design.md` |
 
 ## Keeping it clean
 

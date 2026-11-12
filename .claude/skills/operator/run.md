@@ -6,7 +6,7 @@ The Project Manager's steps from brainstorm to launch and after. Read at project
 before each step; builder, gate and fix threads read their `roles/<role>.md` instead.
 
 1. **Brainstorm.** (all kinds) Open with your own take: what you would build, what worries you, one or two ideas yskills did not ask for, then challenge their answers with reasons. The grill is short (`SKILL.md`, Grill first): the real
-   moment when the idea comes from his life, then at most 2 tap cards (goal, taste); every other open
+   moment when the idea comes from his life, then 1-2 tap cards (goal, taste); every other open
    question gets your pick, said in one line. `sell`'s money keys and the Impressum data (name, postal
    address, email, second channel) are asked by key card when the slice that needs them starts. Plus
    one plain **design ask**: "Send pictures, screenshots or links of apps and sites you like (or
@@ -29,7 +29,7 @@ before each step; builder, gate and fix threads read their `roles/<role>.md` ins
      no-go. No-go → brief (a) recommends no or a smaller first version. This shows that others
      earn, not that yskills can find buyers; the probe slice (step 5) tests that.
    - **Legal:** the `legal` skill's table for this idea.
-3. **Plan.** (site, app, game, story) The research's open questions get the Planner's recommended pick in `PLAN.md`; only a goal or taste question goes to yskills (within the 2 cards of `SKILL.md`, Grill first), posted by the Project Manager together with the Designer's vote card of 2-3 example looks (screenshots) copied from the category leaders, before the plan. Order for a game: the Game Designer's concept first, then the Designer's card (the one home of this order). `planner` proposes; the operator writes `PLAN.md` and `features.json`. **Brief (a).**
+3. **Plan.** (site, app, game, story) The research's open questions get the Planner's recommended pick in `PLAN.md`; only a goal or taste question goes to yskills (within the 1-2 cards of `SKILL.md`, Grill first), posted by the Project Manager together with the Designer's vote card of 2-3 example looks (screenshots) copied from the category leaders, before the plan. Order for a game: the Game Designer's concept first, then the Designer's card (the one home of this order). `planner` proposes; the operator writes `PLAN.md` and `features.json`. **Brief (a).**
    No task for yskills: the operator deploys the day-zero site in one shot
    ([`docs/USING.md`](../../../docs/USING.md), Deploy a page in one shot) before the scaffold.
    **Day one in HQ** (the same hour as brief (a), one `ArtifactData` batch, every row with `at`, as

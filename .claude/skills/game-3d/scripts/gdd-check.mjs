@@ -34,6 +34,7 @@ export function checkGdd(md) {
     if (!(h in s)) errors.push(`no "## ${h}" section`)
     else if (!s[h].trim()) errors.push(`## ${h} is empty`)
   }
+  if (/asked before any build/.test(s['Real moment'] ?? '')) errors.push('## Real moment still holds the template text: quote yskills or write "none: invented"')
   for (const m of md.matchAll(PLACEHOLDER)) errors.push(`template placeholder left: ${m[0].slice(0, 40)}`)
   for (const h of ['Session length', 'Difficulty curve']) {
     if (s[h]?.trim() && !/\d/.test(s[h])) errors.push(`## ${h} has no number`)

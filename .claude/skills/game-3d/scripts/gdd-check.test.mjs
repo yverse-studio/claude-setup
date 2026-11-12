@@ -83,3 +83,6 @@ test('the CLI exits 1 on a missing file', () => {
   assert.equal(r.status, 1)
   assert.match(r.stderr, /does not exist/)
 })
+test('the Real moment template text left in fails', () => {
+  assert.match(checkGdd(GOOD.replace('none: invented', 'For a level built from his life: his own words, asked before any build.')).join(), /template text/)
+})

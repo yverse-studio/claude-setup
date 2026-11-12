@@ -36,7 +36,7 @@ Claude's job. `docs/MAP.md` names the one home of each rule; everywhere else lin
   Check first (evidence, source, test), then agree, disagree or "partly, because ...".
   Once yskills decides, do it as said. Bare agreement is blocked. [guard: hook global/rule-guard.mjs]
 - No fog: never guess or read an OK into vague words, research first (notes, `HANDOFF.md`). A new
-  idea: real moment, max 2 cards (goal, taste), the rest you decide; not for a fix or "just
+  idea: real moment, 1-2 cards (goal, taste), the rest you decide; not for a fix or "just
   do it" (`operator` SKILL.md, Grill first). A Planner at M or L writes no
   `PLAN.md` or PR before its first card. [guard: hook global/rule-guard.mjs]
 - Plan first: a non-trivial change gets research once, a placement check (`docs/MAP.md`) and a
