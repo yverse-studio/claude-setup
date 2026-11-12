@@ -461,8 +461,12 @@ else {
 
 // One home per rule (docs/MAP.md): a rule sentence stands in one file; the others link it.
 const { duplicateRules } = await import('./dup-rules.mjs')
-const DUP_FILES = ['CLAUDE.md', ...walk('docs').filter((f) => /\.md$/.test(f) && !/^docs\/(research|archive|proposals)\//.test(f)), ...walk('.claude/skills/operator').filter((f) => f.endsWith('.md') && !f.includes('/templates/'))]
+const { budgetFiles, measureRepo, compare: budgetProblems} = await import('./rule-budget.mjs')
+const DUP_FILES = budgetFiles(root)
 for (const [n, fs] of duplicateRules(DUP_FILES.map((f) => [f, readFileSync(join(root, f), 'utf8')]))) errors.push(`rule written twice (${fs.join(', ')}): "${n.slice(0, 80)}..." keep it in its home and link it from the others (docs/MAP.md)`)
+
+// Rule budget (cleanup/PLAN.md step 2): unguarded prose rule lines per file only fall; scripts/rule-budget.mjs.
+errors.push(...budgetProblems(measureRepo(root), json('config/rule-budget.json') ?? { perFile: {} }))
 
 if (errors.length) { console.error(errors.map((e) => `x ${e}`).join('\n')); process.exit(1) }
 console.log(`ok: ${seen.skill.size} skills, ${seen.agent.size} agents, ${plugins?.global.length ?? 0}+${plugins?.project.length ?? 0} plugins`)
