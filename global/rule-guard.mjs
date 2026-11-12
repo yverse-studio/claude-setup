@@ -361,7 +361,7 @@ export const stripTags = (t) => t.replace(/\\[nt]/g, '\n').replace(/<\/?(wake|me
 // The template a refusal carries, so the coordinator needs no file: the stamp with the role filled in, then one line per applicable row of BRIEF_FIELDS.
 export const templateFor = (guard, role, size = 'M') => {
   const plain = `Role: ${role} · Kit: <kit> · Size: ${size}`
-  return [`Role: ${role} · Kit: <kit> · Size: <S|M|L>`, ...guard.BRIEF_FIELDS.filter((f) => f.key !== 'Prior art' || true).filter((f) => f.applies?.(plain) ?? true).map((f) => f.tpl)].join('\n')
+  return [`Role: ${role} · Kit: <kit> · Size: <S|M|L>`, ...guard.BRIEF_FIELDS.filter((f) => f.applies?.(plain) ?? true).map((f) => f.tpl)].join('\n')
 }
 // M50: ONE refusal lists every judgment gap (role, kit, size, topic, model, and at size M or L Item, Plan, Acceptance; Sheet; Tester at size L) with the role's
 // template; what follows from Role, Kit and Size or what the thread can fetch itself is no block: the thread is told how it fills each line (`Brief repair`).
@@ -376,11 +376,12 @@ export async function briefCheck(prompt, cwd, model = null, any = false) {
   const role = guard.stamped(brief) ? roleOf(brief, teams) : null
   const kit = plain.match(/\bKit:[ \t]*([\w-]+)/i)?.[1]?.toLowerCase()
   if (!guard.stamped(brief)) found.push('no `Role: · Kit: · Size:` stamp line')
-  else if (!role?.row) found.push(`the Role line names no role of the Roster (docs/TEAMS.md); "none" or a role of your own is not allowed in a thread${kit && guard.rolesForKit(teams, kit).length ? `; on the \`${kit}\` kit pick one of ${guard.rolesForKit(teams, kit).join(', ')}` : ''}`)
+  else if (!role?.row) found.push(`the Role line names no role of the Roster (docs/TEAMS.md); "none" or a role of your own is not allowed in a thread${kit && guard.rolesForKit(teams, kit).length ? `; on the \`${kit}\` kit pick one of ${guard.rolesForKit(teams, kit).join(', ')}` : ''}${/^[ \t>-]*Role:[ \t]*(Fable )?director\b/im.test(plain) ? '; a gate director round is `Role: Reviewer` on Fable (docs/TEAMS.md, Models; gate.md, Rounds)' : ''}`)
   const team = guard.stamped(brief) && guard.badTeam(brief, teams)
   // issue #479 part 1: a gate director round is no thread role of its own.
+  // issue #479 part 1: a gate director round is no thread role of its own; the hint rides on a refusal that already exists (Director is a valid role on the video kit).
   const director = /^[ \t>-]*Role:[ \t]*(Fable )?director\b/im.test(plain) ? '; a gate director round is `Role: Reviewer` on Fable (docs/TEAMS.md, Models; gate.md, Rounds)' : ''
-  if (team || director) found.push(`${team || 'the Director is no thread role'}${director}`)
+  if (team) found.push(`${team}${director}`)
   const topic = guard.badTopic(brief, read(join(setupRoot(cwd), guard.CHECKLISTS)))
   if (topic) found.push(topic)
   const sorted = guard.classify(brief)

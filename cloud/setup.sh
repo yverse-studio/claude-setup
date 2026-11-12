@@ -615,7 +615,7 @@ const gateRolePlain = (plain) => /^[ \t>-]*Role:[ \t]*(Tester|Reviewer|Security|
 const line = (re) => (plain) => re.test(plain)
 const sizeCls = (plain) => (small(plain) ? 'recoverable' : 'judgment')
 export const BRIEF_FIELDS = [
-  { key: 'Item', name: 'Item: (M<n> from PLAN.json, or new)', tpl: 'Item: <PLAN.json item M<n> or new>', ok: line(/^[ \t>-]*Item:[^\n]*?\b(M\d+|new)\b/im), clean: /^[ \t>-]*Item:[ \t]*(M\d+|new)[ \t]*$/im, cls: sizeCls, fill: (p) => `Item: ${p.match(/^[ \t>-]*Item:[^\n]*?\b(M\d+)\b/im)?.[1] ?? 'new'}` },
+  { key: 'Item', name: 'Item: (M<n> from PLAN.json, or new)', tpl: 'Item: <PLAN.json item M<n> or new>', ok: line(/^[ \t>-]*Item:[^<\n]*?\b(M\d+|new)\b/im), clean: /^[ \t>-]*Item:[ \t]*(M\d+|new)[ \t]*$/im, cls: sizeCls, fill: (p) => `Item: ${p.match(/^[ \t>-]*Item:[^\n]*?\b(M\d+)\b/im)?.[1] ?? 'new'}` },
   { key: 'Plan', name: 'Plan: (the plan file or card this thread builds)', tpl: 'Plan: <plan file or card it builds>', ok: line(/^[ \t>-]*Plan:[ \t]*[^<\s]/im), cls: sizeCls, fill: () => 'Plan: n/a, size S' },
   { key: 'Acceptance', name: 'Acceptance: (what counts as accepted)', tpl: 'Acceptance: <what counts as accepted>', ok: line(/^[ \t>-]*Acceptance:[ \t]*[^<\s]/im), cls: sizeCls, fill: () => 'Acceptance: propose one from the task, say so in your first checklist line' },
   { key: 'Model', name: 'Model:', tpl: 'Model: <model id of the role\'s Roster row>', ok: line(/^[ \t>-]*Model:[ \t]*[^<\s]/im), cls: () => 'derived', fill: () => 'Model: the model this thread runs on' },
@@ -629,7 +629,7 @@ export const BRIEF_FIELDS = [
   { key: 'Gate', name: 'Gate: <Reviewer thread> before owner, or `Gate: n/a <why no owner-facing result>` (a builder, designer or animator brief at size M or L)', tpl: 'Gate: <Reviewer thread> before owner (M or L)', applies: needsGate, ok: line(GATE_LINE), cls: () => 'recoverable', fill: () => 'Gate: ask the coordinator (message_coordinator) for the Reviewer thread, then write `Gate: Reviewer · <what> before owner`' },
   { key: 'Sheet', name: 'Sheet: (approved cast sheet, docs/preproduction-workflow.md)', tpl: 'Sheet: <approved cast sheet .md, or `n/a <why no body, face or outfit job>`; Programmer or Animator on a game or story kit>', applies: needsSheet, ok: line(/^[ \t>-]*Sheet:[ \t]*[^<\n]*\.md\b/im), cls: () => 'judgment' },
   { key: 'Look-Lock', name: 'Look-Lock: (owner card of the look)', tpl: 'Look-Lock: <owner card link of the approved look; not needed with `Sheet: n/a`>', applies: needsSheet, ok: line(/^[ \t>-]*Look-Lock:[ \t]*[^<\n]*(https?:\/\/|card)/im), cls: () => 'judgment' },
-  { key: 'Researcher', name: 'Researcher: (the task asks for research)', tpl: 'Researcher: <subagent and model; research tasks only>', applies: (p) => ASKS_RESEARCH.test(p) && !/\bRole:[ \t]*Researcher\b/i.test(p), ok: line(/^[ \t>-]*Researcher:[ \t]*[^<\s]/im), cls: () => 'recoverable', fill: () => 'Researcher: ask the coordinator for a Researcher thread (message_coordinator) and go on meanwhile' },
+  { key: 'Researcher', name: 'Researcher: (the task asks for research)', tpl: 'Researcher: <subagent and model, or the Researcher thread; research tasks only>', applies: (p) => ASKS_RESEARCH.test(p) && !/\bRole:[ \t]*Researcher\b/i.test(p), ok: line(/^[ \t>-]*Researcher:[ \t]*[^<\s]/im), cls: () => 'recoverable', fill: () => 'Researcher: ask the coordinator for a Researcher thread (message_coordinator) and go on meanwhile' },
   { key: 'Tester', strict: false, tpl: 'Tester: <Tester thread; size L Programmer only>', applies: (p) => /^[ \t>-]*Role:[ \t]*Programmer\b/im.test(p), ok: (p) => !needsTester(p), cls: () => 'judgment' },
 ]
 export function missingLines(text) {
@@ -1881,7 +1881,7 @@ export const stripTags = (t) => t.replace(/\\[nt]/g, '\n').replace(/<\/?(wake|me
 // The template a refusal carries, so the coordinator needs no file: the stamp with the role filled in, then one line per applicable row of BRIEF_FIELDS.
 export const templateFor = (guard, role, size = 'M') => {
   const plain = `Role: ${role} · Kit: <kit> · Size: ${size}`
-  return [`Role: ${role} · Kit: <kit> · Size: <S|M|L>`, ...guard.BRIEF_FIELDS.filter((f) => f.key !== 'Prior art' || true).filter((f) => f.applies?.(plain) ?? true).map((f) => f.tpl)].join('\n')
+  return [`Role: ${role} · Kit: <kit> · Size: <S|M|L>`, ...guard.BRIEF_FIELDS.filter((f) => f.applies?.(plain) ?? true).map((f) => f.tpl)].join('\n')
 }
 // M50: ONE refusal lists every judgment gap (role, kit, size, topic, model, and at size M or L Item, Plan, Acceptance; Sheet; Tester at size L) with the role's
 // template; what follows from Role, Kit and Size or what the thread can fetch itself is no block: the thread is told how it fills each line (`Brief repair`).
@@ -1896,11 +1896,12 @@ export async function briefCheck(prompt, cwd, model = null, any = false) {
   const role = guard.stamped(brief) ? roleOf(brief, teams) : null
   const kit = plain.match(/\bKit:[ \t]*([\w-]+)/i)?.[1]?.toLowerCase()
   if (!guard.stamped(brief)) found.push('no `Role: · Kit: · Size:` stamp line')
-  else if (!role?.row) found.push(`the Role line names no role of the Roster (docs/TEAMS.md); "none" or a role of your own is not allowed in a thread${kit && guard.rolesForKit(teams, kit).length ? `; on the \`${kit}\` kit pick one of ${guard.rolesForKit(teams, kit).join(', ')}` : ''}`)
+  else if (!role?.row) found.push(`the Role line names no role of the Roster (docs/TEAMS.md); "none" or a role of your own is not allowed in a thread${kit && guard.rolesForKit(teams, kit).length ? `; on the \`${kit}\` kit pick one of ${guard.rolesForKit(teams, kit).join(', ')}` : ''}${/^[ \t>-]*Role:[ \t]*(Fable )?director\b/im.test(plain) ? '; a gate director round is `Role: Reviewer` on Fable (docs/TEAMS.md, Models; gate.md, Rounds)' : ''}`)
   const team = guard.stamped(brief) && guard.badTeam(brief, teams)
   // issue #479 part 1: a gate director round is no thread role of its own.
+  // issue #479 part 1: a gate director round is no thread role of its own; the hint rides on a refusal that already exists (Director is a valid role on the video kit).
   const director = /^[ \t>-]*Role:[ \t]*(Fable )?director\b/im.test(plain) ? '; a gate director round is `Role: Reviewer` on Fable (docs/TEAMS.md, Models; gate.md, Rounds)' : ''
-  if (team || director) found.push(`${team || 'the Director is no thread role'}${director}`)
+  if (team) found.push(`${team}${director}`)
   const topic = guard.badTopic(brief, read(join(setupRoot(cwd), guard.CHECKLISTS)))
   if (topic) found.push(topic)
   const sorted = guard.classify(brief)

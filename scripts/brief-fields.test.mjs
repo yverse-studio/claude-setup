@@ -45,6 +45,8 @@ test('the template file, the generated brief files and the refusal carry exactly
     const block = briefFile(role).match(/```\n([\s\S]*?)```/)[1].split('\n').filter(Boolean)
     for (const l of block) assert.ok(keys.includes(keyOf(l)) || EXTRA.includes(keyOf(l)), `${role} brief file line "${keyOf(l)}" is a row`)
   }
+  const prog = briefFile('Programmer').match(/```\n([\s\S]*?)```/)[1]
+  for (const f of BRIEF_FIELDS.filter((r) => !r.applies && r.key !== 'Prior art' && r.key !== 'Tester')) assert.ok(prog.split('\n').some((l) => keyOf(l) === f.key), `row ${f.key} is in the Programmer brief file`)
   const refusal = await check('Role: Researcher · Kit: research · Size: M\nItem: PLAN.json item M29')
   for (const f of BRIEF_FIELDS.filter((r) => !r.applies)) assert.ok(refusal.includes(f.tpl), `the refusal's template has the ${f.key} line`)
 })
@@ -67,6 +69,8 @@ test('live fixtures: the Gate line without "before owner" is repaired, a Directo
   assert.match(noOwner, /^Brief repair[^\n]*Gate[\s\S]*before owner/, 'precisely reported: what the thread does about the Gate line')
   const director = await check(`Role: Director · Kit: setup · Size: M\n${FULL_M}`)
   assert.match(director, /^Brief check[\s\S]*Programmer, [\s\S]*Reviewer[\s\S]*Role: Reviewer/, 'the kit\'s thread roles and the gate director hint')
+  assert.doesNotMatch(await check(`Role: Director · Kit: video · Size: M\n${FULL_M}`), /^Brief check/, 'a Director on the video kit is a valid start, the gate hint rides only on a refusal')
+  assert.match(await check(`Role: Programmer · Kit: setup · Size: M\n${FULL_M.replace('Item: M50', 'Item: <PLAN.json item M<n> or new>')}`), /^Brief check[\s\S]*Item is missing/, 'the untouched Item placeholder is refused at size M')
   assert.match(await check(`Kit: setup · Size: M\n${FULL_M}`), /^Brief check[\s\S]*no `Role: · Kit: · Size:` stamp/)
   assert.match(await check(`Role: Programmer · Kit: setup · Size: L\n${FULL_M.replace('Tester: Tester · app\n', '').replace(/\nTester:.*$/, '')}`), /^Brief check[\s\S]*Tester/)
   const noPrior = await check(`Role: Programmer · Kit: setup · Size: M\n${FULL_M.replace(/Prior art:[^\n]*\n/, '')}`)
