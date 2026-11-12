@@ -913,7 +913,10 @@ const humanAfter = (transcript, ref, counter) => {
   // as text quoted inside a relay, a cited message or a tool result.
   const text = (r) => typeof r.message?.content === 'string' ? r.message.content : (Array.isArray(r.message?.content) ? r.message.content.map((c) => (c?.type === 'text' ? c.text ?? '' : '')).join('\n') : '')
   const WAKE = /^\s*<wake\b[^>]*>\s*(?:<project\b[^>]*>\s*)?(?:<thread\b[^>]*>\s*)?<message\b(?=[^>]*\bfrom="human")(?=[^>]*\btrust="principal")/
-  const answer = (r) => counter.fromHuman(r) && !(Array.isArray(r.message?.content) && r.message.content.some((c) => c?.type === 'tool_result')) && WAKE.test(text(r)) && text(r).includes(`<system-note>decision_id=${id}</system-note>`) && text(r).includes('<system-note>option_index=0</system-note>')
+  // The app writes one decision_id note and one option_index note per tap. The notes are counted, not searched for: a label or question that
+  // carried a raw note (if the app ever stopped escaping `<`) would add a second one and the row would count for nothing (gate 515, finding 1).
+  const notes = (r, key) => [...text(r).matchAll(new RegExp(`<system-note>${key}=([^<]*)</system-note>`, 'g'))].map((m) => m[1])
+  const answer = (r) => counter.fromHuman(r) && !(Array.isArray(r.message?.content) && r.message.content.some((c) => c?.type === 'tool_result')) && WAKE.test(text(r)) && notes(r, 'decision_id').length === 1 && notes(r, 'decision_id')[0] === id && notes(r, 'option_index').length === 1 && notes(r, 'option_index')[0] === '0'
   return at >= 0 && rows.slice(at + 1).some(answer)
 }
 // A cached cloud image can lack the counter (its pasted setup predates it) and its start hook, the old team-guard, never fetches it
