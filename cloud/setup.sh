@@ -586,12 +586,18 @@ export function wrongModel(text, model, teams) {
   // The first tier is the thread's own; a later one only for Fable or a size L exception ("Opus on L"), never a subagent's.
   const allowed = TIERS.filter((t, _i, all) => parts.some((p, i) => p.includes(t) && (i === 0 ? all.filter((x) => p.includes(x)).indexOf(t) === 0 : t === 'fable' || (sizeL && /\bon l\b/.test(p)))))
   const tier = TIERS.find((t) => String(model).toLowerCase().includes(t))
+  // M30: a Planner at size L is a hard task (Models line): Fable only; `Model: opus (<why>)` above is the way out when Fable is unavailable.
+  if (role.name === 'Planner' && sizeL) allowed.splice(0, allowed.length, 'fable')
   return allowed.length && tier && !allowed.includes(tier) ? { role: role.name, allowed, tier } : null
 }
 
 // The brief block's must-have lines (operator/briefs.md). Blind test 2026-10-27: a fresh coordinator
 // started threads with only a title and a guess, and nothing stopped it.
 const BRIEF_LINES = [
+  // M30 (plan section 5): the masterplan item, the plan the thread builds and what counts as accepted, one field each.
+  ['Item: (M<n> from PLAN.json, or new)', /^[ \t>-]*Item:[ \t]*(M\d+|new)\b/im],
+  ['Plan: (the plan file or card this thread builds)', /^[ \t>-]*Plan:[ \t]*[^<\s]/im],
+  ['Acceptance: (what counts as accepted)', /^[ \t>-]*Acceptance:[ \t]*[^<\s]/im],
   ['Model:', /^[ \t>-]*Model:[ \t]*[^<\s]/im],
   ['Skills:', /^[ \t>-]*Skills:[ \t]*[^<\s]/im],
   ['Done when:', /\bDone when:[ \t]*\n?[ \t]*[^<\s]/i],
@@ -688,7 +694,7 @@ export function badTeam(text, teams) {
   const film = rosterOf(teams, 'Film').includes(`| ${role.name} (`)
   const social = rosterOf(teams, 'Social').includes(`| ${role.name} (`)
   const media = ['video', 'social'].includes(kit)
-  const fits = social ? kit === 'social' : film ? media : media ? named(row.team, role.name) : !skips(row.skipped, role.name)
+  const fits = ['Reviewer', 'Researcher'].includes(role.name) || (social ? kit === 'social' : film ? media : media ? named(row.team, role.name) : !skips(row.skipped, role.name))
   return fits ? null : `the ${role.name} is not on the \`${kit}\` kit's team (docs/TEAMS.md, Kits: team "${row.team}", skipped "${row.skipped}"); start the role that row names`
 }
 
