@@ -119,7 +119,7 @@ const PAGE_CMD = /^\s*node (~|\/root|\/home\/user)\/\.claude\/claude-setup\/rule
 const readOnlyShell = (cmd) => {
   if (PLAN_CMD.test(cmd) || PAGE_CMD.test(cmd)) return true
   const c = cmd.replace(/\d?>&\d|\d?>\s*\/dev\/null/g, '')
-  if (/[`<>\n\r]|\$\(|\$\{/.test(c)) return false
+  if (/[`<>\n\r]|\$\(|\$\{/.test(c) || /&/.test(c.replace(/&&/g, ''))) return false // a lone & would start a second command
   return c.split(/\|\||&&|[|;]/).every((seg) => READ_CMD.test(seg) && !/\bsed\b[^|]*\s-[a-z]*i|\bfind\b[^|]*\s-(exec|execdir|delete|fprint|fls|ok)\b|\bgit\b[^|]*\s(--output|-o)\b/.test(seg))
 }
 // The text the plan file will hold after this edit: a split `Status: PA` + `SSED` cannot slip past a per-field match.

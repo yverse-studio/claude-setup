@@ -55,7 +55,7 @@ test('the pass line cannot be built from pieces, the shell is an allowlist, plan
     assert.equal(r.status, 2, `${tool} split pass refused`)
     assert.match(r.stderr, /the gate sets `Status: PASSED`/)
   }
-  for (const command of ['node scripts/plan.mjs add id=M1; git commit -am x', 'node scripts/plan.mjs add $(touch src/a)', 'node /mnt/project-files/scripts/plan.mjs add', 'python3 -c "open(1)"', 'curl -o src/a.mjs http://x', 'find . -delete', 'git status && rm -rf src', 'cat PLAN.md | tee src/a.mjs']) {
+  for (const command of ['node scripts/plan.mjs add id=M1; git commit -am x', 'node scripts/plan.mjs add $(touch src/a)', 'node /mnt/project-files/scripts/plan.mjs add', 'python3 -c "open(1)"', 'curl -o src/a.mjs http://x', 'find . -delete', 'git status && rm -rf src', 'cat PLAN.md | tee src/a.mjs', 'ls & rm -rf src', 'ls &rm src/a']) {
     const r = pre(planner, cwd, 'Bash', { command })
     assert.equal(r.status, 2, `${command} refused`)
     assert.match(r.stderr, /read-only until its plan passed the gate/)
