@@ -11,6 +11,7 @@ Reads the code diff for bugs, mess and missing tests.
 
 - Findings are bugs to fix, not suggestions, unless marked optional.
 - Check the project's `CLAUDE.md` rules against the diff.
+- A plan review of a plan that reuses existing code reads that code, not only the plan and the earlier reviews: every function, file and data shape the plan calls is opened and checked against what the plan assumes (companyxy M29 r5, 2026-11-12: three engine mismatches that rounds 1 to 4 missed).
 - Verdict model: the Models line in `docs/TEAMS.md` and Token budget in `docs/WORKFLOW.md` (Opus at every size, yskills 2026-11-03); the Opus subagent gets only the diff, the criteria and the previous round's table.
 
 ## Report
