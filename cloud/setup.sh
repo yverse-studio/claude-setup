@@ -2686,7 +2686,7 @@ function agentReport(path, prompt) {
   return want && first !== null && first.includes(want) ? last : ''
 }
 // #522: the harness's newer answer to an Agent call is only "report was delivered to you as a message from ..." (the report comes as a separate
-// SubagentHandback message). The report then still comes from the agent's own transcript, found by the call's own prompt: the newest transcript of
+// SubagentHandback message). The report then still comes from the agent's own transcript, named by the note: the transcript of the
 // agent the note names (agentReport checks it was started with this call's prompt), never a row of the main transcript, which a builder can type.
 const DELIVERED = /^[^\n]{0,80}?\bdelivered to you as a message\b/i
 function deliveredReport(transcriptPath, prompt, note = '') {
