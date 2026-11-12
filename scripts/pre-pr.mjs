@@ -11,6 +11,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { overlapWarnings } from './pr-overlap.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const args = process.argv.slice(2)
@@ -74,6 +75,11 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   if (body) step('PR body (Prior art:, Lessons:)', 'node', ['scripts/pr-lessons-check.mjs', body])
   else { results.push(['PR body', null]); console.log('open PR body: not checked here; run again with --body <file> before gh pr create (Prior art: ... -> copy|adapt|build, because ...; Lessons: <repo path>)') }
   if (!quick && steps.tests) { const [cmd, ...argv] = steps.tests.split(/\s+/); step('tests (CI line)', cmd, argv) }
+  // Warns only (scripts/pr-overlap.mjs): another branch that changes the same files is the next merge conflict.
+  try {
+    const warn = overlapWarnings({ cwd: root, base })
+    console.log(warn.length ? `note: overlap with other branches, not a failure; agree the order with that PR and say \`Depends on:\` in the body\n  ${warn.join('\n  ')}` : 'ok  overlap (no other local branch changes the same files)')
+  } catch (e) { console.log(`note: overlap not checked (${e.message.split('\n')[0]})`) }
   const failed = results.filter(([, ok]) => ok === false)
   if (failed.length) console.log(diagnoseRed({ failed: failed.map(([n]) => n), baseOk: baseCheckOk(failed.map(([n]) => n)) }))
   console.log(failed.length ? `pre-pr: ${failed.length} failing: ${failed.map(([n]) => n).join(', ')}. Fix the code, not the check.` : 'pre-pr: clean (CI runs the same steps)')
