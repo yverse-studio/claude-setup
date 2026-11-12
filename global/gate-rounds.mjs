@@ -439,7 +439,7 @@ export function gateStep(tool, input = {}, ctx = {}) {
   if (/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) && STAMP.test(file)) return 'gate ledger: the role stamp and the brief lock of a session are written only by the hooks (security review 2026-11-12), never by hand.'
   const target = file || String(input.notebook_path ?? '')
   if (/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) && TRANSCRIPT.test(lexical(target))) return 'gate ledger: a session transcript (~/.claude/projects/**/*.jsonl) is never written by hand: the origin proofs of the role lock, waive and approve read it (M53, plan section 7).'
-  if (/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) && ledgerFile(file, dir)) return 'gate ledger: the round counter is written only by gate-rounds.mjs (gate.md, Rounds), never by hand.'
+  if (/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) && ledgerFile(file, dir)) return 'gate ledger: the round counter is written only by gate-rounds.mjs (gate.md, Rounds), never by hand; a verdict the hook missed is counted by its gate role with "gate-rounds.mjs record <name> --body-file <f>" (a PR: "gate-rounds.mjs post <owner/repo#n> --body-file <f>").'
   if (/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) && /\.claude[\\/]claude-setup[\\/](gate-rounds|task-ledger|card-render|rule-guard|team-guard)\.mjs$/.test(file)) return 'gate ledger: the installed guards are changed only through claude-setup (a PR), never in place.'
   if (tool === 'Bash' || tool === 'PowerShell') return bashProblem(String(input.command ?? ''), dir, ctx)
   if (tool === 'mcp__github__create_pull_request') {
