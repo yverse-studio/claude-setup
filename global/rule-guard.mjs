@@ -23,7 +23,7 @@
 
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
 import { isIP } from 'node:net'
 import { homedir, tmpdir } from 'node:os'
 import { dirname, join, relative } from 'node:path'
@@ -354,14 +354,15 @@ export function sessionModel(transcript = '', env = process.env) {
 export const GATE_ROLES = /^(Tester|Reviewer|Security|Legal|Playtester|Hook Checker|Critic|Story Editor|Evaluator)$/i
 export const GATE_PRIOR = /^[ \t>-]*Prior art:[^\n]*\bgate\.md\b/im
 
-export async function briefCheck(prompt, cwd, model = null) {
-  if (!/<(wake|relay)\b[^>]*reason=\\?"spawn/.test(prompt)) return ''
+export async function briefCheck(prompt, cwd, model = null, any = false) {
+  if (!any && !/<(wake|relay)\b[^>]*reason=\\?"spawn/.test(prompt)) return ''
   let guard
   try { guard = await import(new URL('./team-guard.mjs', import.meta.url)) } catch { return '' }
   const teams = read(join(setupRoot(cwd), 'docs', 'TEAMS.md'))
   const brief = prompt.replace(/\\[nt]/g, '\n').replace(/<\/?(wake|message|thread|project|relay|coordinator-relay|cited|note|system-note)\b[^>]*>/g, '\n')
   const missing = guard.missingLines(brief)
   const why = !guard.stamped(brief) ? 'no `Role: · Kit: · Size:` stamp line'
+    : !roleOf(brief, teams)?.row ? 'the Role line names no role of the Roster (docs/TEAMS.md); "none" or a role of your own is not allowed in a thread'
     : guard.badTeam(brief, teams) ?? guard.badTopic(brief, read(join(setupRoot(cwd), guard.CHECKLISTS))) ?? (missing.length ? `brief lines missing: ${missing.join(', ')}` : null)
   if (why) return `Brief check (docs/TEAMS.md): this start breaks the team rules: ${why}. Do no work: send this reason and the corrected Role, Kit and Size to the coordinator (message_coordinator), then stop.`
   // The coordinator runs without hooks, so its model pick and gate brief are checked here, on the thread side.
@@ -751,13 +752,50 @@ const listProcs = () => {
 const agentTranscript = (transcriptPath, agentId) => (transcriptPath && agentId ? join(transcriptPath.replace(/\.jsonl$/, ''), 'subagents', `agent-${String(agentId).replace(/[^\w-]/g, '')}.jsonl`) : '')
 
 
+// A thread whose brief breaks the team rules does not work (yskills 2026-11-12: threads started without a Role line ran anyway). The prompt hook
+// leaves a lock; until a corrected brief arrives, every tool except talking to the coordinator is refused.
+export const lockFile = (session) => join(tmpdir(), `claude-setup-badbrief-${String(session).replace(/\W/g, '')}`)
+const LOCK_FREE = /^(mcp__hearthbot__(message_coordinator|post_message|no_reply_needed|update_progress_checklist|read_thread|read_messages_by_id|list_threads)|ReadNotifications|Read|Glob|Grep|ToolSearch)$/
+const BAD_BRIEF = /^(Brief check|Model check|Gate check)\b/
+export function updateLock(session, check) {
+  if (!session) return
+  const f = lockFile(session)
+  if (BAD_BRIEF.test(check)) writeFileSync(f, check)
+  else if (existsSync(f)) { try { unlinkSync(f) } catch { /* gone */ } } // any check that is no brief failure (an M-size note too) lifts it
+}
+// A corrected brief that arrives as a relay lifts the lock; it then stamps its role, as roleContext does for a spawn brief.
+async function relayRebrief(session, prompt, cwd, model) {
+  const text = prompt.replace(/\\n/g, '\n')
+  updateLock(session, await briefCheck(text, cwd, model, true))
+  if (existsSync(lockFile(session))) return
+  const role = roleOf(text, read(join(setupRoot(cwd), 'docs', 'TEAMS.md')))
+  if (role) writeFileSync(join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`), role.name)
+}
+export function lockBlock(tool, session) {
+  const f = session ? lockFile(session) : ''
+  if (!f || !existsSync(f) || LOCK_FREE.test(tool)) return null
+  return `rule-guard: this thread's brief breaks the team rules, so it does no work (docs/TEAMS.md, Coordinator or thread): ${read(f).slice(0, 300)}\nSend the reason and the corrected Role, Kit and Size to the coordinator (message_coordinator) and wait for a new brief.`
+}
+// docs/hands-off.md: a role never writes the files another role owns.
+export function handsOff(tool, input = {}, role = '', root = '') {
+  if (!/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) || !role) return null
+  const name = String(input.file_path ?? input.notebook_path ?? '').split(/[\\/]/).pop().toLowerCase()
+  const rows = read(join(root, 'docs', 'hands-off.md')).split('\n').filter((l) => /^\| [A-Z]/.test(l) && !/^\| Role /.test(l)).map((l) => l.split('|').map((c) => c.trim()))
+  const hit = rows.find((c) => c[1].toLowerCase() === role.toLowerCase() && name.includes(c[2].toLowerCase()))
+  return hit ? `rule-guard: a ${hit[1]} does not write "${name}" itself: that is the ${hit[3]}'s work (docs/hands-off.md). Call the ${hit[3]} as its own subagent (docs/TEAMS.md, Roster) and use its output.` : null
+}
+
 // Gate round counter (global/gate-rounds.mjs, operator/gate.md Rounds): a gate post, a merge, a ledger write or a director/card record is
 // checked against the asset's ledger. Fail closed: a check that throws refuses the call (research 2026-11-12: a crashing hook does not block).
 const humanAfter = (transcript, ref) => {
   const id = String(ref).match(/cmsg_\w+/)?.[0]
   const rows = transcript.split('\n').map((l) => { try { return JSON.parse(l) } catch { return null } }).filter(Boolean)
   const at = rows.findIndex((r) => id && JSON.stringify(r.message?.content ?? '').includes(id))
-  const human = (r) => r.type === 'user' && !(Array.isArray(r.message?.content) && r.message.content.some((c) => c?.type === 'tool_result')) && /<message\b[^>]*\bfrom=\\?"human\\?"[^>]*\btrust=\\?"principal\\?"/.test(JSON.stringify(r.message?.content ?? ''))
+  // Finding 3: the principal tag counts only as the message the wake wraps (the wrapper opens the row, then project and thread tags), never
+  // as text quoted inside a relay, a cited message or a tool result.
+  const text = (r) => typeof r.message?.content === 'string' ? r.message.content : (Array.isArray(r.message?.content) ? r.message.content.map((c) => (c?.type === 'text' ? c.text ?? '' : '')).join('\n') : '')
+  const WAKE = /^\s*<wake\b[^>]*>\s*(?:<project\b[^>]*>\s*)?(?:<thread\b[^>]*>\s*)?<message\b(?=[^>]*\bfrom="human")(?=[^>]*\btrust="principal")/
+  const human = (r) => r.type === 'user' && !(Array.isArray(r.message?.content) && r.message.content.some((c) => c?.type === 'tool_result')) && WAKE.test(text(r))
   return at >= 0 && rows.slice(at + 1).some(human)
 }
 // A cached cloud image can lack the counter (its pasted setup predates it) and its start hook, the old team-guard, never fetches it
@@ -771,7 +809,7 @@ async function loadCounter() {
     return import(url)
   }
 }
-export async function gateBlock(tool, input, transcript, model, dry = false) {
+export async function gateBlock(tool, input, transcript, model, dry = false, role = '') {
   if (!/^(Write|Edit|MultiEdit|NotebookEdit|Bash|PowerShell)$|^mcp__github__/.test(tool)) return null
   let mod
   try { mod = await loadCounter() } catch (e) {
@@ -781,7 +819,7 @@ export async function gateBlock(tool, input, transcript, model, dry = false) {
   }
   try {
     const t = transcript()
-    const why = mod.gateStep(tool, input, { model, dry, calls: /gate-rounds\.mjs/.test(JSON.stringify(input)) ? toolCalls(t) : [], humanAfter: (ref) => humanAfter(t, ref) })
+    const why = mod.gateStep(tool, input, { model, dry, role, calls: /gate-rounds\.mjs|\bGate\b/.test(JSON.stringify(input)) ? toolCalls(t) : [], humanAfter: (ref) => humanAfter(t, ref) })
     return why ? `rule-guard: ${why}` : null
   } catch (e) { return `rule-guard: gate ledger check failed (${String(e.message).slice(0, 80)}); refused, fail closed (operator/gate.md, Rounds).` }
 }
@@ -817,7 +855,10 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           const brief = lookup ? spawnPrompt(prompt, read(transcriptPath)) : prompt
           if (session && (spawned || (lookup && brief !== prompt))) writeFileSync(briefOnce, '')
           const model = sessionModel(transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : '') ?? (read(join(tmpdir(), `claude-setup-model-${String(session).replace(/[^A-Za-z0-9]/g, '')}`)).trim() || null)
-          const context = [await briefCheck(brief, cwd, model), spawned || (lookup && brief !== prompt) ? await gateBriefContext(brief, model) : '', spawned ? await guardLine() : '', modelOnce(brief, transcriptPath, session), await roleContext(brief, cwd, session), promptContext(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
+          const checkNow = await briefCheck(brief, cwd, model)
+          if (spawned || (lookup && brief !== prompt)) updateLock(session, checkNow)
+          else if (existsSync(lockFile(session)) && /\bRole:/.test(prompt)) await relayRebrief(session, prompt, cwd, model)
+          const context = [checkNow, spawned || (lookup && brief !== prompt) ? await gateBriefContext(brief, model) : '', spawned ? await guardLine() : '', modelOnce(brief, transcriptPath, session), await roleContext(brief, cwd, session), promptContext(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
           if (context) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: context } }))
           return
         }
@@ -831,7 +872,10 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         const shipped = join(tmpdir(), `claude-setup-artifacts-${String(session).replace(/\W/g, '')}`)
         const transcript = () => (transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : '')
         const sessionTranscript = () => [transcriptPath, agentTranscript(transcriptPath, agentId)].filter((p) => p && existsSync(p)).map(read).join('\n')
-        let block = (await gateBlock(tool, input ?? {}, transcript, sessionModel(transcript()), true))
+        const gateRole = session ? read(join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)).trim() : ''
+        let block = lockBlock(tool, session)
+          ?? handsOff(tool, input ?? {}, gateRole, setupRoot(cwd))
+          ?? (await gateBlock(tool, input ?? {}, transcript, sessionModel(transcript()), true, gateRole))
           ?? decide(tool, input ?? {}, process.env, session ? read(shipped).split('\n') : [], () => threadBoard(toolCalls(transcript())))
           ?? canaryMissing(tool, input ?? {}, session ? read(join(process.env.CLAUDE_SETUP_HOME || homedir(), '.claude', 'claude-setup', 'booted', `${String(session).replace(/\W/g, '')}.canary`)) : '', transcript)
           ?? receiptBlock(tool, input ?? {}, session, cwd, agentId, transcript)
@@ -843,7 +887,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           ?? blenderServerBusy(tool, input ?? {}, listProcs)
           ?? blenderDocsMissing(tool, input ?? {}, sessionTranscript)
           ?? (grillMissing(tool, input ?? {}, transcript) ? 'rule-guard: a Planner at size M or L grills first (CLAUDE.md, No fog; operator SKILL.md, Grill first): post the real-moment question (when it comes from his life) and up to 2 request_decision cards (goal, taste), each with your recommended answer, then write the plan on the answers (or the recommendations while he is away).' : null)
-        if (!block) block = await gateBlock(tool, input ?? {}, transcript, sessionModel(transcript()), false) // commit the round only now: no other guard refused the post
+        if (!block) block = await gateBlock(tool, input ?? {}, transcript, sessionModel(transcript()), false, gateRole) // commit the round only now: no other guard refused the post
         if (!block && session && tool === 'Artifact' && input?.url && input.file_path) writeFileSync(shipped, `${input.file_path}\n`, { flag: 'a' })
         if (block) { process.stderr.write(block); process.exitCode = 2 }
         else {

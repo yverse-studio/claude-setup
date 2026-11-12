@@ -534,9 +534,19 @@ export function stamped(text) {
 }
 
 // Every size (yskills 2026-11-03: research before guessing, a small task too).
+// Prior art (yskills 2026-11-12: "erst schauen was gut funktioniert, dann klauen oder reverse engineeren, dann selber bauen"): the line records real
+// findings, not a gesture: a named source (URL, owner/repo or path, #n, a file name, a `name`) and the decision (copy, adapt, reuse, extend, build);
+// or `none, because <why nothing could exist>`; or `to find: <where the Researcher looks>` when the Researcher has not run yet.
+// scripts/pr-lessons-check.mjs holds the same rule for the PR body; scripts/pr-lessons-check.test.mjs runs one corpus through both.
+const PA_SOURCE = /https?:\/\/\S+|[\w.-]+\/[\w.-]+|#\d+|\b[\w-]+\.(?:md|mjs|json|ts|js|yml|sh)\b|`[^`\n]{3,}`/
+const PA_DECISION = /\b(copy|copied|adapt(?:ed|s)?|reuse[ds]?|build|built|extend(?:ed|s)?|reverse-engineer\w*)\b/i
+export function priorArtOk(line) {
+  const t = String(line).replace(/\*\*/g, '').trim()
+  return /^none, because .{10,}$/i.test(t) || /\bto find:\s*\S{5,}/i.test(t) || (t.length >= 20 && PA_SOURCE.test(t) && PA_DECISION.test(t))
+}
 export function needsPriorArt(text) {
-  const plain = text.replace(/[*_`]/g, '')
-  return /\bSize:[ \t]*[SML]\b/i.test(plain) &&!/^[ \t>-]*Prior art:[ \t]*[^<\s][^\n]{9,}$/im.test(plain)
+  const line = String(text).split('\n').map((l) => l.replace(/^[ \t>-]*(?:\*\*)?Prior art:(?:\*\*)?[ \t]*/i, (m) => (/Prior art:/i.test(m) ? '\u0000' : m))).find((l) => l.startsWith('\u0000'))
+  return /\bSize:[ \t]*[SML]\b/i.test(String(text).replace(/[*_`]/g, '')) && !(line && priorArtOk(line.slice(1)))
 }
 
 const briefText = (input) => Object.values(input).filter((v) => typeof v === 'string').join('\n')
@@ -645,13 +655,17 @@ export function badTopic(text, checklists) {
   return names.some((n) => n.toLowerCase() === topic.toLowerCase()) ? null : `Topic: ${topic} is no topic in ${CHECKLISTS}: pick one of ${names.join(', ')}`
 }
 
+// Skill folders of claude-setup that get mistaken for kits.
+const SKILL_NAMES = /^(game-3d|social-team|video-studio|storyteller|blender-body|media-editing|roblox|studio|twin|store|store-publish|market|sell|seo|legal|publish|scaffold|toolbox|ui-review|impeccable|operator)$/
 export function badTeam(text, teams) {
   const plain = text.replace(/[*_`]/g, '')
   const rows = teams ? kitRows(teams) : []
   if (!rows.length) return null
   const kit = plain.match(/\bKit:[ \t]*([\w-]+)/i)?.[1].toLowerCase()
   const row = rows.find((r) => r.kit === kit)
-  if (!row) return `Kit: ${kit} is no kit in docs/TEAMS.md (Kits): pick one of ${rows.map((r) => r.kit).join(', ')} by what the task makes (Spawn rule 1)`
+  // A skill name is not a kit (2026-11-12: game-3d, social-team): the kit is what the task makes, the skill goes on the Skills: line.
+  const skill = /^[a-z][\w-]*$/.test(kit) && kit !== 'none' && SKILL_NAMES.test(kit) ? ` (\`${kit}\` is a skill: put it on the Skills: line and pick the kit by what the task makes, e.g. game-3d is a game, social-team is social)` : ''
+  if (!row) return `Kit: ${kit} is no kit in docs/TEAMS.md (Kits)${skill}: pick one of ${rows.map((r) => r.kit).join(', ')} by what the task makes (Spawn rule 1)`
   const size = plain.match(/\bSize:[ \t]*([SML])\b/i)?.[1].toUpperCase()
   if (['video', 'social'].includes(kit) && size === 'S') return `a ${kit} brief is size M (one video or post) or L (a batch, series or launch video), never S (docs/TEAMS.md, Spawn rule 2)`
   const role = roleOf(plain, teams)
@@ -707,7 +721,7 @@ export function decide(tool, input = {}, dirs = [], unread = [], teams = '', che
     if (title) found.push(`a ${title} thread is titled \`${title} · <what>\` (claude-setup docs/TEAMS.md, Roster "Runs as"), e.g. "${title} · Bienen-Video"; fix the title`)
     const lines = missingLines(text)
     if (lines.length) found.push(`the brief misses ${lines.join(', ')} (claude-setup .claude/skills/operator/briefs.md, Every thread brief starts with)`)
-    if (needsPriorArt(text)) found.push('add a line `Prior art: <our repos, skills, plugins, public setups checked> -> copy | adapt | build, because <why>` (or `to find: <where the Researcher looks>`; CLAUDE.md, Work for the future)')
+    if (needsPriorArt(text)) found.push('add a line `Prior art: <the sources checked, named: owner/repo, path, URL, #PR> -> copy | adapt | reuse | build, because <why>` (a gesture like \"looked around\" fails; or `none, because <why nothing could exist>`, or `to find: <where the Researcher looks>`; CLAUDE.md, Work for the future)')
     if (needsTester(text)) found.push('a size L Programmer thread starts only after its Tester thread (claude-setup docs/TEAMS.md, Sizes): start `Tester · <app>` first, then put a line `Tester: <its thread id or title>` in this brief')
     const wrong = wrongModel(text, input.model, teams)
     if (wrong) found.push(`the ${wrong.role} runs on ${wrong.allowed.join(' or ')} (claude-setup docs/TEAMS.md, Roster), not ${wrong.tier}. Pass that model. For an exception the row names (e.g. "Opus writes the weekly plan") add \`Model: <tier> (<why>)\` to the brief; if yskills named this model, say "yskills named <model>"`)
@@ -835,9 +849,9 @@ cat > "$HOME/.claude/claude-setup/gate-rounds.mjs" <<'GATE'
 // CLI: gate-rounds.mjs status|check|init|direct|card|picture|waive <asset> ...   (usage text below)
 // Fail closed: a gate-shaped call whose check throws is refused. CLAUDE_SETUP_RULE_GUARD=off turns the hook (not the CLI) off.
 import { execFileSync } from 'node:child_process'
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { join } from 'node:path'
+import { basename, join, normalize } from 'node:path'
 
 export const THRESHOLD = 4.5
 export const IMPORTANT_THRESHOLD = 4.8
@@ -869,6 +883,44 @@ export function writeLedger(dir, ledger) {
   renameSync(`${f}.${process.pid}.tmp`, f)
 }
 export const lastRound = (l) => l.rounds.at(-1)?.n ?? 0
+
+// ---- grants (security review 2026-11-12, finding 1): the proofs for init, direct, card, picture and waive are read by the hook, and the
+// CLI refuses those verbs without the short grant the hook leaves after it checked them. A call that bypasses the hook (a copy of this
+// file, node -e, an import) reaches the CLI without a grant and is refused there too, so the filename in argv is no longer the lock.
+export const GRANTED = ['init', 'direct', 'card', 'picture', 'waive']
+export const GRANT_SECONDS = 120
+const grantFile = (dir, verb, asset) => join(dir, 'grants', `${verb}.${basename(fileOf(dir, asset))}`)
+// The hook reads the command before the shell expands it, the CLI after: both sides key the grant on the same form (gate round 1 of the #450 re-land).
+export const grantKey = (ref, home = homedir()) => { const v = String(ref ?? '').trim().replace(/^(['"])(.*)\1$/, '$2'); return v ? normalize(v.replace(/^(?:~|\$HOME|\$\{HOME\})(?=\/|$)/, home)) : '' }
+export function issueGrant(dir, verb, asset, ref, now = Date.now()) {
+  mkdirSync(join(dir, 'grants'), { recursive: true })
+  writeFileSync(grantFile(dir, verb, asset), `${JSON.stringify({ verb, asset: String(asset).toLowerCase(), ref: grantKey(ref), exp: now + GRANT_SECONDS * 1000 })}\n`)
+}
+export function takeGrant(dir, verb, asset, ref, now = Date.now()) {
+  const f = grantFile(dir, verb, asset)
+  let g
+  try { g = JSON.parse(readFileSync(f, 'utf8')) } catch { return false }
+  try { unlinkSync(f) } catch { /* already taken */ }
+  return g.exp > now && g.verb === verb && g.asset === String(asset).toLowerCase() && g.ref === grantKey(ref)
+}
+
+// ---- who may post a verdict (finding 2): a verdict is counted only from a gate session (role Tester, Reviewer, Evaluator) or when the
+// headline came out of a fresh reviewer subagent of this session (gate.md: S and M run in the author thread with one fresh code-reviewer).
+// A Programmer that types its own "Gate 5/5" has neither, so it can neither pass nor merge itself.
+const norm = (t) => String(t).replace(/[*_`#>\s]+/g, ' ').trim().toLowerCase()
+const GATE_ROLE = /^(tester|reviewer|evaluator)$/i // exact Roster name from the role stamp, never a prefix (security review 2026-11-12)
+// Real reviewer agents only (an invented subagent_type does not vouch), the verdict must open the reviewer's own result, and the prompt the
+// builder gave it must not already contain that verdict (security review 2026-11-12, finding 2: a self-attested proof).
+const REVIEWER = /^(code-reviewer|evaluator|security-reviewer|typescript-reviewer|vue-reviewer|database-reviewer|design-critic|legal-reviewer|red-team)$/
+export function reviewerProof(body, calls = []) {
+  const line = norm(String(body).split('\n').find((l) => l.trim()) ?? '')
+  const lead = (t) => norm(String(t).split('\n').find((l) => l.trim()) ?? '')
+  return !!line && calls.some((c) => /^(Agent|Task)$/.test(c.name) && REVIEWER.test(String(c.input?.subagent_type ?? '')) && lead(c.result) === line && !norm(c.input?.prompt ?? '').includes(line))
+}
+export function authorProblem(body, ctx = {}) {
+  if (GATE_ROLE.test(ctx.role ?? '') || reviewerProof(body, ctx.calls ?? [])) return null
+  return `gate verdict: a verdict counts only from a gate session (role Tester or Reviewer) or when its headline came out of a fresh reviewer subagent of this session (code-reviewer or evaluator). This session is ${ctx.role ? `the ${String(ctx.role).slice(0, 30)}` : 'not a gate role'} and no reviewer subagent returned this headline, so a builder cannot pass or merge its own work (gate.md, Rounds).`
+}
 
 // "Gate 4.2/5 (L, round 3) [important]" or "Gate 5/5 (S, round 1)" or "Gate fail, round 2".
 // Only a line that STARTS with "Gate <score>/5", "Gate fail" or "Gate pass" is a verdict; "the gate flagged ... round 1" is talk.
@@ -1110,13 +1162,22 @@ function ghProblem(s) {
 
 // The literal ledger or guard path only: a word that holds the ledger dir (or .claude/claude-setup/gate, project-files/gate) or an installed
 // guard file, as a redirect target or an argument of a writer. Shell tricks around it are a named Limit (gate.md, Rounds).
+// The session stamps the guards write in the temp dir: the role (who may post a verdict, hands-off) and the brief lock.
+const STAMP = /claude-setup-(?:role|badbrief|model|brief|artifacts)-/
+const READ_ONLY = new Set(['cat', 'grep', 'rg', 'ls', 'head', 'tail', 'wc', 'diff', 'git', 'stat', 'file', 'less', 'echo', 'printf', 'find', 'test', 'cd', 'sed', 'awk'])
+// `node <script>` whose first non-flag argument is gate-rounds.mjs, with no flag that runs other code first.
+const isCounterCall = (s) => s.a0 === 'node' && !s.args.some((a) => /^(-e|-p|--eval|--print|--import|-r|--require|--input-type|--loader|--experimental-loader)/.test(a)) && base(s.args.find((a) => !a.startsWith('-')) ?? '') === 'gate-rounds.mjs'
 function bashProblem(cmd, dir, ctx) {
   const { list, bad } = simpleCommands(cmd)
   if (bad && /\bgh\b|gate/.test(cmd)) return 'gate ledger: this command has unbalanced quotes and mentions gh or gate, so it cannot be read; write it plainly (gate.md, Rounds).'
-  const dirRe = dir ? new RegExp(`${dir.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\/+$/, '')}(?:/|$)`) : null
-  const named = (w) => !/\s/.test(w) && (dirRe?.test(w) || /(?:project-files|\.claude\/claude-setup)\/gate(?:\/|$)/.test(w) || GUARD_FILE.test(w))
+  // Only the ledger itself is protected: the dir, a file directly in it and grants/. Files below gate/<asset>/ (images, PLAN-REVIEW.md) are free (transition rule 6).
+  const dirRe = dir ? new RegExp(`^(?:[-\\w]*=)?${dir.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\/+$/, '')}(?:/(?:grants(?:/.*)?|[^/]*))?$`) : null
+  const named = (w) => !/\s/.test(w) && (STAMP.test(w) || dirRe?.test(w) || /^(?:[-\w]*=)?(?:.*\/)?(?:project-files|\.claude\/claude-setup)\/gate(?:\/(?:grants(?:\/.*)?|[^/]*))?$/.test(w) || GUARD_FILE.test(w))
   const msg = 'gate ledger: the round counter is written only by gate-rounds.mjs (gate.md, Rounds), never by hand; the installed guards change only through a claude-setup PR.'
   if (list.some((s) => s.env) && list.some((s) => s.a0 === 'node' && s.args.some((a) => base(a) === 'gate-rounds.mjs'))) return 'gate ledger: CLAUDE_SETUP_* variables (the ledger dir, the guard switch) are not set in a call that runs the counter; they would point it at another ledger (gate.md, Rounds).'
+  // Finding 1: the counter is run as `node <path>/gate-rounds.mjs <verb>` and nothing else. Any other command that names the file and is
+  // not a plain read (a copy, node -e, an import, a symlink) is refused, so the proofs cannot be walked around by renaming the script.
+  if (/gate-rounds\.mjs/.test(cmd) && !list.every((s) => isCounterCall(s) || READ_ONLY.has(base(s.a0).toLowerCase()))) return 'gate ledger: gate-rounds.mjs is run only as "node ~/.claude/claude-setup/gate-rounds.mjs <verb> <asset> ..." (gate.md, Rounds); copying it, importing it or running it through node -e is refused, because the proofs live in this hook and in the CLI.'
   for (const s of list) {
     if (s.a0 === 'gh') { const r = ghProblem(s); if (r) return r }
     if (s.redirs.some((r) => !/\s/.test(r) && (named(r) || GUARD_FILE.test(r)))) return msg
@@ -1131,6 +1192,12 @@ function bashProblem(cmd, dir, ctx) {
       if (verb === 'direct' && !/fable/i.test(ctx.model ?? '')) return `gate ledger: only a Fable session records the director, this one runs on ${ctx.model ?? 'an unknown model'}. Ask the coordinator for a Fable thread (docs/TEAMS.md, Models line).`
       if (['card', 'picture', 'waive'].includes(verb) && !(ref && cardProof(ref, ctx.calls ?? []))) return `gate ledger: "${verb}" needs --ref <cmsg id> of a request_decision card this session posted (it was not found in this session).`
       if (verb === 'waive' && !(ctx.humanAfter?.(ref))) return 'gate ledger: waive needs yskills\' own answer on that card in this session; none arrived yet.'
+      if (verb === 'post') {
+        const body = read(s.args[s.args.indexOf('--body-file') + 1] ?? '')
+        const why = authorProblem(body, ctx)
+        if (why) return why
+      }
+      if (!ctx.dry && GRANTED.includes(verb)) issueGrant(dir, verb, s.args[at + 2], verb === 'init' ? s.args[s.args.indexOf('--round') + 1] : verb === 'direct' ? s.args[s.args.indexOf('--plan') + 1] : ref)
       continue
     }
     const writes = WRITERS.has(s.a0.toLowerCase()) || (s.a0 === 'sed' && s.args.some((x) => /^-[a-zA-Z]*i|^--in-place/.test(x)))
@@ -1149,10 +1216,13 @@ const assetOf = (input) => {
 
 // PreToolUse. ctx: { dir, model, calls (the session's tool calls), humanAfter(ref), dry }. Returns a reason or null. dry: check only; the
 // hook runs it first and commits (dry false) only when no other guard refused, so a refused post is never counted.
+// A Write or Edit target that is the ledger: a file directly in the ledger dir (or the project-files/gate folder) or under grants/.
+const ledgerFile = (file, dir) => [dir, '/mnt/project-files/gate'].some((d) => { const root = `${String(d).replace(/\/+$/, '')}/`; if (!file.startsWith(root) && !file.includes('project-files/gate/')) return false; const rel = file.includes('project-files/gate/') && !file.startsWith(root) ? file.split('project-files/gate/').pop() : file.slice(root.length); return !rel.includes('/') || rel.startsWith('grants/') })
 export function gateStep(tool, input = {}, ctx = {}) {
   const dir = ctx.dir ?? ledgerDir()
   const file = String(input.file_path ?? '')
-  if (/^(Write|Edit)$/.test(tool) && (file.includes('project-files/gate/') || (file.startsWith(`${dir}/`) && file.endsWith('.json')))) return 'gate ledger: the round counter is written only by gate-rounds.mjs (gate.md, Rounds), never by hand.'
+  if (/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) && STAMP.test(file)) return 'gate ledger: the role stamp and the brief lock of a session are written only by the hooks (security review 2026-11-12), never by hand.'
+  if (/^(Write|Edit)$/.test(tool) && ledgerFile(file, dir)) return 'gate ledger: the round counter is written only by gate-rounds.mjs (gate.md, Rounds), never by hand.'
   if (/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) && /\.claude[\\/]claude-setup[\\/](gate-rounds|task-ledger|rule-guard|team-guard)\.mjs$/.test(file)) return 'gate ledger: the installed guards are changed only through claude-setup (a PR), never in place.'
   if (tool === 'Bash' || tool === 'PowerShell') return bashProblem(String(input.command ?? ''), dir, ctx)
   if (tool === 'mcp__github__create_pull_request') {
@@ -1163,8 +1233,10 @@ export function gateStep(tool, input = {}, ctx = {}) {
   if (!asset) return null
   if (MERGES.test(tool)) return mergeProblem(readLedger(dir, asset))
   if (!POSTS.test(tool)) return null
-  const head = parseHeadline(input.body ?? input.comment ?? '')
-  return head ? verdictProblem(dir, asset, head, ctx.dry) : null
+  const text = input.body ?? input.comment ?? ''
+  const head = parseHeadline(text)
+  if (!head) return null
+  return authorProblem(text, ctx) ?? verdictProblem(dir, asset, head, ctx.dry)
 }
 
 // ---- CLI
@@ -1190,6 +1262,10 @@ export function cli(argv, env = process.env) {
   const fail = (t) => ({ code: 2, text: t })
   if (cmd === 'status') return { code: 0, text: JSON.stringify(l, null, 2) }
   if (cmd === 'check') return roundProblem(l, Number(rest[0])) ? fail(roundProblem(l, Number(rest[0]))) : { code: 0, text: 'ok' }
+  if (GRANTED.includes(cmd)) {
+    const key = cmd === 'init' ? flag(rest, '--round') : cmd === 'direct' ? flag(rest, '--plan') : flag(rest, '--ref')
+    if (!takeGrant(dir, cmd, asset, key)) return fail(`${cmd}: refused: the hook (global/rule-guard.mjs) checks the proof for this verb and leaves a short grant; none was found for this call. Run it as "node ~/.claude/claude-setup/gate-rounds.mjs ${cmd} <asset> ..." in a session where the hook is on (gate.md, Rounds).`)
+  }
   if (cmd === 'init') {
     const n = Number(flag(rest, '--round'))
     if (l.rounds.length || !(n >= 1)) return fail('init: only for an asset without a ledger, with --round <n> (1 or more: the rounds that already ran)')
@@ -1402,7 +1478,7 @@ cat > "$HOME/.claude/claude-setup/rule-guard.mjs" <<'RULE'
 
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
 import { isIP } from 'node:net'
 import { homedir, tmpdir } from 'node:os'
 import { dirname, join, relative } from 'node:path'
@@ -1733,14 +1809,15 @@ export function sessionModel(transcript = '', env = process.env) {
 export const GATE_ROLES = /^(Tester|Reviewer|Security|Legal|Playtester|Hook Checker|Critic|Story Editor|Evaluator)$/i
 export const GATE_PRIOR = /^[ \t>-]*Prior art:[^\n]*\bgate\.md\b/im
 
-export async function briefCheck(prompt, cwd, model = null) {
-  if (!/<(wake|relay)\b[^>]*reason=\\?"spawn/.test(prompt)) return ''
+export async function briefCheck(prompt, cwd, model = null, any = false) {
+  if (!any && !/<(wake|relay)\b[^>]*reason=\\?"spawn/.test(prompt)) return ''
   let guard
   try { guard = await import(new URL('./team-guard.mjs', import.meta.url)) } catch { return '' }
   const teams = read(join(setupRoot(cwd), 'docs', 'TEAMS.md'))
   const brief = prompt.replace(/\\[nt]/g, '\n').replace(/<\/?(wake|message|thread|project|relay|coordinator-relay|cited|note|system-note)\b[^>]*>/g, '\n')
   const missing = guard.missingLines(brief)
   const why = !guard.stamped(brief) ? 'no `Role: · Kit: · Size:` stamp line'
+    : !roleOf(brief, teams)?.row ? 'the Role line names no role of the Roster (docs/TEAMS.md); "none" or a role of your own is not allowed in a thread'
     : guard.badTeam(brief, teams) ?? guard.badTopic(brief, read(join(setupRoot(cwd), guard.CHECKLISTS))) ?? (missing.length ? `brief lines missing: ${missing.join(', ')}` : null)
   if (why) return `Brief check (docs/TEAMS.md): this start breaks the team rules: ${why}. Do no work: send this reason and the corrected Role, Kit and Size to the coordinator (message_coordinator), then stop.`
   // The coordinator runs without hooks, so its model pick and gate brief are checked here, on the thread side.
@@ -2130,13 +2207,50 @@ const listProcs = () => {
 const agentTranscript = (transcriptPath, agentId) => (transcriptPath && agentId ? join(transcriptPath.replace(/\.jsonl$/, ''), 'subagents', `agent-${String(agentId).replace(/[^\w-]/g, '')}.jsonl`) : '')
 
 
+// A thread whose brief breaks the team rules does not work (yskills 2026-11-12: threads started without a Role line ran anyway). The prompt hook
+// leaves a lock; until a corrected brief arrives, every tool except talking to the coordinator is refused.
+export const lockFile = (session) => join(tmpdir(), `claude-setup-badbrief-${String(session).replace(/\W/g, '')}`)
+const LOCK_FREE = /^(mcp__hearthbot__(message_coordinator|post_message|no_reply_needed|update_progress_checklist|read_thread|read_messages_by_id|list_threads)|ReadNotifications|Read|Glob|Grep|ToolSearch)$/
+const BAD_BRIEF = /^(Brief check|Model check|Gate check)\b/
+export function updateLock(session, check) {
+  if (!session) return
+  const f = lockFile(session)
+  if (BAD_BRIEF.test(check)) writeFileSync(f, check)
+  else if (existsSync(f)) { try { unlinkSync(f) } catch { /* gone */ } } // any check that is no brief failure (an M-size note too) lifts it
+}
+// A corrected brief that arrives as a relay lifts the lock; it then stamps its role, as roleContext does for a spawn brief.
+async function relayRebrief(session, prompt, cwd, model) {
+  const text = prompt.replace(/\\n/g, '\n')
+  updateLock(session, await briefCheck(text, cwd, model, true))
+  if (existsSync(lockFile(session))) return
+  const role = roleOf(text, read(join(setupRoot(cwd), 'docs', 'TEAMS.md')))
+  if (role) writeFileSync(join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`), role.name)
+}
+export function lockBlock(tool, session) {
+  const f = session ? lockFile(session) : ''
+  if (!f || !existsSync(f) || LOCK_FREE.test(tool)) return null
+  return `rule-guard: this thread's brief breaks the team rules, so it does no work (docs/TEAMS.md, Coordinator or thread): ${read(f).slice(0, 300)}\nSend the reason and the corrected Role, Kit and Size to the coordinator (message_coordinator) and wait for a new brief.`
+}
+// docs/hands-off.md: a role never writes the files another role owns.
+export function handsOff(tool, input = {}, role = '', root = '') {
+  if (!/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) || !role) return null
+  const name = String(input.file_path ?? input.notebook_path ?? '').split(/[\\/]/).pop().toLowerCase()
+  const rows = read(join(root, 'docs', 'hands-off.md')).split('\n').filter((l) => /^\| [A-Z]/.test(l) && !/^\| Role /.test(l)).map((l) => l.split('|').map((c) => c.trim()))
+  const hit = rows.find((c) => c[1].toLowerCase() === role.toLowerCase() && name.includes(c[2].toLowerCase()))
+  return hit ? `rule-guard: a ${hit[1]} does not write "${name}" itself: that is the ${hit[3]}'s work (docs/hands-off.md). Call the ${hit[3]} as its own subagent (docs/TEAMS.md, Roster) and use its output.` : null
+}
+
 // Gate round counter (global/gate-rounds.mjs, operator/gate.md Rounds): a gate post, a merge, a ledger write or a director/card record is
 // checked against the asset's ledger. Fail closed: a check that throws refuses the call (research 2026-11-12: a crashing hook does not block).
 const humanAfter = (transcript, ref) => {
   const id = String(ref).match(/cmsg_\w+/)?.[0]
   const rows = transcript.split('\n').map((l) => { try { return JSON.parse(l) } catch { return null } }).filter(Boolean)
   const at = rows.findIndex((r) => id && JSON.stringify(r.message?.content ?? '').includes(id))
-  const human = (r) => r.type === 'user' && !(Array.isArray(r.message?.content) && r.message.content.some((c) => c?.type === 'tool_result')) && /<message\b[^>]*\bfrom=\\?"human\\?"[^>]*\btrust=\\?"principal\\?"/.test(JSON.stringify(r.message?.content ?? ''))
+  // Finding 3: the principal tag counts only as the message the wake wraps (the wrapper opens the row, then project and thread tags), never
+  // as text quoted inside a relay, a cited message or a tool result.
+  const text = (r) => typeof r.message?.content === 'string' ? r.message.content : (Array.isArray(r.message?.content) ? r.message.content.map((c) => (c?.type === 'text' ? c.text ?? '' : '')).join('\n') : '')
+  const WAKE = /^\s*<wake\b[^>]*>\s*(?:<project\b[^>]*>\s*)?(?:<thread\b[^>]*>\s*)?<message\b(?=[^>]*\bfrom="human")(?=[^>]*\btrust="principal")/
+  const human = (r) => r.type === 'user' && !(Array.isArray(r.message?.content) && r.message.content.some((c) => c?.type === 'tool_result')) && WAKE.test(text(r))
   return at >= 0 && rows.slice(at + 1).some(human)
 }
 // A cached cloud image can lack the counter (its pasted setup predates it) and its start hook, the old team-guard, never fetches it
@@ -2150,7 +2264,7 @@ async function loadCounter() {
     return import(url)
   }
 }
-export async function gateBlock(tool, input, transcript, model, dry = false) {
+export async function gateBlock(tool, input, transcript, model, dry = false, role = '') {
   if (!/^(Write|Edit|MultiEdit|NotebookEdit|Bash|PowerShell)$|^mcp__github__/.test(tool)) return null
   let mod
   try { mod = await loadCounter() } catch (e) {
@@ -2160,7 +2274,7 @@ export async function gateBlock(tool, input, transcript, model, dry = false) {
   }
   try {
     const t = transcript()
-    const why = mod.gateStep(tool, input, { model, dry, calls: /gate-rounds\.mjs/.test(JSON.stringify(input)) ? toolCalls(t) : [], humanAfter: (ref) => humanAfter(t, ref) })
+    const why = mod.gateStep(tool, input, { model, dry, role, calls: /gate-rounds\.mjs|\bGate\b/.test(JSON.stringify(input)) ? toolCalls(t) : [], humanAfter: (ref) => humanAfter(t, ref) })
     return why ? `rule-guard: ${why}` : null
   } catch (e) { return `rule-guard: gate ledger check failed (${String(e.message).slice(0, 80)}); refused, fail closed (operator/gate.md, Rounds).` }
 }
@@ -2196,7 +2310,10 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           const brief = lookup ? spawnPrompt(prompt, read(transcriptPath)) : prompt
           if (session && (spawned || (lookup && brief !== prompt))) writeFileSync(briefOnce, '')
           const model = sessionModel(transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : '') ?? (read(join(tmpdir(), `claude-setup-model-${String(session).replace(/[^A-Za-z0-9]/g, '')}`)).trim() || null)
-          const context = [await briefCheck(brief, cwd, model), spawned || (lookup && brief !== prompt) ? await gateBriefContext(brief, model) : '', spawned ? await guardLine() : '', modelOnce(brief, transcriptPath, session), await roleContext(brief, cwd, session), promptContext(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
+          const checkNow = await briefCheck(brief, cwd, model)
+          if (spawned || (lookup && brief !== prompt)) updateLock(session, checkNow)
+          else if (existsSync(lockFile(session)) && /\bRole:/.test(prompt)) await relayRebrief(session, prompt, cwd, model)
+          const context = [checkNow, spawned || (lookup && brief !== prompt) ? await gateBriefContext(brief, model) : '', spawned ? await guardLine() : '', modelOnce(brief, transcriptPath, session), await roleContext(brief, cwd, session), promptContext(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
           if (context) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: context } }))
           return
         }
@@ -2210,7 +2327,10 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         const shipped = join(tmpdir(), `claude-setup-artifacts-${String(session).replace(/\W/g, '')}`)
         const transcript = () => (transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : '')
         const sessionTranscript = () => [transcriptPath, agentTranscript(transcriptPath, agentId)].filter((p) => p && existsSync(p)).map(read).join('\n')
-        let block = (await gateBlock(tool, input ?? {}, transcript, sessionModel(transcript()), true))
+        const gateRole = session ? read(join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)).trim() : ''
+        let block = lockBlock(tool, session)
+          ?? handsOff(tool, input ?? {}, gateRole, setupRoot(cwd))
+          ?? (await gateBlock(tool, input ?? {}, transcript, sessionModel(transcript()), true, gateRole))
           ?? decide(tool, input ?? {}, process.env, session ? read(shipped).split('\n') : [], () => threadBoard(toolCalls(transcript())))
           ?? canaryMissing(tool, input ?? {}, session ? read(join(process.env.CLAUDE_SETUP_HOME || homedir(), '.claude', 'claude-setup', 'booted', `${String(session).replace(/\W/g, '')}.canary`)) : '', transcript)
           ?? receiptBlock(tool, input ?? {}, session, cwd, agentId, transcript)
@@ -2222,7 +2342,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           ?? blenderServerBusy(tool, input ?? {}, listProcs)
           ?? blenderDocsMissing(tool, input ?? {}, sessionTranscript)
           ?? (grillMissing(tool, input ?? {}, transcript) ? 'rule-guard: a Planner at size M or L grills first (CLAUDE.md, No fog; operator SKILL.md, Grill first): post the real-moment question (when it comes from his life) and up to 2 request_decision cards (goal, taste), each with your recommended answer, then write the plan on the answers (or the recommendations while he is away).' : null)
-        if (!block) block = await gateBlock(tool, input ?? {}, transcript, sessionModel(transcript()), false) // commit the round only now: no other guard refused the post
+        if (!block) block = await gateBlock(tool, input ?? {}, transcript, sessionModel(transcript()), false, gateRole) // commit the round only now: no other guard refused the post
         if (!block && session && tool === 'Artifact' && input?.url && input.file_path) writeFileSync(shipped, `${input.file_path}\n`, { flag: 'a' })
         if (block) { process.stderr.write(block); process.exitCode = 2 }
         else {
