@@ -43,6 +43,8 @@ The game's roster (`characters/roster.json`) and `figures-ahead.json` stay the m
 | Tells | Zero banned tells. |
 | Caption | Does every beat stand alone under an animated scene (one moment, 2 to 4 sentences)? |
 
+Reading per format, fixed before round 1 (companyxy ch1, 2026-11-12: Choice, Caption and Rung were read differently on the Ren'Py `.md` than on the beat JSON, so scores moved between rounds without a text change): the plan's Acceptance states how each row is read for the chapter's format (for example Caption on a `.md` without scene cuts, Choice on `menu:` blocks), and the gate keeps that reading every round. Knowledge and Choice are checked across all chapters, not only the one under review: grep every flag the chapter sets or reads and every fact a character knows through every chapter file. A self-run of the rubric missed a knowledge and a choice-continuity bug that a fresh judge found.
+
 ## Banned tells (lint list)
 
 "nicht nur … sondern auch" / "not X but Y" and negative parallelism · hypophora (a question the narrator answers) · em dash chains (soft warning, max 1 per 30 beats) · symmetric triads · a fact restated across three sentences · even paragraph cadence (vary beat lengths 1 to 4 sentences) · "a testament to", "delve", "tapestry", "ein Hauch von" as filler · blushes named instead of shown · the narrator explaining a joke · ending a beat or scene on a question · adjective strings of three or more.
