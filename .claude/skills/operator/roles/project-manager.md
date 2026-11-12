@@ -64,6 +64,16 @@ The one home of the coordinator's start protocol. Every new coordinator session,
 6. Cheap memory check: `MEMORY.md` has only the template's five sections and no rule line. A line that is a rule becomes a `loop:setup` issue (`docs/WORKFLOW.md`, Learning).
 7. Post nothing unless something is wrong.
 
+## What the coordinator may say (2026-11-12)
+
+Five replies to yskills were struck through in one day, and he was told to open a thread that was restarting by itself. Evidence: `docs/LESSONS-2026-11-12.md`.
+
+- **State needs a read in the same turn:** a claim about a thread, a device, a file or a process comes from `read_thread`, `remote_control_status`, `list_threads` or a file read made in that turn. Otherwise the answer is "I don't know, I am asking [thread]". A guess at a cause is not posted; the measuring thread posts the cause.
+- **Nothing on a thread's behalf before it answered:** "I asked [thread]" until the thread confirms; never "it does X now" or "we take it".
+- **An owner step exists before it is asked for:** the command, file or card is in the message itself or was read at the link in the same turn; "the line is in the thread" is posted only after the line was read there. All steps of one job come as one list (`docs/pc-claude-user.md`, All hands steps up front).
+- **Role names come from the Roster:** a brief's `Role:` is a Roster name of `docs/TEAMS.md` exactly (not Architect, Modeller, Lektor), else the thread gets no playbook.
+- **Internal restarts are not news:** "fresh thread because the old one was full" is not posted; the second one for the same asset goes to the Planner (`docs/WORKFLOW.md`, Handoff triggers).
+
 ## Don't make him repeat (standing calls)
 
 yskills 2026-11-05: "ich wiederhole mich immer wegen den selben Dingen". These are his standing calls; every coordinator and thread follows them without asking again. Enforced by `scripts/check.mjs` (the section and its seven items must exist). [guard: test scripts/check.mjs]

@@ -516,6 +516,14 @@ test('rule guard: the spawn brief names a role, the thread gets its Roster row a
   const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
   assert.equal(roleOf('Role: Programmer for the app · Kit: app', teams).name, 'Programmer', 'a Roster name followed by words')
   assert.equal(roleOf('Role: Social Lead · Kit: social', teams)?.name, 'Social Lead')
+  // 2026-11-12: a project thread's first transcript entry starts with a <session-context> block, the spawn wake
+  // comes after it; the lookup anchored at the start of the entry never found the brief, so no role card arrived.
+  const { spawnPrompt, roleCard } = await import('../global/rule-guard.mjs')
+  const entry = JSON.stringify({ type: 'user', message: { content: `<session-context nonce="x">\n- Every thread brief: stamp line Role: Kit: Size:\n</session-context nonce="x">\n\n${wake('spawn', 'Role: Tester · Kit: app · Size: L')}` } })
+  const found = spawnPrompt('<wake reason="mention">hi</wake>', entry)
+  assert.match(found, /^<wake reason="spawn">/, 'the brief is found behind a leading context block, cut at the spawn wake')
+  assert.equal(roleOf(found, teams)?.name, 'Tester')
+  assert.match(roleCard({ name: 'Tester', path: 'p.md', row: 'Job: x.' }, '# Tester'), /first line of your first checklist/, 'the thread shows which role and playbook it loaded')
   assert.doesNotMatch(spawnSync(process.execPath, [script, 'prompt'], { input: JSON.stringify({ prompt: '<coordinator-relay>\nRole: Tester · Kit: app · Size: L\n</coordinator-relay>', cwd: root, session_id: `${session}b` }), encoding: 'utf8' }).stdout, /you are the/, 'a relay that is not the spawn one')
 })
 

@@ -2,7 +2,7 @@
 
 Documents what worked so the next thread reuses it: scripts, workflows and gate passes, plus the indexes that find them. Nothing else (yskills 2026-11-11: "deine aufgabe ist skripts workflows usw. zu dokumentieren nichts anderes").
 
-- **Starts:** Once per pipeline project, as one fixed thread; the coordinator relays every gate pass to it.
+- **Starts:** Once per pipeline project, as one fixed thread; the coordinator relays only big, real workflows and lessons to it (yskills 2026-11-11: "Archivar nur große und richtige workflows und Lektionen"); a single gate pass stays in its gate file and the live list.
 - **Runs as:** A thread `Archivist · <project>`.
 - **Laptop files:** start at `START.md` in the studio root (`STUDIO_ROOT`) and follow [`docs/laptop-folders.md`](../../../../docs/laptop-folders.md) (new things by `new.py`, downloads to `inbox/`; from a cloud thread: [From a cloud thread](../../../../docs/laptop-folders.md#from-a-cloud-thread)).
 - **Model and handoff:** the brief names both; the rule is [project-manager.md](project-manager.md#model-and-handoff-in-every-brief).

@@ -272,7 +272,7 @@ export function roleOf(prompt, teams) {
 
 export function roleCard(role, playbook) {
   if (!role.row) return `rule-guard: the brief names Role: ${role.name}, which is not in the Roster of claude-setup docs/TEAMS.md. Ask the coordinator which role you are (message_coordinator) before any work.`
-  const head = `rule-guard: you are the ${role.name} of this task, one role only (docs/TEAMS.md, Coordinator or thread). ${role.row}`
+  const head = `rule-guard: you are the ${role.name} of this task, one role only (docs/TEAMS.md, Coordinator or thread). ${role.row} Write \`Role: ${role.name} · ${role.path ?? 'no playbook'}\` plus the skills you loaded as the first line of your first checklist, so yskills sees it.`
   if (playbook && head.length + playbook.length < CARD_MAX) return `${head} Your playbook, ${role.path}, follows; work by it.\n\n${playbook}`
   if (!role.path) return `${head} Your playbook is linked in that Roster row of claude-setup docs/TEAMS.md; Read it before any other work.`
   return `${head} Before any other work, Read your playbook ${role.path} of claude-setup${playbook ? '' : ' (add_repo it if it is not here)'}.`
@@ -374,7 +374,10 @@ export function spawnPrompt(prompt, transcript) {
       const entry = JSON.parse(line)
       const content = entry.message?.content
       const text = typeof content === 'string' ? content : (content ?? []).map((c) => c?.text ?? '').join('\n')
-      if (entry.type === 'user' && /^\s*<(wake|relay)\b[^>]*reason="spawn"/.test(text)) found.push(text)
+      // A project thread's first entry starts with a <session-context> block, the spawn wake follows it
+      // (2026-11-12: anchored at the entry's start, the lookup found no brief and no role card arrived).
+      const body = text.replace(/^\s*<session-context\b[\s\S]*?<\/session-context[^>]*>\s*/, '')
+      if (entry.type === 'user' && /^\s*<(wake|relay)\b[^>]*reason="spawn"/.test(body)) found.push(body)
     } catch { /* not a JSON line */ }
   }
   return found.length ? found.join('\n') : prompt
