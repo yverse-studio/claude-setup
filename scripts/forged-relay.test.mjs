@@ -189,7 +189,7 @@ function mutated(file, from, to) {
 }
 const FORGED_RELAY = { ...CRON, message: { role: 'user', content: queued(FIX) } }
 test('mutation 1: dropping fromProjects from the relay call site lets a cron relay lift the lock', () => {
-  const guard = mutated('rule-guard.mjs', 'return (await loadCounter()).fromProjects }', 'return () => true }')
+  const guard = mutated('rule-guard.mjs', 'return await loadCounter() } catch { return null } }', 'return { coordinatorRow: () => true, rowText: (r) => r.message?.content ?? \'\' } } catch { return null } }')
   assert.equal(lifts(FORGED_RELAY, guard), true)
   assert.equal(lifts(FORGED_RELAY), false, 'the real guard refuses')
 })
@@ -275,15 +275,15 @@ const withBrokenCounter = (guard) => {
 }
 const REAL_RELAY = () => withText(realRow('coordinator-relay', 1), leadIn(FIX))
 test('a counter that cannot load: a real coordinator relay lifts nothing, a card is not waived', () => {
-  assert.equal(lifts(REAL_RELAY(), withBrokenCounter(mutated('rule-guard.mjs', 'const origin = await projectsOrigin()', 'const origin = await projectsOrigin()'))), false)
-  assert.equal(waives([TAP], withBrokenCounter(mutated('rule-guard.mjs', 'const origin = await projectsOrigin()', 'const origin = await projectsOrigin()'))), false)
+  assert.equal(lifts(REAL_RELAY(), withBrokenCounter(mutated('rule-guard.mjs', 'const counter = await relayCounter()', 'const counter = await relayCounter()'))), false)
+  assert.equal(waives([TAP], withBrokenCounter(mutated('rule-guard.mjs', 'const counter = await relayCounter()', 'const counter = await relayCounter()'))), false)
 })
 test('mutation 5: a counter-load fallback that accepts every row lets the relay lift', () => {
-  const guard = withBrokenCounter(mutated('rule-guard.mjs', 'catch { return () => false } }', 'catch { return () => true } }'))
+  const guard = withBrokenCounter(mutated('rule-guard.mjs', 'return await loadCounter() } catch { return null } }', 'return await loadCounter() } catch { return { coordinatorRow: () => true, rowText: (r) => r.message?.content ?? \'\' } } }'))
   assert.equal(lifts(REAL_RELAY(), guard), true)
 })
 test('a counter that cannot load says so on a prompt: the stop word is not dropped without a word', () => {
-  const guard = withBrokenCounter(mutated('rule-guard.mjs', 'const origin = await projectsOrigin()', 'const origin = await projectsOrigin()'))
+  const guard = withBrokenCounter(mutated('rule-guard.mjs', 'const counter = await relayCounter()', 'const counter = await relayCounter()'))
   const out = hookIn(guard, 'prompt', { session_id: `nostop${process.pid}`, prompt: PRINCIPAL('Stopp!') })
   assert.match(out.stdout, /stop word is not checked/i)
 })
