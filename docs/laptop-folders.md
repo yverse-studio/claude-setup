@@ -61,7 +61,7 @@ No scripts inside an asset: data and at most one recipe file; build scripts live
 │  ├─ clothes/        CL_<name>/ (source/ files/ fitted/<figure>.blend reference/ gate/)   accessories as CL_acc-*
 │  ├─ parts/          {hair,eyes,skin}/PT_<name>/ (source/ files/ reference/)
 │  ├─ rooms/          <room>/ (<room>.blend reference/ export/ gate/)
-│  ├─ props/          OB_<name>/ (source/ files/) · nsfw/OB_<name>/
+│  ├─ props/          <category>/OB_<name>/ (source/ files/; furniture, office, street, travel, weapon) · nsfw/OB_<name>/
 │  ├─ anims/          <sfw|nsfw>/<solo|pair>/<type>/ : sfw/solo/{locomotion,idle,gesture,action}/AN_<name>/ · sfw/pair/kiss/ · nsfw/pair/<position>/
 │  │                  nsfw/reference/{boards,camera,poses,motion,contact}/
 │  │                  _engine/ (pair engine: core, projects, docs) · _retarget/ (tools)
