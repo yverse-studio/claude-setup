@@ -23,7 +23,7 @@ const PREFLIGHT = `## Before every reply
 - Every ask or pointer carries its clickable link ([title](#cmsg_…), URL, [Project settings](#project-settings/resources)); every ask of yskills gets a thread, a PR or a \`Done:\` line the same turn; a skill idea is a PR (\`new-skill\`), never a propose_skills card.
 - A PR whose \`Depends on: #n\` is parked or blocked: one chat line the same turn naming both PRs and the fix.
 - Ask yskills only the real moment (a level from his life), goal, taste and the ask-first list; build details, process and order you decide, in one line.
-- Gate: operator/gate.md (Rounds). Game PRs: Controls and World life pass before any look round.
+- Gate (you stop the builder, no hook does): up to 6 rounds; the round number stands in the asset's gate file and every handoff, never only in a thread; 3 failed rounds on one asset stop the builder until the Planner has re-planned; a check failing twice gets a diagnosis first; after round 6 one card to yskills. Game PRs: Controls and World life pass before any look round.
 - Plan: /mnt/project-files/PLAN.json is the one plan; threads write it (scripts/plan.mjs), you only Read it before every reply, then write_custom_view. "Stand?": goal, x/y done, doing, waits on him, next 3. Ping only when he must act, rate a visual, a part is Done (link), or a plan question.
 - Project instructions lack the line "Read /mnt/project-files/claude-setup/COORDINATOR-CARD.md first": call update_project_settings once, PREPEND operator/templates/project-instructions.md filled for this project, keep every existing line, say so in one line.`
 
@@ -54,7 +54,7 @@ export function compact(full) {
   const roster = part('## Roster', '## Kits').split('\n').filter((l) => l.startsWith('- ') && /thread/.test(l)).map((l) => { const [r, ...rest] = l.slice(2).split(': '); return `- ${r}: ${clip(flat(rest.join(': ')), 85)}` })
   const kits = part('## Kits').split('\n').filter((l) => l.startsWith('- ')).map((l) => clip(flat(l), 110))
   return [
-    `## Models (docs/TEAMS.md)\n\n${ids}. A model yskills names is used as named. A thread picks no Fable. Task first, then kit, then size: team-guard refuses a start that breaks it.`,
+    `## Models (docs/TEAMS.md)\n\n${ids}. A model yskills names is used as named. A thread picks no Fable. Task first, then kit, then size; team-guard refuses an unknown kit and a size or role that kit does not allow.`,
     `## Sizes\n\n${sizes.join('\n')}`, `## Roster (thread roles: runs as; model)\n\n${roster.join('\n')}`, `## Kits (team at size L)\n\n${kits.join('\n')}`,
   ].join('\n\n')
 }
@@ -63,9 +63,7 @@ export function buildCard({ hash = 'nogit', date = new Date().toISOString().slic
   const head = `Coordinator card (claude-setup ${hash}, ${date}).\nYou are the project chat. You have no Bash and no repo: this card and MEMORY.md are your rules.\nA rule not on this card: Read COORDINATOR-RULES-INDEX.md in this folder; still unclear: ask a setup thread (size S); never guess.`
   const full = coordinatorCard(read('docs/TEAMS.md'), '') // '' drops the "Text only" section: it does not fit
   const team = full ? compact(full) : ''
-  const build = () => [head, PREFLIGHT, briefBlock(read('docs/templates/thread-brief.md')), team,
-    'A rule not named here: Read COORDINATOR-RULES-INDEX.md (same folder), one line per rule with its home file.',
-  ].join('\n\n') + '\n'
+  const build = () => [head, PREFLIGHT, briefBlock(read('docs/templates/thread-brief.md')), team].join('\n\n') + '\n'
   const card = build()
   if (!team || card.length >= CARD_MAX) throw new Error(`coordinator card is ${card.length} characters, limit ${CARD_MAX}: trim a pre-flight line or a Roster cell`)
   return card
