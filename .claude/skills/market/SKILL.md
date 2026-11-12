@@ -40,9 +40,11 @@ events. So the plan is part of the PRD, not an afterthought.
 7. **Tracking.** The events and UTM tags. Section 5.
 8. **Legal check.** Section 4.
 
-### Questions for the first batch
+### Questions when marketing starts
 
-Ask these with the PRD questions, as tap cards:
+Asked when the marketing step starts (`operator/run.md` step 1: no grill batch). Claude takes the
+recommended pick of each and says it in one line; only the accounts and the face or voice question
+go to yskills, as 1-2 cards:
 
 - **Market:** German and English speakers (yskills' default: English content, German and English
   app text), Germany only, or English only.

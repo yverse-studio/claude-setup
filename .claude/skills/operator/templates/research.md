@@ -27,7 +27,7 @@ Repos, skills, setups and posts where someone made this kind of product with Cla
 (prompts, skills, workflows) and which mistakes they report.
 
 ## 5. Open questions
-Each with a recommended answer; they reach yskills as one batch of cards (`run.md` step 3).
+Each with a recommended answer; the Planner decides them in `PLAN.md`; only a goal or taste question reaches yskills as a card (`run.md` step 3).
 
 ## 6. Sources
 One line per source read: link or `path:line`, what it says, the day read.

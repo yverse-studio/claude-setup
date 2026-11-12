@@ -54,6 +54,14 @@ replaces check 2, the rest of the table and the sizes stay as they are (clothes 
 - A figure or scene PR that fails the same item in two rounds is not re-gated until the Programmer
   attaches the diagnosis (`character-workflow.md`, step 4).
 
+## Game PRs: play before look
+
+vacation-game, 2026-11-12: the night market got 24+ look rounds while the walk had no first-person
+view, no mouse look and every NPC stood still; yskills found it, not the gate. On a game PR that
+changes play, the playtest report (`roles/playtester.md`) passes its Controls and World life rows
+before any look round (design-critic, a scored look gate, a vote card) starts on that build; a look
+round on a build whose report fails or is missing is not run. `playtest-check.mjs` holds the rows.
+
 ## Scored gates (the score rule)
 
 The one home of the score rule (yskills 2026-11-04: "4.5, then 2 more tries for 5/5, render the

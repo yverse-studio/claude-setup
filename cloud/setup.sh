@@ -556,9 +556,14 @@ const BRIEF_LINES = [
   ['Stop when:', /\bStop when:[ \t]*\n?[ \t]*[^<\s]/i],
   ['Start: (read MEMORY.md first)', /^[ \t>-]*Start:[^\n]*MEMORY\.md/im],
 ]
+// A task that asks for research names its Researcher subagent (docs/TEAMS.md, Kits; yskills 2026-11-12:
+// a Planner did the SOTA research itself). The brief block's own "No extra ... research" does not trigger it.
+const ASKS_RESEARCH = /\b(SOTA|state of the art|research (on|about|into|what)|recherch\w*)\b/i
 export function missingLines(text) {
   const plain = text.replace(/[*_`]/g, '')
-  return BRIEF_LINES.filter(([, re]) => !re.test(plain)).map(([name]) => name)
+  const lines = BRIEF_LINES.filter(([, re]) => !re.test(plain)).map(([name]) => name)
+  if (ASKS_RESEARCH.test(plain) && !/\bRole:[ \t]*Researcher\b/i.test(plain) && !/^[ \t>-]*Researcher:[ \t]*[^<\s]/im.test(plain)) lines.push('Researcher: (the task asks for research)')
+  return lines
 }
 
 // Kit and size checked against docs/TEAMS.md, not only their format (blind test 2026-10-27: "Kit: content",
@@ -1433,7 +1438,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           ?? kaomojiMissing(tool, input ?? {})
           ?? blenderServerBusy(tool, input ?? {}, listProcs)
           ?? blenderDocsMissing(tool, input ?? {}, sessionTranscript)
-          ?? (grillMissing(tool, input ?? {}, transcript) ? 'rule-guard: a Planner at size M or L grills first (CLAUDE.md, No fog; operator SKILL.md, Grill first): post 3-5 sharp questions as request_decision cards, each with your recommended answer, then write the plan on the answers (or the recommendations while he is away).' : null)
+          ?? (grillMissing(tool, input ?? {}, transcript) ? 'rule-guard: a Planner at size M or L grills first (CLAUDE.md, No fog; operator SKILL.md, Grill first): post the real-moment question (when it comes from his life) and up to 2 request_decision cards (goal, taste), each with your recommended answer, then write the plan on the answers (or the recommendations while he is away).' : null)
         if (!block && session && tool === 'Artifact' && input?.url && input.file_path) writeFileSync(shipped, `${input.file_path}\n`, { flag: 'a' })
         if (block) { process.stderr.write(block); process.exitCode = 2 }
         else {

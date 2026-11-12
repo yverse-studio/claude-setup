@@ -4,9 +4,18 @@ One page, written by the Game Designer before the first build, kept in `design/G
 bar: [`roles/game-designer.md`](../roles/game-designer.md). Every number is a target a bot or a
 tester can check; every claim in References has a link and the day read.
 
+## Real moment
+For a level built from yskills' life: his own words, asked before any build (`roles/game-designer.md`,
+Real moment first): what happened, how it felt, what was stressful, calm or wrong, who was there. Quote him.
+An invented game writes `none: invented`.
+
 ## Core loop
 The verb repeated every few seconds, in one sentence. What closes the loop (the reward). The
 30-second test: what a stranger understands without text.
+
+## Controls
+View (first or third person, top-down), camera (mouse or drag look, follow), movement keys and touch,
+what the player can look at or interact with. The genre's standard unless a line says why not.
 
 ## Session length
 Shortest and longest run in seconds, from the references. How a run ends.
