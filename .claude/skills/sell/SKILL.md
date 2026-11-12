@@ -55,9 +55,12 @@ PR.
 - **Subscriptions:** where the paywall shows, the 14-day trial (`subscription_data.trial_period_days`)
   and annual first follow the `store` skill's paywall defaults, on the web too.
 
-## 2. First batch of questions
+## 2. Questions when the money slice starts
 
-These go into the same batch as the PRD questions, as tap cards, and never mid-build.
+Asked when the slice that takes money starts (`operator/run.md` step 1: no grill batch, never
+mid-build). Claude fills every item it can decide with the recommended pick and says it in one line;
+only what it cannot know (what is sold, the prices, what exists already) goes to yskills, as a key
+card.
 
 1. What is sold: digital, subscription, physical, or a mix. Multi-select.
 2. Prices. For physical goods, also:

@@ -68,7 +68,7 @@ test('a missing preview or commit line fails', () => {
 test('a missing area row fails', () => assert.match(checkReport(report('abc1234', (s) => s.replace(/\| Ad hooks.*\n/, '')), exists).join(), /no verdict row "Ad hooks"/))
 test('a verdict that is not pass or fail fails', () => assert.match(checkReport(report('abc1234', (s) => s.replace('| Full run | pass', '| Full run | ok')), exists).join(), /Full run: verdict must be pass or fail/))
 test('a fail verdict fails the check', () => assert.match(checkReport(report('abc1234', (s) => s.replace('| Full run | pass', '| Full run | fail')), exists).join(), /Full run: verdict is fail/))
-test('evidence without a time fails', () => assert.match(checkReport(report('abc1234', (s) => s.replace('00:12 the first kill', 'the first kill')), exists).join(), /First 30 seconds: evidence has no time/))
+test('evidence without a time fails', () => assert.match(checkReport(report('abc1234', (s) => s.replace('00:12 the first kill', 'the first kill')), exists).join(), /Controls: evidence has no time/))
 test('evidence without a file, or a file that is missing, fails', () => {
   assert.match(checkReport(report('abc1234', (s) => s.replace('shots/Touch-390.png', 'a screenshot')), exists).join(), /Touch 390: evidence names no png/)
   assert.match(checkReport(report('abc1234'), () => false).join(), /does not exist/)
@@ -144,4 +144,9 @@ test('ordinary evidence lines pass (the pass-table)', () => {
   for (const ev of ['1:05 first hit, a.webm', '10:30 night 3 ends ([clip](clips/run.webm))', '00:04 menu, shots/menu.JPG', '00:59 died to bats (a.jpeg) and again 01:02 (b.png)', '02:10 ad frozen, `s.png`']) {
     assert.deepEqual(checkReport(report('abc1234', (s) => s.replace(/\| Full run \| pass \|.*\n/, `| Full run | PASS | ${ev} |\n`)), exists), [], ev)
   }
+})
+
+test('Controls and World life are rows and come first (play before look, gate.md)', () => {
+  assert.deepEqual(AREAS.slice(0, 2), ['Controls', 'World life'])
+  assert.match(checkReport(report('abc1234', (s) => s.replace(/\| World life \| pass \|/, '| World life | fail |')), exists).join(), /World life: verdict is fail/)
 })

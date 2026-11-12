@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 // Fails when a game's design doc lacks what roles/game-designer.md asks of it: every heading with
-// content, numbers in the session and difficulty parts, two NOT lines, three references with a
+// content (Real moment: yskills' own words on the moment it copies, or "none: invented"; Controls: camera
+// and input), numbers in the session and difficulty parts, two NOT lines, three references with a
 // link, the day read, Copy and Skip, and a Not checked list. Usage: node gdd-check.mjs [design/GDD.md]  (exit 1 on errors)
 import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-export const REQUIRED_HEADINGS = ['Core loop', 'Session length', 'Progression', 'Difficulty curve', 'Feel and feedback', 'Monetisation hooks', 'Not this', 'References']
+export const REQUIRED_HEADINGS = ['Real moment', 'Core loop', 'Controls', 'Session length', 'Progression', 'Difficulty curve', 'Feel and feedback', 'Monetisation hooks', 'Not this', 'References']
 const MIN_REFERENCES = 3
 const MIN_NOT_LINES = 2
 const MIN_CURVE_ROWS = 2
@@ -33,6 +34,7 @@ export function checkGdd(md) {
     if (!(h in s)) errors.push(`no "## ${h}" section`)
     else if (!s[h].trim()) errors.push(`## ${h} is empty`)
   }
+  if (/asked before any build/.test(s['Real moment'] ?? '')) errors.push('## Real moment still holds the template text: quote yskills or write "none: invented"')
   for (const m of md.matchAll(PLACEHOLDER)) errors.push(`template placeholder left: ${m[0].slice(0, 40)}`)
   for (const h of ['Session length', 'Difficulty curve']) {
     if (s[h]?.trim() && !/\d/.test(s[h])) errors.push(`## ${h} has no number`)

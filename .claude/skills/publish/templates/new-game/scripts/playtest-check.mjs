@@ -2,8 +2,9 @@
 // Playtest check: a PR that changes how the game plays must carry a playtest report for the
 // build it ships (roles/playtester.md). Play files = rules, hooks and ads in src/, the GDD and
 // the bot. The newest design/playtests/*.md changed in the PR must name the preview and a commit
-// no play file changed after, give pass/fail for all seven areas with a time and an existing
-// file as evidence, hold no pass-through fail, no template placeholder, and end with Not checked.
+// no play file changed after, give pass/fail for all nine areas with a time and an existing
+// file as evidence (Controls and World life come first: a game that does not steer or whose people stand
+// still fails before anyone grades its look, vacation-game 2026-11-12), hold no pass-through fail, no template placeholder, and end with Not checked.
 // Escape hatch: a commit message in the PR with `playtest-ok: <reason>` waives a missing report, the
 // reason is printed; it never waives a report that holds a fail row.
 // Exit 0 ok, 1 violation, 2 could not run (never read 2 as 0).
@@ -13,7 +14,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-export const AREAS = ['First 30 seconds', 'Full run', 'Death and restart', 'Ad hooks', 'Touch 390', 'Keyboard 1440', 'GDD promises']
+export const AREAS = ['Controls', 'World life', 'First 30 seconds', 'Full run', 'Death and restart', 'Ad hooks', 'Touch 390', 'Keyboard 1440', 'GDD promises']
 const NOT_PLAY = new Set(['src/index.js']) // the Worker entry, not the game
 export const isPlayFile = (f) =>
   (/^src\/.+\.(ts|js|mjs|json)$/.test(f) && !/\.test\./.test(f) && !NOT_PLAY.has(f)) || f === 'design/GDD.md' || f === 'test/game.mjs'

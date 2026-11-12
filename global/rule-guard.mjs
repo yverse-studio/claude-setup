@@ -676,7 +676,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           ?? kaomojiMissing(tool, input ?? {})
           ?? blenderServerBusy(tool, input ?? {}, listProcs)
           ?? blenderDocsMissing(tool, input ?? {}, sessionTranscript)
-          ?? (grillMissing(tool, input ?? {}, transcript) ? 'rule-guard: a Planner at size M or L grills first (CLAUDE.md, No fog; operator SKILL.md, Grill first): post 3-5 sharp questions as request_decision cards, each with your recommended answer, then write the plan on the answers (or the recommendations while he is away).' : null)
+          ?? (grillMissing(tool, input ?? {}, transcript) ? 'rule-guard: a Planner at size M or L grills first (CLAUDE.md, No fog; operator SKILL.md, Grill first): post the real-moment question (when it comes from his life) and up to 2 request_decision cards (goal, taste), each with your recommended answer, then write the plan on the answers (or the recommendations while he is away).' : null)
         if (!block && session && tool === 'Artifact' && input?.url && input.file_path) writeFileSync(shipped, `${input.file_path}\n`, { flag: 'a' })
         if (block) { process.stderr.write(block); process.exitCode = 2 }
         else {

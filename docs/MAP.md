@@ -153,7 +153,7 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 | Permission prompts, the allow list and autoMode, safety-check refusals and the way around each | `docs/permissions.md` (settings in `global/settings.json`) | `CLAUDE.md`, operator `SKILL.md`, `gate.md`, `README.md`, `docs/pc-claude-user.md` |
 | Workflows with keys run from main only (`environment: production`) | `docs/permissions.md` (Layer 4) | `docs/permissions.md` only |
 | Auto-run, pauses and taste calls | `CLAUDE.md` (How to work) | operator `SKILL.md`, `docs/WORKFLOW.md` |
-| How a game build is played before the gate (blind pass, full run, death, ad hooks; the report and its seven verdicts) | `operator/roles/playtester.md`, template `operator/templates/playtest-report.md`, checked in game CI by `publish/templates/new-game/scripts/playtest-check.mjs` (+ `scripts/playtest-check.test.mjs`) | `operator/run.md` (step 5), `game-3d` |
+| How a game build is played before the gate (blind pass, full run, death, ad hooks; the report and its nine verdicts, Controls and World life first) | `operator/roles/playtester.md`, template `operator/templates/playtest-report.md`, checked in game CI by `publish/templates/new-game/scripts/playtest-check.mjs` (+ `scripts/playtest-check.test.mjs`) | `operator/run.md` (step 5), `game-3d` |
 | The words of a site or app (voice, terms, German and English strings, errors, empty states) | `operator/roles/content-designer.md`, template `operator/templates/copy-deck.md`, checked by `ui-review/scripts/copy-check.mjs` | `roles/tester.md`, `ui-review`, `SLOP.md` 9 |
 | What a site, app or game measures (events, money metric, legal basis, tools with prices, the weekly numbers line) | `operator/roles/analytics.md`, template `operator/templates/tracking-plan.md`, checked by `market/scripts/analytics-check.mjs` | `market` §5, `roles/tester.md`, `docs/hq-rows.md` |
 | Cards and votes (who posts them, the thread-to-coordinator loop, screenshots on a vote card per visual choice); yskills reads only the project chat | `CLAUDE.md` (How to work) | `briefs.md` (b), `roles/project-manager.md` |
@@ -191,6 +191,9 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 | How a video or ad is made (roles, pipeline, video lessons) | `video-studio` skill | operator `SKILL.md`, `roles/marketer.md`, `market` |
 | Free sound library (CC0 SFX and music, manifest with licence proof, BPM, loudness) | `video-studio/sound/README.md`, checked by `video-studio/scripts/sound_library.py` | `video-studio/roles/sound.md`, `sound-kit.md` |
 | How posts go out, auto-post guardrails, comments and DMs, brand accounts | `social-team` skill | operator `SKILL.md`, `video-studio`, `market` §6, `docs/USING.md` |
+| Coordinator answers facts from a source read this turn, checks one thread = one role before every `message_thread`, flags PR dependencies at once, decides build details itself (vacation-game 2026-11-12) | `operator/roles/project-manager.md` (Facts, roles and dependencies) | coordinator card (pre-flight), `roles/programmer.md` (`Depends on:` line) |
+| Game PRs: Controls and World life pass before any look round | `operator/gate.md` (Game PRs: play before look), checked by `publish/templates/new-game/scripts/playtest-check.mjs` | `roles/playtester.md`, template `playtest-report.md`, coordinator card |
+| Real moment first (a level from yskills' life starts with his own words on how it felt) and the GDD's Controls | `operator/roles/game-designer.md` (Real moment first), checked by `game-3d/scripts/gdd-check.mjs` | `CLAUDE.md` (No fog), operator `SKILL.md` (Grill first), `roles/planner.md`, template `game-design.md` |
 
 ## Keeping it clean
 
