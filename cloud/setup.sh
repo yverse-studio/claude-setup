@@ -2687,18 +2687,14 @@ function agentReport(path, prompt) {
 }
 // #522: the harness's newer answer to an Agent call is only "report was delivered to you as a message from ..." (the report comes as a separate
 // SubagentHandback message). The report then still comes from the agent's own transcript, found by the call's own prompt: the newest transcript of
-// subagents/ that was started with it (agentReport checks that), never a row of the main transcript, which a builder can type.
+// agent the note names (agentReport checks it was started with this call's prompt), never a row of the main transcript, which a builder can type.
 const DELIVERED = /^[^\n]{0,80}?\bdelivered to you as a message\b/i
 function deliveredReport(transcriptPath, prompt, note = '') {
-  const dir = transcriptPath ? join(transcriptPath.replace(/\.jsonl$/, ''), 'subagents') : ''
-  // The note names the agent ("... from agent-<id>" or "agentId: <id>"): that one transcript only. No id in it: the one transcript started with this
-  // call's prompt, and more than one (or none) fails closed.
+  // The note names the agent ("... from agent-<id>" or "agentId: <id>"): that one transcript only. No id: nothing counts (a scan by prompt could pick
+  // another agent that was started with a prompt that begins with this one, gate r1 of #525).
   const id = /\bagent-?Id:\s*([A-Za-z0-9-]+)/i.exec(note)?.[1] ?? /\bfrom\s+agent-([A-Za-z0-9][A-Za-z0-9-]*)/i.exec(note)?.[1]
-  if (id) { const path = agentTranscript(transcriptPath, id); return path ? agentReport(path, prompt) : '' }
-  let files = []
-  try { files = readdirSync(dir).filter((f) => /^agent-[\w-]+\.jsonl$/.test(f)) } catch { return '' }
-  const reports = files.map((f) => agentReport(join(dir, f), prompt)).filter(Boolean)
-  return reports.length === 1 ? reports[0] : ''
+  const path = id ? agentTranscript(transcriptPath, id) : ''
+  return path ? agentReport(path, prompt) : ''
 }
 export const withReports = (calls, transcriptPath) => calls.map((c) => {
   if (!/^(Agent|Task)$/.test(c.name)) return c
