@@ -2297,7 +2297,12 @@ async function relayRebrief(session, prompt, cwd, model, transcript = '') {
   const text = stripTags([prompt, context].join('\n'))
   updateLock(session, await briefCheck(text, cwd, model, true))
   const stamp = join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)
-  if (existsSync(lockFile(session))) return coordinatorRelays(transcript).filter((t) => t.trim() !== prompt.trim()).length === 2 ? `Brief check: three relays did not lift the lock. Post one card to yskills with request_decision that names what is still missing (${read(lockFile(session)).slice(0, 250)}), then stay idle; a complete relay lifts the lock at any time.` : ''
+  if (existsSync(lockFile(session))) {
+    if (coordinatorRelays(transcript).filter((t) => t.trim() !== prompt.trim()).length < 2) return ''
+    const note = 'Three relays did not lift the lock: post one card to yskills with request_decision that names the lines still missing, then stay idle; a complete relay lifts the lock at any time.'
+    if (!read(lockFile(session)).includes('request_decision')) writeFileSync(lockFile(session), `${read(lockFile(session)).slice(0, 300)}\n${note}`)
+    return note
+  }
   if (read(stamp).trim()) return ''
   const role = roleOf(text, read(join(setupRoot(cwd), 'docs', 'TEAMS.md')))
   if (role) writeFileSync(stamp, role.name)
@@ -2306,7 +2311,7 @@ async function relayRebrief(session, prompt, cwd, model, transcript = '') {
 export function lockBlock(tool, session) {
   const f = session ? lockFile(session) : ''
   if (!f || !existsSync(f) || LOCK_FREE.test(tool)) return null
-  return `rule-guard: this thread's brief breaks the team rules, so it does no work (docs/TEAMS.md, Coordinator or thread): ${read(f).slice(0, 300)}\nSend the reason and the corrected Role, Kit and Size to the coordinator (message_coordinator) and wait for a new brief.`
+  return `rule-guard: this thread's brief breaks the team rules, so it does no work (docs/TEAMS.md, Coordinator or thread): ${read(f).slice(0, 480)}\nSend the reason and the corrected Role, Kit and Size to the coordinator (message_coordinator) and wait for a new brief.`
 }
 // docs/hands-off.md: a role never writes the files another role owns.
 export function handsOff(tool, input = {}, role = '', root = '') {
