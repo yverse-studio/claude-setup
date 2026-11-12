@@ -3,12 +3,12 @@
 // no Bash, no repo and no hooks (proven 2026-11-08), so team-guard's card never reached it; threads write
 // this file to /mnt/project-files/claude-setup/ and the coordinator Reads it.
 // Usage: node scripts/coordinator-card.mjs [out-path]   (default ./COORDINATOR-CARD.md)
-import { readFileSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import { dirname, join } from 'node:path'
-import { roleLines } from './brief.mjs'
+import { briefFile, briefFileName, roleLines } from './brief.mjs'
 import { fileURLToPath } from 'node:url'
-import { coordinatorCard } from '../global/team-guard.mjs'
+import { coordinatorCard, rosterNames } from '../global/team-guard.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 export const CARD_MAX = 6800 // 6,600 until #430, 8,000 until 2026-11-12 (M27 step 6: rules a hook enforces left the card, the brief template came in)
@@ -76,7 +76,7 @@ export function buildCard({ hash = 'nogit', date = new Date().toISOString().slic
 export const INDEX_MAX = 20000
 export function buildIndex({ hash = 'nogit', date = new Date().toISOString().slice(0, 10) } = {}) {
   const head = `Rules index (claude-setup ${hash}, ${date}). Read this when a rule is not on the card;\nthe home is the file to name, never a guess.`
-  const roles = `## Brief lines per role (node scripts/brief.mjs --lines; a size S setup thread builds a whole brief with scripts/brief.mjs)\n\n${roleLines(read('docs/TEAMS.md')).map((l) => `- ${l}`).join('\n')}`
+  const roles = `## Brief lines per role (a filled copy of briefs/<Role>.md in this folder is the brief; a size S setup thread builds one with scripts/brief.mjs)\n\n${roleLines(read('docs/TEAMS.md')).map((l) => `- ${l}`).join('\n')}`
   const out = `${head}\n\n${ruleRows(read('docs/MAP.md')).map((r) => `- ${r.rule} → ${r.home}`).join('\n')}\n\n${roles}\n`
   if (out.length >= INDEX_MAX) throw new Error(`rules index is ${out.length} characters, limit ${INDEX_MAX}`)
   return out
@@ -92,5 +92,11 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const idx = buildIndex({ hash })
   const idxOut = join(dirname(out), 'COORDINATOR-RULES-INDEX.md')
   writeFileSync(idxOut, idx)
-  console.log(`${out}: ${card.length} characters; ${idxOut}: ${idx.length} characters`)
+  // M30: one rendered brief file per role next to the card (the project chat has no Bash and fills a file instead of writing a brief).
+  const dir = join(dirname(out), 'briefs')
+  mkdirSync(dir, { recursive: true })
+  const teams = read('docs/TEAMS.md')
+  const files = rosterNames(teams).map((r) => [r, briefFile(r, teams)]).filter(([, text]) => text)
+  for (const [r, text] of files) writeFileSync(join(dir, briefFileName(r)), text)
+  console.log(`${out}: ${card.length} characters; ${idxOut}: ${idx.length} characters; ${files.length} brief files in ${dir}`)
 }

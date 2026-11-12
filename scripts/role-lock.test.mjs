@@ -11,7 +11,10 @@ import { fileURLToPath } from 'node:url'
 const root = join(fileURLToPath(import.meta.url), '..', '..')
 let n = 0
 const guard = (mode, session, payload) => spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), mode], { input: JSON.stringify({ cwd: root, session_id: session, transcript_path: join(mkdtempSync(join(tmpdir(), 'rl-')), 't.jsonl'), ...payload }), encoding: 'utf8', env: { ...process.env, CLAUDE_SETUP_RULE_GUARD: '' } })
-const BLOCKS = `Threads: list_threads checked, none open on this topic
+const BLOCKS = `Item: M30
+Plan: docs/plans/x.md
+Acceptance: the test passes
+Threads: list_threads checked, none open on this topic
 Model: sonnet
 Skills: none
 Prior art: obra/superpowers checked -> adapt, because ours reads hearthbot tools

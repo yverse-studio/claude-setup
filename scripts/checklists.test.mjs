@@ -16,7 +16,7 @@ const checklists = readFileSync(join(root, CHECKLISTS), 'utf8')
 const SONNET = teams.match(/Sonnet \((claude-[\w.-]+)\)/)[1]
 const OPUS = teams.match(/Opus \((claude-[\w.-]+)\)/)[1]
 const TOPICS = ['Garment', 'Hair', 'Character', 'HUD/UI', 'Animation', 'Scene render', 'Asset-Intake']
-const REVIEWER = (topic) => `Role: Reviewer · Kit: game · Size: M\nModel: ${OPUS}\nItem: M48\nThreads: list_threads checked, none open\nPrior art: .claude/skills/operator/gate.md and the game kit's checks -> adapt, because they exist\nSkills: x\n${topic ? `Topic: ${topic}\n` : ''}Done when: verdict\nStop when: two rounds\nStart: read MEMORY.md first`
+const REVIEWER = (topic) => `Role: Reviewer · Kit: game · Size: M\nModel: ${OPUS}\nItem: M48\nPlan: gate.md\nAcceptance: verdict\nThreads: list_threads checked, none open\nPrior art: .claude/skills/operator/gate.md and the game kit's checks -> adapt, because they exist\nSkills: x\n${topic ? `Topic: ${topic}\n` : ''}Done when: verdict\nStop when: two rounds\nStart: read MEMORY.md first`
 
 test('the checklist file has the seven topics, each with a body', () => {
   assert.deepEqual(topicNames(checklists), TOPICS)
@@ -43,11 +43,11 @@ test('team-guard blocks a thread start with an unknown Topic and lets a known on
 })
 
 test('the generator writes Topic and the checklist into a Reviewer brief, and refuses an unknown topic', () => {
-  const out = buildBrief({ role: 'Reviewer', kit: 'game', size: 'M', item: 'M48', threads: 'list_threads checked', done: 'verdict', stop: 'two rounds', what: 'garment gate', topic: 'Garment', checklists })
+  const out = buildBrief({ role: 'Reviewer', kit: 'game', size: 'M', item: 'M48', plan: 'gate.md', acceptance: 'v', threads: 'list_threads checked', done: 'verdict', stop: 'two rounds', what: 'garment gate', topic: 'Garment', checklists })
   assert.match(out.brief, /^Topic: Garment$/m)
   assert.match(out.brief, /Prior art:[^\n]*gate\.md[^\n]*checklists\.md/)
-  assert.throws(() => buildBrief({ role: 'Reviewer', kit: 'game', size: 'M', item: 'M48', threads: 'x', done: 'v', stop: 's', what: 'w', topic: 'Cooking', checklists }), BriefError)
-  assert.throws(() => buildBrief({ role: 'Programmer', kit: 'setup', size: 'S', item: 'M48', threads: 'x', done: 'v', stop: 's', priorArt: 'p', topic: 'Garment', checklists }), BriefError)
+  assert.throws(() => buildBrief({ role: 'Reviewer', kit: 'game', size: 'M', item: 'M48', plan: 'gate.md', acceptance: 'v', threads: 'x', done: 'v', stop: 's', what: 'w', topic: 'Cooking', checklists }), BriefError)
+  assert.throws(() => buildBrief({ role: 'Programmer', kit: 'setup', size: 'S', item: 'M48', plan: 'gate.md', acceptance: 'v', threads: 'x', done: 'v', stop: 's', priorArt: 'p', topic: 'Garment', checklists }), BriefError)
 })
 
 test('a Reviewer with a Topic gets that checklist plus Scored gates, not the code playbook', async () => {
@@ -95,6 +95,6 @@ test('a topic card takes the section of exactly that heading, not one that merel
 })
 
 test('a Topic brief from the generator lists the checklist as its skill, not the code playbook', () => {
-  const out = buildBrief({ role: 'Reviewer', kit: 'game', size: 'M', item: 'M48', threads: 'list_threads checked, none open', done: 'v', stop: 's', what: 'w', topic: 'Hair', checklists })
+  const out = buildBrief({ role: 'Reviewer', kit: 'game', size: 'M', item: 'M48', plan: 'gate.md', acceptance: 'v', threads: 'list_threads checked, none open', done: 'v', stop: 's', what: 'w', topic: 'Hair', checklists })
   assert.match(out.brief, /^Skills: \.claude\/skills\/operator\/checklists\.md$/m)
 })
