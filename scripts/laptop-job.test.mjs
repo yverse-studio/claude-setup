@@ -7,7 +7,7 @@ import { mkdtempSync, readdirSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { MAX_BLENDER, MAX_RENDERS, acquireSlot, blenderCount, ledgerList, ledgerSignIn, ledgerSignOut, releaseSlot } from './laptop-slots.mjs'
+import { MAX_BLENDER, MAX_RENDERS, acquireSlot, blenderCount, ledgerCli, ledgerList, ledgerSignIn, ledgerSignOut, releaseSlot } from './laptop-slots.mjs'
 import { parseAcMinutes, parseArgs, powerProblems, gpuProblem, ramShort, heartbeatProblem, progressProblem, heavyApp } from './laptop-job.mjs'
 
 const script = fileURLToPath(new URL('./laptop-job.mjs', import.meta.url))
@@ -191,4 +191,14 @@ test('RAM ledger: a Ren\'Py job signs in while it runs and out when it ends', ()
   const r = spawnSync('node', [script, '--no-gpu', '--name', 'vn', '--', 'node', '-e', `const s=require('fs'),p=require('path');console.log('LEDGER '+s.readdirSync(p.join(process.env.LAPTOP_JOB_LOCK_DIR,'ledger')).join())`, 'renpy'], { encoding: 'utf8', env: { ...process.env, LAPTOP_JOB_LOCK_DIR: dir, LAPTOP_JOB_LOG: '/dev/null' } })
   assert.match(r.stdout, /LEDGER vn\.json/)
   assert.deepEqual(readdirSync(join(dir, 'ledger')), [])
+})
+
+test('RAM ledger CLI: a hand sign-in with a live pid survives the list, out removes it, bad input is refused', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'ledger-cli-'))
+  assert.equal(ledgerCli(['in', 'vn-play', 'renpy', String(process.pid)], dir), 'signed in vn-play')
+  assert.match(ledgerCli(['list'], dir), /vn-play \(renpy, pid \d+\)/)
+  assert.equal(ledgerCli(['out', 'vn-play'], dir), 'signed out vn-play')
+  assert.equal(ledgerCli(['list'], dir), 'empty')
+  assert.throws(() => ledgerCli(['in', 'x', 'renpy'], dir), /usage/)
+  assert.throws(() => ledgerCli(['in', 'x', 'excel', '5'], dir), /usage/)
 })
