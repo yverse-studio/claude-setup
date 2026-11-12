@@ -56,14 +56,15 @@ export function blenderCount(run = (cmd, args) => spawnSync(cmd, args, { encodin
 // RAM ledger (yskills 2026-11-12): whoever starts Blender or Ren'Py signs in and signs out again, so "who holds the RAM"
 // is a list, not a guess. One file per entry; an entry whose pid is dead is stale and dropped when the list is read.
 const ledgerDir = (dir) => join(dir, 'ledger')
-const ledgerFile = (who, dir) => join(ledgerDir(dir), `${who.replace(/[^\w.-]/g, '_')}.json`)
+const ledgerFile = (who, pid, dir) => join(ledgerDir(dir), `${who.replace(/[^\w.-]/g, '_')}-${pid}.json`)
 
 export function ledgerSignIn({ who, app, pid = process.pid, dir = slotDir(), now = Date.now() }) {
   mkdirSync(ledgerDir(dir), { recursive: true })
-  writeFileSync(ledgerFile(who, dir), JSON.stringify({ who, app, pid, at: now }))
+  writeFileSync(ledgerFile(who, pid, dir), JSON.stringify({ who, app, pid, at: now }))
 }
 
-export const ledgerSignOut = (who, dir = slotDir()) => rmSync(ledgerFile(who, dir), { force: true })
+// Keyed by name and pid: two jobs with one name never sign each other out.
+export const ledgerSignOut = (who, pid = process.pid, dir = slotDir()) => rmSync(ledgerFile(who, pid, dir), { force: true })
 
 export function ledgerList({ dir = slotDir(), alive = pidAlive } = {}) {
   let names = []
@@ -80,13 +81,13 @@ export function ledgerList({ dir = slotDir(), alive = pidAlive } = {}) {
 }
 
 // By hand (a Ren'Py playtest or Blender started outside laptop-job): the pid is the app's own, so the entry lives as long as it does.
-//   node scripts/laptop-slots.mjs ledger in <who> <blender|renpy> <pid> | out <who> | list
+//   node scripts/laptop-slots.mjs ledger in <who> <blender|renpy> <pid> | out <who> <pid> | list
 export function ledgerCli(args, dir = slotDir()) {
   const [verb, who, app, pid] = args
   if (verb === 'in' && who && ['blender', 'renpy'].includes(app) && Number(pid) > 0) { ledgerSignIn({ who, app, pid: Number(pid), dir }); return `signed in ${who}` }
-  if (verb === 'out' && who) { ledgerSignOut(who, dir); return `signed out ${who}` }
+  if (verb === 'out' && who && Number(app) > 0) { ledgerSignOut(who, Number(app), dir); return `signed out ${who}` }
   if (verb === 'list') return ledgerList({ dir }).map((r) => `${r.who} (${r.app}, pid ${r.pid})`).join('\n') || 'empty'
-  throw new Error('usage: ledger in <who> <blender|renpy> <pid> | ledger out <who> | ledger list')
+  throw new Error('usage: ledger in <who> <blender|renpy> <pid> | ledger out <who> <pid> | ledger list')
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url) && process.argv[2] === 'ledger') {

@@ -79,7 +79,7 @@ const statusLine = (state, name, why) => `JOB ${state} ${name}: ${why}`
 
 function finish(line, code) {
   releaseSlot(heldSlot)
-  if (ledgerName) ledgerSignOut(ledgerName)
+  if (ledgerName) ledgerSignOut(ledgerName, process.pid)
   console.log(line)
   const log = process.env.LAPTOP_JOB_LOG ?? 'laptop-job.log'
   try { appendFileSync(log, `${new Date().toISOString()} ${line}\n`) } catch (e) { console.error(`WARN could not write ${log}: ${e.message}`) }
@@ -106,7 +106,7 @@ export function stopState(file = process.env.LAPTOP_STOP_FILE ?? 'STOP') {
 }
 
 // Blender and Ren'Py are the two RAM-heavy starts; both sign in to the RAM ledger (scripts/laptop-slots.mjs).
-export const heavyApp = (cmd) => (/blender/i.test(cmd.join(' ')) ? 'blender' : /renpy/i.test(cmd.join(' ')) ? 'renpy' : null)
+export const heavyApp = (cmd) => (/blender/i.test(cmd.join(' ')) ? 'blender' : /(^|[\\/ ])renpy(\.exe|\.sh|\.py)?(\s|$)/i.test(cmd.join(' ')) ? 'renpy' : null)
 const isHeavy = (cmd) => heavyApp(cmd) !== null
 const ledgerText = () => ledgerList().map((r) => `${r.who} (${r.app}, pid ${r.pid})`).join(', ') || 'empty'
 
@@ -207,5 +207,5 @@ function killChild() {
   if (process.platform === 'win32') spawnSync('taskkill', ['/PID', String(runningChild.pid), '/T', '/F'])
   else { try { process.kill(-runningChild.pid, 'SIGKILL') } catch { runningChild.kill('SIGKILL') } }
 }
-for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => { killChild(); releaseSlot(heldSlot); if (ledgerName) ledgerSignOut(ledgerName); process.exit(130) })
+for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => { killChild(); releaseSlot(heldSlot); if (ledgerName) ledgerSignOut(ledgerName, process.pid); process.exit(130) })
 if (process.argv[1] === fileURLToPath(import.meta.url)) main().catch((e) => { killChild(); finish(statusLine('FAIL', 'job', `watchdog error: ${e.message}`), 1) })
