@@ -276,7 +276,7 @@ test('check.mjs fails when a lessons file is not linked from docs/MAP.md or the 
 // `model:` passes; SessionStart prints the TEAMS.md pointer.
 const teamFile = join(root, 'global/team-guard.mjs')
 // The brief block's must-have lines (operator/briefs.md); a thread start without them is blocked.
-const FULL = '\nModel: claude-x-1\nSkills: roles/programmer.md\nDone when: node --test passes. Stop when: two rounds.\nStart: read MEMORY.md, then CLAUDE.md\nPrior art: none, because a test brief'
+const FULL = '\nThreads: list_threads checked, none open on this topic\nModel: claude-x-1\nSkills: roles/programmer.md\nDone when: node --test passes. Stop when: two rounds.\nStart: read MEMORY.md, then CLAUDE.md\nPrior art: none, because a test brief'
 const runTeam = (mode, payload, env = {}) => spawnSync(process.execPath, [teamFile, mode], {
   input: JSON.stringify(payload), encoding: 'utf8', timeout: 5000, env: { ...process.env, CLAUDE_CODE_CHILD_SESSION: '', ...env },
 })
@@ -861,13 +861,13 @@ test('team guard: kit, size, role and brief lines are checked against TEAMS.md',
   assert.equal(badTeam('Role: Tester · Kit: app · Size: L', teams), null)
   assert.ok(missingLines('Model: <id for this role>\nSkills: <role doc>').includes('Model:'), 'an unfilled Model placeholder does not count')
   assert.ok(!missingLines('Done when:\n  node --test passes').includes('Done when:'), 'the value may start on the next line')
-  assert.deepEqual(missingLines('Role: Producer · Kit: video · Size: M\nMake a bee video.'), ['Model:', 'Skills:', 'Done when:', 'Stop when:', 'Start: (read MEMORY.md first)'])
+  assert.deepEqual(missingLines('Role: Producer · Kit: video · Size: M\nMake a bee video.'), ['Model:', 'Skills:', 'Done when:', 'Stop when:', 'Start: (read MEMORY.md first)', 'Threads: (list_threads checked, none open on this topic)'])
   assert.deepEqual(missingLines(`Role: Planner · Kit: setup · Size: M${FULL}\nDone when: SOTA research on plan tracking is summarized`), ['Researcher: (the task asks for research)'], 'a research task names its Researcher')
   assert.deepEqual(missingLines(`Role: Planner · Kit: setup · Size: M${FULL}\nDone when: research on best practice summarized\nResearcher: general-purpose, sonnet`), [])
   assert.deepEqual(missingLines(`Role: Programmer · Kit: app · Size: S${FULL}\nFollow best practices for tests.`), [], 'an order to follow best practice is no research ask')
   assert.deepEqual(missingLines(`Role: Researcher · Kit: app · Size: M${FULL}\nFind the SOTA for offline sync.`), [], 'the Researcher itself names none')
   assert.deepEqual(missingLines(`Role: Programmer · Kit: app · Size: S${FULL}\nShortest reply. No extra subagents, research, screenshots or re-reads.`), [], 'the brief block itself is no research ask')
-  assert.deepEqual(missingLines('Done when: <a check>. Stop when: <budget>'), ['Model:', 'Skills:', 'Done when:', 'Stop when:', 'Start: (read MEMORY.md first)'], 'unfilled placeholders do not count')
+  assert.deepEqual(missingLines('Done when: <a check>. Stop when: <budget>'), ['Model:', 'Skills:', 'Done when:', 'Stop when:', 'Start: (read MEMORY.md first)', 'Threads: (list_threads checked, none open on this topic)'], 'unfilled placeholders do not count')
 })
 
 // Luna (yskills 2026-10-27): every reply to him carries a kaomoji; nothing else is touched.
@@ -1151,4 +1151,33 @@ test('rule-guard: the receipt check runs only in a spawned thread', () => {
     assert.match(run(spawned).stderr, /start receipt/)
     assert.equal(run(JSON.stringify({ type: 'user', message: { content: 'Role: Programmer · Kit: setup · Size: S' } })).status, 0, 'a pasted brief in a project chat is no thread')
   } finally { rmSync(rolefile, { force: true }); rmSync(dir, { recursive: true, force: true }) }
+})
+
+// Companyxy report 2026-11-12, point 1: almost every thread start failed the brief check one line at a time, so each
+// start cost an extra round. One refusal now lists every problem and points at a fixed, tested template.
+test('team guard: a bad brief is refused once with every problem and a template that itself passes', async () => {
+  const { decide, missingLines, stamped, needsPriorArt, needsTester } = await import('../global/team-guard.mjs')
+  const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
+  const bad = decide('mcp__hearthbot__start_thread', { title: 'Fix it', instructions: 'Role: Programmer · Kit: app · Size: L\nBuild the thing.', model: 'claude-x-1' }, [], [], teams).block ?? ''
+  for (const part of [/Threads:/, /Model:/, /Skills:/, /Done when:/, /Stop when:/, /Start:/, /Prior art:/, /Tester:/, /docs\/templates\/thread-brief\.md/]) assert.match(bad, part, `one refusal names ${part}`)
+  const tpl = readFileSync(join(root, 'docs/templates/thread-brief.md'), 'utf8')
+  const block = tpl.match(/```\n([\s\S]*?)```/)?.[1] ?? ''
+  assert.ok(block, 'the template has one fenced brief block')
+  const filled = block.replace(/<[^>\n]+>/g, (m) => (m === '<S|M|L>' ? 'M' : /^<kit/.test(m) ? 'setup' : /^<Role/.test(m) ? 'Programmer' : 'something concrete for this task'))
+  assert.deepEqual(missingLines(filled), [], 'a filled template has every must-have line')
+  assert.ok(stamped(filled) && !needsPriorArt(filled) && !needsTester(filled))
+  const unfilled = missingLines(block)
+  assert.ok(unfilled.length >= 4, 'the unfilled template does not pass by itself')
+  assert.equal(decide('mcp__hearthbot__start_thread', { title: 'Programmer · Fix it', instructions: filled, model: 'claude-x-1' }, [], [], teams).block, undefined, 'a filled template starts the thread')
+})
+
+// Companyxy report 2026-11-12, point 2: a Researcher opened the Claude app's built-in browser instead of yskills' own
+// Chrome on the laptop. The app browser is blocked unless the environment says yskills asked for it.
+test('rule guard: the Claude app browser is blocked, Owner-Chrome and others are not', async () => {
+  const { decide } = await import('../global/rule-guard.mjs')
+  const app = (name, env = {}) => decide(`mcp__remote-devices__Claude_Browser__${name}`, { url: 'https://example.com' }, env)
+  for (const name of ['navigate', 'tabs_create', 'browser_batch', 'preview_start']) assert.match(app(name) ?? '', /Owner-Chrome[\s\S]*claude-in-chrome/, name)
+  assert.equal(app('navigate', { CLAUDE_SETUP_BROWSER: 'app' }), null, 'yskills asked for the app browser in his own words')
+  assert.equal(decide('mcp__claude-in-chrome__navigate', { url: 'https://example.com' }, {}), null, 'Owner-Chrome passes')
+  assert.equal(decide('mcp__plugin_playwright_playwright__browser_navigate', { url: 'https://example.com' }, {}), null, 'headless Playwright passes')
 })
