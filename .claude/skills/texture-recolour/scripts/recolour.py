@@ -38,11 +38,9 @@ def island_ids(faces, n_uv):
     return [order.setdefault(find(f[0]), len(order)) for f in faces]
 
 
-def island_mask(uvs, faces, picked, width, height=None, grow=0, ids=None):
-    """Boolean (height, width) mask: triangles of the picked islands at pixel centres (v up, image row 0 = v 1); each triangle only inside its own bounding box. grow = dilation in px."""
-    height = height or width; ids = ids or island_ids(faces, len(uvs)); mask = np.zeros((height, width), bool)
-    for f, i in zip(faces, ids):
-        if i not in picked: continue
+def _triangles(uvs, faces, width, height):
+    """(face index, row0, row1, col0, col1, inside) per triangle, evaluated only inside the triangle's own bounding box (v up, row 0 = v 1, pixel centres)."""
+    for n, f in enumerate(faces):
         for k in range(1, len(f) - 1):
             (x0, y0), (x1, y1), (x2, y2) = uvs[f[0]], uvs[f[k]], uvs[f[k + 1]]
             d = (y1 - y2) * (x0 - x2) + (x2 - x1) * (y0 - y2)
@@ -51,11 +49,27 @@ def island_mask(uvs, faces, picked, width, height=None, grow=0, ids=None):
             r0, r1 = max(int(np.floor((1 - max(y0, y1, y2)) * height)) - 1, 0), min(int(np.ceil((1 - min(y0, y1, y2)) * height)) + 1, height)
             if c0 >= c1 or r0 >= r1: continue
             ys, xs = np.mgrid[r0:r1, c0:c1]; px, py = (xs + 0.5) / width, 1 - (ys + 0.5) / height
-            a = ((y1 - y2) * (px - x2) + (x2 - x1) * (py - y2)) / d; b = ((y2 - y0) * (px - x2) + (x0 - x2) * (py - y2)) / d
-            mask[r0:r1, c0:c1] |= (a >= -1e-9) & (b >= -1e-9) & (1 - a - b >= -1e-9)
+            u = ((y1 - y2) * (px - x2) + (x2 - x1) * (py - y2)) / d; v = ((y2 - y0) * (px - x2) + (x0 - x2) * (py - y2)) / d
+            yield n, r0, r1, c0, c1, (u >= -1e-9) & (v >= -1e-9) & (1 - u - v >= -1e-9)
+
+
+def island_mask(uvs, faces, picked, width, height=None, grow=0, ids=None):
+    """Boolean (height, width) mask of the picked islands' triangles. grow = dilation of the mask itself in px."""
+    height = height or width; ids = ids or island_ids(faces, len(uvs)); mask = np.zeros((height, width), bool)
+    for n, r0, r1, c0, c1, inside in _triangles(uvs, faces, width, height):
+        if ids[n] in picked: mask[r0:r1, c0:c1] |= inside
     for _ in range(grow):
         g = mask.copy(); g[1:] |= mask[:-1]; g[:-1] |= mask[1:]; g[:, 1:] |= mask[:, :-1]; g[:, :-1] |= mask[:, 1:]; mask = g
     return mask
+
+
+def island_areas(uvs, faces, ids, width, height):
+    """{island: pixels} in one pass over the triangles (a pixel two islands cover counts for the later one)."""
+    label = np.full((height, width), -1, np.int32)
+    for n, r0, r1, c0, c1, inside in _triangles(uvs, faces, width, height):
+        label[r0:r1, c0:c1][inside] = ids[n]
+    counts = np.bincount(label[label >= 0], minlength=max(ids, default=-1) + 1)
+    return {i: int(counts[i]) for i in sorted(set(ids))}
 
 
 def shift_hsv(rgb, mask, hue_deg=0.0, sat=1.0, val=1.0, grey_sat=0.15):
@@ -85,9 +99,8 @@ def main():
     uvs, faces, skipped = read_obj_uv(a.mesh); ids = island_ids(faces, len(uvs)); known = sorted(set(ids))
     if skipped: print(f'recolour: {skipped} face(s) without a full set of UVs were ignored', file=sys.stderr)
     if a.list:
-        per = {i: 0 for i in known}; cnt = {i: 0 for i in known}
-        for f, i in zip(faces, ids): cnt[i] += 1
-        for i in known: print(json.dumps({'island': i, 'faces': cnt[i], 'px': int(island_mask(uvs, [f for f, j in zip(faces, ids) if j == i], {0}, w, h).sum())}))
+        cnt = {i: ids.count(i) for i in known}; area = island_areas(uvs, faces, ids, w, h)
+        for i in known: print(json.dumps({'island': i, 'faces': cnt[i], 'px': area[i]}))
         return 0
     picked = {int(i) for i in (a.islands or '').split(',') if i.strip() != ''}
     if not picked or not picked <= set(known): sys.exit(f'recolour: pick islands from {known} with --islands (got {sorted(picked)})')

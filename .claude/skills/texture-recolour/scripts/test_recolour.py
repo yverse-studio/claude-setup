@@ -118,6 +118,14 @@ class Recolour(unittest.TestCase):
         p = run(self.tex, self.obj, '--list'); rows = [json.loads(l) for l in p.stdout.strip().splitlines()]
         self.assertEqual([r['island'] for r in rows], [0, 1]); self.assertTrue(all(r['px'] > 1000 and r['faces'] == 1 for r in rows))
 
+    def test_list_is_fast_with_thousands_of_islands(self):
+        import time
+        lines = [f'vt {0.01 + (i % 70) * 0.014} {0.01 + (i // 70) * 0.014}\nvt {0.01 + (i % 70) * 0.014 + 0.01} {0.01 + (i // 70) * 0.014}\nvt {0.01 + (i % 70) * 0.014} {0.01 + (i // 70) * 0.014 + 0.01}' for i in range(2000)]
+        obj = os.path.join(self.dir, 'many.obj'); open(obj, 'w').write('\n'.join(lines) + '\n' + '\n'.join(f'f {3*i+1}/{3*i+1} {3*i+2}/{3*i+2} {3*i+3}/{3*i+3}' for i in range(2000)) + '\n')
+        big = os.path.join(self.dir, 'big.png'); Image.fromarray(np.zeros((1024, 1024, 3), np.uint8)).save(big)
+        t = time.time(); p = run(big, obj, '--list'); self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertEqual(len(p.stdout.strip().splitlines()), 2000); self.assertLess(time.time() - t, 8)
+
     def test_unknown_island_fails_loudly(self):
         p = run(self.tex, self.obj, '--islands', '9', '--hue', '10', '--out', self.dir)
         self.assertNotEqual(p.returncode, 0)
