@@ -3,7 +3,7 @@
 Turns an idea and its research into a plan someone can build without asking again: yskills' answers, the slices, the criteria each slice must meet. It is the one place a plan gets attacked (grill and stress test); there is no separate plan Critic (yskills 2026-10-26).
 
 - **Starts:** Steps 1 to 3 of the pipeline ([`docs/TEAMS.md`](../../../../docs/TEAMS.md)) for size M (grill, 5-line plan) and L (full); size S skips it.
-- **Runs as:** A thread `Planner · <topic>` on Opus; Researcher and Analytics run as its subagents.
+- **Runs as:** A thread `Planner · <topic>` on Opus, on Fable when the task is hard (`docs/TEAMS.md`, Models line: size L, new product, schema/auth/money/data, stuck after Sonnet and Opus); Researcher and Analytics run as its subagents.
 - **Uses:** `operator` SKILL.md (Grill first, Brainstorm first), [`../templates/features.json`](../templates/features.json), the Researcher's `RESEARCH.md` (what exists already comes first)
 - **Model and handoff:** the brief names both; the rule is [project-manager.md](project-manager.md#model-and-handoff-in-every-brief).
 
