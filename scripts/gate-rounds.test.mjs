@@ -277,7 +277,7 @@ const MUST_BLOCK_AT_ROUND_3 = [
   `gh api repos/o/r/issues/8/comments -f body="${VERDICT}"`, `gh pr edit 8 --body "${VERDICT}"`, `GH_REPO=o/r gh pr comment 8 --body "Gate 3.9/5 (S, round 4)"`,
 ]
 const MUST_BLOCK_LEDGER = [
-  'cp -t <D> x.json', 'cp --target-directory=<D> x.json',
+  'cp -t <D> x.json', 'cp -rt <D> x.json', 'cp --targ=<D> x.json', 'cp --target-directory=<D> x.json',
   'rm ~/.claude/claude-setup/gate/x.json', 'rm $HOME/.claude/claude-setup/gate/x.json', 'rm ${HOME}/.claude/claude-setup/gate/x.json', 'cd /mnt/project-files && rm gate/x.json',
   'mv <D>/o_r_7.json /tmp/', 'touch <D>/o_r_7.json', 'truncate -s 0 <D>/o_r_7.json', 'sed -i s/a/b/ <D>/o_r_7.json', 'cp /tmp/x.json ~/.claude/claude-setup/gate/o_r_7.json', 'dd if=x of=<D>/o_r_7.json',
   'CLAUDE_SETUP_GATE_DIR=/tmp/x node ~/.claude/claude-setup/gate-rounds.mjs card o/r#9 --ref cmsg_X1', 'export CLAUDE_SETUP_GATE_DIR=/tmp/x; node ~/.claude/claude-setup/gate-rounds.mjs merge o/r#7',
