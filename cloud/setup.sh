@@ -368,7 +368,7 @@ import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { homedir, tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
-import { dirname, join } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 // rule-guard sits beside this file (GUARD_FILES); without it only the model-tier check is skipped.
 let roleOf = () => null
 let openThreads = () => []
@@ -430,7 +430,10 @@ function install(dir, fetched) {
 
 // M47 follow-up: a cached image's start hook is its own old team-guard, so it refreshes with its old lists and a guard or boot
 // file added later never arrives. The first fresh code to run (rule-guard on a thread start) fills in by this copy's lists.
+// Only an installed copy: run from a git checkout (claude-setup's own global/), it would write boot files into the repo (#478 gate round 1).
+const inCheckout = (dir) => { for (let d = resolve(dir); ; d = dirname(d)) { if (existsSync(join(d, '.git'))) return true; if (dirname(d) === d) return false } }
 export function fillMissing(dir) {
+  if (inCheckout(dir)) return
   const missing = (list) => list.filter((f) => !existsSync(join(dir, f)))
   const files = [...missing(GUARD_FILES), ...missing(BOOT_FILES)]
   if (files.length) install(dir, fetchAll(dir, files, guardUrl, 2)) // one download, so it fits rule-guard's 5 s prompt hook

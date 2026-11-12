@@ -656,6 +656,9 @@ test('rule guard: a thread start installs the guards and boot files an old image
     const transcript = join(dir, 't.jsonl')
     writeFileSync(transcript, JSON.stringify({ type: 'user', message: { role: 'user', content: brief } }))
     assert.match(run('<wake reason="mention"><message>hi</message></wake>', `old2${process.pid}`, transcript), /Guards in this session: [0-9a-f]{8} \(7\/7 installed\)/, 'a thread whose brief is found in the transcript gets the line too')
+    const repo = spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'prompt'], { input: JSON.stringify({ prompt: brief, cwd: root, session_id: `old3${process.pid}` }), encoding: 'utf8', env }).stdout
+    assert.match(repo, /Guards in this session/, 'a checkout still names its guards')
+    assert.equal(existsSync(join(root, 'global', '.claude')), false, 'run from a git checkout, it writes no boot files into the repo')
   } finally { for (const d of [dir, bin]) rmSync(d, { recursive: true, force: true }) }
 })
 
