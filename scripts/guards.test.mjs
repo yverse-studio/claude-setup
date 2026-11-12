@@ -1247,3 +1247,10 @@ test('gate round 3: needsSheet ignores the Done line and UI work, catches coat, 
   for (const task of ['Tailor the coat for Kai', 'Put the lingerie set on Nova', 'Fix the hands mesh weights on Mira', 'Give Luna a new hairstyle and earrings, fit them to her head', 'Refit the dress on Luna', 'Fix the skirt clipping on the hips']) assert.equal(need(task), 2, task)
   assert.equal(need('Fit the outfit to the new UI preview screen\nSheet: n/a this is a screen layout job, no model changes'), 0, 'a declared exception passes')
 })
+
+test('gate round 4: a task sentence starting with Model is not a brief line, figure and garment builds need a sheet', async () => {
+  const { missingLines } = await import('../global/team-guard.mjs')
+  const need = (task) => missingLines(`Role: Programmer · Kit: game · Size: M${FULL}\n${task}`).length
+  for (const task of ['Model a red dress for Lena', 'Model the new body for Nova', 'Please model a red dress for Lena', 'Build the new body for Nova from the base mesh', "Make Nova's body taller and slimmer", 'Make Kai a new jacket', 'Fix the stockings poking through the boots', 'Fit the bikini to Nova', 'Create a new hairstyle for Mira']) assert.equal(need(task), 2, task)
+  for (const task of ['Make the NPCs face the player', 'Make the HUD fit on 390px', 'Create a uniform loading spinner', 'Add an outfit shop screen', 'Make the outfit shop screen scroll on mobile', 'Build the new inventory screen with a clothing tab']) assert.equal(need(task), 0, task)
+})
