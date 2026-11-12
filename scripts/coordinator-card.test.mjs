@@ -265,3 +265,32 @@ test('the hook writes the count: a spawn prompt with a refused brief logs refuse
     assert.equal(read1('h2').outcome, 'clean')
   } finally { delete process.env.CLAUDE_SETUP_PROJECT_FILES; rmSync(out, { recursive: true, force: true }) }
 })
+
+// Gate round 1 of #501: the outcome is read from REAL briefCheck results, not from hand-written texts.
+const ROOT = join(import.meta.dirname, '..')
+const modelId = (tier) => readFileSync(join(ROOT, 'docs/TEAMS.md'), 'utf8').match(new RegExp(`${tier} \\((claude-[\\w.-]+)\\)`))[1]
+const [SONNET_ID, FABLE_ID] = [modelId('Sonnet'), modelId('Fable')]
+const spawned = (brief) => `<wake reason="spawn"><relay>${brief}</relay></wake>`
+const BODY = '\nItem: M50\nPlan: p.md\nAcceptance: tests pass\nModel: x\nSkills: x\nDone when: tests pass\nStop when: 3 rounds\nStart: read MEMORY.md first\nThreads: list_threads checked, none open on this topic'
+test('a real briefCheck result is sorted right: a Reviewer\'s gate.md note is repaired, a wrong model next to another gap is wrong-model', async () => {
+  const { briefCheck } = await import('../global/rule-guard.mjs')
+  const repaired = await briefCheck(spawned(`Role: Reviewer · Kit: setup · Size: S${BODY}\nPrior art: our notes -> adapt, because they exist`), ROOT, null)
+  assert.match(repaired, /^Brief repair \(no block\)/)
+  assert.equal(startOutcome(repaired).outcome, 'repaired', 'any Brief repair text is a repair')
+  assert.equal(startOutcome(await briefCheck(spawned(`Role: Programmer · Kit: setup · Size: S${BODY}\nPrior art: obra/superpowers -> adapt, because it exists`), ROOT, null)).outcome, 'clean')
+  const mixed = await briefCheck(spawned(`Role: Planner · Kit: setup · Size: M${BODY.replace('Item: M50\n', '')}\nPrior art: obra/superpowers -> adapt, because it exists`), ROOT, SONNET_ID)
+  assert.match(mixed, /^Brief check[\s\S]*in 2 places[\s\S]*restart it on that model/, mixed)
+  assert.equal(startOutcome(mixed).outcome, 'wrong-model', 'the restart text among the items decides')
+  const plain = await briefCheck(spawned(`Role: Planner · Kit: setup · Size: M${BODY.replace('Item: M50\n', '')}\nPrior art: obra/superpowers -> adapt, because it exists`), ROOT, FABLE_ID)
+  assert.equal(startOutcome(plain).outcome, 'refused')
+})
+
+test('a linked brief-log folder writes nothing and the start goes on', () => {
+  const out = mkdtempSync(join(tmpdir(), 'brief-log-'))
+  const target = mkdtempSync(join(tmpdir(), 'elsewhere-'))
+  symlinkSync(target, join(out, 'brief-log'))
+  assert.equal(logStart({ session: 'l1', outcome: 'clean' }, out), null)
+  assert.deepEqual(readdirSync(target), [], 'nothing went through the link')
+  assert.equal(noteRelay('l1', true, out), false)
+  rmSync(out, { recursive: true, force: true }); rmSync(target, { recursive: true, force: true })
+})

@@ -180,6 +180,14 @@ export function renderAll({ base, hash = cardHash(base), date = today() }) {
   for (const role of rosterNames(teams)) { const text = renderBrief(role, teams); if (text) files.set(`briefs/${briefFileName(role)}`, text) }
   return files
 }
+// The folder is shared by every thread of the project: never write through a link planted there, and never reuse a guessable temp name.
+// The one writer of writeAll and the start log: temp name, then rename; a linked folder or file is refused.
+function safeWrite(to, text, name = to) {
+  mkdirSync(join(to, '..'), { recursive: true })
+  if (lstatSync(join(to, '..')).isSymbolicLink() || (existsSync(to) && lstatSync(to).isSymbolicLink())) throw new Error(`card-render: ${name} is behind a symlink, refused`)
+  const tmp = `${to}.${randomBytes(6).toString('hex')}.new`
+  try { writeFileSync(tmp, text, { flag: 'wx' }); renameSync(tmp, to) } catch (e) { rmSync(tmp, { force: true }); throw e }
+}
 // Writes only what changed (temp name, then rename), so two threads writing at once leave a whole file, and a second run writes nothing.
 export function writeAll(dir, files) {
   let written = 0
@@ -187,11 +195,7 @@ export function writeAll(dir, files) {
   for (const [name, text] of [...files].sort(([a], [b]) => (a === 'COORDINATOR-CARD.md') - (b === 'COORDINATOR-CARD.md'))) {
     const to = join(dir, name)
     if (existsSync(to) && readFileSync(to, 'utf8') === text) continue
-    mkdirSync(join(to, '..'), { recursive: true })
-    // The folder is shared by every thread of the project: never write through a link planted there, and never reuse a guessable temp name.
-    if (lstatSync(join(to, '..')).isSymbolicLink() || (existsSync(to) && lstatSync(to).isSymbolicLink())) throw new Error(`card-render: ${name} is behind a symlink, refused`)
-    const tmp = `${to}.${randomBytes(6).toString('hex')}.new`
-    try { writeFileSync(tmp, text, { flag: 'wx' }); renameSync(tmp, to) } catch (e) { rmSync(tmp, { force: true }); throw e }
+    safeWrite(to, text, name)
     written++
   }
   return written
@@ -222,17 +226,16 @@ export const FALSE_STARTS = ['refused', 'wrong-model', 'duplicate']
 // The outcome of one start from the brief check's text (rule-guard briefCheck) and the model check's text.
 export function startOutcome(check = '', modelCheckText = '') {
   if (/^Model check\b/.test(modelCheckText)) return { outcome: 'wrong-model', reasons: ['model'] }
-  const items = [...String(check).matchAll(/\((\d+)\) (.*?)(?= \(\d+\) |\. Do no work)/g)].map((m) => m[2].trim().slice(0, 80))
-  if (/^Brief check\b/.test(check)) return { outcome: items.length === 1 && /ask the coordinator to restart it on that model/.test(String(check)) ? 'wrong-model' : 'refused', reasons: items }
-  const lacks = String(check).match(/Brief repair \(no block\): the brief lacks ([^.]*?)\. Work as if/)?.[1]
-  return lacks ? { outcome: 'repaired', reasons: lacks.split(', ') } : { outcome: 'clean', reasons: [] }
+  const full = [...String(check).matchAll(/\((\d+)\) (.*?)(?= \(\d+\) |\. Do no work)/g)].map((m) => m[2].trim())
+  if (/^Brief check\b/.test(check)) return { outcome: full.some((i) => /ask the coordinator to restart it on that model/.test(i)) ? 'wrong-model' : 'refused', reasons: full.map((i) => i.slice(0, 80)) }
+  // Any repair text counts, whatever it repairs: the missing-lines note and the gate role's Prior art note both start with `Brief repair (no block):`.
+  const repair = String(check).match(/Brief repair \(no block\): ([^\n]*)/)
+  if (!repair) return { outcome: 'clean', reasons: [] }
+  const lacks = repair[1].match(/^the brief lacks ([^.]*?)\. Work as if/)?.[1]
+  return { outcome: 'repaired', reasons: lacks ? lacks.split(', ') : [repair[1].slice(0, 60)] }
 }
 const logName = (session, date) => `${date}-${String(session).replace(/\W/g, '').slice(0, 40)}.json`
-function writeLog(file, entry) {
-  mkdirSync(join(file, '..'), { recursive: true })
-  const tmp = `${file}.${randomBytes(6).toString('hex')}.new`
-  try { writeFileSync(tmp, `${JSON.stringify(entry)}\n`, { flag: 'wx' }); renameSync(tmp, file) } catch (e) { rmSync(tmp, { force: true }); throw e }
-}
+const writeLog = (file, entry) => safeWrite(file, `${JSON.stringify(entry)}\n`)
 // Writes the start's file. `info`: { session, project, role, kit, size, guard, card, outcome, reasons }. A failure never stops the start.
 export function logStart(info, out = projectFolder(), now = new Date()) {
   try {
