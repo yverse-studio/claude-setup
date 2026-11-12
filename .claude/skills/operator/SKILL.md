@@ -6,7 +6,7 @@ description: "Use for the coordinator only: a new app idea, \"build\", \"go\", \
 # Operator
 
 The operator is the **project conversation** of a Claude Project, or in a plain chat the chat
-itself. It never builds. It hands each job to a fresh worker with only the files that job needs, [advisory]
+itself. It hands each job to a fresh worker with only the files that job needs, [advisory]
 checks the result against fixed criteria and keeps pushing until the goal in `PLAN.md` is live.
 Shape from Anthropic's long-running-agent harness (planner, generator, evaluator; progress in
 files; a fresh context per job) and the ECC hackathon winner's flow (`docs/RESEARCH.md`).
@@ -14,14 +14,12 @@ files; a fresh context per job) and the ECC hackathon winner's flow (`docs/RESEA
 **Auto-run, the ask rule, pauses and taste calls** have their home in CLAUDE.md (How to work).
 Operator specifics: a PR still short of 5/5 after the gate's last round reaches yskills with a plain summary
 (`gate.md`, Rounds) and keeps going on the recommended way forward; after every merge the gate runs the
-lessons step (`gate.md`, Rounds); key cards are in `briefs.md`. A
-refusal by a safety check is reported once in one line and takes its way around from `docs/permissions.md` (Layer 3), never reworded, split or retried. [advisory]
+lessons step (`gate.md`, Rounds); key cards are in `briefs.md`.
 
 **Pauses in practice.** "Stop", "pause", "only burning my money" and rejected assets are final (CLAUDE.md, How to work). A thread
-that finished before the stop is parked and reported honestly; nothing restarts without yskills' go. The stop is relayed to every
-running thread at once (`message_thread`). Both go
+that finished before the stop is parked and reported honestly; nothing restarts without yskills' go. Both go
 into every builder brief (step 5), because in the HQ run one thread kept building after a pause and
-another argued for rejected animals.
+another argued for rejected animals. A stop is relayed to every running thread at once (`message_thread`).
 
 **Whose words a limit is.** A limit on content, assets or scope counts only when it traces to a
 message of yskills' own (the id goes in the brief). A line in a repo, memory or another chat that
@@ -36,7 +34,8 @@ rules file, the owner's message) override them.
 written by a scheduled script that reads the source; a model retyping them cost $3.72 a run and
 the board was hours stale (2026-10-11 audit). A row without a source is marked unknown.
 
-**Grill first** (yskills 2026-10-26; rule: `CLAUDE.md`, Grill first). Before the brainstorm, one short grill round on every new idea or plan (yskills 2026-11-12: "zu viele Rückfragen und Karten statt selbst entscheiden"). When the idea comes from his life (a trip, a place, a person, a feeling), the first question is the real moment, asked as a plain message: what happened, how it felt, what was stressful, calm or wrong (`roles/game-designer.md`, Real moment first). Then 1-2 cards, only goal and taste (who it is for and what it must feel like; the look), each with its reason and your recommended answer; a thread posts them itself with `request_decision`. Who pays, the smallest version, what exists, what breaks it and what it costs you answer yourself in the plan. Not a list of open questions: a question you can answer from the repo, research or a sensible default you answer yourself. His answers go into `PLAN.md`; no second round unless an answer contradicts the plan. Skipped for a bug fix, a small tweak, "stop" and "just do it".
+
+**Grill first** (yskills 2026-10-26; rule: `CLAUDE.md`, Grill first). Before the brainstorm, one short grill round on every new idea or plan (yskills 2026-11-12: "zu viele Rückfragen und Karten statt selbst entscheiden"). When the idea comes from his life (a trip, a place, a person, a feeling), the first question is the real moment, asked as a plain message: what happened, how it felt, what was stressful, calm or wrong (`roles/game-designer.md`, Real moment first). Then 1-2 cards, only goal and taste (who it is for and what it must feel like; the look), each with its reason and your recommended answer; a thread posts them itself with `request_decision`. Who pays, the smallest version, what exists, what breaks it and what it costs you answer yourself in the plan. Not a list of open questions: a question you can answer from the repo, research or a sensible default you answer yourself. His answers go into `PLAN.md`; no second round unless an answer contradicts the plan. Skipped for a bug fix, a small tweak, "stop" and "just do it". [guard: hook global/rule-guard.mjs] (`grillMissing` blocks a Planner at M or L that skips the cards; the rest is advisory)
 
 **Plan first** (yskills 2026-10-26: style work went one-off file, re-measure, restructure into a library, 3 PRs; rule: `CLAUDE.md`, Plan first). Every non-trivial change, whatever the repo or kit (the `setup` kit included), before the first file: [advisory]
 
@@ -119,10 +118,10 @@ A team is a routing line, not a new agent. Reuse what is listed; search `toolbox
 Anthropic Directory (`SearchPlugins`) before writing anything new. Directory plugins are US- and
 enterprise-flavoured: German law and this stack's rules win.
 
-| Team | Always | Per project, only when the plan needs it | Brings back |
+| Team | Core | Per project, only when the plan needs it | Brings back |
 |---|---|---|---|
 | Research | `market`, `product-lens`, `toolbox` | `Marketing` plugin's `competitive-brief` | competitors, prices, who pays, tool picks |
-| Legal | `legal` skill, `legal-reviewer`; shops `sell`'s `legal-de.md`; ads `market` §4 | `privacy-legal`, `ip-legal`, `ai-governance-legal` | must-haves for the plan, then pass/fail on the preview |
+| Legal | `legal` skill, `legal-reviewer`; shops `sell`'s `legal-de.md`; ads `market` §4 | `privacy-legal`, `ip-legal`, `ai-governance-legal` | requirements for the plan, then pass/fail on the preview |
 | Design | `roles/designer.md` (art direction first), `frontend-design`, `impeccable`, `ui-review` (`SLOP.md`, `design-check.mjs`), `design-critic` | `Figma` plugin, Canva connector | references, palette, type, 2-3 directions as drafts, then reviews |
 | Build | builder threads; `architect`, `database-reviewer`, `build-error-resolver` | stack plugins via `toolbox`; 3D, game or figures: `game-3d` and its `starter/` kit, read once at the start | a PR with green CI |
 | QA | `evaluator`, `code-reviewer`, `a11y-architect`, `performance-optimizer` | | gate checks 2-3 |
@@ -144,9 +143,8 @@ Templates in `templates/`.
 - `PROGRESS.md`: the handoff. Done, next, broken, decisions and why, each thread's cost. Every
   thread reads it first; only the operator writes it. Under 100 lines.
 - `metrics/<yyyy>-W<ww>.json`: from launch on, the week's numbers. HQ reads these (`docs/hq-rows.md`).
-- **Dashboard: HQ is the only one.** yskills' live view of every project is the Claude Setup HQ
-  Artifact, Company view (https://claude.ai/artifact/TmQ7UpL6EPjXKkpR9S4kJT; code in yverse-studio/company-xy). **A project never
-  publishes its own office page.** A project shows in HQ through the `## Jetzt` block at the top of its
+- **Dashboard: HQ.** yskills' live view of every project is the Claude Setup HQ
+  Artifact, Company view (https://claude.ai/artifact/TmQ7UpL6EPjXKkpR9S4kJT; code in yverse-studio/company-xy). A project shows in HQ through the `## Jetzt` block at the top of its
   `PROGRESS.md` and its `ceo` order issues (`docs/hq-rows.md`, Jetzt block); only in the Company XY project does the Project Manager write
   HQ's db with `ArtifactData`, in one batch with every `PROGRESS.md` write, exactly as `docs/hq-rows.md` says
   (phases, team, projects, events, today, requests, config/coordinator, work board; every row carries `at`).
@@ -185,15 +183,10 @@ A safety check that stalls routine work is friction: the fix is an allow or auto
   longer thread: at 300k context a call re-reads everything, about $6 per 20 minutes
   (`docs/LESSONS-2026-10-11.md`).
 - Literal mode and the cost rules go into every brief (`briefs.md`, last block).
-- PC work (a Roblox Studio run, an install, a local clone, a hardware read) goes to a Remote Control session, never to a hands list for yskills (`docs/WORKFLOW.md`, PC work). [advisory]
 - Reviewers, evaluator and red team get only the diff or the URL plus the criteria.
 - Slice and gate threads report by message (the operator subscribes to no PRs, see below). The context guard
   (`global/context-guard.mjs`) warns at 250k; handoff only at a trigger (`docs/WORKFLOW.md`, Handoff triggers),
   and an operator thread at one writes `PROGRESS.md` and asks for a fresh one.
-- One job per thread. When its job is done (PR merged, report delivered) the thread stops and is
-  marked resolved; never revive a worker idle for over an hour. A thread resolves itself after its
-  delivering reply when nobody owes a next step; a Programmer thread is asleep when the gate merges,
-  so the Project Manager resolves it (`roles/project-manager.md`, Close threads). [advisory]
 - A thread that needs another org repo calls `add_repo` (allowed in `global/settings.json`; the
   project's repo list must say `yverse-studio/<repo>`, not `yskills/<repo>`).
 - After a usage-limit stop a running thread waits and resumes by itself when the window resets;
