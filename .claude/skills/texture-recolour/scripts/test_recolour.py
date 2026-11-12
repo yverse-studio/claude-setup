@@ -1,5 +1,6 @@
 """Red before recolour.py exists, green after. Run: python -m unittest discover -s .claude/skills/texture-recolour/scripts -p "test_*.py" """
-import json, os, subprocess, sys, tempfile, unittest
+import colorsys, json, os, subprocess, sys, tempfile, unittest
+from unittest import mock
 import numpy as np
 from PIL import Image
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -68,8 +69,41 @@ class Recolour(unittest.TestCase):
         red = after[40, 10]; self.assertGreater(red[1], red[0], 'red should have turned green')
         self.assertEqual(int(red.max()), int(before[40, 10].max()), 'value (brightness) must be kept')
         grey = after[12, 12]; self.assertLessEqual(int(grey.max()) - int(grey.min()), 2, 'grey inside the mask got tinted')
-        near = after[24, 12]; full = R.shift_hsv(before, m, hue_deg=120, grey_sat=1e-6)[24, 12]
-        self.assertFalse(np.array_equal(near, full), 'near-grey must get a damped hue shift, not the full one')
+
+    def test_near_grey_pixels_reach_the_target_hue(self):   # gate #514 r1: a damped shift left pale pink yellowish
+        uvs, faces, _ = R.read_obj_uv(self.obj)
+        before = texture(); before[30:34, 8:12] = (249, 233, 233); m = R.island_mask(uvs, faces, {0}, 64)
+        after = R.shift_hsv(before, m, hue_deg=120)
+        for y, x in ((24, 12), (31, 9)):
+            hue = colorsys.rgb_to_hsv(*(after[y, x] / 255.0))[0] * 360
+            self.assertLess(abs(hue - 120), 4, f'pixel {before[y, x]} came out at hue {hue:.0f}')
+
+    def test_v_axis_is_up(self):   # gate #514 r1: a flipped v passed every test because both islands were symmetric in v
+        obj = os.path.join(self.dir, 'hi.obj'); open(obj, 'w').write('vt 0.05 0.6\nvt 0.45 0.6\nvt 0.45 0.9\nvt 0.05 0.9\nf 1/1 2/2 3/3 4/4\n')
+        uvs, faces, _ = R.read_obj_uv(obj); m = R.island_mask(uvs, faces, {0}, 64)
+        self.assertTrue(m[10, 12] and m[24, 12], 'v 0.6 to 0.9 belongs to the top rows')
+        self.assertFalse(m[40, 12] or m[60, 12], 'the bottom rows are v near 0, not in the mask')
+        self.assertEqual(int(m[32:].sum()), 0)
+
+    def test_grow_widens_the_mask_and_defaults_to_one(self):
+        uvs, faces, _ = R.read_obj_uv(self.obj)
+        m0, m2 = R.island_mask(uvs, faces, {0}, 64), R.island_mask(uvs, faces, {0}, 64, grow=2)
+        self.assertTrue((m2 | m0).sum() == m2.sum() and m2.sum() > m0.sum())
+        px = lambda *g: int(np.array(Image.open(os.path.join(self.dir, 'g', 'mask.png'))).astype(bool).sum()) if run(self.tex, self.obj, '--islands', '0', '--hue', '10', *g, '--out', os.path.join(self.dir, 'g')).returncode == 0 else -1
+        self.assertEqual(px(), px('--grow', '1')); self.assertGreater(px(), px('--grow', '0'))
+
+    def test_exit_1_when_the_saved_file_differs_outside_the_mask(self):   # gate #514 r1: the check compared the in-memory RGB copy, so a changed alpha or a bad save never showed
+        real = np.dstack
+        def leaky(arrs, *a, **k):
+            out = real(arrs, *a, **k); out[60, 60, 3] = 7; return out
+        out = os.path.join(self.dir, 'leak')
+        with mock.patch.object(R.np, 'dstack', leaky), mock.patch.object(sys, 'argv', ['recolour.py', self.tex, self.obj, '--islands', '0', '--hue', '90', '--out', out]), mock.patch('builtins.print') as pr:
+            self.assertEqual(R.main(), 1)
+        self.assertEqual(json.loads(pr.call_args[0][0])['changed_outside_mask'], 1)
+
+    def test_non_numeric_island_fails_with_a_message_not_a_traceback(self):
+        p = run(self.tex, self.obj, '--islands', 'a', '--out', self.dir)
+        self.assertNotEqual(p.returncode, 0); self.assertIn('--islands', p.stderr); self.assertNotIn('Traceback', p.stderr)
 
     def test_cli_writes_recoloured_mask_and_before_after_and_reports_zero_outside(self):
         out = os.path.join(self.dir, 'out')
