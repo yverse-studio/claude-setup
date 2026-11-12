@@ -338,8 +338,8 @@ export function assertConnectionNames(result, org, name, label) {
 // Saves the repository connection Workers Builds needs before a build configuration can exist
 // (PUT /builds/repos/connections, "the repository connection required by build triggers").
 // The public API lists neither connected Git accounts nor their repositories and offers no
+// re-sync, so this upsert is the only way to see whether Cloudflare knows the repo yet: it is
 // retried in case Cloudflare lags behind a repo created moments ago (run 42 needed no retry), with every answer logged.
-// retried while Cloudflare catches up with a repo created moments ago, with every answer logged.
 export async function connectRepo(cf, { repo, org, name, tries = CONNECT_TRIES, waitMs = CONNECT_WAIT_MS }) {
   const forms = repoIdForms(repo, org, name)
   let refused = []
