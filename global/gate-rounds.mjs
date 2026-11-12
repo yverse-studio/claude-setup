@@ -137,10 +137,13 @@ export function gateStep(tool, input = {}, ctx = {}) {
     const cmd = String(input.command ?? '')
     // gh pr merge goes through the same ledger as the merge tool.
     if (/\bgh\s+pr\s+merge\b/.test(cmd)) {
-      const n = cmd.match(/\bmerge\s+(?:-\S+\s+)*(\d+)/)?.[1]
-      const repo = cmd.match(/(?:-R|--repo)[ =]\s*(\S+)/)?.[1]
-      const ledgers = n ? (repo ? [readLedger(dir, `${repo.toLowerCase()}#${n}`)] : ledgersOfPr(dir, n)) : []
-      return ledgers.map(mergeProblem).find(Boolean) ?? null
+      const url = cmd.match(/github\.com\/([\w.-]+\/[\w.-]+)\/pull\/(\d+)/)
+      const n = url?.[2] ?? cmd.match(/\bmerge\s+(?:-\S+(?:\s+(?![\d-])\S+)?\s+)*(\d+)/)?.[1]
+      const repo = url?.[1] ?? cmd.match(/(?:-R|--repo)[ =]\s*(?:[\w.-]+\/)?([\w.-]+\/[\w.-]+)/)?.[1]
+      if (!n) return 'gate ledger: "gh pr merge" needs the PR number in the command (a number, or the PR URL), so its ledger can be checked (gate.md, Rounds).'
+      const ledgers = repo ? [readLedger(dir, `${repo.toLowerCase()}#${n}`)] : ledgersOfPr(dir, n)
+      const why = ledgers.map(mergeProblem).find(Boolean)
+      if (why) return why // no early success: the gate-file checks below still run
     }
     if (!/gate-rounds|project-files[\\/]gate|[\\/]claude-setup[\\/](?:gate\b|rule-guard|team-guard)/.test(cmd) && !cmd.includes(dir)) return null
     // One plain command in one known form: no pipes, chains, substitution, redirects, node -e or imports (a parser differential is a bypass).

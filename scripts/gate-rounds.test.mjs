@@ -245,3 +245,10 @@ test('the brief and the hook read one ledger whatever the case of the asset', ()
   assert.match(gateBrief('Round: 4\nAsset: Yverse-Studio/VG#13', { dir, model: 'sonnet-test' }), /Fable director/)
   assert.equal(readLedger(dir, 'yverse-studio/vg#13').rounds.length, 3)
 })
+
+test('gh pr merge: URL form, flags before the number and a missing number are all handled; a chained ledger edit still fails', () => {
+  const s = session(); s.gate(1, '3.0')
+  for (const c of ['gh pr merge https://github.com/yverse-studio/vacation-game/pull/13 --squash', 'gh pr merge --squash -R github.com/yverse-studio/vacation-game 13', 'gh pr merge --repo yverse-studio/vacation-game 13']) assert.match(s.hook('Bash', { command: c }).stderr, /no merge below the threshold/, c)
+  assert.match(s.hook('Bash', { command: 'gh pr merge --squash' }).stderr, /needs the PR number/)
+  assert.match(s.hook('Bash', { command: `gh pr merge 99 && rm -rf ${s.env.CLAUDE_SETUP_GATE_DIR}` }).stderr, /one plain command/)
+})
