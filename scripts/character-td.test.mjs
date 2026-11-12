@@ -12,7 +12,7 @@ const read = (p) => readFileSync(join(root, p), 'utf8')
 const teams = read('docs/TEAMS.md')
 const CARD = '.claude/skills/operator/roles/character-td.md'
 // The brief block every thread start carries (operator/briefs.md), as team-guard demands it.
-const FULL = '\nModel: sonnet\nSkills: garment-fit, texture-recolour\nDone when: the fit report is green\nStop when: a look needs yskills\nStart: read MEMORY.md first\nPrior art: clothes library and fit_garment.py checked; refit, because the garment exists'
+const FULL = '\nModel: sonnet\nThreads: list_threads checked, none open on this topic\nSkills: garment-fit, texture-recolour\nSheet: /mnt/project-files/game-dev/rika-cast-sheet.md\nLook-Lock: owner card https://example.invalid/card/rika\nDone when: the fit report is green\nStop when: a look needs yskills\nStart: read MEMORY.md first\nPrior art: clothes library and fit_garment.py checked; refit, because the garment exists'
 
 test('roster: Character TD is a row that points at its card and names a model', async () => {
   const { roleOf } = await import('../global/rule-guard.mjs')
@@ -28,6 +28,8 @@ test('team guard: Character TD starts on game and story, not on site, app or set
   const brief = (kit, model = 'claude-sonnet-x') => ({ brief: `Role: Character TD · Kit: ${kit} · Size: M${FULL}`, title: 'Character TD · refit boots', model })
   for (const kit of ['game', 'story']) assert.deepEqual(decide('mcp__hearthbot__start_thread', brief(kit), [], [], teams), {}, `passes on ${kit}`)
   for (const kit of ['site', 'app', 'setup']) assert.match(decide('mcp__hearthbot__start_thread', brief(kit), [], [], teams).block ?? '', /not on the `\w+` kit's team/, `skipped on ${kit}`)
+  const noSheet = brief('game'); noSheet.brief = noSheet.brief.replace(/\nSheet:[^\n]*\nLook-Lock:[^\n]*/, '')
+  assert.match(decide('mcp__hearthbot__start_thread', noSheet, [], [], teams).block ?? '', /Sheet:/, 'a Character TD fit brief needs the approved cast sheet like the Programmer and Animator')
   assert.match(decide('mcp__hearthbot__start_thread', brief('game', 'claude-opus-x'), [], [], teams).block ?? '', /runs on sonnet/, 'Sonnet, not Opus')
 })
 
