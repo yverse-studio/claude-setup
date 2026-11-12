@@ -73,7 +73,7 @@ Then reply "done". Meanwhile: <what the slice keeps building>
 
 The fixed, tested copy of this block is [`docs/templates/thread-brief.md`](../../../docs/templates/thread-brief.md); a refused start lists every missing line at once.
 
-`team-guard` blocks a thread start whose brief lacks the `Threads:` (one `list_threads` look before every start), `Model:`, `Skills:`, `Done when:`, `Stop when:` or `Start: ... MEMORY.md` line, names a kit that is not in `docs/TEAMS.md` (Kits), a video or post at size S, a Planner at S, or a role that is not on its kit's team (blind test 2026-10-27). The thread checks the same rules on its spawn brief (rule-guard `briefCheck`), because a project chat may run without hooks: a bad start is sent back to the coordinator and no work starts (routing test 2026-10-27).
+`team-guard` blocks a thread start whose brief lacks the `Item:`, `Plan:`, `Acceptance:`, `Threads:` (one `list_threads` look before every start), `Model:`, `Skills:`, `Done when:`, `Stop when:` or `Start: ... MEMORY.md` line, names a kit that is not in `docs/TEAMS.md` (Kits), a video or post at size S, a Planner at S, or a role that is not on its kit's team (blind test 2026-10-27). The thread checks the same rules on its spawn brief (rule-guard `briefCheck`), because a project chat may run without hooks: a bad start is sent back to the coordinator and no work starts (routing test 2026-10-27).
 
 ```
 Role: <one role from docs/TEAMS.md (Roster); none is refused> · Kit: <kit> · Size: <S|M|L>. team-guard blocks a start without this line; rule-guard puts the role's Roster row and playbook into the thread. You are this one role, not the coordinator: docs/TEAMS.md (Coordinator or thread).
@@ -82,6 +82,8 @@ Model: <id for this role's row in docs/TEAMS.md (Roster), via its Models line>. 
 Skills: load your role doc from claude-setup (`.claude/skills/operator/roles/<role>.md`) and the skills it lists before anything else. Your report ends with `Skills used:` naming the ones you actually opened; without that line it is not done.
 Claims: a claim from yskills, a lesson or another thread is checked first (repo, evidence, a test), then answered yes, no or changed with the reason, never a bare yes (`CLAUDE.md`, Co-founder).
 Prior art: <the sources checked, named: owner/repo, path, URL, #PR> -> copy | adapt | reuse | build, because <why> (every size; team-guard blocks one without a named source and a decision; the PR repeats it, CI checks).
+Plan: <the plan file or card this thread builds; the thread builds exactly it (`operator` SKILL.md, Plan first)>
+Acceptance: <what counts as accepted, one line from the plan's criteria; the gate grades against it>
 Threads: <`list_threads` checked this turn: `none open on <topic>` or `continues <open thread title>`; team-guard blocks a start without it (companyxy 2026-11-12: finished threads stayed open and work lay twice)>
 Item: <the PLAN.json item this thread works on, e.g. `M3`, or `new` (roles/project-manager.md, Masterplan); the thread sets it with `node scripts/plan.mjs set` at start and at its Done: line; its start receipt shows it>
 Sheet: <path of the approved cast sheet .md> and Look-Lock: <owner card link of the approved look> in every Programmer or Animator brief on a game or story kit, or `Sheet: n/a <why this is no body, face or outfit job>` (10+ characters); team-guard blocks one without (docs/preproduction-workflow.md, companyxy 2026-11-12: about 20 fit rounds before any sheet existed; no keyword guessing, six gate rounds showed it cannot work).

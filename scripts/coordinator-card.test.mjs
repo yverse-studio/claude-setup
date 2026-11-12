@@ -1,6 +1,9 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, readdirSync } from 'node:fs'
+import { spawnSync } from 'node:child_process'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { buildIndex, buildCard, ruleRows, briefBlock, CARD_MAX } from './coordinator-card.mjs'
 
 test('the card builds, stays under CARD_MAX characters and has its parts', () => {
@@ -77,4 +80,15 @@ test('the card says team-guard refuses an unknown role or kit; the index lists e
   assert.match(idx, /- Programmer: Kit: [^\n]*setup[^\n]*; Model: sonnet; Runs as: [^\n]*; Skills: \.claude\/skills\/operator\/roles\/programmer\.md/)
   const teams = readFileSync(new URL('../docs/TEAMS.md', import.meta.url), 'utf8')
   for (const l of teams.split('\n').filter((x) => /^\| [A-Z][\w ]* \(\[`/.test(x))) assert.ok(idx.includes(`- ${l.slice(2, l.indexOf(' ('))}: Kit:`), l.slice(0, 30))
+})
+
+test('M30: the CLI writes one rendered brief file per role next to the card, and the index points at them', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'card-'))
+  const r = spawnSync(process.execPath, [new URL('./coordinator-card.mjs', import.meta.url).pathname, join(dir, 'COORDINATOR-CARD.md')], { encoding: 'utf8' })
+  assert.equal(r.status, 0, r.stderr)
+  const files = readdirSync(join(dir, 'briefs'))
+  assert.ok(files.includes('programmer.md') && files.includes('reviewer.md') && !files.includes('project-manager.md'), files.join(', '))
+  assert.match(readFileSync(join(dir, 'briefs/programmer.md'), 'utf8'), /^# Brief file: Programmer[\s\S]*Model: claude-sonnet[\s\S]*Acceptance:/)
+  assert.ok(existsSync(join(dir, 'COORDINATOR-RULES-INDEX.md')))
+  assert.match(readFileSync(join(dir, 'COORDINATOR-RULES-INDEX.md'), 'utf8'), /briefs\/<role>\.md/)
 })
