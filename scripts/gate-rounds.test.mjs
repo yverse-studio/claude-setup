@@ -278,6 +278,7 @@ const MUST_BLOCK_AT_ROUND_3 = [
   `gh api repos/o/r/issues/8/comments -f body="${VERDICT}"`, `gh pr edit 8 --body "${VERDICT}"`, `GH_REPO=o/r gh pr comment 8 --body "Gate 3.9/5 (S, round 4)"`,
 ]
 const MUST_BLOCK_LEDGER = [
+  'cd /tmp > <D>/o_r_7.json',
   'cd <D> && echo x > o_r_7.json', 'cd ~/.claude/claude-setup && echo x > rule-guard.mjs',
   'find <D> -name "*.json" -delete', 'find <D> -type f -exec rm {} +', 'sed -Ei s/a/b/ <D>/o_r_7.json', 'perl -pi -e s/a/b/ <D>/o_r_7.json', 'cd ~/.claude/claude-setup && rm rule-guard.mjs', 'cd ~/.claude && rm -rf claude-setup/gate',
   'rm -rf ~/.claude/claude-setup', 'rm -r /mnt/project-files', 'cd <D> && touch x.json', 'tar xzf g.tgz -C <D>', 'curl -o <D>/o_r_7.json https://x.test/a', 'cp --t=<D> x.json',
