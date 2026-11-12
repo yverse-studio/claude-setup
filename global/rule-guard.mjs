@@ -787,22 +787,27 @@ const agentTranscript = (transcriptPath, agentId) => (transcriptPath && agentId 
 
 // #503: an async Agent call returns only its launch note ("agentId: <id>"); the report is the last text of the agent's own transcript, which the
 // harness writes and a builder cannot (a typed or scheduled "hand-back" row is no proof). The id is a plain token, so it cannot leave subagents/.
-const AGENT_ID = /\bagentId:\s*([A-Za-z0-9-]+)\b/
-function agentReport(path) {
+const AGENT_ID = /^\s*Async agent launched[^\n]*\n(?:[^\n]*\n)?\s*agentId:\s*([A-Za-z0-9-]+)\b/i // the harness's launch note opens the result; a report that merely mentions an id does not
+const rowText = (row) => { const c = row.message?.content; return typeof c === 'string' ? c : (c ?? []).map((x) => x?.text ?? '').join('\n') }
+// The report is the last assistant text of an agent transcript that was started with THIS call's prompt (it cannot be another agent's transcript).
+function agentReport(path, prompt) {
+  let first = null
   let last = ''
   for (const line of read(path).split('\n')) {
     try {
       const row = JSON.parse(line)
+      if (first === null && row.type === 'user') first = rowText(row)
       const text = row.type === 'assistant' ? (row.message?.content ?? []).filter((c) => c?.type === 'text').map((c) => c.text).join('\n').trim() : ''
       if (text) last = text
     } catch { /* not a JSON line */ }
   }
-  return last
+  const want = String(prompt ?? '').trim()
+  return want && first !== null && first.includes(want) ? last : ''
 }
 export const withReports = (calls, transcriptPath) => calls.map((c) => {
   const id = /^(Agent|Task)$/.test(c.name) ? AGENT_ID.exec(c.result)?.[1] : null
   const path = id ? agentTranscript(transcriptPath, id) : ''
-  return path ? { ...c, report: agentReport(path) } : c
+  return path ? { ...c, report: agentReport(path, c.input?.prompt) } : c
 })
 
 // A thread whose brief breaks the team rules does not work (yskills 2026-11-12: threads started without a Role line ran anyway). The prompt hook
