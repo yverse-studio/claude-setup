@@ -159,6 +159,7 @@ test('briefs: a gate round without Asset, round 4 without the director, a new hu
   assert.equal(gateBrief('Role: Designer\nBuild the new hub\nPicture card: #cmsg_01ABC', { dir }), '')
   assert.equal(gateBrief('Role: Programmer\nFix the login bug', { dir }), '', 'an ordinary brief is not touched')
   assert.equal(gateBrief('Round: 1\nAsset: brand-new', { dir }), '')
+  assert.equal(gateBrief('Role: Programmer\nAsset: brand-new', { dir }), '', 'an Asset: line without Round: is fine')
 })
 
 test('a PR that brings a new hub, start screen or style needs its picture card link', () => {
@@ -211,10 +212,10 @@ test('a corrupt ledger is refused, never reset', () => {
 })
 
 test('ordinary prompts and briefs are never blocked: the picture rule fires only on NEW hubs, screens and styles', () => {
-  for (const t of ['fix: main menu button overlaps on phones', 'docs: push image to Docker Hub', 'docs: Coding-Stil vereinheitlicht', 'Keep the art style as is, fix collisions', 'please fix the start screen text', 'the HQ hub shows wrong rows', 'new Docker Hub image']) assert.equal(needsPicture(t), false, t)
-  for (const t of ['feat: new hub for the village', 'Build a new start screen', 'neuer Startbildschirm mit Karte', 'redesign the main menu', 'a new art style for the game']) assert.equal(needsPicture(t), true, t)
+  for (const t of ['fix: main menu button overlaps on phones', 'docs: push image to Docker Hub', 'docs: Coding-Stil vereinheitlicht', 'Keep the art style as is, fix collisions', 'please fix the start screen text', 'the HQ hub shows wrong rows', 'new Docker Hub image', 'Fix the camera clipping in the new hub (PR #13 merged last week).', 'Task: fix the new start screen text overlap at 390px.', 'Add German strings to the new main menu.', 'Bug: new hub NPC stuck', 'Füge Texte zum neuen Hauptmenü hinzu', 'Behebe den Fehler im neuen Hub']) assert.equal(needsPicture(t), false, t)
+  for (const t of ['feat: new hub for the village', 'Build a new start screen', 'Design the new hub for the village', 'neuer Startbildschirm mit Karte', 'redesign the main menu', 'a new art style for the game']) assert.equal(needsPicture(t), true, t)
   const s = session()
-  const prompt = (p) => spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'prompt'], { input: JSON.stringify({ cwd: s.dir, session_id: 'p1', transcript_path: s.transcript, prompt: p }), encoding: 'utf8', env: s.env }).stdout
+  const prompt = (p) => spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'prompt'], { input: JSON.stringify({ cwd: s.dir, session_id: 'p1', transcript_path: s.transcript, prompt: p }), encoding: 'utf8', env: { ...s.env, TMPDIR: s.dir } }).stdout
   assert.doesNotMatch(prompt('please build a new hub for me'), /Gate check/, 'a plain message to a non-spawned session is not a brief')
   assert.match(prompt('<wake reason="spawn">Role: Designer\nBuild a new hub</wake>'), /Picture card/)
   assert.equal(needsPicture('Picture card: https://example.com'), false)

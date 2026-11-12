@@ -90,9 +90,16 @@ export function mergeProblem(l) {
 // ---- picture card: a new hub, start screen or style is shown as pictures from current games before anything is built.
 // Only a NEW one: "new hub", "neuer Startbildschirm", "redesign the main menu"; "fix: main menu button", "push to Docker Hub" and "keep the art style" pass.
 const THING = '(?:hub|start ?screen|startbildschirm|title ?screen|titelbildschirm|main ?menu|hauptmen[üu]|art ?style|visual ?style)'
-const NEW_LOOK = new RegExp(`\\b(?:new|neu(?:e|er|es|en)?)\\s+(?:\\w+\\s+){0,1}${THING}\\b|\\bredesign(?:ed)?\\s+(?:the\\s+)?${THING}\\b`, 'i')
+const ADDED_TO = '(?<!\\b(?:in|into|to|of|on|at|from|for|with|im|zum|zur|vom|des|am|auf)\\s+(?:(?:the|this|our|an?|dem|der|das|den)\\s+)?)' // "in the new hub", "zum neuen Hub": work on something that exists
+const NEW_LOOK = new RegExp(`${ADDED_TO}\\b(?:new|neu(?:e|er|es|en)?)\\s+(?:\\w+\\s+){0,1}${THING}\\b|\\bredesign(?:ed)?\\s+(?:the\\s+)?${THING}\\b`, 'i')
 // Text that talks about the picture card itself (this rule's own docs, PRs and the line) is not a new look.
-export const needsPicture = (text) => (!/picture[- ]card/i.test(String(text)) || /^[ \t>*_-]*Picture card:/im.test(String(text))) && NEW_LOOK.test(String(text).replace(/docker hub|github hub/gi, ''))
+// A line that starts with fix, bug, repair, translate (after a label like "Task:") works on something already built.
+const WORK_ON_BUILT = /^[ \t>*_-]*(?:\w+:\s*)?(?:fix|bug|repair|translate|behebe|korrigiere)\b/i
+export const needsPicture = (text) => {
+  const t = String(text)
+  const lines = t.split('\n').filter((l) => !WORK_ON_BUILT.test(l)).join('\n').replace(/docker hub|github hub/gi, '')
+  return (!/picture[- ]card/i.test(t) || /^[ \t>*_-]*Picture card:/im.test(t)) && NEW_LOOK.test(lines)
+}
 const PICTURE_LINE = /^[ \t>*_-]*Picture card:[ \t*_`]*(?:\[[^\]]*\]\()?(#?cmsg_\w+|https?:\/\/[^\s)]*cmsg_\w+[^\s)]*)/im
 export const pictureRef = (text) => String(text).match(PICTURE_LINE)?.[1] ?? null // a real card id, not any URL
 
@@ -103,7 +110,7 @@ export function gateBrief(brief, { model = null, dir = ledgerDir() } = {}) {
   const roundText = num(brief, 'Round')
   const asset = num(brief, 'Asset')?.toLowerCase() ?? null
   const out = []
-  if (roundText !== null || asset !== null) {
+  if (roundText !== null) { // an Asset: line alone is fine
     const round = Number(roundText?.match(/^\d+/)?.[0])
     if (!roundText || !round) out.push('a gate-round brief needs a `Round: <n>` line')
     else if (!asset) out.push('`Round:` needs an `Asset: <owner/repo#pr | name>` line, the count belongs to the asset')

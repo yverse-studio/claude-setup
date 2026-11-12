@@ -237,7 +237,7 @@ How to undo a merge, by kind of change (write the line into the PR's "undo" line
   counted pass. `CLAUDE_SETUP_RULE_GUARD=off` is the one off switch; nobody sets it. It stops careless and honest-mistake
   releases, not an agent that writes its own script around the hook: shell writes to the ledger other than the literal path (a cd
   and a relative name, a variable, `node -e` or a script file, xargs) are not stopped; a verdict through plain gh is not counted (so
-  it never merges); the hook does not know who posts a verdict (rounds 1 to 3 are free, so a poster can claim a pass); a PR merged by
+  it never merges); a new PR for the same work is a new asset and starts at round 1; the hook does not know who posts a verdict (rounds 1 to 3 are free, so a poster can claim a pass); a PR merged by
   a person in the GitHub UI is outside it. The next step is a counter a CI workflow writes (a required status or label) that the
   hook only reads.
 - **Picture card first** (vacation-game 2026-11-12: a hub nobody asked for was built and nearly merged): a new hub, start
