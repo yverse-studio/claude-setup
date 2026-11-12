@@ -28,10 +28,8 @@ nothing fits. The first check of any fit is the silhouette row of the gate (`gat
 
 ## Body first
 
-No garment work on a character before her body is settled (yskills 2026-11-12: "erst body perfekt dann outfits ... du hast
-nicht mal gefragt welcher lily ist"): the plan names, per character, which base body and preset she carries and its slider
-values. Where that is not written down as yskills' decision, it is one card to him before the first fit, not a guess. The
-order in every plan and masterplan is body, then outfits on that body.
+No garment work on a character before yskills has approved her body: the fixed order is
+`docs/character-workflow.md` (Body, then outfits).
 
 ## The pipeline
 

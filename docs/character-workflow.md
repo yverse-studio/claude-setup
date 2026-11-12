@@ -15,6 +15,18 @@ project reuses: the next figure should take a brief and a picture, not a new inv
 file taken as "the basis", pictures without the reference beside them, eyes that vanished in the game),
 and yskills had to say it twice. This page is the fix.
 
+## Body, then outfits (the fixed order)
+
+The one order for every character, in every plan and masterplan (yskills 2026-11-12: "erst body perfekt dann
+outfits", "das hätte der workflow sein müssen klar einfach und direkt"):
+
+1. **Pick the body.** One line per character: which base body, which preset and slider values. Where yskills has
+   not decided it in writing, one card to him with the options side by side. Never a guess.
+2. **He approves the body.** Bare, with the style numbers of the gate's silhouette row (`gate.md`, Asset PRs).
+   Until then no garment is fitted or fixed on her.
+3. **Outfits on that body.** An existing gate-passed outfit first, fitted through the sliders and follow keys
+   (`docs/clothing-pipeline.md`, Reuse first); a new garment only when nothing fits.
+
 ## The steps, in order
 
 1. **Reference.** One picture per character, named after her, in
