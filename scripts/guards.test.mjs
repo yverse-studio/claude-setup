@@ -460,6 +460,7 @@ test('team guard: the registered matchers catch Agent and the thread-start tools
 
 test('rule guard: blocks the rules that were text only, passes the normal calls', async () => {
   const { decide, commitSubjects, promptContext, REPLY_MAX_CHARS } = await import('../global/rule-guard.mjs')
+  const { STOP_WORD } = await import('../global/gate-rounds.mjs')
   const blocked = [
     ['mcp__github__update_pull_request', { reviewers: ['yskills'] }],
     ['mcp__github__issue_write', { method: 'update', assignees: ['YSkills'] }],
@@ -500,8 +501,8 @@ test('rule guard: blocks the rules that were text only, passes the normal calls'
   assert.equal(decide('Artifact', { file_path: '/tmp/hq.html' }, {}, ['/tmp/hq.html']), null, 'republishing an Artifact this session updated by url')
   assert.match(decide('Artifact', { type_url: 'u', title: 'x', file_path: '/tmp/hq.html' }, {}, ['/tmp/hq.html']) ?? '', /only Artifact/)
   assert.match(promptContext('schau mal https://www.tiktok.com/@a/video/1'), /watch\.py/)
-  assert.match(promptContext('<wake><message trigger="true" from="human">Stopp!</message></wake>'), /said stop/)
-  assert.equal(promptContext('stop the server on port 8787 please'), '')
+  assert.match(promptContext('<wake><message trigger="true" from="human">Stopp!</message></wake>', STOP_WORD), /said stop/)
+  assert.equal(promptContext('stop the server on port 8787 please', STOP_WORD), '')
 })
 
 test('rule guard: hook entry blocks with exit 2, notes a video, and the off switch works', () => {
