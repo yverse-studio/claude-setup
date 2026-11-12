@@ -567,7 +567,7 @@ const SHEET_LINES = [
   ['Sheet: (approved cast sheet, docs/preproduction-workflow.md)', /^[ \t>-]*Sheet:[ \t]*[^<\n]*\.md\b/im],
   ['Look-Lock: (owner card of the look)', /^[ \t>-]*Look-Lock:[ \t]*[^<\n]*(https?:\/\/|card)/im],
 ]
-const GARMENT = /\b(outfits?|garments?|dress(es)?|skirts?|clothes|clothing|shirts?|blouses?|jackets?|coats?|lingerie|stockings|tights|uniforms?|bras?|bikinis?|swimsuits?|pants|boots|panties|earrings|hair(style|do)?)\b/i
+const GARMENT = /\b(outfits?|garments?|dress(es)?|skirts?|clothes|clothing|shirts?|blouses?|jackets?|coats?|lingerie|stockings|tights|uniforms?|bras?|sweaters?|hoodies?|cardigans?|shoes|sneakers|hats?|glasses|kimonos?|bikinis?|swimsuits?|pants|boots|panties|earrings|hair(style|do)?)\b/i
 const FIGURE = /\b(body|bodies|face|faces|figure|hands?|breasts?|chest)\b/i
 const BUILD_VERB = /\b(make|build|create|adjust|resize|slim(mer)?|taller|new)\b/i
 const BODY = /\b(body|bodies|figure|hands?|breasts?|chest)\b/i
@@ -580,8 +580,8 @@ const needsSheet = (plain) => {
   if (!(/^[ \t>-]*Role:[ \t]*(Programmer|Animator)\b/im.test(plain) && /\bKit:[ \t]*(game|story)\b/i.test(plain))) return false
   if (/^[ \t>-]*Sheet:[ \t]*n\/a\s+\S[^\n]{9,}$/im.test(plain)) return false
   const task = plain.replace(/^[ \t>-]*(Model|Prior art|Skills|Start|Stop when|Done when|Threads|Item|Researcher|Tester|Role):.*$/gim, '')
-  const ui = /\b(UI|HUD|menu|screen|button|tab|dialog|shop|scroll|font|text|loading|spinner|pinia|save data)\b/i.test(task)
-  return (GARMENT.test(task) && FIT_VERB.test(task)) || (GARMENT.test(task) && MODEL_VERB.test(task) && !ui) || (GARMENT.test(task) && BUILD_VERB.test(task) && !ui) || (BODY.test(task) && BUILD_VERB.test(task) && !ui) || (FIGURE.test(task) && MODEL_VERB.test(task) && !ui)
+  const ui = /\b(UI|HUD|menu|screen|button|tab|dialog|shop|scroll|font|text|loading|spinner|pinia|save data|sound|icon|translat\w*|crash\w*|i18n|locale|tests?|unlock\w*|price|inventory|shader|collider)\b/i.test(task)
+  return (GARMENT.test(task) && !ui) || (GARMENT.test(task) && FIT_VERB.test(task)) || (BODY.test(task) && BUILD_VERB.test(task) && !ui) || (FIGURE.test(task) && MODEL_VERB.test(task) && !ui)
 }
 export function missingLines(text) {
   const plain = text.replace(/[*_`]/g, '')

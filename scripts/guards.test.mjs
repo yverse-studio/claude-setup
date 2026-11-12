@@ -1254,3 +1254,10 @@ test('gate round 4: a task sentence starting with Model is not a brief line, fig
   for (const task of ['Model a red dress for Lena', 'Model the new body for Nova', 'Please model a red dress for Lena', 'Build the new body for Nova from the base mesh', "Make Nova's body taller and slimmer", 'Make Kai a new jacket', 'Fix the stockings poking through the boots', 'Fit the bikini to Nova', 'Create a new hairstyle for Mira']) assert.equal(need(task), 2, task)
   for (const task of ['Make the NPCs face the player', 'Make the HUD fit on 390px', 'Create a uniform loading spinner', 'Add an outfit shop screen', 'Make the outfit shop screen scroll on mobile', 'Build the new inventory screen with a clothing tab']) assert.equal(need(task), 0, task)
 })
+
+test('gate round 5: a garment word outside a UI task triggers on its own, whatever the verb', async () => {
+  const { missingLines } = await import('../global/team-guard.mjs')
+  const need = (task) => missingLines(`Role: Programmer · Kit: game · Size: M${FULL}\n${task}`).length
+  for (const task of ["Change Lena's outfit to the beach look", "Swap Nova's uniform for the summer version", 'Give Lena a longer skirt; measure it against every BT_ preset', 'Add a sweater to Kai and export the VRM', 'Put a hoodie on Kai', 'Lengthen the dress hem for Lena', 'Give Mira new sneakers']) assert.equal(need(task), 2, task)
+  for (const task of ['Play a sound on outfit change', 'Fix the saved-outfit crash on load', 'Translate the clothing names to German', 'Add a jacket icon to the inventory', 'Fix the outfit unlock tests', 'Fix the hair shader flicker']) assert.equal(need(task), 0, task)
+})
