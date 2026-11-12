@@ -10,7 +10,7 @@ Claude's job. `docs/MAP.md` names the one home of each rule; everywhere else lin
 - Only the coordinator builds teams: `docs/TEAMS.md` (Spawn rule) picks kit, size, roles and `model`.
   A thread is one role and calls only its role's subagents (`docs/TEAMS.md`, Coordinator or thread).
   Every `Agent` call and thread start passes `model`; a thread brief starts with
-  `Role: · Kit: · Size:` and a `Prior art:` line; a thread start waits until the
+  `Role: · Kit: · Size:` (guard fills the rest); a thread start waits until the
   session has read `docs/TEAMS.md`. [guard: hook global/team-guard.mjs] The thread then gets its
   role's Roster row and playbook put into context. [guard: hook global/rule-guard.mjs]
 - Models: the Models line and the Roster in `docs/TEAMS.md`; another tier than the role's is

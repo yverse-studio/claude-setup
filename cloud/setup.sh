@@ -591,30 +591,9 @@ export function wrongModel(text, model, teams) {
   return allowed.length && tier && !allowed.includes(tier) ? { role: role.name, allowed, tier } : null
 }
 
-// The brief block's must-have lines (operator/briefs.md). Blind test 2026-10-27: a fresh coordinator
-// started threads with only a title and a guess, and nothing stopped it.
-const BRIEF_LINES = [
-  // M30 (plan section 5): the masterplan item, the plan the thread builds and what counts as accepted, one field each.
-  ['Item: (M<n> from PLAN.json, or new)', /^[ \t>-]*Item:[ \t]*(M\d+|new)\b/im],
-  ['Plan: (the plan file or card this thread builds)', /^[ \t>-]*Plan:[ \t]*[^<\s]/im],
-  ['Acceptance: (what counts as accepted)', /^[ \t>-]*Acceptance:[ \t]*[^<\s]/im],
-  ['Model:', /^[ \t>-]*Model:[ \t]*[^<\s]/im],
-  ['Skills:', /^[ \t>-]*Skills:[ \t]*[^<\s]/im],
-  ['Done when:', /\bDone when:[ \t]*\n?[ \t]*[^<\s]/i],
-  ['Stop when:', /\bStop when:[ \t]*\n?[ \t]*[^<\s]/i],
-  ['Start: (read MEMORY.md first)', /^[ \t>-]*Start:[^\n]*MEMORY\.md/im],
-  // Companyxy 2026-11-12: finished threads stayed open and work lay twice. The coordinator lists the threads before every start.
-  ['Threads: (list_threads checked, none open on this topic)', /^[ \t>-]*Threads:[ \t]*[^<\s][^\n]{8,}$/im],
-]
 // A task that asks for research names its Researcher subagent (docs/TEAMS.md, Kits; yskills 2026-11-12:
 // a Planner did the SOTA research itself). The brief block's own "No extra ... research" does not trigger it.
 const ASKS_RESEARCH = /\b(SOTA|state of the art|research (on|about|into|what)|recherch\w*)\b/i
-// Companyxy 2026-11-12 (point 3): about 20 fit rounds because bodies and outfits were built before cast sheets with measures and a
-// look lock existed (docs/preproduction-workflow.md). A modelling job of a Programmer or Animator on a game or story kit names both.
-const SHEET_LINES = [
-  ['Sheet: (approved cast sheet, docs/preproduction-workflow.md)', /^[ \t>-]*Sheet:[ \t]*[^<\n]*\.md\b/im],
-  ['Look-Lock: (owner card of the look)', /^[ \t>-]*Look-Lock:[ \t]*[^<\n]*(https?:\/\/|card)/im],
-]
 // Gate rounds 1 to 6 chased verbs and body words and every round found more. So there is no classifier: every Programmer or Animator brief
 // on a game or story kit names its approved cast sheet and look lock, or declares in one line that it is no body, face or outfit job:
 // `Sheet: n/a <why>` (10+ characters). A false "n/a" on a real modelling job is visible in the brief; a missing line is refused.
@@ -624,16 +603,52 @@ const needsSheet = (plain) => /^[ \t>-]*Role:[ \t]*(Programmer|Animator)\b/im.te
 // at size M or L names the Reviewer thread that gates its work before the owner sees it; the gate roles themselves need no such line.
 // A Gate line names a reviewer thread (`Gate: Reviewer · fit round 2 before owner`), or says in 10+ characters why the slice has no owner-facing
 // result (`Gate: n/a no owner-facing result, a CI script only`); the same shape as `Sheet: n/a`. `none`, `later` or `skipped` do not count.
-export const GATE_BUILDER_ROLES = '(?:Programmer|Designer|Animator|Game Designer|Content Designer|Sound Designer)'
+export const GATE_BUILDER_ROLES = '(?:Programmer|Designer|Animator|Story Writer|Game Designer|Content Designer|Sound Designer)'
 export const GATE_LINE = /^[ \t>-]*Gate:[ \t]*(?:(?:Reviewer|Tester)\b[^\n]*\bbefore owner\b[^\n]*|n\/a[ \t]+\S[^\n]{9,})$/im
-const needsGate = (plain) => new RegExp(`^[ \\t>-]*Role:[ \\t]*${GATE_BUILDER_ROLES}\\b`, 'im').test(plain) && /\bSize:[ \t]*[ML]\b/i.test(plain) && !GATE_LINE.test(plain)
+const needsGate = (plain) => new RegExp(`^[ \\t>-]*Role:[ \\t]*${GATE_BUILDER_ROLES}\\b`, 'im').test(plain) && /\bSize:[ \t]*[ML]\b/i.test(plain)
+const small = (plain) => /\bSize:[ \t]*S\b/i.test(plain)
+const gateRolePlain = (plain) => /^[ \t>-]*Role:[ \t]*(Tester|Reviewer|Security|Legal|Playtester|Hook Checker|Critic|Story Editor|Evaluator)\b/im.test(plain)
+// M50 (plan 2026-11-12-brief-fix-plan, section 4): ONE table row per line of a thread brief. `tpl` is the template line (docs/templates/thread-brief.md and
+// the refusal), `ok` says the line is there, `cls` says who closes a gap: judgment = only the coordinator can decide it (one refusal that lists every such
+// gap), recoverable = the thread fetches or fills it itself, derived = follows from Role, Kit and Size (the hook states it). `fill` is the thread's own
+// answer to a gap. `strict: false` rows are reported by decide() in their own words, not in missingLines().
+const line = (re) => (plain) => re.test(plain)
+const sizeCls = (plain) => (small(plain) ? 'recoverable' : 'judgment')
+export const BRIEF_FIELDS = [
+  { key: 'Item', name: 'Item: (M<n> from PLAN.json, or new)', tpl: 'Item: <PLAN.json item M<n> or new>', ok: line(/^[ \t>-]*Item:[^<\n]*?\b(M\d+|new)\b/im), clean: /^[ \t>-]*Item:[ \t]*(M\d+|new)[ \t]*$/im, cls: sizeCls, fill: (p) => `Item: ${p.match(/^[ \t>-]*Item:[^\n]*?\b(M\d+)\b/im)?.[1] ?? 'new'}` },
+  { key: 'Plan', name: 'Plan: (the plan file or card this thread builds)', tpl: 'Plan: <plan file or card it builds>', ok: line(/^[ \t>-]*Plan:[ \t]*[^<\s]/im), cls: sizeCls, fill: () => 'Plan: n/a, size S' },
+  { key: 'Acceptance', name: 'Acceptance: (what counts as accepted)', tpl: 'Acceptance: <what counts as accepted>', ok: line(/^[ \t>-]*Acceptance:[ \t]*[^<\s]/im), cls: sizeCls, fill: () => 'Acceptance: propose one from the task, say so in your first checklist line' },
+  { key: 'Model', name: 'Model:', tpl: 'Model: <model id of the role\'s Roster row>', ok: line(/^[ \t>-]*Model:[ \t]*[^<\s]/im), cls: () => 'derived', fill: () => 'Model: the model this thread runs on' },
+  { key: 'Skills', name: 'Skills:', tpl: 'Skills: <role file and skills the thread loads first>', ok: line(/^[ \t>-]*Skills:[ \t]*[^<\s]/im), cls: () => 'derived', fill: () => 'Skills: your role file from docs/TEAMS.md' },
+  { key: 'Done when', name: 'Done when:', tpl: 'Done when: <command and expected output, or the screenshot that proves it>', ok: line(/\bDone when:[ \t]*\n?[ \t]*[^<\s]/i), cls: () => 'recoverable', fill: () => 'Done when: the Acceptance line, proven by a command or screenshot' },
+  { key: 'Stop when', name: 'Stop when:', tpl: 'Stop when: <rounds or attempts, never tokens>', ok: line(/\bStop when:[ \t]*\n?[ \t]*[^<\s]/i), cls: () => 'recoverable', fill: () => 'Stop when: 3 gate rounds without 5/5, then report to the coordinator' },
+  { key: 'Start', name: 'Start: (read MEMORY.md first)', tpl: 'Start: read MEMORY.md first, then <the files this task needs>', ok: line(/^[ \t>-]*Start:[^\n]*MEMORY\.md/im), cls: () => 'derived', fill: () => 'Start: read MEMORY.md first' },
+  // Companyxy 2026-11-12: finished threads stayed open and work lay twice. The thread lists the threads itself before it builds.
+  { key: 'Threads', name: 'Threads: (list_threads checked, none open on this topic)', tpl: 'Threads: <list_threads checked: none open on this topic | continues <title of the open thread>>', ok: line(/^[ \t>-]*Threads:[ \t]*[^<\s][^\n]{8,}$/im), cls: () => 'recoverable', fill: () => 'Threads: call list_threads yourself and reuse an open thread of this topic' },
+  { key: 'Prior art', strict: false, tpl: 'Prior art: <sources named: repo, path, URL, #n> -> copy | adapt | reuse | build, because <why>', ok: (p) => !needsPriorArt(p), cls: (p) => (gateRolePlain(p) ? 'derived' : 'recoverable'), fill: (p) => (gateRolePlain(p) ? 'Prior art: .claude/skills/operator/gate.md and the kit\'s checks -> adapt, because the gate rules exist' : 'Prior art: to find: the repo and docs first, sources named before you build') },
+  { key: 'Gate', name: 'Gate: <Reviewer thread> before owner, or `Gate: n/a <why no owner-facing result>` (a builder, designer or animator brief at size M or L)', tpl: 'Gate: <Reviewer thread> before owner (M or L)', applies: needsGate, ok: line(GATE_LINE), cls: () => 'recoverable', fill: () => 'Gate: ask the coordinator (message_coordinator) for the Reviewer thread, then write `Gate: Reviewer · <what> before owner`' },
+  { key: 'Sheet', name: 'Sheet: (approved cast sheet, docs/preproduction-workflow.md)', tpl: 'Sheet: <approved cast sheet .md, or `n/a <why no body, face or outfit job>`; Programmer or Animator on a game or story kit>', applies: needsSheet, ok: line(/^[ \t>-]*Sheet:[ \t]*[^<\n]*\.md\b/im), cls: () => 'judgment' },
+  { key: 'Look-Lock', name: 'Look-Lock: (owner card of the look)', tpl: 'Look-Lock: <owner card link of the approved look; not needed with `Sheet: n/a`>', applies: needsSheet, ok: line(/^[ \t>-]*Look-Lock:[ \t]*[^<\n]*(https?:\/\/|card)/im), cls: () => 'judgment' },
+  { key: 'Researcher', name: 'Researcher: (the task asks for research)', tpl: 'Researcher: <subagent and model, or the Researcher thread; research tasks only>', applies: (p) => ASKS_RESEARCH.test(p) && !/\bRole:[ \t]*Researcher\b/i.test(p), ok: line(/^[ \t>-]*Researcher:[ \t]*[^<\s]/im), cls: () => 'recoverable', fill: () => 'Researcher: ask the coordinator for a Researcher thread (message_coordinator) and go on meanwhile' },
+  { key: 'Tester', strict: false, tpl: 'Tester: <Tester thread; size L Programmer only>', applies: (p) => /^[ \t>-]*Role:[ \t]*Programmer\b/im.test(p), ok: (p) => !needsTester(p), cls: () => 'judgment' },
+]
 export function missingLines(text) {
   const plain = text.replace(/[*_`]/g, '')
-  const lines = BRIEF_LINES.filter(([, re]) => !re.test(plain)).map(([name]) => name)
-  if (needsGate(plain)) lines.push('Gate: <Reviewer thread> before owner, or `Gate: n/a <why no owner-facing result>` (a builder, designer or animator brief at size M or L)')
-  if (needsSheet(plain)) for (const [name, re] of SHEET_LINES) if (!re.test(plain)) lines.push(name)
-  if (ASKS_RESEARCH.test(plain) && !/\bRole:[ \t]*Researcher\b/i.test(plain) && !/^[ \t>-]*Researcher:[ \t]*[^<\s]/im.test(plain)) lines.push('Researcher: (the task asks for research)')
-  return lines
+  return BRIEF_FIELDS.filter((f) => f.strict !== false && (f.applies?.(plain) ?? true) && !f.ok(plain)).map((f) => f.name)
+}
+// The same table sorted by who closes the gap. Acceptance and Done when are one datum: either satisfies both.
+export function classify(text) {
+  const plain = text.replace(/[*_`]/g, '')
+  const out = { judgment: [], recoverable: [], derived: [] }
+  const has = (k) => BRIEF_FIELDS.find((f) => f.key === k).ok(plain)
+  for (const f of BRIEF_FIELDS) {
+    // A line that is there but in the wrong format (`Item: PLAN.json item M29`) is a derived repair, never a gap.
+    if (f.clean && f.ok(plain) && !f.clean.test(plain)) out.derived.push({ key: f.key, tpl: f.tpl, fill: f.fill(plain) })
+    if (!(f.applies?.(plain) ?? true) || f.ok(plain) || (f.key === 'Acceptance' && has('Done when')) || (f.key === 'Done when' && has('Acceptance'))) continue
+    const cls = f.cls(plain)
+    out[cls].push({ key: f.key, tpl: f.tpl, fill: f.fill?.(plain) })
+  }
+  return out
 }
 
 // Kit and size checked against docs/TEAMS.md, not only their format (blind test 2026-10-27: "Kit: content",
@@ -651,6 +666,19 @@ const skips = (cell, role) => cell.replace(/`/g, '').split(/[,;]/).map((i) => i.
 export const rosterNames = (teams) => String(teams).split('\n').filter((l) => /^\| [A-Z][\w ]* \(\[`/.test(l)).map((l) => l.slice(2, l.indexOf(' (')))
 export const kitNames = (teams) => (teams ? kitRows(teams).map((r) => r.kit) : [])
 
+// The one answer to "which role may I name on this kit": a Roster role fits a kit by the same rule badTeam applies (a refusal lists these, so nobody guesses).
+export function rolesForKit(teams, kit) {
+  const row = kitRows(teams).find((r) => r.kit === String(kit).toLowerCase())
+  if (!row) return []
+  const media = ['video', 'social'].includes(row.kit)
+  return rosterNames(teams).filter((n) => {
+    const film = rosterOf(teams, 'Film').includes(`| ${n} (`)
+    const social = rosterOf(teams, 'Social').includes(`| ${n} (`)
+    const story = rosterOf(teams, 'Story').includes(`| ${n} (`)
+    return ['Reviewer', 'Researcher'].includes(n) || (story ? row.kit === 'story' : social ? row.kit === 'social' : film ? media : media ? named(row.team, n) : !skips(row.skipped, n))
+  })
+}
+
 // #453 left this gap: a brief may name any Role. It names a Roster role, or `Role: none` for a mini task (operator/briefs.md).
 export function badRole(text, teams) {
   const names = rosterNames(teams)
@@ -660,7 +688,10 @@ export function badRole(text, teams) {
   // roleOf matches a name by its start: `Programmers` or `Programmer-X` must not pass as the Programmer (a name ends at a space, `·`, `|`, `,` or `(`).
   const line = plain.match(/^[\s>-]*Role:[ \t]*([^\n]*)/m)?.[1].trim() ?? ''
   const exact = role.row && /^$|^[\s·|,(]/.test(line.slice(role.name.length))
-  return exact ? null : `Role: ${role.row ? line.split(/[\s·|,(]/)[0] : role.name} is no role in docs/TEAMS.md (Roster): pick one of ${names.join(', ')}, or \`Role: none\` for a small task with no role`
+  const kit = plain.match(/\bKit:[ \t]*([\w-]+)/i)?.[1]
+  const onKit = kit ? rolesForKit(teams, kit) : []
+  const pick = onKit.length ? `on the ${kit.toLowerCase()} kit pick one of ${onKit.join(', ')}` : `pick one of ${names.join(', ')}`
+  return exact ? null : `Role: ${role.row ? line.split(/[\s·|,(]/)[0] : role.name} is no role in docs/TEAMS.md (Roster): ${pick}, or \`Role: none\` for a small task with no role`
 }
 
 // M48: a Reviewer brief may carry `Topic: <name>`; the names are the `## ` headings of the checklist file (the one source for this guard,
@@ -693,9 +724,10 @@ export function badTeam(text, teams) {
   if (role.name === 'Planner' && size === 'S') return 'a Planner thread runs at size M or L only; size S starts the Programmer (docs/TEAMS.md, Sizes)'
   const film = rosterOf(teams, 'Film').includes(`| ${role.name} (`)
   const social = rosterOf(teams, 'Social').includes(`| ${role.name} (`)
+  const story = rosterOf(teams, 'Story').includes(`| ${role.name} (`)
   const media = ['video', 'social'].includes(kit)
-  const fits = ['Reviewer', 'Researcher'].includes(role.name) || (social ? kit === 'social' : film ? media : media ? named(row.team, role.name) : !skips(row.skipped, role.name))
-  return fits ? null : `the ${role.name} is not on the \`${kit}\` kit's team (docs/TEAMS.md, Kits: team "${row.team}", skipped "${row.skipped}"); start the role that row names`
+  const fits = ['Reviewer', 'Researcher'].includes(role.name) || (story ? kit === 'story' : social ? kit === 'social' : film ? media : media ? named(row.team, role.name) : !skips(row.skipped, role.name))
+  return fits ? null : `the ${role.name} is not on the \`${kit}\` kit's team (docs/TEAMS.md, Kits: team "${row.team}", skipped "${row.skipped}"); pick one of ${rolesForKit(teams, kit).join(', ')}`
 }
 
 // A size M or L thread's title is `<Role> · <what>` (docs/TEAMS.md, Roster "Runs as"); test project 2026-10-27: a bee video thread
@@ -1846,24 +1878,44 @@ export const GATE_PRIOR = /^[ \t>-]*Prior art:[^\n]*\bgate\.md\b/im
 
 export const stripTags = (t) => t.replace(/\\[nt]/g, '\n').replace(/<\/?(wake|message|thread|project|relay|coordinator-relay|cited|note|system-note)\b[^>]*>/g, '\n')
 
+// The template a refusal carries, so the coordinator needs no file: the stamp with the role filled in, then one line per applicable row of BRIEF_FIELDS.
+export const templateFor = (guard, role, size = 'M') => {
+  const plain = `Role: ${role} · Kit: <kit> · Size: ${size}`
+  return [`Role: ${role} · Kit: <kit> · Size: <S|M|L>`, ...guard.BRIEF_FIELDS.filter((f) => f.applies?.(plain) ?? true).map((f) => f.tpl)].join('\n')
+}
+// M50: ONE refusal lists every judgment gap (role, kit, size, topic, model, and at size M or L Item, Plan, Acceptance; Sheet; Tester at size L) with the role's
+// template; what follows from Role, Kit and Size or what the thread can fetch itself is no block: the thread is told how it fills each line (`Brief repair`).
 export async function briefCheck(prompt, cwd, model = null, any = false) {
   if (!any && !/<(wake|relay)\b[^>]*reason=\\?"spawn/.test(prompt)) return ''
   let guard
   try { guard = await import(new URL('./team-guard.mjs', import.meta.url)) } catch { return '' }
   const teams = read(join(setupRoot(cwd), 'docs', 'TEAMS.md'))
   const brief = stripTags(prompt)
-  const missing = guard.missingLines(brief)
-  const why = !guard.stamped(brief) ? 'no `Role: · Kit: · Size:` stamp line'
-    : !roleOf(brief, teams)?.row ? 'the Role line names no role of the Roster (docs/TEAMS.md); "none" or a role of your own is not allowed in a thread'
-    : guard.badTeam(brief, teams) ?? guard.badTopic(brief, read(join(setupRoot(cwd), guard.CHECKLISTS))) ?? (missing.length ? `brief lines missing: ${missing.join(', ')}` : null)
-  if (why) return `Brief check (docs/TEAMS.md): this start breaks the team rules: ${why}. Do no work: send this reason and the corrected Role, Kit and Size to the coordinator (message_coordinator), then stop.`
-  // The coordinator runs without hooks, so its model pick and gate brief are checked here, on the thread side.
+  const plain = brief.replace(/[*_`]/g, '')
+  const found = []
+  const role = guard.stamped(brief) ? roleOf(brief, teams) : null
+  const kit = plain.match(/\bKit:[ \t]*([\w-]+)/i)?.[1]?.toLowerCase()
+  if (!guard.stamped(brief)) found.push('no `Role: · Kit: · Size:` stamp line')
+  else if (!role?.row) found.push(`the Role line names no role of the Roster (docs/TEAMS.md); "none" or a role of your own is not allowed in a thread${kit && guard.rolesForKit(teams, kit).length ? `; on the \`${kit}\` kit pick one of ${guard.rolesForKit(teams, kit).join(', ')}` : ''}${/^[ \t>-]*Role:[ \t]*(Fable )?director\b/im.test(plain) ? '; a gate director round is `Role: Reviewer` on Fable (docs/TEAMS.md, Models; gate.md, Rounds)' : ''}`)
+  const team = guard.stamped(brief) && guard.badTeam(brief, teams)
+  // issue #479 part 1: a gate director round is no thread role of its own.
+  // issue #479 part 1: a gate director round is no thread role of its own; the hint rides on a refusal that already exists (Director is a valid role on the video kit).
+  const director = /^[ \t>-]*Role:[ \t]*(Fable )?director\b/im.test(plain) ? '; a gate director round is `Role: Reviewer` on Fable (docs/TEAMS.md, Models; gate.md, Rounds)' : ''
+  if (team) found.push(`${team}${director}`)
+  const topic = guard.badTopic(brief, read(join(setupRoot(cwd), guard.CHECKLISTS)))
+  if (topic) found.push(topic)
+  const sorted = guard.classify(brief)
+  found.push(...sorted.judgment.map((f) => `${f.key} is missing or still a <placeholder>`))
   const wrong = model && guard.wrongModel(brief, model, teams)
-  if (wrong) return `Model check (docs/TEAMS.md, Roster): this thread runs on ${wrong.tier}, but the ${wrong.role} runs on ${wrong.allowed.join(' or ')}. Do no work: tell the coordinator (message_coordinator) to restart it on that model, then stop.`
-  const gate = roleOf(brief, teams)?.name
-  if (gate && GATE_ROLES.test(gate) && !GATE_PRIOR.test(brief.replace(/[*_`]/g, ''))) return `Gate check (.claude/skills/operator/gate.md): a ${gate} brief names the gate rules in its \`Prior art:\` line (gate.md and the kit's checks). Do no work: ask the coordinator (message_coordinator) for the brief with them, then stop.`
-  const role = guard.stamped(brief) && /\bSize:[ \t]*[ML]\b/i.test(brief.replace(/[*_`]/g, '')) && roleOf(brief, teams)?.name
-  return role ? `Title check (docs/TEAMS.md, Roster "Runs as"): this thread's title starts with \`${role} · \`; if it does not, rename_thread to \`${role} · <what>\` first.` : ''
+  if (wrong) found.push(`this thread runs on ${wrong.tier}, but the ${wrong.role} runs on ${wrong.allowed.join(' or ')}: ask the coordinator to restart it on that model`)
+  if (found.length) return `Brief check (docs/TEAMS.md): this start breaks the team rules in ${found.length} place${found.length === 1 ? '' : 's'}: ${found.map((f, i) => `(${i + 1}) ${f}`).join(' ')}. Do no work: send ALL of this to the coordinator in one message (message_coordinator) together with this template for a ${role?.name ?? '<Role>'}, then stop:\n${templateFor(guard, role?.name ?? '<Role>', plain.match(/\bSize:[ \t]*([SML])\b/i)?.[1])}`
+  // Nothing the coordinator must decide is missing: the thread closes the rest itself and says so in its first checklist line.
+  const mine = [...sorted.derived, ...sorted.recoverable]
+  const notes = mine.length ? [`Brief repair (no block): the brief lacks ${mine.map((f) => f.key).join(', ')}. Work as if it read: ${mine.map((f) => f.fill).join(' | ')}. Name the repaired lines in your first checklist line.`] : []
+  const gate = role?.name
+  if (gate && GATE_ROLES.test(gate) && !GATE_PRIOR.test(plain) && !mine.some((f) => f.key === 'Prior art')) notes.push(`Brief repair (no block): a ${gate} brief names gate.md and the kit's checks in its \`Prior art:\` line; read .claude/skills/operator/gate.md first.`)
+  if (role && /\bSize:[ \t]*[ML]\b/i.test(plain)) notes.push(`Title check (docs/TEAMS.md, Roster "Runs as"): this thread's title starts with \`${role.name} · \`; if it does not, rename_thread to \`${role.name} · <what>\` first.`)
+  return notes.join('\n')
 }
 
 // Spawn rule 4 (proven 2026-11-08: the hook-less coordinator started a thread with no `model` and `Model: default`
@@ -2288,7 +2340,7 @@ const withoutOlderStamps = (sources) => { let seen = false; return sources.map((
 export function relayContext(prompt, transcript) {
   const relays = coordinatorRelays(transcript).filter((t) => t.trim() !== prompt.trim())
   const spawn = spawnPrompt(prompt, String(transcript))
-  return withoutOlderStamps([prompt, ...relays.reverse(), spawn === prompt ? '' : spawn].filter(Boolean)).slice(1).join('\n')
+  return withoutOlderStamps([prompt, ...relays.reverse(), spawn === prompt ? '' : spawn].filter(Boolean).map(stripTags)).slice(1).join('\n') // tags off first: a spawn brief's Role sits right behind its wake tag
 }
 // M50: a thread locked since its spawn has no role stamp and built nothing (the lock refuses every tool outside LOCK_FREE), so its first lift may take any
 // role, a gate role too; one that holds a stamp keeps it (#475: a builder never becomes the reviewer of its own work).

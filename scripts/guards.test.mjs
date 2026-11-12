@@ -307,6 +307,21 @@ test('team guard: blocks Agent and thread starts without model, passes with one'
 })
 
 // yskills 2026-11-01: an Animator brief was blocked because the role was not in the Roster.
+// yskills 2026-11-12: "Writer", "Storyteller" and "Story Writer" were all refused and the coordinator had to guess. The refusal names the roles the kit accepts.
+test('team guard: an unknown or wrong role is refused with the roles that kit accepts; Story Writer and Story Editor are Roster roles on story', async () => {
+  const { decide, rolesForKit } = await import('../global/team-guard.mjs')
+  const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
+  const brief = (role, kit, size = 'M') => ({ brief: `Role: ${role} · Kit: ${kit} · Size: ${size}\nPrior art: docs/TEAMS.md and .claude/skills/storyteller checked; adapt, because the story team exists${FULL.replace(/\nGate:[^\n]*/, '')}\nGate: Reviewer · story gate before owner`, title: `${role} · kapitel`, model: 'claude-x-1' })
+  const out = (role, kit) => decide('mcp__hearthbot__start_thread', brief(role, kit), [], [], teams).block ?? ''
+  assert.deepEqual(out('Story Writer', 'story'), '', 'Story Writer passes on story')
+  assert.match(out('Storyteller', 'story'), /is no role.*on the story kit pick one of .*Story Writer, Story Editor/, 'an unknown role lists the story kit roles')
+  assert.match(out('Writer', 'story'), /not on the `story` kit's team.*pick one of .*Story Writer/, 'a Roster role from another kit lists the story kit roles')
+  assert.doesNotMatch(out('Storyteller', 'story'), /Hook Checker|Caption Writer/, 'the list is the kit\'s, not the whole Roster')
+  assert.ok(rolesForKit(teams, 'story').includes('Story Editor') && !rolesForKit(teams, 'story').includes('Writer'))
+  assert.ok(!rolesForKit(teams, 'site').includes('Story Writer'), 'Story Writer is skipped on site')
+  assert.deepEqual(rolesForKit(teams, 'nonsense'), [])
+})
+
 test('team guard: an Animator thread starts on the game and story kits, on Sonnet, not on site or setup', async () => {
   const { decide } = await import('../global/team-guard.mjs')
   const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
@@ -706,7 +721,12 @@ test('rule guard: a thread checks its spawn brief against TEAMS.md and sends a b
   assert.match(await briefCheck(spawn(`Role: none · Kit: setup · Size: S${FULL}`), root), /Brief check[\s\S]*names no role of the Roster/, 'no role is refused (yskills 2026-11-12), not waved through')
   assert.match(await briefCheck(spawn(`Role: Designer · Kit: content · Size: S${FULL}`), root), /Brief check[\s\S]*Kit: content is no kit[\s\S]*message_coordinator/)
   assert.match(await briefCheck(spawn('Make a bee video.'), root), /no `Role: · Kit: · Size:` stamp/)
-  assert.match(await briefCheck(spawn('Role: Programmer · Kit: setup · Size: S\nFix it.'), root), /brief lines missing: Item:[\s\S]*Plan:[\s\S]*Acceptance:[\s\S]*Model:/)
+  assert.match(await briefCheck(spawn('Role: Programmer · Kit: setup · Size: S\nFix it.'), root), /^Brief repair \(no block\): the brief lacks[\s\S]*Model[\s\S]*Item[\s\S]*Plan[\s\S]*Acceptance[\s\S]*first checklist line/, 'M50: at size S everything follows from the stamp, so nothing blocks')
+  const bad = await briefCheck(spawn('Role: Designer · Kit: content · Size: M\nFix it.'), root)
+  assert.match(bad, /^Brief check[\s\S]*Kit: content is no kit/, 'M50: one refusal lists every judgment gap at once')
+  const sizeM = await briefCheck(spawn('Role: Programmer · Kit: setup · Size: M\nFix it.'), root)
+  assert.match(sizeM, /^Brief check[\s\S]*Item is missing[\s\S]*Plan is missing[\s\S]*Acceptance is missing[\s\S]*Role: Programmer · Kit: <kit>[\s\S]*Item: <PLAN\.json item/, 'at size M the three decisions and the role template')
+  assert.doesNotMatch(sizeM.split('\n')[0], /Model|Skills|Start|Threads|Stop when/, 'what follows from the stamp is never in the refusal')
   assert.equal(await briefCheck('Role: Designer · Kit: content · Size: S', root), '', 'only the spawn wake')
   assert.match(await briefCheck(JSON.stringify(spawn(`Role: Programmer (debug) · Kit: setup · Size: M${FULL}`)), root), /^Title check/, 'an escaped wake, a role with a note')
   assert.equal(await briefCheck(spawn(`Role: Programmer · Kit: setup · Size: S${FULL}\nDone when: <b>x</b> and a < b`), root), '', 'other tags stay')
@@ -1111,10 +1131,10 @@ test('rule guard: a thread on the wrong model or a gate brief without gate rules
   const wake = (brief) => `<wake reason="spawn"><relay>${brief}</relay></wake>`
   const tester = (prior) => `Role: Tester · Kit: app · Size: L${FULL.replace(/\nPrior art:.*$/, '')}\nPrior art: ${prior}`
   const withGate = tester('.claude/skills/operator/gate.md and the app kit checks -> adapt, because they are the gate')
-  assert.match(await briefCheck(wake(withGate), root, 'claude-sonnet-x'), /Model check.*Tester runs on opus/)
-  assert.doesNotMatch(await briefCheck(wake(withGate), root, 'claude-opus-x[1m]'), /Model check|Gate check/)
-  assert.match(await briefCheck(wake(tester('none, because a test brief')), root, 'claude-opus-x'), /Gate check/)
-  assert.doesNotMatch(await briefCheck(wake(withGate), root, null), /Model check/, 'an unknown model is not guessed')
+  assert.match(await briefCheck(wake(withGate), root, 'claude-sonnet-x'), /Brief check[\s\S]*runs on sonnet, but the Tester runs on opus/)
+  assert.doesNotMatch(await briefCheck(wake(withGate), root, 'claude-opus-x[1m]'), /Brief check|runs on/)
+  assert.match(await briefCheck(wake(tester('none, because a test brief')), root, 'claude-opus-x'), /^Brief repair \(no block\)[\s\S]*gate\.md/, 'a gate role without gate.md in Prior art is told to read it, never locked')
+  assert.doesNotMatch(await briefCheck(wake(withGate), root, null), /runs on/, 'an unknown model is not guessed')
   const line = (type, model) => JSON.stringify({ type, message: { model, content: [{ type: 'tool_use', input: { model: 'haiku' } }] } })
   assert.equal(sessionModel([line('assistant', 'claude-sonnet-x'), line('assistant', 'claude-opus-x')].join('\n'), {}), 'claude-opus-x')
   assert.equal(sessionModel(line('user', 'claude-haiku-x'), {}), null, 'only assistant entries')
