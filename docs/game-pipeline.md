@@ -27,8 +27,8 @@ links it. Update both in the same turn when a folder changes.
 | A character | `lib\characters\CH_<name>\` (Rika: `CH_rika\Blend\rika.blend`; man: `CH_male\male.blend`) |
 | Rooms | `lib\rooms\<room>\<room>.blend` + `_preview.png` (built by `_work\sets.py`, saved by `save_rooms.py`; office_night has `Camera_POV_stand`, `Camera_POV_sit`, `Camera_Side`) |
 | Shots | `projects\games\<game>\<chapter>\<shot>\<shot>.blend` + `compare.png`; overview `projects\games\companyxy\ch01\overview.png` |
-| Animation | `lib\anims\retarget\ANIMATIONEN.md` (+ `retarget.py`, `maps\`); packs in `lib\anims\AN_<name>\` |
-| Two-person rig | `lib\anims\interaction\kiss\` (`README.md`, `kiss.json`, `apply_interaction.py`, `bone_maps\`) |
+| Animation | `lib\anims\_retarget\ANIMATIONEN.md` (+ `retarget.py`, `maps\`); packs in `lib\anims\AN_<name>\` |
+| Two-person rig | `lib\anims\sfw\pair\kiss\` (`README.md`, `kiss.json`, `apply_interaction.py`, `bone_maps\`) |
 | Ren'Py game | private repo `yverse-studio/companyxy-spiel` (`game/` source, `story/<char>/` chapters, `story/briefs/` scene list + briefs); playable build on the laptop `projects/games/companyxy/build/` (the play copy) (art in `game\art\`, `game\art\loops\`, slots in `game\slots.rpy`) |
 | Story guide + plan | `/mnt/project-files/companyxy/story/storyteller/` (`09-story-plan.md`); Rika's ten chapters: company-xy branch `story-rika-fanservice` |
 | Body building guide + lessons | `/mnt/project-files/companyxy/patches/base-body/` (`GUIDE.md`, `LESSONS.md`); posing `characters/POSEN-ANLEITUNG.md` |
@@ -38,7 +38,7 @@ README and the private `nacht-kapitel1.rpy` only.
 
 ### One source, kept clean
 
-Planned 2026-11-05, executed in stages (`rigs\` merged into `lib\anims\interaction\`; scripts live in `tools/`).
+Planned 2026-11-05, executed in stages (`rigs\` merged into `lib\anims\_engine\`; scripts live in `tools/`).
 
 - One file per character, clip and scene, at its place in the README tree (`lib\characters\`, `lib\anims\`, `projects\games\`).
 - Work happens in a dated copy `<name>_<date>_<reason>.blend` in the same folder and is written back into the target
@@ -86,7 +86,7 @@ characters as delivered never go into 18+ scenes. Clothes are fitted once per ba
 
 ## Put an animation on a character
 
-Full steps and the clip table: `lib\anims\retarget\ANIMATIONEN.md`. Short:
+Full steps and the clip table: `lib\anims\_retarget\ANIMATIONEN.md`. Short:
 
 1. New clip: put the FBX in `animations\AN_<pack>\source\`, add a `catalog.json` entry.
 2. Bone map: copy `retarget\maps\mixamo_to_rika.json`, fix the target bone names for a new rig.

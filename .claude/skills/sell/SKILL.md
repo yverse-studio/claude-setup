@@ -44,6 +44,7 @@ PR.
 | Physical goods | Our order page (address, shipping, the order button), then the Stripe-hosted page to pay | Kleinunternehmer: none. Otherwise Stripe Tax plus OSS. No merchant-of-record service takes physical goods | Order in D1, then Sendcloud, then yskills prints the label |
 | Many products, variants, stock, or someone else runs the shop | Shopify instead of building one | Shopify Tax | Shopify |
 
+- **Selling a game or other digital product on itch.io or Steam as well:** itch.io has two modes (you are the seller and handle VAT yourself, or itch.io is the merchant of record) and collects VAT automatically only in the second; use it as a store page, Stripe Checkout stays our own checkout. **Keep the price the same on Steam and on our own site** (Steam's parity rule is written for Steam keys sold elsewhere; whether it reaches a key-less own site is disputed), and do not link to our shop from inside the Steam build. Read the Steamworks terms before launch. Detail and sources: `docs/research/2026-11-10-paid-games-and-service.md`.
 - Turn payment methods on in the Stripe Dashboard: cards, Apple Pay and Google Pay, PayPal,
   Klarna, SEPA. The hosted page then shows them with no extra code. giropay no longer exists.
 - **Why the hosted page:** it has no monthly fee and the lowest fees. Stripe.js never loads on

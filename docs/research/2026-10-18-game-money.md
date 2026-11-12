@@ -3,6 +3,8 @@
 Asked by yskills 2026-10-18 00:31 ("did you research right ... sota way to earn money with a game ... google what is actually the way").
 Updates [the game-route research](../archive/claude-setup-memory-2026-10-25/game-route-research.md). **[V]** = vendor/SEO blog, not audited or official. No solo-dev postmortem with disclosed numbers turned up in six searches, so every euro figure below is an estimate.
 
+> Paid direct sales, pricing a 1 to 2 hour game and a personalised-game service are not covered here: see [2026-11-10-paid-games-and-service.md](2026-11-10-paid-games-and-service.md).
+
 ## Route (one)
 
 **Browser game on CrazyGames first (free, their ads), own site as the demo; if the test launch shows good play time, offer the same game to Poki; Steam and Roblox only for a proven winner.** Same as 10-17.
