@@ -224,7 +224,9 @@ How to undo a merge, by kind of change (write the line into the PR's "undo" line
      (`gate-rounds.mjs waive <asset> --ref <cmsg id>`, the hook needs his reply in the session).
   5. **Two doors for gh**, because the hook reads no gh comment text: a merge is `mcp__github__merge_pull_request` or [guard: hook global/gate-rounds.mjs]
      `node ~/.claude/claude-setup/gate-rounds.mjs merge <owner/repo#n> [--squash|--merge|--rebase] [--auto] [--delete-branch]`;
-     a verdict is the comment tool or `gate-rounds.mjs post <owner/repo#n> --body-file <f>`. `gh pr merge` is refused in Bash by
+     a verdict is the comment tool or `gate-rounds.mjs post <owner/repo#n> --body-file <f>`; a named asset without a PR (a video, an
+     image set) is counted by `gate-rounds.mjs record <name> --body-file <f>`, run by any gate role (Tester, Reviewer, Evaluator, Critic,
+     Playtester, Hook Checker, Story Editor, Security, Legal) and never for a PR asset. `gh pr merge` is refused in Bash by
      command position (one tokenizer: quotes, `;`, `&&`, `|`, `$( )`, `bash -c`), so a commit message, a grep pattern or an echo is
      data. A `gh` comment is never refused and never counted: a verdict through plain gh cannot lead to a merge. Bash refuses only the
      literal ledger or guard path (as a redirect target or the argument of a writer such as rm, mv, tee, cp into it, sed -i).

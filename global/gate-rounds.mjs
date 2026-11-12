@@ -45,7 +45,10 @@ export const lastRound = (l) => l.rounds.at(-1)?.n ?? 0
 // ---- grants (security review 2026-11-12, finding 1): the proofs for init, direct, card, picture and waive are read by the hook, and the
 // CLI refuses those verbs without the short grant the hook leaves after it checked them. A call that bypasses the hook (a copy of this
 // file, node -e, an import) reaches the CLI without a grant and is refused there too, so the filename in argv is no longer the lock.
-export const GRANTED = ['init', 'direct', 'card', 'picture', 'waive']
+export const GRANTED = ['init', 'direct', 'card', 'picture', 'waive', 'record']
+// A named asset is plain word characters: no slash, space or #, so it cannot spell a PR ledger (owner/repo#n and "owner/repo n" share one file key).
+export const namedProblem = (asset) => /^[\w.-]+$/.test(String(asset)) && !/_\d+$/.test(String(asset)) ? null : 'record: only a plain named asset (letters, digits, - . _; not ending in _<number>, no owner/repo#n); a PR verdict goes through "post" or the comment tool (gate.md, Rounds)'
+const grantRef = (verb, rest, ref) => verb === 'init' ? rest[rest.indexOf('--round') + 1] : verb === 'direct' ? rest[rest.indexOf('--plan') + 1] : verb === 'record' ? rest[rest.indexOf('--body-file') + 1] : ref
 export const GRANT_SECONDS = 120
 const grantFile = (dir, verb, asset) => join(dir, 'grants', `${verb}.${basename(fileOf(dir, asset))}`)
 // The hook reads the command before the shell expands it, the CLI after: both sides key the grant on the same form (gate round 1 of the #450 re-land).
@@ -62,11 +65,11 @@ export function takeGrant(dir, verb, asset, ref, now = Date.now()) {
   return g.exp > now && g.verb === verb && g.asset === String(asset).toLowerCase() && g.ref === grantKey(ref)
 }
 
-// ---- who may post a verdict (finding 2): a verdict is counted only from a gate session (role Tester, Reviewer, Evaluator) or when the
+// ---- who may post a verdict (finding 2): a verdict is counted only from a gate session (a gate role: Tester, Reviewer, Evaluator, Critic ...) or when the
 // headline came out of a fresh reviewer subagent of this session (gate.md: S and M run in the author thread with one fresh code-reviewer).
 // A Programmer that types its own "Gate 5/5" has neither, so it can neither pass nor merge itself.
 const norm = (t) => String(t).replace(/[*_`#>\s]+/g, ' ').trim().toLowerCase()
-const GATE_ROLE = /^(tester|reviewer|evaluator)$/i // exact Roster name from the role stamp, never a prefix (security review 2026-11-12)
+export const GATE_ROLE = /^(tester|reviewer|security|legal|playtester|hook checker|critic|story editor|evaluator)$/i // the list of rule-guard's GATE_ROLES (a test keeps them equal); exact Roster name from the role stamp, never a prefix (security review 2026-11-12)
 // Real reviewer agents only (an invented subagent_type does not vouch), the verdict must open the reviewer's own result, and the prompt the
 // builder gave it must not already contain that verdict (security review 2026-11-12, finding 2: a self-attested proof).
 const REVIEWER = /^(code-reviewer|evaluator|security-reviewer|typescript-reviewer|vue-reviewer|database-reviewer|design-critic|legal-reviewer|red-team)$/
@@ -77,7 +80,7 @@ export function reviewerProof(body, calls = []) {
 }
 export function authorProblem(body, ctx = {}) {
   if (GATE_ROLE.test(ctx.role ?? '') || reviewerProof(body, ctx.calls ?? [])) return null
-  return `gate verdict: a verdict counts only from a gate session (role Tester or Reviewer) or when its headline came out of a fresh reviewer subagent of this session (code-reviewer or evaluator). This session is ${ctx.role ? `the ${String(ctx.role).slice(0, 30)}` : 'not a gate role'} and no reviewer subagent returned this headline, so a builder cannot pass or merge its own work (gate.md, Rounds).`
+  return `gate verdict: a verdict counts only from a gate session (a gate role: Tester, Reviewer, Critic ..., docs/TEAMS.md) or when its headline came out of a fresh reviewer subagent of this session (code-reviewer or evaluator). This session is ${ctx.role ? `the ${String(ctx.role).slice(0, 30)}` : 'not a gate role'} and no reviewer subagent returned this headline, so a builder cannot pass or merge its own work (gate.md, Rounds).`
 }
 
 // "Gate 4.2/5 (L, round 3) [important]" or "Gate 5/5 (S, round 1)" or "Gate fail, round 2".
@@ -330,7 +333,7 @@ function runsOthers(s) {
 
 const GUARDS = 'rule-guard|team-guard|context-guard|compact-guard|attempt-guard|gate-rounds|task-ledger' // every installed guard file (team-guard.mjs GUARD_FILES)
 const GUARD_FILE = new RegExp(`\\.claude[\\\\/]claude-setup[\\\\/](?:${GUARDS})\\.mjs$`)
-const CLI_VERBS = ['status', 'check', 'init', 'direct', 'card', 'picture', 'waive', 'merge', 'post']
+const CLI_VERBS = ['status', 'check', 'init', 'direct', 'card', 'picture', 'waive', 'merge', 'post', 'record']
 const MERGE_DOOR = /pulls\/[^\s/]*\/merge|mergePullRequest|enablePullRequestAutoMerge/
 
 // gh decided by command position only: a merge goes through the counter. Comments are never read here: a verdict posted through plain gh
@@ -393,12 +396,13 @@ function bashProblem(cmd, dir, ctx) {
       if (verb === 'direct' && !/fable/i.test(ctx.model ?? '')) return `gate ledger: only a Fable session records the director, this one runs on ${ctx.model ?? 'an unknown model'}. Ask the coordinator for a Fable thread (docs/TEAMS.md, Models line).`
       if (['card', 'picture', 'waive'].includes(verb) && !(ref && cardProof(ref, ctx.calls ?? []))) return `gate ledger: "${verb}" needs --ref <cmsg id> of a request_decision card this session posted (it was not found in this session).`
       if (verb === 'waive' && !(ctx.humanAfter?.(ref))) return 'gate ledger: waive needs yskills\' own answer on that card in this session; none arrived yet.'
-      if (verb === 'post') {
+      if (verb === 'record' && namedProblem(s.args[at + 2])) return namedProblem(s.args[at + 2])
+      if (verb === 'post' || verb === 'record') {
         const body = read(s.args[s.args.indexOf('--body-file') + 1] ?? '')
         const why = authorProblem(body, ctx)
         if (why) return why
       }
-      if (!ctx.dry && GRANTED.includes(verb)) issueGrant(dir, verb, s.args[at + 2], verb === 'init' ? s.args[s.args.indexOf('--round') + 1] : verb === 'direct' ? s.args[s.args.indexOf('--plan') + 1] : ref)
+      if (!ctx.dry && GRANTED.includes(verb)) issueGrant(dir, verb, s.args[at + 2], grantRef(verb, s.args, ref))
       continue
     }
     const writes = WRITERS.has(s.a0.toLowerCase()) || (s.a0 === 'sed' && s.args.some((x) => /^-[a-zA-Z]*i|^--in-place/.test(x)))
@@ -450,7 +454,8 @@ const USAGE = `usage: gate-rounds.mjs <cmd> <asset> [...]   asset = owner/repo#p
   picture --ref <cmsg id>     record the picture card for a new hub, start screen or style
   waive --ref <cmsg id>       yskills answered the card: a below-threshold version may merge
   merge [--squash|--merge|--rebase] [--auto] [--delete-branch]   merge owner/repo#n if its last round passed (runs gh)
-  post --body-file <f>        count the verdict headline at the top of <f>, then post it with gh`
+  post --body-file <f>        count the verdict headline at the top of <f>, then post it with gh
+  record --body-file <f>      count the verdict headline at the top of <f> for a named asset (no PR, no gh): a video, an image set`
 const flag = (args, name) => { const i = args.indexOf(name); return i < 0 ? null : args[i + 1] }
 
 export function cli(argv, env = process.env) {
@@ -464,7 +469,7 @@ export function cli(argv, env = process.env) {
   if (cmd === 'status') return { code: 0, text: JSON.stringify(l, null, 2) }
   if (cmd === 'check') return roundProblem(l, Number(rest[0])) ? fail(roundProblem(l, Number(rest[0]))) : { code: 0, text: 'ok' }
   if (GRANTED.includes(cmd)) {
-    const key = cmd === 'init' ? flag(rest, '--round') : cmd === 'direct' ? flag(rest, '--plan') : flag(rest, '--ref')
+    const key = cmd === 'init' ? flag(rest, '--round') : cmd === 'direct' ? flag(rest, '--plan') : cmd === 'record' ? flag(rest, '--body-file') : flag(rest, '--ref')
     if (!takeGrant(dir, cmd, asset, key)) return fail(`${cmd}: refused: the hook (global/rule-guard.mjs) checks the proof for this verb and leaves a short grant; none was found for this call. Run it as "node ~/.claude/claude-setup/gate-rounds.mjs ${cmd} <asset> ..." in a session where the hook is on (gate.md, Rounds).`)
   }
   if (cmd === 'init') {
@@ -477,6 +482,14 @@ export function cli(argv, env = process.env) {
     if (lastRound(l) < FREE_ROUNDS) return fail(`direct: a director comes after round ${FREE_ROUNDS}, the ledger stands at ${lastRound(l)}`)
     if (!plan || read(plan).trim().length < 200) return fail('direct: --plan <file> with the Fable plan (goal, constraints, what changes, done-test) is required')
     return save({ ...l, director: { model: DIRECTOR, plan, round: lastRound(l), at: new Date().toISOString() } })
+  }
+  if (cmd === 'record') {
+    if (namedProblem(asset)) return fail(namedProblem(asset))
+    const file = flag(rest, '--body-file')
+    const head = file ? parseHeadline(read(file)) : null
+    if (!head) return fail('record: --body-file <f> must start with the verdict headline "Gate <score>/5 (<size>, round <n>)"')
+    const bad = verdictProblem(dir, asset, head, false)
+    return bad ? fail(bad) : { code: 0, text: `recorded: ${asset} stands at round ${lastRound(readLedger(dir, asset))}` }
   }
   if (cmd === 'merge' || cmd === 'post') {
     const m = String(asset).match(/^([\w.-]+\/[\w.-]+)#(\d+)$/)

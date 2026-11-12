@@ -118,6 +118,14 @@ yskills (2026-11-03): Remote Control sessions on the laptop dropped mid-turn, "t
 - **Overnight chains** run as one headless PowerShell script with resume markers, so a dropped session does not stop the work and Claude only reads the results (example: the game's `night_runner.ps1`). Waits for older jobs, never kills Blender, runs one Blender at a time.
 - **Permissions:** `scripts/laptop/claude-settings.template.json` plus `scripts/laptop/install-claude-settings.ps1` (merges into `~/.claude/settings.json`, keeps existing entries, writes a `.bak`): `defaultMode` acceptEdits, a clean allow list (whole tools plus the home folder, no duplicate sub-rules), an `ask` list (deletes, secrets, repo edits) and a deny list (secrets, disk formatting, `rm -rf` on roots, force-push to main, deploy commands). The installer writes UTF-8 without BOM. Note: auto mode has its own classifier that blocks persistence (scheduled tasks, background processes) whatever `permissions.allow` says; acceptEdits plus this list does not. [advisory]
 
+## Claude desktop app RAM leak (2026-11-12, again)
+
+Symptom (yskills, more than once): about 10 GB "driver" (kernel pool) memory, 0.57 of 15.7 GB free, a 3D job start blocked by the RAM check in `scripts/laptop-job.mjs`. Process memory in Task Manager looks small, so the suspect is the long-running Claude app and its sessions, not the job.
+
+- **Warning:** `rc-watchdog.ps1` (above) shows one Windows toast per low episode when free RAM drops under 4 GB (none while a laptop job holds a slot; re-armed at 4 GB again) and logs the top 5 processes plus the nonpaged/paged pool (CIM `Win32_PerfFormattedData_PerfOS_Memory`, works on de-DE; `check-laptop.ps1` reads the same number) to `%LOCALAPPDATA%\rc-watchdog\watchdog.log`. Free, costs no tokens, kills nothing. The pool lines are the proof of the leak: read them before blaming an app.
+- **Restart rule:** toast, or under 4 GB free with no job running: quit the Claude app completely (tray icon, Quit) and start it again as a test; sessions resume. A kernel pool leak may not shrink from that: then restart Windows. A running job is left alone: wait for the job, then restart. Restart the app once a week anyway; a Windows restart also clears the pool. yskills is asked once at most, with the numbers (see `RAM is per job`).
+- **Install once, no admin** (the task runs the repo file, so a `git pull` is enough for later changes): `powershell -NoProfile -ExecutionPolicy Bypass -File %USERPROFILE%\claude-setup\scripts\laptop\install-rc-watchdog.ps1` [advisory]
+
 ## Update
 
 ```
