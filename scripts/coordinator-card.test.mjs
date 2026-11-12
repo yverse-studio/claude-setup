@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, symlinkSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -176,4 +176,25 @@ test('M50 B acceptance: from an installed copy, no card and a stale card both en
   assert.equal(none.stdout.trim(), 'null', 'no project folder (a laptop session): nothing to refresh')
   writeFileSync(join(dir, 'docs', 'TEAMS.md'), readFileSync(join(dir, 'docs', 'TEAMS.md'), 'utf8').replace('## Kits', '## Kits\n\nChanged kit text.'))
   assert.notEqual(refresh(dir, out).stdout.trim(), 'null', 'a changed TEAMS.md makes the card stale')
+})
+
+test('the card is written last: a write that fails halfway leaves no card, so the next start repairs the folder', () => {
+  const dir = installedCopy()
+  const out = mkdtempSync(join(tmpdir(), 'proj-'))
+  const real = mkdtempSync(join(tmpdir(), 'elsewhere-'))
+  symlinkSync(real, join(out, 'briefs')) // a planted link makes the brief writes fail
+  assert.equal(refresh(dir, out).stdout.trim(), 'null', 'the failed refresh reports nothing')
+  assert.ok(!existsSync(join(out, 'COORDINATOR-CARD.md')), 'no card marks a half-written folder as current')
+  assert.deepEqual(readdirSync(real), [], 'nothing went through the link')
+  rmSync(join(out, 'briefs'))
+  assert.match(refresh(dir, out).stdout.trim(), /^[0-9a-f]{8}$/, 'the next start writes everything')
+  assert.ok(existsSync(join(out, 'briefs/programmer.md')))
+})
+
+test('ROSTER.md lists no role without a brief file as a thread role (the Project Manager)', () => {
+  const roster = renderRoster({ teams, hash: 'h', date: 'd' })
+  assert.match(roster, /\*\*Project Manager\*\*:[^\n]*no thread brief/)
+  assert.doesNotMatch(roster.split('## Kits')[1], /Project Manager \(/)
+  const briefs = [...renderAll({ base: new URL('..', import.meta.url).pathname, hash: 'h', date: 'd' }).keys()].filter((k) => k.startsWith('briefs/')).length
+  assert.equal(briefs, rosterNames(teams).length - 1, 'one brief file per Roster role but the Project Manager')
 })

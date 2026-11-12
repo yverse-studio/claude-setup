@@ -1252,6 +1252,9 @@ test('rule-guard: a thread\'s first reply carries the hook-built start receipt',
   const t0 = brief
   const line0 = threadReceipt('Programmer', 'Role: Programmer · Kit: setup · Size: S', t0, rules)
   assert.match(line0, /^Thread · Programmer · setup · S · item \? · skills: none · rules #[0-9a-f]{7} · missing: none$/, 'no Item line: item ?')
+  assert.ok(threadReceipt('Programmer', 'Role: Programmer · Kit: setup · Size: S', t0, rules, undefined, 'abc12345').endsWith(' · card #abc12345'), 'the receipt names the card this start left in the project folder')
+  assert.doesNotMatch(line0, /card #/, 'no card folder: no card part')
+  assert.match(receiptMissing('mcp__hearthbot__post_message', { text: 'Luna · hi' }, 'Thread · P · card #abc12345', t0) ?? '', /Teams\): Thread · P · card #abc12345/, 'a reply without the card part is refused')
   assert.match(threadReceipt('Planner', 'Role: Planner · Kit: setup · Size: M\nItem: M12', t0, rules), /^Thread · Planner · setup · M · item M12 · skills:/, 'the real brief shape and its Masterplan item')
   assert.match(threadReceipt('Planner', 'Role: Planner · Kit: setup · Size: M\nItem: new', t0, rules), /item new ·/, 'a new item')
   assert.match(threadReceipt('Programmer', 'Role: · Kit: · Size:', t0, rules), /· \? · \? · item \?/, 'template text reads as ?')

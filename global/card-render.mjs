@@ -115,13 +115,15 @@ export function roleLines(teams) {
 // ROSTER.md: every Roster role and every kit, unclipped; per kit the thread roles and sizes the guard accepts, per role the kits.
 export function renderRoster({ teams, hash = 'nogit', date = today() }) {
   const kits = kitRows(teams)
+  const hasBrief = (role) => tierOf(roleOf(stub(role, 'setup', 'M'), teams).row) // the Project Manager (set by yskills) is no thread role
   const roles = rosterNames(teams).map((role) => {
     const info = roleOf(stub(role, 'setup', 'M'), teams)
     const on = kits.map((k) => [k.kit, sizesOf(role, k.kit, teams)]).filter(([, s]) => s.length)
+    if (!hasBrief(role)) return `- **${role}**: runs as: ${flat(runsAs(info.row))}; model: ${modelCell(info.row)}; playbook: ${info.path ?? 'its Roster row'}; no thread brief (never started as a thread)`
     return `- **${role}**: runs as: ${flat(runsAs(info.row))}; model: ${modelCell(info.row)}; playbook: ${info.path ?? 'its Roster row'}; starts on: ${on.length ? on.map(([k, s]) => `${k} (${s.join(' ')})`).join(', ') : 'no kit (no thread brief)'}`
   })
   const kitText = kits.map((k) => {
-    const who = rosterNames(teams).map((role) => [role, sizesOf(role, k.kit, teams)]).filter(([, s]) => s.length)
+    const who = rosterNames(teams).filter(hasBrief).map((role) => [role, sizesOf(role, k.kit, teams)]).filter(([, s]) => s.length)
     return `### ${k.kit}\n\n- Team at size L: ${flat(k.team)}\n- Skipped: ${flat(k.skipped)}\n- Thread roles (sizes): ${who.map(([r, s]) => `${r} (${s.join(' ')})`).join(', ')}`
   })
   return `Roster and kits (claude-setup ${hash}, ${date}), rendered from docs/TEAMS.md and the guard's own role and kit check; never edited by hand.\nA brief names a role from this list on a kit that lists it, at a size it lists; briefs/<role>.md has the brief for each.\n\n## Roles\n\n${roles.join('\n')}\n\n## Kits\n\n${kitText.join('\n\n')}\n`
@@ -181,7 +183,8 @@ export function renderAll({ base, hash = cardHash(base), date = today() }) {
 // Writes only what changed (temp name, then rename), so two threads writing at once leave a whole file, and a second run writes nothing.
 export function writeAll(dir, files) {
   let written = 0
-  for (const [name, text] of files) {
+  // The card is the marker refreshCard reads, so it goes last: a write that fails or is killed halfway leaves the old card and the next start repairs the rest.
+  for (const [name, text] of [...files].sort(([a], [b]) => (a === 'COORDINATOR-CARD.md') - (b === 'COORDINATOR-CARD.md'))) {
     const to = join(dir, name)
     if (existsSync(to) && readFileSync(to, 'utf8') === text) continue
     mkdirSync(join(to, '..'), { recursive: true })

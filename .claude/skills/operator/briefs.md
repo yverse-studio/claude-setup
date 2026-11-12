@@ -75,27 +75,15 @@ The fixed, tested copy of this block is [`docs/templates/thread-brief.md`](../..
 
 `team-guard` blocks a thread start whose brief lacks the `Item:`, `Plan:`, `Acceptance:`, `Threads:` (one `list_threads` look before every start), `Model:`, `Skills:`, `Done when:`, `Stop when:` or `Start: ... MEMORY.md` line, names a kit that is not in `docs/TEAMS.md` (Kits), a video or post at size S, a Planner at S, or a role that is not on its kit's team (blind test 2026-10-27). The thread checks the same rules on its spawn brief (rule-guard `briefCheck`), because a project chat may run without hooks: a bad start is sent back to the coordinator and no work starts (routing test 2026-10-27).
 
+The lines of a brief are the rows of `BRIEF_FIELDS` (`global/team-guard.mjs`); `docs/templates/thread-brief.md` and the coordinator's `briefs/<role>.md` are rendered from it (`global/card-render.mjs`, a test compares them), so no field is written out here: what a line means is in its role file and `gate.md` (Owner-facing results). What a brief carries beyond the fields:
+
 ```
-Role: <one role from docs/TEAMS.md (Roster); none is refused> · Kit: <kit> · Size: <S|M|L>. team-guard blocks a start without this line; rule-guard puts the role's Roster row and playbook into the thread. You are this one role, not the coordinator: docs/TEAMS.md (Coordinator or thread).
-Model: <id for this role's row in docs/TEAMS.md (Roster), via its Models line>. Handoff: at a trigger (docs/WORKFLOW.md, Handoff triggers): write
+Handoff: at a trigger (docs/WORKFLOW.md, Handoff triggers): write
 /mnt/project-files/<project>/handoff/<date>-<topic>.md, reply with its path, stop.
-Skills: load your role doc from claude-setup (`.claude/skills/operator/roles/<role>.md`) and the skills it lists before anything else. Your report ends with `Skills used:` naming the ones you actually opened; without that line it is not done.
 Claims: a claim from yskills, a lesson or another thread is checked first (repo, evidence, a test), then answered yes, no or changed with the reason, never a bare yes (`CLAUDE.md`, Co-founder).
-Prior art: <the sources checked, named: owner/repo, path, URL, #PR> -> copy | adapt | reuse | build, because <why> (every size; a builder brief without one gets `to find:` and the thread looks before it builds; the PR repeats it, CI checks).
-Plan: <the plan file or card this thread builds; the thread builds exactly it (`operator` SKILL.md, Plan first)>
-Acceptance: <what counts as accepted, one line from the plan's criteria; the gate grades against it>
-Threads: <`list_threads` checked this turn: `none open on <topic>` or `continues <open thread title>`; a start without it is no block, the thread lists the threads itself (companyxy 2026-11-12: finished threads stayed open and work lay twice)>
-Item: <the PLAN.json item this thread works on, e.g. `M3`, or `new` (roles/project-manager.md, Masterplan); the thread sets it with `node scripts/plan.mjs set` at start and at its Done: line; its start receipt shows it>
-Sheet: <path of the approved cast sheet .md> and Look-Lock: <owner card link of the approved look> in every Programmer or Animator brief on a game or story kit, or `Sheet: n/a <why this is no body, face or outfit job>` (10+ characters); team-guard blocks one without (docs/preproduction-workflow.md, companyxy 2026-11-12: about 20 fit rounds before any sheet existed; no keyword guessing, six gate rounds showed it cannot work).
-Researcher: <the Researcher subagent and its model, e.g. `general-purpose, sonnet, writes research/<date>-<topic>.md`> (a task that asks for research only; docs/TEAMS.md, Kits; without it the thread asks the coordinator for a Researcher thread).
-Tester: <the `Tester · <app>` thread> (size L Programmer briefs only; docs/TEAMS.md, Tester first; team-guard blocks one without).
-Gate: <Reviewer thread> before owner, or `Gate: n/a <why this slice has no owner-facing result>` (10+ characters), in every Programmer, Designer, Animator, Game Designer, Content Designer or Sound Designer brief at size M or L; the Reviewer is its own thread with its own brief from the coordinator, see `gate.md` (Owner-facing results). `node scripts/brief.mjs` writes it. [guard: hook global/team-guard.mjs]
 Reuse: none (<why this is a new thread: other plan or PR, long or idle context, parallel slice or read job>) (only when the board has an open thread of this role; otherwise message that thread, docs/TEAMS.md, Reuse rule; team-guard blocks one without).
 Literal mode: yskills' words are orders, done as said. No "yes, but", no offers, no alternatives
 when they ask for one thing; impossible or unsafe = one plain line, then the nearest thing done.
-Done when: <a check the thread can run: command and expected output, or the screenshot/number that proves it>, plus "NOW.md line set to done" (`docs/USING.md`, Live board). Stop when: <budget in rounds or attempts, never tokens;
-default the `Handoff:` triggers; gate rounds as `gate.md` (Rounds); the `attempt-guard` hook only counts a command failing again>.
-Start: first write your line in /mnt/project-files/NOW.md (`docs/templates/NOW.md`); read MEMORY.md, then claude-setup CLAUDE.md and docs/MAP.md (Start here); for a product, its repo's CLAUDE.md and docs/LESSONS.md. Lessons: at the end, say where each lesson went (docs/MAP.md, Where a lesson goes) or `none, because ...`, or an inbox block (`templates/lessons-inbox.md`) when the thread cannot open a PR.
 Guides: a brief only points to the guide's checks (`docs/clothing-pipeline.md`, `character-workflow.md`) and never weakens them (no exception, no skipped step, no lower limit); wording like "no visual change" or "just compare" does not override a check, and the thread follows the guide. The thread reads each named guide fresh from current `main` at start (`git fetch origin main`, then `git show origin/main:<path>` or check out main on a laptop), never an earlier draft or a remembered copy.
 Laptop: a brief whose work touches laptop files names `docs/laptop-folders.md` (start at `START.md` in the studio root; a cloud thread reads its section "From a cloud thread": `docs/laptop-folders.md#from-a-cloud-thread`).
 Shortest reply. No extra subagents, research, screenshots or re-reads. Models as in
@@ -108,6 +96,7 @@ Context (long threads: builds, test runs, renders, fetches; 1M tokens is the mos
    the path is the `Handoff:` line above. Keep the handoff and saved artefacts
    current at every milestone so a successor thread on the same branch and PR loses nothing.
 5. One task per thread; a flaw in shared code is fixed once, by its owner, and the others merge it.
+
 ```
 
 ## A figure brief (any 3D character)

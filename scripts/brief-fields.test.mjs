@@ -89,3 +89,9 @@ test('a Planner is a gate-builder role: an M brief without a Gate line is named 
   assert.doesNotMatch(missingLines(planner(true)).join('\n'), /Gate:/)
   assert.match(briefFile('Planner'), /^Gate:/m)
 })
+
+test('briefs.md keeps no hand-written brief block: a fenced block with a Role stamp would be a second source of BRIEF_FIELDS', () => {
+  const briefs = readFileSync(join(root, '.claude/skills/operator/briefs.md'), 'utf8')
+  for (const block of briefs.match(/```[\s\S]*?```/g) ?? []) assert.doesNotMatch(block, /^Role: .*Kit: .*Size:/m, 'a brief block lives in docs/templates/thread-brief.md only')
+  assert.match(briefs, /rows of `BRIEF_FIELDS`/)
+})

@@ -293,6 +293,15 @@ function setupRoot(cwd) {
 }
 const fetchRaw = (path) => { try { return execFileSync('curl', ['-fsSL', '--max-time', '3', RAW + path], { encoding: 'utf8', timeout: 4000 }) } catch { return '' } }
 
+// M50 slice B: the hash in the header of the project folder's COORDINATOR-CARD.md, so the receipt says which card this thread's start left there (the coordinator
+// compares it with the card it read, and reads again when they differ). Empty when the project has no card folder.
+function cardOnDisk(env = process.env) {
+  for (const d of [env.CLAUDE_SETUP_PROJECT_FILES, '/mnt/project-files', '/mnt/attach/project-files']) {
+    const hash = d && read(join(d, 'claude-setup', 'COORDINATOR-CARD.md')).match(/^Coordinator card \(claude-setup (\w+),/)?.[1]
+    if (hash) return hash
+  }
+  return ''
+}
 // Wires the receipt: only a thread whose role card was injected (roleContext wrote the role file) and only its own calls, not a subagent's.
 function receiptBlock(tool, input, session, cwd, agentId, transcript) {
   if (tool !== 'mcp__hearthbot__post_message' || !session || agentId) return null
@@ -306,7 +315,7 @@ function receiptBlock(tool, input, session, cwd, agentId, transcript) {
   const path = roleOf(brief, read(join(root, 'docs', 'TEAMS.md')))?.path
   // No checkout (only the boot copy): nothing can be checked, so the receipt says that instead of a false `none`.
   const status = existsSync(join(root, 'config', 'plugins.json')) ? skillStatus(wanted(root, path ? read(join(root, path)) : '', brief), { root, cwd }) : { loaded: [], missing: [], unknown: true }
-  return receiptMissing(tool, input, threadReceipt(role, brief, t, rules, status), t) ?? (receiptSent(t) ? null : fallbackUnread(status, t))
+  return receiptMissing(tool, input, threadReceipt(role, brief, t, rules, status, cardOnDisk()), t) ?? (receiptSent(t) ? null : fallbackUnread(status, t))
 }
 
 // M48: a Reviewer brief with a valid `Topic:` is given that topic's checklist plus the Scored gates section of gate.md instead of the code playbook.
@@ -614,12 +623,12 @@ export function fallbackUnread(status, transcript) {
   return todo.length ? `rule-guard: a skill your role names cannot load here, so read what stands in for it before your first reply, then say so in it (receipt line: missing): ${todo.join(', ')} of claude-setup (CLAUDE.md, Never "can't").` : null
 }
 
-export function threadReceipt(role, brief, transcript, rules, status = { loaded: [], missing: [] }) {
+export function threadReceipt(role, brief, transcript, rules, status = { loaded: [], missing: [] }, card = '') {
   const tag = (k) => brief.replace(/[*_`]/g, '').match(new RegExp(`${k}:[ \\t]*([A-Za-z0-9-]+)`))?.[1] ?? '?'
   const skills = [...new Set(toolCalls(transcript).filter((c) => c.name === 'Skill').map((c) => String(c.input.skill ?? '')).filter(Boolean))]
   const hash = rules.includes(MARK) ? createHash('sha256').update(rules.replace(/\r/g, '')).digest('hex').slice(0, 7) : 'none'
   const item = brief.replace(/[*_`]/g, '').match(/\bItem:[ \t]*(M\d+|new)/)?.[1] ?? '?' // the coordinator's Masterplan id (roles/project-manager.md, Masterplan)
-  return `Thread · ${role} · ${tag('Kit')} · ${tag('Size')} · item ${item} · skills: ${skills.join(', ') || 'none'} · rules #${hash} · ${missingNote(status)}`
+  return `Thread · ${role} · ${tag('Kit')} · ${tag('Size')} · item ${item} · skills: ${skills.join(', ') || 'none'} · rules #${hash} · ${missingNote(status)}${card ? ` · card #${card}` : ''}`
 }
 
 // Until one reply carried a receipt and went out (a blocked try has a hook error as its result).
