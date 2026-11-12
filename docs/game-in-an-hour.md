@@ -43,7 +43,7 @@ A scene is a **slot name** plus files in `game/art/loops/`, nothing else:
   for that part. Render time only, no code per view.
 - **Camera A/B**: automatic cut every 4-8 s (A/B), or locked by the player (Kamera: Auto/A/B). Clip pair has equal length.
 - The Blender side (clip library, retarget, contact gate, strip OK before any full render) is the animator's recipe:
-  `lib\anims\retarget\ANIMATIONEN.md`, `projects\games\companyxy\ch01\SZENE-REZEPT.md`.
+  `lib\anims\_retarget\ANIMATIONEN.md`, `projects\games\companyxy\ch01\SZENE-REZEPT.md`.
 - New loops are copied into `game/art/loops/` only after the gate; the game never waits for them.
 
 ## 3. UI and gameplay patterns that worked

@@ -23,7 +23,7 @@
     "trash": "_claude/trash",
     "guides": "docs/guides",
     "renpy_sdk": "tools/apps/renpy-8.3.7-sdk",
-    "interaction": "lib/anims/interaction"
+    "anims_engine": "lib/anims/_engine"
   },
   "dead_names": [
     "GameAssetLibrary",
