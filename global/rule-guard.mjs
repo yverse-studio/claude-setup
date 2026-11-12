@@ -23,7 +23,7 @@
 
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { existsSync, readdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
 import { isIP } from 'node:net'
 import { homedir, tmpdir } from 'node:os'
 import { dirname, join, relative } from 'node:path'
@@ -261,8 +261,8 @@ export function promptContext(prompt = '', stopWord = null) { // stopWord: STOP_
 
 // The role a brief names (`Role: Programmer · Kit: setup · Size: M`) and its Roster row in TEAMS.md.
 export function roleOf(prompt, teams) {
-  // The line may start the text, a line, or sit right behind a tag (`<note>Role: Tester ...`, #523), and ends before the next tag.
-  const line = prompt.replace(/[*_`]/g, '').match(/(?:^|>)[\s>-]*Role:[ \t]*([^\n<]*)/m)?.[1].trim()
+  // One parser: the wrapper tags come off first (stripTags, so `<note>Role: Tester` is a line of its own, #523), then the line is anchored at its start.
+  const line = stripTags(prompt).replace(/[*_`]/g, '').match(/^[\s>-]*Role:[ \t]*([^\n]*)/m)?.[1].trim()
   if (!line || /^(none|n\/a|tbd|-)\b/i.test(line)) return null
   const rows = teams.split('\n').filter((l) => /^\| [A-Z][\w ]* \(\[`/.test(l))
   const named = (r) => r.slice(2, r.indexOf(' (')).toLowerCase()
@@ -814,19 +814,23 @@ function agentReport(path, prompt) {
 // SubagentHandback message). The report then still comes from the agent's own transcript, found by the call's own prompt: the newest transcript of
 // subagents/ that was started with it (agentReport checks that), never a row of the main transcript, which a builder can type.
 const DELIVERED = /^[^\n]{0,80}?\bdelivered to you as a message\b/i
-function deliveredReport(transcriptPath, prompt) {
+function deliveredReport(transcriptPath, prompt, note = '') {
   const dir = transcriptPath ? join(transcriptPath.replace(/\.jsonl$/, ''), 'subagents') : ''
+  // The note names the agent ("... from agent-<id>" or "agentId: <id>"): that one transcript only. No id in it: the one transcript started with this
+  // call's prompt, and more than one (or none) fails closed.
+  const id = /\bagent-?Id:\s*([A-Za-z0-9-]+)/i.exec(note)?.[1] ?? /\bfrom\s+agent-([A-Za-z0-9][A-Za-z0-9-]*)/i.exec(note)?.[1]
+  if (id) { const path = agentTranscript(transcriptPath, id); return path ? agentReport(path, prompt) : '' }
   let files = []
-  try { files = readdirSync(dir).filter((f) => /^agent-[\w-]+\.jsonl$/.test(f)).map((f) => ({ path: join(dir, f), at: statSync(join(dir, f)).mtimeMs })).sort((a, b) => b.at - a.at) } catch { return '' }
-  for (const f of files) { const report = agentReport(f.path, prompt); if (report) return report }
-  return ''
+  try { files = readdirSync(dir).filter((f) => /^agent-[\w-]+\.jsonl$/.test(f)) } catch { return '' }
+  const reports = files.map((f) => agentReport(join(dir, f), prompt)).filter(Boolean)
+  return reports.length === 1 ? reports[0] : ''
 }
 export const withReports = (calls, transcriptPath) => calls.map((c) => {
   if (!/^(Agent|Task)$/.test(c.name)) return c
   const id = AGENT_ID.exec(c.result)?.[1]
   const path = id ? agentTranscript(transcriptPath, id) : ''
   if (path) return { ...c, report: agentReport(path, c.input?.prompt) }
-  return DELIVERED.test(String(c.result).trim()) ? { ...c, report: deliveredReport(transcriptPath, c.input?.prompt) } : c
+  return DELIVERED.test(String(c.result).trim()) ? { ...c, report: deliveredReport(transcriptPath, c.input?.prompt, String(c.result)) } : c
 })
 
 // A thread whose brief breaks the team rules does not work (yskills 2026-11-12: threads started without a Role line ran anyway). The prompt hook
@@ -908,7 +912,8 @@ async function stampFromTranscript(session, transcript, cwd) {
   if (!session || read(stamp).trim() || existsSync(lockFile(session))) return
   const t = transcript()
   if (!/reason=\\?"spawn/.test(t)) return
-  const sources = [...coordinatorRelays(t, await projectsOrigin()).reverse(), spawnPrompt('', t)].filter(Boolean)
+  const firstUser = t.split('\n').find((l) => /"type":"user"/.test(l)) ?? '' // the spawn is the session's own first user entry, never a later row
+  const sources = [...coordinatorRelays(t, await projectsOrigin()).reverse(), spawnPrompt('', firstUser)].filter(Boolean)
   const role = roleOf(withoutOlderStamps(sources.map(stripTags)).join('\n'), read(join(setupRoot(cwd), 'docs', 'TEAMS.md')))
   if (role) writeFileSync(stamp, role.name)
 }

@@ -294,6 +294,11 @@ test('the role stamp comes from a spawn brief however it is wrapped, from the tr
   writeFileSync(t3, `${entry(spawn('You are a thread session.'))}\n${JSON.stringify({ type: 'user', message: { content: relay('coordinator', `Role: Tester · Kit: game · Size: M\n${rest}`) } })}\n`)
   guard('pre', typed, { transcript_path: t3, tool_name: 'Bash', tool_input: { command: 'ls' } })
   assert.equal(stampOf(typed), null, 'a relay no projects row delivered stamps nothing')
+  const late = `rolelock${process.pid}x${++n}`
+  const t4 = join(mkdtempSync(join(tmpdir(), 'rl-stamp-')), 't.jsonl')
+  writeFileSync(t4, `${entry('You are a thread session.')}\n${entry(spawn(`Role: Tester · Kit: game · Size: M\n${rest}`))}\n`)
+  guard('pre', late, { transcript_path: t4, tool_name: 'Bash', tool_input: { command: 'ls' } })
+  assert.equal(stampOf(late), null, 'a spawn wake in a later row, not the session\'s first user entry, stamps nothing')
   const kept = `rolelock${process.pid}x${++n}`
   writeFileSync(join(tmpdir(), `claude-setup-role-${kept}`), 'Programmer')
   guard('pre', kept, { transcript_path: t2, tool_name: 'Bash', tool_input: { command: 'ls' } })
