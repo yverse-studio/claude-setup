@@ -47,3 +47,7 @@ test('a flag is never taken as the output path (#439: --help wrote a file named 
   assert.equal(r.status, 2)
   assert.deepEqual(readdirSync(dir), [])
 })
+
+test('the pre-flight carries the reuse rule (docs/TEAMS.md, Reuse rule)', () => {
+  assert.match(buildCard({ hash: 'abc1234', date: '2026-11-12' }), /Before every start_thread: relist the board[^\n]*message_thread[^\n]*Reuse: none/)
+})

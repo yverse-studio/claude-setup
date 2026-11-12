@@ -50,19 +50,17 @@ Coordinator only (a thread: Coordinator or thread, above).
 4. **Every start names its model.** The coordinator's thread start (`mcp__hearthbot__start_thread`, older `start_thread_session`) and `create_session` pass `model` (the
    full id from the Models line); every `Agent` call passes `model` (`haiku`, `sonnet`, `opus`). A
    brief's `Model:` line is text only and sets nothing; without the parameter a thread gets the
-   project default and a subagent inherits its parent (tested 2026-10-26: a subagent of an Opus
-   thread ran on Opus although `CLAUDE_CODE_SUBAGENT_MODEL` was sonnet; with `model: haiku` it ran
-   on Haiku). The `team-guard` hook (`global/team-guard.mjs`) blocks an `Agent` call or thread
+   project default and a subagent inherits its parent (tested 2026-10-26: an Opus thread's subagent ran on Opus; with `model: haiku` on Haiku). The `team-guard` hook (`global/team-guard.mjs`) blocks an `Agent` call or thread
    start without `model`, and a thread start before this session read this file (and `CLAUDE.md`
    where no checkout loaded it); a worker's summary does not count (2026-10-26: one found no copy
    and the coordinator guessed every model).
-5. **Agent files load only on the laptop.** A cloud project thread offers only the built-in agent
-   types (`general-purpose`, `Explore`, `Plan`; tested 2026-10-26: `code-reviewer` was "not found").
+5. **Agent files load only on the laptop.** A cloud project thread has only `general-purpose`, `Explore`, `Plan` (2026-10-26: `code-reviewer` "not found").
    There, a named agent such as `code-reviewer` or `design-critic` runs as `general-purpose` with
    its `model` and the prompt "Read `.claude/agents/<name>.md` of claude-setup and act as it on:
    ...".
 6. **The brief** starts with the block in `operator/briefs.md` and names the role's playbook and
    what the step before handed over.
+7. **Reuse**: open same-role thread: `message_thread`, else `Reuse: none (<why>)`.
 
 Models: best fitting model per task, cheapest that fits. Fable (claude-fable-5-2) plans a hard task (yskills 2026-11-12): hard = size L, a new product's architecture, art direction or game core loop, a schema, auth, money or data change, or still stuck after a Sonnet round and an Opus checkpoint; plus what yskills names and the project chat (coordinator), which yskills sets by hand. It writes a short plan (goal, constraints, files, done-test) and one checkpoint; Sonnet and Haiku build it. Never on routine work; if Fable is out of credits or unavailable, Opus takes it without asking. Opus (claude-opus-5-5), the one Opus rule: the Planner; taste (Designer, Game Designer, a pick between variants, the video Critic, the story team's taste roles); every gate at every size (yskills 2026-11-03: every gate role and reviewer agent file); a full audit; senior-builder jobs judged by the image (Animator posing, IK, scene systems: `Model: opus (why)`); one checkpoint subagent per S or M task (before committing to an approach, or before "done", or when stuck twice); and the one escalation a roster row names (conflicting findings, a concept or weekly-plan pick, one diagnosis); nothing else. Sonnet (claude-sonnet-5-5) only for cheap, mechanical work: builds and fixes against a given plan, research, renders, edits; never architecture, planning or a gate (yskills 2026-11-03). Haiku (claude-haiku-5-5) for a simple reading job, a lookup, a watch, a CI poll. A thread never picks Fable itself. Effort medium unless yskills asks for more. When a newer model ships, use the newest of each tier. A model yskills names is used as named.
 
@@ -192,6 +190,21 @@ non-trivial change in any kit, `setup` included, starts with research, a placeme
 (`operator` SKILL.md, Plan first). Research asked for (SOTA, best practice): a Researcher subagent, named on the brief's `Researcher:` line. A kind not in the table is sized as `site`. Several ideas in one message become one chain each; chains that
 share no file run at once, the rest queue in `PROGRESS.md`. The `Done:` line ends with one short
 line per role saying what it found or checked, and the skills actually used (`briefs.md`, Skills).
+
+## Reuse rule
+
+yskills 2026-11-12, role threads "like a real team"; research
+[`research/2026-11-12-persistent-role-threads-sota.md`](research/2026-11-12-persistent-role-threads-sota.md), verdict partly, yskills chose per plan or PR. A role thread
+serves one plan or PR and gets that plan's next job (revise, fix, next slice) by `message_thread`, not a new start; its
+memory is its files (`PLAN.md`, `PROGRESS.md`, `NOW.md`), and after a compaction it re-reads its role card and brief.
+Always fresh: the L gate `Tester`, every reviewer, a new plan or PR, a thread idle over 1 h (CLAUDE.md, Tokens) or with
+a long history, because a long context degrades and a woken thread re-pays its cache. A second thread of a writer role
+only for a parallel slice on other files (max three Programmers) and a second reader only for a parallel read job;
+it closes at its `Done:`. Work goes to the thread whose title role matches; a job no role fits becomes a new
+Roster row (a PR), never another role's job. Before every `start_thread` the coordinator relists its board; an
+open thread of that role means `message_thread`, or the brief says `Reuse: none (<why>)`. [guard: hook
+global/team-guard.mjs]. Not adopted from the proposal: nine standing threads per project (no source supports a
+thread as long memory) and "waiting costs no tokens" (unproven; an idle thread rewrites its cache after 5 min).
 
 ## Who checks
 

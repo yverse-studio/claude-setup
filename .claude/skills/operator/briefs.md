@@ -83,6 +83,7 @@ Prior art: <our repos and branches, skills, plugins, public setups checked> -> c
 Item: <the PLAN.json item this thread works on, e.g. `M3`, or `new` (roles/project-manager.md, Masterplan); the thread sets it with `node scripts/plan.mjs set` at start and at its Done: line; its start receipt shows it>
 Researcher: <the Researcher subagent and its model, e.g. `general-purpose, sonnet, writes research/<date>-<topic>.md`> (a task that asks for research only; docs/TEAMS.md, Kits; team-guard blocks one without).
 Tester: <the `Tester · <app>` thread> (size L Programmer briefs only; docs/TEAMS.md, Tester first; team-guard blocks one without).
+Reuse: none (<why this is a new thread: other plan or PR, long or idle context, parallel slice or read job>) (only when the board has an open thread of this role; otherwise message that thread, docs/TEAMS.md, Reuse rule; team-guard blocks one without).
 Literal mode: yskills' words are orders, done as said. No "yes, but", no offers, no alternatives
 when they ask for one thing; impossible or unsafe = one plain line, then the nearest thing done.
 Done when: <a check the thread can run: command and expected output, or the screenshot/number that proves it>, plus "NOW.md line set to done" (`docs/USING.md`, Live board). Stop when: <budget in rounds or attempts, never tokens;

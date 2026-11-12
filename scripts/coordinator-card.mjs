@@ -22,6 +22,7 @@ const PREFLIGHT = `## Pre-flight before every reply
 - Each ask of yskills or pointer to a thread, PR or setting has its clickable link: [title](#cmsg_…), URL, [Project settings](#project-settings/resources).
 - Every ask of yskills gets a thread, a PR or a \`Done:\` line the same turn. A skill idea is a PR (\`new-skill\`), never a propose_skills card.
 - Facts about the product (what the code uses, a role's model, what a PR did) only from a source read this turn, linked; none in reach: "prüfe ich" and ask the owning thread. Never from memory (roles/project-manager.md, Facts, roles and dependencies).
+- Before every start_thread: relist the board; an open thread of that role for the same plan or PR gets message_thread. Fresh only for a new plan or PR, a long or idle (1 h+) thread, a reviewer, the L Tester or a parallel slice; brief says \`Reuse: none (<why>)\` (TEAMS.md, Reuse rule).
 - Before every message_thread with work: the work's role = the thread title's role, same topic, thread not done; else a new thread. Folder moves and cleanups never go to a builder.
 - A PR whose \`Depends on: #n\` is parked or blocked: one chat line the same turn naming both PRs and the fix.
 - Decide build details, process and order yourself, one line. Ask only the real moment (a level from his life: what happened, how it felt, before any build), goal, taste, the ask-first list.

@@ -604,8 +604,40 @@ export function badTitle(title, text, teams) {
   return new RegExp(`^\\s*${role.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*·\\s*\\S`, 'i').test(title) ? null : role.name
 }
 
+// Persistent role threads, partly (research 2026-11-12; yskills picked "partly, per plan or PR"): a role thread is
+// reused for the next job of the same plan or PR, so a start while that role has an open thread must say why it is new.
+// The board is the last thread listing of the transcript; a resolved or done thread is not reusable, a Tester at L is always fresh.
+const OPEN_STATES = ['working', 'blocked', 'review_ready']
+export function boardThreads(transcript) {
+  let last = ''
+  for (const line of String(transcript).split('\n')) {
+    if (!line.includes('thread_id')) continue
+    try {
+      for (const c of JSON.parse(line).message?.content ?? []) {
+        if (c?.type !== 'tool_result') continue
+        const t = typeof c.content === 'string' ? c.content : (c.content ?? []).map((x) => x?.text ?? '').join('\n')
+        if (t.includes('"sessions"')) last = t
+      }
+    } catch { continue } // a line that is not JSON
+  }
+  const rows = []
+  for (const m of last.matchAll(/\{"created_at"[^{}]*\}/g)) {
+    try { const r = JSON.parse(m[0]); rows.push({ title: String(r.title ?? ''), state: r.state, resolved: Boolean(r.resolved) }) } catch { /* a row that is not JSON */ }
+  }
+  return rows
+}
+export const openSameRole = (board, role) => board.filter((t) => !t.resolved && OPEN_STATES.includes(t.state) && t.title.toLowerCase().startsWith(`${role.toLowerCase()} ·`)).map((t) => t.title)
+export function reuseBlock(text, teams, board) {
+  const plain = text.replace(/[*_`]/g, '')
+  const role = teams && board?.length && roleOf(plain, teams)
+  if (!role?.row || (role.name === 'Tester' && /\bSize:[ \t]*L\b/i.test(plain))) return null
+  const open = openSameRole(board, role.name)
+  if (!open.length || /^[ \t>-]*Reuse:[ \t]*none\b[^\n]*\([^)\n]{8,}\)/im.test(plain)) return null
+  return `${role.name} thread already open: "${open[0]}". Give the work to it with message_thread (same plan or PR; docs/TEAMS.md, Reuse rule), or add \`Reuse: none (<why: other plan or PR, long context, parallel read job>)\` to the brief and retry`
+}
+
 // unread: the boot files a thread start still needs (empty when read or when no transcript was given).
-export function decide(tool, input = {}, dirs = [], unread = [], teams = '') {
+export function decide(tool, input = {}, dirs = [], unread = [], teams = '', board = []) {
   const kind = AGENT.test(tool) ? 'Agent' : THREAD_START.test(tool) ? 'thread' : null
   if (kind === 'thread' && unread.length) return { block: `team-guard: read the rules before starting a thread: ${unread.join(' and ')} (in ~/.claude/claude-setup/ or the claude-setup repo; docs/MAP.md, Start here). 2026-10-26 a coordinator skipped them and guessed every model. Read them, then retry.` }
   if (kind === 'thread' && !stamped(briefText(input))) return { block: 'team-guard: every thread brief starts with the stamp line `Role: <one role from docs/TEAMS.md Roster> · Kit: <kit> · Size: <S|M|L>` (operator/briefs.md); a small task with no role says `Role: none`. The thread loads its playbook from it. Add the line, then retry.' }
@@ -619,6 +651,8 @@ export function decide(tool, input = {}, dirs = [], unread = [], teams = '') {
   if (kind === 'thread' && needsTester(briefText(input))) return { block: 'team-guard: a size L Programmer thread starts only after its Tester thread (claude-setup docs/TEAMS.md, Sizes). Start `Tester · <app>` first, then put a line `Tester: <its thread id or title>` in this brief and retry.' }
   const wrong = kind === 'thread' && wrongModel(briefText(input), input.model, teams)
   if (wrong) return { block: `team-guard: the ${wrong.role} runs on ${wrong.allowed.join(' or ')} (claude-setup docs/TEAMS.md, Roster), not ${wrong.tier}. Pass that model. For an exception the row names (e.g. "Opus writes the weekly plan") add \`Model: <tier> (<why>)\` to the brief; if yskills named this model, say "yskills named <model>". Then retry.` }
+  const reuse = kind === 'thread' && reuseBlock(briefText(input), teams, board)
+  if (reuse) return { block: `team-guard: ${reuse}.` }
   const own = kind === 'Agent' && downgraded(input, dirs)
   if (own) return { block: `team-guard: the ${input.subagent_type} agent runs on ${own} (its agent file in claude-setup .claude/agents), not ${input.model}. Drop \`model\` or pass ${own}, then retry.` }
   if (!kind || String(input.model ?? '').trim()) return {}
@@ -684,7 +718,8 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         .filter((f) => !(session && existsSync(mark(f === 'CLAUDE.md' ? 'rules' : 'teams'))))
       const unread = read ? need.filter((f) => !read.has(f)) : []
       const teams = THREAD_START.test(tool) ? text(join(cwd, 'docs', 'TEAMS.md')) || text(join(dir, 'docs', 'TEAMS.md')) : ''
-      const out = decide(tool, input, [join(cwd, '.claude', 'agents'), join(home, '.claude', 'agents')], unread, teams)
+      const board = THREAD_START.test(tool) && transcript ? boardThreads(text(transcript)) : []
+      const out = decide(tool, input, [join(cwd, '.claude', 'agents'), join(home, '.claude', 'agents')], unread, teams, board)
       if (out.block) { process.stderr.write(out.block); process.exitCode = 2 }
     } catch {
       // A guard must never break a tool call.
