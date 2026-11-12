@@ -44,6 +44,11 @@ replaces check 2, the rest of the table and the sizes stay as they are (clothes 
   sheet, because a `.blend` has no diff. It checks that every piece, pose and slider extreme has a row, that no row is over the
   limit, and looks at the sheet. A sheet that shows clipping the numbers do not is a fail; the Programmer re-measures
   on the laptop (`docs/WORKFLOW.md`, PC work) and attaches the new file.
+- **Silhouette row (round 1 of every body, look and garment gate):** the measurement file also carries the body numbers
+  the project's style sheet names (girth and gap at the heights it lists, bare and with the garment on) and the body
+  preset the figure must carry, with its value. A missing preset or a number outside the style range is a hard-check
+  fail at any score, before any clipping fix (2026-11-12: ten rounds on one garment scored clipping only while the
+  legs read thinner than the style, and one character passed three gates without her preset; `docs/LESSONS-2026-11-12.md`).
 - **Contact gate (scenes and clips, mandatory every round, even a camera-only one):** no gate score above 3/5 and no PASS (Scored gates below) without penetration mm per contact pair over all frames, 1:1 close cams on each contact, a material opacity check and a non-POV camera, with the numbers in the verdict (`roles/animator.md`, Contact gate).
 - **Check 2** is shown as `evidence` in the table (the file and the sheet), not n/a.
 - **Size:** a garment move or refit with no new look = M; one that changes the look, and any figure, body, character or scene PR, is L (`character-workflow.md`, step 6).
@@ -201,6 +206,10 @@ How to undo a merge, by kind of change (write the line into the PR's "undo" line
   limit, every other file links here): the builder fixes and the gate re-runs until 5/5, at most six
   rounds. A defect that fails the same check twice gets a diagnosis before the next fix
   (`character-workflow.md`, step 4), not a blind patch.
+- **The count belongs to the asset, not the thread** (2026-11-12: ten rounds on one garment across four fresh
+  threads): the round number stands in the asset's gate file and in every handoff file, and a fresh thread goes on
+  from it. **Three failed rounds on one asset:** the coordinator stops the builder, and there is no round 4 before
+  the Planner has re-planned (reuse an existing piece, another method, or one card to yskills).
 - **Still not 5/5 after round 6:** the Tester sends one message to yskills: what the PR does, why it
   still fails and the problems in plain words (from the last reports), and two or three ideas to
   solve it as tap options; the thread goes on with the

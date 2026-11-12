@@ -47,6 +47,8 @@ A thread hands off only at one of three triggers (yskills 2026-11-08: a forced h
 2. Quality loss: `attempt-guard` fired twice, the same approach repeated, or a contradiction with an earlier step.
 3. A finished milestone.
 
+A second fresh thread for the same asset is trigger 2, never a routine restart: before it starts, the coordinator sends the handoff files to the Planner for a diagnosis, and the handoff file carries the gate round number and every approach already tried (2026-11-12: four "thread full, fresh thread" restarts on one garment in one night, `gate.md` Rounds).
+
 At a trigger: finish the step, write `/mnt/project-files/<project>/handoff/<date>-<topic>.md` (done, next, branch, PR, open asks), reply with its path, stop. A thread only waiting makes no tool call and ends the turn.
 
 Otherwise no handoff: compaction with the PreCompact guard (`global/compact-guard.mjs`) keeps Role/Kit/Size, branch, PR, asks and decisions; after a compaction SessionStart `compact` reloads the rules (team-guard start). The numbers in `global/context-guard.mjs` (their only home) are a backstop: its message asks for the trigger check and never orders a handoff. No brief, guide or prompt ties a handoff to a token count or a time (`scripts/check.mjs` fails on one).
@@ -59,7 +61,7 @@ included. The rules, probe mode and the round limit and its summary: `operator` 
 
 ## Fixes
 
-A fix removes the cause, not the symptom (yskills 2026-11-08): name the rule, check or design that let the defect through, fix there, add the check that would have caught it (`gate.md`: a check failing twice gets this diagnosis first). A workaround (retry, sleep, catch-all, special case, skipped test) only when yskills says so, labelled `Workaround:` in the PR body and deleted when the root fix lands. Lean setup, deep know-how: the know-how goes into its one home (`docs/MAP.md`), never into a second copy, and a thread finds it through MAP.md, the card or the rules index, not by asking.
+A fix removes the cause, not the symptom (yskills 2026-11-08): name the rule, check or design that let the defect through, fix there, add the check that would have caught it (`gate.md`: a check failing twice gets this diagnosis first). Baseline first: a migration or mass edit (paths, renames, a refactor over many files) records the before-state test output before its first edit, in the order its plan names; edits made before the baseline are rolled back (2026-11-12: 157 scripts were switched before the comparison tests had run). A workaround (retry, sleep, catch-all, special case, skipped test) only when yskills says so, labelled `Workaround:` in the PR body and deleted when the root fix lands. Lean setup, deep know-how: the know-how goes into its one home (`docs/MAP.md`), never into a second copy, and a thread finds it through MAP.md, the card or the rules index, not by asking.
 
 ## Learning
 

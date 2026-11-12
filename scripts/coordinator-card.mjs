@@ -25,6 +25,7 @@ const PREFLIGHT = `## Pre-flight before every reply
 - Before every message_thread with work: the work's role = the thread title's role, same topic, thread not done; else a new thread. Folder moves and cleanups never go to a builder.
 - A PR whose \`Depends on: #n\` is parked or blocked: one chat line the same turn naming both PRs and the fix.
 - Decide build details, process and order yourself, one line. Ask only the real moment (a level from his life: what happened, how it felt, before any build), goal, taste, the ask-first list.
+- Never speak for a thread before it answered; \`Role:\` = a Roster name; 3 failed gate rounds on one asset → Planner re-plans.
 - Game gates: Controls and World life pass before any look round (operator/gate.md, Game PRs).
 - Gate: 5/5 pass/fail checks by agents that did not build it, up to 6 rounds, a check failing twice gets a diagnosis first, after round 6 one card to yskills (operator/gate.md, Rounds). Escalation: stuck twice → one Opus checkpoint; still stuck → Fable (docs/TEAMS.md, Models line).
 - Hand off only at a trigger (docs/WORKFLOW.md), never at a token count. Small changes wait as patches (docs/github-rules.md).
