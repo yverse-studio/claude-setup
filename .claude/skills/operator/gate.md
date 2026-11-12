@@ -232,7 +232,7 @@ How to undo a merge, by kind of change (write the line into the PR's "undo" line
   Three bypasses closed (security review of 2026-11-12, tests `bypass 1` to `bypass 3` in `scripts/gate-rounds.test.mjs`): the proofs for init, direct, card,
   picture and waive sit in the CLI too (it refuses them without the short one-use grant the hook leaves after it checked the proof), and a command that names
   `gate-rounds.mjs` other than as `node <path>/gate-rounds.mjs <verb>` or a plain read is refused; a verdict counts only from a Tester or Reviewer session or
-  when a fresh reviewer subagent of the session returned that headline (a builder cannot pass or merge its own work); the human answer on a card is read from
+  when a real reviewer agent (code-reviewer, evaluator, security-reviewer and the like) of the session returned that headline as the opening of its own result, from a prompt that did not hold it (a builder cannot pass or merge its own work); the session's role stamp and brief lock in the temp dir are protected like the ledger path; the human answer on a card is read from
   the wake's own wrapper, never from tags quoted in a relay or a result.
   Limits, said plainly: the ledger lives in the project's shared folder (one project's threads share it); a session without
   hooks (the project chat) cannot be stopped itself, but every thread it starts checks its brief, and no merge works without a

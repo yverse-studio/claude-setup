@@ -726,7 +726,7 @@ test('team guard: a thread start runs its role on the tier its Roster row names'
   // gate.md Rounds 2: the Fable gate director runs as a Designer thread (11-12: that start was refused for lack of a row).
   assert.equal(wrongModel(brief('Designer', 'S'), 'fable', teams), null, 'the Designer row names Fable for the gate director')
   assert.ok(wrongModel(brief('Designer', 'S'), 'sonnet', teams), 'a Designer is never Sonnet')
-  assert.match(teams, /\| Designer .*Fable: new product art direction, gate director/, 'the Designer row names the gate director')
+  assert.match(teams, /\| Designer .*Fable: art direction, gate director/, 'the Designer row names the gate director')
   // yskills 2026-11-03: gates always Opus, at every size.
   for (const size of ['S', 'M', 'L']) {
     assert.equal(wrongModel(brief('Tester', size), 'opus', teams), null, `Tester ${size} on Opus`)
@@ -1229,7 +1229,7 @@ test('team guard: a bad brief is refused once with every problem and a template 
   const tpl = readFileSync(join(root, 'docs/templates/thread-brief.md'), 'utf8')
   const block = tpl.match(/```\n([\s\S]*?)```/)?.[1] ?? ''
   assert.ok(block, 'the template has one fenced brief block')
-  const filled = block.replace(/<[^>\n]+>/g, (m) => (m === '<S|M|L>' ? 'M' : /^<kit/.test(m) ? 'setup' : /^<Role/.test(m) ? 'Programmer' : /^<the sources/.test(m) ? 'obra/superpowers' : 'something concrete for this task'))
+  const filled = block.replace(/<[^>\n]+>/g, (m) => (m === '<S|M|L>' ? 'M' : /^<kit/.test(m) ? 'setup' : /^<Role/.test(m) ? 'Programmer' : /^<sources/.test(m) ? 'obra/superpowers' : 'something concrete for this task'))
   assert.deepEqual(missingLines(filled), [], 'a filled template has every must-have line')
   assert.ok(stamped(filled) && !needsPriorArt(filled) && !needsTester(filled))
   const unfilled = missingLines(block)
