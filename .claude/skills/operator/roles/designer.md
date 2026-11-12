@@ -42,6 +42,7 @@ against that text. So:
 
 ## Every time
 
+- New hub, world map or start screen in a running project (vacation-game 2026-11-12: the diary shell #13 went through seven gate rounds and yskills rejected the look; the overworld map then started from a picture card): before its first build, a picture card of 3 to 4 real game references (captures, step 1 of Art direction first) for him to pick from; the build follows the pick.
 - Full effort (yskills, 2026-10-18, Mondgarten looked underwhelming): from the next project on, give look, UI and UX everything (screen design, motion, juice, polish). Never scale design down because a project is a "test" or the first of its kind.
 
 - Variants: any pick between variants is a vote card plus a criteria table judged by an evaluator that did not build them (Opus); one variant per unit, a rebuild replaces its branch, never a "-2" branch.
