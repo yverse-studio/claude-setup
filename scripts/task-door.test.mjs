@@ -411,6 +411,40 @@ test('round 4, L1: when reading the verdict throws, the hook says so instead of 
   } finally { rmSync(mark, { recursive: true, force: true }); t.done() }
 })
 
+test('reviewer round 4: --eval=<code> and --print=<code> are inline scripts, and a session transcript path is refused to Write and redirects (named, gateStep)', () => {
+  const t = door()
+  try {
+    const file = join(t.gate, `${ASSET}.json`)
+    for (const c of [`node --eval="require('fs').writeFileSync('${file}','{}')"`, `node --print="require('fs').writeFileSync('${file}','{}')"`]) assert.equal(t.bash(c).status, 2, c)
+    const jsonl = '/root/.claude/projects/-home-user/abc.jsonl'
+    for (const c of [`echo '{}' >> ${jsonl}`, `tee ${jsonl} < x.json`, `node -e "require('fs').appendFileSync('${jsonl}','x')"`]) assert.equal(t.bash(c).status, 2, c)
+    for (const tool of ['Write', 'Edit']) {
+      const r = spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'pre'], { input: JSON.stringify({ cwd: t.dir, session_id: 's', tool_name: tool, tool_input: { file_path: jsonl, content: 'x', old_string: 'a', new_string: 'b' } }), encoding: 'utf8', env: t.env })
+      assert.equal(r.status, 2, tool)
+    }
+    assert.equal(t.bash(`grep -c Plan ${jsonl}`).status, 0, 'a plain read of a transcript stays free')
+  } finally { t.done() }
+})
+
+test('director ruling on (b): an interpreter that takes its code from stdin holds the literal path test over the whole call, as -e does', () => {
+  const t = door()
+  try {
+    const paths = [join(t.gate, `${ASSET}.json`), join(t.gate, 'grants', 'x.json'), '/root/.claude/projects/-home-user/abc.jsonl']
+    const code = (p) => `require('fs').writeFileSync('${p}','{}')`
+    for (const p of paths) {
+      for (const c of [
+        `node <<'EOF'\n${code(p)}\nEOF`, `node - <<EOF\n${code(p)}\nEOF`, `node <<< "${code(p)}"`, `echo "${code(p)}" | node`, `printf '%s' "${code(p)}" | node -`,
+        `python3 <<EOF\nopen('${p}','w').write('{}')\nEOF`, `bash <<EOF\necho '{}' > ${p}\nEOF`, `sh <<'EOF'\necho '{}' > ${p}\nEOF`,
+      ]) assert.equal(t.bash(c).status, 2, c)
+    }
+    const l = paths[0]
+    for (const c of [
+      `cat ${l}`, `echo "see ${l}"`, `cat <<'EOF' > /tmp/notes.md\nthe ledger is ${l}\nEOF`, `cat ${l} | jq .`, `cat ${l} | python3 -m json.tool`,
+      `node scripts/x.mjs ${paths[2]}`, `cp ${l} /tmp/x.json`, `node - <<'EOF'\nconsole.log(1)\nEOF`, `echo hi | node -e "console.log(1)"`,
+    ]) assert.equal(t.bash(c).status, 0, c)
+  } finally { t.done() }
+})
+
 test('round 4, H1: find -exec and a git alias run code, so what they run is read like bash -c', () => {
   const t = door()
   try {
