@@ -1246,6 +1246,24 @@ export function kaomojiMissing(tool, input) {
   return 'rule-guard: every reply to yskills is Luna and carries at least one kaomoji, e.g. (◕‿◕) or ٩(◕‿◕)۶ (his ask 2026-10-27; tone only, the content stays). Add one, then retry.'
 }
 
+// The gate's round counter (operator/gate.md, Rounds; yskills 2026-11-12: #13 ran 11 rounds against a limit of 6 that
+// only prose stated). A gate headline `Gate <score>/5 (<size>, round <n>/3)` carries the round; rounds 4 to 6 also carry
+// `director: <note>` (a Fable director's instructions); there is no round 7, only a card to yskills.
+const GATE_HEAD = /^[ \t>*_#`-]*Gate\s+[\d.]+\/5\b[^\n]*/im
+const GATE_TOOLS = /^mcp__(github__(add_issue_comment|update_issue_comment|pull_request_review_write|add_comment_to_pending_review)|hearthbot__post_message)$/
+export function gateRoundBlock(tool, input = {}) {
+  if (!GATE_TOOLS.test(tool)) return null
+  const head = String(input.body ?? input.text ?? '').match(GATE_HEAD)?.[0]
+  if (!head) return null
+  const m = head.match(/\bround\s+(\d+)\s*\/\s*(\d+)/i)
+  if (!m) return 'rule-guard: a gate headline carries its round counter (operator/gate.md, Rounds): `Gate <score>/5 (<size>, round <n>/3)`, rounds 4 to 6 `round <n>/6, director: <note>`. Count from the asset\'s gate file, not from 1 in a fresh thread, then retry.'
+  const [n, cap] = [Number(m[1]), Number(m[2])]
+  if (n > 6) return `rule-guard: round ${n} is past the limit (operator/gate.md, Rounds): there is no round 7. Post one request_decision card to yskills (what the PR does, why it fails, 2-3 ways out, one recommended) and stop gating; the coordinator cannot lift this.`
+  if (n > 3 && !/\bdirector:\s*\S{3,}/i.test(head)) return `rule-guard: round ${n} needs a Fable director first (operator/gate.md, Rounds): after round 3 the coordinator starts one Fable Planner thread (docs/TEAMS.md, Models line) that writes exact instructions from the three gate reports. Add \`director: <note path or link>\` to the headline once it exists; no director note, no round ${n}.`
+  if (cap !== (n > 3 ? 6 : 3)) return `rule-guard: the counter reads ${n}/${cap}, but rounds 1 to 3 are \`/3\` and rounds 4 to 6 are \`/6\` (operator/gate.md, Rounds).`
+  return null
+}
+
 // The coordinator's first reply opens with the canary line team-guard wrote at start (team-guard.mjs, canary).
 export function canaryMissing(tool, input, line, transcript) {
   if (tool !== 'mcp__hearthbot__post_message' || !line.trim()) return null
@@ -1439,6 +1457,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           ?? opensWindow(tool, input ?? {})
           ?? archivistFiles(tool, input ?? {}, session ? read(join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)) : '')
           ?? kaomojiMissing(tool, input ?? {})
+          ?? gateRoundBlock(tool, input ?? {})
           ?? blenderServerBusy(tool, input ?? {}, listProcs)
           ?? blenderDocsMissing(tool, input ?? {}, sessionTranscript)
           ?? (grillMissing(tool, input ?? {}, transcript) ? 'rule-guard: a Planner at size M or L grills first (CLAUDE.md, No fog; operator SKILL.md, Grill first): post the real-moment question (when it comes from his life) and up to 2 request_decision cards (goal, taste), each with your recommended answer, then write the plan on the answers (or the recommendations while he is away).' : null)

@@ -1152,3 +1152,22 @@ test('rule-guard: the receipt check runs only in a spawned thread', () => {
     assert.equal(run(JSON.stringify({ type: 'user', message: { content: 'Role: Programmer · Kit: setup · Size: S' } })).status, 0, 'a pasted brief in a project chat is no thread')
   } finally { rmSync(rolefile, { force: true }); rmSync(dir, { recursive: true, force: true }) }
 })
+
+// yskills 2026-11-12: vacation-game shell #13 ran 11 gate rounds against a prose limit of 6 (gate.md, Rounds).
+test('rule guard: gate rounds are counted: 3, then a Fable director, then a card', async () => {
+  const { gateRoundBlock } = await import('../global/rule-guard.mjs')
+  const post = (body, tool = 'mcp__github__add_issue_comment') => gateRoundBlock(tool, { body })
+  for (const n of [1, 2, 3]) assert.equal(post(`Gate 5/5 (S, round ${n}/3), merging`), null, `round ${n} passes`)
+  assert.match(post('Gate 4.3/5 (S, round 4/6)') ?? '', /needs a Fable director/, 'round 4 without a director is refused')
+  assert.match(post('Gate 4.3/5 (S, round 4/6, director: x)') ?? '', /needs a Fable director/, 'a one-letter "note" is no director note')
+  assert.equal(post('Gate 4.6/5 (S, round 4/6, director: /mnt/project-files/vg/director-r4.md)'), null)
+  assert.equal(post('Gate 5/5 (L, round 6/6, director: #12 comment)'), null)
+  assert.match(post('Gate 4.6/5 (S, round 7/6, director: /mnt/project-files/vg/director-r4.md)') ?? '', /no round 7/, 'round 7 is refused even with a director')
+  assert.match(post('Gate 4.2/5 (S, round 11/3)') ?? '', /no round 7/)
+  assert.match(post('Gate 5/5 (S)') ?? '', /round counter/, 'no counter, no post')
+  assert.match(post('Gate 5/5 (S, round 5/3, director: /mnt/x/d.md)') ?? '', /counter reads 5\/3/)
+  assert.match(post('> **Gate 4.3/5 (L, round 9/6)**', 'mcp__github__pull_request_review_write') ?? '', /no round 7/, 'a review and a bold headline count too')
+  assert.match(gateRoundBlock('mcp__hearthbot__post_message', { text: 'Gate 4.3/5 (S, round 8/6)' }) ?? '', /no round 7/, 'the coordinator cannot post one either')
+  assert.equal(post('The gate runs now, round 2 of the fixes.'), null, 'ordinary prose is not a headline')
+  assert.equal(gateRoundBlock('Bash', { command: 'echo Gate 5/5 (S)' }), null)
+})

@@ -10,13 +10,14 @@ import { fileURLToPath } from 'node:url'
 import { coordinatorCard } from '../global/team-guard.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
-export const CARD_MAX = 8000 // 6,600 until 2026-11-12 (#430); raised for the Masterplan, facts, roles and dependencies lines
+export const CARD_MAX = 9000 // 6,600 until 2026-11-12 (#430); 8,000 for the Masterplan, facts, roles and dependencies lines; 9,000 for the copyable brief
 const cells = (l) => l.split('|').map((c) => c.trim())
 const read = (f) => readFileSync(join(root, f), 'utf8').replace(/\r/g, '')
 
 const PREFLIGHT = `## Pre-flight before every reply
 
-- Reply at most 15 lines / 1,500 characters: Luna, at least one kaomoji, result first, in his language (CLAUDE.md, Replies).
+- Reply at most 15 lines / 1,500 characters: you are Luna in EVERY reply (warm, cheeky, kaomoji, his language), result first; plain English or German without her is a mistake he sees (2026-11-12). No hook reaches this chat, so check yourself before each send (CLAUDE.md, Replies).
+- Rules live in claude-setup, never in project settings: a new rule is a claude-setup PR (gate.md, a role file, a hook); the settings only say "read the card" (yskills 2026-11-12).
 - Every start_thread passes \`model\` (yskills' model as named, else the Roster row) and a brief that begins \`Role: · Kit: · Size:\` plus the block in operator/briefs.md; a task with research gets a Researcher subagent, named on a \`Researcher:\` line; \`Item: M<n>\` names its PLAN.json item.
 - A finished thread (done, failed, stopped, or review_ready idle 2 h with a Done: or hand-off reply) gets set_thread_resolved or a message_thread nudge before you stop; relist when your board is 2 h old (roles/project-manager.md, Close threads; routine step 11).
 - Each ask of yskills or pointer to a thread, PR or setting has its clickable link: [title](#cmsg_…), URL, [Project settings](#project-settings/resources).
@@ -27,10 +28,22 @@ const PREFLIGHT = `## Pre-flight before every reply
 - Decide build details, process and order yourself, one line. Ask only the real moment (a level from his life: what happened, how it felt, before any build), goal, taste, the ask-first list.
 - Never speak for a thread before it answered; \`Role:\` = a Roster name; 3 failed gate rounds on one asset → Planner re-plans.
 - Game gates: Controls and World life pass before any look round (operator/gate.md, Game PRs).
-- Gate: 5/5 pass/fail checks by agents that did not build it, up to 6 rounds, a check failing twice gets a diagnosis first, after round 6 one card to yskills (operator/gate.md, Rounds). Escalation: stuck twice → one Opus checkpoint; still stuck → Fable (docs/TEAMS.md, Models line).
+- Gate: pass/fail checks 5/5, scored gates 4.5 (4.8 when it matters), by agents that did not build it. Rounds 1-3 builder; then ONE Fable director thread writes exact instructions; rounds 4-6; then one card, no round 7, no exception merge below the bar. Every gate headline prints \`round <n>/3\` (4-6: \`round <n>/6, director: <note>\`); rule-guard refuses the rest, you cannot lift it, never approve "one more round" (operator/gate.md, Rounds; #13 ran 11). A new hub, start screen or style: picture card with references from current games to yskills before any build (operator/roles/designer.md).
 - Hand off only at a trigger (docs/WORKFLOW.md), never at a token count. Small changes wait as patches (docs/github-rules.md).
 - Masterplan (roles/project-manager.md, Masterplan): /mnt/project-files/PLAN.json is the one plan; threads write it (scripts/plan.mjs), you Read it. Roadmap first (a Planner writes it), post it, start. Every event: Read PLAN.json before the reply; a change no thread owns goes into the next brief or a size S plan-update thread; then write_custom_view. "Stand?": goal, x/y done, doing, waits on him, next 3. Ping only when he must act, rate a visual, a part is Done (link), or a plan question.
 - If the project instructions lack the line "Read /mnt/project-files/claude-setup/COORDINATOR-CARD.md first", call update_project_settings once: PREPEND the text of operator/templates/project-instructions.md filled for this project above the existing instructions, keep every existing line (yskills 2026-11-08: add, never remove), and say so in one line.`
+
+const BRIEF = `## Copy this brief (a start missing a line is blocked by team-guard; operator/briefs.md has the rest)
+
+Role: <Roster name> · Kit: <kit> · Size: <S|M|L>
+Model: <id from the Roster row (docs/TEAMS.md, Models line)>
+Skills: <role doc and skills to load, or none>
+Item: <M<n> or new>
+Prior art: <what exists, checked> -> copy | adapt | build, because <why>
+Start: read MEMORY.md, then claude-setup CLAUDE.md and docs/TEAMS.md; a product: its CLAUDE.md and docs/LESSONS.md.
+Task: <one concrete job>
+Done when: <a check the thread can run, with its expected output>, plus NOW.md line set to done.
+Stop when: <rounds or attempts, never tokens; gate rounds as gate.md>`
 
 export function ruleRows(map) {
   const t = map.split('\n## One home per rule')[1] ?? ''
@@ -66,7 +79,7 @@ export function buildCard({ hash = 'nogit', date = new Date().toISOString().slic
   const team = full ? compact(full) : ''
   const rows = ruleRows(read('docs/MAP.md'))
   const tail = '… every rule: Read COORDINATOR-RULES-INDEX.md (same folder as this card)'
-  const build = () => [head, PREFLIGHT, team,
+  const build = () => [head, PREFLIGHT, BRIEF, team,
     `## Where is rule X? (One home per rule)\n\n${rows.slice(0, 6).map((r) => `- ${r.rule.slice(0, 44)} → ${clip(r.home.replace(/`/g, ""), 40)}`).concat(rows.length > 6 ? [tail] : []).join('\n')}`,
   ].join('\n\n') + '\n'
   const card = build()

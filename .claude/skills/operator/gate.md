@@ -18,7 +18,7 @@ A check that doesn't apply passes; say "n/a" in the table. A reviewer verdict in
 
 ## Gate size
 
-The PR's size decides which checks run; the headline names it: `Gate 5/5 (S, round <n>)`.
+The PR's size decides which checks run; the headline names it: `Gate 5/5 (S, round <n>/3)` (rounds 4 to 6: `round <n>/6, director: <note>`, Rounds).
 Security never drops: any PR touching user input, auth, money or secrets runs check 4.
 
 | Size | PR | Checks |
@@ -67,6 +67,10 @@ changes play, the playtest report (`roles/playtester.md`) passes its Controls an
 before any look round (design-critic, a scored look gate, a vote card) starts on that build; a look
 round on a build whose report fails or is missing is not run. `playtest-check.mjs` holds the rows.
 
+A new hub, start screen or style gets yskills' picture card (references from current games) before its first build, and no
+look round runs on a build he has not picked a direction for (vacation-game, 2026-11-12: eleven rounds on a diary hub he
+then rejected). The rule lives in `roles/designer.md` (#442); the gate checks the pick exists before round 1.
+
 ## Scored gates (the score rule)
 
 The one home of the score rule (yskills 2026-11-04: "4.5, then 2 more tries for 5/5, render the
@@ -101,7 +105,7 @@ must exist; the old wording that a render needs 5/5 or his strip OK is banned).
    the eligible version with the highest score goes on (render, bake, merge); on a tie the newer
    one. Nobody waits for yskills' OK: the check strip is posted to him, the
    pick is the go, his veto stops it at once and is final.
-8. **Under 4.5** the normal Rounds below apply (up to 6 rounds, a diagnosis after the same fail
+8. **Under 4.5** the normal Rounds below apply (3 rounds, a Fable director, 3 more, then a card; a diagnosis after the same fail
    twice); the 2 rounds after a PASS come on top of that cap.
 
 The verdict names: round, rubric rows with numbers, hard checks, score (and the median runs, if
@@ -202,20 +206,27 @@ How to undo a merge, by kind of change (write the line into the PR's "undo" line
   live without them.
 - **Less:** post the blocking findings as one PR review and stop. The builder fixes them; the next
   round re-runs the failed checks with fresh agents on the new head.
-- **Up to 6 rounds** (yskills 2026-10-26: "6-7 versuche", was 2; the one home of the gate's round
-  limit, every other file links here): the builder fixes and the gate re-runs until 5/5, at most six
-  rounds. A defect that fails the same check twice gets a diagnosis before the next fix
-  (`character-workflow.md`, step 4), not a blind patch.
+- **3 rounds, then a Fable director, then a card** (yskills 2026-11-12: "3 gate Versuche auf 4.5 bzw. 4.8, wenn wichtig dann
+  Fable, dann nochmal 3, dann komme ich dazu"; was 6 rounds, 2026-10-26; the one home of the round limit, every other file
+  links here). The bar is 4.5/5 for a score gate (4.8 when it matters: money, auth, data, the launch, a look yskills named) and
+  5/5 for the pass/fail checks.
+  1. **Rounds 1 to 3:** the builder fixes, the gate re-runs. A defect that fails the same check twice gets a diagnosis before
+     the next fix (`character-workflow.md`, step 4), not a blind patch.
+  2. **Rounds 4 to 6:** only after a director note exists. The coordinator starts one Fable thread (Models line, `docs/TEAMS.md`), role
+     Planner, that reads the three gate reports and writes exact instructions (what to change, with numbers, and what to
+     stop doing). The builder follows them; the note's path goes in the headline (`director: <path or link>`).
+  3. **After round 6:** no round 7. One `request_decision` card to yskills: what the PR does, why it still fails in plain words,
+     two or three ways out, one recommended; the thread goes on with the recommended option unless money, a new service,
+     secrets, public posts, deleting a live project or database or anything irreversible is in it (`CLAUDE.md`, Cards).
+  4. **Never an exception merge below the bar.** A 4.2 stays a fail: it goes to the next step above, not to `main`.
+  5. **The round number is the counter and it is printed** in every gate headline as `round <n>/3` (rounds 1 to 3) or
+     `round <n>/6, director: <note>` (rounds 4 to 6). Enforced: `global/rule-guard.mjs` (`gateRoundBlock`) refuses a gate
+     comment or review whose headline has no counter, a round 4 to 6 without the director note, and any round 7;
+     the coordinator cannot lift it. [guard: hook global/rule-guard.mjs]
 - **The count belongs to the asset, not the thread** (2026-11-12: ten rounds on one garment across four fresh
-  threads): the round number stands in the asset's gate file and in every handoff file, and a fresh thread goes on
-  from it. **Three failed rounds on one asset:** the coordinator stops the builder, and there is no round 4 before
-  the Planner has re-planned (reuse an existing piece, another method, or one card to yskills).
-- **Still not 5/5 after round 6:** the Tester sends one message to yskills: what the PR does, why it
-  still fails and the problems in plain words (from the last reports), and two or three ideas to
-  solve it as tap options; the thread goes on with the
-  recommended option and the card lets yskills change course; when the coordinator already
-  answered, carry on with its answer instead of asking again; money, a new service, secrets, public posts, deleting a live project or database and
-  anything irreversible wait for the tap (`CLAUDE.md`, Cards).
+  threads; eleven on the vacation-game shell, #13): the round number stands in the asset's gate file and in every handoff
+  file, and a fresh thread goes on from it, never from 1. **Three failed rounds on one asset:** the coordinator stops the
+  builder and starts the director above; it never approves "one more round" itself.
 
 **Important or hard PRs** (auth, payments, database migrations, secrets, anything that can lose
 data or money, the last PR before launch, any PR that needed a second gate round) merge at 5/5
@@ -223,7 +234,7 @@ like every other under auto-run, but their table comes with three plain lines fo
 afterwards: what changed, what could break, how to undo it.
 
 ```
-Gate 5/5 (round <n>), merging | launch: brief (c) below   [risky: auth | payments | migration | secrets]
+Gate 5/5 (round <n>/3), merging | launch: brief (c) below   [rounds 4-6: round <n>/6, director: <note>]   [risky: auth | payments | migration | secrets]
 1 CI + Workers Builds .. pass  <run links>
 2 Evaluator ............ pass  <n>/<n> criteria
 3 Code review .......... pass

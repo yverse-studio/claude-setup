@@ -47,3 +47,12 @@ test('a flag is never taken as the output path (#439: --help wrote a file named 
   assert.equal(r.status, 2)
   assert.deepEqual(readdirSync(dir), [])
 })
+
+test('the copyable brief on the card passes the brief check once filled', async () => {
+  const { missingLines } = await import('../global/team-guard.mjs')
+  const card = buildCard({ hash: 'test', date: '2026-11-12' })
+  const brief = card.split('## Copy this brief')[1]?.split('\n## ')[0]
+  assert.ok(brief, 'the card has the brief section')
+  assert.deepEqual(missingLines(brief.replace(/<[^>]*>/g, 'filled')), [], 'filled in, it lacks no line')
+  assert.ok(missingLines(brief.replace(/^Model:.*$/m, '')).includes('Model:'), 'drop a line and team-guard names it')
+})
