@@ -1102,3 +1102,45 @@ test('rule-guard: an Archivist thread documents, it does not file references', a
   assert.equal(archivistFiles('Write', { file_path: '/mnt/project-files/refs/posen/x.png' }, 'Animator'), null)
   assert.equal(archivistFiles('Write', { file_path: '/mnt/project-files/refs/posen/x.png' }, null), null)
 })
+
+// yskills 2026-11-12: every thread opens with a start receipt the hook builds from the transcript (role, kit, size, Skill calls, rules hash).
+test('rule-guard: a thread\'s first reply carries the hook-built start receipt', async () => {
+  const { threadReceipt, receiptMissing } = await import('../global/rule-guard.mjs')
+  const post = 'mcp__hearthbot__post_message'
+  const use = (id, name, input) => JSON.stringify({ type: 'assistant', message: { content: [{ type: 'tool_use', id, name, input }] } })
+  const res = (id, content) => JSON.stringify({ type: 'user', message: { content: [{ type: 'tool_result', tool_use_id: id, content }] } })
+  const brief = JSON.stringify({ type: 'user', message: { content: '<wake reason="spawn">Role: Programmer · Kit: setup · Size: S</wake>' } })
+  const rules = readFileSync(join(root, 'CLAUDE.md'), 'utf8')
+  const t0 = brief
+  const line0 = threadReceipt('Programmer', 'Role: Programmer · Kit: setup · Size: S', t0, rules)
+  assert.match(line0, /^Thread · Programmer · setup · S · item \? · skills: none · rules #[0-9a-f]{7}$/, 'no Item line: item ?')
+  assert.match(threadReceipt('Planner', 'Role: Planner · Kit: setup · Size: M\nItem: M12', t0, rules), /^Thread · Planner · setup · M · item M12 · skills:/, 'the real brief shape and its Masterplan item')
+  assert.match(threadReceipt('Planner', 'Role: Planner · Kit: setup · Size: M\nItem: new', t0, rules), /item new ·/, 'a new item')
+  assert.match(threadReceipt('Programmer', 'Role: · Kit: · Size:', t0, rules), /· \? · \? · item \?/, 'template text reads as ?')
+  const t1 = [t0, use('s1', 'Skill', { skill: 'ponytail' }), res('s1', 'ok')].join('\n')
+  const line1 = threadReceipt('Programmer', 'Role: Programmer · Kit: setup · Size: S', t1, rules)
+  assert.match(line1, /skills: ponytail /, 'a Skill call shows up in the receipt')
+  assert.match(receiptMissing(post, { text: 'Hi (◕‿◕)' }, line1, t1) ?? '', /start receipt[\s\S]*Thread · Programmer/, 'no receipt: blocked with the exact line')
+  assert.equal(receiptMissing(post, { text: `${line1}\nHi` }, line1, t1), null)
+  assert.match(receiptMissing(post, { text: `${line0}\nHi` }, line1, t1) ?? '', /start receipt/, 'a receipt that hides a loaded skill is refused')
+  assert.equal(receiptMissing('Bash', { command: 'ls' }, line1, t1), null, 'only replies')
+  assert.equal(receiptMissing(post, { text: 'x' }, '', t1), null, 'no line, no check')
+  const sent = [t1, use('p1', post, { text: `${line1}\nHi` }), res('p1', '{"message_id":"cmsg_1"}')].join('\n')
+  assert.equal(receiptMissing(post, { text: 'Zweite' }, line1, sent), null, 'only the first reply carries it')
+  const blocked = [t1, use('p1', post, { text: `${line1}\nHi` }), res('p1', 'PreToolUse hook error: rule-guard: too long')].join('\n')
+  assert.match(receiptMissing(post, { text: 'Zweite' }, line1, blocked) ?? '', /start receipt/, 'a blocked try never went out')
+})
+
+test('rule-guard: the receipt check runs only in a spawned thread', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'receipt-'))
+  const id = `rc${process.pid}`
+  const rolefile = join(tmpdir(), `claude-setup-role-${id}`)
+  try {
+    writeFileSync(rolefile, 'Programmer')
+    const run = (transcript) => { writeFileSync(join(dir, 't.jsonl'), transcript); return spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'pre'], { input: JSON.stringify({ cwd: root, session_id: id, transcript_path: join(dir, 't.jsonl'), tool_name: 'mcp__hearthbot__post_message', tool_input: { text: 'Hi (◕‿◕)' } }), encoding: 'utf8', env: { ...process.env, CLAUDE_SETUP_HOME: dir } }) }
+    const spawned = JSON.stringify({ type: 'user', message: { content: '<wake reason="spawn">Role: Programmer · Kit: setup · Size: S</wake>' } })
+    assert.equal(run(spawned).status, 2, 'a spawned thread without the receipt is blocked')
+    assert.match(run(spawned).stderr, /start receipt/)
+    assert.equal(run(JSON.stringify({ type: 'user', message: { content: 'Role: Programmer · Kit: setup · Size: S' } })).status, 0, 'a pasted brief in a project chat is no thread')
+  } finally { rmSync(rolefile, { force: true }); rmSync(dir, { recursive: true, force: true }) }
+})
