@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { buildIndex, buildCard, ruleRows, CARD_MAX } from './coordinator-card.mjs'
 import { BRIEF_FIELDS, rosterNames } from '../global/team-guard.mjs'
-import { compact, renderAll, renderBrief, renderRoster, writeAll } from '../global/card-render.mjs'
+import { compact, projectFolder, renderAll, renderBrief, renderRoster, writeAll } from '../global/card-render.mjs'
 
 test('the card builds, stays under CARD_MAX characters and has its parts', () => {
   const card = buildCard({ hash: 'abc1234', date: '2026-11-08' })
@@ -293,4 +293,13 @@ test('a linked brief-log folder writes nothing and the start goes on', () => {
   assert.deepEqual(readdirSync(target), [], 'nothing went through the link')
   assert.equal(noteRelay('l1', true, out), false)
   rmSync(out, { recursive: true, force: true }); rmSync(target, { recursive: true, force: true })
+})
+
+test('a test run never resolves the real project folder, only an explicit temp one', () => {
+  const inTest = { NODE_TEST_CONTEXT: 'child-v8' }
+  assert.equal(projectFolder(inTest), null, 'no env override under node --test: no folder, so no brief-log write')
+  const tmp = mkdtempSync(join(tmpdir(), 'pf-'))
+  try {
+    assert.equal(projectFolder({ ...inTest, CLAUDE_SETUP_PROJECT_FILES: tmp }), join(tmp, 'claude-setup'), 'an explicit temp folder still works')
+  } finally { rmSync(tmp, { recursive: true, force: true }) }
 })

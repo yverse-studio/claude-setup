@@ -203,7 +203,9 @@ export function writeAll(dir, files) {
   return written
 }
 // The project's shared folder: /mnt/project-files in a cloud thread. Absent (a laptop session): nothing to refresh.
+// Under `node --test` (NODE_TEST_CONTEXT, inherited by spawned hooks) only an explicit CLAUDE_SETUP_PROJECT_FILES counts: a test run never writes into the real folder (7,707 stray brief-log files, 2026-11-12).
 export function projectFolder(env = process.env) {
+  if (env.NODE_TEST_CONTEXT && !env.CLAUDE_SETUP_PROJECT_FILES) return null
   for (const d of [env.CLAUDE_SETUP_PROJECT_FILES, '/mnt/project-files', '/mnt/attach/project-files']) if (d && existsSync(d)) return join(d, 'claude-setup')
   return null
 }
