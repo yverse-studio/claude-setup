@@ -319,15 +319,16 @@ function ghProblem(s) {
 // The literal ledger or guard path only: a word that holds the ledger dir (or .claude/claude-setup/gate, project-files/gate) or an installed
 // guard file, as a redirect target or an argument of a writer. Shell tricks around it are a named Limit (gate.md, Rounds).
 // The session stamps the guards write in the temp dir: the role (who may post a verdict, hands-off) and the brief lock.
-const STAMP = /claude-setup-(?:role|badbrief|model)-/
+const STAMP = /claude-setup-(?:role|badbrief|model|brief|artifacts)-/
 const READ_ONLY = new Set(['cat', 'grep', 'rg', 'ls', 'head', 'tail', 'wc', 'diff', 'git', 'stat', 'file', 'less', 'echo', 'printf', 'find', 'test', 'cd', 'sed', 'awk'])
 // `node <script>` whose first non-flag argument is gate-rounds.mjs, with no flag that runs other code first.
 const isCounterCall = (s) => s.a0 === 'node' && !s.args.some((a) => /^(-e|-p|--eval|--print|--import|-r|--require|--input-type|--loader|--experimental-loader)/.test(a)) && base(s.args.find((a) => !a.startsWith('-')) ?? '') === 'gate-rounds.mjs'
 function bashProblem(cmd, dir, ctx) {
   const { list, bad } = simpleCommands(cmd)
   if (bad && /\bgh\b|gate/.test(cmd)) return 'gate ledger: this command has unbalanced quotes and mentions gh or gate, so it cannot be read; write it plainly (gate.md, Rounds).'
-  const dirRe = dir ? new RegExp(`${dir.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\/+$/, '')}(?:/|$)`) : null
-  const named = (w) => !/\s/.test(w) && (STAMP.test(w) || dirRe?.test(w) || /(?:project-files|\.claude\/claude-setup)\/gate(?:\/|$)/.test(w) || GUARD_FILE.test(w))
+  // Only the ledger itself is protected: the dir, a file directly in it and grants/. Files below gate/<asset>/ (images, PLAN-REVIEW.md) are free (transition rule 6).
+  const dirRe = dir ? new RegExp(`^(?:[-\\w]*=)?${dir.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\/+$/, '')}(?:/(?:grants(?:/.*)?|[^/]*))?$`) : null
+  const named = (w) => !/\s/.test(w) && (STAMP.test(w) || dirRe?.test(w) || /^(?:[-\w]*=)?(?:.*\/)?(?:project-files|\.claude\/claude-setup)\/gate(?:\/(?:grants(?:\/.*)?|[^/]*))?$/.test(w) || GUARD_FILE.test(w))
   const msg = 'gate ledger: the round counter is written only by gate-rounds.mjs (gate.md, Rounds), never by hand; the installed guards change only through a claude-setup PR.'
   if (list.some((s) => s.env) && list.some((s) => s.a0 === 'node' && s.args.some((a) => base(a) === 'gate-rounds.mjs'))) return 'gate ledger: CLAUDE_SETUP_* variables (the ledger dir, the guard switch) are not set in a call that runs the counter; they would point it at another ledger (gate.md, Rounds).'
   // Finding 1: the counter is run as `node <path>/gate-rounds.mjs <verb>` and nothing else. Any other command that names the file and is
@@ -371,11 +372,13 @@ const assetOf = (input) => {
 
 // PreToolUse. ctx: { dir, model, calls (the session's tool calls), humanAfter(ref), dry }. Returns a reason or null. dry: check only; the
 // hook runs it first and commits (dry false) only when no other guard refused, so a refused post is never counted.
+// A Write or Edit target that is the ledger: a file directly in the ledger dir (or the project-files/gate folder) or under grants/.
+const ledgerFile = (file, dir) => [dir, '/mnt/project-files/gate'].some((d) => { const root = `${String(d).replace(/\/+$/, '')}/`; if (!file.startsWith(root) && !file.includes('project-files/gate/')) return false; const rel = file.includes('project-files/gate/') && !file.startsWith(root) ? file.split('project-files/gate/').pop() : file.slice(root.length); return !rel.includes('/') || rel.startsWith('grants/') })
 export function gateStep(tool, input = {}, ctx = {}) {
   const dir = ctx.dir ?? ledgerDir()
   const file = String(input.file_path ?? '')
   if (/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) && STAMP.test(file)) return 'gate ledger: the role stamp and the brief lock of a session are written only by the hooks (security review 2026-11-12), never by hand.'
-  if (/^(Write|Edit)$/.test(tool) && (file.includes('project-files/gate/') || (file.startsWith(`${dir}/`) && file.endsWith('.json')))) return 'gate ledger: the round counter is written only by gate-rounds.mjs (gate.md, Rounds), never by hand.'
+  if (/^(Write|Edit)$/.test(tool) && ledgerFile(file, dir)) return 'gate ledger: the round counter is written only by gate-rounds.mjs (gate.md, Rounds), never by hand.'
   if (/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) && /\.claude[\\/]claude-setup[\\/](gate-rounds|rule-guard|team-guard)\.mjs$/.test(file)) return 'gate ledger: the installed guards are changed only through claude-setup (a PR), never in place.'
   if (tool === 'Bash' || tool === 'PowerShell') return bashProblem(String(input.command ?? ''), dir, ctx)
   if (tool === 'mcp__github__create_pull_request') {

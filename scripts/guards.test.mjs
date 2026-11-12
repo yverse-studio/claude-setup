@@ -1311,3 +1311,41 @@ test('team guard: every Programmer or Animator brief on a game or story kit name
   assert.deepEqual(missingLines(brief('Fix the login page copy.', 'Programmer', 'app')), [], 'only game and story kits')
   assert.deepEqual(missingLines(brief('Write the cast sheet and body plan for Mira.', 'Planner', 'game')), [], 'the cast stage itself writes the sheet')
 })
+
+// 2026-11-12 (devlog plan reviewer): the boot refresh renewed only guard files that already existed, so an install made before #444 never got
+// gate-rounds.mjs and rule-guard failed closed on every Bash and Write call.
+test('refresh fetches gate-rounds.mjs for an install that has rule-guard but not yet the counter', async () => {
+  const { guardsToFetch } = await import('../global/team-guard.mjs')
+  const dir = mkdtempSync(join(tmpdir(), 'inst-'))
+  for (const f of ['team-guard.mjs', 'rule-guard.mjs']) writeFileSync(join(dir, f), '#!/usr/bin/env node\n')
+  assert.ok(guardsToFetch(dir).includes('gate-rounds.mjs'), 'the missing counter is fetched')
+  assert.ok(!guardsToFetch(dir).includes('context-guard.mjs'), 'a guard the install never had stays out')
+  assert.deepEqual(guardsToFetch(dir, ['team-guard.mjs']), ['team-guard.mjs'], 'a narrowed refresh stays narrowed')
+  const bare = mkdtempSync(join(tmpdir(), 'inst-'))
+  assert.deepEqual(guardsToFetch(bare), [], 'a folder without guards gets none')
+})
+
+// 2026-11-12: a skill name as the Kit (game-3d, social-team) got the bare kit list; now the error says it is a skill.
+test('team guard: a skill name as the Kit gets a hint and the valid kit list', async () => {
+  const { badTeam } = await import('../global/team-guard.mjs')
+  const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
+  const msg = badTeam('Role: Programmer · Kit: game-3d · Size: M', teams) ?? ''
+  assert.match(msg, /game-3d.*is a skill: put it on the Skills: line/)
+  assert.match(msg, /pick one of [\w, -]*game/, 'the valid kits are listed')
+  assert.doesNotMatch(badTeam('Role: Programmer · Kit: nonsense · Size: M', teams) ?? '', /is a skill/, 'an unknown word gets no skill hint')
+})
+
+// transition rule 6 (2026-11-12): gate images and PLAN-REVIEW.md live under gate/<asset>/, only the ledger itself is protected.
+test('gate folder: files under gate/<asset>/ are free to write, the ledger and grants are not', async () => {
+  const { gateStep } = await import('../global/gate-rounds.mjs')
+  const dir = '/tmp/ledger-x'
+  const step = (tool, input) => gateStep(tool, input, { dir })
+  assert.equal(step('Write', { file_path: '/mnt/project-files/gate/o_r_7/r1/front.png' }), null)
+  assert.equal(step('Write', { file_path: '/mnt/project-files/gate/o_r_7/PLAN-REVIEW.md' }), null)
+  assert.equal(step('Write', { file_path: `${dir}/o_r_7/r2/side.png` }), null)
+  assert.match(step('Write', { file_path: '/mnt/project-files/gate/o_r_7.json' }) ?? '', /written only by gate-rounds/)
+  assert.match(step('Write', { file_path: `${dir}/o_r_7.json` }) ?? '', /written only by gate-rounds/)
+  assert.match(step('Edit', { file_path: `${dir}/grants/card.o_r_7.json` }) ?? '', /written only by gate-rounds/)
+  assert.equal(step('Bash', { command: 'mkdir -p /mnt/project-files/gate/o_r_7/r1 && cp /tmp/a.png /mnt/project-files/gate/o_r_7/r1/a.png' }), null)
+  assert.match(step('Bash', { command: 'rm /mnt/project-files/gate/o_r_7.json' }) ?? '', /written only by gate-rounds/)
+})

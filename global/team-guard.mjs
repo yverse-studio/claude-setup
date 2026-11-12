@@ -68,8 +68,12 @@ function fetchAll(dir, files, url, seconds) {
   // curl -f writes nothing for a missing file; a cut-off run (ok false) keeps a guard only if it still parses.
   return files.map((f) => ({ f, tmp: tmp(f), got: existsSync(tmp(f)) && statSync(tmp(f)).size > 0, ok }))
 }
+// rule-guard fails closed on every Bash and Write call when gate-rounds.mjs is missing (2026-11-12: an install made before #444 never got it, because
+// refresh only renewed files that already existed). A companion the others need is fetched even when it is not installed yet.
+export const COMPANIONS = ['gate-rounds.mjs']
+export const guardsToFetch = (dir, only = null) => GUARD_FILES.filter((f) => (existsSync(join(dir, f)) || (COMPANIONS.includes(f) && existsSync(join(dir, 'rule-guard.mjs')))) && (!only || only.includes(f)))
 export function refresh(dir, only = null) {
-  const guards = GUARD_FILES.filter((f) => existsSync(join(dir, f)) && (!only || only.includes(f)))
+  const guards = guardsToFetch(dir, only)
   const boot = only ? [] : fetchAll(dir, BOOT_FILES, (f) => RAW + f, 2.5)
   const code = fetchAll(dir, guards, (f) => `${RAW}global/${f}`, 1.5)
   for (const { f, tmp, got, ok } of [...boot, ...code]) {
@@ -262,13 +266,17 @@ const named = (cell, role) => cell.replace(/`/g, '').split(/[,;()]/).map((i) => 
 // A Skipped item with a condition ("Marketer before the first playable", "Content Designer (unless ...)") skips nobody outright.
 const skips = (cell, role) => cell.replace(/`/g, '').split(/[,;]/).map((i) => i.trim().replace(/^(and|then|plus) /i, ''))
   .some((i) => !/[(]|\b(before|unless|until|after)\b/i.test(i) && i.toLowerCase() === role.toLowerCase())
+// Skill folders of claude-setup that get mistaken for kits.
+const SKILL_NAMES = /^(game-3d|social-team|video-studio|storyteller|blender-body|media-editing|roblox|studio|twin|store|store-publish|market|sell|seo|legal|publish|scaffold|toolbox|ui-review|impeccable|operator)$/
 export function badTeam(text, teams) {
   const plain = text.replace(/[*_`]/g, '')
   const rows = teams ? kitRows(teams) : []
   if (!rows.length) return null
   const kit = plain.match(/\bKit:[ \t]*([\w-]+)/i)?.[1].toLowerCase()
   const row = rows.find((r) => r.kit === kit)
-  if (!row) return `Kit: ${kit} is no kit in docs/TEAMS.md (Kits): pick one of ${rows.map((r) => r.kit).join(', ')} by what the task makes (Spawn rule 1)`
+  // A skill name is not a kit (2026-11-12: game-3d, social-team): the kit is what the task makes, the skill goes on the Skills: line.
+  const skill = /^[a-z][\w-]*$/.test(kit) && kit !== 'none' && SKILL_NAMES.test(kit) ? ` (\`${kit}\` is a skill: put it on the Skills: line and pick the kit by what the task makes, e.g. game-3d is a game, social-team is social)` : ''
+  if (!row) return `Kit: ${kit} is no kit in docs/TEAMS.md (Kits)${skill}: pick one of ${rows.map((r) => r.kit).join(', ')} by what the task makes (Spawn rule 1)`
   const size = plain.match(/\bSize:[ \t]*([SML])\b/i)?.[1].toUpperCase()
   if (['video', 'social'].includes(kit) && size === 'S') return `a ${kit} brief is size M (one video or post) or L (a batch, series or launch video), never S (docs/TEAMS.md, Spawn rule 2)`
   const role = roleOf(plain, teams)
