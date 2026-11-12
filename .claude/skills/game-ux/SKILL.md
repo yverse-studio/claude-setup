@@ -41,7 +41,7 @@ One input layer (`src/input.ts`) turns keyboard, mouse, touch and gamepad into i
   `allow-pointer-lock` in its sandbox. Where the lock is refused (embed, permission), drag-to-look with its own sensitivity (baseline row 4)
   is the fallback, so every build is playable without a lock.
 - **Touch and gamepad:** values and mapping live in baseline rows 6 and 10, not here.
-- **Move feel:** walk speed in baseline row 12, velocity eased with `v += (target - v) * (1 - exp(-10 dt))`, capsule or
+- **Move feel:** walk speed in baseline row 12, velocity eased as in `game-3d/starter/walkable-room.md`, capsule or
   grid collision that slides along walls (`game-3d/starter/walkable-room.md`), no head bob by default
   (an option, off) and no camera smoothing on the look.
 - **Third person:** follow camera with a spring arm that shortens on the first hit

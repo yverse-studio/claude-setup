@@ -6,13 +6,15 @@
 //   look <look_states.json>    point 5  every look state sets every look switch
 //   drivers <drivers.json>     point 5  no driver with a dead or unresolved variable (dump: scripts/blender/dump_drivers.py)
 //   previews <dir> [--fix]     point 7  thumb.jpg older than a final render in its folder
+//   intake <asset dir> --inventory <measure.json>   asset-intake: a downloaded asset is processed, not listed (licence, source, a row and preview per base of the body's _inventory)
 // Each prints OK or RED lines and exits 1 on any RED.
 import { spawnSync } from 'node:child_process'
-import { readdirSync, readFileSync, statSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { basename, dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const field = (text, label) => text.match(new RegExp(`^[ \\t>*-]*\\**${label}\\**:[ \\t]*(.*)$`, 'im'))?.[1]?.trim() ?? null
+// A bold label (`**Adult use:** no`) closes its `**` after the colon: skip it, or the value reads "** no" (gate #483 r2, F1).
+const field = (text, label) => text.match(new RegExp(`^[ \\t>*-]*\\**${label}\\**:\\**[ \\t]*(.*)$`, 'im'))?.[1]?.trim() ?? null
 const placeholder = (v) => !v || /<[^>\n]+>/.test(v.replace(/<https?:[^>]*>/g, ''))
 
 // Point 3: stage 1 and 2 of docs/preproduction-workflow.md. No body, face or outfit job starts on a sheet this rejects.
@@ -103,6 +105,66 @@ export function stalePreviews(root) {
   return out
 }
 
+// asset-intake (.claude/skills/asset-intake): `lib/<typ>/<kategorie>/<PREFIX>_<name>/` holds source/, LICENCE.md, intake.json and the previews.
+// intake.json: {type, rows: {<key>: {preview, number | visual + why}}, catalog: {bases_fitted, md5}}. The list of bases is NOT in it: the caller passes the
+// body's `_inventory` (BT_ presets and char_<name> per CH_ key, as fit_garment.py writes it into measure.json), so an author cannot shorten it.
+// A report that is only a file list has no rows and fails.
+const LICENCE_FIELDS = ['Source', 'Licence', 'Commercial use', 'Adult use', 'Attribution']
+const USE_OK = /^(yes|ja)[\s.!]*$/i // Adult use and Commercial use are allow-lists: only a bare yes or ja passes (a restriction after it, "yes?", "?", "not specified", anything else is quarantine; gate #483 r3, N1)
+const allFields = (text, label) => [...text.matchAll(new RegExp(`^[ \\t>*-]*\\**${label}\\**:\\**[ \\t]*(.*)$`, 'gim'))].map((m) => m[1].trim()) // a repeated line must pass too, the first one does not win (N4)
+const TYPES = ['garment', 'hair', 'eyes', 'face', 'prop'] // steps.md; eyes, faces and props may say "visual" with a reason where no metric exists
+const NUMBER_TYPES = ['garment', 'hair']
+const isImage = (p) => /\.(png|jpe?g|webp)$/i.test(p) && existsSync(p) && statSync(p).isFile() && statSync(p).size > 0 // a folder or an empty file is no preview (gate #483 r4)
+export const bodyInventory = (report) => report?._inventory?.BT && report?._inventory?.CH ? [...report._inventory.BT, ...report._inventory.CH.map((k) => `char_${String(k).replace(/^CH_/, '')}`)] : []
+export function intakeProblems(dir, inventory = []) {
+  const out = []
+  const at = (...p) => join(dir, ...p)
+  const isDir = (...p) => existsSync(at(...p)) && statSync(at(...p)).isDirectory() // a file where a folder belongs is a RED line, not a stack trace (gate #483 r5, S2)
+  const files = isDir('source') ? readdirSync(at('source')) : []
+  if (!files.length) out.push('source/ is missing or empty: keep the untouched download once')
+  const licence = ['LICENCE.md', 'LICENSE.md', 'licence.txt'].map((n) => at(n)).find(existsSync)
+  if (!licence) out.push('no LICENCE.md: a download with no licence note goes to inbox/_quarantine/, not the library')
+  else {
+    const text = readFileSync(licence, 'utf8')
+    for (const f of LICENCE_FIELDS) if (placeholder(field(text, f))) out.push(`LICENCE.md has no real "${f}:" line`)
+    for (const f of ['Commercial use', 'Adult use']) for (const v of allFields(text, f)) if (!USE_OK.test(v)) out.push(`LICENCE.md says "${f}: ${v}": only a bare yes or ja passes, the asset goes to inbox/_quarantine/, never into lib/`)
+  }
+  if (!inventory.length) out.push('no body inventory: pass --inventory <measure.json> (the fit_garment.py output with _inventory {BT, CH}); the list of bases is never typed into intake.json')
+  if (!existsSync(at('intake.json'))) return [...out, 'no intake.json: the report is a file list, not a processed asset (rows, catalog)']
+  let r
+  try { r = JSON.parse(readFileSync(at('intake.json'), 'utf8')) } catch { return [...out, 'intake.json is not valid JSON'] }
+  if (!r || typeof r !== 'object' || Array.isArray(r)) return [...out, 'intake.json is not an object (type, rows, catalog)']
+  const rows = r.rows && typeof r.rows === 'object' ? r.rows : {}
+  if (!TYPES.includes(r.type)) out.push(`intake.json type "${r.type}" is none of ${TYPES.join(', ')} (steps.md)`)
+  if (!Object.keys(rows).length) out.push('intake.json has no rows: a file list is not an intake, test and fit every base')
+  const made = isDir('files') ? readdirSync(at('files')).map((n) => statSync(at('files', n)).mtimeMs) : []
+  const needNumber = NUMBER_TYPES.includes(r.type)
+  for (const k of inventory) {
+    const row = rows[k]
+    if (!row) { out.push(`base ${k}: no row (fit and number or visual check)`); continue }
+    // one render per key, inside the asset's own preview/ folder: this one rule also rules out a shared image and a path outside the dir (gate #483 r5, B1)
+    const own = new RegExp(`^preview/${k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\.(png|jpe?g|webp)$`)
+    const shot = typeof row.preview === 'string' && at(row.preview)
+    if (typeof row.preview === 'string' && !own.test(row.preview)) out.push(`base ${k}: preview ${row.preview} must be preview/${k}.png (or .jpg, .jpeg, .webp): one render per base, inside the asset folder`)
+    else if (!shot || !isImage(shot)) out.push(`base ${k}: preview ${row.preview ?? '(none)'} is not an image file (png, jpg, jpeg or webp, not empty)`)
+    else if (made.some((m) => m > statSync(shot).mtimeMs)) out.push(`base ${k}: preview is older than the asset files, render it again`)
+    const n = row.number
+    const clear = n && typeof n === 'object' && Number.isFinite(n.min_mm) && Number.isFinite(n.inside_pct)
+    const visualOk = row.visual === true && typeof row.why === 'string' && row.why.trim().length >= 10
+    const hasNumber = n !== undefined && n !== null
+    if (needNumber && !(clear && n.min_mm >= 0 && n.inside_pct === 0)) out.push(`base ${k}: a ${r.type} needs number {min_mm >= 0, inside_pct 0} (clearance.py), got ${JSON.stringify(n) ?? 'none'}`)
+    else if (!needNumber && hasNumber && !(clear && n.min_mm >= 0 && n.inside_pct === 0)) out.push(`base ${k}: a ${r.type} number must be complete, min_mm >= 0 and inside_pct 0, got ${JSON.stringify(n)}; visual: true does not excuse a bad number`)
+    else if (!needNumber && TYPES.includes(r.type) && !hasNumber && !visualOk) out.push(`base ${k}: needs number {min_mm, inside_pct}, or visual: true with a why of 10+ characters`)
+  }
+  const fitted = Array.isArray(r.catalog?.bases_fitted) && r.catalog.bases_fitted.every((k) => typeof k === 'string') ? r.catalog.bases_fitted : null
+  if (!fitted) out.push('catalog.bases_fitted must be an array of base names')
+  else if (inventory.some((k) => !fitted.includes(k))) out.push(`catalog.bases_fitted lacks ${inventory.filter((k) => !fitted.includes(k)).join(', ')}`)
+  const md5 = r.catalog?.md5
+  if (!md5 || typeof md5 !== 'object' || Array.isArray(md5) || !Object.keys(md5).length) out.push('catalog.md5 is empty: one hash per fitted file')
+  else if (Object.values(md5).some((h) => !/^[0-9a-f]{32}$/i.test(String(h)))) out.push('catalog.md5 holds a value that is no md5 hash (32 hex characters)')
+  return out
+}
+
 const run = (cmd, args) => spawnSync(cmd, args, { encoding: 'utf8' })
 export function refreshPreview(finalFile, exec = run) {
   const thumb = join(dirname(finalFile), 'thumb.jpg')
@@ -117,12 +179,21 @@ function main([cmd, ...args]) {
     fit: () => fitReportProblems(json(args[0])),
     look: () => lookStateProblems(json(args[0])),
     drivers: () => driverProblems(json(args[0])),
+    intake: () => {
+      const i = args.indexOf('--inventory')
+      if (i < 0) return intakeProblems(args[0], [])
+      const f = args[i + 1]
+      if (!f || f.startsWith('--')) return ['--inventory needs the path of the fit measure.json']
+      let inventory
+      try { inventory = bodyInventory(json(f)) } catch (e) { return [`--inventory ${f} cannot be read: ${e.message}`] }
+      return intakeProblems(args[0], inventory)
+    },
     previews: () => stalePreviews(args[0]).map((s) => {
       if (args.includes('--fix')) { const r = refreshPreview(s.final); return r.ok ? null : `${s.dir}: could not refresh thumb.jpg (${r.why})` }
       return `${s.dir}: thumb.jpg is older than ${s.finals.join(', ')} (run with --fix)`
     }).filter(Boolean),
   }
-  if (!jobs[cmd] || !args.length) { console.error('usage: pipeline-gates.mjs sheet|fit|look|drivers|previews <file or dir> [--fix]'); return 2 }
+  if (!jobs[cmd] || !args.length) { console.error('usage: pipeline-gates.mjs sheet|fit|look|drivers|previews|intake <file or dir> [--fix | --inventory <measure.json>] [--fix]'); return 2 }
   const problems = jobs[cmd]()
   for (const p of problems) console.log(`RED ${p}`)
   console.log(problems.length ? `RESULT RED ${cmd}: ${problems.length} problem(s)` : `OK ${cmd}`)

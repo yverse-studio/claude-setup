@@ -30,6 +30,7 @@ Y-Land notes and scripts live in that project's files (`promo/LEARNINGS.md`, `pr
 - 2026-10-26 (Y-Land): villagers only get emojis and moods near the camera, and the sim still drifts between runs even with a seeded `Math.random`: pick each shot's subject by what it is doing at the shot's first frame, never by a name from a dry run.
 - 2026-10-26 (Y-Land): the first cut juddered on the carousel and yskills saw it before we did: frame steps of [33,33,34] ms skip or double 30 Hz sim steps (use [34,33,33]), a camera locked to a spinning rider shakes (film rides from the hub), and the 2026-10-07 pacing check was skipped. Run it on every cut before showing it.
 - 2026-10-12 (Y-Land): serve the page under the live origin (routes rewritten to the local build) so shared links and pictures show the real address.
+- 2026-11-12 (Xin Xiao airport re-film): a bot-played take needs the bot's choices fixed per take (one script per take, not one shared setting), the full game state logged every frame so the timeline in the README is measured, and a dry run of the bot without screenshots first (about 1 s per frame against 1.5-5 s) to see whether it reaches the beat the brief needs (4 refusals, the bad ending): a bot that stands still next to one pushy NPC never reaches it, walking at full speed shortens the crowd to 3 s, and a 40 % pace made it 6 s. Record the build commit the film came from.
 
 ## Captions, overlays and encode
 

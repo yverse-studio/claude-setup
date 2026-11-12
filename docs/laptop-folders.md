@@ -75,7 +75,7 @@ No scripts inside an asset: data and at most one recipe file; build scripts live
 ├─ tools/             laptop/ anim/ gate/ apps/ ai/ BLENDER_EXE.txt
 │  └─ ai/             comfyui/ chatterbox/ MuseTalk/ liveportrait/ (one closed folder per tool, with its .venv) · models/{diffusion_models,text_encoders,vae,loras,hf}/ · MODELS.md
 ├─ docs/              guides/ logs/ PIPELINE.md INBOX.md
-├─ inbox/             downloads land here, sorted within 7 days by the Downloads thread
+├─ inbox/             downloads land here, processed within 7 days by `asset-intake` (Character TD); _quarantine/ holds unlicensed ones
 └─ _claude/           _worktrees/<repo>/<branch>/ _work/ _queue/ _archive/ trash/<date>/
 the owner's own folders (Private18) stay in the Documents folder and are never touched
 ```
@@ -108,7 +108,7 @@ A cloud thread has no files of its own on the laptop. When its work needs them:
 1. **Reach the laptop** only through the one Remote Control lane (the coordinator starts it) or folder access that the project already approved. Laptop work from a cloud thread is routed there, never run twice in parallel.
 2. **Start at `START.md`** in the root, then this page. Ask the resolver for paths; never copy a path out of an old chat or brief.
 3. **Save with `new.py`**: a new thing is created by `python tools/laptop/new.py <kind> <name>` through the lane, then filled. No hand-made folders.
-4. **Downloads go to `inbox/`** (top level of the root) and are sorted within 7 days; the untouched original is kept once in the `source/` of the main asset.
+4. **Downloads go to `inbox/`** (top level of the root) and are processed within 7 days by the [`asset-intake`](../.claude/skills/asset-intake/SKILL.md) skill (Character TD: licence, fit on all bases, preview, `lib/`; no licence = `inbox/_quarantine/`); the untouched original is kept once in the `source/` of the main asset.
 5. **Transfers are parts of at most 10 MB** (a laptop thread cannot fetch a project file over 16 MB); a bigger file is split with a hash list or rebuilt from its script and parameters.
 6. **18+ never goes into a repo that has a remote**, in no form (image, text, code, bundle), and never into the cloud project files; it stays in `lib/`, `projects/` and the local snapshots.
 7. A reference the owner sends himself is saved by the lane in the same turn, straight into the `reference/` of the thing it is for (rule 3 above); no review step. The Archivist indexes it only when asked.
