@@ -167,6 +167,7 @@ export function parseShell(text, depth = 0) {
       if (bad || j >= text.length) { bad = true; break }
       i = j; continue
     }
+    if (c === '\\' && text[i + 1] === '\n') { i++; continue }
     if (c === '\\') { word += text[i + 1] ?? ''; has = true; i++; continue }
     if (c === '$' && text[i + 1] === '(') { const k = close(i + 1); if (k < 0) { bad = true; break } word += text.slice(i, k + 1); has = true; inner(text.slice(i + 2, k)); i = k; continue }
     if (c === '`') { const k = tick(i); if (k < 0) { bad = true; break } word += text.slice(i, k + 1); has = true; inner(text.slice(i + 1, k)); i = k; continue }
@@ -209,14 +210,25 @@ export function parseShell(text, depth = 0) {
   return { cmds, bad }
 }
 
+const KEYWORDS = new Set(['if', 'then', 'else', 'elif', 'do', 'while', 'until', '!', 'time'])
+const SETUP_VAR = /^CLAUDE_SETUP_[A-Z_]+=/
 function simple(c) {
-  let a = [...c.argv]
+  let a = [...c.argv], env = false
   for (;;) {
-    while (a.length && /^[A-Za-z_]\w*=/.test(a[0])) a.shift()
-    if (a.length && WRAPPERS.has(base(a[0]))) { a.shift(); while (a.length && (a[0].startsWith('-') || /^[A-Za-z_]\w*=/.test(a[0]))) a.shift(); continue }
+    while (a.length && /^[A-Za-z_]\w*=/.test(a[0])) { env ||= SETUP_VAR.test(a[0]); a.shift() }
+    const w = a.length ? base(a[0]) : ''
+    if (KEYWORDS.has(w)) { a.shift(); continue }
+    if (WRAPPERS.has(w)) { a.shift(); while (a.length && (a[0].startsWith('-') || /^[A-Za-z_]\w*=/.test(a[0]))) { env ||= SETUP_VAR.test(a[0]); a.shift() } continue }
+    if (w === 'timeout' || w === 'nice') { // own flags (some take a value), timeout also its duration
+      a.shift()
+      while (a.length && a[0].startsWith('-')) { const v = /^-[ksn]$/.test(a[0]) || a[0] === '--adjustment'; a.shift(); if (v) a.shift() }
+      if (w === 'timeout') a.shift()
+      continue
+    }
     break
   }
-  return { a0: a.length ? base(a[0]) : '', args: a.slice(1), redirs: c.redirs, env: c.argv.some((w) => /^CLAUDE_SETUP_[A-Z_]+=/.test(w)) }
+  if (a.length && ['export', 'declare', 'typeset'].includes(base(a[0]))) env ||= a.some((x) => SETUP_VAR.test(x))
+  return { a0: a.length ? base(a[0]) : '', args: a.slice(1), redirs: c.redirs, env }
 }
 // Every simple command of the text, also what sits in $( ), backticks and bash -c '...'.
 export function simpleCommands(text, depth = 0) {
@@ -238,9 +250,10 @@ const CLI_VERBS = ['status', 'check', 'init', 'direct', 'card', 'picture', 'waiv
 const MERGE_DOOR = /pulls\/[^\s/]*\/merge|mergePullRequest|enablePullRequestAutoMerge/
 
 function ghProblem(s) {
-  const i = s.args.indexOf('pr')
-  if ((i >= 0 && s.args[i + 1] === 'merge') || (s.args[0] === 'api' && s.args.some((a) => MERGE_DOOR.test(a)))) return 'gate ledger: a merge goes through the counter (gate.md, Rounds): the merge tool mcp__github__merge_pull_request, or "node ~/.claude/claude-setup/gate-rounds.mjs merge <owner/repo#n> [--squash|--merge|--rebase] [--auto] [--delete-branch]". It refuses a PR without a counted pass.'
-  const comments = (s.args[0] === 'pr' && /^(comment|review|edit)$/.test(s.args[1])) || (s.args[0] === 'issue' && s.args[1] === 'comment') || s.args[0] === 'api'
+  const w = [] // the subcommand words: flags and the value of -R/--repo dropped
+  for (let j = 0; j < s.args.length; j++) { const x = s.args[j]; if (/^(-R|--repo)$/.test(x)) j++; else if (!x.startsWith('-')) w.push(x) }
+  if ((w[0] === 'pr' && w[1] === 'merge') || (w[0] === 'api' && s.args.some((a) => MERGE_DOOR.test(a)))) return 'gate ledger: a merge goes through the counter (gate.md, Rounds): the merge tool mcp__github__merge_pull_request, or "node ~/.claude/claude-setup/gate-rounds.mjs merge <owner/repo#n> [--squash|--merge|--rebase] [--auto] [--delete-branch]". It refuses a PR without a counted pass.'
+  const comments = (w[0] === 'pr' && /^(comment|review|edit)$/.test(w[1])) || (w[0] === 'issue' && w[1] === 'comment') || w[0] === 'api'
   if (!comments) return null
   const texts = [...s.args]
   s.args.forEach((a, j) => { if (/^(--body-file|-F)$/.test(a) && s.args[j + 1]) texts.push(read(s.args[j + 1])) })
@@ -251,12 +264,13 @@ function ghProblem(s) {
 function bashProblem(cmd, dir, ctx) {
   const { list, bad } = simpleCommands(cmd)
   if (bad && /\bgh\b|gate/.test(cmd)) return 'gate ledger: this command has unbalanced quotes and mentions gh or gate, so it cannot be read; write it plainly (gate.md, Rounds).'
-  const inLedger = (op) => (dir && String(op).includes(dir)) || /project-files\/gate(?:\/|$)/.test(op)
+  const inLedgerRaw = (op) => (dir && String(op).includes(dir)) || /project-files\/gate(?:\/|$)/.test(op)
+  const inLedger = (op) => !/\s/.test(op) && inLedgerRaw(op) // a word with spaces is prose, not a path
   const msg = 'gate ledger: the round counter is written only by gate-rounds.mjs (gate.md, Rounds), never by hand; the installed guards change only through a claude-setup PR.'
   for (const s of list) {
     if (s.env) return 'gate ledger: CLAUDE_SETUP_* variables (the ledger dir, the guard switch) are not set from a command; they would point the counter at another ledger (gate.md, Rounds).'
     if (s.a0 === 'gh') { const r = ghProblem(s); if (r) return r }
-    if (s.redirs.some((r) => inLedger(r) || GUARD_FILE.test(r))) return msg
+    if (s.redirs.some((r) => inLedgerRaw(r) || GUARD_FILE.test(r))) return msg
     if (s.a0 === 'cd') { if (s.args.some(inLedger)) return msg; continue }
     const script = s.a0 === 'node' ? s.args.find((a) => base(a) === 'gate-rounds.mjs') ?? s.args.find((a) => !a.startsWith('-')) : null
     if (script && base(script) === 'gate-rounds.mjs') {
@@ -271,6 +285,7 @@ function bashProblem(cmd, dir, ctx) {
       if (verb === 'waive' && !(ctx.humanAfter?.(ref))) return 'gate ledger: waive needs yskills\' own answer on that card in this session; none arrived yet.'
       continue
     }
+    if (s.a0 === 'echo' || s.a0 === 'printf') continue
     if (READERS.has(s.a0) || ['node', 'bash', 'sh', 'zsh', 'git'].includes(s.a0)) continue
     if (s.args.some((a) => inLedger(a) || GUARD_FILE.test(a))) return msg
   }
