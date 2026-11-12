@@ -32,6 +32,18 @@ and how each changes play.
 ## Feel and feedback
 Per action: screen, sound, length in ms.
 
+## Controls and camera
+First or third person; one line per row of `game-ux/refs/controls-baseline.md` (yes, or a written exception); the numbers this game starts with. Optional for a 2D game with no camera.
+
+## Map (only if the map is a real place)
+Outline, elevation, stations at real coordinates, travel: `game-3d/refs/real-map-overworld.md`; the country and the stations are this game's, the method is not.
+
+## Screen and onboarding
+HUD content, the first goal and the seconds it appears in, prompts per device. Wireframe in `design/UX.md`.
+
+## People in the scene
+What each kind of NPC does while idle, its reaction to the player, crowd density.
+
 ## Monetisation hooks
 Where the platform's ads and rewarded offers sit, and the moment that is never interrupted.
 
