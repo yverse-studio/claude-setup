@@ -70,7 +70,7 @@ export function progressProblem(cmd, opt) {
 
 export function heartbeatProblem({ now, started, mtimeMs, heartbeatMin, firstFrameMin = 30 }) {
   const limit = heartbeatMin * 60000
-  if (mtimeMs === null) return now - started > firstFrameMin * 60000 ? `progress file never wrote in ${firstFrameMin} min` : null   // the first frame may compile shaders and build the BVH
+  if (mtimeMs === null || mtimeMs < started) return now - started > firstFrameMin * 60000 ? `progress file never wrote in ${firstFrameMin} min` : null   // the first frame may compile shaders and build the BVH
   return now - Math.max(mtimeMs, started) > limit ? `no progress for ${Math.round((now - mtimeMs) / 60000)} min (progress file not rewritten)` : null
 }
 

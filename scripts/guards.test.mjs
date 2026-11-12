@@ -1227,6 +1227,7 @@ test('team guard: every Programmer or Animator brief on a game or story kit name
   assert.equal(missingLines(brief('Fit the outfit.\nSheet: <path>\nLook-Lock: <card>')).length, 2, 'placeholders do not count')
   assert.equal(missingLines(brief('Make the HUD fit on 390px.\nSheet: n/a this is a HUD layout job, no model changes')).length, 0, 'a declared exception passes')
   assert.equal(missingLines(brief('Make the HUD.\nSheet: n/a no')).length, 2, 'a one-word reason does not')
+  assert.equal(missingLines(brief('Make the HUD.\nSheet: n/a\nModel: sonnet because the role says so')).length, 2, 'a bare n/a does not borrow the next line as its reason')
   assert.equal(missingLines(brief('Make the HUD.', 'Animator', 'story')).length, 2, 'Animator on the story kit too')
   assert.deepEqual(missingLines(brief('Fix the login page copy.', 'Programmer', 'app')), [], 'only game and story kits')
   assert.deepEqual(missingLines(brief('Write the cast sheet and body plan for Mira.', 'Planner', 'game')), [], 'the cast stage itself writes the sheet')

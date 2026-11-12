@@ -25,11 +25,14 @@ for name, idb in owners():
             ts = []
             for t in v.targets:
                 ok = False
-                if t.id is not None and t.data_path:
+                if t.id is not None and v.type == 'SINGLE_PROP' and t.data_path:
                     try: t.id.path_resolve(t.data_path); ok = True
                     except Exception: ok = False
-                ts.append({'id': t.id.name if t.id else None, 'data_path': t.data_path, 'resolved': ok})
-            vs.append({'name': v.name, 'targets': ts})
+                elif t.id is not None and v.type != 'SINGLE_PROP':   # transform, rotation and distance variables: id plus an optional bone
+                    ok = not t.bone_target or (getattr(t.id, 'pose', None) is not None and t.bone_target in t.id.pose.bones)
+                ts.append({'id': t.id.name if t.id else None, 'data_path': t.data_path, 'bone_target': t.bone_target,
+                           'transform_type': getattr(t, 'transform_type', None), 'resolved': ok})
+            vs.append({'name': v.name, 'type': v.type, 'targets': ts})
         rows.append({'owner': name, 'path': fc.data_path, 'type': d.type, 'expression': d.expression, 'variables': vs})
 json.dump(rows, open(out, 'w'), indent=1)
 print('DRIVERS', len(rows), '->', out)
