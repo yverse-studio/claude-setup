@@ -869,7 +869,7 @@ function verdictProblem(dir, asset, head, dry) {
 // text, and each fix moved the line). One small tokenizer gives argv lists; text inside quotes, a commit message or an echo is data.
 const base = (p) => String(p).split(/[\\/]/).pop().replace(/\.exe$/i, '')
 const WRAPPERS = new Set(['env', 'command', 'sudo', 'time', 'nohup', 'exec', 'builtin'])
-const WRITERS = new Set(['rm', 'unlink', 'shred', 'mv', 'tee', 'truncate', 'dd', 'ln', 'install', 'touch', 'chmod', 'chown', 'rsync', 'cp', 'set-content', 'add-content', 'out-file', 'remove-item', 'new-item', 'copy-item', 'move-item', 'del', 'ri'])
+const WRITERS = new Set(['rm', 'unlink', 'shred', 'mv', 'tee', 'truncate', 'dd', 'ln', 'install', 'touch', 'chmod', 'chown', 'rsync', 'cp', 'tar', 'unzip', 'curl', 'wget', 'set-content', 'add-content', 'out-file', 'remove-item', 'new-item', 'copy-item', 'move-item', 'del', 'ri'])
 const SHELLS = new Set(['bash', 'sh', 'zsh', 'dash'])
 
 export function parseShell(text, depth = 0) {
@@ -905,8 +905,9 @@ export function parseShell(text, depth = 0) {
     if (c === '\n') {
       end()
       for (const d of pending.splice(0)) { // a heredoc body is data: skip to its delimiter line
-        let j = i + 1
-        while (j < text.length) { const e = text.indexOf('\n', j); const line = text.slice(j, e < 0 ? text.length : e); j = e < 0 ? text.length : e + 1; if (line.trim() === d) break }
+        let j = i + 1, body = ''
+        while (j < text.length) { const e = text.indexOf('\n', j); const line = text.slice(j, e < 0 ? text.length : e); j = e < 0 ? text.length : e + 1; if (line.trim() === d) break; body += `${line}\n` }
+        if (cmds.length) cmds[cmds.length - 1].body = (cmds[cmds.length - 1].body ?? '') + body // read as code only when a shell runs it
         i = j - 1
       }
       continue
@@ -940,7 +941,8 @@ export function parseShell(text, depth = 0) {
   return { cmds, bad }
 }
 
-const KEYWORDS = new Set(['if', 'then', 'else', 'elif', 'do', 'while', 'until', '!', 'time'])
+const KEYWORDS = new Set(['if', 'then', 'else', 'elif', 'do', 'while', 'until', '!'])
+const WRAP_VALUE = { sudo: 'ugCDRThprtU', env: 'uCS' } // one-letter options of a wrapper that take a value
 const SETUP_VAR = /^CLAUDE_SETUP_[A-Z_]+=/
 function simple(c) {
   let a = [...c.argv], env = false
@@ -948,7 +950,7 @@ function simple(c) {
     while (a.length && /^[A-Za-z_]\w*=/.test(a[0])) { env ||= SETUP_VAR.test(a[0]); a.shift() }
     const w = a.length ? base(a[0]) : ''
     if (KEYWORDS.has(w)) { a.shift(); continue }
-    if (WRAPPERS.has(w)) { a.shift(); while (a.length && (a[0].startsWith('-') || /^[A-Za-z_]\w*=/.test(a[0]))) { env ||= SETUP_VAR.test(a[0]); a.shift() } continue }
+    if (WRAPPERS.has(w)) { a.shift(); while (a.length && (a[0].startsWith('-') || /^[A-Za-z_]\w*=/.test(a[0]))) { env ||= SETUP_VAR.test(a[0]); const f = a.shift(); if (/^-[A-Za-z]$/.test(f) && (WRAP_VALUE[w] ?? '').includes(f[1])) a.shift() } continue }
     if (w === 'timeout' || w === 'nice') { // own flags (some take a value), timeout also its duration
       a.shift()
       while (a.length && a[0].startsWith('-')) { const v = /^-[ksn]$/.test(a[0]) || a[0] === '--adjustment'; a.shift(); if (v) a.shift() }
@@ -958,7 +960,7 @@ function simple(c) {
     break
   }
   if (a.length && ['export', 'declare', 'typeset'].includes(base(a[0]))) env ||= a.some((x) => SETUP_VAR.test(x))
-  return { a0: a.length ? base(a[0]) : '', args: a.slice(1), redirs: c.redirs, env }
+  return { a0: a.length ? base(a[0]) : '', args: a.slice(1), redirs: c.redirs, env, body: c.body }
 }
 // Every simple command of the text, also what sits in $( ), backticks and bash -c '...'.
 export function simpleCommands(text, depth = 0) {
@@ -968,7 +970,8 @@ export function simpleCommands(text, depth = 0) {
   for (const c of cmds) {
     const s = simple(c)
     list.push(s)
-    const i = s.args.indexOf('-c')
+    const i = s.args.findIndex((a) => /^-[a-zA-Z]*c$/.test(a))
+    if (SHELLS.has(s.a0) && s.body && i < 0 && depth < 3) { const r = simpleCommands(s.body, depth + 1); list.push(...r.list); bad ||= r.bad }
     if (s.a0 === 'eval' && depth < 3) { const r = simpleCommands(s.args.join(' '), depth + 1); list.push(...r.list); bad ||= r.bad }
     if (SHELLS.has(s.a0) && i >= 0 && s.args[i + 1] !== undefined && depth < 3) { const r = simpleCommands(s.args[i + 1], depth + 1); list.push(...r.list); bad ||= r.bad }
   }
@@ -979,7 +982,7 @@ const GUARD_FILE = /\.claude[\\/]claude-setup[\\/](?:rule-guard|team-guard|gate-
 const CLI_VERBS = ['status', 'check', 'init', 'direct', 'card', 'picture', 'waive', 'merge', 'post']
 const MERGE_DOOR = /pulls\/[^\s/]*\/merge|mergePullRequest|enablePullRequestAutoMerge/
 
-function ghProblem(s, cmd) {
+function ghProblem(s, cmd, list = []) {
   const w = [] // the subcommand words: flags and the value of -R/--repo dropped
   for (let j = 0; j < s.args.length; j++) { const x = s.args[j]; if (/^(-R|--repo)$/.test(x)) j++; else if (!x.startsWith('-')) w.push(x) }
   if ((w[0] === 'pr' && w[1] === 'merge') || (w[0] === 'api' && s.args.some((a) => MERGE_DOOR.test(a)))) return 'gate ledger: a merge goes through the counter (gate.md, Rounds): the merge tool mcp__github__merge_pull_request, or "node ~/.claude/claude-setup/gate-rounds.mjs merge <owner/repo#n> [--squash|--merge|--rebase] [--auto] [--delete-branch]". It refuses a PR without a counted pass.'
@@ -989,9 +992,16 @@ function ghProblem(s, cmd) {
   let unreadable = false // a body from stdin or a substitution: the hook cannot see it
   s.args.forEach((a, j) => {
     const file = /^(--body-file|-F)$/.test(a) ? s.args[j + 1] : a.match(/^--body-file=(.*)$/)?.[1]
-    if (file === '-') unreadable = true
-    else if (file) texts.push(read(file))
-    if (/\$\(|`/.test(a)) unreadable = true
+    const prev = s.args[j - 1] ?? ''
+    const at = (w[0] === 'api' && (a.match(/^(?:\w+=)?@(.+)$/)?.[1] ?? (prev === '--input' ? a : null))) || null // gh api -F body=@f, --input f
+    if (file === '-' || file === '/dev/stdin' || at === '-') unreadable = true
+    else if (file || at) {
+      texts.push(read(file ?? at))
+      // a body file written by the same call does not exist yet: read what the call itself writes
+      if (list.some((c) => c.redirs.includes(file ?? at) || c.args.includes(file ?? at) && c !== s)) texts.push(...list.flatMap((c) => c.args), cmd)
+    }
+    // a gh api path may hold a substitution (a read); only a body flag value is a body
+    if (/\$\(|`/.test(a) && (w[0] !== 'api' || /^(-f|-F|--field|--raw-field|--input|--body)$/.test(prev) || /^(body|--body)=/.test(a))) unreadable = true
   })
   const carried = /<</.test(cmd) // the call's own text carries the body (a heredoc): every raw line is checked
   if (unreadable && carried) texts.push(cmd)
@@ -1003,16 +1013,20 @@ function ghProblem(s, cmd) {
 function bashProblem(cmd, dir, ctx) {
   const { list, bad } = simpleCommands(cmd)
   if (bad && /\bgh\b|gate/.test(cmd)) return 'gate ledger: this command has unbalanced quotes and mentions gh or gate, so it cannot be read; write it plainly (gate.md, Rounds).'
-  const inLedgerRaw = (op) => (dir && String(op).includes(dir)) || /project-files\/gate(?:\/|$)|\.claude\/claude-setup\/gate(?:\/|$)/.test(op)
+  const dirRe = dir ? new RegExp(`${dir.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\/+$/, '')}(?:/|$)`) : null
+  const inLedgerRaw = (op) => dirRe?.test(op) || /project-files\/gate(?:\/|$)|\.claude\/claude-setup\/gate(?:\/|$)|claude-setup\/gate(?:\/|$)/.test(op)
+  // a folder that holds the ledger or the guards: deleting it, or standing in it, reaches them
+  const nearLedger = (op) => /(?:^|\/)(?:\.claude(?:\/claude-setup)?|project-files|claude-setup)\/?$/.test(op) || (dir && dir.startsWith(`${op.replace(/\/+$/, '')}/`) && op.length > 1)
   const inLedger = (op) => !/\s/.test(op) && inLedgerRaw(op) // a word with spaces is prose, not a path
   const msg = 'gate ledger: the round counter is written only by gate-rounds.mjs (gate.md, Rounds), never by hand; the installed guards change only through a claude-setup PR.'
   const runsCounter = list.some((s) => s.a0 === 'node' && s.args.some((a) => base(a) === 'gate-rounds.mjs'))
   if (runsCounter && list.some((s) => s.env)) return 'gate ledger: CLAUDE_SETUP_* variables (the ledger dir, the guard switch) are not set in a call that runs the counter; they would point it at another ledger (gate.md, Rounds).'
   const relLedger = (a) => /(^|\/)gate\/[^/\s]+\.json$/.test(a)
+  let standing = false, near = false // after a cd into the ledger, or into a folder above it, later writers are suspect
   for (const s of list) {
-    if (s.a0 === 'gh') { const r = ghProblem(s, cmd); if (r) return r }
+    if (s.a0 === 'gh') { const r = ghProblem(s, cmd, list); if (r) return r }
     if (s.redirs.some((r) => inLedgerRaw(r) || GUARD_FILE.test(r))) return msg
-    if (s.a0 === 'cd') { if (s.args.some(inLedger)) return msg; continue }
+    if (s.a0 === 'cd') { if (s.args.some(inLedger)) { standing = true; near = true } else if (s.args.some(nearLedger)) near = true; continue }
     const script = s.a0 === 'node' ? s.args.find((a) => base(a) === 'gate-rounds.mjs') ?? s.args.find((a) => !a.startsWith('-')) : null
     if (script && base(script) === 'gate-rounds.mjs') {
       const at = s.args.indexOf(script)
@@ -1027,10 +1041,10 @@ function bashProblem(cmd, dir, ctx) {
       continue
     }
     // only a writer is a ledger write; a reader, find, test, du or a cp out of the ledger names it harmlessly
-    const writes = WRITERS.has(s.a0.toLowerCase()) || (s.a0 === 'sed' && s.args.some((a) => /^(-i|--in-place)/.test(a)))
-    const targetFlag = s.args.some((x) => /^-[a-zA-Z]*t/.test(x) || /^--ta/.test(x)) // cp -t DIR, -rt DIR, --target-directory(=): the destination can be any word
-    const targets = /^(cp|copy-item)$/i.test(s.a0) && !targetFlag ? s.args.slice(-1) : s.args
-    if (writes && targets.some((a) => !/\s/.test(a) && (inLedgerRaw(a) || GUARD_FILE.test(a) || relLedger(a)))) return msg
+    const writes = WRITERS.has(s.a0.toLowerCase()) || (/^(sed|perl)$/.test(s.a0) && s.args.some((x) => /^-[a-zA-Z]*i|^--in-place/.test(x))) || (s.a0 === 'find' && s.args.some((x) => /^-(delete|exec|execdir|ok)$/.test(x)))
+    const targetFlag = s.args.some((x) => /^-[a-zA-Z]*t/.test(x) || /^--t/.test(x)) // cp -t DIR, -rt DIR, --target-directory(=): the destination can be any word
+    const targets = /^(cp|copy-item|rsync)$/i.test(s.a0) && !targetFlag ? s.args.slice(-1) : s.args
+    if (writes && (standing || targets.some((a) => !/\s/.test(a) && (inLedgerRaw(a) || GUARD_FILE.test(a) || (near && (relLedger(a) || /^(rule-guard|team-guard|gate-rounds)\.mjs$/.test(base(a)))) || nearLedger(a))))) return msg
   }
   return null
 }

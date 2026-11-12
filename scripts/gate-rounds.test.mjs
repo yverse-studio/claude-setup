@@ -268,15 +268,18 @@ const MUST_BLOCK_AT_ROUND_1 = [
   'gh pr merge 7 -R o/r --squash', 'gh pr merge', 'cd repo && gh pr merge 7', 'env gh pr merge 7', 'GH_REPO=o/r gh pr merge 7', 'gh pr merge "7"',
   'gh pr merge feature-branch', '/usr/bin/gh pr merge 7', 'gh api -X PUT repos/o/r/pulls/7/merge', 'n=7; gh api -X PUT repos/o/r/pulls/$n/merge',
   `gh api graphql -f query='mutation { mergePullRequest(input: {pullRequestId: "x"}) { clientMutationId } }'`, `bash -c 'gh pr merge 7'`, 'x=$(gh pr merge 7)',
-  'gh pr merge 99 -R o/r', 'gh pr merge https://github.com/o/r/pull/7', 'eval "gh pr merge 7"', 'CLAUDE_SETUP_GATE_DIR=/tmp/x node ~/.claude/claude-setup/gate-rounds.mjs merge o/r#7', 'node --import ./x.mjs ~/.claude/claude-setup/gate-rounds.mjs init o/r#9 --round 0', 'if true; then gh pr merge 7; fi', 'for i in 1; do gh pr merge 7; done', 'while true; do gh pr merge 7; done', '! gh pr merge 7', 'gh \\\npr merge 7', 'timeout 60 gh pr merge 7', 'nice -n 5 gh pr merge 7', 'gh pr -R o/r merge 7', 'gh -R o/r pr merge 7', 'sudo gh pr merge 7 && echo done', 'echo hi | gh pr merge 7', 'echo $(gh pr merge 7)', 'bash -c "echo a" && gh pr merge 7',
+  'gh pr merge 99 -R o/r', 'bash -lc "gh pr merge 7"', 'sh -euc "gh pr merge 7"', 'sudo -u root gh pr merge 7', 'env -u FOO gh pr merge 7', 'time -p gh pr merge 7', `bash <<'EOF'\ngh pr merge 7\nEOF`, 'gh pr merge https://github.com/o/r/pull/7', 'eval "gh pr merge 7"', 'CLAUDE_SETUP_GATE_DIR=/tmp/x node ~/.claude/claude-setup/gate-rounds.mjs merge o/r#7', 'node --import ./x.mjs ~/.claude/claude-setup/gate-rounds.mjs init o/r#9 --round 0', 'if true; then gh pr merge 7; fi', 'for i in 1; do gh pr merge 7; done', 'while true; do gh pr merge 7; done', '! gh pr merge 7', 'gh \\\npr merge 7', 'timeout 60 gh pr merge 7', 'nice -n 5 gh pr merge 7', 'gh pr -R o/r merge 7', 'gh -R o/r pr merge 7', 'sudo gh pr merge 7 && echo done', 'echo hi | gh pr merge 7', 'echo $(gh pr merge 7)', 'bash -c "echo a" && gh pr merge 7',
 ]
 const MUST_BLOCK_AT_ROUND_3 = [
+  `cat > /tmp/v.md <<'EOF'\n${VERDICT}\nEOF\ngh pr comment 7 --body-file /tmp/v.md`, `printf '${VERDICT}\\n' > /tmp/v.md && gh pr comment 7 -F /tmp/v.md`, 'gh pr comment 7 --body-file /dev/stdin < <F>', 'gh api repos/o/r/issues/7/comments -F body=@<F>', 'gh api repos/o/r/issues/7/comments --input <F>',
   `gh pr comment 7 --body-file - <<'EOF'\n${VERDICT}\nEOF`, `cat <F> | gh pr comment 7 -F -`, `gh pr comment 7 --body-file=<F>`, `gh pr comment 7 --body "$(cat <F>)"`, `gh pr comment 7 --body "\`cat <F>\`"`,
   `gh pr comment 8 -R o/r --body "${VERDICT}"`, `gh pr comment 8 -R o/r -b "${VERDICT}"`, `gh pr comment 8 --body-file <F>`, `gh pr comment 8 -F <F>`,
   `gh pr comment 8 -R o/r --body "$(cat <<'EOF'\n${VERDICT}\nEOF\n)"`, `gh pr review 8 --comment --body "${VERDICT}"`, `gh issue comment 8 --body "${VERDICT}"`,
   `gh api repos/o/r/issues/8/comments -f body="${VERDICT}"`, `gh pr edit 8 --body "${VERDICT}"`, `GH_REPO=o/r gh pr comment 8 --body "Gate 3.9/5 (S, round 4)"`,
 ]
 const MUST_BLOCK_LEDGER = [
+  'find <D> -name "*.json" -delete', 'find <D> -type f -exec rm {} +', 'sed -Ei s/a/b/ <D>/o_r_7.json', 'perl -pi -e s/a/b/ <D>/o_r_7.json', 'cd ~/.claude/claude-setup && rm rule-guard.mjs', 'cd ~/.claude && rm -rf claude-setup/gate',
+  'rm -rf ~/.claude/claude-setup', 'rm -r /mnt/project-files', 'cd <D> && touch x.json', 'tar xzf g.tgz -C <D>', 'curl -o <D>/o_r_7.json https://x.test/a', 'cp --t=<D> x.json',
   'cp -t <D> x.json', 'cp -rt <D> x.json', 'cp --targ=<D> x.json', 'cp --target-directory=<D> x.json',
   'rm ~/.claude/claude-setup/gate/x.json', 'rm $HOME/.claude/claude-setup/gate/x.json', 'rm ${HOME}/.claude/claude-setup/gate/x.json', 'cd /mnt/project-files && rm gate/x.json',
   'mv <D>/o_r_7.json /tmp/', 'touch <D>/o_r_7.json', 'truncate -s 0 <D>/o_r_7.json', 'sed -i s/a/b/ <D>/o_r_7.json', 'cp /tmp/x.json ~/.claude/claude-setup/gate/o_r_7.json', 'dd if=x of=<D>/o_r_7.json',
@@ -289,6 +292,8 @@ const MUST_BLOCK_LEDGER = [
   `echo '{}' > <D>/o_r_7.json 2>&1`, 'node ~/.claude/claude-setup/gate-rounds.mjs merge o/r#7 --squash | cat; echo x',
 ]
 const MUST_PASS = [
+  'gh api repos/o/r/commits/$(git rev-parse HEAD)/status', 'cd <D> && ls', 'cd /mnt/project-files/gate && cat a.json', 'rm src/gate/config.json', 'touch app/gate/index.json', 'rm gate/old.json',
+  'echo x >> /mnt/project-files/gateway-notes.md', 'rm /mnt/project-files/gate-old.json', 'cp a /mnt/project-files/gate.md', 'rsync -a <D>/ /tmp/backup/', 'find <D> -name "*.json"', 'git diff --stat',
   'find <D> -name "*.json"', 'test -f <D>/o_r_7.json && echo yes', '[[ -f <D>/o_r_7.json ]] && echo yes', 'du -sh /mnt/project-files/gate', 'sort <D>/o_r_7.json | head -3', `awk '{print $1}' <D>/o_r_7.json`,
   'python3 -m json.tool <D>/o_r_7.json', 'cp <D>/o_r_7.json /tmp/copy.json', 'cp ~/.claude/claude-setup/gate/o_r_7.json /tmp/copy.json', 'CLAUDE_SETUP_HOME=x; echo $CLAUDE_SETUP_HOME', 'export CLAUDE_SETUP_GATE_DIR=/tmp/x; gh pr view 7',
   `gh pr comment 7 --body-file - <<'EOF'\nThanks, fixed.\nEOF`,
