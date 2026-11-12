@@ -16,8 +16,21 @@ Research like [`researcher.md`](researcher.md) (Method): a primary source per cl
 3. **Fill the doc** from [`templates/game-design.md`](../templates/game-design.md) into `design/GDD.md` of the game repo. One page; every number is a target the play bot or Tester can check, not a hope.
 4. **Co-founder pass:** say plainly when the idea has no loop that survives 30 seconds, or copies a reference too closely, and propose the nearer fix; once yskills decides, build it as decided.
 
+## Real moment first
+
+vacation-game, 2026-11-12: the airport ending was built without the stress yskills lived (Grab only
+bookable on site, people waiting, the car stops elsewhere); he had to explain it twice. A level, chapter
+or scene built from his life starts with one question to him, before the GDD line and before any build:
+"Erzähl mir den echten Moment: was ist passiert, wie hat es sich angefühlt, was war stressig, ruhig
+oder falsch, wer war da?" Ask it as a plain message (it has no options, so no card), quote his answer
+in the GDD's `## Real moment` and in every brief of that level; a later correction from him replaces
+the quote. Photos, videos and diaries he already gave are read first, and the question names what they
+already show, so he only adds the feeling. An invented game writes `none: invented`.
+
 ## What the doc must settle
 
+- **Real moment:** his words on the moment the level copies (above), or `none: invented`.
+- **Controls:** view, camera, movement and touch; the genre's standard (a 3D walk: first or third person with mouse or drag look) unless a line says why not.
 - **Core loop:** the verb the player repeats every few seconds, in one sentence, and the reward that closes it. Test: a stranger understands it in 30 seconds without text.
 - **Session length:** the shortest satisfying run and the longest, in seconds, from the platform's norm (links to the references), and where it ends well (a win, a score, a cliffhanger).
 - **Progression:** what the player owns after run 1, run 5 and run 20; what unlocks when; the pool of choices (upgrades, items) with counts and how a choice changes play, not a stat.
@@ -51,3 +64,4 @@ Added at the end of each project (operator step 9): date, project and its type, 
 - 2026-10-18 (Igelgarten, game): shipped with no written core loop, run length or difficulty table; the bot's balance and the look were gated, the fun was not. Write the doc before the first build.
 - 2026-10-24 (MEMORY, MONEY): CrazyGames pays about 1 to 15 USD per 1 000 plays (unverified range, memory only; the money verdict is in `docs/research/2026-10-18-game-money.md`, cited in `game-3d/SKILL.md` 5a).
 - 2026-10-24 (Mondgarten, game): CrazyGames declined it on quality (QA review, told 10-24); yskills accepts it and the retry waits for the first real game.
+- 2026-11-12 (vacation-game, game): the airport's vibe (no stress at the end, Grab only bookable on site) came from yskills after the build, twice; the walk shipped without mouse look. Ask the real moment first and write the controls into the GDD.

@@ -32,3 +32,8 @@ test('the rules index holds every row, unclipped, under 20,000 characters', () =
   assert.ok(idx.split('\n').filter((l) => l.startsWith('- ')).length >= 40)
   assert.match(idx, /^Rules index \(claude-setup x, d\)/)
 })
+
+test('the pre-flight carries the vacation-game fixes (facts, role check, dependencies, play before look)', () => {
+  const card = buildCard({ hash: 'x', date: 'd' })
+  for (const s of ['only from a source read this turn', "thread title's role", 'Depends on: #n', 'real moment', 'Controls and World life']) assert.ok(card.includes(s), s)
+})
