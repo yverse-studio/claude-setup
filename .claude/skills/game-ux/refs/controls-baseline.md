@@ -1,6 +1,6 @@
 # Controls baseline: what every game ships with
 
-The floor for any game with a player-moved camera or character. `SKILL.md` §1 says how to build it. No value here belongs to one game: a project writes
+The floor for any game with a player-moved camera or character. `SKILL.md` §1 says how to build it. Each value lives only in this file; other files link its row, never copy the number. No value here belongs to one game: a project writes
 its own numbers in `design/GDD.md` (`## Controls`) and tunes them by playtest; [judgement] marks a starting point
 no human has tested yet.
 
@@ -38,7 +38,7 @@ one PR for all levels, never inside a level's PR; glyph and key names come from 
 
 ## Playtest checks (where they go in the Playtester's report)
 
-`Layout` to `Hold` go into the `Controls` row, the NPC watch (`game-ux` §3, 30 s) into `World life`, the touch
+`Layout` to `Hold` go into the `Controls` row, the NPC watch (`game-ux` §3) into `World life`, the touch
 check into `Touch 390` (the rows `playtest-check.mjs`, in claude-setup `publish/templates/new-game/scripts/`, and `gate.md` read).
 
 | Check | Pass when |

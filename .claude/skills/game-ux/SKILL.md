@@ -14,7 +14,7 @@ wireframe in `design/UX.md`); Programmer builds §1 to §3; Playtester runs §5.
 ## 1. Controls and camera
 
 The floor every game ships with, plus its playtest checks: [`refs/controls-baseline.md`](refs/controls-baseline.md)
-(control values live only there). One input layer (`src/input.ts`) turns keyboard, mouse, touch and gamepad into intents
+(the floor's settings and values live only there). One input layer (`src/input.ts`) turns keyboard, mouse, touch and gamepad into intents
 (`move`, `look`, `interact`, `pause`); levels and rules read intents, never raw events.
 
 - **First person:** yaw turns the body, pitch only the camera head, clamped to about -70 to +70 degrees (as
@@ -37,7 +37,7 @@ The floor every game ships with, plus its playtest checks: [`refs/controls-basel
   the first action is the core verb. The 60 to 90 s window comes from vendor blogs, so the GDD sets the number and the
   Playtester measures it.
 - **Prompts name the device in use** ("Click", "Tap" or the pad glyph) and read the key from the binding, never from copy.
-- **Diegetic first:** a price on the stall, a goal as a marker in the world; a HUD is what is left, at the screen edges.
+- **Diegetic first:** a price on the stall, a goal as a marker in the world; a HUD is what is left, at the screen edges and out of the centre of view.
 - **Panels:** one open at a time, Esc or a tap outside closes, pause always reachable (`game-3d` §2). UI text from keys, never baked into images.
 
 ## 3. People in the scene
@@ -58,7 +58,7 @@ a start time, or a clip plays longer than 12 s without a switch.
 
 ## 4. Accessibility
 
-The floor is baseline rows 7 and 9 (Game Accessibility Guidelines, Basic tier); beyond it take the guidelines'
+The floor is baseline rows 3, 4, 7 and 9 (Game Accessibility Guidelines, Basic tier); beyond it take the guidelines'
 Intermediate list per game.
 
 ## 5. Test recipe
@@ -67,7 +67,7 @@ Intermediate list per game.
   pitch clamped); Vitest covers clamp, invert, yaw wrap; idle choice takes the game's seeded RNG, never `Math.random`.
 - Hooks: `window.__lookBy(dx, dy)` (deltas in mouse counts) and `render_game_to_text()` with yaw, pitch, position and
   NPC clips, so headless tests turn and walk without a pointer lock. A real lock is not verified in headless Chromium:
-  say so in `Not checked:`.
+  the Playtester's blind pass uses the drag fallback and says so in `Not checked:`.
 - Playtester checks: the table in the baseline, plus first reward and first goal inside the GDD's seconds.
 
 ## Sources (read 2026-11-12)
