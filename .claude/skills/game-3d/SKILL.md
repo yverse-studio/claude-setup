@@ -147,9 +147,10 @@ covers them. Stories are data: threads turn yskills' messages into `story/` file
   QA after every slice, not at the end (idea from OpusGameLabs/game-creator, written in our words).
   `play` and `shots` build first when they have no url; a Preview or live url is shown as deployed.
 - **Perf budget per scene** (`tests/perf`, reads `renderer.info` after one frame): under 300
-  draw calls (mobile about 150, a guess), under 500 000 triangles, textures at most 2048 px, assets under 150 MB in total.
+  draw calls (mobile about 150, a guess), under 500 000 triangles, textures at most 2048 px; asset budgets are split by target (next bullet).
   SwiftShader cannot measure frame rate: yskills' PC runs the perf scene once per milestone and
   the number goes into PROGRESS.md.
+- **Asset budgets by target** (CrazyGames technical docs, via the 5a table; the Steam number is our own guess): **browser first load about 20 MB** (CrazyGames allows 50 MB, 20 MB for the mobile homepage; a free demo is the same build), stream chapter 2 and splats after first play; total browser build at most 250 MB and 1500 files. **Steam build**: assets under 150 MB are a comfortable default, Electron adds about 250 MB on top and Steam uploads only changed chunks. Splats: about 500k per scene, SPZ only (third-party figure, unchecked). Add the 20 MB first-load check to `tests/perf` for the web build (not there yet).
 - **Per-asset defaults** for low-poly web games (low-poly-and-sources, 2026-10-24; common practice, no primary source): mobile character 3 to 10k triangles, mobile prop 300 to 1,500, PC character 20 to 80k, Polycount's mobile figure about 1 to 3k with 512 px maps; shaders and overdraw hurt mobile more than triangles. Our proposed defaults: character 3 to 8k, prop 100 to 1,500, scene under 150k visible triangles on web, 1 material per object, 512 to 1024 px textures. The scene numbers above (500k) are the test ceiling; `starter/figures.md` (full figure at most 100k) and `refs/.../profiling-and-budgets.md` (30 to 80k / 5 to 20k) are other contexts.
 - **LOD** is usually not worth it for stylised web games under about 5k triangles per object; instancing and culling matter more [U]. Godot has visibility-range LOD (low-poly-and-sources, 2026-10-24).
 - **Realistic figures and crowds** (SFW game base, LOD chain 10k/5k/2k/700, three-tier crowds with instanced skinning): [`refs/crowds-and-lod.md`](refs/crowds-and-lod.md) (vacation-game research, 2026-11-10).
@@ -168,10 +169,27 @@ covers them. Stories are data: threads turn yskills' messages into `story/` file
 | Steam Direct fee per game | yskills | 100 $, back after 1 000 $ revenue |
 | Store page: capsules 920×430, 462×174, 1232×706, 748×896, 600×900; 5 screenshots 1920×1080; trailer; texts de + en | threads make, yskills uploads | 1 to 5 days review |
 | Content survey (gives the IARC label; without it the game is hidden in Germany) | yskills, from the thread's draft answers | free |
-| Coming-soon page live 2 weeks; release at the earliest 30 days after the fee | calendar | |
+| Coming-soon page live 2 weeks; release at the earliest 21 days after the fee (Valve onboarding doc, read 2026-11-10; an older note here said 30) | calendar | |
 | Builds: Windows + Linux depots (Linux covers Steam Deck), `electron-builder --dir`, uploaded by `steamcmd` through the `steam-deploy` action (`templates/steam-deploy.yml`) with a builder account whose Steam Guard config is a repo secret | yskills makes the builder account once; threads do the rest | free |
 | Build review, release click | yskills | 1 to 5 days |
 | Money: Steam keeps 30 %, pays monthly by bank; Gewerbe income, Kleinunternehmer is fine | yskills | |
+
+### Wishlists, demo, Next Fest
+
+Steam is a bet on an audience that already exists (`docs/research/2026-10-18-game-money.md`), so build it before launch:
+
+- **Store page early**: the coming-soon page goes live at least 2 weeks before release, in practice months, and starts collecting wishlists.
+- **Demo = the free chapters** of the browser build, uploaded as its own Steam app; the demo and full game can share one Cloud save through the Shared cloud APP ID field.
+- **Wishlist target before Next Fest**: set a number first and join the fest only when the page is near it. Third-party benchmarks (HowToMarketAGame, Feb 2026, search summary only): wishlists before the fest track wishlists gained (r 0.825), median 806 wishlists in the fest, demo conversion median 16 % (12 to 20 %). No data for narrative games.
+- **Track**: chapter-1 finish, chapter-2 start, wishlist click (`operator/roles/analytics.md`).
+- **Price**: a 1 to 2 hour game is about 5 to 15 USD in 2026 guides (search summaries); start at 4.99 to 6.99 EUR, 9.99 only with 2+ hours, because Steam refunds under 2 hours played. Browser purchase at the same price; see `docs/research/2026-11-10-paid-games-and-service.md`.
+
+### Saves and Steam Cloud
+
+- Write one JSON save file (versioned, `{version, data}`) to a fixed folder; never rely on Chromium `localStorage` in the Electron build (it lives in the profile folder Steam does not sync). The web build keeps `localStorage`/IndexedDB behind the same `save.ts` interface.
+- Auto-Cloud (Steamworks, Cloud settings; no code): one Root path per file group, OS restriction left on **Cross-Platform** (Valve's recommendation: a file locked to one OS never syncs to another later); add Root Overrides for Windows (e.g. `WinAppDataLocal`) and Linux (e.g. `LinuxXdgDataHome`) pointing at the same save folder. Keep machine-specific settings (video quality) out of cloud files. Steam drops a `steam_autocloud.vdf` next to the saves; ignore it.
+- Test Windows to Steam Deck sync on a real client before release (`steamworks.js` also has its own overlay issues on Linux).
+- Source: partner.steamgames.com/doc/features/cloud, read 2026-11-10.
 
 Only yskills' hands: account, tax interview, fee, first upload, release click. Everything else
 is a thread's job; when yskills must act, give the exact Steamworks page and the field names.
