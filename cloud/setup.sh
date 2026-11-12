@@ -1085,6 +1085,15 @@ export function simpleCommands(text, depth = 0) {
 const GUARDS = 'rule-guard|team-guard|context-guard|compact-guard|attempt-guard|gate-rounds|task-ledger' // every installed guard file (team-guard.mjs GUARD_FILES)
 const LAUNCHERS = /^(node|nodejs|bun|deno|tsx|ts-node|npx|npm|pnpm|yarn|env|stdbuf|setsid|nice|ionice|timeout|xargs|nohup|time|script|python3?|sh|bash)$/
 const GUARD_NAME = /(?:context|compact|attempt|team|rule)[-_]?guar|claude-setup\/\S*[?*{]/
+// The two hand uses of a guard: `node --check <guard>` (the flag before the file, nothing after it) and `node rule-guard.mjs read <url>` (the verb right after the script).
+const guardHandUse = (s) => {
+  if (base(s.a0) !== 'node') return false
+  const i = s.args.findIndex((a) => GUARD_NAME.test(a))
+  if (i < 0) return false
+  const guard = base(s.args[i])
+  if (s.args.length === 2 && i === 1 && /^(--check|-c)$/.test(s.args[0]) && /^[\w.-]+-guard\.mjs$|^gate-rounds\.mjs$/.test(guard)) return true
+  return i === 0 && guard === 'rule-guard.mjs' && s.args[1] === 'read' && s.args.length >= 3
+}
 const GUARD_FILE = new RegExp(`\\.claude[\\\\/]claude-setup[\\\\/](?:${GUARDS})\\.mjs$`)
 const CLI_VERBS = ['status', 'check', 'init', 'direct', 'card', 'picture', 'waive', 'merge', 'post']
 const MERGE_DOOR = /pulls\/[^\s/]*\/merge|mergePullRequest|enablePullRequestAutoMerge/
@@ -1112,11 +1121,11 @@ function bashProblem(cmd, dir, ctx) {
     if (s.redirs.some((r) => !/\s/.test(r) && (named(r) || GUARD_FILE.test(r)))) return msg
     // An inline script (node -e, python -c) that holds the ledger folder or an installed guard path writes it as well as a redirect does.
     const inline = /^(node|nodejs|python3?|bun|deno|ruby|perl)$/.test(base(s.a0)) && s.args.some((a) => /^-(?:[a-zA-Z]*[ecp]|-eval|-print)$/.test(a))
-    if (inline && s.args.some((a) => (dir && a.includes(dir.replace(/\/+$/, '') + '/')) || /(?:project-files|\.claude\/claude-setup)\/gate\//.test(a) || GUARD_FILE.test(a) || new RegExp(`\\.claude[\\\\/]claude-setup[\\\\/](?:${GUARDS})\\.mjs`).test(a))) return msg
+    if (inline && s.args.some((a) => (dir && a.includes(dir.replace(/\/+$/, '') + '/')) || /(?:project-files|\.claude\/claude-setup)\/gate\//.test(a) || /\.claude\/projects\/\S*\.jsonl/.test(a) || GUARD_FILE.test(a) || new RegExp(`\\.claude[\\\\/]claude-setup[\\\\/](?:${GUARDS})\\.mjs`).test(a))) return msg
     // Second layer (the verdict itself is read from the transcript, not from a payload): an installed guard is run by its hook only. The name is
     // matched unanchored in any argument of a launcher, so a glob or a wrapper (npx, setsid, stdbuf) does not hide it; `node --check` and
     // `rule-guard.mjs read <url>` are the hand uses.
-    if (LAUNCHERS.test(base(s.a0)) && s.args.some((a) => GUARD_NAME.test(a)) && !s.args.some((a) => /^(--check|-c)$/.test(a)) && !(s.args.some((a) => /rule-guard\.mjs$/.test(a)) && s.args.includes('read'))) return 'gate ledger: an installed guard is run by its hook only, never by hand (it takes any payload); the hand uses are "node --check <guard>" and "rule-guard.mjs read <url>".'
+    if (LAUNCHERS.test(base(s.a0)) && s.args.some((a) => GUARD_NAME.test(a)) && !guardHandUse(s)) return 'gate ledger: an installed guard is run by its hook only, never by hand (it takes any payload); the hand uses are "node --check <guard>" and "rule-guard.mjs read <url>".'
     const script = s.a0 === 'node' ? s.args.find((a) => base(a) === 'gate-rounds.mjs') ?? s.args.find((a) => !a.startsWith('-')) : null
     if (script && base(script) === 'gate-rounds.mjs') {
       const at = s.args.indexOf(script)
@@ -1149,6 +1158,7 @@ const assetOf = (input) => {
 export function gateStep(tool, input = {}, ctx = {}) {
   const dir = ctx.dir ?? ledgerDir()
   const file = String(input.file_path ?? '')
+  if (/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) && /\.claude\/projects\/.*\.jsonl$/.test(file.replace(/\\/g, '/'))) return 'gate ledger: a session transcript is written by the harness only, never by hand.'
   if (/^(Write|Edit)$/.test(tool) && (file.includes('project-files/gate/') || (file.startsWith(`${dir}/`) && file.endsWith('.json')))) return 'gate ledger: the round counter is written only by gate-rounds.mjs (gate.md, Rounds), never by hand.'
   if (/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) && GUARD_FILE.test(file)) return 'gate ledger: the installed guards are changed only through claude-setup (a PR), never in place.'
   if (tool === 'Bash' || tool === 'PowerShell') return bashProblem(String(input.command ?? ''), dir, ctx)

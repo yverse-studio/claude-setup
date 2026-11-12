@@ -275,10 +275,14 @@ test('gate round 1 and 2, second layer: an installed guard is run by its hook on
       'node ~/.claude/claude-setup/compact-guard.mjs', 'node ~/.claude/claude-setup/rule-guard.mjs pre < x.json', 'bash -c "node ~/.claude/claude-setup/context-guard.mjs < f.json"',
       'npx node ~/.claude/claude-setup/context-guard.mjs < f.json', 'npm exec -- node ~/.claude/claude-setup/context-guard.mjs < f.json', 'stdbuf -o0 node ~/.claude/claude-setup/context-guard.mjs < f.json',
       'setsid node ~/.claude/claude-setup/context-guard.mjs < f.json', 'node ~/.claude/claude-setup/context-guar?.mjs < f.json', 'node ~/.claude/claude-setup/context-guard.{mjs,x} < f.json',
-      'node --import file:///root/.claude/claude-setup/context-guard.mjs?x -e 1', 'node ~/.claude/claude-setup/*-guard.mjs < f.json',
+      'node --import file:///root/.claude/claude-setup/context-guard.mjs?x -e 1', 'node ~/.claude/claude-setup/context-guard.mjs --check < f.json', 'node ~/.claude/claude-setup/context-guard.mjs -c < f.json', 'node ~/.claude/claude-setup/context-guard.mjs rule-guard.mjs read', 'npx node --check ~/.claude/claude-setup/context-guard.mjs', 'node --check a.mjs ~/.claude/claude-setup/context-guard.mjs', `node -e "require('fs').appendFileSync('/root/.claude/projects/-home-user/s.jsonl','x')"`, 'node ~/.claude/claude-setup/*-guard.mjs < f.json',
     ]) assert.equal(t.bash(c).status, 2, c)
     for (const c of ['node ~/.claude/claude-setup/rule-guard.mjs read https://docs.claude.com/x', 'cat ~/.claude/claude-setup/context-guard.mjs | head -3', 'node --check global/context-guard.mjs', 'node --check ~/.claude/claude-setup/rule-guard.mjs', 'git commit -m "fix: context-guard door"', 'node --test scripts/guards.test.mjs']) assert.equal(t.bash(c).status, 0, c)
     assert.equal(t.bash('echo x >> ~/.claude/projects/-home-user/abc.jsonl').status, 2, 'the session transcript is written by the harness only')
+    for (const tool of ['Write', 'Edit']) {
+      const r = spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'pre'], { input: JSON.stringify({ cwd: t.dir, session_id: 's', tool_name: tool, tool_input: { file_path: '/root/.claude/projects/-home-user/abc.jsonl', content: 'x', old_string: 'a', new_string: 'b' } }), encoding: 'utf8', env: t.env })
+      assert.equal(r.status, 2, `${tool} on a transcript`)
+    }
   } finally { t.done() }
 })
 
