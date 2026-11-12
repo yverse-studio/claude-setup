@@ -6,11 +6,11 @@ in `install.mjs` works as on yskills' own user (`%USERPROFILE%` of that user); t
 
 ## Folders on this user (2026-10-29)
 
-- `repos/<repo>` (under `STUDIO_ROOT`): one git clone per repo, nothing else (no zips, tars, loose notes, secrets files).
-  Extra branches of a repo live as worktrees in `_claude/_worktrees/<repo>/<name>`, never in `%TEMP%`.
+- `repos/<repo>` (under `STUDIO_ROOT`): one git clone per repo.
+  Extra branches of a repo live as worktrees in `_claude/_worktrees/<repo>/<name>` (rules: `docs/laptop-folders.md`).
 - `lib/` (assets by type) and `projects/games/companyxy/`: all art sources; downloads land in `inbox/`. The game play copy stays
   in `projects/games/companyxy/build/` (not a repo).
-- `Private18` (in the Documents folder, not under `STUDIO_ROOT`): 18+ content and its backups, never in any git remote (`docs/game-pipeline.md`).
+- `Private18` (in the Documents folder, outside `STUDIO_ROOT`): 18+ content and its backups; the git rule is in `docs/game-pipeline.md`.
 - `%USERPROFILE%\tools`: SDKs installed by hand (Ren'Py). Scratch work: `%TEMP%\opencode`, deleted when done.
 
 ## What is different
@@ -28,7 +28,7 @@ in `install.mjs` works as on yskills' own user (`%USERPROFILE%` of that user); t
 | GitHub | `gh` logged in as `yskills-claude`; commits are authored as `Claude <339700673+yskills-claude@users.noreply.github.com>` | Claude's own account; Write on claude-setup (tested 2026-10-08), the other repos once yskills adds it |
 | Claude in Chrome | extension installed in this user's Chrome profile | works (2026-10-26): `list_connected_browsers` shows it while yskills' Chrome is open |
 | Roblox Studio | not installed | installs per user and needs a Roblox login Claude does not have yet |
-| Environment variables | always set for the user, never machine-wide; no admin | standard user |
+| Environment variables | set per user | standard user |
 
 A shell started before a PATH change does not see it, and Remote Control sessions inherit the
 PATH of the process that hosts them. After installs, restart that host (not just the session).
@@ -41,10 +41,9 @@ yskills (2026-10-26): a laptop thread read claude-setup from an old branch and m
 
 yskills (2026-10-26): anything that needs a login (TikTok, Google, a dashboard) runs in his
 already-open, logged-in Chrome on this user through Claude in Chrome (`list_connected_browsers`,
-then a tab of your own). Never a fresh Playwright or headless profile that asks him to log in
-again, and never Playwright on Chrome's main profile (Chrome 136+ blocks remote debugging there;
-the run just hangs). Chrome closed: ask him to open it, then go on. Headless Playwright stays for
-pages without a login.
+then a tab of your own), so he logs in once. Chrome 136+ blocks remote debugging on its main
+profile, so Playwright there just hangs. Chrome closed: ask him to open it, then go on. Headless
+Playwright serves public pages.
 
 ## What still needs yskills' hands
 
@@ -54,14 +53,7 @@ plain official URL as text he opens on his own device, numbered steps with the e
 and minutes, and a screenshot in the thread when the state matters. It never opens the page here
 and calls that showing him.
 
-**Every ask carries its link** (yskills 2026-11-10: "everything you want me to do or show with a
-link"). Whenever a reply needs something from yskills (an answer, a card, an Allow, folder access,
-a file, a review) or points him at a place, it gives the exact place as a clickable link: a thread
-as `[title](#cmsg_…)`, a PR or page as its full URL, a setting as
-`[Project settings](#project-settings/<section>)` (`resources` for repos and folders), GitHub
-access as `https://claude.ai/connect-github`. Never "in thread X" or "see the PR" without the
-link. Threads: rule-guard blocks such a reply; the project chat has no hooks, so the coordinator
-card carries the rule.
+**Link formats for every ask** (rule: `CLAUDE.md`, How to work): a thread as `[title](#cmsg_…)`, a PR or page as its full URL, a setting as `[Project settings](#project-settings/<section>)` (`resources` for repos and folders), GitHub access as `https://claude.ai/connect-github`. The coordinator card carries the rule for the project chat, which lacks hooks.
 
 - **Remote Control host restart:** the running `claude remote-control` still has the PATH from
   before the installs. In a fresh terminal on this user: `cd %STUDIO_ROOT%\repos`,
@@ -106,7 +98,7 @@ yskills (2026-10-25): a POV render failed three times (GPU out of memory, a 1h+ 
 - One retry with a changed setting is fine; the same job failing a third time goes to yskills as one line plus the cause, and the rest keeps running. [advisory]
 - The coordinator checks `remote_control_status` on every wake and when a laptop job is running; a device that goes offline mid-job gets one line in the project chat ("laptop offline since <time> during <job>"), with the likely cause (sleep, crash, GPU) if the log shows one. [advisory]
 
-**Overnight and long runs:** a thread works until the goal is reached or a handoff trigger fires, whichever comes first, and does not stop to ask on the way (ask-first items excepted). While yskills sleeps it writes one short progress line per milestone to its checklist (what finished, what runs now, what failed) so the morning read is the checklist, not a scroll. It hands off only at a trigger (`docs/WORKFLOW.md`, Handoff triggers), never at a token count; "run on" never means past a trigger. [advisory]
+**Overnight and long runs:** while yskills sleeps a thread writes one short progress line per milestone to its checklist (what finished, what runs now, what failed), so the morning read is the checklist. Handoff triggers: `docs/WORKFLOW.md`.
 
 **Hands step, once (yskills, admin PowerShell on the laptop):** Windows must not sleep on AC. The script warns at every job start until this is done.
 

@@ -2,7 +2,7 @@
 
 What other 18+ and scene games do with sound, as data, and the template our games follow. Teardown 2026-11-02 of four
 local games; their audio files were **not** extracted or played, only names, counts and manifests read (what that
-leaves open: the list at the bottom). Our practice for the scene player stays in
+leaves open: the list at the bottom). Our practice for the scene player lives in
 [`08-scene-clips-and-sound.md`](../.claude/skills/storyteller/references/08-scene-clips-and-sound.md#sound-for-scene-games-2026-10-26); this file is the cross-game pattern plus the
 event table to fill per game. Sounds from commercial games are placeholders at most (see Licences), never in a release build.
 
