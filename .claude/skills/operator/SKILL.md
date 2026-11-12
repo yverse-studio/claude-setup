@@ -82,7 +82,9 @@ effort** medium, and `templates/project-instructions.md` pasted into Project ins
   (multi-select when several answers fit) plus the fixed text card (`Card: <question>`, then one line
   per option `A label: consequence`, the recommended one first, starred, with its reason); where
   `request_decision` exists, `rule-guard` blocks a `Card:` text reply. The card's thread goes on with
-  the recommendation; the tap comes back as a wake (or relayed by the coordinator), and a tap against
+  the recommendation; a card that waives a gate (`gate-rounds.mjs waive`) puts the option that frees
+  the gate FIRST whatever the recommendation, because the hook reads only a tap on option 1 (`gate.md`,
+  Rounds); the tap comes back as a wake (or relayed by the coordinator), and a tap against
   the recommendation means change course. Only the ask-first items wait for the tap. Visual choices
   (2026-10-18) are normal cards with screenshots from a Designer thread, saved in
   `/mnt/project-files/<project>/votes/` and posted with the card (`designer.md`, Vote cards); never an
