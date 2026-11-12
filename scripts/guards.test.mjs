@@ -723,6 +723,10 @@ test('team guard: a thread start runs its role on the tier its Roster row names'
   assert.equal(wrongModel(brief('Planner', 'M'), 'opus', teams), null)
   assert.equal(wrongModel(brief('Planner', 'M'), 'fable', teams), null, 'the row names Fable')
   assert.ok(wrongModel(brief('Programmer', 'M'), 'opus', teams), 'an Opus checkpoint subagent is no Opus thread')
+  // gate.md Rounds 2: the Fable gate director runs as a Designer thread (11-12: that start was refused for lack of a row).
+  assert.equal(wrongModel(brief('Designer', 'S'), 'fable', teams), null, 'the Designer row names Fable for the gate director')
+  assert.ok(wrongModel(brief('Designer', 'S'), 'sonnet', teams), 'a Designer is never Sonnet')
+  assert.match(teams, /\| Designer .*Fable: new product art direction, gate director/, 'the Designer row names the gate director')
   // yskills 2026-11-03: gates always Opus, at every size.
   for (const size of ['S', 'M', 'L']) {
     assert.equal(wrongModel(brief('Tester', size), 'opus', teams), null, `Tester ${size} on Opus`)
