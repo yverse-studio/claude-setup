@@ -1251,12 +1251,14 @@ export function canaryMissing(tool, input, line, transcript) {
 // The thread's start receipt (yskills 2026-11-12: "every thread says its role loaded, with its skills, enforced by a hook, not just text").
 // The line is built here from what the transcript really shows: the brief's Role/Kit/Size, the Skill tool calls so far, and a hash of
 // the rule files (the same one as the coordinator canary). The model only copies it; a first reply without it is blocked once with the
-// exact line. It proves the role card was injected and which skills were called, not that the model heeds them.
+// exact line. It proves the role card was injected and which skills were called, not that the model heeds them. Only a post_message
+// is checked: a thread whose first visible act is a decision card shows no receipt there (accepted, documented in docs/MAP.md).
 export function threadReceipt(role, brief, transcript, rules) {
   const tag = (k) => brief.replace(/[*_`]/g, '').match(new RegExp(`${k}:[ \\t]*([A-Za-z0-9-]+)`))?.[1] ?? '?'
   const skills = [...new Set(toolCalls(transcript).filter((c) => c.name === 'Skill').map((c) => String(c.input.skill ?? '')).filter(Boolean))]
   const hash = rules.includes(MARK) ? createHash('sha256').update(rules.replace(/\r/g, '')).digest('hex').slice(0, 7) : 'none'
-  return `Thread · ${role} · ${tag('Kit')} · ${tag('Size')} · skills: ${skills.join(', ') || 'none'} · rules #${hash}`
+  const item = brief.match(/\bItem:[ \t]*(M\d+)/)?.[1] ?? '?' // the coordinator's Masterplan id (roles/project-manager.md, Masterplan)
+  return `Thread · ${role} · ${tag('Kit')} · ${tag('Size')} · item ${item} · skills: ${skills.join(', ') || 'none'} · rules #${hash}`
 }
 
 export function receiptMissing(tool, input, line, transcript) {

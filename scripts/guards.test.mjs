@@ -1108,7 +1108,9 @@ test('rule-guard: a thread\'s first reply carries the hook-built start receipt',
   const rules = readFileSync(join(root, 'CLAUDE.md'), 'utf8')
   const t0 = brief
   const line0 = threadReceipt('Programmer', 'Role: Programmer · Kit: setup · Size: S', t0, rules)
-  assert.match(line0, /^Thread · Programmer · setup · S · skills: none · rules #[0-9a-f]{7}$/)
+  assert.match(line0, /^Thread · Programmer · setup · S · item \? · skills: none · rules #[0-9a-f]{7}$/, 'no Item line: item ?')
+  assert.match(threadReceipt('Planner', 'Role: Planner · Kit: setup · Size: M\nItem: M12', t0, rules), /^Thread · Planner · setup · M · item M12 · skills:/, 'the real brief shape and its Masterplan item')
+  assert.match(threadReceipt('Programmer', 'Role: · Kit: · Size:', t0, rules), /· \? · \? · item \?/, 'template text reads as ?')
   const t1 = [t0, use('s1', 'Skill', { skill: 'ponytail' }), res('s1', 'ok')].join('\n')
   const line1 = threadReceipt('Programmer', 'Role: Programmer · Kit: setup · Size: S', t1, rules)
   assert.match(line1, /skills: ponytail /, 'a Skill call shows up in the receipt')
