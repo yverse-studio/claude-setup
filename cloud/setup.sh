@@ -2329,12 +2329,15 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         const { tool_name: tool = '', tool_input: input = {}, prompt = '', cwd = process.cwd(), session_id: session, transcript_path: transcriptPath, agent_id: agentId } = JSON.parse(raw || '{}')
         if (mode === 'prompt') {
           const briefOnce = join(tmpdir(), `claude-setup-brief-${String(session).replace(/\W/g, '')}`)
-          const spawned = /reason=\\?"spawn/.test(prompt)
-          const lookup = session && !spawned && !existsSync(briefOnce) && transcriptPath && existsSync(transcriptPath)
+          // A thread that already answered is mid-work: a hand-back or a quoted spawn wake is no start, so it is never checked or
+          // locked (Reviewer thread 2026-11-12: the lookup found only the bare spawn wake and locked a working thread).
+          const midWork = transcriptPath && existsSync(transcriptPath) && /reason=\\?"spawn[\s\S]*"type":"assistant"/.test(read(transcriptPath)) // answered after its spawn
+          const spawned = !midWork && /reason=\\?"spawn/.test(prompt)
+          const lookup = session && !midWork && !spawned && !existsSync(briefOnce) && transcriptPath && existsSync(transcriptPath)
           const brief = lookup ? spawnPrompt(prompt, read(transcriptPath)) : prompt
           if (session && (spawned || (lookup && brief !== prompt))) writeFileSync(briefOnce, '')
           const model = sessionModel(transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : '') ?? (read(join(tmpdir(), `claude-setup-model-${String(session).replace(/[^A-Za-z0-9]/g, '')}`)).trim() || null)
-          const checkNow = await briefCheck(brief, cwd, model)
+          const checkNow = midWork ? '' : await briefCheck(brief, cwd, model)
           if (spawned || (lookup && brief !== prompt)) updateLock(session, checkNow)
           else if (existsSync(lockFile(session)) && /\bRole:/.test(prompt)) await relayRebrief(session, prompt, cwd, model)
           const context = [checkNow, spawned || (lookup && brief !== prompt) ? await gateBriefContext(brief, model) : '', spawned || (lookup && brief !== prompt) ? await guardLine() : '', modelOnce(brief, transcriptPath, session), await roleContext(brief, cwd, session), promptContext(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')

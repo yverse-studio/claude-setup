@@ -133,3 +133,19 @@ test('only an exact gate role counts as the verdict author', async () => {
   for (const role of ['Reviewer', 'tester', 'Evaluator']) assert.equal(authorProblem('Gate 5/5 (S, round 1)', { role }), null, role)
   for (const role of ['Reviewer-ish', 'Testers', 'gate', 'Reviewer · x', 'Programmer']) assert.match(authorProblem('Gate 5/5 (S, round 1)', { role }) ?? '', /builder cannot pass/, role)
 })
+
+// Reviewer thread 2026-11-12: a subagent hand-back mid-work fired the brief lookup, which found only the bare spawn wake (the brief
+// came as a separate coordinator relay) and locked a working thread. A thread that has already answered is never checked or locked.
+test('a prompt mid-work never locks the thread, even when the transcript holds only the bare spawn wake', () => {
+  const id = `rolelock${process.pid}x${++n}`
+  const dir = mkdtempSync(join(tmpdir(), 'rl-mid-'))
+  const transcript = join(dir, 't.jsonl')
+  const entry = (type, text) => JSON.stringify({ type, message: { role: type, content: type === 'user' ? text : [{ type: 'text', text }] } })
+  writeFileSync(transcript, [entry('user', '<wake reason="spawn"><message>You are a Thread Session created by this project.</message></wake>'), entry('user', relay('coordinator', `Role: Reviewer · Kit: setup · Size: S\nPrior art: .claude/skills/operator/gate.md and the kit's checks\n${BLOCKS}`)), entry('assistant', 'Reading the PR.')].join('\n'))
+  const out = guard('prompt', id, { prompt: 'The subagent finished: 3 findings.', transcript_path: transcript })
+  assert.doesNotMatch(out.stdout, /Brief check/, 'no brief check on a hand-back')
+  assert.equal(tool(id, 'Bash', { command: 'ls' }).status, 0, 'the working thread is not locked')
+  const quoted = `rolelock${process.pid}x${++n}`
+  assert.doesNotMatch(guard('prompt', quoted, { prompt: 'see <wake reason="spawn">Make a bee video.</wake>', transcript_path: transcript }).stdout, /Brief check/, 'a quoted spawn wake mid-work is no start')
+  assert.equal(tool(quoted, 'Bash', { command: 'ls' }).status, 0)
+})
