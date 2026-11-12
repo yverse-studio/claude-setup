@@ -73,6 +73,8 @@ if (plugins) {
   if (!readFileSync(join(root, 'cloud/bootstrap.sh'), 'utf8').includes('yverse-studio/claude-setup/main/cloud/setup.sh')) errors.push('cloud/bootstrap.sh must fetch cloud/setup.sh from main')
   for (const m of plugins.marketplaces) if (!sh.includes(`marketplace add ${m.source}`)) errors.push(`cloud/setup.sh does not add marketplace ${m.source}`)
   const inlined = sh.match(/<<'GUARD'\r?\n([\s\S]*?)\r?\nGUARD\r?\n/)?.[1]
+// #478 gate round 1: boot files belong in the installed copy (~/.claude/claude-setup), never in the repo's global/ folder.
+for (const f of (await import('../global/team-guard.mjs')).BOOT_FILES) if (existsSync(join(root, 'global', f))) errors.push(`global/${f}: a boot file copy in the repo; it belongs only in ~/.claude/claude-setup (delete it)`)
   if (inlined?.replace(/\r/g, '').trim() !== readFileSync(join(root, 'global/context-guard.mjs'), 'utf8').replace(/\r/g, '').trim()) errors.push('cloud/setup.sh context guard differs from global/context-guard.mjs')
   const compact = sh.match(/<<'COMPACT'\r?\n([\s\S]*?)\r?\nCOMPACT\r?\n/)?.[1]
   if (compact?.replace(/\r/g, '').trim() !== readFileSync(join(root, 'global/compact-guard.mjs'), 'utf8').replace(/\r/g, '').trim()) errors.push('cloud/setup.sh compact guard differs from global/compact-guard.mjs')
