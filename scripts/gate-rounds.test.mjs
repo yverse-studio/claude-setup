@@ -7,7 +7,7 @@ import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
-import { cli, gateBrief, namesLook, pictureOk, mergeProblem, parseHeadline, readLedger, recordRound, roundProblem, issueGrant, GRANTED, reviewerProof, authorProblem } from '../global/gate-rounds.mjs'
+import { cli, gateBrief, namesLook, pictureOk, mergeProblem, parseHeadline, readLedger, recordRound, roundProblem, issueGrant, GRANTED, reviewerProof, authorProblem, GATE_ROLE } from '../global/gate-rounds.mjs'
 
 const root = join(fileURLToPath(import.meta.url), '..', '..')
 const PR = { owner: 'yverse-studio', repo: 'vacation-game', issue_number: 13 }
@@ -525,5 +525,6 @@ test('every gate role the hooks know may post a verdict: gate-rounds uses the sa
   const { GATE_ROLES } = await import('../global/rule-guard.mjs')
   for (const r of ['Tester', 'Reviewer', 'Evaluator', 'Critic', 'Hook Checker', 'Playtester', 'Story Editor']) assert.equal(authorProblem('Gate 5/5 (S, round 1)', { role: r }), null, r)
   for (const r of ['Programmer', 'Designer', 'Planner', 'Critic Intern', 'Tester2']) assert.notEqual(authorProblem('Gate 5/5 (S, round 1)', { role: r }), null, r)
-  assert.ok(GATE_ROLES.test('Critic'))
+  const names = (re) => re.source.replace(/^\^\(|\)\$$/g, '').toLowerCase().split('|').sort()
+  assert.deepEqual(names(GATE_ROLE), names(GATE_ROLES), 'a role added to one list only turns this red')
 })
