@@ -261,3 +261,41 @@ test('the third refused relay asks for one card, a fourth complete relay lifts',
   appendFileSync(c.transcript, c.line({ type: 'attachment', attachment: { type: 'queued_command', prompt: last, origin: PROJECTS } }))
   assert.equal(c.bash(), 0, 'a complete relay still lifts it')
 })
+
+// #522 / #523: a gate role is stamped whether the prompt hook saw the brief or not, wherever the Role line sits, and never over an existing stamp.
+test('the role stamp comes from a spawn brief however it is wrapped, from the transcript, and from a re-brief of an unlocked thread', () => {
+  const stampOf = (id) => (existsSync(join(tmpdir(), `claude-setup-role-${id}`)) ? readFileSync(join(tmpdir(), `claude-setup-role-${id}`), 'utf8') : null)
+  const rest = `Prior art: .claude/skills/operator/gate.md\n${BLOCKS}`
+  // the Role line right behind the note tag (#523: "as wrapped in the spawn wake")
+  const inline = `rolelock${process.pid}x${++n}`
+  guard('prompt', inline, { prompt: `<wake reason="spawn"><relay from="coordinator"><note>Role: Tester · Kit: game · Size: M\n${rest}</note></relay></wake>` })
+  assert.equal(stampOf(inline), 'Tester', 'a Role line behind a tag is read')
+  // the prompt hook saw only the status wake; the spawn (behind harness reminders) is in the transcript
+  const transcriptOnly = `rolelock${process.pid}x${++n}`
+  const reminder = '<system-reminder>\nCodebase and user instructions are shown below.\n</system-reminder><system-reminder>\n# Memory\n</system-reminder>'
+  const entry = (text) => JSON.stringify({ type: 'user', message: { content: [{ type: 'text', text }] } })
+  const dir = mkdtempSync(join(tmpdir(), 'rl-stamp-'))
+  const transcript = join(dir, 't.jsonl')
+  writeFileSync(transcript, `${entry(`${reminder}<session-context nonce="x">ctx</session-context nonce="x">\n${spawn(`Role: Reviewer · Kit: setup · Size: S\n${rest}`)}`)}\n`)
+  assert.equal(tool(transcriptOnly, 'Bash', { command: 'ls', transcript_path: transcript }).status, 0)
+  assert.equal(stampOf(transcriptOnly), null, 'no transcript given to the hook, nothing to stamp from')
+  guard('pre', transcriptOnly, { transcript_path: transcript, tool_name: 'Bash', tool_input: { command: 'ls' } })
+  assert.equal(stampOf(transcriptOnly), 'Reviewer', 'the pre hook stamps from the spawn in the transcript')
+  // an unlocked thread without a stamp takes the role of a coordinator re-brief; a stamp is kept
+  const rebrief = `rolelock${process.pid}x${++n}`
+  const t2 = join(mkdtempSync(join(tmpdir(), 'rl-stamp-')), 't.jsonl')
+  writeFileSync(t2, `${entry(spawn('You are a thread session.'))}\n`)
+  sessionTranscripts.set(rebrief, t2)
+  appendFileSync(t2, `${JSON.stringify({ type: 'user', isMeta: true, origin: PROJECTS, promptSource: 'system', message: { content: relay('coordinator', `Role: Tester · Kit: game · Size: M\n${rest}`) } })}\n`)
+  guard('pre', rebrief, { transcript_path: t2, tool_name: 'Bash', tool_input: { command: 'ls' } })
+  assert.equal(stampOf(rebrief), 'Tester', 'a re-brief with a gate role stamps a thread that holds no stamp and no lock')
+  const typed = `rolelock${process.pid}x${++n}`
+  const t3 = join(mkdtempSync(join(tmpdir(), 'rl-stamp-')), 't.jsonl')
+  writeFileSync(t3, `${entry(spawn('You are a thread session.'))}\n${JSON.stringify({ type: 'user', message: { content: relay('coordinator', `Role: Tester · Kit: game · Size: M\n${rest}`) } })}\n`)
+  guard('pre', typed, { transcript_path: t3, tool_name: 'Bash', tool_input: { command: 'ls' } })
+  assert.equal(stampOf(typed), null, 'a relay no projects row delivered stamps nothing')
+  const kept = `rolelock${process.pid}x${++n}`
+  writeFileSync(join(tmpdir(), `claude-setup-role-${kept}`), 'Programmer')
+  guard('pre', kept, { transcript_path: t2, tool_name: 'Bash', tool_input: { command: 'ls' } })
+  assert.equal(stampOf(kept), 'Programmer', 'a stamp is never changed')
+})
