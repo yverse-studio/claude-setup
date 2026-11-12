@@ -137,7 +137,7 @@ test('intake: Adult use or Commercial use "no", or an unclear answer, goes to qu
 
 test('intake: Adult use and Commercial use are allow-lists, only yes or ja passes', () => {
   for (const field of ['Adult use', 'Commercial use']) {
-    for (const value of ['?', 'not specified', 'keine Angabe', 'maybe', 'see website', 'permitted?', 'yes?', 'Yes ?']) {
+    for (const value of ['?', 'not specified', 'keine Angabe', 'maybe', 'see website', 'permitted?', 'yes?', 'Yes ?', 'Non-commercial only', 'CC BY-NC', 'Not permitted', 'personal use only', '-']) {
       assert.match(problems((d) => writeFileSync(join(d, 'LICENCE.md'), LICENCE.replace(`${field}: yes`, `${field}: ${value}`))), new RegExp(`"${field}: .*_quarantine`), `${field}: ${value}`)
     }
     for (const value of ['yes', 'Yes, no restrictions', 'ja']) assert.equal(problems((d) => writeFileSync(join(d, 'LICENCE.md'), LICENCE.replace(`${field}: yes`, `${field}: ${value}`))), '', `${field}: ${value}`)
@@ -162,6 +162,14 @@ test('intake: a garment or hair number must be a real clearance: numeric, 0 mm o
   assert.match(problems(report({ type: 'hair' })), /^$/)
 })
 
+test('intake: a bold licence label cannot hide its value (gate #483 r2, F1)', () => {
+  for (const [label, bad] of [['Adult use', 'no'], ['Commercial use', 'Non-commercial only']]) {
+    assert.match(problems((d) => writeFileSync(join(d, 'LICENCE.md'), LICENCE.replace(`- ${label}: yes`, `- **${label}:** ${bad}`))), new RegExp(`"${label}: ${bad}.*_quarantine`))
+    assert.match(problems((d) => writeFileSync(join(d, 'LICENCE.md'), LICENCE.replace(`- ${label}: yes`, `- **${label}**: ${bad}`))), new RegExp(`"${label}: ${bad}.*_quarantine`))
+  }
+  assert.equal(problems((d) => writeFileSync(join(d, 'LICENCE.md'), LICENCE.replace('- Adult use: yes', '- **Adult use:** yes'))), '')
+})
+
 test('intake: the type is one of garment, hair, eyes, face', () => {
   assert.match(problems(report({ type: 'shoes' })), /type "shoes" is none of/)
   assert.match(problems(report({ type: 'Garment' })), /type "Garment" is none of/)
@@ -173,6 +181,10 @@ test('intake: eyes and faces may be visual-only with a reason, garments and hair
   assert.equal(problems(visual('eyes', 'no metric for an eye in a socket, 4 views checked')), '')
   assert.match(problems(visual('eyes', 'ok')), /visual: true with a why/)
   assert.match(problems(visual('hair', 'looks fine in the render here')), /hair needs number/)
+  // an eye or face row that carries a number refuses a negative clearance too (gate #483 r2, F4)
+  const eyeNum = (n) => report({ type: 'eyes', rows: Object.fromEntries(INV.map((k) => [k, { preview: `preview/${k}.png`, number: n }])) })
+  assert.match(problems(eyeNum({ min_mm: -3, inside_pct: 0 })), /eyes number must be min_mm >= 0/)
+  assert.equal(problems(eyeNum({ min_mm: 0.4, inside_pct: 0 })), '')
 })
 
 test('intake: a preview older than the asset files fails', () => {

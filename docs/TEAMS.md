@@ -41,7 +41,7 @@ Coordinator only (a thread: Coordinator or thread, above).
    this lookup for every task without being asked and names kit and size in the brief.
 2. **Size.** The task's size (below) decides how much of the kit's team starts. It is the gate's size
    ([`gate.md`](../.claude/skills/operator/gate.md), Gate size): one size per task, picked by the
-   table, never by the author. A video or post brief's `Size:` stamp still needs a letter: one video or post is `M`, an ad batch, series or a launch video `L` (blind test 2026-10-27: a fresh coordinator guessed).
+   table, never by the author. A video or post brief's `Size:` stamp still needs a letter: one video or post is `M`, an ad batch, series or a launch video `L`.
 3. **Threads only for roles that own a long job or talk to yskills:** Planner, Designer, Game
    Designer, Animator, Programmer, Tester (size L), Producer, Editor, Social Lead, Marketer. Every other role
    is an `Agent` subagent of the thread that needs it, fresh for each job. A thread never plays a
@@ -50,7 +50,7 @@ Coordinator only (a thread: Coordinator or thread, above).
 4. **Every start names its model.** The coordinator's thread start (`mcp__hearthbot__start_thread`, older `start_thread_session`) and `create_session` pass `model` (the
    full id from the Models line); every `Agent` call passes `model` (`haiku`, `sonnet`, `opus`). A
    brief's `Model:` line is text only and sets nothing; without the parameter a thread gets the
-   project default and a subagent inherits its parent (tested 2026-10-26: an Opus thread's subagent ran on Opus; with `model: haiku` on Haiku). The `team-guard` hook (`global/team-guard.mjs`) blocks an `Agent` call or thread
+   project default and a subagent inherits its parent. The `team-guard` hook (`global/team-guard.mjs`) blocks an `Agent` call or thread
    start without `model`, and a thread start before this session read this file (and `CLAUDE.md`
    where no checkout loaded it); a worker's summary does not count (2026-10-26: one found no copy
    and the coordinator guessed every model).
@@ -62,7 +62,7 @@ Coordinator only (a thread: Coordinator or thread, above).
    what the step before handed over.
 7. **Reuse**: see the Reuse rule below.
 
-Models: best fitting model per task, cheapest that fits. Fable (claude-fable-5-2) plans a hard task (yskills 2026-11-12): hard = size L, a new product's architecture, art direction or game core loop, a schema, auth, money or data change, or still stuck after a Sonnet round and an Opus checkpoint; plus what yskills names and the project chat (coordinator), which yskills sets by hand. It writes a short plan and one checkpoint; Sonnet and Haiku build it. Never on routine work; Opus takes it if Fable is out of credits or unavailable. Opus (claude-opus-5-5), the one Opus rule: the Planner; taste (Designer, Game Designer, a pick between variants, the video Critic, the story team's taste roles); every gate at every size (yskills 2026-11-03); a full audit; senior-builder jobs judged by the image (Animator posing, IK, scene systems: `Model: opus (why)`); one checkpoint subagent per S or M task (before an approach, before "done", or when stuck twice); and the one escalation a roster row names (conflicting findings, a concept or weekly-plan pick, one diagnosis); nothing else. Sonnet (claude-sonnet-5-5) only for cheap, mechanical work: builds and fixes against a given plan, research, renders, edits; never architecture, planning or a gate (yskills 2026-11-03). Haiku (claude-haiku-5-5) for a simple reading job, a lookup, a watch, a CI poll. A thread never picks Fable itself. Effort medium unless yskills asks for more. When a newer model ships, use the newest of each tier. A model yskills names is used as named.
+Models: best fitting model per task, cheapest that fits. Fable (claude-fable-5-2) plans a hard task (yskills 2026-11-12): hard = size L, a new product's architecture, art direction or game core loop, a schema, auth, money or data change, or still stuck after a Sonnet round and an Opus checkpoint; plus what yskills names and the project chat (coordinator), which yskills sets by hand. It writes a short plan (goal, constraints, files, done-test) and one checkpoint; Sonnet and Haiku build it. Never on routine work; if Fable is out of credits or unavailable, Opus takes it without asking. Opus (claude-opus-5-5), the one Opus rule: the Planner; taste (Designer, Game Designer, a pick between variants, the video Critic, the story team's taste roles); every gate at every size (yskills 2026-11-03: every gate role and reviewer agent file); a full audit; senior-builder jobs judged by the image (Animator posing, IK, scene systems: `Model: opus (why)`); one checkpoint subagent per S or M task (before committing to an approach, or before "done", or when stuck twice); and the one escalation a roster row names (conflicting findings, a concept or weekly-plan pick, one diagnosis); nothing else. Sonnet (claude-sonnet-5-5) only for cheap, mechanical work: builds and fixes against a given plan, research, renders, edits; never architecture, planning or a gate (yskills 2026-11-03). Haiku (claude-haiku-5-5) for a simple reading job, a lookup, a watch, a CI poll. A thread never picks Fable itself. Effort medium unless yskills asks for more. When a newer model ships, use the newest of each tier. A model yskills names is used as named.
 
 Tiers as a team: Fable architect, Opus senior builder (hard judgment, judged by the image), Sonnet junior (specified work, fixes with given numbers), Haiku reading. Nobody grades their own work: a separate Opus gate gives the verdict.
 
@@ -164,7 +164,7 @@ The roles of a heading that names kits in backticks fit those kits only.
 
 | Role and playbook | Job | Called when | Runs as | Model |
 |---|---|---|---|---|
-| Character TD ([`character-td.md`](../.claude/skills/operator/roles/character-td.md)) | body, face, hair, eyes and garments on the one base; takes every download from the inbox to the library (`asset-intake`, `garment-fit`, `texture-recolour`); runs the fixed check scripts and hands numbers and sheets to the gate | a body, face, hair, garment or download job on a `game` or `story` kit, after the cast sheet and look lock | a thread `Character TD · <asset>` | Sonnet; Opus judges fit images |
+| Character TD ([`character-td.md`](../.claude/skills/operator/roles/character-td.md)) | body, face, hair, eyes, garments on the one base; every download from inbox to lib (`asset-intake`, `garment-fit`, `texture-recolour`); runs the check scripts, hands numbers and sheets to the gate | a body, face, hair, garment or download job on `game` or `story`, after cast sheet and look lock | a thread `Character TD · <asset>` | Sonnet; Opus judges fit images |
 
 ### Story (`storyteller`)
 
@@ -234,7 +234,7 @@ images, content or quality, its own or another thread's, and adds no check of it
 - Content Designer, Game Designer, Audio, Sound Designer, Analytics, Marketer: write or build their part; the gate checks it.
 - Animator: builds, runs the fixed check script, hands strip and numbers to the gate.
 - Story Writer: writes and runs the lint; the Story Editor is its gate.
-- Character TD: builds and fits, runs the fixed check scripts (`clearance.py`, `pipeline-gates.mjs`), hands numbers and sheets to the gate.
+- Character TD: fits, runs the check scripts, hands numbers and sheets to the gate.
 - Programmer: builds and runs the tests (numbers); the look is the gate's.
 - Tester, Reviewer, Security, Playtester, Legal (its pass or fail on the preview), Evaluator, Story Editor: these are the gate.
 - Film and Social teams: makers make; only the Critic and the Hook Checker grade.

@@ -13,7 +13,8 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { basename, dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const field = (text, label) => text.match(new RegExp(`^[ \\t>*-]*\\**${label}\\**:[ \\t]*(.*)$`, 'im'))?.[1]?.trim() ?? null
+// A bold label (`**Adult use:** no`) closes its `**` after the colon: skip it, or the value reads "** no" (gate #483 r2, F1).
+const field = (text, label) => text.match(new RegExp(`^[ \\t>*-]*\\**${label}\\**:\\**[ \\t]*(.*)$`, 'im'))?.[1]?.trim() ?? null
 const placeholder = (v) => !v || /<[^>\n]+>/.test(v.replace(/<https?:[^>]*>/g, ''))
 
 // Point 3: stage 1 and 2 of docs/preproduction-workflow.md. No body, face or outfit job starts on a sheet this rejects.
@@ -144,6 +145,7 @@ export function intakeProblems(dir, inventory = []) {
     const clear = n && typeof n === 'object' && Number.isFinite(n.min_mm) && Number.isFinite(n.inside_pct)
     const visualOk = row.visual === true && typeof row.why === 'string' && row.why.length >= 10
     if (needNumber && !(clear && n.min_mm >= 0 && n.inside_pct === 0)) out.push(`base ${k}: a ${r.type} needs number {min_mm >= 0, inside_pct 0} (clearance.py), got ${JSON.stringify(n) ?? 'none'}`)
+    else if (!needNumber && clear && (n.min_mm < 0 || n.inside_pct !== 0)) out.push(`base ${k}: a ${r.type} number must be min_mm >= 0 and inside_pct 0, got ${JSON.stringify(n)}`)
     else if (!needNumber && TYPES.includes(r.type) && !clear && !visualOk) out.push(`base ${k}: needs number {min_mm, inside_pct}, or visual: true with a why of 10+ characters`)
   }
   const fitted = r.catalog?.bases_fitted ?? []
