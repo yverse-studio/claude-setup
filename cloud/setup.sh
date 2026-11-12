@@ -1543,7 +1543,7 @@ cat > "$HOME/.claude/claude-setup/rule-guard.mjs" <<'RULE'
 
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { existsSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, realpathSync, unlinkSync, writeFileSync } from 'node:fs'
 import { isIP } from 'node:net'
 import { homedir, tmpdir } from 'node:os'
 import { basename, dirname, join, relative, resolve } from 'node:path'
@@ -1631,17 +1631,39 @@ export const bareAgreement = (text) => YES.test(text.replace(/^[\s*_>]+/, '').sp
 // stand-in. A Planner writes only the plan files (and project-files); no other edit, commit, push, branch or PR until PLAN.md starts with `Status: PASSED`.
 const PLAN_NAMES = /^(PLAN\.md|features\.json|PLAN\.json|HANDOFF\.md)$/
 const PASSED = /Status:[ \t]*PASSED/i
+const real = (f) => { try { return realpathSync(f) } catch { try { return join(realpathSync(dirname(f)), basename(f)) } catch { return f } } } // symlinks resolved, also for a file not yet written
+// Read-only shell: every segment starts with a listed command; no redirect, substitution or write flag. plan.mjs and the page reader run only in their exact form.
+const READ_CMD = /^\s*(cd|cat|ls|head|tail|grep|rg|wc|sort|uniq|cut|tr|pwd|echo|date|stat|file|jq|diff|sed|find|git(\s+-C\s+\S+)?\s+(status|log|diff|show|ls-files|rev-parse|blame|grep|branch\s+(-a|-r|--list)|remote\s+-v))(\s|$)/
+const PLAN_CMD = /^\s*node scripts\/plan\.mjs(\s+[\w .,=:/@+'"-]*)?$/
+const PAGE_CMD = /^\s*node (~|\/root|\/home\/user)\/\.claude\/claude-setup\/rule-guard\.mjs read https?:\/\/[^\s;&|$`<>()'"\\]+\s*$/
+const readOnlyShell = (cmd) => {
+  if (PLAN_CMD.test(cmd) || PAGE_CMD.test(cmd)) return true
+  const c = cmd.replace(/\d?>&\d|\d?>\s*\/dev\/null/g, '')
+  if (/[`<>\n\r]|\$\(|\$\{/.test(c)) return false
+  return c.split(/\|\||&&|[|;]/).every((seg) => READ_CMD.test(seg) && !/\bsed\b[^|]*\s-[a-z]*i|\bfind\b[^|]*\s-(exec|execdir|delete|fprint|fls|ok)\b|\bgit\b[^|]*\s(--output|-o)\b/.test(seg))
+}
+// The text the plan file will hold after this edit: a split `Status: PA` + `SSED` cannot slip past a per-field match.
+function planAfter(tool, input, file) {
+  if (tool === 'Write') return String(input.content ?? '')
+  let text = read(file)
+  for (const e of tool === 'MultiEdit' ? (input.edits ?? []) : [input]) {
+    const from = String(e.old_string ?? '')
+    const to = String(e.new_string ?? '')
+    text = e.replace_all ? text.split(from).join(to) : text.replace(from, () => to)
+  }
+  return text
+}
 export function plannerReadOnly(tool, input = {}, role = '', cwd = process.cwd()) {
   if (role !== 'Planner') return null
-  const file = resolve(cwd, String(input.file_path ?? input.notebook_path ?? '')) // resolved: `..` cannot reach out of the allowed places
+  const file = real(resolve(cwd, String(input.file_path ?? input.notebook_path ?? ''))) // resolved: `..` and symlinks cannot reach out of the allowed places
   const isEdit = /^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool)
-  const planFile = isEdit && (PLAN_NAMES.test(basename(file)) || file.startsWith('/mnt/project-files/'))
+  const inFiles = file.startsWith(real('/mnt/project-files') + '/')
+  const planFile = isEdit && (PLAN_NAMES.test(basename(file)) || inFiles)
   const cmd = String(input.command ?? '')
-  // Bash: no write-shaped command (git write verbs even behind options, gh, redirects, tee, sed -i) and none that names the pass line; plan.mjs and read-only commands stay.
-  const writes = tool === 'Bash' && !/^\s*node\s+\S*plan\.mjs\b/.test(cmd) && (/\bgit\b[^|;&\n]*\b(commit|push|branch|checkout|switch|reset|rebase|merge|apply|am|cherry-pick|stash|tag|rm|mv|restore)\b/.test(cmd) || /\bgh\s+(pr|api|repo|issue)\b/.test(cmd) || /(^|[^>-])>>?\s*[^\s&]/.test(cmd.replace(/\d>&\d|2>\s*\/dev\/null/g, '')) || /\b(tee|sed\s+-i|perl\s+-pi|mkdir|touch|cp|mv|rm)\b/.test(cmd))
+  const writes = tool === 'Bash' && !readOnlyShell(cmd)
   const ships = /^mcp__github__(create_pull_request|push_files|create_or_update_file|create_branch|delete_file|merge_pull_request)$/.test(tool)
   // Self-approval: the Planner never writes the pass line itself; the gate thread (a Reviewer) sets it.
-  if (planFile && PASSED.test(JSON.stringify(input.content ?? input.new_string ?? input.edits ?? ''))) return 'rule-guard: the gate sets `Status: PASSED`, not the Planner (research/2026-11-12-planner-vs-plan-mode.md): write `Status: gate round <n>` and hand the plan to the Reviewer named in your brief\'s Gate line.'
+  if (planFile && basename(file) === 'PLAN.md' && /^Status:[ \t]*PASSED/i.test(planAfter(tool, input, file).trimStart())) return 'rule-guard: the gate sets `Status: PASSED`, not the Planner (research/2026-11-12-planner-vs-plan-mode.md): write `Status: gate round <n>` and hand the plan to the Reviewer named in your brief\'s Gate line.'
   if (tool === 'Bash' && PASSED.test(cmd)) return 'rule-guard: the gate sets `Status: PASSED`, not the Planner (research/2026-11-12-planner-vs-plan-mode.md).'
   if (!(isEdit && !planFile) && !ships && !writes) return null
   if (/^Status:[ \t]*PASSED\b/.test(read(join(cwd, 'PLAN.md')).slice(0, 200))) return null // first line only

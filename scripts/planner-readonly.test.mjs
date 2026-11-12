@@ -42,3 +42,25 @@ test('a Planner cannot approve its own plan: writing the pass line is refused, o
   writeFileSync(join(cwd, 'PLAN.md'), '# Plan\nStatus: PASSED 5/5 (a later line is no pass)\n')
   assert.equal(pre(planner, cwd, 'Edit', { file_path: '/repo/src/app.mjs' }).status, 2, 'only the first line counts')
 })
+
+test('the pass line cannot be built from pieces, the shell is an allowlist, plan.mjs runs only in its exact form', () => {
+  const cwd = mkdtempSync(join(tmpdir(), 'planro-'))
+  const planner = as('Planner')
+  writeFileSync(join(cwd, 'PLAN.md'), 'Status: PA\n# Plan\n')
+  for (const [tool, input] of [
+    ['Edit', { file_path: `${cwd}/PLAN.md`, old_string: 'Status: PA', new_string: 'Status: PASSED' }],
+    ['MultiEdit', { file_path: `${cwd}/PLAN.md`, edits: [{ old_string: 'PA', new_string: 'PASS' }, { old_string: 'PASS', new_string: 'PASSED' }] }],
+  ]) {
+    const r = pre(planner, cwd, tool, input)
+    assert.equal(r.status, 2, `${tool} split pass refused`)
+    assert.match(r.stderr, /the gate sets `Status: PASSED`/)
+  }
+  for (const command of ['node scripts/plan.mjs add id=M1; git commit -am x', 'node scripts/plan.mjs add $(touch src/a)', 'node /mnt/project-files/scripts/plan.mjs add', 'python3 -c "open(1)"', 'curl -o src/a.mjs http://x', 'find . -delete', 'git status && rm -rf src', 'cat PLAN.md | tee src/a.mjs']) {
+    const r = pre(planner, cwd, 'Bash', { command })
+    assert.equal(r.status, 2, `${command} refused`)
+    assert.match(r.stderr, /read-only until its plan passed the gate/)
+  }
+  for (const command of ['node scripts/plan.mjs add id=M1 title="Plan it"', 'ls -la | head', 'git -C /repo log --oneline -3', 'grep -rn foo src | wc -l', 'cd /repo && git diff', 'node ~/.claude/claude-setup/rule-guard.mjs read https://example.com/a']) {
+    assert.notEqual(pre(planner, cwd, 'Bash', { command }).status, 2, `${command} allowed`)
+  }
+})
