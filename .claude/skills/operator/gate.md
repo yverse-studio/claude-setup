@@ -14,8 +14,6 @@ check is a hard yes or no from someone who didn't write the code.
 
 A check that doesn't apply passes; say "n/a" in the table. A reviewer verdict in checks 3 to 5 without quoted lines, the test-gap answer and a `Not judged:` list is not a pass ([`roles/reviewer.md`](roles/reviewer.md), Report).
 
-**Until the `journey` status can be posted (2026-10-26).** claude-setup's `journey.yml` fails on every run (GitHub 403 on the project repo, PR 292 replaces it), so a missing or red `journey` status from it is a warning, not a fail, until a project's own `journey.yml` posts one (this overrides "missing, pending, red ... is not 5/5" in The `journey` status below; a green one is still run through `verify` and a forged one still fails). Instead, check 2 runs the default branch's `npm run journey` against the preview by hand (or, without that script, the evaluator's preview run) and quotes its output. A check that cannot pass for anyone never blocks a merge (yskills 2026-10-26).
-
 ## Gate size
 
 The PR's size decides which checks run; the headline names it: `Gate 5/5 (S, round <n>)`.
@@ -163,10 +161,6 @@ thread and to the coordinator and goes on with the next PR; it tries no other wa
 this in one line and point here. A scene, figure or other asset PR judged by a scored gate
 merges once Scored gates has picked its version (after the fix rounds end); that pick counts as
 5/5 here.
-
-Policy files (`CLAUDE.md`, this file, `hq-refresh.md` in yverse-studio/company-xy, `global/`, `cloud/`, `install.mjs`): edits on
-a branch are allowed by an autoMode line; a refusal follows `docs/permissions.md` (Layer 3), never
-reworded, split or routed another way.
 
 How to undo a merge, by kind of change (write the line into the PR's "undo" line):
 
