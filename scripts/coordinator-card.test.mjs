@@ -59,10 +59,22 @@ test('a flag is never taken as the output path (#439: --help wrote a file named 
 test('the first rule is the one loop (yskills 2026-11-12): role, playbook, Researcher gap, learnings back; its hooks behave', async () => {
   const card = buildCard({ hash: 'x', date: 'd' })
   const first = card.split('## Before every reply\n\n')[1].split('\n')[0]
-  for (const s of ['every thread has a role', 'Role: none', 'playbook, skills and workflows', 'Researcher finds', 'back to claude-setup', 'start receipt', 'Roster by hand']) assert.ok(first.includes(s), s)
+  for (const s of ['every thread has a role', 'Role: none', 'playbook, skills and workflows', 'Researcher finds', 'back to claude-setup', 'start receipt', 'unknown role or kit name']) assert.ok(first.includes(s), s)
   const { stamped } = await import('../global/team-guard.mjs')
   assert.equal(stamped('Role: Programmer · Kit: setup · Size: S'), true)
   assert.equal(stamped('Role: none · Kit: setup · Size: S'), true, 'a mini or unclear task may name no role')
   assert.equal(stamped('Kit: setup · Size: S'), false, 'a brief without a Role line is refused')
   assert.match(readFileSync(new URL('../global/rule-guard.mjs', import.meta.url), 'utf8'), /export function threadReceipt\(role, brief/)
+})
+
+// S1 of the spec-to-review plan: team-guard refuses an unknown role or kit now, so the card must not tell the chat to check by hand,
+// and the index carries one ready Role/Kit/Model/Skills line per Roster role (the chat has no Bash to run scripts/brief.mjs).
+test('the card says team-guard refuses an unknown role or kit; the index lists every Roster role with its kits, model and playbook', () => {
+  const card = buildCard({ hash: 'x', date: '2026-11-12' })
+  assert.match(card, /team-guard refuses a brief with no Role line or an unknown role or kit name/)
+  assert.doesNotMatch(card, /neither refuses an unknown role name/)
+  const idx = buildIndex({ hash: 'x', date: '2026-11-12' })
+  assert.match(idx, /- Programmer: Kit: [^\n]*setup[^\n]*; Model: sonnet; Runs as: [^\n]*; Skills: \.claude\/skills\/operator\/roles\/programmer\.md/)
+  const teams = readFileSync(new URL('../docs/TEAMS.md', import.meta.url), 'utf8')
+  for (const l of teams.split('\n').filter((x) => /^\| [A-Z][\w ]* \(\[`/.test(x))) assert.ok(idx.includes(`- ${l.slice(2, l.indexOf(' ('))}: Kit:`), l.slice(0, 30))
 })

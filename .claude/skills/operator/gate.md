@@ -27,6 +27,10 @@ Security never drops: any PR touching user input, auth, money or secrets runs ch
 
 Who runs it (yskills, 2026-10-18: a gate thread starts at ~114k tokens and every call re-reads it, `docs/WORKFLOW.md` Token budget): S and M run in the author thread: CI, one fresh `code-reviewer` subagent (never the author's own pass) and the merge, with the table headline in the PR. The author does not pick the size: the table does, and anything touching user input, auth, money, data or UI is L. The reviewer gets the diff itself (`git diff <base>...<head>`), never the author's summary of it, and the author posts its report unedited; a finding the author disputes goes to the coordinator, not to a second reviewer. L keeps a fresh gate thread, because it runs the preview, security and design checks. A reviewer subagent still sees only the diff, the criteria and the previous round's table.
 
+## Owner-facing results
+
+Owner-facing results (an image, a sheet, a build or a page to look at) of a builder, designer or animator thread at size M or L get a PASS from a separate Reviewer thread, started with its own brief from the coordinator and named in the brief's `Gate:` line, before yskills sees them (yskills 2026-11-12: unchecked outfit sheets and a self-briefed critic subagent reached him). A subagent passes the merge gate above, not this one; after a fix the result is gated again. A slice with no owner-facing result (a script, a CI check) says so in `Gate: n/a <why>`. [guard: hook global/team-guard.mjs] (the line is enforced; that the Reviewer ran is not yet, see the spec-to-review plan, S5)
+
 ## Asset PRs (models, garments, figures, scenes)
 
 Numbers and the real render, both (yskills 2026-11-03): the gate opens the frames it scores and the PR body links them in a `Render:` line (`scripts/pr-lessons-check.mjs` fails a scored asset PR without it).

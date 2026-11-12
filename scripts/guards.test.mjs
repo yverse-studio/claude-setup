@@ -276,7 +276,7 @@ test('check.mjs fails when a lessons file is not linked from docs/MAP.md or the 
 // `model:` passes; SessionStart prints the TEAMS.md pointer.
 const teamFile = join(root, 'global/team-guard.mjs')
 // The brief block's must-have lines (operator/briefs.md); a thread start without them is blocked.
-const FULL = '\nThreads: list_threads checked, none open on this topic\nModel: claude-x-1\nSkills: roles/programmer.md\nDone when: node --test passes. Stop when: two rounds.\nStart: read MEMORY.md, then CLAUDE.md\nPrior art: none, because a test brief'
+const FULL = '\nGate: Reviewer thread before owner\nThreads: list_threads checked, none open on this topic\nModel: claude-x-1\nSkills: roles/programmer.md\nDone when: node --test passes. Stop when: two rounds.\nStart: read MEMORY.md, then CLAUDE.md\nPrior art: none, because a test brief'
 const runTeam = (mode, payload, env = {}) => spawnSync(process.execPath, [teamFile, mode], {
   input: JSON.stringify(payload), encoding: 'utf8', timeout: 5000, env: { ...process.env, CLAUDE_CODE_CHILD_SESSION: '', ...env },
 })
@@ -1225,7 +1225,7 @@ test('team guard: a bad brief is refused once with every problem and a template 
   const tpl = readFileSync(join(root, 'docs/templates/thread-brief.md'), 'utf8')
   const block = tpl.match(/```\n([\s\S]*?)```/)?.[1] ?? ''
   assert.ok(block, 'the template has one fenced brief block')
-  const filled = block.replace(/<[^>\n]+>/g, (m) => (m === '<S|M|L>' ? 'M' : /^<kit/.test(m) ? 'setup' : /^<Role/.test(m) ? 'Programmer' : 'something concrete for this task'))
+  const filled = block.replace(/<[^>\n]+>/g, (m) => (m === '<S|M|L>' ? 'M' : /^<kit/.test(m) ? 'setup' : /^<Role/.test(m) ? 'Programmer' : /^<Reviewer thread/.test(m) ? 'Reviewer · x' : 'something concrete for this task'))
   assert.deepEqual(missingLines(filled), [], 'a filled template has every must-have line')
   assert.ok(stamped(filled) && !needsPriorArt(filled) && !needsTester(filled))
   const unfilled = missingLines(block)

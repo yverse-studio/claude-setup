@@ -20,6 +20,7 @@ Asset: <owner/repo#n> (with Round)
 Picture card: <link | none, because <why>> (delete unless a look is new)
 Researcher: <subagent and model, only when the task asks for research>
 Tester: <Tester thread, size L Programmer briefs only>
+Gate: <Reviewer thread> before owner (M or L)
 Done when: <command and expected output, or the screenshot that proves it>
 Stop when: <rounds or attempts, never tokens>
 Start: read MEMORY.md first, then <the files this task needs>
