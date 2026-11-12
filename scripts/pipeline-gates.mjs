@@ -76,8 +76,8 @@ export function driverProblems(drivers) {
       if (d.type === 'SCRIPTED' && !new RegExp(`\\b${v.name}\\b`).test(d.expression ?? '')) out.push(`${where}: variable ${v.name} is not used in "${d.expression}"`)
       for (const t of v.targets ?? []) {
         const single = !v.type || v.type === 'SINGLE_PROP'   // transform and distance variables point at an id and a bone, not a data path
-        if (!t.id || (single && !t.data_path)) out.push(`${where}: variable ${v.name} has no target`)
-        else if (!t.resolved) out.push(`${where}: variable ${v.name} (${t.data_path || t.bone_target || v.type}) does not resolve`)
+        if (v.type !== 'CONTEXT_PROP' && (!t.id || (single && !t.data_path))) out.push(`${where}: variable ${v.name} has no target`)
+        else if (v.type !== 'CONTEXT_PROP' && !t.resolved) out.push(`${where}: variable ${v.name} (${t.data_path || t.bone_target || v.type}) does not resolve`)
       }
     }
   }

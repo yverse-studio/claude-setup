@@ -28,6 +28,8 @@ for name, idb in owners():
                 if t.id is not None and v.type == 'SINGLE_PROP' and t.data_path:
                     try: t.id.path_resolve(t.data_path); ok = True
                     except Exception: ok = False
+                elif v.type == 'CONTEXT_PROP':   # reads the scene or view layer, has no id
+                    ok = True
                 elif t.id is not None and v.type != 'SINGLE_PROP':   # transform, rotation and distance variables: id plus an optional bone
                     ok = not t.bone_target or (getattr(t.id, 'pose', None) is not None and t.bone_target in t.id.pose.bones)
                 ts.append({'id': t.id.name if t.id else None, 'data_path': t.data_path, 'bone_target': t.bone_target,

@@ -53,6 +53,8 @@ test('point 5: every look state sets every look switch, and no driver has a dead
   assert.match(driverProblems([dead]).join('|'), /ankle[^|]*not used/)
   const xform = drv('a', [{ name: 'a', type: 'TRANSFORMS', targets: [{ id: 'Armature', data_path: '', bone_target: 'foot_L', resolved: true }] }])
   assert.deepEqual(driverProblems([xform]), [], 'a transform variable has a bone, not a data path')
+  const ctx = drv('a', [{ name: 'a', type: 'CONTEXT_PROP', targets: [{ id: null, data_path: '', resolved: false }] }])
+  assert.deepEqual(driverProblems([ctx]), [], 'a context variable has no id')
   const lostBone = drv('a', [{ name: 'a', type: 'TRANSFORMS', targets: [{ id: 'Armature', data_path: '', bone_target: 'gone', resolved: false }] }])
   assert.match(driverProblems([lostBone]).join('|'), /does not resolve/)
   const unresolved = drv('a', [{ name: 'a', targets: [{ id: 'Armature', data_path: 'pose.bones["gone"].x', resolved: false }] }])
