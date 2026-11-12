@@ -63,7 +63,7 @@ test('a flag is never taken as the output path (#439: --help wrote a file named 
 test('the first rule is the one loop (yskills 2026-11-12): role, playbook, Researcher gap, learnings back; its hooks behave', async () => {
   const card = buildCard({ hash: 'x', date: 'd' })
   const first = card.split('## Before every reply\n\n')[1].split('\n')[0]
-  for (const s of ['every thread has a role', 'Role: none', 'playbook, skills and workflows', 'Researcher finds', 'back to claude-setup', 'start receipt', 'unknown role or kit name']) assert.ok(first.includes(s), s)
+  for (const s of ['every thread has a role', 'Role: none', 'playbook, skills and workflows', 'Researcher finds', 'back to claude-setup', 'start receipt', 'unknown role or kit name', 'card #<hash>', 'Read this card again']) assert.ok(first.includes(s), s)
   const { stamped } = await import('../global/team-guard.mjs')
   assert.equal(stamped('Role: Programmer · Kit: setup · Size: S'), true)
   assert.equal(stamped('Role: none · Kit: setup · Size: S'), true, 'a mini or unclear task may name no role')
