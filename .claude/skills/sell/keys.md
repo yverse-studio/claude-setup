@@ -8,7 +8,7 @@
    - Never in `wrangler.jsonc` `vars`, never in GitHub, the cloud environment or chat.
    - Never `NUXT_PUBLIC_*`: those ship to the browser.
    - They can only be set once the Worker exists, so after the Workers Builds import
-     (`publish` skill), not with the first batch of questions.
+     (`publish` skill), not before the money slice starts.
 2. **Previews get none of them.** Previews Base holds only preview-safe values (`publish` skill).
    Without `STRIPE_SECRET_KEY` a preview's checkout answers 503, which is why the sandbox
    checkout runs on the live URL and the e2e tests use signed fakes and stripe-mock.
@@ -51,7 +51,7 @@ The key card then starts with these steps (asked 2026-10-08, workflow-tests):
 
 A filled-in example for one Worker: `stripe/ANLEITUNG.md` in the "Tests" project files.
 
-## Message template for the first batch
+## Message template for the money slice
 
 Fill in the project, and drop the rows it doesn't need. Ask for test keys only; live keys come at
 go-live.

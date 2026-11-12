@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url'
 import { coordinatorCard } from '../global/team-guard.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
-export const CARD_MAX = 8000 // 6,000 until 2026-11-12; raised for the Masterplan, facts, roles and dependencies lines
+export const CARD_MAX = 8000 // 6,600 until 2026-11-12 (#430); raised for the Masterplan, facts, roles and dependencies lines
 const cells = (l) => l.split('|').map((c) => c.trim())
 const read = (f) => readFileSync(join(root, f), 'utf8').replace(/\r/g, '')
 
