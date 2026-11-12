@@ -664,6 +664,29 @@ const listProcs = () => {
 // A subagent's own tool calls live next to the session transcript: <session>/subagents/agent-<id>.jsonl.
 const agentTranscript = (transcriptPath, agentId) => (transcriptPath && agentId ? join(transcriptPath.replace(/\.jsonl$/, ''), 'subagents', `agent-${String(agentId).replace(/[^\w-]/g, '')}.jsonl`) : '')
 
+
+// Gate round counter (global/gate-rounds.mjs, operator/gate.md Rounds): a gate post, a merge, a ledger write or a director/card record is
+// checked against the asset's ledger. Fail closed: a check that throws refuses the call (research 2026-11-12: a crashing hook does not block).
+const humanAfter = (transcript, ref) => {
+  const id = String(ref).match(/cmsg_\w+/)?.[0]
+  const lines = transcript.split('\n')
+  const at = lines.findIndex((l) => id && l.includes(id))
+  return at >= 0 && lines.slice(at + 1).some((l) => l.includes('"type":"user"') && l.includes('trust=\\"principal\\"'))
+}
+export async function gateBlock(tool, input, transcript, model) {
+  if (!/^(Write|Edit|Bash)$|^mcp__github__/.test(tool)) return null
+  let mod
+  try { mod = await import(new URL('./gate-rounds.mjs', import.meta.url)) } catch { return null }
+  try {
+    const t = transcript()
+    const why = mod.gateStep(tool, input, { model, calls: /gate-rounds\.mjs/.test(JSON.stringify(input)) ? toolCalls(t) : [], humanAfter: (ref) => humanAfter(t, ref) })
+    return why ? `rule-guard: ${why}` : null
+  } catch (e) { return `rule-guard: gate ledger check failed (${String(e.message).slice(0, 80)}); refused, fail closed (operator/gate.md, Rounds).` }
+}
+export async function gateBriefContext(brief, model) {
+  try { return (await import(new URL('./gate-rounds.mjs', import.meta.url))).gateBrief(brief, { model }) } catch { return '' }
+}
+
 if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/').split('/').pop())) {
   const mode = process.argv[2]
   if (mode === 'read') {
@@ -688,7 +711,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           const brief = lookup ? spawnPrompt(prompt, read(transcriptPath)) : prompt
           if (session && (spawned || (lookup && brief !== prompt))) writeFileSync(briefOnce, '')
           const model = sessionModel(transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : '') ?? (read(join(tmpdir(), `claude-setup-model-${String(session).replace(/[^A-Za-z0-9]/g, '')}`)).trim() || null)
-          const context = [await briefCheck(brief, cwd, model), modelOnce(brief, transcriptPath, session), roleContext(brief, cwd, session), promptContext(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
+          const context = [await briefCheck(brief, cwd, model), await gateBriefContext(brief, model), modelOnce(brief, transcriptPath, session), roleContext(brief, cwd, session), promptContext(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
           if (context) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: context } }))
           return
         }
@@ -702,7 +725,8 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         const shipped = join(tmpdir(), `claude-setup-artifacts-${String(session).replace(/\W/g, '')}`)
         const transcript = () => (transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : '')
         const sessionTranscript = () => [transcriptPath, agentTranscript(transcriptPath, agentId)].filter((p) => p && existsSync(p)).map(read).join('\n')
-        const block = decide(tool, input ?? {}, process.env, session ? read(shipped).split('\n') : [], () => threadBoard(toolCalls(transcript())))
+        const block = (await gateBlock(tool, input ?? {}, transcript, sessionModel(transcript())))
+          ?? decide(tool, input ?? {}, process.env, session ? read(shipped).split('\n') : [], () => threadBoard(toolCalls(transcript())))
           ?? canaryMissing(tool, input ?? {}, session ? read(join(process.env.CLAUDE_SETUP_HOME || homedir(), '.claude', 'claude-setup', 'booted', `${String(session).replace(/\W/g, '')}.canary`)) : '', transcript)
           ?? receiptBlock(tool, input ?? {}, session, cwd, agentId, transcript)
           ?? proposeSkillsBlocked(tool)
