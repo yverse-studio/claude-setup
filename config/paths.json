@@ -11,6 +11,11 @@
     "repos": "repos",
     "tools": "tools",
     "tools_laptop": "tools/laptop",
+    "ai": "tools/ai",
+    "ai_models": "tools/ai/models",
+    "hf_home": "tools/ai/models/hf",
+    "footage": "lib/footage",
+    "videos": "projects/videos",
     "blender_exe_file": "tools/BLENDER_EXE.txt",
     "docs": "docs",
     "logs": "docs/logs",
@@ -38,6 +43,13 @@
     "GAL_TOOLS",
     "CXY_BLENDER",
     "_claude\\_inbox",
-    "_claude/_inbox"
+    "_claude/_inbox",
+    "twin-tools",
+    "wan-local",
+    "Videos\\xyskillsx",
+    "Documents\\ComfyUI",
+    "twin-raw",
+    "reel-test",
+    ".cache\\huggingface"
   ]
 }

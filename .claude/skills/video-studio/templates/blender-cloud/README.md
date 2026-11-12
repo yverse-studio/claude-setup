@@ -2,7 +2,7 @@
 
 Rule and the estimate live in the `studio` skill (Where Blender runs). This folder is the proven
 starter: a 16 s vertical test reel, built and rendered completely in the cloud on 2026-11-03
-(first run by yskills; source files `reel-test` on the laptop).
+(first run by yskills; source files in the `lib/` thing they belong to, on the laptop).
 
 ## Run
 
