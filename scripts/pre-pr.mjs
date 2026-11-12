@@ -2,9 +2,11 @@
 // The one pre-PR check: runs exactly what .github/workflows/ci.yml runs on a pull request, so a push
 // from any machine (cloud thread with hooks, laptop without) fails here and not in CI
 // (yskills 2026-11-08: 9 PRs went red in CI for things CI had always checked).
-// Usage: node scripts/pre-pr.mjs [--base origin/main] [--body <file>] [--quick]
+// Usage: node scripts/pre-pr.mjs [--base origin/main] [--body <file> --title <PR title>] [--quick]
 //   --body <file>  the PR body to check (Prior art: and Lessons: lines); without it the body check
-//                  is reported as still open, never as passed.
+//                  is reported as still open, never as passed. It needs --title too: a `fix:` title
+//                  also needs a check file in its Lessons: line, and CI reads the title (2026-11-11: #417 went red on that).
+//                  With --body (and without --quick) the PR brake runs too (scripts/pr-brake.mjs).
 //   --quick        skip the node test line (the git pre-push hook uses it; CI still runs the tests).
 import { execFileSync, spawnSync } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
@@ -12,12 +14,14 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { overlapWarnings } from './pr-overlap.mjs'
+import { brakeVerdict, openPrs } from './pr-brake.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const args = process.argv.slice(2)
 const opt = (name) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : undefined }
 const base = opt('--base') ?? 'origin/main'
 const body = opt('--body')
+const title = opt('--title')
 const quick = args.includes('--quick')
 
 // The CI steps this mirrors, read from the workflow so the two cannot drift.
@@ -61,8 +65,8 @@ export function cleanEnv(env = process.env) {
 }
 
 const results = []
-function step(name, cmd, argv) {
-  const r = spawnSync(cmd, argv, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], env: cleanEnv() })
+function step(name, cmd, argv, extraEnv = {}) {
+  const r = spawnSync(cmd, argv, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], env: { ...cleanEnv(), ...extraEnv } })
   const ok = r.status === 0
   results.push([name, ok])
   const tail = `${r.stdout ?? ''}${r.stderr ?? ''}`.trim().split('\n').slice(-6).join('\n  ')
@@ -78,8 +82,14 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   step('check.mjs', 'node', ['scripts/check.mjs'])
   step('paths-lint (no hard-coded laptop paths)', 'node', ['--test', 'scripts/paths-lint.test.mjs'])
   step('floor-guard', 'node', ['.claude/skills/publish/templates/new-project/scripts/floor-guard.mjs', '--base', base])
-  if (body) step('PR body (Prior art:, Lessons:)', 'node', ['scripts/pr-lessons-check.mjs', body])
-  else { results.push(['PR body', null]); console.log('open PR body: not checked here; run again with --body <file> before gh pr create (Prior art: ... -> copy|adapt|build, because ...; Lessons: <repo path>)') }
+  if (body && title === undefined) { results.push(['PR body', false]); console.log('FAIL PR body: pass --title "<PR title>" too; CI checks the title (a fix: PR needs a test, check, guard or lint file in its Lessons: line)') }
+  else if (body) step('PR body (Prior art:, Lessons:, fix check)', 'node', ['scripts/pr-lessons-check.mjs', body], { PR_TITLE: title })
+  else { results.push(['PR body', null]); console.log('open PR body: not checked here; run again with --body <file> --title "<title>" before the PR opens (Prior art: ... -> copy|adapt|build, because ...; Lessons: <repo path>)') }
+  if (body && !quick) {
+    const v = brakeVerdict(openPrs({ cwd: root, env: cleanEnv() }))
+    if (v.ok !== null) results.push(['PR brake', v.ok])
+    console.log(`${v.ok === false ? 'FAIL' : v.ok ? 'ok ' : 'note:'} ${v.message}`)
+  }
   if (!quick && steps.tests) { const [cmd, ...argv] = steps.tests.split(/\s+/); step('tests (CI line)', cmd, argv) }
   // Warns only (scripts/pr-overlap.mjs): another branch that changes the same files is the next merge conflict.
   try {

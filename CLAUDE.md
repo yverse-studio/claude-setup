@@ -84,7 +84,7 @@ Claude's job. `docs/MAP.md` names the one home of each rule; everywhere else lin
   friction with this setup a `loop:setup` issue. Memory holds state only
   [guard: hook global/rule-guard.mjs]; a rule lives in one file, the others link it [guard: test scripts/check.mjs].
   Every PR body has a `Lessons:` line. [guard: test scripts/pr-lessons-check.test.mjs]
-- Before done or a push: `node scripts/pre-pr.mjs --body <file>` (what CI runs; pre-push hook too),
+- Before done or a push: `node scripts/pre-pr.mjs --body <file> --title <title>` (what CI runs; pre-push hook too),
   no deploy script; report failures. [guard: deny Bash(npm run deploy *)]
 - Tokens, handoff: `docs/WORKFLOW.md`; idle 1 h+: no resume.
 - Cloud threads: no WebFetch; a page: `node

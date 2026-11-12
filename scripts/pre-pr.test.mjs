@@ -84,3 +84,24 @@ test('the hook does not exec a .git/hooks/pre-push that is a copy of itself (iss
   writeFileSync(join(repo, '.git/hooks/pre-push'), '#!/bin/sh\nexit 7\n')
   assert.equal(run(repo).status, 7)
 })
+
+// 2026-11-11: #417 (a fix: PR) went red in CI because pre-pr never saw the title; a body without a title now fails here (from #415).
+test('pre-pr fails a body check that has no title, and a fix: title without a check file', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'prepr-'))
+  const file = join(dir, 'body.md')
+  writeFileSync(file, 'Prior art: docs/x -> adapt, because y.\nLessons: docs/github-rules.md\n')
+  const run = (...a) => spawnSync('node', ['scripts/pre-pr.mjs', '--quick', '--body', file, ...a], { cwd: new URL('..', import.meta.url).pathname, encoding: 'utf8', env: { ...cleanEnvForTest() } })
+  const noTitle = run()
+  assert.notEqual(noTitle.status, 0)
+  assert.match(noTitle.stdout, /pass --title/)
+  const fixTitle = run('--title', 'fix: x')
+  assert.notEqual(fixTitle.status, 0)
+  assert.match(fixTitle.stdout, /PR body \(Prior art:, Lessons:, fix check\)/)
+})
+
+// Plan 2026-11-12, M41: the PR brake runs at PR-open time (--body, not the --quick pre-push run).
+test('pre-pr runs the PR brake with --body and counts only a real verdict', () => {
+  const src = readFileSync(new URL('./pre-pr.mjs', import.meta.url), 'utf8')
+  assert.match(src, /if \(body && !quick\) \{\s*const v = brakeVerdict\(openPrs\(/)
+  assert.match(src, /if \(v\.ok !== null\) results\.push\(\['PR brake', v\.ok\]\)/)
+})
