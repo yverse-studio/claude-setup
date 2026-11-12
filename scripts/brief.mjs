@@ -99,9 +99,13 @@ export function briefFile(role, teams = readFileSync(join(root, 'docs/TEAMS.md')
     ...(role === 'Reviewer' ? ['Topic: <checklist topic> (delete unless a topic gate)'] : []),
     ...(builder ? ['Gate: <Reviewer thread> before owner (size M or L; or `n/a <why no owner-facing result>`)'] : []),
     ...(role === 'Programmer' ? ['Tester: <Tester thread> (size L only; delete otherwise)'] : []),
+    ...(role === 'Researcher' ? [] : [`Researcher: <subagent and model> (${RESEARCH_NOTE}; delete otherwise)`]),
     'Done when: <command and expected output, or the screenshot that proves it>', 'Stop when: <rounds or attempts, never tokens>', 'Start: read MEMORY.md first, then <the files this task needs>']
   return `# Brief file: ${role}\n\nCopy the block, fill every <...>, delete the lines marked delete, start the thread with it as the brief, title \`${role} · <what>\` and \`model\` = the Model line. Sizes and kits are checked by team-guard; the block is rendered from docs/TEAMS.md by scripts/brief.mjs.\n\n\`\`\`\n${lines.join('\n')}\n\`\`\`\n`
 }
+
+// team-guard refuses a brief whose text (cited owner messages included) holds one of these words and names no Researcher (ASKS_RESEARCH).
+export const RESEARCH_NOTE = 'needed when the brief, or an owner message cited in it, says SOTA, state of the art, research on/about/into/what or recherch*'
 
 export const briefFileName = (role) => `${role.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.md`
 
