@@ -89,10 +89,10 @@ export function mergeProblem(l) {
 
 // ---- picture card: a hub, start screen, menu or style is shown as pictures from current games before anything is built. The hook does not
 // guess whether a text means a NEW one: a text that names one at all carries a `Picture card:` line (the card link, or `none, because <reason>`).
-const THING = /\b(?:hubs?|start ?screens?|startbildschirm\w*|title ?screens?|titelbildschirm\w*|main ?menus?|hauptmen(?:ü|ue|u)\w*|art ?styles?|visual ?styles?)(?![\p{L}\d])/iu
-export const namesLook = (text) => THING.test(String(text).replace(/docker ?hub|github ?hub/gi, ''))
+const THING = /\b(?:hubs?|start[\s_-]*(?:screens?|bildschirm\w*)|(?:title|titel)[\s_-]*(?:screens?|bildschirm\w*)|main[\s_-]*menus?|haupt[\s_-]*men(?:ü|ue|u)\w*|art[\s_-]*styles?|visual[\s_-]*styles?)(?![\p{L}\d])/iu
+export const namesLook = (text) => THING.test(String(text).replace(/docker[\s_-]*hub|github[\s_-]*hub|hub\.docker\.com/gi, ''))
 const PICTURE_LINE = /^[ \t>*_-]*Picture card:[ \t*_`]*(?:\[[^\]]*\]\()?(#?cmsg_\w+|https?:\/\/[^\s)]*cmsg_\w+[^\s)]*)/im
-const PICTURE_NONE = /^[ \t>*_-]*Picture card:[ \t*_`]*none,[ \t]*because[ \t]+\S/im
+const PICTURE_NONE = /^[ \t>*_-]*Picture card:[ \t*_`]*none,[ \t]*because[ \t]+(?![<.\s])\S/im
 export const pictureRef = (text) => String(text).match(PICTURE_LINE)?.[1] ?? null // a real card id, not any URL
 export const pictureOk = (text) => !!pictureRef(text) || PICTURE_NONE.test(String(text))
 const PICTURE_ASK = 'a `Picture card: <cmsg link>` line, or `Picture card: none, because <reason>` (gate.md, Picture card first)'

@@ -204,9 +204,9 @@ test('a corrupt ledger is refused, never reset', () => {
 })
 
 // ---- picture card: one exact table. The hook never guesses new or existing; a text that names a hub, start screen, menu or style carries the line.
-const NAMES = ['Build the new hub for the village', 'Fix the camera clipping in the new hub', 'Make the new main menu buttons bigger', 'neues Hauptmenü', 'neues Hauptmenue', 'neuer Startbildschirm mit Karte', 'a new art style for the game', 'Move the shop into a new hub', 'Add German strings to the main menu', 'the HQ hub shows wrong rows', 'Title screen music', 'visual style guide']
-const NAMES_NOTHING = ['fix: button overlaps on phones', 'docs: push image to Docker Hub', 'new GitHub hub badge', 'docs: Coding-Stil vereinheitlicht', 'The new screenshots look right at 390px and 1440px', 'feat: new button style for the shop', 'add a new CSS style for errors', 'Take a new look at the spacing']
-const LINES = [['Picture card: #cmsg_01ABC', true], ['Picture card: https://claude.ai/code/project/x?thread=cmsg_01', true], ['Picture card: none, because it is a text fix on the live menu', true], ['Picture card: none', false], ['Picture card: none, because', false], ['Picture card: https://example.com', false], ['Picture card first is the rule', false]]
+const NAMES = ['Build the new hub for the village', 'Fix the camera clipping in the new hub', 'Make the new main menu buttons bigger', 'neues Hauptmenü', 'neues Hauptmenue', 'neuer Startbildschirm mit Karte', 'a new art style for the game', 'Move the shop into a new hub', 'Add German strings to the main menu', 'the HQ hub shows wrong rows', 'Title screen music', 'visual style guide', 'feat: new start-screen', 'Start-Screen', 'main-menu', 'art-style', 'start\nscreen', 'start  screen', 'start_screen', 'Start-Bildschirm', 'Titel-Bildschirm', 'Haupt-Menü', 'title-screen']
+const NAMES_NOTHING = ['fix: button overlaps on phones', 'docs: push image to Docker Hub', 'new GitHub hub badge', 'ci: push to Docker-Hub', 'ci: push to docker  hub', 'chore: bump hub.docker.com image', 'docs: Coding-Stil vereinheitlicht', 'The new screenshots look right at 390px and 1440px', 'feat: new button style for the shop', 'add a new CSS style for errors', 'Take a new look at the spacing']
+const LINES = [['Picture card: #cmsg_01ABC', true], ['Picture card: https://claude.ai/code/project/x?thread=cmsg_01', true], ['Picture card: none, because it is a text fix on the live menu', true], ['Picture card: none', false], ['Picture card: none, because <reason>', false], ['Picture card: none, because <why>', false], ['Picture card: none, because .', false], ['Picture card: none, because', false], ['Picture card: https://example.com', false], ['Picture card first is the rule', false]]
 
 test('picture card: a text that names a thing at all needs the line, a text that names nothing never does', () => {
   for (const t of NAMES) assert.equal(namesLook(t), true, t)
@@ -217,7 +217,7 @@ test('picture card: a text that names a thing at all needs the line, a text that
 test('picture card: a PR that names a thing without the line is refused, with the link or none-because it passes, no title exemption', () => {
   const s = session()
   const open = (title, body) => s.hook('mcp__github__create_pull_request', { owner: 'a', repo: 'b', title, body })
-  for (const title of ['feat: new hub', 'fix: new hub button overlaps', 'docs: reword the main menu rule']) assert.match(open(title, 'x').stderr, /Picture card/, title)
+  for (const title of ['feat: new hub', 'fix: new hub button overlaps', 'docs: reword the main menu rule', 'feat: new start-screen']) { const r = open(title, 'x'); assert.equal(r.status, 2, title); assert.match(r.stderr, /Picture card/, title) }
   assert.match(open('feat: x', 'A start screen with a map.').stderr, /none, because/, 'both forms are named')
   assert.equal(open('feat: new hub', 'Picture card: #cmsg_01ABC').status, 0)
   assert.equal(open('fix: hub button', 'Picture card: none, because the hub exists, this is a text fix').status, 0)
