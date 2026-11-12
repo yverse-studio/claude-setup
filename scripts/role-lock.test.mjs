@@ -270,6 +270,9 @@ test('the role stamp comes from a spawn brief however it is wrapped, from the tr
   const inline = `rolelock${process.pid}x${++n}`
   guard('prompt', inline, { prompt: `<wake reason="spawn"><relay from="coordinator"><note>Role: Tester · Kit: game · Size: M\n${rest}</note></relay></wake>` })
   assert.equal(stampOf(inline), 'Tester', 'a Role line behind a tag is read')
+  const literal = `rolelock${process.pid}x${++n}`
+  guard('prompt', literal, { prompt: `<wake reason="spawn"><relay>Kit: setup · Size: S\\nRole: Reviewer · Kit: setup · Size: S\n${rest}</relay></wake>` })
+  assert.notEqual(stampOf(literal), 'Reviewer', 'a literal backslash-n is no line break for the Role line')
   // the prompt hook saw only the status wake; the spawn (behind harness reminders) is in the transcript
   const transcriptOnly = `rolelock${process.pid}x${++n}`
   const reminder = '<system-reminder>\nCodebase and user instructions are shown below.\n</system-reminder><system-reminder>\n# Memory\n</system-reminder>'

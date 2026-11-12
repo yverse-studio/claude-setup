@@ -261,8 +261,8 @@ export function promptContext(prompt = '', stopWord = null) { // stopWord: STOP_
 
 // The role a brief names (`Role: Programmer · Kit: setup · Size: M`) and its Roster row in TEAMS.md.
 export function roleOf(prompt, teams) {
-  // One parser: the wrapper tags come off first (stripTags, so `<note>Role: Tester` is a line of its own, #523), then the line is anchored at its start.
-  const line = stripTags(prompt).replace(/[*_`]/g, '').match(/^[\s>-]*Role:[ \t]*([^\n]*)/m)?.[1].trim()
+  // One parser: the wrapper tags come off first (stripTags, so `<note>Role: Tester` is a line of its own, #523), then the line is anchored at its start (only the tags, never a literal \\n, which team-guard does not turn into a line either).
+  const line = prompt.replace(/<\/?(wake|message|thread|project|relay|coordinator-relay|cited|note|system-note)\b[^>]*>/g, '\n').replace(/[*_`]/g, '').match(/^[\s>-]*Role:[ \t]*([^\n]*)/m)?.[1].trim()
   if (!line || /^(none|n\/a|tbd|-)\b/i.test(line)) return null
   const rows = teams.split('\n').filter((l) => /^\| [A-Z][\w ]* \(\[`/.test(l))
   const named = (r) => r.slice(2, r.indexOf(' (')).toLowerCase()
@@ -817,7 +817,8 @@ const DELIVERED = /^[^\n]{0,80}?\bdelivered to you as a message\b/i
 function deliveredReport(transcriptPath, prompt, note = '') {
   // The note names the agent ("... from agent-<id>" or "agentId: <id>"): that one transcript only. No id: nothing counts (a scan by prompt could pick
   // another agent that was started with a prompt that begins with this one, gate r1 of #525).
-  const id = /\bagent-?Id:\s*([A-Za-z0-9-]+)/i.exec(note)?.[1] ?? /\bfrom\s+agent-([A-Za-z0-9][A-Za-z0-9-]*)/i.exec(note)?.[1]
+  const first = String(note).trim().split('\n')[0] // the harness's note is the opening line; an id mentioned later in a report is nobody's note
+  const id = /\bagent-?Id:\s*([A-Za-z0-9-]+)/i.exec(first)?.[1] ?? /\bfrom\s+agent-([A-Za-z0-9][A-Za-z0-9-]*)/i.exec(first)?.[1]
   const path = id ? agentTranscript(transcriptPath, id) : ''
   return path ? agentReport(path, prompt) : ''
 }
