@@ -198,3 +198,70 @@ test('ROSTER.md lists no role without a brief file as a thread role (the Project
   const briefs = [...renderAll({ base: new URL('..', import.meta.url).pathname, hash: 'h', date: 'd' }).keys()].filter((k) => k.startsWith('briefs/')).length
   assert.equal(briefs, rosterNames(teams).length - 1, 'one brief file per Roster role but the Project Manager')
 })
+
+// ---- M50 slice C: every thread start is counted (card-render.mjs: logStart, noteRelay, statsLine)
+import { logStart, noteRelay, startOutcome, statsLine } from '../global/card-render.mjs'
+const REFUSED = 'Brief check (docs/TEAMS.md): this start breaks the team rules in 2 places: (1) Item is missing or still a <placeholder> (2) Plan is missing or still a <placeholder>. Do no work: send ALL of this to the coordinator'
+const REPAIRED = 'Brief repair (no block): the brief lacks Skills, Start. Work as if it read: x. Name the repaired lines in your first checklist line.'
+const WRONG = 'Brief check (docs/TEAMS.md): this start breaks the team rules in 1 place: (1) this thread runs on sonnet, but the Planner runs on fable: ask the coordinator to restart it on that model. Do no work: send ALL'
+
+test('startOutcome sorts a start into clean, repaired, refused or wrong-model, with its reasons', () => {
+  assert.deepEqual(startOutcome(''), { outcome: 'clean', reasons: [] })
+  assert.deepEqual(startOutcome(`${REPAIRED}\nTitle check (x)`), { outcome: 'repaired', reasons: ['Skills', 'Start'] })
+  assert.deepEqual(startOutcome(REFUSED), { outcome: 'refused', reasons: ['Item is missing or still a <placeholder>', 'Plan is missing or still a <placeholder>'] })
+  assert.equal(startOutcome(WRONG).outcome, 'wrong-model')
+  assert.equal(startOutcome('', 'Model check (docs/TEAMS.md, Spawn rule 4): the brief asks for fable').outcome, 'wrong-model')
+})
+
+test('one count line per start type: --stats over a folder with every outcome', () => {
+  const out = mkdtempSync(join(tmpdir(), 'brief-log-'))
+  const t = new Date('2026-11-12T10:00:00Z')
+  const starts = [['s1', REFUSED], ['s2', ''], ['s3', ''], ['s4', REPAIRED], ['s5', WRONG]]
+  for (const [session, check] of starts) logStart({ session, project: 'P', role: 'Programmer', kit: 'setup', size: 'S', guard: 'abcd1234', card: 'b6a9c717', ...startOutcome(check) }, out, t)
+  assert.equal(readdirSync(join(out, 'brief-log')).length, 5, 'one file per start')
+  assert.equal(statsLine(out), 'starts 5: clean 2, repaired 1, refused 1, wrong-model 1, duplicate 0 (false starts 2, 40%); top reason: Item is missing or still a <placeholder> (1x)')
+  assert.equal(statsLine(out, new Date('2026-11-13T00:00:00Z')).startsWith('starts 0:'), true, 'since drops older starts')
+  const file = JSON.parse(readFileSync(join(out, 'brief-log', '2026-11-12-s1.json'), 'utf8'))
+  assert.deepEqual([file.project, file.role, file.kit, file.size, file.guard, file.card, file.outcome], ['P', 'Programmer', 'setup', 'S', 'abcd1234', 'b6a9c717', 'refused'])
+  rmSync(out, { recursive: true, force: true })
+})
+
+test('a relay on a refused start lands in the same file; a clean start is left alone; a second hook for one start writes once', () => {
+  const out = mkdtempSync(join(tmpdir(), 'brief-log-'))
+  logStart({ session: 'r1', ...startOutcome(REFUSED) }, out)
+  logStart({ session: 'r1', outcome: 'clean' }, out)
+  logStart({ session: 'c1', ...startOutcome('') }, out)
+  assert.equal(noteRelay('r1', false, out), true)
+  assert.equal(noteRelay('r1', true, out), true)
+  assert.equal(noteRelay('c1', true, out), false)
+  const [f] = readdirSync(join(out, 'brief-log')).filter((n) => n.endsWith('-r1.json'))
+  const e = JSON.parse(readFileSync(join(out, 'brief-log', f), 'utf8'))
+  assert.deepEqual([e.outcome, e.relays, e.lifted], ['refused', 2, true])
+  rmSync(out, { recursive: true, force: true })
+})
+
+test('twenty processes logging at once lose no start, and no folder or session means no log and no crash', () => {
+  const out = mkdtempSync(join(tmpdir(), 'brief-log-'))
+  const code = (i) => `const { logStart } = await import(${JSON.stringify(join(process.cwd(), 'global/card-render.mjs'))}); logStart({ session: 'p${i}', outcome: 'repaired', reasons: ['Skills'] }, ${JSON.stringify(out)})`
+  const kids = Array.from({ length: 20 }, (_, i) => spawnSync(process.execPath, ['--input-type=module', '-e', code(i)], { encoding: 'utf8' }))
+  assert.ok(kids.every((k) => k.status === 0))
+  assert.match(statsLine(out), /^starts 20: clean 0, repaired 20,/)
+  assert.equal(logStart({ session: 'x', outcome: 'clean' }, null), null)
+  assert.equal(logStart({ outcome: 'clean' }, out), null)
+  assert.match(statsLine(null), /^starts 0:/)
+  rmSync(out, { recursive: true, force: true })
+})
+
+test('the hook writes the count: a spawn prompt with a refused brief logs refused, a full one logs clean, both under the project name', async () => {
+  const out = mkdtempSync(join(tmpdir(), 'brief-log-'))
+  const { countStart } = await import('../global/rule-guard.mjs')
+  process.env.CLAUDE_SETUP_PROJECT_FILES = out
+  try {
+    const brief = (role) => `<wake reason="spawn"><project id="chan_1" name="Demo Project" type="project">Role: ${role} · Kit: setup · Size: S\n</project></wake>`
+    await countStart({ session: 'h1', brief: brief('Programmer'), checkNow: REFUSED, modelNote: '', guard: 'Guards in this session: deadbeef (8/8 installed).', card: 'Card refreshed cafe1234: x' })
+    await countStart({ session: 'h2', brief: brief('Programmer'), checkNow: '', modelNote: '', guard: '', card: '' })
+    const read1 = (s) => JSON.parse(readFileSync(join(out, 'claude-setup', 'brief-log', readdirSync(join(out, 'claude-setup', 'brief-log')).find((n) => n.endsWith(`-${s}.json`))), 'utf8'))
+    assert.deepEqual([read1('h1').outcome, read1('h1').project, read1('h1').role, read1('h1').guard, read1('h1').card], ['refused', 'Demo Project', 'Programmer', 'deadbeef', 'cafe1234'])
+    assert.equal(read1('h2').outcome, 'clean')
+  } finally { delete process.env.CLAUDE_SETUP_PROJECT_FILES; rmSync(out, { recursive: true, force: true }) }
+})

@@ -1568,7 +1568,7 @@ cat > "$HOME/.claude/claude-setup/card-render.mjs" <<'CARD'
 // briefs/<role>.md. All of it is rendered from docs/TEAMS.md, docs/MAP.md and BRIEF_FIELDS (global/team-guard.mjs); nothing in it is written by hand.
 // scripts/coordinator-card.mjs is the CLI over it, rule-guard calls refreshCard() when a thread starts (docs/MAP.md, Coordinator card).
 import { createHash, randomBytes } from 'node:crypto'
-import { existsSync, lstatSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { BRIEF_FIELDS, GATE_BUILDER_ROLES, GUARD_FILES, badRole, badTeam, coordinatorCard, kitNames, kitRows, rosterNames } from './team-guard.mjs'
 import { GATE_ROLES, roleOf } from './rule-guard.mjs'
@@ -1776,6 +1776,65 @@ export function refreshCard(base, out = projectFolder()) {
     writeAll(out, renderAll({ base, hash }))
     return hash
   } catch { return null }
+}
+
+// ---- M50 slice C: every thread start is counted, so the false-start rate is a number (docs/WORKFLOW.md, Thread starts)
+// One file per start, `brief-log/<date>-<session>.json` in the project's rulebook folder; one writer per file, so two threads never overwrite each other.
+// Outcomes: clean, repaired, refused (a judgment gap), wrong-model (a restart is needed), duplicate (reserved: the start was not needed).
+export const OUTCOMES = ['clean', 'repaired', 'refused', 'wrong-model', 'duplicate']
+export const FALSE_STARTS = ['refused', 'wrong-model', 'duplicate']
+// The outcome of one start from the brief check's text (rule-guard briefCheck) and the model check's text.
+export function startOutcome(check = '', modelCheckText = '') {
+  if (/^Model check\b/.test(modelCheckText)) return { outcome: 'wrong-model', reasons: ['model'] }
+  const items = [...String(check).matchAll(/\((\d+)\) (.*?)(?= \(\d+\) |\. Do no work)/g)].map((m) => m[2].trim().slice(0, 80))
+  if (/^Brief check\b/.test(check)) return { outcome: items.length === 1 && /ask the coordinator to restart it on that model/.test(String(check)) ? 'wrong-model' : 'refused', reasons: items }
+  const lacks = String(check).match(/Brief repair \(no block\): the brief lacks ([^.]*?)\. Work as if/)?.[1]
+  return lacks ? { outcome: 'repaired', reasons: lacks.split(', ') } : { outcome: 'clean', reasons: [] }
+}
+const logName = (session, date) => `${date}-${String(session).replace(/\W/g, '').slice(0, 40)}.json`
+function writeLog(file, entry) {
+  mkdirSync(join(file, '..'), { recursive: true })
+  const tmp = `${file}.${randomBytes(6).toString('hex')}.new`
+  try { writeFileSync(tmp, `${JSON.stringify(entry)}\n`, { flag: 'wx' }); renameSync(tmp, file) } catch (e) { rmSync(tmp, { force: true }); throw e }
+}
+// Writes the start's file. `info`: { session, project, role, kit, size, guard, card, outcome, reasons }. A failure never stops the start.
+export function logStart(info, out = projectFolder(), now = new Date()) {
+  try {
+    if (!out || !info?.session) return null
+    const date = now.toISOString().slice(0, 10)
+    const file = join(out, 'brief-log', logName(info.session, date))
+    if (existsSync(file)) return file // the hook may fire twice for one start: the first entry stands
+    writeLog(file, { at: now.toISOString(), project: '', role: '', kit: '', size: '', guard: '', card: '', outcome: 'clean', reasons: [], relays: 0, lifted: false, ...info })
+    return file
+  } catch { return null }
+}
+// A later relay on a refused start is added to the same file (`lifted` once a relay brings the thread to work).
+export function noteRelay(session, lifted, out = projectFolder()) {
+  try {
+    if (!out || !session) return false
+    const files = existsSync(join(out, 'brief-log')) ? readdirSync(join(out, 'brief-log')).filter((f) => f.endsWith(`-${String(session).replace(/\W/g, '').slice(0, 40)}.json`)) : []
+    if (!files.length) return false
+    const file = join(out, 'brief-log', files.sort().at(-1))
+    const entry = JSON.parse(readFileSync(file, 'utf8'))
+    if (!FALSE_STARTS.includes(entry.outcome)) return false
+    writeLog(file, { ...entry, relays: (entry.relays ?? 0) + 1, lifted: Boolean(entry.lifted || lifted) })
+    return true
+  } catch { return false }
+}
+// The count over a folder: `starts N: clean a, repaired b, refused c, wrong-model d, duplicate e (false starts f, g%); top reason: ...`. `since` is a Date or null.
+export function statsLine(out = projectFolder(), since = null) {
+  const dir = out ? join(out, 'brief-log') : ''
+  const entries = []
+  for (const f of dir && existsSync(dir) ? readdirSync(dir) : []) {
+    try { const e = JSON.parse(readFileSync(join(dir, f), 'utf8')); if (!since || new Date(e.at) >= since) entries.push(e) } catch { /* a cut file counts as nothing */ }
+  }
+  const count = Object.fromEntries(OUTCOMES.map((o) => [o, entries.filter((e) => e.outcome === o).length]))
+  const bad = FALSE_STARTS.reduce((n, o) => n + count[o], 0)
+  const reasons = new Map()
+  for (const e of entries.filter((x) => x.outcome !== 'clean')) for (const r of e.reasons ?? []) reasons.set(r, (reasons.get(r) ?? 0) + 1)
+  const top = [...reasons].sort((a, b) => b[1] - a[1])[0]
+  const pct = entries.length ? Math.round((100 * bad) / entries.length) : 0
+  return `starts ${entries.length}: ${OUTCOMES.map((o) => `${o} ${count[o]}`).join(', ')} (false starts ${bad}, ${pct}%); top reason: ${top ? `${top[0]} (${top[1]}x)` : 'none'}`
 }
 CARD
 
@@ -2623,6 +2682,7 @@ async function relayRebrief(session, prompt, cwd, model, transcript = '') {
   const context = relayContext(prompt, transcript)
   const text = stripTags([prompt, context].join('\n'))
   updateLock(session, await briefCheck(text, cwd, model, true))
+  await countRelay(session)
   const stamp = join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)
   if (existsSync(lockFile(session))) {
     if (coordinatorRelays(transcript).filter((t) => t.trim() !== prompt.trim() && BRIEF_LINE.test(t)).length < 2) return ''
@@ -2702,6 +2762,20 @@ async function cardLine() {
     return hash ? `Card refreshed ${hash}: the project folder's COORDINATOR-CARD.md, ROSTER.md and briefs/ now match main; the coordinator reads them again.` : ''
   } catch { return '' }
 }
+// M50 slice C: every checked start writes one count file in its project's folder (card-render.mjs, logStart); never stops the start.
+export async function countStart({ session, brief, checkNow, modelNote, guard, card }) {
+  try {
+    const { logStart, startOutcome, cardHash } = await import(new URL('./card-render.mjs', import.meta.url))
+    const base = dirname(fileURLToPath(import.meta.url))
+    const plain = brief.replace(/[*_`]/g, '')
+    const field = (re) => plain.match(re)?.[1]?.trim() ?? ''
+    const project = brief.match(/<project\b[^>]*\bname=\\?"([^"\\]+)/)?.[1] ?? brief.match(/<project\b[^>]*\bid=\\?"([^"\\]+)/)?.[1] ?? ''
+    logStart({ session, project, role: field(/\bRole:[ \t]*([^·|\n]+)/i), kit: field(/\bKit:[ \t]*([\w-]+)/i), size: field(/\bSize:[ \t]*([SML])\b/i), guard: guard.match(/Guards in this session: (\w+)/)?.[1] ?? '', card: card.match(/Card refreshed (\w+)/)?.[1] ?? (existsSync(join(base, 'docs', 'TEAMS.md')) ? cardHash(base) : ''), ...startOutcome(checkNow, modelNote) })
+  } catch { /* counting is never a reason to stop a start */ }
+}
+async function countRelay(session) {
+  try { (await import(new URL('./card-render.mjs', import.meta.url))).noteRelay(session, !existsSync(lockFile(session))) } catch { /* same */ }
+}
 export async function gateBriefContext(brief, model) {
   try { return (await loadCounter()).gateBrief(brief, { model }) } catch { return '' }
 }
@@ -2737,7 +2811,12 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           let relayNote = ''
           if (spawned || (lookup && brief !== prompt)) updateLock(session, checkNow)
           else if (existsSync(lockFile(session)) && COORDINATOR_RELAY.test(prompt)) relayNote = await relayRebrief(session, prompt, cwd, model, transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : '')
-          const context = [checkNow, relayNote, spawned || (lookup && brief !== prompt) ? await gateBriefContext(brief, model) : '', spawned || (lookup && brief !== prompt) ? await guardLine() : '', spawned || (lookup && brief !== prompt) ? await cardLine() : '', modelOnce(brief, transcriptPath, session), await roleContext(brief, cwd, session), promptContext(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
+          const isStart = spawned || (lookup && brief !== prompt)
+          const modelNote = modelOnce(brief, transcriptPath, session)
+          const guard = isStart ? await guardLine() : ''
+          const card = isStart ? await cardLine() : ''
+          if (isStart) await countStart({ session, brief, checkNow, modelNote, guard, card })
+          const context = [checkNow, relayNote, isStart ? await gateBriefContext(brief, model) : '', guard, card, modelNote, await roleContext(brief, cwd, session), promptContext(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
           if (context) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: context } }))
           return
         }

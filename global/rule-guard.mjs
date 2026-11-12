@@ -839,6 +839,7 @@ async function relayRebrief(session, prompt, cwd, model, transcript = '') {
   const context = relayContext(prompt, transcript)
   const text = stripTags([prompt, context].join('\n'))
   updateLock(session, await briefCheck(text, cwd, model, true))
+  await countRelay(session)
   const stamp = join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)
   if (existsSync(lockFile(session))) {
     if (coordinatorRelays(transcript).filter((t) => t.trim() !== prompt.trim() && BRIEF_LINE.test(t)).length < 2) return ''
@@ -918,6 +919,20 @@ async function cardLine() {
     return hash ? `Card refreshed ${hash}: the project folder's COORDINATOR-CARD.md, ROSTER.md and briefs/ now match main; the coordinator reads them again.` : ''
   } catch { return '' }
 }
+// M50 slice C: every checked start writes one count file in its project's folder (card-render.mjs, logStart); never stops the start.
+export async function countStart({ session, brief, checkNow, modelNote, guard, card }) {
+  try {
+    const { logStart, startOutcome, cardHash } = await import(new URL('./card-render.mjs', import.meta.url))
+    const base = dirname(fileURLToPath(import.meta.url))
+    const plain = brief.replace(/[*_`]/g, '')
+    const field = (re) => plain.match(re)?.[1]?.trim() ?? ''
+    const project = brief.match(/<project\b[^>]*\bname=\\?"([^"\\]+)/)?.[1] ?? brief.match(/<project\b[^>]*\bid=\\?"([^"\\]+)/)?.[1] ?? ''
+    logStart({ session, project, role: field(/\bRole:[ \t]*([^·|\n]+)/i), kit: field(/\bKit:[ \t]*([\w-]+)/i), size: field(/\bSize:[ \t]*([SML])\b/i), guard: guard.match(/Guards in this session: (\w+)/)?.[1] ?? '', card: card.match(/Card refreshed (\w+)/)?.[1] ?? (existsSync(join(base, 'docs', 'TEAMS.md')) ? cardHash(base) : ''), ...startOutcome(checkNow, modelNote) })
+  } catch { /* counting is never a reason to stop a start */ }
+}
+async function countRelay(session) {
+  try { (await import(new URL('./card-render.mjs', import.meta.url))).noteRelay(session, !existsSync(lockFile(session))) } catch { /* same */ }
+}
 export async function gateBriefContext(brief, model) {
   try { return (await loadCounter()).gateBrief(brief, { model }) } catch { return '' }
 }
@@ -953,7 +968,12 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           let relayNote = ''
           if (spawned || (lookup && brief !== prompt)) updateLock(session, checkNow)
           else if (existsSync(lockFile(session)) && COORDINATOR_RELAY.test(prompt)) relayNote = await relayRebrief(session, prompt, cwd, model, transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : '')
-          const context = [checkNow, relayNote, spawned || (lookup && brief !== prompt) ? await gateBriefContext(brief, model) : '', spawned || (lookup && brief !== prompt) ? await guardLine() : '', spawned || (lookup && brief !== prompt) ? await cardLine() : '', modelOnce(brief, transcriptPath, session), await roleContext(brief, cwd, session), promptContext(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
+          const isStart = spawned || (lookup && brief !== prompt)
+          const modelNote = modelOnce(brief, transcriptPath, session)
+          const guard = isStart ? await guardLine() : ''
+          const card = isStart ? await cardLine() : ''
+          if (isStart) await countStart({ session, brief, checkNow, modelNote, guard, card })
+          const context = [checkNow, relayNote, isStart ? await gateBriefContext(brief, model) : '', guard, card, modelNote, await roleContext(brief, cwd, session), promptContext(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
           if (context) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: context } }))
           return
         }
