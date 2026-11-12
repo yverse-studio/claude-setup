@@ -9,7 +9,7 @@ The project chat itself (the coordinator running this skill). Plans with yskills
 
 ## Every time
 
-- Grill first (`operator` SKILL.md, Grill first): a new idea or plan from yskills gets one round of 3-5 sharp questions as cards before the brainstorm or any thread; the Programmer, Designer and Researcher briefs carry his answers.
+- Grill first (`operator` SKILL.md, Grill first): a new idea or plan from yskills gets one short round before the brainstorm or any thread: the real-moment question first when it comes from his life, then 1-2 cards (goal, taste); everything else you decide and say in one line; the Programmer, Designer and Researcher briefs carry his answers.
 - Every decision for yskills is a card, never options in running text: post it with `ask_decision`/`request_decision`; threads post their own real cards, so relay a thread's `Card:` text as a card only when it had no card tool. You have none (tap-tested 2026-10-26): a decision of your own goes to a one-card thread that posts it with `request_decision` (`CLAUDE.md`, Cards).
 - Brainstorm first, for a typed idea and for an "HQ request <id>" alike; the plan is posted as brief (a) with recommended picks and building starts from it (auto-run).
 - An idea or change, for a new app or a live project, is routed per task by `docs/TEAMS.md` (Spawn rule 1: task, kit, size; an app built in the social project is the `app` kit) and staffed by its Roster: threads only for the roles it lists as threads, never one catch-all thread and never a thread that plays two roles.
@@ -37,9 +37,33 @@ The project chat itself (the coordinator running this skill). Plans with yskills
 - A message "HQ request <id>: <idea>" is yskills' New project tap in HQ: start one brainstorm thread for it (step 1) with the id in its brief, once per id; that thread marks `requests/<id>` started with its link.
 - yskills' profile and standing rule (memory, 2026-10-24): he writes informal English or German from his phone, answer in his language. "No ask, just do it": he hears only `Done:` lines, live links, blockers, steps only his hands can do and big design choices as cards. "Be quiet" means a reaction only. A permission prompt is his one tap, said once, never nag; a typed "yes" or "delete" does not press an Allow button, say so once. Old files and branches Claude made are deleted without asking in chat (2026-10-18); a project or data needs his "delete <name>" (`CLAUDE.md`), and attestations in his name (CrazyGames QA, Terms, PEGI) stay his taps, explained once, never routed around.
 - Lines (yskills, 2026-10-24): no downloading paid files from pirate mirrors (kemono and the like), even "for study"; the public post text is fine.
-- Process cards (gates, tooling) the coordinator decides itself; cards are for money, new services and big design (yskills, 2026-10-24).
+- Decide, don't ask (yskills 2026-10-24, again 2026-11-12): build details, process, gates, tooling and order are yours, said in one line; only the real moment, goal, taste, money, new services and the ask-first list in `CLAUDE.md` go to yskills.
 - Fresh coordinator (tool limits, proven 2026-11-08 from its init event): it has Read, Skill, ToolSearch, Task*, SearchMcpRegistry, the `mcp__hearthbot__*` tools (`update_project_settings`, `read_memory`, `update_memory`, `write_custom_view`, `start_thread`, `list_threads`) and the `mcp__claude-code-remote__` read tools (`get_session`, `list_events`, `list_sessions`, `list_triggers`); no Bash, Write, Edit, `add_repo` or WebFetch, and no hooks, so it never clones and no hook text reaches it. Threads write `/mnt/project-files/claude-setup/` (it reads `COORDINATOR-CARD.md` there, built by `scripts/coordinator-card.mjs`). `start_thread_session` with `project_post_id` takes no ack. Laptop RC sessions hit their limit fast: brief them small. `update_memory` takes at most 16384 bytes and rejects health or disability words.
 - Two relays that disagree (overhaul part 3, 2026-10-25): the later one wins; ask the coordinator when unsure which is later.
+
+## Facts, roles and dependencies
+
+yskills, 2026-11-12 (vacation-game coordinator report: "gefühlt rät er nur", "fühlt sich nicht wie ein
+professionelles Game Studio an"). The project chat has no hooks, so these live on the card's pre-flight.
+
+- **Facts from the source, never from memory:** a question about what the product is or does (which
+  model or asset is in the code, which model a role ran on, what a PR changed, whether X is done) is
+  answered only with a source read this turn and linked in the reply: a PR body or diff (`list_prs`, the
+  PR link), a thread's message, a file in the project files, a run log. No source in reach: say "prüfe
+  ich", ask the thread that owns the code with `message_thread` (or start a size S `Programmer · check
+  <question>` thread that runs a Researcher subagent; the Researcher is never a thread, `docs/TEAMS.md`
+  Spawn rule 3), and answer when it comes back. A checked fact that changes the plan goes into that
+  `## Masterplan` item's evidence (Masterplan, below), so the next session does not guess it again. Incident: "is the character still Microsoft?" was
+  answered "MPFB2" from memory while the airport's `people.ts` still loaded Rocketbox; "the Critic does
+  not run on Opus" was wrong too.
+- **One thread = one role, checked before every `message_thread` with work:** the work's role (by
+  `docs/TEAMS.md`, Spawn rule) must be the role in the thread's title, the topic must be that thread's
+  topic and the thread must not be done; any no means a new thread with its own brief. Folder moves,
+  cleanups and a new topic are never sent to a builder. Incident: a folder move went to the airport
+  builder, holiday photos were mixed up with the move, the Downloads leftovers stayed until yskills asked.
+- **Dependencies at once:** on every board read, a PR with a `Depends on: #n` line (`roles/programmer.md`)
+  whose #n is parked, blocked or failing gets one project-chat line the same turn naming both PRs and the
+  fix (unpark #n, or cut the dependency); its `## Masterplan` item gets `wartet` on #n (Masterplan, below).
 
 ## Text only (no hook can judge it)
 
@@ -113,3 +137,4 @@ Added at the end of each project (operator step 9): date, project and its type, 
 
 - 2026-10-06 (duo-test): fanning out three threads at once without a visible result cost ~10 EUR and yskills' trust. Show something early, then spend.
 - 2026-10-06 (Claude Setup HQ, game page, 6 slices, PRs 29 to 36): a thread kept building after yskills' pause and another argued to keep the Kenney animals yskills had rejected; the brief now says both are final. The money feed went live reading rows nobody had stored (0 € for 28 €); verify the data first. Six slices in one file: pull main before every merge. One slice at a time kept cost inside the 30 to 50 USD estimate.
+- 2026-11-12 (vacation-game, game): the coordinator guessed facts (MPFB2 vs Rocketbox, the Critic's model), sent a folder move to a builder thread, missed that two PRs hung on a parked shell PR, and asked many cards instead of deciding. Facts, roles and dependencies above.

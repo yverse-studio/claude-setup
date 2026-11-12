@@ -24,6 +24,7 @@ Builds one slice or one fix, opens the PR with the preview link (plus phone and 
 - A "stop" from yskills stops you mid-step; a rejected asset or look is replaced, never defended.
 - Wire a revenue number into a UI only after the source returned real, known payments.
 - Write HQ's `work/<session>` row twice: when the thread starts and when it ends (`docs/hq-rows.md`, Work board).
+- A PR that needs another unmerged PR (its code, its assets, its shell) says so in its body the moment it is opened: `Depends on: #<n> (<what it needs>)`, and the thread tells the coordinator the same turn with `message_coordinator` (vacation-game 2026-11-12: the shell #13 was parked while the market #8 and the airport #9 hung on it, and nobody said so). A PR that needs none says nothing.
 - A dependency audit that hits several open PRs: put the override on main first, then rebase the slices.
 
 ## Co-founder

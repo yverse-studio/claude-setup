@@ -6,8 +6,12 @@ import { fileURLToPath } from 'node:url'
 import { checkGdd, REQUIRED_HEADINGS, PLACEHOLDER } from './gdd-check.mjs'
 
 const GOOD = `# Game design: Bug Garden
+## Real moment
+none: invented
 ## Core loop
 Dash through the swarm; each kill drops dew that pulls toward you.
+## Controls
+Top-down, WASD or one thumb stick, the camera follows.
 ## Session length
 Runs last 180 to 300 seconds.
 ## Progression
@@ -38,6 +42,10 @@ test('the shipped template fails until it is filled in', () => {
   const t = readFileSync(new URL('../../operator/templates/game-design.md', import.meta.url), 'utf8')
   assert.ok(checkGdd(t).length > 0)
   for (const h of REQUIRED_HEADINGS) assert.ok(t.includes(`## ${h}`), h)
+})
+test('a doc without Real moment or Controls fails', () => {
+  assert.match(checkGdd(without(/## Real moment\n.*\n/)).join(), /no "## Real moment"/)
+  assert.match(checkGdd(without(/## Controls\n.*\n/)).join(), /no "## Controls"/)
 })
 test('a missing heading fails', () => assert.match(checkGdd(without(/## Progression\n.*\n/)).join(), /no "## Progression"/))
 test('an empty section fails', () => assert.match(checkGdd(GOOD.replace(/## Core loop\n.*\n/, '## Core loop\n')).join(), /Core loop is empty/))
@@ -74,4 +82,7 @@ test('the CLI exits 1 on a missing file', () => {
   const r = spawnSync('node', [fileURLToPath(new URL('./gdd-check.mjs', import.meta.url)), '/nonexistent/GDD.md'], { encoding: 'utf8' })
   assert.equal(r.status, 1)
   assert.match(r.stderr, /does not exist/)
+})
+test('the Real moment template text left in fails', () => {
+  assert.match(checkGdd(GOOD.replace('none: invented', 'For a level built from his life: his own words, asked before any build.')).join(), /template text/)
 })
