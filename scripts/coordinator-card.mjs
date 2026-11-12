@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url'
 import { coordinatorCard } from '../global/team-guard.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
-export const CARD_MAX = 8000 // 6,600 until 2026-11-12 (#430); raised for the Masterplan, facts, roles and dependencies lines
+export const CARD_MAX = 9000 // 9,000 for the copyable brief  6,600 until 2026-11-12 (#430); raised for the Masterplan, facts, roles and dependencies lines
 const cells = (l) => l.split('|').map((c) => c.trim())
 const read = (f) => readFileSync(join(root, f), 'utf8').replace(/\r/g, '')
 
@@ -32,6 +32,20 @@ const PREFLIGHT = `## Pre-flight before every reply
 - Hand off only at a trigger (docs/WORKFLOW.md), never at a token count. Small changes wait as patches (docs/github-rules.md).
 - Masterplan (roles/project-manager.md, Masterplan): /mnt/project-files/PLAN.json is the one plan; threads write it (scripts/plan.mjs), you Read it. Roadmap first (a Planner writes it), post it, start. Every event: Read PLAN.json before the reply; a change no thread owns goes into the next brief or a size S plan-update thread; then write_custom_view. "Stand?": goal, x/y done, doing, waits on him, next 3. Ping only when he must act, rate a visual, a part is Done (link), or a plan question.
 - If the project instructions lack the line "Read /mnt/project-files/claude-setup/COORDINATOR-CARD.md first", call update_project_settings once: PREPEND the text of operator/templates/project-instructions.md filled for this project above the existing instructions, keep every existing line (yskills 2026-11-08: add, never remove), and say so in one line.`
+
+const BRIEF = `## Copy this brief (a start missing a line is blocked by team-guard; operator/briefs.md has the rest)
+
+Role: <Roster name> · Kit: <kit> · Size: <S|M|L>
+Model: <id from the Roster row (docs/TEAMS.md, Models line)>
+Skills: <role doc and skills to load, or none>
+Threads: <list_threads checked this turn: none open on <topic> or continues <open thread title>>
+Item: <M<n> or new>
+Prior art: <what exists, checked> -> copy | adapt | build, because <why>
+Start: read MEMORY.md, then claude-setup CLAUDE.md and docs/TEAMS.md; a product: its CLAUDE.md and docs/LESSONS.md.
+Task: <one concrete job>
+Done when: <a check the thread can run, with its expected output>, plus NOW.md line set to done.
+Stop when: <rounds or attempts, never tokens; gate rounds as gate.md>
+(a gate round also: Round: <n> and Asset: <name>)`
 
 export function ruleRows(map) {
   const t = map.split('\n## One home per rule')[1] ?? ''
@@ -67,7 +81,7 @@ export function buildCard({ hash = 'nogit', date = new Date().toISOString().slic
   const team = full ? compact(full) : ''
   const rows = ruleRows(read('docs/MAP.md'))
   const tail = '… every rule: Read COORDINATOR-RULES-INDEX.md (same folder as this card)'
-  const build = () => [head, PREFLIGHT, team,
+  const build = () => [head, PREFLIGHT, BRIEF, team,
     `## Where is rule X? (One home per rule)\n\n${rows.slice(0, 6).map((r) => `- ${r.rule.slice(0, 44)} → ${clip(r.home.replace(/`/g, ""), 40)}`).concat(rows.length > 6 ? [tail] : []).join('\n')}`,
   ].join('\n\n') + '\n'
   const card = build()
