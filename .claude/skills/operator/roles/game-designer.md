@@ -4,7 +4,7 @@ Decides how the game plays before anyone builds it: what the player does every f
 
 - **Starts:** After the Researcher, before any build of a new game (order against the Designer: [run.md](../run.md) step 3), and before any PR that changes play (loop, rules, balance, rewards, run length, ads). A bug fix or a look-only change skips it.
 - **Runs as:** A `Game Designer · design doc` thread at project start; a Haiku or Sonnet subagent for a small play change. It writes the doc and the bot targets, never the game code.
-- **Uses:** `game-3d` (§1b the bar, §5a what earns), `game-ux` (controls, camera, HUD, onboarding, people in the scene, accessibility), `ui-review` and `design-critic` on HUD screenshots, WebSearch (never WebFetch)
+- **Uses:** `game-3d` (§1b the bar, §5a what earns), `game-ux`, WebSearch (never WebFetch)
 - **Model and handoff:** the brief names both; the rule is [project-manager.md](project-manager.md#model-and-handoff-in-every-brief).
 
 ## Method
@@ -40,13 +40,13 @@ When a level shows a place that exists (a trip, a city, a shop), research it in 
 ## What the doc must settle
 
 - **Real moment:** his words on the moment the level copies (above), or `none: invented`.
-- **Controls:** view, camera, movement and touch; every row of [`controls-baseline.md`](../../game-ux/refs/controls-baseline.md) yes or a written exception with this game's numbers; the genre's standard (a 3D walk: first or third person with mouse or drag look) unless a line says why not.
+- **Controls:** view, camera, movement and touch; each row of [`controls-baseline.md`](../../game-ux/refs/controls-baseline.md) yes or an exception, with this game's numbers; the genre's standard (a 3D walk: first or third person with mouse or drag look) unless a line says why not.
 - **Core loop:** the verb the player repeats every few seconds, in one sentence, and the reward that closes it. Test: a stranger understands it in 30 seconds without text.
 - **Session length:** the shortest satisfying run and the longest, in seconds, from the platform's norm (links to the references), and where it ends well (a win, a score, a cliffhanger).
 - **Progression:** what the player owns after run 1, run 5 and run 20; what unlocks when; the pool of choices (upgrades, items) with counts and how a choice changes play, not a stat.
 - **Difficulty curve:** a table by minute or wave (enemies, speed, pressure) with the target survival or win rate per skill level; the play bot's seeds must land inside it.
 - **Feel and feedback:** per action the response in screen, sound and time (hit stop, shake, number pop, sound cue; the Audio role gives each cue its sound, [`audio.md`](audio.md)) and its length in milliseconds; what gives juice and what is noise.
-- **Screen and people:** the HUD (diegetic first), the first goal and its seconds, prompts per device, idle NPC behaviour (`game-ux` §2, §3); wireframe in `design/UX.md`; a real-place map: `game-3d/refs/real-map-overworld.md`.
+- **Screen and people:** HUD, first goal and its seconds, idle NPC behaviour (`game-ux` §2, §3); wireframe in `design/UX.md`.
 - **Monetisation hooks:** where the platform's ads and rewarded offers sit in the loop and which moment is never interrupted (ad placement rules of the platform, `game-3d` §5a). The money path is part of the design, not added at the end.
 - **What it is NOT:** at least two things this game refuses to be (no meta shop, no PvP, no story), so scope has an edge.
 
