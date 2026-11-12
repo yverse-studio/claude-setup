@@ -89,7 +89,8 @@ export function mergeProblem(l) {
 // Only a NEW one: "new hub", "neuer Startbildschirm", "redesign the main menu"; "fix: main menu button", "push to Docker Hub" and "keep the art style" pass.
 const THING = '(?:hub|start ?screen|startbildschirm|title ?screen|titelbildschirm|main ?menu|hauptmen[üu]|art ?style|visual ?style)'
 const NEW_LOOK = new RegExp(`\\b(?:new|neu(?:e|er|es|en)?)\\s+(?:\\w+\\s+){0,1}${THING}\\b|\\bredesign(?:ed)?\\s+(?:the\\s+)?${THING}\\b`, 'i')
-export const needsPicture = (text) => NEW_LOOK.test(String(text).replace(/docker hub|github hub/gi, ''))
+// Text that talks about the picture card itself (this rule's own docs, PRs and the line) is not a new look.
+export const needsPicture = (text) => (!/picture[- ]card/i.test(String(text)) || /^[ \t>*_-]*Picture card:/im.test(String(text))) && NEW_LOOK.test(String(text).replace(/docker hub|github hub/gi, ''))
 const PICTURE_LINE = /^[ \t>*_-]*Picture card:[ \t*_`]*(?:\[[^\]]*\]\()?(#?cmsg_\w+|https?:\/\/[^\s)]*cmsg_\w+[^\s)]*)/im
 export const pictureRef = (text) => String(text).match(PICTURE_LINE)?.[1] ?? null // a real card id, not any URL
 
@@ -152,13 +153,18 @@ export function gateStep(tool, input = {}, ctx = {}) {
     // gh api .../pulls/<n>/merge is a merge door too.
     const apiMerge = cmd.match(/\bgh\s+api\b[^\n]*?repos\/([\w.-]+\/[\w.-]+)\/pulls\/(\d+)\/merge/)
     if (apiMerge) return mergeProblem(readLedger(dir, `${apiMerge[1].toLowerCase()}#${apiMerge[2]}`))
-    // A verdict posted with gh counts like one posted with the tool.
-    const ghPost = cmd.match(/\bgh\s+pr\s+(?:comment|review)\s+(?:-\S+\s+)*(\d+)\b/)
-    const ghHead = ghPost && parseHeadline(cmd.match(/(?:--body|-b)[ =]\s*(['"])([\s\S]*?)\1/)?.[2] ?? '')
-    if (ghHead) {
-      const repo = cmd.match(/(?:-R|--repo)[ =]\s*(?:[\w.-]+\/)?([\w.-]+\/[\w.-]+)/)?.[1]
-      const ids = repo ? [`${repo.toLowerCase()}#${ghPost[1]}`] : ledgersOfPr(dir, ghPost[1]).map((x) => x.asset)
-      for (const id of ids.length ? ids : []) { const bad = verdictProblem(dir, id, ghHead, ctx.dry); if (bad) return bad }
+    if (/\bgh\s+api\b[^\n]*pulls\/[^\s/]+\/merge/.test(cmd)) return 'gate ledger: a "gh api ... /merge" call names the repo literally (repos/owner/repo/pulls/N/merge), so its ledger can be checked (gate.md, Rounds).'
+    // A verdict posted with gh counts like one posted with the tool; a gate-shaped gh post must say its repo, PR and headline plainly.
+    if (/\bgh\s+pr\s+(?:comment|review|edit)\b/.test(cmd) && /\bGate\s+(?:\d(?:[.,]\d+)?\s*\/\s*5|fail|pass)/i.test(cmd)) {
+      const bare = cmd.replace(/(['"])[\s\S]*?\1/g, ' ')
+      const url = cmd.match(/github\.com\/([\w.-]+\/[\w.-]+)\/pull\/(\d+)/)
+      const repo = url?.[1] ?? cmd.match(/(?:-R|--repo)[ =]\s*(?:[\w.-]+\/)?([\w.-]+\/[\w.-]+)/)?.[1]
+      const n = url?.[2] ?? bare.replace(/(?:-R|--repo)[ =]?\s*\S+/g, ' ').match(/\b(?:comment|review|edit)\b\s+(?:\S+\s+)*?(\d+)(?=\s|$)/)?.[1]
+      const body = cmd.match(/(?:--body|-b)[ =]\s*(['"])([\s\S]*?)\1/)?.[2]
+      const head = body && !/\$\(|`/.test(body) ? parseHeadline(body) : null
+      if (!repo || !n || !head) return 'gate ledger: a verdict posted with gh is checked only in the plain form: gh pr comment|review|edit <N> -R <owner/repo> --body \'Gate <score>/5 (<size>, round <n>) ...\' (headline first, no $(...), no --body-file), so its ledger can be counted (gate.md, Rounds).'
+      const bad = verdictProblem(dir, `${repo.toLowerCase()}#${n}`, head, ctx.dry)
+      if (bad) return bad
     }
     // gh pr merge goes through the same ledger as the merge tool.
     if (/\bgh\s+pr\s+merge\b/.test(cmd)) {
@@ -173,13 +179,14 @@ export function gateStep(tool, input = {}, ctx = {}) {
     }
     // Only a command that RUNS the counter or WRITES the ledger or the installed guards is held to the plain form; reading, git, tests and
     // the page reader pass (a false block here stops ordinary claude-setup work).
-    const WRITES = /(?:>|\btee\b|\bsed\s+-\S*i|\b(?:rm|mv|cp|ln|truncate|dd|install|touch|chmod|perl|python3?|ruby|node)\b|Set-Content|Out-File|Remove-Item|Move-Item|Copy-Item|Add-Content)/
-    const ledger = (cmd.includes(dir) || /project-files[\\/]gate[\\/]/.test(cmd)) && WRITES.test(cmd)
+    const w = cmd.replace(/\d*>&\d+|\d+>\s*\/dev\/null/g, ' ') // 2>&1 and 2>/dev/null are no writes
+    const WRITES = /(?:>|\btee\b|\bsed\s+-\S*i|\b(?:rm|mv|cp|ln|truncate|dd|install|touch|chmod|perl|python3?|ruby)\b|\bnode\b(?!\s+--(?:check|test)\b)|Set-Content|Out-File|Remove-Item|Move-Item|Copy-Item|Add-Content)/
+    const ledger = (cmd.includes(dir) || /project-files[\\/]gate[\\/]/.test(cmd)) && WRITES.test(w)
     const guards = /\.claude[\\/]claude-setup[\\/](?:rule-guard|team-guard|gate-rounds)\.mjs/.test(cmd) && /(?:>|\btee\b|\bsed\s+-\S*i|\b(?:rm|mv|cp|ln|truncate|dd|install|perl|python3?|ruby)\b|Set-Content|Out-File|Remove-Item|Move-Item|Copy-Item|Add-Content)/.test(cmd) && !/rule-guard\.mjs\s+read\b/.test(cmd)
-    const runs = /\bnode\s+(?:-\S+\s+)*[\w~./-]*gate-rounds\.mjs\b/.test(cmd) || /\b(?:-e|--eval|-p|--print)\b[^\n]*gate-rounds|import\s*\([^)]*gate-rounds|require\([^)]*gate-rounds/.test(cmd)
+    const runs = /\bnode\s+(?!-{1,2}(?:check|test)\b)(?:-\S+\s+)*[\w~./-]*gate-rounds\.mjs\b/.test(cmd) || /\b(?:-e|--eval|-p|--print)\b[^\n]*gate-rounds|import\s*\([^)]*gate-rounds|require\([^)]*gate-rounds/.test(cmd)
     if (!ledger && !guards && !runs) return null
     // One plain command in one known form: no pipes, chains, substitution, redirects, node -e or imports (a parser differential is a bypass).
-    const plain = /^\s*node\s+[\w~./-]*gate-rounds\.mjs\s+(status|check|init|direct|card|picture|waive)\s+[\w./#-]+(?:\s+(?:--(?:plan|ref|round)\s+[\w./#:@-]+|[\w.]+))*\s*$/.exec(cmd)
+    const plain = /^\s*node\s+[\w~./-]*gate-rounds\.mjs\s+(status|check|init|direct|card|picture|waive)\s+[\w./#-]+(?:\s+(?:--(?:plan|ref|round)\s+[\w./#:@-]+|[\w.]+))*\s*$/.exec(w)
     if (!plain) return 'gate ledger: run the round counter only as one plain command, "node ~/.claude/claude-setup/gate-rounds.mjs <status|check|init|direct|card|picture|waive> <asset> [--plan f|--ref id|--round n]", and never touch the gate files another way (gate.md, Rounds).'
     const verb = plain[1]
     const ref = cmd.match(/--ref\s+(\S+)/)?.[1]
@@ -189,7 +196,7 @@ export function gateStep(tool, input = {}, ctx = {}) {
     return null
   }
   if (tool === 'mcp__github__create_pull_request') {
-    const text = `${input.title ?? ''}\n${input.body ?? ''}`
+    const text = /^(?:fix|docs|test|chore|ci|perf)\b/i.test(input.title ?? '') ? '' : `${input.title ?? ''}\n${input.body ?? ''}` // a fix of something already built is no new look
     return needsPicture(text) && !pictureRef(text) ? 'gate check: this PR introduces a hub, start screen or style but its body has no `Picture card: <link>` line. Pictures with references from current games go to yskills as a card BEFORE the build (gate.md, Picture card first).' : null
   }
   const asset = assetOf(input)

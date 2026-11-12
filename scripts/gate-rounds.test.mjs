@@ -279,3 +279,17 @@ test('review round 2: ordinary work is never blocked, and the doors it found are
   const q = session(); q.gate(1, '4.6'); q.gate(2, '3.0'); q.gate(3, '4.6')
   assert.equal(q.gate(4, '4.6').status, 0, 'polish counts from the latest passing run')
 })
+
+test('review round 3: gh verdicts in odd forms, the rule\'s own text, stderr redirects and node --check', () => {
+  const s = session(); const h = (c) => s.hook('Bash', { command: c })
+  for (const c of [`gh pr comment 11 --body 'Gate 4.2/5 (M, round 1)'`, `gh pr comment 11 -R o/r --body-file r.md # Gate 4.2/5`, `gh pr comment 11 -R o/r --body "$(cat <<'EOF'\nGate 4.2/5 (M, round 1)\nEOF\n)"`, `gh pr edit 11 --body 'Gate 4.2/5 (M, round 1)'`]) assert.match(h(c).stderr, /checked only in the plain form/, c)
+  assert.equal(h(`gh pr comment https://github.com/yverse-studio/vacation-game/pull/13 --body 'Gate 3.0/5 (S, round 1)'`).status, 0)
+  assert.equal(readLedger(join(s.dir, 'gate'), ASSET).rounds.length, 1, 'URL form counted')
+  assert.equal(h(`gh pr review -R yverse-studio/vacation-game 13 -b 'Gate 3.0/5 (S, round 2)'`).status, 0)
+  assert.equal(readLedger(join(s.dir, 'gate'), ASSET).rounds.length, 2, 'review form with -R before the number counted')
+  assert.match(h('gh api -X PUT repos/{owner}/{repo}/pulls/7/merge').stderr, /names the repo literally/)
+  for (const c of [`ls ${s.env.CLAUDE_SETUP_GATE_DIR}/ 2>/dev/null`, `cat ${s.env.CLAUDE_SETUP_GATE_DIR}/x.json 2>&1`, 'node --check global/gate-rounds.mjs', `node ~/.claude/claude-setup/gate-rounds.mjs status ${ASSET} 2>&1`]) assert.equal(h(c).status, 0, c)
+  assert.equal(needsPicture('docs: reword the rule that a new hub or start screen needs a picture card first'), false)
+  assert.equal(s.hook('mcp__github__create_pull_request', { owner: 'a', repo: 'b', title: 'fix: new hub button overlaps', body: 'x' }).status, 0)
+  assert.equal(s.hook('mcp__github__create_pull_request', { owner: 'a', repo: 'b', title: 'feat: new hub', body: 'x' }).status, 2)
+})
