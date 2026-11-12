@@ -1233,7 +1233,7 @@ function bashProblem(cmd, dir, ctx) {
     // An inline script (node -e, python -c) that holds the ledger folder, an installed guard or a transcript path writes it as well as a redirect does (plan 2026-11-12 M28, test 4).
     // Inline code is an interpreter with an eval-ish flag or subcommand, or any interpreter in a call that feeds stdin (heredoc, here-string,
     // pipe). For it the path test runs over the whole call text, the stdin body and the pipe's left side included.
-    const inline = INTERPRETERS.test(base(s.a0)) && (evalish(s) || stdinFed(cmd))
+    const inline = INTERPRETERS.test(base(s.a0)) && !isCounterCall(s) && (evalish(s) || stdinFed(cmd))
     if (inline && holdsPath(cmd, dir)) return `${msg} Read the ledger with cat, jq or the task-ledger status verb.`
     const script = s.a0 === 'node' ? s.args.find((a) => base(a) === 'gate-rounds.mjs') ?? s.args.find((a) => !a.startsWith('-')) : null
     if (script && base(script) === 'gate-rounds.mjs') {
