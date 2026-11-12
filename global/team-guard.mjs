@@ -229,8 +229,16 @@ const SHEET_LINES = [
   ['Sheet: (approved cast sheet, docs/preproduction-workflow.md)', /^[ \t>-]*Sheet:[ \t]*[^<\n]*\.md\b/im],
   ['Look-Lock: (owner card of the look)', /^[ \t>-]*Look-Lock:[ \t]*[^<\n]*(https?:\/\/|card)/im],
 ]
-const needsSheet = (plain) => /^[ \t>-]*Role:[ \t]*(Programmer|Animator)\b/im.test(plain) && /\bKit:[ \t]*(game|story)\b/i.test(plain)
-  && /\b(body|bodies|outfit|garment|clothes|clothing|character|cast)\b/i.test(plain.replace(/^[ \t>-]*(Model|Prior art|Skills|Start|Stop when|Threads|Item|Researcher|Tester):.*$/gim, ''))
+const GARMENT = /\b(outfits?|garments?|dress(es)?|skirts?|clothes|clothing|shirts?|blouses?|jackets?|lingerie|stockings|tights|uniforms?|wardrobe)\b/i
+const FIGURE = /\b(body|bodies|face|faces|figure)\b/i
+const MODEL_VERB = /\b(re-?fit(ting)?|fit(ting)?|sculpt(ing)?|model(l?ing)?|rig(ging)?|retopo\w*|shape.?keys?|weight.?paint\w*|skinning)\b/i
+const GARMENT_VERB = /\b(clip(ping|s)?|poke\w*|swap|move|make|build|create|dress(ing)?|put on|change)\b/i
+// A garment job (a garment word plus a fitting or building verb) or a figure job (body or face plus a modelling verb); not "face the player", "fit on 390px" or "rig the camera".
+const needsSheet = (plain) => {
+  if (!(/^[ \t>-]*Role:[ \t]*(Programmer|Animator)\b/im.test(plain) && /\bKit:[ \t]*(game|story)\b/i.test(plain))) return false
+  const task = plain.replace(/^[ \t>-]*(Model|Prior art|Skills|Start|Stop when|Threads|Item|Researcher|Tester|Role):.*$/gim, '')
+  return (GARMENT.test(task) && (MODEL_VERB.test(task) || GARMENT_VERB.test(task))) || (FIGURE.test(task) && MODEL_VERB.test(task))
+}
 export function missingLines(text) {
   const plain = text.replace(/[*_`]/g, '')
   const lines = BRIEF_LINES.filter(([, re]) => !re.test(plain)).map(([name]) => name)

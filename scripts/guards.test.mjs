@@ -1232,3 +1232,10 @@ test('gate fixes: Sheet: must be a .md path and Look-Lock: a link or card, "late
   assert.equal(missingLines(b('Sheet: later\nLook-Lock: later')).length, 2)
   assert.equal(missingLines(b('Sheet: characters/mira/SHEET.md\nLook-Lock: owner card https://claude.ai/c/1')).length, 0)
 })
+
+test('gate round 2: needsSheet matches garment and figure jobs, not everyday game work', async () => {
+  const { missingLines } = await import('../global/team-guard.mjs')
+  const need = (task, kit = 'game') => missingLines(`Role: Programmer · Kit: ${kit} · Size: M${FULL}\n${task}`).length
+  for (const task of ['Make the character jump higher', 'Fix the character controller camera', 'Fix the cast list UI', 'Fix the body text font on the menu', 'Add an outfit shop screen']) assert.equal(need(task), 0, task)
+  for (const task of ['Refit the dress on Luna', 'Fix the skirt clipping on the hips', 'Sculpt the new face for Mira', 'Fit the new character outfit', 'Rig and weight-paint the body']) assert.equal(need(task), 2, task)
+})

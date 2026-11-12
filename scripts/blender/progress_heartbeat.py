@@ -26,7 +26,7 @@ def install(path):
         _done += 1
         write_progress(path, scn.frame_current, _done, total)
 
-    write_progress(path, scene.frame_start, 0, total)   # alive before the first frame finishes
+    # No write before frame 1: laptop-job gives the first frame 30 min of grace, and a startup write would end that grace after 10.
     bpy.app.handlers.render_post.append(on_frame)
 
 
