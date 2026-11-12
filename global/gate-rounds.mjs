@@ -172,6 +172,27 @@ export function gateBrief(brief, { model = null, dir = ledgerDir() } = {}) {
 // The one transcript reader of the task ledger (task-ledger.mjs): the rows of the JSONL, bad lines skipped.
 export const transcriptRows = (text) => String(text).split('\n').map((l) => { try { return JSON.parse(l) } catch { return null } }).filter(Boolean)
 export const CMSG = /#?(cmsg_\w+)/ // one pattern for a card or message id; task-ledger.mjs reuses it
+// Who wrote a transcript row (#474 round 11). One place for both proofs: rule-guard's humanAfter (card proof) and task-ledger's pure-code
+// approve. A principal message is the wake wrapper the harness writes (the wrapper opens the row, then project and thread tags, then the
+// message from human with trust principal), never text quoted inside a relay, a cited entry, an event or a tool result. A coordinator
+// message is the relay behind the harness lead-in, or the bare queued form where only the harness writes it (a queued_command attachment
+// or an isMeta user row). The row text is the string or the joined text parts, not the JSON of the row. rule-guard.mjs keeps its own copy of
+// COORDINATOR_RELAY for the prompt hook (it loads this file lazily); a test holds the two sources equal.
+export const WAKE = /^\s*<wake\b[^>]*>\s*(?:<project\b[^>]*>\s*)?(?:<thread\b[^>]*>\s*)?<message\b(?=[^>]*\bfrom="human")(?=[^>]*\btrust="principal")/
+export const COORDINATOR_RELAY = /^\s*(?:<system-note>[^<]*<\/system-note>\s*)*(?:<system-reminder>\s*)?A message from this project[’']s coordinator session[^\n]*\n\s*<coordinator-relay>\s*<relay\b[^>]*\bfrom=\\?"coordinator"/
+export const BARE_RELAY = /^\s*<relay\b[^>]*\bfrom=\\?"coordinator"/
+export const rowText = (r) => {
+  if (r?.type === 'attachment') return r.attachment?.type === 'queued_command' ? String(r.attachment.prompt ?? '') : ''
+  const c = r?.message?.content
+  return typeof c === 'string' ? c : Array.isArray(c) ? c.map((x) => (x?.type === 'text' ? x.text ?? '' : '')).join('\n') : ''
+}
+const typed = (r) => r?.type === 'user' && !(Array.isArray(r.message?.content) && r.message.content.some((c) => c?.type === 'tool_result'))
+export const principalRow = (r) => typed(r) && WAKE.test(rowText(r))
+export const coordinatorRow = (r) => {
+  const text = rowText(r)
+  const harness = r?.type === 'attachment' ? r.attachment?.type === 'queued_command' : typed(r) && r.isMeta === true
+  return harness ? BARE_RELAY.test(text) || COORDINATOR_RELAY.test(text) : typed(r) && COORDINATOR_RELAY.test(text)
+}
 const cmsg = CMSG
 export function cardProof(ref, calls) {
   const id = String(ref).match(cmsg)?.[1]
@@ -469,7 +490,8 @@ export function gateStep(tool, input = {}, ctx = {}) {
   const file = String(input.file_path ?? '')
   if (/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) && STAMP.test(file)) return 'gate ledger: the role stamp and the brief lock of a session are written only by the hooks (security review 2026-11-12), never by hand.'
   if (/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) && ledgerFile(file, dir)) return 'gate ledger: the round counter is written only by gate-rounds.mjs (gate.md, Rounds), never by hand.'
-  if (/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) && (GUARD_FILE.test(file) || /\.claude\/projects\/.*\.jsonl$/.test(file.replace(/\\/g, '/')))) return 'gate ledger: the installed guards are changed only through claude-setup (a PR), never in place.'
+  if (/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) && GUARD_FILE.test(file)) return 'gate ledger: the installed guards are changed only through claude-setup (a PR), never in place.'
+  if (/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) && /\.claude\/projects\/.*\.jsonl$/.test(file.replace(/\\/g, '/'))) return 'gate ledger: a session transcript is written only by the harness, never by hand (the proofs are read from it).'
   if (tool === 'Bash' || tool === 'PowerShell') return bashProblem(String(input.command ?? ''), dir, ctx)
   if (tool === 'mcp__github__create_pull_request') {
     const text = `${input.title ?? ''}\n${input.body ?? ''}`

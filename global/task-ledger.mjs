@@ -23,7 +23,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { CMSG, cardProof, issueGrant, ledgerDir, readLedger, simpleCommands, takeGrant, transcriptRows, writeLedger } from './gate-rounds.mjs'
+import { CMSG, cardProof, coordinatorRow, issueGrant, ledgerDir, principalRow, readLedger, rowText, simpleCommands, takeGrant, transcriptRows, writeLedger } from './gate-rounds.mjs'
 
 const OPUS_UP = /opus|fable/i // the checker's tier: Opus or above (docs/TEAMS.md, Models line)
 export const sha = (text) => createHash('sha256').update(text).digest('hex')
@@ -228,15 +228,12 @@ export function verdictOf(text) {
 
 // A message in this session after a time: a user-side row that is no tool result (a thread cannot write one), from the principal or the
 // coordinator, holding exactly that id (pure-code approval).
-const FROM = /trust=\\?"principal\\?"|<relay\b[^>]*\bfrom=\\?"coordinator\\?"/
+// The sender is read by gate-rounds' principalRow and coordinatorRow (the wake wrapper or the relay itself, never a tag quoted inside a row).
 function messageAfter(rows, ref, at) {
   const id = String(ref).match(CMSG)?.[1]
   const since = Date.parse(at ?? '')
   if (!id || !Number.isFinite(since)) return false
-  return rows.some((r) => {
-    const body = JSON.stringify(r.message?.content ?? '')
-    return r.type === 'user' && !(Array.isArray(r.message?.content) && r.message.content.some((c) => c?.type === 'tool_result')) && new RegExp(`${id}(?!\\w)`).test(body) && FROM.test(body) && Date.parse(r.timestamp ?? '') >= since
-  })
+  return rows.some((r) => (principalRow(r) || coordinatorRow(r)) && new RegExp(`${id}(?!\\w)`).test(rowText(r)) && Date.parse(r.timestamp ?? '') >= since)
 }
 // The brief's Size (S, M or L) from the session's first user message that names one; null when none does.
 const briefSize = (rows) => { for (const r of rows) { if (r.type !== 'user' || (Array.isArray(r.message?.content) && r.message.content.some((c) => c?.type === 'tool_result'))) continue; const m = JSON.stringify(r.message?.content ?? '').replace(/[*_`]/g, '').match(/\bSize:[ \t]*([SML])\b/); if (m) return m[1] } return null }

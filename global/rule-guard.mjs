@@ -867,15 +867,12 @@ export function handsOff(tool, input = {}, role = '', root = '') {
 
 // Gate round counter (global/gate-rounds.mjs, operator/gate.md Rounds): a gate post, a merge, a ledger write or a director/card record is
 // checked against the asset's ledger. Fail closed: a check that throws refuses the call (research 2026-11-12: a crashing hook does not block).
-const humanAfter = (transcript, ref) => {
+const humanAfter = (transcript, ref, human) => {
   const id = String(ref).match(/cmsg_\w+/)?.[0]
   const rows = transcript.split('\n').map((l) => { try { return JSON.parse(l) } catch { return null } }).filter(Boolean)
   const at = rows.findIndex((r) => id && JSON.stringify(r.message?.content ?? '').includes(id))
-  // Finding 3: the principal tag counts only as the message the wake wraps (the wrapper opens the row, then project and thread tags), never
-  // as text quoted inside a relay, a cited message or a tool result.
-  const text = (r) => typeof r.message?.content === 'string' ? r.message.content : (Array.isArray(r.message?.content) ? r.message.content.map((c) => (c?.type === 'text' ? c.text ?? '' : '')).join('\n') : '')
-  const WAKE = /^\s*<wake\b[^>]*>\s*(?:<project\b[^>]*>\s*)?(?:<thread\b[^>]*>\s*)?<message\b(?=[^>]*\bfrom="human")(?=[^>]*\btrust="principal")/
-  const human = (r) => r.type === 'user' && !(Array.isArray(r.message?.content) && r.message.content.some((c) => c?.type === 'tool_result')) && WAKE.test(text(r))
+  // Finding 3: the principal tag counts only as the message the wake wraps, never as text quoted inside a relay, a cited message or a
+  // tool result. The test is gate-rounds' principalRow, the one task-ledger's approve proof uses too (#474 round 11).
   return at >= 0 && rows.slice(at + 1).some(human)
 }
 // A cached cloud image can lack the counter (its pasted setup predates it) and its start hook, the old team-guard, never fetches it
@@ -899,7 +896,7 @@ export async function gateBlock(tool, input, transcript, model, dry = false, rol
   }
   try {
     const t = transcript()
-    const why = mod.gateStep(tool, input, { model, dry, role, calls: /gate-rounds\.mjs|\bGate\b/.test(JSON.stringify(input)) ? toolCalls(t) : [], humanAfter: (ref) => humanAfter(t, ref) })
+    const why = mod.gateStep(tool, input, { model, dry, role, calls: /gate-rounds\.mjs|\bGate\b/.test(JSON.stringify(input)) ? toolCalls(t) : [], humanAfter: (ref) => humanAfter(t, ref, mod.principalRow) })
     if (why) return `rule-guard: ${why}`
     // The task ledger (M28): `approve` is checked here and leaves its grant; the name rule for the file is gate-rounds.mjs's.
     const cmd = /^(Bash|PowerShell)$/.test(tool) ? String(input?.command ?? '') : ''

@@ -1077,6 +1077,27 @@ export function gateBrief(brief, { model = null, dir = ledgerDir() } = {}) {
 // The one transcript reader of the task ledger (task-ledger.mjs): the rows of the JSONL, bad lines skipped.
 export const transcriptRows = (text) => String(text).split('\n').map((l) => { try { return JSON.parse(l) } catch { return null } }).filter(Boolean)
 export const CMSG = /#?(cmsg_\w+)/ // one pattern for a card or message id; task-ledger.mjs reuses it
+// Who wrote a transcript row (#474 round 11). One place for both proofs: rule-guard's humanAfter (card proof) and task-ledger's pure-code
+// approve. A principal message is the wake wrapper the harness writes (the wrapper opens the row, then project and thread tags, then the
+// message from human with trust principal), never text quoted inside a relay, a cited entry, an event or a tool result. A coordinator
+// message is the relay behind the harness lead-in, or the bare queued form where only the harness writes it (a queued_command attachment
+// or an isMeta user row). The row text is the string or the joined text parts, not the JSON of the row. rule-guard.mjs keeps its own copy of
+// COORDINATOR_RELAY for the prompt hook (it loads this file lazily); a test holds the two sources equal.
+export const WAKE = /^\s*<wake\b[^>]*>\s*(?:<project\b[^>]*>\s*)?(?:<thread\b[^>]*>\s*)?<message\b(?=[^>]*\bfrom="human")(?=[^>]*\btrust="principal")/
+export const COORDINATOR_RELAY = /^\s*(?:<system-note>[^<]*<\/system-note>\s*)*(?:<system-reminder>\s*)?A message from this project[’']s coordinator session[^\n]*\n\s*<coordinator-relay>\s*<relay\b[^>]*\bfrom=\\?"coordinator"/
+export const BARE_RELAY = /^\s*<relay\b[^>]*\bfrom=\\?"coordinator"/
+export const rowText = (r) => {
+  if (r?.type === 'attachment') return r.attachment?.type === 'queued_command' ? String(r.attachment.prompt ?? '') : ''
+  const c = r?.message?.content
+  return typeof c === 'string' ? c : Array.isArray(c) ? c.map((x) => (x?.type === 'text' ? x.text ?? '' : '')).join('\n') : ''
+}
+const typed = (r) => r?.type === 'user' && !(Array.isArray(r.message?.content) && r.message.content.some((c) => c?.type === 'tool_result'))
+export const principalRow = (r) => typed(r) && WAKE.test(rowText(r))
+export const coordinatorRow = (r) => {
+  const text = rowText(r)
+  const harness = r?.type === 'attachment' ? r.attachment?.type === 'queued_command' : typed(r) && r.isMeta === true
+  return harness ? BARE_RELAY.test(text) || COORDINATOR_RELAY.test(text) : typed(r) && COORDINATOR_RELAY.test(text)
+}
 const cmsg = CMSG
 export function cardProof(ref, calls) {
   const id = String(ref).match(cmsg)?.[1]
@@ -1374,7 +1395,8 @@ export function gateStep(tool, input = {}, ctx = {}) {
   const file = String(input.file_path ?? '')
   if (/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) && STAMP.test(file)) return 'gate ledger: the role stamp and the brief lock of a session are written only by the hooks (security review 2026-11-12), never by hand.'
   if (/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) && ledgerFile(file, dir)) return 'gate ledger: the round counter is written only by gate-rounds.mjs (gate.md, Rounds), never by hand.'
-  if (/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) && (GUARD_FILE.test(file) || /\.claude\/projects\/.*\.jsonl$/.test(file.replace(/\\/g, '/')))) return 'gate ledger: the installed guards are changed only through claude-setup (a PR), never in place.'
+  if (/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) && GUARD_FILE.test(file)) return 'gate ledger: the installed guards are changed only through claude-setup (a PR), never in place.'
+  if (/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) && /\.claude\/projects\/.*\.jsonl$/.test(file.replace(/\\/g, '/'))) return 'gate ledger: a session transcript is written only by the harness, never by hand (the proofs are read from it).'
   if (tool === 'Bash' || tool === 'PowerShell') return bashProblem(String(input.command ?? ''), dir, ctx)
   if (tool === 'mcp__github__create_pull_request') {
     const text = `${input.title ?? ''}\n${input.body ?? ''}`
@@ -1506,7 +1528,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { CMSG, cardProof, issueGrant, ledgerDir, readLedger, simpleCommands, takeGrant, transcriptRows, writeLedger } from './gate-rounds.mjs'
+import { CMSG, cardProof, coordinatorRow, issueGrant, ledgerDir, principalRow, readLedger, rowText, simpleCommands, takeGrant, transcriptRows, writeLedger } from './gate-rounds.mjs'
 
 const OPUS_UP = /opus|fable/i // the checker's tier: Opus or above (docs/TEAMS.md, Models line)
 export const sha = (text) => createHash('sha256').update(text).digest('hex')
@@ -1711,15 +1733,12 @@ export function verdictOf(text) {
 
 // A message in this session after a time: a user-side row that is no tool result (a thread cannot write one), from the principal or the
 // coordinator, holding exactly that id (pure-code approval).
-const FROM = /trust=\\?"principal\\?"|<relay\b[^>]*\bfrom=\\?"coordinator\\?"/
+// The sender is read by gate-rounds' principalRow and coordinatorRow (the wake wrapper or the relay itself, never a tag quoted inside a row).
 function messageAfter(rows, ref, at) {
   const id = String(ref).match(CMSG)?.[1]
   const since = Date.parse(at ?? '')
   if (!id || !Number.isFinite(since)) return false
-  return rows.some((r) => {
-    const body = JSON.stringify(r.message?.content ?? '')
-    return r.type === 'user' && !(Array.isArray(r.message?.content) && r.message.content.some((c) => c?.type === 'tool_result')) && new RegExp(`${id}(?!\\w)`).test(body) && FROM.test(body) && Date.parse(r.timestamp ?? '') >= since
-  })
+  return rows.some((r) => (principalRow(r) || coordinatorRow(r)) && new RegExp(`${id}(?!\\w)`).test(rowText(r)) && Date.parse(r.timestamp ?? '') >= since)
 }
 // The brief's Size (S, M or L) from the session's first user message that names one; null when none does.
 const briefSize = (rows) => { for (const r of rows) { if (r.type !== 'user' || (Array.isArray(r.message?.content) && r.message.content.some((c) => c?.type === 'tool_result'))) continue; const m = JSON.stringify(r.message?.content ?? '').replace(/[*_`]/g, '').match(/\bSize:[ \t]*([SML])\b/); if (m) return m[1] } return null }
@@ -2900,15 +2919,12 @@ export function handsOff(tool, input = {}, role = '', root = '') {
 
 // Gate round counter (global/gate-rounds.mjs, operator/gate.md Rounds): a gate post, a merge, a ledger write or a director/card record is
 // checked against the asset's ledger. Fail closed: a check that throws refuses the call (research 2026-11-12: a crashing hook does not block).
-const humanAfter = (transcript, ref) => {
+const humanAfter = (transcript, ref, human) => {
   const id = String(ref).match(/cmsg_\w+/)?.[0]
   const rows = transcript.split('\n').map((l) => { try { return JSON.parse(l) } catch { return null } }).filter(Boolean)
   const at = rows.findIndex((r) => id && JSON.stringify(r.message?.content ?? '').includes(id))
-  // Finding 3: the principal tag counts only as the message the wake wraps (the wrapper opens the row, then project and thread tags), never
-  // as text quoted inside a relay, a cited message or a tool result.
-  const text = (r) => typeof r.message?.content === 'string' ? r.message.content : (Array.isArray(r.message?.content) ? r.message.content.map((c) => (c?.type === 'text' ? c.text ?? '' : '')).join('\n') : '')
-  const WAKE = /^\s*<wake\b[^>]*>\s*(?:<project\b[^>]*>\s*)?(?:<thread\b[^>]*>\s*)?<message\b(?=[^>]*\bfrom="human")(?=[^>]*\btrust="principal")/
-  const human = (r) => r.type === 'user' && !(Array.isArray(r.message?.content) && r.message.content.some((c) => c?.type === 'tool_result')) && WAKE.test(text(r))
+  // Finding 3: the principal tag counts only as the message the wake wraps, never as text quoted inside a relay, a cited message or a
+  // tool result. The test is gate-rounds' principalRow, the one task-ledger's approve proof uses too (#474 round 11).
   return at >= 0 && rows.slice(at + 1).some(human)
 }
 // A cached cloud image can lack the counter (its pasted setup predates it) and its start hook, the old team-guard, never fetches it
@@ -2932,7 +2948,7 @@ export async function gateBlock(tool, input, transcript, model, dry = false, rol
   }
   try {
     const t = transcript()
-    const why = mod.gateStep(tool, input, { model, dry, role, calls: /gate-rounds\.mjs|\bGate\b/.test(JSON.stringify(input)) ? toolCalls(t) : [], humanAfter: (ref) => humanAfter(t, ref) })
+    const why = mod.gateStep(tool, input, { model, dry, role, calls: /gate-rounds\.mjs|\bGate\b/.test(JSON.stringify(input)) ? toolCalls(t) : [], humanAfter: (ref) => humanAfter(t, ref, mod.principalRow) })
     if (why) return `rule-guard: ${why}`
     // The task ledger (M28): `approve` is checked here and leaves its grant; the name rule for the file is gate-rounds.mjs's.
     const cmd = /^(Bash|PowerShell)$/.test(tool) ? String(input?.command ?? '') : ''
