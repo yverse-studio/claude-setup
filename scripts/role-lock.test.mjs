@@ -2,7 +2,7 @@
 // and a role does not write the files another role owns. Run: node --test scripts/role-lock.test.mjs
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { appendFileSync, existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
@@ -154,7 +154,7 @@ test('a prompt mid-work never locks the thread, even when the transcript holds o
 })
 
 // Issue #479 part 2 (VacationGame Critic, our Director): the coordinator often sends only the lines the start brief lacked, and the
-// lock then stayed. The latest coordinator relay is read together with the spawn brief from the transcript; its lines win, the spawn's fill the gaps.
+// lock then stayed. Every coordinator relay is read together with the spawn brief from the transcript; the newest lines win, the older ones fill the gaps.
 test('a coordinator relay that supplies only the missing brief lines lifts the lock, one that still lacks a line does not', () => {
   const dir = mkdtempSync(join(tmpdir(), 'rl-t-'))
   const started = (brief) => {
@@ -163,7 +163,9 @@ test('a coordinator relay that supplies only the missing brief lines lifts the l
     writeFileSync(transcript, `${JSON.stringify({ type: 'user', message: { content: spawn(brief) } })}\n`)
     const run = (mode, payload) => spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), mode], { input: JSON.stringify({ cwd: root, session_id: id, transcript_path: transcript, ...payload }), encoding: 'utf8', env: { ...process.env, CLAUDE_SETUP_RULE_GUARD: '' } })
     run('prompt', { prompt: spawn(brief) })
-    return { id, run }
+    // what the harness does: the relay is a user entry of the transcript and the prompt of the hook
+    const deliver = (prompt) => { appendFileSync(transcript, `${JSON.stringify({ type: 'user', message: { content: prompt } })}\n`); return run('prompt', { prompt }) }
+    return { id, run, deliver }
   }
   const head = 'Role: Programmer · Kit: setup · Size: S'
   const lacking = `${head}\nItem: M30\nPlan: x.md\nAcceptance: ok\nModel: sonnet\nSkills: none\nPrior art: obra/superpowers checked -> adapt, because ours reads hearthbot tools\nStart: read MEMORY.md first`
@@ -171,18 +173,19 @@ test('a coordinator relay that supplies only the missing brief lines lifts the l
   const bash = (t) => t.run('pre', { tool_name: 'Bash', tool_input: { command: 'ls' } }).status
   const a = started(lacking)
   assert.equal(bash(a), 2, 'the start brief lacks Threads, Done when and Stop when: locked')
-  a.run('prompt', { prompt: relay('coordinator', 'Threads: list_threads checked, none open on this topic') })
+  a.deliver(relay('coordinator', 'Threads: list_threads checked, none open on this topic'))
   assert.equal(bash(a), 2, 'a relay that still leaves Done when and Stop when out does not lift it')
-  a.run('prompt', { prompt: relay('coordinator', rest) })
-  assert.equal(bash(a), 0, 'the lines the coordinator adds later complete the spawn brief, no Role line needed')
+  a.deliver(relay('coordinator', 'Done when: the test passes\nStop when: 3 attempts'))
+  assert.equal(bash(a), 0, 'the lines of two relays add up with the spawn brief, no Role line needed')
+  assert.equal(readFileSync(join(tmpdir(), `claude-setup-role-${a.id}`), 'utf8'), 'Programmer', 'the lifted thread is stamped with the spawn brief role')
   const b = started(lacking)
-  b.run('prompt', { prompt: relay('thread', rest) })
+  b.deliver(relay('thread', rest))
   assert.equal(bash(b), 2, 'another thread cannot add the lines')
   const c = started(lacking)
-  c.run('prompt', { prompt: `<wake reason="mention"><message>${rest}</message></wake>` })
+  c.deliver(`<wake reason="mention"><message>${rest}</message></wake>`)
   assert.equal(bash(c), 2, 'a plain message cannot add the lines')
   const d = started(`Role: Programer · Kit: setup · Size: S\n${rest}\nItem: M30\nPlan: x.md\nAcceptance: ok\nModel: sonnet\nSkills: none\nPrior art: obra/superpowers checked -> adapt, because ours reads hearthbot tools\nStart: read MEMORY.md first`)
   assert.equal(bash(d), 2, 'a misspelled role is locked')
-  d.run('prompt', { prompt: relay('coordinator', head) })
+  d.deliver(relay('coordinator', head))
   assert.equal(bash(d), 0, 'the relay restates the Role line and wins over the spawn brief')
 })
