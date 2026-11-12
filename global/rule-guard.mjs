@@ -330,6 +330,7 @@ async function roleContext(prompt, cwd, session) {
   const root = setupRoot(cwd)
   const role = roleOf(prompt, read(join(root, 'docs', 'TEAMS.md')))
   if (!role) return ''
+  writeFileSync(spawnRoleFile(session), role.name)
   writeFileSync(once, existsSync(lockFile(session)) ? '' : role.name) // a rejected brief gets its card once but an empty stamp (it could name a gate role); a coordinator re-brief stamps it (relayRebrief)
   const topic = role.name === 'Reviewer' ? await topicPlaybook(prompt, root) : null
   if (topic) return roleCard({ ...role, path: `${'.claude/skills/operator/checklists.md'} (${topic.name}) and gate.md, Scored gates` }, topic.text)
@@ -764,10 +765,12 @@ export function updateLock(session, check) {
   else if (existsSync(f)) { try { unlinkSync(f) } catch { /* gone */ } } // any check that is no brief failure (an M-size note too) lifts it
 }
 // A corrected brief lifts the lock only when the coordinator itself relays it: the wrapper may follow the harness's own lead-in
-// (system-note, the "A message from this project's coordinator session" reminder), never a wake, message, note or another relay
-// that would quote it. It then stamps the role once, as roleContext does for a spawn brief: a non-empty stamp is never changed,
-// so a builder is never lifted into a gate role, while a gate thread whose first brief failed gets its role (#475 gate round 1).
-export const COORDINATOR_RELAY = /^(?:(?!<\/?(?:wake|message|note|relay|thread)\b)[\s\S])*?<coordinator-relay>\s*<relay\b[^>]*\bfrom=\\?"coordinator"/
+// (an allowlist: system-note blocks, then the fixed "A message from this project's coordinator session" line), so a wrapper inside
+// a wake, a PR event, a task notification or another relay never counts (#475 follow-up). It then stamps the role once, as roleContext does for a spawn brief: a non-empty stamp is never changed,
+// and a gate role only when the spawn brief named that same role (spawnRoleFile): a rejected Programmer spawn never becomes a
+// Reviewer, a rejected Reviewer spawn recovers (#475 gate round 1 and follow-up).
+export const COORDINATOR_RELAY = /^\s*(?:<system-note>[^<]*<\/system-note>\s*)*(?:<system-reminder>\s*)?A message from this project[’']s coordinator session(?:[^<]|<cited author="(?:user|coordinator)">)*<coordinator-relay>\s*<relay\b[^>]*\bfrom=\\?"coordinator"/
+const spawnRoleFile = (session) => join(tmpdir(), `claude-setup-spawnrole-${String(session).replace(/\W/g, '')}`)
 async function relayRebrief(session, prompt, cwd, model) {
   if (!COORDINATOR_RELAY.test(prompt)) return
   const text = prompt.replace(/\\n/g, '\n')
@@ -775,6 +778,7 @@ async function relayRebrief(session, prompt, cwd, model) {
   const stamp = join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)
   if (existsSync(lockFile(session)) || read(stamp).trim()) return
   const role = roleOf(text, read(join(setupRoot(cwd), 'docs', 'TEAMS.md')))
+  if (role && GATE_ROLES.test(role.name) && read(spawnRoleFile(session)).trim() !== role.name) return updateLock(session, `Brief check (docs/TEAMS.md): a re-brief cannot turn this thread into a ${role.name}; the spawn brief named another role. Ask the coordinator for a fresh ${role.name} thread, then stop.`)
   if (role) writeFileSync(stamp, role.name)
 }
 export function lockBlock(tool, session) {
