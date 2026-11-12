@@ -55,6 +55,10 @@ for (const [name, must] of [
   })
 }
 
+test('garment-fit restates no number of docs/clothing-pipeline.md', () => {
+  assert.doesNotMatch(read('.claude/skills/garment-fit/SKILL.md'), /\b\d+(\.\d+)? ?(mm|%)|\d+ to \d+/, 'a number here would drift from its home')
+})
+
 test('map and kits: one home each, linked from MAP.md and the game and story kits', () => {
   const map = read('docs/MAP.md')
   for (const s of ['garment-fit', 'texture-recolour', 'character-td.md']) assert.ok(map.includes(s), `MAP.md names ${s}`)
