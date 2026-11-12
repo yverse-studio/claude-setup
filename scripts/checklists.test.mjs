@@ -1,10 +1,12 @@
 // M48: fixed gate checklists per topic, `Topic:` in a Reviewer brief, and a Reviewer with a Topic gets checklist plus Scored gates (not the code playbook).
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { spawnSync } from 'node:child_process'
+import { tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
 import { join } from 'node:path'
-import { CHECKLISTS, badTopic, decide, topicNames } from '../global/team-guard.mjs'
+import { BOOT_FILES, CHECKLISTS, badTopic, decide, topicNames } from '../global/team-guard.mjs'
 import { topicPlaybook } from '../global/rule-guard.mjs'
 import { buildBrief, BriefError } from './brief.mjs'
 
@@ -57,4 +59,42 @@ test('a Reviewer with a Topic gets that checklist plus Scored gates, not the cod
   assert.doesNotMatch(pb.text, /^## Garment/m, 'only its own topic')
   assert.equal(await topicPlaybook(REVIEWER(null), root), null, 'no Topic: the normal Reviewer playbook')
   assert.equal(await topicPlaybook(REVIEWER('Cooking'), root), null, 'unknown Topic: no card from here (the guard blocks the start)')
+})
+
+// Gate round 1 (#467): outside the claude-setup repo the guard read '' because the checklist file was never in the boot copy, so badTopic returned null.
+test('the checklist file is part of the boot copy, and a thread start outside claude-setup with an unknown Topic is blocked', () => {
+  assert.ok(BOOT_FILES.includes(CHECKLISTS), 'team-guard fetches the checklist file with the other boot files')
+  const home = mkdtempSync(join(tmpdir(), 'cl-home-'))
+  const cwd = mkdtempSync(join(tmpdir(), 'cl-cwd-'))
+  try {
+    for (const f of BOOT_FILES) { // what the boot fetch leaves in ~/.claude/claude-setup
+      const dest = join(home, '.claude', 'claude-setup', f)
+      mkdirSync(join(dest, '..'), { recursive: true })
+      writeFileSync(dest, readFileSync(join(root, f), 'utf8'))
+    }
+    const start = (topic) => spawnSync(process.execPath, [join(root, 'global/team-guard.mjs'), 'pre'], {
+      input: JSON.stringify({ cwd, tool_name: 'mcp__hearthbot__start_thread', tool_input: { brief: REVIEWER(topic), title: 'Reviewer · M48', model: OPUS } }),
+      encoding: 'utf8', timeout: 5000, env: { ...process.env, CLAUDE_SETUP_HOME: home, CLAUDE_SETUP_BOOT_FETCH: 'off', CLAUDE_CODE_CHILD_SESSION: '' },
+    })
+    assert.match(start('Cooking').stderr, /Topic: Cooking is no topic/)
+    assert.equal(start('Garment').status, 0)
+  } finally { rmSync(home, { recursive: true, force: true }); rmSync(cwd, { recursive: true, force: true }) }
+})
+
+test('a topic card takes the section of exactly that heading, not one that merely starts with it', async () => {
+  const fake = mkdtempSync(join(tmpdir(), 'cl-root-'))
+  try {
+    mkdirSync(join(fake, '.claude/skills/operator'), { recursive: true })
+    writeFileSync(join(fake, CHECKLISTS), '# Gate checklists\n\n## Hair-extensions\n\nWRONG-SECTION rows\n\n## Hair\n\nRIGHT-SECTION rows\n')
+    writeFileSync(join(fake, '.claude/skills/operator/gate.md'), readFileSync(join(root, '.claude/skills/operator/gate.md'), 'utf8'))
+    const pb = await topicPlaybook(REVIEWER('Hair'), fake)
+    assert.match(pb.text, /RIGHT-SECTION/)
+    assert.doesNotMatch(pb.text, /WRONG-SECTION/)
+    assert.match(pb.text, /Scored gates \(the score rule\)/)
+  } finally { rmSync(fake, { recursive: true, force: true }) }
+})
+
+test('a Topic brief from the generator lists the checklist as its skill, not the code playbook', () => {
+  const out = buildBrief({ role: 'Reviewer', kit: 'game', size: 'M', item: 'M48', threads: 'list_threads checked, none open', done: 'v', stop: 's', what: 'w', topic: 'Hair', checklists })
+  assert.match(out.brief, /^Skills: \.claude\/skills\/operator\/checklists\.md$/m)
 })

@@ -35,7 +35,7 @@ export function buildBrief({ role, kit, size, item, threads, priorArt, done, sto
   if (badTopicWhy) throw new BriefError(badTopicWhy)
   const info = roleOf(stub(role, kit, size), teams)
   const needsSheet = /^(Programmer|Animator)$/.test(role) && /^(game|story)$/.test(kit)
-  const skillsLine = skills ?? info.path
+  const skillsLine = skills ?? (topic ? CHECKLISTS : info.path) // a Topic Reviewer works from its checklist, not the code playbook
   // A gate role's Prior art names the gate rules and the kit's checks (rule-guard briefCheck, GATE_PRIOR): written here, never by hand (CompanyXY 2026-11-12: two Reviewer threads blocked).
   const gateRole = GATE_ROLES.test(role)
   const prior = gateRole ? `.claude/skills/operator/gate.md and the ${kit} kit's checks (docs/TEAMS.md, Kits)${topic ? `; ${CHECKLISTS} (Topic: ${topic})` : ''}${priorArt ? `; ${priorArt}` : ' -> adapt, because the gate rules and checks already exist'}` : priorArt

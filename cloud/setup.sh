@@ -375,7 +375,8 @@ try { ({ roleOf } = await import('./rule-guard.mjs')) } catch { /* no rule-guard
 
 export const POINTER = 'Team rule (claude-setup docs/TEAMS.md): route every task on its own (task picks the kit, not the project; then size S/M/L), call only the roles it needs, as thread or subagent as the roster says, and pass `model` from the role\'s row on every thread start and Agent call.'
 export const PM_FILE = '.claude/skills/operator/roles/project-manager.md'
-export const BOOT_FILES = ['CLAUDE.md', 'docs/TEAMS.md', 'docs/MAP.md', PM_FILE, 'config/persona.json']
+export const CHECKLISTS = '.claude/skills/operator/checklists.md' // M48: the topics a Reviewer brief may name; in the boot copy so the guard knows them outside claude-setup too
+export const BOOT_FILES = ['CLAUDE.md', 'docs/TEAMS.md', 'docs/MAP.md', PM_FILE, 'config/persona.json', CHECKLISTS]
 const RAW = 'https://raw.githubusercontent.com/yverse-studio/claude-setup/main/'
 const MARK = '# Working for yskills' // first line of claude-setup's CLAUDE.md
 
@@ -632,7 +633,6 @@ export function badRole(text, teams) {
 
 // M48: a Reviewer brief may carry `Topic: <name>`; the names are the `## ` headings of the checklist file (the one source for this guard,
 // scripts/brief.mjs and rule-guard's topic card).
-export const CHECKLISTS = '.claude/skills/operator/checklists.md'
 export const topicNames = (checklists) => String(checklists).split('\n').filter((l) => /^## \S/.test(l)).map((l) => l.slice(3).trim())
 export function badTopic(text, checklists) {
   const plain = text.replace(/[*_`]/g, '')
@@ -1536,7 +1536,7 @@ function receiptBlock(tool, input, session, cwd, agentId, transcript) {
 }
 
 // M48: a Reviewer brief with a valid `Topic:` is given that topic's checklist plus the Scored gates section of gate.md instead of the code playbook.
-const mdSection = (text, heading) => { const a = text.indexOf(`\n## ${heading}`); if (a < 0) return ''; const b = text.indexOf('\n## ', a + 1); return text.slice(a + 1, b < 0 ? undefined : b).trim() }
+const mdSection = (text, heading, prefix = false) => { const m = new RegExp(`\\n## ${heading.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}${prefix ? '' : '$'}`, 'm').exec(text); if (!m) return ''; const b = text.indexOf('\n## ', m.index + 1); return text.slice(m.index + 1, b < 0 ? undefined : b).trim() }
 export async function topicPlaybook(brief, root) {
   let guard
   try { guard = await import(new URL('./team-guard.mjs', import.meta.url)) } catch { return null }
@@ -1545,7 +1545,7 @@ export async function topicPlaybook(brief, root) {
   const checklists = read(join(root, guard.CHECKLISTS)) || fetchRaw(guard.CHECKLISTS)
   if (!topic || !/^[ \t>-]*Role:[ \t]*Reviewer\b/im.test(plain) || guard.badTopic(plain, checklists)) return null
   const name = guard.topicNames(checklists).find((n) => n.toLowerCase() === topic.toLowerCase())
-  const scored = mdSection(read(join(root, '.claude/skills/operator/gate.md')) || fetchRaw('.claude/skills/operator/gate.md'), 'Scored gates')
+  const scored = mdSection(read(join(root, '.claude/skills/operator/gate.md')) || fetchRaw('.claude/skills/operator/gate.md'), 'Scored gates', true)
   return { name, text: `Topic: ${name}. Your whole job is this checklist, scored by the rule below; judge only these rows.\n\n${mdSection(checklists, name)}\n\n${scored}` }
 }
 
