@@ -5,14 +5,18 @@ const SHARED_INTROS = ['added at the end of each project operator step 9 date pr
 const MIN_WORDS = 12
 
 // Hard-wrapped lines join back into their paragraph or list item before the split into sentences.
-export function sentences(text) {
-  const blocks = []
+export function blocks(text) {
+  const out = []
   for (const line of text.replace(/```[\s\S]*?```/g, '').split('\n')) {
     const starts = !line.trim() || /^\s*([-*|#>]|\d+\.)/.test(line)
-    if (starts || !blocks.length) blocks.push(line.trim())
-    else blocks[blocks.length - 1] += ` ${line.trim()}`
+    if (starts || !out.length) out.push(line.trim())
+    else out[out.length - 1] += ` ${line.trim()}`
   }
-  return blocks.flatMap((b) => b.split(/(?<=[.!?])\s+/))
+  return out
+}
+
+export function sentences(text) {
+  return blocks(text).flatMap((b) => b.split(/(?<=[.!?])\s+/))
 }
 
 // files: [[path, text]]. Returns [[normalized sentence, [paths]]] for every sentence in two or more files.
