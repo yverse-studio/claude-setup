@@ -41,16 +41,16 @@ Coordinator only (a thread: Coordinator or thread, above).
    this lookup for every task without being asked and names kit and size in the brief.
 2. **Size.** The task's size (below) decides how much of the kit's team starts. It is the gate's size
    ([`gate.md`](../.claude/skills/operator/gate.md), Gate size): one size per task, picked by the
-   table, never by the author. A video or post brief's `Size:` stamp still needs a letter: one video or post is `M`, an ad batch, series or a launch video `L` (blind test 2026-10-27: a fresh coordinator guessed).
+   table, never by the author. A video or post brief's `Size:` stamp still needs a letter: one video or post is `M`, an ad batch, series or a launch video `L`.
 3. **Threads only for roles that own a long job or talk to yskills:** Planner, Designer, Game
-   Designer, Animator, Programmer, Tester (size L), Producer, Editor, Social Lead, Marketer. Every other role
+   Designer, Animator, Character TD, Programmer, Tester (size L), Producer, Editor, Social Lead, Marketer. Every other role
    is an `Agent` subagent of the thread that needs it, fresh for each job. A thread never plays a
    second thread-role; it asks the coordinator with `message_coordinator` (role, topic, files,
    done-when) and goes on with its own job.
 4. **Every start names its model.** The coordinator's thread start (`mcp__hearthbot__start_thread`, older `start_thread_session`) and `create_session` pass `model` (the
    full id from the Models line); every `Agent` call passes `model` (`haiku`, `sonnet`, `opus`). A
    brief's `Model:` line is text only and sets nothing; without the parameter a thread gets the
-   project default and a subagent inherits its parent (tested 2026-10-26: an Opus thread's subagent ran on Opus; with `model: haiku` on Haiku). The `team-guard` hook (`global/team-guard.mjs`) blocks an `Agent` call or thread
+   project default and a subagent inherits its parent. The `team-guard` hook (`global/team-guard.mjs`) blocks an `Agent` call or thread
    start without `model`, and a thread start before this session read this file (and `CLAUDE.md`
    where no checkout loaded it); a worker's summary does not count (2026-10-26: one found no copy
    and the coordinator guessed every model).
@@ -158,6 +158,14 @@ Runs yskills' accounts; the loop and posting rules: [`social-team`](../.claude/s
 | Publisher ([`publisher.md`](../.claude/skills/social-team/roles/publisher.md)) | preflight, scheduling, read-back, `posts.md` row | "upload", the switch, a project account | subagent of the Lead | Sonnet |
 | Analyst ([`analyst.md`](../.claude/skills/social-team/roles/analyst.md)) | numbers per post at 24 h and 7 d, what to repeat or drop | the daily sweep (24 h and 7 d due), the weekly routine | subagent of the Lead | Sonnet |
 
+### 3D parts (kits `game`, `story`)
+
+The roles of a heading that names kits in backticks fit those kits only.
+
+| Role and playbook | Job | Called when | Runs as | Model |
+|---|---|---|---|---|
+| Character TD ([`character-td.md`](../.claude/skills/operator/roles/character-td.md)) | body, face, hair, eyes, garments on the one base; every download from inbox to lib (`asset-intake`, `garment-fit`, `texture-recolour`); runs the check scripts, hands numbers and sheets to the gate | a body, face, hair, garment or download job on `game` or `story`, after cast sheet and look lock | a thread `Character TD · <asset>` | Sonnet; Opus judges fit images |
+
 ### Story (`storyteller`)
 
 The Story team (Director, Planner, Writers, Editor, Continuity, Narrative Designer, Copywriter,
@@ -183,10 +191,10 @@ M take the Sizes table.
 |---|---|---|---|---|
 | `site` | [`scaffold`](../.claude/skills/scaffold/SKILL.md), [`publish`](../.claude/skills/publish/SKILL.md), [`roles/designer.md`](../.claude/skills/operator/roles/designer.md), [`roles/content-designer.md`](../.claude/skills/operator/roles/content-designer.md), [`legal`](../.claude/skills/legal/SKILL.md), [`sell`](../.claude/skills/sell/SKILL.md) (money path), [`roles/analytics.md`](../.claude/skills/operator/roles/analytics.md), [`USING.md`](USING.md) | Planner, Researcher, Designer (Content Designer), Analytics, Programmer, Tester; Legal at launch | Game Designer, Audio, Playtester, Animator | 1 to 9 |
 | `app` | the `site` files, the built-in `/security-review` | the `site` team plus Security | Game Designer, Audio, Playtester, Animator | 1 to 9 |
-| `game` | [`game-pipeline.md`](game-pipeline.md) (only story games with renders), [`game-3d`](../.claude/skills/game-3d/SKILL.md), [`roles/designer.md`](../.claude/skills/operator/roles/designer.md) (Art direction first), [`roles/game-designer.md`](../.claude/skills/operator/roles/game-designer.md), [`roles/audio.md`](../.claude/skills/operator/roles/audio.md), [`roles/analytics.md`](../.claude/skills/operator/roles/analytics.md), [`roles/playtester.md`](../.claude/skills/operator/roles/playtester.md), [`checklists.md`](../.claude/skills/operator/checklists.md) (gate Topics), [`store-publish`](../.claude/skills/store-publish/SKILL.md) (only Google Play; the CrazyGames checklist is `game-3d` section 5a) | Planner, Researcher, Game Designer (Audio), Designer, Animator (3D scenes and clips), Analytics, Programmer, Playtester, Tester; Security (`red-team` on the last PR) and Legal at launch | Content Designer (unless the game has a lot of text), Marketer before the first playable | 1 to 9 |
+| `game` | [`game-pipeline.md`](game-pipeline.md) (only story games with renders), [`game-3d`](../.claude/skills/game-3d/SKILL.md), [`roles/designer.md`](../.claude/skills/operator/roles/designer.md) (Art direction first), [`roles/game-designer.md`](../.claude/skills/operator/roles/game-designer.md), [`roles/audio.md`](../.claude/skills/operator/roles/audio.md), [`roles/analytics.md`](../.claude/skills/operator/roles/analytics.md), [`roles/playtester.md`](../.claude/skills/operator/roles/playtester.md), [`checklists.md`](../.claude/skills/operator/checklists.md) (gate Topics), [`store-publish`](../.claude/skills/store-publish/SKILL.md) (only Google Play; the CrazyGames checklist is `game-3d` section 5a) | Planner, Researcher, Game Designer (Audio), Designer, Character TD, Animator (3D scenes and clips), Analytics, Programmer, Playtester, Tester; Security (`red-team` on the last PR) and Legal at launch | Content Designer (unless the game has a lot of text), Marketer before the first playable | 1 to 9 |
 | `video` | [`video-studio`](../.claude/skills/video-studio/SKILL.md), its [`learnings.md`](../.claude/skills/video-studio/learnings.md) and [`formats.md`](../.claude/skills/video-studio/formats.md), [`media-editing`](../.claude/skills/media-editing/SKILL.md) | Researcher, then the Film team | Programmer, scaffold, launch, grow | 1, 2, 9, then the `video-studio` pipeline |
 | `social` | [`social-team`](../.claude/skills/social-team/SKILL.md), its [`learnings.md`](../.claude/skills/social-team/learnings.md), [`market`](../.claude/skills/market/SKILL.md) §4 and §6, [`watch`](../.claude/skills/watch/SKILL.md) (a video link) | the Social team; "work them out" starts the Social Lead | Programmer, scaffold, launch | 1, 9, then the `social-team` pipeline |
-| `story` (Ren'Py) | [`renpy.md`](renpy.md), [`game-pipeline.md`](game-pipeline.md), [`two-figure-scenes.md`](two-figure-scenes.md), [`character-workflow.md`](character-workflow.md), [`storyteller`](../.claude/skills/storyteller/SKILL.md) | Planner, Researcher, Story Writer, Story Editor, Producer + Director per chapter ([`game-pipeline.md`](game-pipeline.md)), Animator for scene clips, Programmer for Ren'Py, Tester; Legal at release | Game Designer, Audio, Analytics, Security, Marketer | 1 to 7 and 9 |
+| `story` (Ren'Py) | [`renpy.md`](renpy.md), [`game-pipeline.md`](game-pipeline.md), [`two-figure-scenes.md`](two-figure-scenes.md), [`character-workflow.md`](character-workflow.md), [`storyteller`](../.claude/skills/storyteller/SKILL.md) | Planner, Researcher, Story Writer, Story Editor, Producer + Director per chapter ([`game-pipeline.md`](game-pipeline.md)), Character TD, Animator for scene clips, Programmer for Ren'Py, Tester; Legal at release | Game Designer, Audio, Analytics, Security, Marketer | 1 to 7 and 9 |
 | `setup` (claude-setup) | [`CLAUDE.md`](../CLAUDE.md), [`MAP.md`](MAP.md), this file, [`WORKFLOW.md`](WORKFLOW.md) | Planner (size M and L), Researcher (subagent), Programmer, the gate with its Reviewer | Designer, Animator, Marketer, Legal, `sell`, launch, grow | 1 to 3 by size, 5, 6, 9 |
 | `repo` (private, no Worker) | the row of the kind its content says; default `site` | that kind's team | that kind's list | that kind's steps |
 
@@ -226,6 +234,7 @@ images, content or quality, its own or another thread's, and adds no check of it
 - Content Designer, Game Designer, Audio, Sound Designer, Analytics, Marketer: write or build their part; the gate checks it.
 - Animator: builds, runs the fixed check script, hands strip and numbers to the gate.
 - Story Writer: writes and runs the lint; the Story Editor is its gate.
+- Character TD: fits, runs the check scripts, hands numbers and sheets to the gate.
 - Programmer: builds and runs the tests (numbers); the look is the gate's.
 - Tester, Reviewer, Security, Playtester, Legal (its pass or fail on the preview), Evaluator, Story Editor: these are the gate.
 - Film and Social teams: makers make; only the Critic and the Hook Checker grade.
