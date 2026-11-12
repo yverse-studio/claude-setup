@@ -1390,6 +1390,8 @@ test('team guard: the coordinator reuses an open role thread instead of starting
   assert.match(start('Programmer', '\nReuse: none (<why this is a new thread>)').block ?? '', /Reuse:/, 'the template placeholder is no reason')
   assert.deepEqual(start('Planner'), {}, 'no open Planner thread: start as before')
   assert.deepEqual(start('Tester', '', 'L'), {}, 'the L gate Tester is always fresh (docs/TEAMS.md, Reuse rule)')
+  const withReviewer = boardThreads(JSONL(BOARD([['Reviewer · Gate PR 1', 'working']])))
+  assert.deepEqual(decide('mcp__hearthbot__start_thread', { brief: `Role: Reviewer · Kit: setup · Size: M${FULL}`, title: 'Reviewer · Gate PR 2', model: 'claude-x-1' }, [], [], teams, '', withReviewer), {}, 'every reviewer is fresh (docs/TEAMS.md, Reuse rule: Always fresh)')
   assert.deepEqual(decide('mcp__hearthbot__start_thread', { brief: `Role: Programmer · Kit: setup · Size: M${FULL}`, title: 'Programmer · x', model: 'claude-x-1' }, [], [], teams, '', []), {}, 'no board read: as before')
 })
 

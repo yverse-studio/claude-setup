@@ -682,7 +682,7 @@ export const openSameRole = (board, role) => board.filter((t) => new RegExp(`^\\
 export function reuseBlock(text, teams, board) {
   const plain = text.replace(/[*_`]/g, '')
   const role = teams && board?.length && roleOf(plain, teams)
-  if (!role?.row || (role.name === 'Tester' && /\bSize:[ \t]*L\b/i.test(plain))) return null
+  if (!role?.row || role.name === 'Reviewer' || (role.name === 'Tester' && /\bSize:[ \t]*L\b/i.test(plain))) return null
   const open = openSameRole(board, role.name)
   if (!open.length || /^[ \t>-]*Reuse:[ \t]*none\b[^\n]*\([^)<\n][^)\n]{7,}\)/im.test(plain)) return null
   return `${role.name} thread already open: "${open[0]}". Give the work to it with message_thread (same plan or PR; docs/TEAMS.md, Reuse rule), or add \`Reuse: none (<why: other plan or PR, long context, parallel read job>)\` to the brief and retry`
