@@ -84,8 +84,8 @@ export function ledgerList({ dir = slotDir(), alive = pidAlive } = {}) {
 //   node scripts/laptop-slots.mjs ledger in <who> <blender|renpy> <pid> | out <who> <pid> | list
 export function ledgerCli(args, dir = slotDir()) {
   const [verb, who, app, pid] = args
-  if (verb === 'in' && who && ['blender', 'renpy'].includes(app) && Number(pid) > 0) { ledgerSignIn({ who, app, pid: Number(pid), dir }); return `signed in ${who}` }
-  if (verb === 'out' && who && Number(app) > 0) { ledgerSignOut(who, Number(app), dir); return `signed out ${who}` }
+  if (verb === 'in' && who && ['blender', 'renpy'].includes(app) && Number.isInteger(Number(pid)) && pidAlive(Number(pid))) { ledgerSignIn({ who, app, pid: Number(pid), dir }); return `signed in ${who}` }
+  if (verb === 'out' && who && Number.isInteger(Number(app)) && Number(app) > 0) { ledgerSignOut(who, Number(app), dir); return `signed out ${who}` }
   if (verb === 'list') return ledgerList({ dir }).map((r) => `${r.who} (${r.app}, pid ${r.pid})`).join('\n') || 'empty'
   throw new Error('usage: ledger in <who> <blender|renpy> <pid> | ledger out <who> <pid> | ledger list')
 }
