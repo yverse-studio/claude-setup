@@ -1171,6 +1171,18 @@ test('team guard: a bad brief is refused once with every problem and a template 
   assert.equal(decide('mcp__hearthbot__start_thread', { title: 'Programmer · Fix it', instructions: filled, model: 'claude-x-1' }, [], [], teams).block, undefined, 'a filled template starts the thread')
 })
 
+// Gate counter follow-up (PR #444): the one brief template carries the Round / Asset / Picture card lines the gate hook reads, so a coordinator copies them instead of finding them out from a refusal.
+test('the brief template carries the Round, Asset and Picture card lines the gate hook reads', async () => {
+  const { gateBrief } = await import('../global/gate-rounds.mjs')
+  const block = readFileSync(join(root, 'docs/templates/thread-brief.md'), 'utf8').match(/```\n([\s\S]*?)```/)?.[1] ?? ''
+  assert.match(block, /^Round: <n> · Asset: <owner\/repo#n>/m)
+  assert.match(block, /^Picture card: <link \| none, because <why>>/m)
+  const dir = mkdtempSync(join(tmpdir(), 'brief-gate-'))
+  const filled = block.replace(/^Round:.*$/m, 'Round: 1\nAsset: o/r#1').replace(/^Picture card:.*$/m, 'Picture card: none, because this builds no hub or menu')
+  assert.equal(gateBrief(filled, { dir }), '', 'a filled template passes the gate check')
+  assert.match(gateBrief(block, { dir }), /Round/, 'the unfilled Round line is caught, not skipped')
+})
+
 // Companyxy report 2026-11-12, point 2: a Researcher opened the Claude app's built-in browser instead of yskills' own
 // Chrome on the laptop. The app browser is blocked unless the environment says yskills asked for it.
 test('rule guard: the Claude app browser is blocked, Owner-Chrome and others are not', async () => {
