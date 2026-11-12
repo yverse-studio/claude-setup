@@ -10,11 +10,13 @@
 // because the evidence would be fabricated: a transcript, ledger or grant file written another way than by its literal path, a copy of a guard,
 // a script file, a glob or variable that hides a name, a guard run by hand on a transcript the thread wrote, a read-only tool's own write or
 // escape (find -fprintf, git diff --output=, sed w, awk system(), sed e), git config keys other than alias that run code (core.fsmonitor,
-// diff.external, core.sshCommand, core.pager), an alias supplied through the environment (--config-env, GIT_CONFIG_*), xargs as a launcher, a dummy source-looking argument next to code on stdin (node -r a.js <<EOF), a ledger path written non-canonically (gate/./x.json, gate//x.json, gate/a/../x.json).
-// What the Bash branch does read: find -exec and a git alias like bash -c; an interpreter with an eval flag or subcommand, or in a call that
-// feeds stdin (heredoc, here-string, pipe, process substitution) and has no script argument, is inline code, and the literal-path test runs over the whole call (accepted
-// cost: cat <ledger> | python3 -m json.tool is refused; read it with cat, jq or the status verb). The next step is a writer
-// outside the sandbox (a CI workflow), not a longer list here.
+// diff.external, core.sshCommand, core.pager), an alias supplied through the environment (--config-env, GIT_CONFIG_*), xargs as a launcher,
+// a ledger path written non-canonically (gate/./x.json, gate//x.json, gate/a/../x.json), code on stdin (a heredoc, here-string, pipe or
+// process substitution into an interpreter: "cat > x.mjs <<EOF ... EOF; node x.mjs" in one call is a script file and does the same), and an
+// eval flag after a non-flag argument (node -r a.js -e ...).
+// What the Bash branch does read: find -exec and a git alias like bash -c; an interpreter of the list with its own eval flag (before its first
+// non-flag argument) or the eval subcommand is inline code, and the literal-path test runs over that command's own arguments. The next step
+// is a writer outside the sandbox (a CI workflow), not a longer list here.
 // CLI: task-ledger.mjs plan <asset> <PLAN.md> | approve <asset> <ref> | status <asset> | brief <asset>
 import { createHash } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'

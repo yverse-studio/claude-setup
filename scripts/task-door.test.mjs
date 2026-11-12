@@ -434,36 +434,37 @@ test('reviewer round 4: --eval=<code> and --print=<code> are inline scripts, and
   } finally { t.done() }
 })
 
-test('director ruling on (b): an interpreter that takes its code from stdin holds the literal path test over the whole call, as -e does', () => {
+test('round 7: inline code is an interpreter\'s own eval flag, nothing else: 19 ordinary commands pass, 15 eval forms with a literal ledger, grants or transcript path are refused', () => {
   const t = door()
   try {
-    const paths = [join(t.gate, `${ASSET}.json`), join(t.gate, 'grants', 'x.json'), '/root/.claude/projects/-home-user/abc.jsonl']
-    const code = (p) => `require('fs').writeFileSync('${p}','{}')`
-    for (const p of paths) {
-      for (const c of [
-        `node <<'EOF'\n${code(p)}\nEOF`, `node - <<EOF\n${code(p)}\nEOF`, `node <<< "${code(p)}"`, `echo "${code(p)}" | node`, `printf '%s' "${code(p)}" | node -`,
-        `python3 <<EOF\nopen('${p}','w').write('{}')\nEOF`, `bash <<EOF\necho '{}' > ${p}\nEOF`, `sh <<'EOF'\necho '{}' > ${p}\nEOF`,
-      ]) assert.equal(t.bash(c).status, 2, c)
-    }
-    const l = paths[0]
-    assert.equal(t.bash(`cat ${l} | python3 -m json.tool`).status, 2, 'accepted cost: a pipe into an interpreter with the literal path is refused')
-    assert.match(t.bash(`cat ${l} | python3 -m json.tool`).stderr, /cat, jq or the task-ledger status verb/)
-    for (const c of [
-      `cat ${l}`, `echo "see ${l}"`, `cat <<'EOF' > /tmp/notes.md\nthe ledger is ${l}\nEOF`, `cat ${l} | jq .`,
-      `node scripts/x.mjs ${paths[2]}`, `cp ${l} /tmp/x.json`, `node - <<'EOF'\nconsole.log(1)\nEOF`, `echo hi | node -e "console.log(1)"`,
-    ]) assert.equal(t.bash(c).status, 0, c)
-    // Widened: a flag's value, a versioned name, perl -E, deno eval, bun eval. Each refused with the literal path, each passes without.
-    for (const p of paths) for (const m of ['gate-rounds', 'task-ledger']) { // "node -" reads stdin as the script, so naming the counter after it is not a counter call
-      const c = `node - /root/.claude/claude-setup/${m}.mjs status x <<'EOF'\n${code(p)}\nEOF`
-      assert.equal(t.bash(c).status, 2, c)
-    }
-    const wide = (p) => [
-      `python3 -c"open('${p}','w')"`, `node -pe"require('fs').writeFileSync('${p}','{}')"`, `node <(echo "require('fs').writeFileSync('${p}','{}')")`,
-      `python3 -W error <<EOF\nopen('${p}','w')\nEOF`, `node -r x <<EOF\nrequire('fs').writeFileSync('${p}','{}')\nEOF`, `python3.12 <<EOF\nopen('${p}','w')\nEOF`,
-      `perl -E 'open F, ">${p}"'`, `deno eval "Deno.writeTextFileSync('${p}','{}')"`, `bun eval "require('fs').writeFileSync('${p}','{}')"`,
+    const L = join(t.gate, `${ASSET}.json`)
+    const G = join(t.gate, 'grants', 'x.json')
+    const T = '/root/.claude/projects/-home-user/abc.jsonl'
+    const must = [
+      `node scripts/audit.mjs -p ${T}`, `python3 tools/count.py -c ${T}`, `node scripts/grep-transcript.mjs -e Agent ${T}`, `python3 -Wignore tools/count.py ${T}`,
+      `python3 -Werror tools/count.py ${L}`, `node -c scripts/x.mjs && cat ${L}`, `python3 -m pytest -p no:cacheprovider tests/test_x.py && cat ${L}`,
+      `node bin/audit ${T} | head`, `cat ${T} | node bin/audit | head`, `deno run x.mts ${L} | head`,
+      'node ~/.claude/claude-setup/rule-guard.mjs read https://example.com | head -50', 'node ~/.claude/claude-setup/team-guard.mjs version | head -2',
+      `node scripts/x.mjs ${L} || echo missing`, `wc -l ${T} && node scripts/audit.mjs ${T} | tail -5`, `python3 -I tools/count.py ${T} | head -3`,
+      'node scripts/shot.mjs --out /mnt/project-files/gate/o_r_7/r1/a.png 2>&1 | tail -2',
+      `cat ${L} | python3 -m json.tool`, `tail -c 2000 ${T} | python3 -c "print(1)"`, `python3 - <<'EOF'\nprint(open('${L}').read())\nEOF`,
     ]
-    for (const p of paths) for (const c of wide(p)) assert.equal(t.bash(c).status, 2, c)
-    for (const c of wide('/tmp/out.txt')) assert.equal(t.bash(c).status, 0, c)
+    assert.equal(must.length, 19)
+    for (const c of must) assert.equal(t.bash(c).status, 0, c)
+    for (const c of [`node -c ${L}`, `python3 -u ${L}`]) assert.equal(t.bash(c).status, 0, `${c} (node -c is --check, not an eval flag)`)
+    const refused = (p) => [
+      `node -e "require('fs').writeFileSync('${p}','{}')"`, `node -p "require('fs').writeFileSync('${p}','{}')"`, `node -pe"require('fs').writeFileSync('${p}','{}')"`,
+      `node --eval="require('fs').writeFileSync('${p}','{}')"`, `node --print="require('fs').writeFileSync('${p}','{}')"`,
+      `python3 -c "open('${p}','w')"`, `python3 -c"open('${p}','w')"`, `python3.12 -c "open('${p}','w')"`,
+      `perl -e 'open F, ">${p}"'`, `perl -E 'open F, ">${p}"'`, `ruby -e "File.write('${p}','{}')"`,
+      `deno eval "Deno.writeTextFileSync('${p}','{}')"`, `bun eval "require('fs').writeFileSync('${p}','{}')"`,
+      `git -c Alias.z='!node -e "require(\\"fs\\").writeFileSync(\\"${p}\\",\\"{}\\")"' z`, `find . -maxdepth 0 -exec node -e "require('fs').writeFileSync('${p}','{}')" \;`,
+    ]
+    assert.equal(refused(L).length, 15)
+    for (const p of [L, G, T]) for (const c of refused(p)) assert.equal(t.bash(c).status, 2, c)
+    for (const c of refused('/tmp/out.txt')) assert.equal(t.bash(c).status, 0, c)
+    // A shell's heredoc body is read like bash -c, so a redirect into the ledger in it is still refused; code on stdin for an interpreter is a Limit.
+    for (const c of [`bash <<EOF\necho '{}' > ${L}\nEOF`, `sh <<'EOF'\necho '{}' > ${G}\nEOF`]) assert.equal(t.bash(c).status, 2, c)
   } finally { t.done() }
 })
 
