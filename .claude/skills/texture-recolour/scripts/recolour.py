@@ -19,8 +19,9 @@ def read_obj_uv(path):
         elif p[0] == 'f':
             corners = [t.split('/') for t in p[1:]]
             if len(corners) < 3: continue
-            if any(len(c) < 2 or not c[1] for c in corners): skipped += 1; continue
-            faces.append([int(c[1]) - 1 if int(c[1]) > 0 else len(uvs) + int(c[1]) for c in corners])   # negative = relative to the vt read so far
+            try: idx = [int(c[1]) for c in corners]
+            except (IndexError, ValueError): skipped += 1; continue
+            faces.append([i - 1 if i > 0 else len(uvs) + i for i in idx])   # negative = relative to the vt read so far
     ok = [f for f in faces if all(0 <= i < len(uvs) for i in f)]
     return uvs, ok, skipped + len(faces) - len(ok)
 
@@ -37,9 +38,9 @@ def island_ids(faces, n_uv):
     return [order.setdefault(find(f[0]), len(order)) for f in faces]
 
 
-def island_mask(uvs, faces, picked, width, height=None, grow=0):
+def island_mask(uvs, faces, picked, width, height=None, grow=0, ids=None):
     """Boolean (height, width) mask: triangles of the picked islands at pixel centres (v up, image row 0 = v 1); each triangle only inside its own bounding box. grow = dilation in px."""
-    height = height or width; ids = island_ids(faces, len(uvs)); mask = np.zeros((height, width), bool)
+    height = height or width; ids = ids or island_ids(faces, len(uvs)); mask = np.zeros((height, width), bool)
     for f, i in zip(faces, ids):
         if i not in picked: continue
         for k in range(1, len(f) - 1):
@@ -78,16 +79,20 @@ def main():
     ap.add_argument('--hue', type=float, default=0.0); ap.add_argument('--sat', type=float, default=1.0); ap.add_argument('--val', type=float, default=1.0)
     ap.add_argument('--grow', type=int, default=0); ap.add_argument('--out', default='recolour_out')
     a = ap.parse_args()
-    full = np.array(Image.open(a.texture).convert('RGBA')); rgb, alpha = full[..., :3], full[..., 3]; h, w = rgb.shape[:2]
+    img = Image.open(a.texture)
+    if img.mode not in ('L', 'LA', 'P', 'RGB', 'RGBA'): sys.exit(f'recolour: texture mode {img.mode} (16-bit or float) would be flattened; convert it to 8-bit PNG first')
+    full = np.array(img.convert('RGBA')); rgb, alpha = full[..., :3], full[..., 3]; h, w = rgb.shape[:2]
     uvs, faces, skipped = read_obj_uv(a.mesh); ids = island_ids(faces, len(uvs)); known = sorted(set(ids))
     if skipped: print(f'recolour: {skipped} face(s) without a full set of UVs were ignored', file=sys.stderr)
     if a.list:
-        for i in known: print(json.dumps({'island': i, 'faces': ids.count(i), 'px': int(island_mask(uvs, faces, {i}, w, h).sum())}))
+        per = {i: 0 for i in known}; cnt = {i: 0 for i in known}
+        for f, i in zip(faces, ids): cnt[i] += 1
+        for i in known: print(json.dumps({'island': i, 'faces': cnt[i], 'px': int(island_mask(uvs, [f for f, j in zip(faces, ids) if j == i], {0}, w, h).sum())}))
         return 0
     picked = {int(i) for i in (a.islands or '').split(',') if i.strip() != ''}
     if not picked or not picked <= set(known): sys.exit(f'recolour: pick islands from {known} with --islands (got {sorted(picked)})')
     mask = island_mask(uvs, faces, picked, w, h, a.grow)
-    if not mask.any(): sys.exit('recolour: the picked islands cover 0 pixels at this texture size; check the UVs or raise --grow')
+    if not mask.any(): sys.exit('recolour: the picked islands cover 0 pixels at this texture size; check the UVs or use a larger texture')
     after = shift_hsv(rgb, mask, a.hue, a.sat, a.val)
     os.makedirs(a.out, exist_ok=True)
     Image.fromarray(np.dstack([after, alpha]), 'RGBA').save(os.path.join(a.out, 'recoloured.png')); Image.fromarray((mask * 255).astype(np.uint8)).save(os.path.join(a.out, 'mask.png'))

@@ -104,6 +104,20 @@ class Recolour(unittest.TestCase):
         p = run(self.tex, obj, '--islands', '0', '--hue', '10', '--out', os.path.join(self.dir, 'ot'))
         self.assertNotEqual(p.returncode, 0); self.assertIn('0 pixels', p.stderr); self.assertNotIn('Traceback', p.stderr)
 
+    def test_16bit_png_is_refused_not_flattened(self):
+        t = os.path.join(self.dir, 'g16.png'); Image.fromarray(np.full((64, 64), 30000, np.uint16)).save(t)
+        p = run(t, self.obj, '--islands', '0', '--hue', '10', '--out', os.path.join(self.dir, 'o16'))
+        self.assertNotEqual(p.returncode, 0); self.assertIn('8-bit', p.stderr)
+
+    def test_non_numeric_vt_index_is_skipped_not_a_traceback(self):
+        obj = os.path.join(self.dir, 'x.obj'); open(obj, 'w').write(OBJ + 'f 1/x 2/2 3/3\n')
+        p = run(self.tex, obj, '--list'); self.assertEqual(p.returncode, 0, p.stderr); self.assertNotIn('Traceback', p.stderr)
+        self.assertEqual(len(p.stdout.strip().splitlines()), 2)
+
+    def test_list_reports_area_per_island(self):
+        p = run(self.tex, self.obj, '--list'); rows = [json.loads(l) for l in p.stdout.strip().splitlines()]
+        self.assertEqual([r['island'] for r in rows], [0, 1]); self.assertTrue(all(r['px'] > 1000 and r['faces'] == 1 for r in rows))
+
     def test_unknown_island_fails_loudly(self):
         p = run(self.tex, self.obj, '--islands', '9', '--hue', '10', '--out', self.dir)
         self.assertNotEqual(p.returncode, 0)
