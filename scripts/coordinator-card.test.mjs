@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, symlinkSync, writeFileSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -135,6 +135,11 @@ test('a second run writes nothing, and a hand-edited or stale file is rewritten 
   assert.equal(writeAll(dir, files), files.size)
   assert.equal(writeAll(dir, renderAll({ base, hash: 'h', date: 'd' })), 0, 'no diff on the second run')
   assert.deepEqual(readdirSync(dir).filter((f) => f.endsWith('.new')), [], 'no temp file left')
+  const real = mkdtempSync(join(tmpdir(), 'real-'))
+  const linked = mkdtempSync(join(tmpdir(), 'link-'))
+  symlinkSync(real, join(linked, 'briefs'))
+  assert.throws(() => writeAll(linked, files), /symlink/)
+  assert.deepEqual(readdirSync(real), [], 'nothing written through the link')
   writeFileSync(join(dir, 'briefs/programmer.md'), 'drifted by hand')
   assert.equal(writeAll(dir, files), 1)
   assert.match(readFileSync(join(dir, 'briefs/programmer.md'), 'utf8'), /^# Brief file: Programmer/)

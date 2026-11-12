@@ -3,8 +3,8 @@
 // start can refresh a stale rulebook in ITS project with no checkout: COORDINATOR-CARD.md, COORDINATOR-RULES-INDEX.md, ROSTER.md and
 // briefs/<role>.md. All of it is rendered from docs/TEAMS.md, docs/MAP.md and BRIEF_FIELDS (global/team-guard.mjs); nothing in it is written by hand.
 // scripts/coordinator-card.mjs is the CLI over it, rule-guard calls refreshCard() when a thread starts (docs/MAP.md, Coordinator card).
-import { createHash } from 'node:crypto'
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
+import { createHash, randomBytes } from 'node:crypto'
+import { existsSync, lstatSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { BRIEF_FIELDS, GATE_BUILDER_ROLES, GUARD_FILES, badRole, badTeam, coordinatorCard, kitNames, kitRows, rosterNames } from './team-guard.mjs'
 import { GATE_ROLES, roleOf } from './rule-guard.mjs'
@@ -185,9 +185,10 @@ export function writeAll(dir, files) {
     const to = join(dir, name)
     if (existsSync(to) && readFileSync(to, 'utf8') === text) continue
     mkdirSync(join(to, '..'), { recursive: true })
-    const tmp = `${to}.${process.pid}.new`
-    writeFileSync(tmp, text)
-    renameSync(tmp, to)
+    // The folder is shared by every thread of the project: never write through a link planted there, and never reuse a guessable temp name.
+    if (lstatSync(join(to, '..')).isSymbolicLink() || (existsSync(to) && lstatSync(to).isSymbolicLink())) throw new Error(`card-render: ${name} is behind a symlink, refused`)
+    const tmp = `${to}.${randomBytes(6).toString('hex')}.new`
+    try { writeFileSync(tmp, text, { flag: 'wx' }); renameSync(tmp, to) } catch (e) { rmSync(tmp, { force: true }); throw e }
     written++
   }
   return written
