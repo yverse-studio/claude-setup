@@ -4,12 +4,12 @@
 // role or kit, a role the kit does not allow) and names every field you did not give; it guesses none (CLAUDE.md, No fog).
 // Usage: node scripts/brief.mjs --role <Role> --kit <kit> --size <S|M|L> --item <M<n>|new> --threads <text> --prior-art <text>
 //          --done <text> --stop <text> [--what <title words>] [--start <files>] [--skills <text>] [--sheet <path|n/a why>]
-//          [--look-lock <card link>] [--tester <thread>] [--researcher <text>] [--gate <reviewer thread>] [--json]
+//          [--look-lock <card link>] [--topic <checklist topic, Reviewer only>] [--tester <thread>] [--researcher <text>] [--gate <reviewer thread>] [--json]
 //        node scripts/brief.mjs --lines   one line per Roster role: its kits, model and playbook (for the coordinator's index)
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { GATE_BUILDER_ROLES, GATE_LINE, badRole, badTeam, decide, kitNames, rosterNames } from '../global/team-guard.mjs'
+import { CHECKLISTS, GATE_BUILDER_ROLES, GATE_LINE, badRole, badTeam, badTopic, decide, kitNames, rosterNames } from '../global/team-guard.mjs'
 import { GATE_ROLES, roleOf } from '../global/rule-guard.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -23,7 +23,7 @@ const tierOf = (row) => TIERS.find((t) => (modelCell(row).split(';')[0]).toLower
 const runsAs = (row) => row.match(/Runs as: (.*?)\. Model:/)?.[1] ?? ''
 const stub = (role, kit, size) => `Role: ${role} · Kit: ${kit} · Size: ${size}`
 
-export function buildBrief({ role, kit, size, item, threads, priorArt, done, stop, what, start, skills, sheet, lookLock, tester, researcher, gate, teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8') }) {
+export function buildBrief({ role, kit, size, item, threads, priorArt, done, stop, what, start, skills, sheet, lookLock, tester, researcher, gate, topic, checklists = readFileSync(join(root, CHECKLISTS), 'utf8'), teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8') }) {
   const roles = rosterNames(teams)
   const kits = kitNames(teams)
   if (!roles.includes(role)) throw new BriefError(`Role: ${role} is no role in docs/TEAMS.md (Roster); valid: ${roles.join(', ')}`)
@@ -31,12 +31,14 @@ export function buildBrief({ role, kit, size, item, threads, priorArt, done, sto
   if (!['S', 'M', 'L'].includes(size)) throw new BriefError(`Size: ${size} is none of S, M, L`)
   const refused = badRole(stub(role, kit, size), teams) ?? badTeam(stub(role, kit, size), teams)
   if (refused) throw new BriefError(refused)
+  const badTopicWhy = topic !== undefined && badTopic(`Role: ${role}\nTopic: ${topic}`, checklists)
+  if (badTopicWhy) throw new BriefError(badTopicWhy)
   const info = roleOf(stub(role, kit, size), teams)
   const needsSheet = /^(Programmer|Animator)$/.test(role) && /^(game|story)$/.test(kit)
   const skillsLine = skills ?? info.path
   // A gate role's Prior art names the gate rules and the kit's checks (rule-guard briefCheck, GATE_PRIOR): written here, never by hand (CompanyXY 2026-11-12: two Reviewer threads blocked).
   const gateRole = GATE_ROLES.test(role)
-  const prior = gateRole ? `.claude/skills/operator/gate.md and the ${kit} kit's checks (docs/TEAMS.md, Kits)${priorArt ? `; ${priorArt}` : ' -> adapt, because the gate rules and checks already exist'}` : priorArt
+  const prior = gateRole ? `.claude/skills/operator/gate.md and the ${kit} kit's checks (docs/TEAMS.md, Kits)${topic ? `; ${CHECKLISTS} (Topic: ${topic})` : ''}${priorArt ? `; ${priorArt}` : ' -> adapt, because the gate rules and checks already exist'}` : priorArt
   const builder = new RegExp(`^${GATE_BUILDER_ROLES}$`).test(role) && size !== 'S'
   const named = gate ?? `Reviewer · ${what}`
   const gateLine = builder ? `Gate: ${/^n\/a/i.test(named) || /\bbefore owner\b/.test(named) ? named : `${named} before owner`}` : null
@@ -51,11 +53,11 @@ export function buildBrief({ role, kit, size, item, threads, priorArt, done, sto
   const model = modelIds(teams)[tier]
   const lines = [stub(role, kit, size), `Model: ${model}`, `Item: ${item}`, `Threads: ${threads}`, `Prior art: ${prior}`, `Skills: ${skillsLine}`,
     ...(needsSheet ? [`Sheet: ${sheet}`, ...(/^n\/a/i.test(sheet) ? [] : [`Look-Lock: ${lookLock}`])] : []),
-    ...(gateLine ? [gateLine] : []), ...(researcher ? [`Researcher: ${researcher}`] : []), ...(role === 'Programmer' && size === 'L' ? [`Tester: ${tester}`] : []),
+    ...(topic ? [`Topic: ${topic}`] : []), ...(gateLine ? [gateLine] : []), ...(researcher ? [`Researcher: ${researcher}`] : []), ...(role === 'Programmer' && size === 'L' ? [`Tester: ${tester}`] : []),
     `Done when: ${done}`, `Stop when: ${stop}`, `Start: read MEMORY.md first${start ? `, then ${start}` : ''}`]
   const out = { brief: lines.join('\n'), title: `${role} · ${what ?? item}`, model }
   // Belt and braces: what leaves here passes the guard, or it does not leave.
-  const blocked = decide('mcp__hearthbot__start_thread', out, [], [], teams)
+  const blocked = decide('mcp__hearthbot__start_thread', out, [], [], teams, checklists)
   if (blocked.block) throw new BriefError(`the generated brief fails team-guard: ${blocked.block}`)
   return out
 }
@@ -81,7 +83,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   try {
     const out = buildBrief({ role: flag('role'), kit: flag('kit'), size: flag('size'), item: flag('item'), threads: flag('threads'), priorArt: flag('prior-art'),
       done: flag('done'), stop: flag('stop'), what: flag('what'), start: flag('start'), skills: flag('skills'), sheet: flag('sheet'), lookLock: flag('look-lock'),
-      tester: flag('tester'), researcher: flag('researcher'), gate: flag('gate') })
+      tester: flag('tester'), researcher: flag('researcher'), gate: flag('gate'), topic: flag('topic') })
     console.log(args.includes('--json') ? JSON.stringify(out) : out.brief)
   } catch (e) {
     if (!(e instanceof BriefError)) throw e

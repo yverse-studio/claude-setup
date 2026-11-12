@@ -43,3 +43,5 @@ Added at the end of each project (operator step 9): date, project and its type, 
 - 2026-10-07 (Kleingarten, Roblox): Robux receipts, Creator Hub hands steps, the HUD twin, `Strings` and baking the world now live in the `roblox` skill. Keep a check-in after dispatching a reviewer: a missed hand-back stalled the thread six hours.
 - PC work goes to a Remote Control session via the coordinator (`docs/WORKFLOW.md`, PC work); a job over ~10 minutes runs under the watchdog (`docs/pc-claude-user.md`, Long laptop jobs).
 - 2026-10-18 (claude-setup, PR 182): a fix added in a late gate round is a new rule. It ships with a negative test (the checker rules in [`reviewer.md`](reviewer.md), Report, point 2) and runs against this repo's own folders (`.shots/`, `test-results/`) before the verdict. A late ".webm counts as audio" extra broke silent games with a test recording and cost a round.
+
+- 2026-11-12 (M48): a new guard file change needs `node scripts/sync-cloud-setup.mjs` before check.mjs is green; write new playbook prose without never/must/always or it counts in the rule budget.
