@@ -55,7 +55,7 @@ export function compact(full) {
   const modelsLine = (part('## Spawn rule', '## Sizes').match(/\nModels:.*/) ?? [''])[0]
   const ids = [...modelsLine.matchAll(/(Fable|Opus|Sonnet|Haiku) \((claude-[\w.-]+)\)/g)].map((m) => `${m[1]} ${m[2]}`).join(', ')
   const sizes = part('## Sizes', '## Roster').split('\n').filter((l) => /^\| [SML] \|/.test(l)).map((l) => { const c = cells(l); return `- ${c[1]}: ${clip(flat(c[2]), 70)}; threads: ${clip(flat(c[3]), 60)}` })
-  const roster = part('## Roster', '## Kits').split('\n').filter((l) => l.startsWith('- ') && /thread/.test(l)).map((l) => { const [r, ...rest] = l.slice(2).split(': '); return `- ${r}: ${clip(flat(rest.join(': ')), 60)}` })
+  const roster = part('## Roster', '## Kits').split('\n').filter((l) => l.startsWith('- ') && /thread/.test(l)).map((l) => { const [r, ...rest] = l.slice(2).split(': '); return `- ${r}: ${clip(flat(rest.join(': ')), 44)}` })
   const kits = part('## Kits').split('\n').filter((l) => l.startsWith('- ')).map((l) => clip(flat(l), 90))
   return [
     `## Models (docs/TEAMS.md)\n\n${ids}. A model yskills names is used as named. A thread picks no Fable. Task first, then kit, then size; the thread's brief check refuses an unknown kit and a size or role that kit does not allow.`,
@@ -76,7 +76,7 @@ export function buildCard({ hash = 'nogit', date = new Date().toISOString().slic
 export const INDEX_MAX = 20000
 export function buildIndex({ hash = 'nogit', date = new Date().toISOString().slice(0, 10) } = {}) {
   const head = `Rules index (claude-setup ${hash}, ${date}). Read this when a rule is not on the card;\nthe home is the file to name, never a guess.`
-  const roles = `## Brief lines per role (a filled copy of briefs/<Role>.md in this folder is the brief; a size S setup thread builds one with scripts/brief.mjs)\n\n${roleLines(read('docs/TEAMS.md')).map((l) => `- ${l}`).join('\n')}`
+  const roles = `## Brief lines per role (a filled copy of briefs/<role>.md in this folder (lowercase, dashes) is the brief; a size S setup thread builds one with scripts/brief.mjs)\n\n${roleLines(read('docs/TEAMS.md')).map((l) => `- ${l}`).join('\n')}`
   const out = `${head}\n\n${ruleRows(read('docs/MAP.md')).map((r) => `- ${r.rule} → ${r.home}`).join('\n')}\n\n${roles}\n`
   if (out.length >= INDEX_MAX) throw new Error(`rules index is ${out.length} characters, limit ${INDEX_MAX}`)
   return out

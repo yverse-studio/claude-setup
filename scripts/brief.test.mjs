@@ -189,21 +189,28 @@ test('the Gate line has a home: the brief block in briefs.md and the owner-facin
   assert.match(gate, /Owner-facing results[^\n]*Gate:[^\n]*\[guard: hook global\/team-guard\.mjs\]/)
 })
 
-// M30: the coordinator has no Bash, so each role's brief is a rendered file it fills; a filled file must pass team-guard.
-test('a rendered brief file per role passes team-guard once its <...> are filled', async () => {
-  const { briefFile, briefFileName } = await import('./brief.mjs')
+// M30: the coordinator has no Bash, so each role's brief is a rendered file it fills; a filled file must pass team-guard at every size it offers.
+test('a rendered brief file per role passes team-guard once its <...> are filled, at every size and model it offers', async () => {
+  const { briefFile, briefFileName, modelFor } = await import('./brief.mjs')
   const { rosterNames } = await import('../global/team-guard.mjs')
   const roles = rosterNames(teams).filter((r) => briefFile(r, teams))
   assert.ok(roles.length >= 10 && !roles.includes('Project Manager'), 'the roles with a model tier have a file, the project chat has none')
   for (const role of roles) {
-    const text = briefFile(role, teams)
-    const block = text.match(/```\n([\s\S]*?)```/)[1]
-    const kit = block.match(/Kit: <([\w-]+)/)[1]
-    const filled = block.split('\n').filter((l) => !/^(Look-Lock|Topic|Tester):/.test(l))
-      .map((l) => l.replace(/^Sheet: .*/, 'Sheet: n/a this slice is no body, face or outfit job').replace(/Size: <[^>]+>/, 'Size: M').replace(/Kit: <[^>]+>/, `Kit: ${kit}`).replace(/^Gate: .*/, 'Gate: Reviewer · x before owner')
-        .replace(/<[^>\n]+>/g, (m) => (/PLAN\.json/.test(m) ? 'M30' : /^<sources/.test(m) ? 'obra/superpowers' : 'something concrete for this task'))).join('\n')
-    const out = decide(START, { brief: filled, title: `${role} · x`, model: block.match(/^Model: (\S+)/m)[1] }, [], [], teams)
-    assert.equal(out.block, undefined, `${role}: ${out.block}`)
+    const block = briefFile(role, teams).match(/```\n([\s\S]*?)```/)[1]
+    const cell = block.match(/Kit: <([^>]+)>/)[1].split(' | ')
+    const offered = block.match(/Size: <([^>]+)>/)[1].split('|')
+    for (const [name, only] of cell.map((c) => [c.match(/^[\w-]+/)[0], c.match(/size ([SML]( or [SML])*) only/)?.[1].split(' or ')])) for (const size of only ?? offered) {
+      const kit = name
+      const model = modelFor(role, size, teams)
+      const filled = block.split('\n').filter((l) => !/^(Look-Lock|Topic):/.test(l) && (size === 'L' || !/^Tester:/.test(l)))
+        .map((l) => l.replace(/^Sheet: .*/, 'Sheet: n/a this slice is no body, face or outfit job').replace(/Size: <[^>]+>/, `Size: ${size}`).replace(/Kit: <[^>]+>/, `Kit: ${kit}`)
+          .replace(/^Model: .*/, `Model: ${model}`).replace(/^Gate: .*/, 'Gate: Reviewer · x before owner')
+          .replace(/<[^>\n]+>/g, (m) => (/PLAN\.json/.test(m) ? 'M30' : /^<sources/.test(m) ? 'obra/superpowers' : 'something concrete for this task'))).join('\n')
+      const out = decide(START, { brief: filled, title: `${role} · x`, model }, [], [], teams)
+      assert.equal(out.block, undefined, `${role} at ${size}: ${out.block}`)
+    }
     assert.match(briefFileName(role), /^[a-z0-9-]+\.md$/)
   }
+  assert.equal(modelFor('Planner', 'L', teams), teams.match(/Fable \((claude-[\w.-]+)\)/)[1])
+  assert.match(briefFile('Planner', teams), /Model: <claude-opus[\w.-]* at size M \| claude-fable[\w.-]* at size L>/, 'the Planner file offers the model per size')
 })

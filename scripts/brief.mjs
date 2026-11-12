@@ -21,6 +21,11 @@ const modelIds = (teams) => Object.fromEntries([...teams.matchAll(/(Fable|Opus|S
 const modelCell = (row) => row.match(/Model: (.*?)\.?$/)?.[1] ?? ''
 const tierOf = (row) => TIERS.find((t) => (modelCell(row).split(';')[0]).toLowerCase().includes(t)) // undefined: the row names none (the Project Manager's is set by yskills)
 const runsAs = (row) => row.match(/Runs as: (.*?)\. Model:/)?.[1] ?? ''
+// The model a thread of this role starts on at this size: the first tier its Roster row names, Fable for a Planner at size L (team-guard wrongModel).
+export const modelFor = (role, size, teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')) => {
+  const tier = role === 'Planner' && size === 'L' ? 'fable' : tierOf(roleOf(stub(role, 'setup', size), teams).row)
+  return tier ? modelIds(teams)[tier] : undefined
+}
 const stub = (role, kit, size) => `Role: ${role} · Kit: ${kit} · Size: ${size}`
 
 export function buildBrief({ role, kit, size, item, plan, acceptance, threads, priorArt, done, stop, what, start, skills, sheet, lookLock, tester, researcher, gate, topic, checklists = readFileSync(join(root, CHECKLISTS), 'utf8'), teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8') }) {
@@ -48,9 +53,9 @@ export function buildBrief({ role, kit, size, item, plan, acceptance, threads, p
   if (needsSheet && sheet && !/^n\/a/i.test(sheet) && !lookLock) missing.push('--look-lock')
   if (needsSheet && /^n\/a/i.test(sheet ?? '') && !/^n\/a[ \t]+\S[^\n]{9,}$/i.test(sheet)) throw new BriefError('--sheet n/a needs a reason of 10+ characters after it (team-guard: Sheet: n/a <why this is no body, face or outfit job>)')
   if (missing.length) throw new BriefError(`missing, never guessed: ${missing.join(', ')}`)
-  const tier = role === 'Planner' && size === 'L' ? 'fable' : tierOf(info.row) // a Planner at size L is a hard task: Fable (team-guard wrongModel)
+  const tier = tierOf(info.row)
   if (!tier) throw new BriefError(`the Roster row of ${role} names no model tier ("${modelCell(info.row)}"); the model of this role is not the generator's to pick`)
-  const model = modelIds(teams)[tier]
+  const model = modelFor(role, size, teams)
   const lines = [stub(role, kit, size), `Model: ${model}`, `Item: ${item}`, `Plan: ${plan}`, `Acceptance: ${acceptance}`, `Threads: ${threads}`, `Prior art: ${prior}`, `Skills: ${skillsLine}`,
     ...(needsSheet ? [`Sheet: ${sheet}`, ...(/^n\/a/i.test(sheet) ? [] : [`Look-Lock: ${lookLock}`])] : []),
     ...(topic ? [`Topic: ${topic}`] : []), ...(gateLine ? [gateLine] : []), ...(researcher ? [`Researcher: ${researcher}`] : []), ...(role === 'Programmer' && size === 'L' ? [`Tester: ${tester}`] : []),
@@ -78,11 +83,14 @@ export function briefFile(role, teams = readFileSync(join(root, 'docs/TEAMS.md')
   const info = roleOf(stub(role, 'setup', 'M'), teams)
   const tier = tierOf(info.row)
   if (!tier) return null // the Project Manager's model is set by yskills: no thread brief
-  const kits = kitNames(teams).filter((kit) => !badTeam(stub(role, kit, 'M'), teams))
+  const sizesOf = (kit) => ['S', 'M', 'L'].filter((size) => !badRole(stub(role, kit, size), teams) && !badTeam(stub(role, kit, size), teams) && (role !== 'Planner' || size !== 'S'))
+  const kits = kitNames(teams).filter((kit) => sizesOf(kit).length)
   if (!kits.length) return null
+  const offered = [...new Set(kits.flatMap(sizesOf))]
+  const kitCell = kits.map((kit) => (sizesOf(kit).length < offered.length ? `${kit} (size ${sizesOf(kit).join(' or ')} only)` : kit)).join(' | ')
   const gateRole = GATE_ROLES.test(role)
   const builder = new RegExp(`^${GATE_BUILDER_ROLES}$`).test(role)
-  const lines = [`Role: ${role} · Kit: <${kits.join(' | ')}> · Size: <${role === 'Planner' ? 'M|L' : 'S|M|L'}>`, `Model: ${modelIds(teams)[tier]}`,
+  const lines = [`Role: ${role} · Kit: <${kitCell}> · Size: <${offered.join('|')}>`, `Model: ${role === 'Planner' ? `<${modelFor(role, 'M', teams)} at size M | ${modelFor(role, 'L', teams)} at size L>` : modelFor(role, 'M', teams)}`,
     'Item: <PLAN.json item M<n>, or new>', 'Plan: <plan file or card it builds>', 'Acceptance: <what counts as accepted>',
     'Threads: <list_threads checked: none open on this topic | continues <title of the open thread>>',
     `Prior art: ${gateRole ? `.claude/skills/operator/gate.md and the <kit>'s checks (docs/TEAMS.md, Kits) -> adapt, because the gate rules and checks already exist` : '<sources named: repo, path, URL, #n> -> copy | adapt | reuse | build, because <why>'}`,
