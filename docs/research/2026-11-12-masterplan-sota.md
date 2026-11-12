@@ -2,7 +2,7 @@
 
 Read 2026-11-12 via rule-guard read (full page text) unless marked. `inferred` = my guess, not in the source.
 
-Taken (Planner, 2026-11-12, `inferred`): the plan lives in `MEMORY.md` `## Masterplan`, not a `PLAN.json`, because the coordinator can write only memory (`update_memory`) and must change the plan on every ask; the rest (roadmap first, status words, done needs a link, stall rule, fixed Stand answer) is adopted as recommended below. Rule: [`roles/project-manager.md`](../../.claude/skills/operator/roles/project-manager.md) (Masterplan).
+Taken (Planner, 2026-11-12, `inferred`): the plan lives in `MEMORY.md` `## Masterplan`, not a `PLAN.json`, because the coordinator can write only memory (`update_memory`) and must change the plan on every ask; threads also write their own item line (two writers, re-read before each write); the rest (roadmap first, status words, done needs a link, stall rule, fixed Stand answer) is adopted as recommended below. Rule: [`roles/project-manager.md`](../../.claude/skills/operator/roles/project-manager.md) (Masterplan).
 
 ## Per source
 

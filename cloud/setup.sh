@@ -558,11 +558,11 @@ const BRIEF_LINES = [
 ]
 // A task that asks for research names its Researcher subagent (docs/TEAMS.md, Kits; yskills 2026-11-12:
 // a Planner did the SOTA research itself). The brief block's own "No extra ... research" does not trigger it.
-const ASKS_RESEARCH = /\b(SOTA|state of the art|best[ -]practices?|research (on|about|into|what)|recherch\w*)\b/i
+const ASKS_RESEARCH = /\b(SOTA|state of the art|research (on|about|into|what)|recherch\w*)\b/i
 export function missingLines(text) {
   const plain = text.replace(/[*_`]/g, '')
   const lines = BRIEF_LINES.filter(([, re]) => !re.test(plain)).map(([name]) => name)
-  if (ASKS_RESEARCH.test(plain) && !/^[ \t>-]*Researcher:[ \t]*[^<\s]/im.test(plain)) lines.push('Researcher: (the task asks for research)')
+  if (ASKS_RESEARCH.test(plain) && !/\bRole:[ \t]*Researcher\b/i.test(plain) && !/^[ \t>-]*Researcher:[ \t]*[^<\s]/im.test(plain)) lines.push('Researcher: (the task asks for research)')
   return lines
 }
 
