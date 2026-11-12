@@ -60,8 +60,19 @@ export function baseCheckOk(failed = [], run = spawnSync) {
 
 // Inside a git hook git exports GIT_DIR and friends; fixture tests that run git in temp dirs would then
 // act on the real repo (issue #419). Children never see them.
+// git's own list of repo-local variables (gate of #468: a hand-kept regex missed GIT_CONFIG_PARAMETERS and friends);
+// the fallback list is only for a git too old to answer.
+let localVars
+export function gitLocalVars(run = execFileSync) {
+  if (localVars) return localVars
+  try { localVars = new Set(run('git', ['rev-parse', '--local-env-vars'], { encoding: 'utf8', env: {} }).split('\n').filter(Boolean)) } catch {
+    localVars = new Set(['GIT_DIR', 'GIT_WORK_TREE', 'GIT_INDEX_FILE', 'GIT_OBJECT_DIRECTORY', 'GIT_COMMON_DIR', 'GIT_PREFIX', 'GIT_NAMESPACE', 'GIT_ALTERNATE_OBJECT_DIRECTORIES', 'GIT_CONFIG_PARAMETERS', 'GIT_CONFIG_COUNT'])
+  }
+  return localVars
+}
 export function cleanEnv(env = process.env) {
-  return Object.fromEntries(Object.entries(env).filter(([k]) => !/^GIT_(DIR|WORK_TREE|INDEX_FILE|OBJECT_DIRECTORY|COMMON_DIR|PREFIX|NAMESPACE|ALTERNATE_OBJECT_DIRECTORIES)$/.test(k)))
+  const local = gitLocalVars()
+  return Object.fromEntries(Object.entries(env).filter(([k]) => !local.has(k) && !/^GIT_CONFIG_(KEY|VALUE)_\d+$/.test(k)))
 }
 
 const results = []

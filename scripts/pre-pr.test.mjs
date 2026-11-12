@@ -105,3 +105,16 @@ test('pre-pr runs the PR brake with --body and counts only a real verdict', () =
   assert.match(src, /if \(body && !quick\) \{\s*const v = brakeVerdict\(openPrs\(/)
   assert.match(src, /if \(v\.ok !== null\) results\.push\(\['PR brake', v\.ok\]\)/)
 })
+
+// Gate of #468: git names its own repo-local variables, and every child of pre-pr gets cleanEnv().
+test('cleanEnv strips what git rev-parse --local-env-vars names, config overrides included', () => {
+  const env = cleanEnvForTest({ GIT_DIR: '/x', GIT_CONFIG_PARAMETERS: "'core.hooksPath'='/evil'", GIT_CONFIG_COUNT: '1', GIT_CONFIG_KEY_0: 'a', GIT_CONFIG_VALUE_0: 'b', GIT_AUTHOR_NAME: 'a', PATH: '/bin' })
+  assert.deepEqual(Object.keys(env).sort(), ['GIT_AUTHOR_NAME', 'PATH'])
+})
+
+test('every child process pre-pr starts runs with cleanEnv()', () => {
+  const src = readFileSync(new URL('./pre-pr.mjs', import.meta.url), 'utf8').replace(/export function gitLocalVars[\s\S]*?\n}\n/, '')
+  const calls = src.match(/\b(spawnSync|execFileSync|run)\((?:'[^']*'|cmd)[^\n]*/g) ?? []
+  assert.ok(calls.length >= 6, `found ${calls.length} child calls`)
+  for (const c of calls) assert.match(c, /env: (\{ \.\.\.)?cleanEnv\(\)/, c)
+})
