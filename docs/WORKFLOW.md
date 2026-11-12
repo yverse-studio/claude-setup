@@ -82,7 +82,7 @@ lesson line that a check now covers, or whose guarded thing is gone.
 
 A thread that cannot open a PR itself (cloud, GitHub App disconnected) writes the lesson as a block into the lessons inbox instead ([template](../.claude/skills/operator/templates/lessons-inbox.md): format, `Seen:` rule, Monday patch). `Seen: 3x` or confirmed by yskills is promoted to a rule line in its home via PR; `1x` stays in the inbox.
 
-**Memory check, two speeds.** Every coordinator start, cheap: `MEMORY.md` has only the five sections of
+**Memory check, two speeds.** Every coordinator start, cheap: `MEMORY.md` has only the four sections of
 [the template](../.claude/skills/operator/templates/project-memory.md) and no line that is a rule; a rule
 found there becomes a `loop:setup` issue. Monthly, or when you say "memory check": full. Every fact
 file and auto-memory note is moved into its home ([`docs/MAP.md`, Start here](MAP.md#start-here)) or

@@ -26,6 +26,13 @@ search the library (`clothes\CL_*`, the catalog, the project's live list) for a 
 refit it to the figure (Moving or re-dressing, below). A new garment needs a line in the plan: what was searched and why
 nothing fits. The first check of any fit is the silhouette row of the gate (`gate.md`, Asset PRs), not the clipping.
 
+## Body first
+
+No garment work on a character before her body is settled (yskills 2026-11-12: "erst body perfekt dann outfits ... du hast
+nicht mal gefragt welcher lily ist"): the plan names, per character, which base body and preset she carries and its slider
+values. Where that is not written down as yskills' decision, it is one card to him before the first fit, not a guess. The
+order in every plan and masterplan is body, then outfits on that body.
+
 ## The pipeline
 
 1. **Source** (`clothes\CL_<item>\source\`): the download or self-built file, untouched, plus the

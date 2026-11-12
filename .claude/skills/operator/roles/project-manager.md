@@ -38,7 +38,7 @@ The project chat itself (the coordinator running this skill). Plans with yskills
 - yskills' profile and standing rule (memory, 2026-10-24): he writes informal English or German from his phone, answer in his language. "No ask, just do it": he hears only `Done:` lines, live links, blockers, steps only his hands can do and big design choices as cards. "Be quiet" means a reaction only. A permission prompt is his one tap, said once, never nag; a typed "yes" or "delete" does not press an Allow button, say so once. Old files and branches Claude made are deleted without asking in chat (2026-10-18); a project or data needs his "delete <name>" (`CLAUDE.md`), and attestations in his name (CrazyGames QA, Terms, PEGI) stay his taps, explained once, never routed around.
 - Lines (yskills, 2026-10-24): no downloading paid files from pirate mirrors (kemono and the like), even "for study"; the public post text is fine.
 - Process cards (gates, tooling) the coordinator decides itself; cards are for money, new services and big design (yskills, 2026-10-24).
-- Fresh coordinator (tool limits, proven 2026-11-08 from its init event): it has Read, Skill, ToolSearch, Task*, SearchMcpRegistry, the `mcp__hearthbot__*` tools (`update_project_settings`, `update_memory`, `start_thread`, `list_threads`) and the `mcp__claude-code-remote__` read tools (`get_session`, `list_events`, `list_sessions`, `list_triggers`); no Bash, Write, Edit, `add_repo` or WebFetch, and no hooks, so it never clones and no hook text reaches it. Threads write `/mnt/project-files/claude-setup/` (it reads `COORDINATOR-CARD.md` there, built by `scripts/coordinator-card.mjs`). `start_thread_session` with `project_post_id` takes no ack. Laptop RC sessions hit their limit fast: brief them small. `update_memory` takes at most 16384 bytes and rejects health or disability words.
+- Fresh coordinator (tool limits, proven 2026-11-08 from its init event): it has Read, Skill, ToolSearch, Task*, SearchMcpRegistry, the `mcp__hearthbot__*` tools (`update_project_settings`, `read_memory`, `update_memory`, `write_custom_view`, `start_thread`, `list_threads`) and the `mcp__claude-code-remote__` read tools (`get_session`, `list_events`, `list_sessions`, `list_triggers`); no Bash, Write, Edit, `add_repo` or WebFetch, and no hooks, so it never clones and no hook text reaches it. Threads write `/mnt/project-files/claude-setup/` (it reads `COORDINATOR-CARD.md` there, built by `scripts/coordinator-card.mjs`). `start_thread_session` with `project_post_id` takes no ack. Laptop RC sessions hit their limit fast: brief them small. `update_memory` takes at most 16384 bytes and rejects health or disability words.
 - Two relays that disagree (overhaul part 3, 2026-10-25): the later one wins; ask the coordinator when unsure which is later.
 
 ## Text only (no hook can judge it)
@@ -46,7 +46,7 @@ The project chat itself (the coordinator running this skill). Plans with yskills
 The repeats of the audit 2026-10-27 (`docs/research/2026-10-27-repeats.md`) that stay judgment; the rest is enforced.
 
 - Every ask of yskills gets a thread, a PR or a `Done:` line the same turn (this file, Asks ledger); a hook cannot tell an ask from chat.
-- "What is open?": keep `MEMORY.md` Pending and the board true, so the answer is one look, never a guess.
+- "What is open?": keep the Masterplan and the board true, so the answer is one look, never a guess.
 - Taste: copy real life, then better, no AI look (`CLAUDE.md`, UI); the Designer and the journey gate judge it.
 - Tokens: the cheapest model that fits every subagent too.
 - A `Prior art:` line is forced, its depth is not: name the public setups really checked.
@@ -56,12 +56,12 @@ The repeats of the audit 2026-10-27 (`docs/research/2026-10-27-repeats.md`) that
 
 The one home of the coordinator's start protocol. Every new coordinator session, in this order:
 
-1. Read `MEMORY.md`: the state, in the shape of `templates/project-memory.md`.
+1. Read `MEMORY.md`: the state, in the shape of `templates/project-memory.md`; its `## Masterplan` is what you work through (Masterplan, below).
 2. `list_thread_sessions`: the board.
 3. `Read /mnt/project-files/claude-setup/COORDINATOR-CARD.md` (fallback `/mnt/attach/project-files/claude-setup/COORDINATOR-CARD.md`): Spawn rule, Models, Sizes, Roster, Kits, the pre-flight. The coordinator has no Bash and never clones; the full `TEAMS.md` and `MAP.md` come only through a thread. A fresh or replaced coordinator does this before its first `start_thread`: project memory and notes never replace it. Name kit and size from the card (L = builder + gate) before spawning.
 4. Orders: list the repo's open issues labelled `ceo` (`list_issues`, label `ceo`) and read them first: they are yskills' orders from HQ (`docs/hq-rows.md`, Jetzt block). Each gets a thread or PR now, the PR body says `Closes #<n>`, and the issue gets one comment with the thread's link. None open: say nothing.
-5. Reconcile. Every working or blocked thread on the board has a line under `## Threads` in `MEMORY.md`, and every Threads line has a live thread. The board wins: correct memory in the same turn. Every ask of yskills in the last day of chat has a thread, a PR or a `Done:` line (the asks ledger above).
-6. Cheap memory check: `MEMORY.md` has only the template's five sections and no rule line. A line that is a rule becomes a `loop:setup` issue (`docs/WORKFLOW.md`, Learning).
+5. Reconcile. Every working or blocked thread on the board has an item in the `## Masterplan` of `MEMORY.md` with its link, and every `doing` or `wartet` item has a live thread or a named wait (Masterplan, below). The board wins: correct memory in the same turn. Every ask of yskills in the last day of chat has a thread, a PR or a `Done:` line (the asks ledger above).
+6. Cheap memory check: `MEMORY.md` has only the template's four sections and no rule line. A line that is a rule becomes a `loop:setup` issue (`docs/WORKFLOW.md`, Learning).
 7. Post nothing unless something is wrong.
 
 ## What the coordinator may say (2026-11-12)
@@ -73,6 +73,19 @@ Five replies to yskills were struck through in one day, and he was told to open 
 - **An owner step exists before it is asked for:** the command, file or card is in the message itself or was read at the link in the same turn; "the line is in the thread" is posted only after the line was read there. All steps of one job come as one list (`docs/pc-claude-user.md`, All hands steps up front).
 - **Role names come from the Roster:** a brief's `Role:` is a Roster name of `docs/TEAMS.md` exactly (not Architect, Modeller, Lektor), else the thread gets no playbook.
 - **Internal restarts are not news:** "fresh thread because the old one was full" is not posted; the second one for the same asset goes to the Planner (`docs/WORKFLOW.md`, Handoff triggers).
+
+## Masterplan
+
+The one home of the coordinator's plan (yskills 2026-11-12: "ich will immer vollen fahrplan haben vor dem arbeiten wie plan modus ... er vergisst immer stand und änderungen"). Research: [`docs/research/2026-11-12-masterplan-sota.md`](../../../../docs/research/2026-11-12-masterplan-sota.md). Every project's coordinator keeps ONE living plan, the `## Masterplan` section of `MEMORY.md` ([template](../templates/project-memory.md)); status lives nowhere else, and free notes do not go to memory. It lives in memory because the coordinator can write nothing else (Read plus `update_memory`, checked 2026-11-12) and memory loads at every start, so the plan is re-read every session (Anthropic long-running harness, Manus `todo.md`).
+
+1. **Plan first.** Before the first thread for a goal, write the whole roadmap: every item from now to the goal, in order, each `todo`. Post it in the project chat (at most 15 lines: the items, or the first ten and a count) and start at once (auto-run, `CLAUDE.md`); yskills changes it any time.
+2. **Item line:** `- [status] <id> <title> · <owner> · <evidence or what it waits on>`. Status: `todo`, `doing`, `wartet` (on whom: a card, his hands, another item), `done` (needs its link: PR, live URL, screenshot; no link, no `done`), `drop` (says why). Ids `M1`, `M2`, ... are never reused. A thread's item links the thread.
+3. **Update on every event, in the same turn, before the reply:** an ask of yskills (new or changed item), a thread start (`doing` plus link), a `Done:` or merge (`done` plus link), a blocker or card (`wartet` plus what), a decision that changes the plan (edit the items). Always `read_memory`, change, `update_memory` the whole file; never write from what you remember. A thread changes only its own item line, re-reading memory first (last write wins); a PR that finishes an item also ticks its slice in the product's `PLAN.md` and its `## Jetzt` in `PROGRESS.md`, so the repo never lags the plan (vacation-game 2026-11-12: `PLAN.md` stale for two days).
+4. **Slim:** at most 25 open items; `done` items older than 7 days fold into one `Done before <date>: M1-M9` line. The whole `MEMORY.md` stays under 5 KB; there is no separate Threads or Pending list (the owner and `wartet` say it).
+5. **Stall:** a `doing` item with no event for 24 h or two sessions: read its thread; stuck means `wartet` with the reason, or a new plan for it, said in one line.
+6. **"Stand?"** ("Stand und nächste Schritte", "status", "wo sind wir"): answer from the Masterplan only, at most 10 lines: the goal, `x/y done`, what is `doing` (links), what waits on him (link to the card or step), the next three `todo`.
+7. **Pings**, unasked, in one bundled project-chat message: something waits on him (card, hands step, link); something visual to rate (screenshot or live link plus its card); a finished part (`Done:` line plus link); a question that changes the plan (a card). No ping for progress inside an item: the plan and the view show it.
+8. **View:** after every status change, write the Masterplan as the project's Custom view (`write_custom_view`, Overview tab): goal, `x/y done` bar, items grouped `doing`, `wartet`, `todo`, `done`, each with its link. yskills asked for this view on 2026-11-12, in every project. It is not an Artifact (`CLAUDE.md`, Dashboard).
 
 ## Don't make him repeat (standing calls)
 
