@@ -1155,21 +1155,28 @@ test('rule-guard: the receipt check runs only in a spawned thread', () => {
 
 // yskills 2026-11-12 (persistent role threads, research 2026-11-12): a role thread is reused within one plan or PR,
 // so a thread start while the same role has an open thread on the board must say why it is new.
-const BOARD = (rows) => `<child-session-output nonce="x">{"sessions":[${rows.map(([title, state, resolved]) => `{"created_at":"2026-11-12T08:00:00Z","last_activity_at":"2026-11-12T08:10:00Z",${resolved ? '"resolved":true,' : ''}"state":"${state}","thread_id":"cmsg_${title.length}","title":"${title}"}`).join(',')}],"total":${rows.length}}</child-session-output>`
+const BOARD = (rows) => `<child-session-output nonce="x">{"sessions":[${rows.map(([title, state, resolved]) => `{"created_at":"2026-11-12T08:00:00Z","last_activity_at":"2026-11-12T08:10:00Z",${resolved ? '"resolved":true,' : ''}"state":"${state}","thread_id":"cmsg_${rows.findIndex((r) => r[0] === title)}","title":"${title}"}`).join(',')}],"total":${rows.length}}</child-session-output>`
 
-const JSONL = (text) => `${JSON.stringify({ message: { content: [{ type: 'tool_result', content: [{ type: 'text', text }] }] } })}\n`
+const JSONL = (text, input = {}, id = 't1') => `${JSON.stringify({ message: { content: [{ type: 'tool_use', id, name: 'mcp__hearthbot__list_threads', input }] } })}\n${JSON.stringify({ message: { content: [{ type: 'tool_result', tool_use_id: id, content: [{ type: 'text', text }] }] } })}\n`
 
 test('team guard: the coordinator reuses an open role thread instead of starting a second one', async () => {
   const { decide, boardThreads, openSameRole } = await import('../global/team-guard.mjs')
   const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
   const board = boardThreads(JSONL(BOARD([['Programmer · fix the login', 'working'], ['Planner · old plan', 'done', true], ['Animator · scene 1', 'review_ready'], ['Tester · PR 12', 'working']])))
   assert.deepEqual(openSameRole(board, 'Programmer'), ['Programmer · fix the login'])
+  assert.deepEqual(openSameRole([{ title: 'Programmer·a', state: 'working' }, { title: 'Game Designer · x', state: 'working' }], 'Designer'), [], 'no prefix collision')
+  assert.deepEqual(openSameRole([{ title: 'Programmer·a', state: 'working' }], 'Programmer'), ['Programmer·a'], 'the dot may sit tight')
+  const odd = (text) => boardThreads(JSONL(text)).map((t) => t.title)
+  assert.deepEqual(odd(JSON.stringify({ threads: [{ thread_id: 'a', state: 'working', title: 'Programmer · fix {x}', produced: [{ id: 1 }] }] }, null, 2)), ['Programmer · fix {x}'], 'braces, a nested array, pretty print and a threads key')
+  assert.deepEqual(boardThreads(JSONL(BOARD([['Programmer · a', 'working']]), { state: 'done' })), [], 'a filtered listing is no board')
+  assert.deepEqual(boardThreads(`${JSONL(BOARD([['Programmer · a', 'working']]))}${JSON.stringify({ message: { content: [{ type: 'tool_use', id: 'r1', name: 'mcp__hearthbot__set_thread_resolved', input: { thread_id: 'cmsg_0' } }] } })}\n`), [], 'resolved since the listing')
   assert.deepEqual(openSameRole(board, 'Planner'), [], 'a resolved thread is not reusable')
   assert.deepEqual(openSameRole(board, 'Animator'), ['Animator · scene 1'], 'review_ready counts as open')
   const start = (role, extra = '', size = 'M') => decide('mcp__hearthbot__start_thread', { brief: `Role: ${role} · Kit: setup · Size: ${size}${FULL}${extra}`, title: `${role} · next slice`, model: 'claude-x-1' }, [], [], teams, board)
   assert.match(start('Programmer').block ?? '', /Programmer · fix the login.*message_thread/s, 'an open Programmer thread: message it instead')
   assert.deepEqual(start('Programmer', '\nReuse: none (parallel slice on other files, plan 2)'), {}, 'a stated reason lets a second one start')
   assert.match(start('Programmer', '\nReuse: none').block ?? '', /Reuse:/, 'a bare none is no reason')
+  assert.match(start('Programmer', '\nReuse: none (<why this is a new thread>)').block ?? '', /Reuse:/, 'the template placeholder is no reason')
   assert.deepEqual(start('Planner'), {}, 'no open Planner thread: start as before')
   assert.deepEqual(start('Tester', '', 'L'), {}, 'the L gate Tester is always fresh (docs/TEAMS.md, Reuse rule)')
   assert.deepEqual(decide('mcp__hearthbot__start_thread', { brief: `Role: Programmer · Kit: setup · Size: M${FULL}`, title: 'Programmer · x', model: 'claude-x-1' }, [], [], teams, []), {}, 'no board read: as before')

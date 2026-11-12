@@ -366,7 +366,9 @@ import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 // rule-guard sits beside this file (GUARD_FILES); without it only the model-tier check is skipped.
 let roleOf = () => null
-try { ({ roleOf } = await import('./rule-guard.mjs')) } catch { /* no rule-guard here */ }
+let openThreads = () => []
+let toolCalls = () => []
+try { ({ roleOf, openThreads, toolCalls } = await import('./rule-guard.mjs')) } catch { /* no rule-guard here */ }
 
 export const POINTER = 'Team rule (claude-setup docs/TEAMS.md): route every task on its own (task picks the kit, not the project; then size S/M/L), call only the roles it needs, as thread or subagent as the roster says, and pass `model` from the role\'s row on every thread start and Agent call.'
 export const PM_FILE = '.claude/skills/operator/roles/project-manager.md'
@@ -607,32 +609,15 @@ export function badTitle(title, text, teams) {
 // Persistent role threads, partly (research 2026-11-12; yskills picked "partly, per plan or PR"): a role thread is
 // reused for the next job of the same plan or PR, so a start while that role has an open thread must say why it is new.
 // The board is the last thread listing of the transcript; a resolved or done thread is not reusable, a Tester at L is always fresh.
-const OPEN_STATES = ['working', 'blocked', 'review_ready']
-export function boardThreads(transcript) {
-  let last = ''
-  for (const line of String(transcript).split('\n')) {
-    if (!line.includes('thread_id')) continue
-    try {
-      for (const c of JSON.parse(line).message?.content ?? []) {
-        if (c?.type !== 'tool_result') continue
-        const t = typeof c.content === 'string' ? c.content : (c.content ?? []).map((x) => x?.text ?? '').join('\n')
-        if (t.includes('"sessions"')) last = t
-      }
-    } catch { continue } // a line that is not JSON
-  }
-  const rows = []
-  for (const m of last.matchAll(/\{"created_at"[^{}]*\}/g)) {
-    try { const r = JSON.parse(m[0]); rows.push({ title: String(r.title ?? ''), state: r.state, resolved: Boolean(r.resolved) }) } catch { /* a row that is not JSON */ }
-  }
-  return rows
-}
-export const openSameRole = (board, role) => board.filter((t) => !t.resolved && OPEN_STATES.includes(t.state) && t.title.toLowerCase().startsWith(`${role.toLowerCase()} ·`)).map((t) => t.title)
+// The board is the last full thread listing of the transcript (rule-guard's openThreads: any nesting, filtered listings skipped, threads resolved since dropped).
+export const boardThreads = (transcript) => openThreads(toolCalls(String(transcript)))
+export const openSameRole = (board, role) => board.filter((t) => new RegExp(`^\\s*${role.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*·`, 'i').test(t.title)).map((t) => t.title)
 export function reuseBlock(text, teams, board) {
   const plain = text.replace(/[*_`]/g, '')
   const role = teams && board?.length && roleOf(plain, teams)
   if (!role?.row || (role.name === 'Tester' && /\bSize:[ \t]*L\b/i.test(plain))) return null
   const open = openSameRole(board, role.name)
-  if (!open.length || /^[ \t>-]*Reuse:[ \t]*none\b[^\n]*\([^)\n]{8,}\)/im.test(plain)) return null
+  if (!open.length || /^[ \t>-]*Reuse:[ \t]*none\b[^\n]*\([^)<\n][^)\n]{7,}\)/im.test(plain)) return null
   return `${role.name} thread already open: "${open[0]}". Give the work to it with message_thread (same plan or PR; docs/TEAMS.md, Reuse rule), or add \`Reuse: none (<why: other plan or PR, long context, parallel read job>)\` to the brief and retry`
 }
 
@@ -1372,6 +1357,16 @@ export function threadBoard(calls) {
     blocked: rows.filter((t) => t.state === 'blocked' && !t.resolved).map(pick),
     told,
   }
+}
+
+// The threads still open on the last full listing (working, blocked, review_ready, not resolved, not resolved since): team-guard's
+// Reuse check (docs/TEAMS.md, Reuse rule). Same listing rules as threadBoard; null when the session never listed its threads.
+const OPEN_STATES = new Set(['working', 'blocked', 'review_ready'])
+export function openThreads(calls) {
+  const i = calls.findLastIndex((c) => LIST.test(c.name) && c.result && !c.input.state && !c.input.since && !c.input.cursor)
+  if (i < 0) return []
+  const resolved = new Set(calls.slice(i + 1).filter((c) => /set_thread_resolved$/.test(c.name)).map((c) => c.input.thread_id ?? c.input.thread))
+  return threadRows(calls[i].result).filter((t) => !t.resolved && OPEN_STATES.has(t.state) && !resolved.has(t.thread_id)).map((t) => ({ id: t.thread_id, title: String(t.title ?? ''), state: t.state }))
 }
 
 // The coordinator (yskills 2026-10-27: "coordinators look after their threads"): before it stops, every

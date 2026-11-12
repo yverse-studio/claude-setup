@@ -60,7 +60,7 @@ Coordinator only (a thread: Coordinator or thread, above).
    ...".
 6. **The brief** starts with the block in `operator/briefs.md` and names the role's playbook and
    what the step before handed over.
-7. **Reuse**: open same-role thread: `message_thread`, else `Reuse: none (<why>)`.
+7. **Reuse**: see the Reuse rule below.
 
 Models: best fitting model per task, cheapest that fits. Fable (claude-fable-5-2) plans a hard task (yskills 2026-11-12): hard = size L, a new product's architecture, art direction or game core loop, a schema, auth, money or data change, or still stuck after a Sonnet round and an Opus checkpoint; plus what yskills names and the project chat (coordinator), which yskills sets by hand. It writes a short plan (goal, constraints, files, done-test) and one checkpoint; Sonnet and Haiku build it. Never on routine work; if Fable is out of credits or unavailable, Opus takes it without asking. Opus (claude-opus-5-5), the one Opus rule: the Planner; taste (Designer, Game Designer, a pick between variants, the video Critic, the story team's taste roles); every gate at every size (yskills 2026-11-03: every gate role and reviewer agent file); a full audit; senior-builder jobs judged by the image (Animator posing, IK, scene systems: `Model: opus (why)`); one checkpoint subagent per S or M task (before committing to an approach, or before "done", or when stuck twice); and the one escalation a roster row names (conflicting findings, a concept or weekly-plan pick, one diagnosis); nothing else. Sonnet (claude-sonnet-5-5) only for cheap, mechanical work: builds and fixes against a given plan, research, renders, edits; never architecture, planning or a gate (yskills 2026-11-03). Haiku (claude-haiku-5-5) for a simple reading job, a lookup, a watch, a CI poll. A thread never picks Fable itself. Effort medium unless yskills asks for more. When a newer model ships, use the newest of each tier. A model yskills names is used as named.
 
@@ -120,7 +120,7 @@ The company. Runs as: where the role lives. Model: the tier (the id is in the Mo
 | Sound Designer ([`sound-designer.md`](../.claude/skills/operator/roles/sound-designer.md)) | builds and mixes all sound | picture locked; new scene or cut | a thread | Sonnet |
 | Analytics ([`analytics.md`](../.claude/skills/operator/roles/analytics.md)) | what is measured and why, the weekly numbers line | step 4 of a site, app or game; a PR with a new user action | subagent of the Planner | Sonnet |
 | Animator ([`animator.md`](../.claude/skills/operator/roles/animator.md)) | poses and animates frozen rigged figures: key poses, loops, scene clips, contact; runs the fixed check script and hands strip and numbers to the gate | size M or L of a `game` or `story` scene or clip, after the models are frozen | a thread `Animator · <scene>`; `animator` agent file | Sonnet for given numbers; Opus for posing, IK, scene systems |
-| Programmer ([`programmer.md`](../.claude/skills/operator/roles/programmer.md)) | one slice or fix as one PR, tests first, green CI; runs the S and M gate, its verdict from a fresh Opus reviewer | every size, step 5 | a thread per slice, max three at once | Sonnet; one Opus checkpoint subagent |
+| Programmer ([`programmer.md`](../.claude/skills/operator/roles/programmer.md)) | one slice or fix as one PR, tests first, green CI; runs the S and M gate, its verdict from a fresh Opus reviewer | every size, step 5 | a fresh thread per slice or PR (follow-ups on its PR go to it), max three at once | Sonnet; one Opus checkpoint subagent |
 | Tester ([`tester.md`](../.claude/skills/operator/roles/tester.md)) | QA: the gate, grades the preview against the criteria; never built it | step 6 | S, M: the author thread; L: a fresh thread | Opus |
 | Reviewer ([`reviewer.md`](../.claude/skills/operator/roles/reviewer.md)) | reads the diff for bugs, mess, missing tests | every gate | subagent of the gate | Opus |
 | Security ([`security.md`](../.claude/skills/operator/roles/security.md)) | the diff and the preview attacked like an outsider | user input, auth, money, secrets; before launch | subagent of the gate | Opus, effort high on money, auth, secrets |
@@ -195,9 +195,9 @@ line per role saying what it found or checked, and the skills actually used (`br
 
 yskills 2026-11-12, role threads "like a real team"; research
 [`research/2026-11-12-persistent-role-threads-sota.md`](research/2026-11-12-persistent-role-threads-sota.md), verdict partly, yskills chose per plan or PR. A role thread
-serves one plan or PR and gets that plan's next job (revise, fix, next slice) by `message_thread`, not a new start; its
+serves one plan or PR and gets that plan's follow-up work (revise, fix within the same PR, the next part of a plan for a Planner, Designer or Animator) by `message_thread`, not a new start; a thread that posted its `Done:` is resolved and not reused, one that waits on review or yskills is; its
 memory is its files (`PLAN.md`, `PROGRESS.md`, `NOW.md`), and after a compaction it re-reads its role card and brief.
-Always fresh: the L gate `Tester`, every reviewer, a new plan or PR, a thread idle over 1 h (CLAUDE.md, Tokens) or with
+Always fresh: the L gate `Tester`, every reviewer (an `Agent` subagent anyway), a new plan or PR, a thread idle over 1 h (CLAUDE.md, Tokens) or with
 a long history, because a long context degrades and a woken thread re-pays its cache. A second thread of a writer role
 only for a parallel slice on other files (max three Programmers) and a second reader only for a parallel read job;
 it closes at its `Done:`. Work goes to the thread whose title role matches; a job no role fits becomes a new

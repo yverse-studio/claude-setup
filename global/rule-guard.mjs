@@ -609,6 +609,16 @@ export function threadBoard(calls) {
   }
 }
 
+// The threads still open on the last full listing (working, blocked, review_ready, not resolved, not resolved since): team-guard's
+// Reuse check (docs/TEAMS.md, Reuse rule). Same listing rules as threadBoard; null when the session never listed its threads.
+const OPEN_STATES = new Set(['working', 'blocked', 'review_ready'])
+export function openThreads(calls) {
+  const i = calls.findLastIndex((c) => LIST.test(c.name) && c.result && !c.input.state && !c.input.since && !c.input.cursor)
+  if (i < 0) return []
+  const resolved = new Set(calls.slice(i + 1).filter((c) => /set_thread_resolved$/.test(c.name)).map((c) => c.input.thread_id ?? c.input.thread))
+  return threadRows(calls[i].result).filter((t) => !t.resolved && OPEN_STATES.has(t.state) && !resolved.has(t.thread_id)).map((t) => ({ id: t.thread_id, title: String(t.title ?? ''), state: t.state }))
+}
+
 // The coordinator (yskills 2026-10-27: "coordinators look after their threads"): before it stops, every
 // finished thread on its last board is resolved or told to resolve, and the board is at most two hours old.
 export const BOARD_MAX_AGE = 2 * 3600 * 1000
