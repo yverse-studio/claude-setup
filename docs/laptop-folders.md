@@ -63,8 +63,9 @@ No scripts inside an asset: data and at most one recipe file; build scripts live
 │  ├─ rooms/          <room>/ (<room>.blend reference/ export/ gate/)
 │  ├─ props/          OB_<name>/ (source/ files/) · nsfw/OB_<name>/
 │  ├─ anims/          <sfw|nsfw>/<solo|pair>/<type>/ : sfw/solo/{locomotion,idle,gesture,action}/AN_<name>/ · sfw/pair/kiss/ · nsfw/pair/<position>/
-│  │                  nsfw/reference/{boards,camera,poses,motion,contact}/ · nsfw/_source/{video,games}/ (raw, read-only)
-│  │                  _engine/ (pair engine: core, projects, docs) · _retarget/ (tools) · _source/ (free raw packs)
+│  │                  nsfw/reference/{boards,camera,poses,motion,contact}/
+│  │                  _engine/ (pair engine: core, projects, docs) · _retarget/ (tools)
+│  │                  _source/ (raw, read-only): free packs at the top, 18+ ones in nsfw/_source/{video,games}/
 │  └─ sounds/         {foley,ambience,human,music,ui}/SN_<name>/ · nsfw/
 ├─ projects/          games/<name>/ videos/<name>/ films/<name>/   README names its repo; STATUS.md
 │  └─ games/<name>/   reference/look/ · ch<NN>/<scene>/ (<scene>.blend reference/ preview/ render/ gate/ STATUS.md)
