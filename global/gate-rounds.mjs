@@ -137,6 +137,7 @@ export function gateStep(tool, input = {}, ctx = {}) {
     const cmd = String(input.command ?? '')
     // gh pr merge goes through the same ledger as the merge tool.
     if (/\bgh\s+pr\s+merge\b/.test(cmd)) {
+      if (/[;&|`\n<>]|\$\(/.test(cmd) || (cmd.match(/\/pull\/\d+/g) ?? []).length > 1) return 'gate ledger: run "gh pr merge" as one plain command (no chains, pipes, substitution or a second PR), so its ledger can be checked (gate.md, Rounds).'
       const url = cmd.match(/github\.com\/([\w.-]+\/[\w.-]+)\/pull\/(\d+)/)
       const n = url?.[2] ?? cmd.match(/\bmerge\s+(?:-\S+(?:\s+(?![\d-])\S+)?\s+)*(\d+)/)?.[1]
       const repo = url?.[1] ?? cmd.match(/(?:-R|--repo)[ =]\s*(?:[\w.-]+\/)?([\w.-]+\/[\w.-]+)/)?.[1]

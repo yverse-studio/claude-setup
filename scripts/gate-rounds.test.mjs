@@ -250,5 +250,6 @@ test('gh pr merge: URL form, flags before the number and a missing number are al
   const s = session(); s.gate(1, '3.0')
   for (const c of ['gh pr merge https://github.com/yverse-studio/vacation-game/pull/13 --squash', 'gh pr merge --squash -R github.com/yverse-studio/vacation-game 13', 'gh pr merge --repo yverse-studio/vacation-game 13']) assert.match(s.hook('Bash', { command: c }).stderr, /no merge below the threshold/, c)
   assert.match(s.hook('Bash', { command: 'gh pr merge --squash' }).stderr, /needs the PR number/)
+  for (const c of ['gh pr merge 99 && echo x', 'echo $(gh pr merge 99)', 'gh pr merge 99; gh pr merge 13']) assert.match(s.hook('Bash', { command: c }).stderr, /one plain command/, c)
   assert.match(s.hook('Bash', { command: `gh pr merge 99 && rm -rf ${s.env.CLAUDE_SETUP_GATE_DIR}` }).stderr, /one plain command/)
 })
