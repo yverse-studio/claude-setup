@@ -58,8 +58,12 @@ test('the resolver stops without STUDIO_ROOT and builds paths from the table', (
 })
 
 test('the Python resolver agrees with the JavaScript one and also stops without STUDIO_ROOT', () => {
-  const run = (env) => spawnSync('python3', ['-I', '-c', `import sys; sys.path.insert(0, 'scripts'); import paths; print(paths.path('companyxy', 'ch01'))`],
-    { cwd: root, encoding: 'utf8', env: { PATH: process.env.PATH, ...env } })
+  // Windows: `python` and `python3` resolve to the Store alias, the launcher is `py -3` (2026-11-12), and it needs SystemRoot.
+  const win = process.platform === 'win32'
+  const [py, pre] = win ? ['py', ['-3']] : ['python3', []]
+  const base = win ? { PATH: process.env.PATH, SystemRoot: process.env.SystemRoot, LOCALAPPDATA: process.env.LOCALAPPDATA } : { PATH: process.env.PATH }
+  const run = (env) => spawnSync(py, [...pre, '-I', '-c', `import sys; sys.path.insert(0, 'scripts'); import paths; print(paths.path('companyxy', 'ch01'))`],
+    { cwd: root, encoding: 'utf8', env: { ...base, ...env } })
   assert.notEqual(run({}).status, 0)
   assert.match(run({}).stderr, /set STUDIO_ROOT/)
   const ok = run({ STUDIO_ROOT: '/studio-test' })
