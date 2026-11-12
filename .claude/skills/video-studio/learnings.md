@@ -35,4 +35,5 @@ Y-Land notes and scripts live in that project's files (`promo/LEARNINGS.md`, `pr
 - 2026-10-12 (Y-Land): a caption-only change needs no re-film: overlay the new card on the old MP4 from the card's first frame; anything the app draws needs a re-film.
 - 2026-10-07 (Y-Land): always check frame pacing before delivering (`mpdecimate` or a mean frame diff); zero difference during motion is stutter.
 - 2026-10-26 (Y-Land /brag): the brag render measured -24.4 LUFS (no loudness pass, no ducking), about 10 LU quieter than the feed; every master goes through `sound.py mix` or `loud` at -14 LUFS (`sound-kit.md`).
+- 2026-11-12 (Xin Xiao): a game whose logic ticks at 20 Hz without render interpolation makes every 3rd frame a repeat at 30 fps stepped captures, and md5 or mpdecimate do not see it (renders differ by noise): check the per-frame mean difference (repeats sit near 0.05 against 4-12 around them). Film at the game's own step (50 ms), then hold each frame 3x at 60 fps for an even cadence.
 - 2026-10-07 (Y-Land): everything was free (Playwright, Chromium, ffmpeg); about 1.5 s of render per frame on the cloud CPU, so a 24 s video takes about 20 minutes.
