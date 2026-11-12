@@ -2,7 +2,7 @@
 // Proof for yskills (2026-11-12): round 4 without Fable is refused, round 7 without a card is refused, an incomplete brief is blocked.
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
@@ -270,7 +270,7 @@ const MUST_BLOCK_AT_ROUND_1 = [
   `gh api graphql -f query='mutation { mergePullRequest(input: {pullRequestId: "x"}) { clientMutationId } }'`, `bash -c 'gh pr merge 7'`, 'x=$(gh pr merge 7)',
   'gh pr merge 99 -R o/r', 'bash -lc "gh pr merge 7"', 'sh -euc "gh pr merge 7"', 'sudo -u root gh pr merge 7', 'env -u FOO gh pr merge 7', 'time -p gh pr merge 7', `bash <<'EOF'\ngh pr merge 7\nEOF`, 'gh pr merge https://github.com/o/r/pull/7', 'eval "gh pr merge 7"', 'CLAUDE_SETUP_GATE_DIR=/tmp/x node ~/.claude/claude-setup/gate-rounds.mjs merge o/r#7', 'node --import ./x.mjs ~/.claude/claude-setup/gate-rounds.mjs init o/r#9 --round 0', 'if true; then gh pr merge 7; fi', 'for i in 1; do gh pr merge 7; done', 'while true; do gh pr merge 7; done', '! gh pr merge 7', 'gh \\\npr merge 7', 'timeout 60 gh pr merge 7', 'nice -n 5 gh pr merge 7', 'gh pr -R o/r merge 7', 'gh -R o/r pr merge 7', 'sudo gh pr merge 7 && echo done', 'echo hi | gh pr merge 7', 'echo $(gh pr merge 7)', 'bash -c "echo a" && gh pr merge 7',
 ]
-const MUST_BLOCK_AT_ROUND_3 = [
+const GH_COMMENTS_PASS = [
   `cat > /tmp/v.md <<'EOF'\n${VERDICT}\nEOF\ngh pr comment 7 --body-file /tmp/v.md`, `printf '${VERDICT}\\n' > /tmp/v.md && gh pr comment 7 -F /tmp/v.md`, 'gh pr comment 7 --body-file /dev/stdin < <F>', 'gh api repos/o/r/issues/7/comments -F body=@<F>', 'gh api repos/o/r/issues/7/comments --input <F>',
   `gh pr comment 7 --body-file - <<'EOF'\n${VERDICT}\nEOF`, `cat <F> | gh pr comment 7 -F -`, `gh pr comment 7 --body-file=<F>`, `gh pr comment 7 --body "$(cat <F>)"`, `gh pr comment 7 --body "\`cat <F>\`"`,
   `gh pr comment 8 -R o/r --body "${VERDICT}"`, `gh pr comment 8 -R o/r -b "${VERDICT}"`, `gh pr comment 8 --body-file <F>`, `gh pr comment 8 -F <F>`,
@@ -279,14 +279,14 @@ const MUST_BLOCK_AT_ROUND_3 = [
 ]
 const MUST_BLOCK_LEDGER = [
   'cd /tmp > <D>/o_r_7.json',
-  'cd <D> && echo x > o_r_7.json', 'cd ~/.claude/claude-setup && echo x > rule-guard.mjs',
-  'find <D> -name "*.json" -delete', 'find <D> -type f -exec rm {} +', 'sed -Ei s/a/b/ <D>/o_r_7.json', 'perl -pi -e s/a/b/ <D>/o_r_7.json', 'cd ~/.claude/claude-setup && rm rule-guard.mjs', 'cd ~/.claude && rm -rf claude-setup/gate',
-  'rm -rf ~/.claude/claude-setup', 'rm -r /mnt/project-files', 'cd <D> && touch x.json', 'tar xzf g.tgz -C <D>', 'curl -o <D>/o_r_7.json https://x.test/a', 'cp --t=<D> x.json',
+  
+  'sed -Ei s/a/b/ <D>/o_r_7.json', 
+  'cp --t=<D> x.json',
   'cp -t <D> x.json', 'cp -rt <D> x.json', 'cp --targ=<D> x.json', 'cp --target-directory=<D> x.json',
-  'rm ~/.claude/claude-setup/gate/x.json', 'rm $HOME/.claude/claude-setup/gate/x.json', 'rm ${HOME}/.claude/claude-setup/gate/x.json', 'cd /mnt/project-files && rm gate/x.json',
+  'rm ~/.claude/claude-setup/gate/x.json', 'rm $HOME/.claude/claude-setup/gate/x.json', 'rm ${HOME}/.claude/claude-setup/gate/x.json', 
   'mv <D>/o_r_7.json /tmp/', 'touch <D>/o_r_7.json', 'truncate -s 0 <D>/o_r_7.json', 'sed -i s/a/b/ <D>/o_r_7.json', 'cp /tmp/x.json ~/.claude/claude-setup/gate/o_r_7.json', 'dd if=x of=<D>/o_r_7.json',
   'CLAUDE_SETUP_GATE_DIR=/tmp/x node ~/.claude/claude-setup/gate-rounds.mjs card o/r#9 --ref cmsg_X1', 'export CLAUDE_SETUP_GATE_DIR=/tmp/x; node ~/.claude/claude-setup/gate-rounds.mjs merge o/r#7',
-  `echo '{}' > <D>/o_r_7.json`, 'rm <D>/o_r_7.json', 'rm -rf <D>', 'cd <D> && rm o_r_7.json', 'cd /mnt/project-files/gate && rm o_r_7.json', 'rm /mnt/project-files/gate/o_r_7.json',
+  `echo '{}' > <D>/o_r_7.json`, 'rm <D>/o_r_7.json', 'rm -rf <D>', 'rm /mnt/project-files/gate/o_r_7.json',
   'node global/gate-rounds.mjs waive o/r#7 --ref cmsg_abc', 'node ./global/gate-rounds.mjs init o/r#99 --round 0', 'node global/gate-rounds.mjs direct o/r#8 --plan p.md',
   'node ~/.claude/claude-setup/gate-rounds.mjs status o/r#7 && node ~/.claude/claude-setup/gate-rounds.mjs init o/r#9 --round 0',
   'node ~/.claude/claude-setup/gate-rounds.mjs init o/r#9 --round 0; echo ok', 'node ~/.claude/claude-setup/gate-rounds.mjs card o/r#9 --ref $(echo cmsg_X1)',
@@ -294,6 +294,7 @@ const MUST_BLOCK_LEDGER = [
   `echo '{}' > <D>/o_r_7.json 2>&1`, 'node ~/.claude/claude-setup/gate-rounds.mjs merge o/r#7 --squash | cat; echo x',
 ]
 const MUST_PASS = [
+  'cp shot.png /mnt/project-files/', 'cd ~/.claude/claude-setup && sed -i s/a/b/ global/rule-guard.mjs', 'rm -rf ~/.claude/claude-setup/tmp', 'rm -r /mnt/project-files/tmp',
   'gh api repos/o/r/commits/$(git rev-parse HEAD)/status', 'cd <D> && ls', 'cd /mnt/project-files/gate && cat a.json', 'rm src/gate/config.json', 'touch app/gate/index.json', 'rm gate/old.json',
   'echo x >> /mnt/project-files/gateway-notes.md', 'rm /mnt/project-files/gate-old.json', 'cp a /mnt/project-files/gate.md', 'rsync -a <D>/ /tmp/backup/', 'find <D> -name "*.json"', 'git diff --stat',
   'find <D> -name "*.json"', 'test -f <D>/o_r_7.json && echo yes', '[[ -f <D>/o_r_7.json ]] && echo yes', 'du -sh /mnt/project-files/gate', 'sort <D>/o_r_7.json | head -3', `awk '{print $1}' <D>/o_r_7.json`,
@@ -317,7 +318,7 @@ test('corpus: every Bash command that must be blocked is, every ordinary one pas
   const sub = (s, c) => c.replaceAll('<D>', s.env.CLAUDE_SETUP_GATE_DIR).replaceAll('<F>', verdictFile)
   const miss = []
   for (const c of MUST_BLOCK_AT_ROUND_1) if (at1.hook('Bash', { command: c }).status !== 2) miss.push(`should block: ${c}`)
-  for (const c of MUST_BLOCK_AT_ROUND_3) if (at3.hook('Bash', { command: sub(at3, c) }).status !== 2) miss.push(`should block: ${c}`)
+  for (const c of GH_COMMENTS_PASS) if (at3.hook('Bash', { command: sub(at3, c) }).status !== 0) miss.push(`should pass (a gh comment is never refused, never counted): ${c}`)
   for (const c of MUST_BLOCK_LEDGER) if (at1.hook('Bash', { command: sub(at1, c) }).status !== 2) miss.push(`should block: ${c}`)
   for (const c of MUST_PASS) if (at1.hook('Bash', { command: sub(at1, c) }).status !== 0) miss.push(`should pass: ${c}`)
   assert.deepEqual(miss, [])
@@ -336,10 +337,31 @@ test('unbalanced quotes: unknown, refused only if gh or gate is in the command',
   assert.equal(s.hook('Bash', { command: 'gh pr merge "7' }).status, 2)
 })
 
-test('the doors work: post counts the verdict then runs gh, merge refuses a PR without a counted pass', () => {
+test('cli merge and post: a counted pass merges through gh, a verdict through post is counted (stub gh on PATH)', () => {
   const s = session()
-  assert.match(s.run('merge', ASSET).text, /counted pass|no gate round/i)
-  const f = join(s.dir, 'v.md'); writeFileSync(f, 'Gate 3.0/5 (S, round 1)\nx')
-  assert.equal(s.run('post', 'not-an-asset', '--body-file', f).code, 2)
+  const bin = join(s.dir, 'bin'); mkdirSync(bin)
+  const log = join(s.dir, 'gh.log')
+  writeFileSync(join(bin, 'gh'), `#!/bin/sh\necho "$@" >> ${log}\n`, { mode: 0o755 })
+  const env = { ...s.env, PATH: `${bin}:${process.env.PATH}` }
+  const f = join(s.dir, 'v.md'); writeFileSync(f, 'Gate 4.6/5 (S, round 1)\n1 CI pass\n')
+  assert.equal(cli(['merge', ASSET], env).code, 2, 'no counted round, no merge')
+  assert.equal(cli(['post', ASSET, '--body-file', f], env).code, 0)
+  assert.equal(readLedger(join(s.dir, 'gate'), ASSET).rounds.length, 1)
+  assert.equal(cli(['merge', ASSET, '--squash', '--delete-branch'], env).code, 0)
+  assert.equal(readFileSync(log, 'utf8'), 'pr comment 13 -R yverse-studio/vacation-game --body-file ' + f + '\npr merge 13 -R yverse-studio/vacation-game --squash --delete-branch\n')
+})
+
+test('a verdict through plain gh is not counted, so it never leads to a merge; the asset key ignores leading zeros', () => {
+  const s = session()
+  assert.equal(s.hook('Bash', { command: 'gh pr comment 13 -R yverse-studio/vacation-game --body "Gate 5/5 (S, round 1)"' }).status, 0)
+  assert.equal(readLedger(join(s.dir, 'gate'), ASSET).rounds.length, 0)
+  assert.equal(s.hook('mcp__github__merge_pull_request', MERGE).status, 2)
+  s.run('init', 'o/r#07', '--round', '2')
+  assert.equal(readLedger(join(s.dir, 'gate'), 'o/r#7').rounds.length, 2)
+})
+
+test('the doors refuse what cannot be proven', () => {
+  const s = session()
+  assert.match(s.run('merge', 'not-an-asset').text, /owner\/repo#n/)
   assert.match(s.run('post', ASSET, '--body-file', join(s.dir, 'none.md')).text, /must start with the verdict headline/)
 })

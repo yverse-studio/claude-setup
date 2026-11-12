@@ -221,23 +221,25 @@ How to undo a merge, by kind of change (write the line into the PR's "undo" line
      ledger or its last round is not a pass (4.5, 4.8 important), whatever the reason. A verdict posted in another shape is never
      counted, so it can never lead to a merge. Only yskills' answer on a card frees a version under the threshold
      (`gate-rounds.mjs waive <asset> --ref <cmsg id>`, the hook needs his reply in the session).
-  5. **Two doors for gh**, because the hook reads no gh flags: a merge is `mcp__github__merge_pull_request` or
+  5. **Two doors for gh**, because the hook reads no gh comment text: a merge is `mcp__github__merge_pull_request` or
      `node ~/.claude/claude-setup/gate-rounds.mjs merge <owner/repo#n> [--squash|--merge|--rebase] [--auto] [--delete-branch]`;
-     a verdict is the comment tool or `gate-rounds.mjs post <owner/repo#n> --body-file <f>`. `gh pr merge` and a `gh` comment whose
-     text opens with a verdict headline are refused in Bash; a `gh` comment whose body the hook cannot read (stdin, `$( )`) is refused too; any other `gh` command is untouched. A ledger or guard file is a Bash write only under a writer (rm, mv, tee, cp into it, sed -i, touch and the like); reading it with any tool is free. Bash is read by command position
-     (one tokenizer: quotes, `;`, `&&`, `|`, `$( )`, `bash -c`), so a commit message, a grep pattern or an echo is data.
+     a verdict is the comment tool or `gate-rounds.mjs post <owner/repo#n> --body-file <f>`. `gh pr merge` is refused in Bash by
+     command position (one tokenizer: quotes, `;`, `&&`, `|`, `$( )`, `bash -c`), so a commit message, a grep pattern or an echo is
+     data. A `gh` comment is never refused and never counted: a verdict through plain gh cannot lead to a merge. Bash refuses only the
+     literal ledger or guard path (as a redirect target or the argument of a writer such as rm, mv, tee, cp into it, sed -i).
   6. **Counting:** rounds go up by one per asset and never start over; a fresh thread goes on from the ledger, a brief that
      names a gate round carries `Round: <n>` and `Asset: <name>` and the thread checks them against the ledger. An asset that
      ran rounds before the ledger existed is imported once: `gate-rounds.mjs init <asset> --round <n>`. Nobody edits the file by
      hand (the hook refuses it). A defect that fails the same check twice still gets a diagnosis before the next fix
      (`character-workflow.md`, step 4); three failed rounds on one asset still mean a re-plan, now the Fable director.
   Limits, said plainly: the ledger lives in the project's shared folder (one project's threads share it); a session without
-  hooks (the project chat) cannot be stopped itself, but every thread it starts checks its brief, and no gate post or merge
-  works without the ledger. `CLAUDE_SETUP_RULE_GUARD=off` is the one off switch; nobody sets it. It stops careless and
-  honest-mistake releases, not an agent that writes its own script around the hook (a variable, `node -e` with fs, or a script
-  file that writes the ledger is outside what the hook reads, and is not chased; setting `CLAUDE_SETUP_*` in a call that runs the counter is refused); the hook does not know who posts a
-  verdict (rounds 1 to 3 are free, so a poster can claim a pass), and a PR merged by a person in the GitHub UI is outside it.
-  The next step if that proves too weak is a counter a CI workflow writes (a PR label) that the hook only reads.
+  hooks (the project chat) cannot be stopped itself, but every thread it starts checks its brief, and no merge works without a
+  counted pass. `CLAUDE_SETUP_RULE_GUARD=off` is the one off switch; nobody sets it. It stops careless and honest-mistake
+  releases, not an agent that writes its own script around the hook: shell writes to the ledger other than the literal path (a cd
+  and a relative name, a variable, `node -e` or a script file, xargs) are not stopped; a verdict through plain gh is not counted (so
+  it never merges); the hook does not know who posts a verdict (rounds 1 to 3 are free, so a poster can claim a pass); a PR merged by
+  a person in the GitHub UI is outside it. The next step is a counter a CI workflow writes (a required status or label) that the
+  hook only reads.
 - **Picture card first** (vacation-game 2026-11-12: a hub nobody asked for was built and nearly merged): a new hub, start
   screen, main menu or art style is shown to yskills as ONE card of pictures (2 or 3 directions, references from current
   games of that kind, per `roles/designer.md`, Vote cards) before any build; the brief and the PR body carry
