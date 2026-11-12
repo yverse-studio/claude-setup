@@ -18,8 +18,13 @@ const setup = () => {
   return { dir, plan, done: () => rmSync(dir, { recursive: true, force: true }) }
 }
 const hashOf = (dir, asset) => readLedger(dir, asset).plan.hash
-// The plan check is written only through the door's PostToolUse function (M28 PR 2): the test plays the hook with an exact brief on Opus.
-const checked = (dir, asset, result = 'pass') => planCheckPost({ hook_event_name: 'PostToolUse', tool_name: 'Agent', tool_input: { prompt: planCheckBrief(asset, { dir, checklists: '' }), model: 'opus' }, tool_response: `Plan check ${result}` }, { dir, checklists: '' })
+// The plan check is written only through the door's PostToolUse function (M28 PR 2): the test plays the hook, with the Agent call in a transcript.
+const hook = (dir, asset, prompt, text) => {
+  const transcript = join(dir, 'transcript.jsonl')
+  writeFileSync(transcript, `${JSON.stringify({ type: 'assistant', message: { content: [{ type: 'tool_use', name: 'Agent', input: { prompt, model: 'opus' } }] } })}\n`)
+  return planCheckPost({ hook_event_name: 'PostToolUse', tool_name: 'Agent', tool_input: { prompt, model: 'opus' }, tool_response: text, transcript_path: transcript }, { dir, checklists: '' })
+}
+const checked = (dir, asset, result = 'pass') => hook(dir, asset, planCheckBrief(asset, { dir, checklists: '' }), `Plan check ${result}`)
 
 test('planReady is false for a new asset, after registerPlan alone, and after a plan check without approval', () => {
   const t = setup()
@@ -60,13 +65,12 @@ test('recordApproval refuses when the plan check is missing, failed, or belongs 
 test('the door records nothing for an asset without a registered plan, nor for a plan edited since it was registered', () => {
   const t = setup()
   try {
-    assert.match(planCheckPost({ hook_event_name: 'PostToolUse', tool_name: 'Agent', tool_input: { prompt: 'Plan check: duck-hud\nx', model: 'opus' }, tool_response: 'Plan check pass' }, { dir: t.dir, checklists: '' }).note, /no registered plan/)
+    assert.match(hook(t.dir, 'duck-hud', 'Plan check: duck-hud\nx', 'Plan check pass').note, /no registered plan/)
     assert.equal(readLedger(t.dir, 'duck-hud').planCheck, undefined)
     registerPlan('duck-hud', t.plan, 's1', t.dir)
     const prompt = planCheckBrief('duck-hud', { dir: t.dir, checklists: '' })
     writeFileSync(t.plan, `${readFileSync(t.plan, 'utf8')} `)
-    const r = planCheckPost({ hook_event_name: 'PostToolUse', tool_name: 'Agent', tool_input: { prompt, model: 'opus' }, tool_response: 'Plan check pass' }, { dir: t.dir, checklists: '' })
-    assert.match(r.note, /changed/)
+    assert.match(hook(t.dir, 'duck-hud', prompt, 'Plan check pass').note, /changed/)
     assert.equal(readLedger(t.dir, 'duck-hud').planCheck, undefined)
   } finally { t.done() }
 })

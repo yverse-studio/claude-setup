@@ -750,12 +750,18 @@ const humanAfter = (transcript, ref) => {
   const human = (r) => r.type === 'user' && !(Array.isArray(r.message?.content) && r.message.content.some((c) => c?.type === 'tool_result')) && /<message\b[^>]*\bfrom=\\?"human\\?"[^>]*\btrust=\\?"principal\\?"/.test(JSON.stringify(r.message?.content ?? ''))
   return at >= 0 && rows.slice(at + 1).some(human)
 }
-// A message in this session after a time: a user-side row that is no tool result (a thread cannot write one), holding the id (M28, pure-code approval).
+// A message in this session after a time: a user-side row that is no tool result (a thread cannot write one), from the principal or the
+// coordinator, holding exactly that id (M28, pure-code approval).
 const messageAfter = (transcript, ref, at) => {
   const id = String(ref).match(/cmsg_\w+/)?.[0]
   const since = Date.parse(at ?? '')
+  const from = /trust=\\?"principal\\?"|<relay\b[^>]*\bfrom=\\?"coordinator\\?"/
   return !!id && Number.isFinite(since) && transcript.split('\n').some((l) => {
-    try { const r = JSON.parse(l); return r.type === 'user' && !(Array.isArray(r.message?.content) && r.message.content.some((c) => c?.type === 'tool_result')) && JSON.stringify(r.message?.content ?? '').includes(id) && Date.parse(r.timestamp ?? '') >= since } catch { return false }
+    try {
+      const r = JSON.parse(l)
+      const body = JSON.stringify(r.message?.content ?? '')
+      return r.type === 'user' && !(Array.isArray(r.message?.content) && r.message.content.some((c) => c?.type === 'tool_result')) && new RegExp(`${id}(?!\\w)`).test(body) && from.test(body) && Date.parse(r.timestamp ?? '') >= since
+    } catch { return false }
   })
 }
 // The brief's Size (S, M or L) from the session's first message that names one; null when none does.
