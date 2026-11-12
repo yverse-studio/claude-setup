@@ -896,7 +896,7 @@ export function parseShell(text, depth = 0) {
       if (bad || j >= text.length) { bad = true; break }
       i = j; continue
     }
-    if (c === '$' && text[i + 1] === '{') { const k = text.indexOf('}', i); if (k > 0) { word += text.slice(i, k + 1); has = true; i = k; continue } }
+    if (c === '$' && text[i + 1] === '{') { const k = text.indexOf('}', i); if (k > 0) { word += text.slice(i, k + 1); has = true; inner(text.slice(i + 2, k)); i = k; continue } }
     if (c === '\\' && text[i + 1] === '\n') { i++; continue }
     if (c === '\\') { word += text[i + 1] ?? ''; has = true; i++; continue }
     if (c === '$' && text[i + 1] === '(') { const k = close(i + 1); if (k < 0) { bad = true; break } word += text.slice(i, k + 1); has = true; inner(text.slice(i + 2, k)); i = k; continue }
@@ -1028,7 +1028,7 @@ function bashProblem(cmd, dir, ctx) {
     }
     // only a writer is a ledger write; a reader, find, test, du or a cp out of the ledger names it harmlessly
     const writes = WRITERS.has(s.a0.toLowerCase()) || (s.a0 === 'sed' && s.args.some((a) => /^(-i|--in-place)/.test(a)))
-    const targets = /^(cp|copy-item)$/i.test(s.a0) ? s.args.slice(-1) : s.args
+    const targets = /^(cp|copy-item)$/i.test(s.a0) ? [s.args.at(-1), ...s.args.filter((x, j) => /^(-t|--target-directory)$/.test(s.args[j - 1] ?? '') || /^--target-directory=/.test(x))] : s.args
     if (writes && targets.some((a) => !/\s/.test(a) && (inLedgerRaw(a) || GUARD_FILE.test(a) || relLedger(a)))) return msg
   }
   return null

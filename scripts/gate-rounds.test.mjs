@@ -264,6 +264,7 @@ test('ordinary work is never blocked, a verdict is read from the opening line on
 // <D> is the temp ledger dir. Add a line first when a finding comes in, then fix the code.
 const VERDICT = 'Gate 4/5 (M, round 4)'
 const MUST_BLOCK_AT_ROUND_1 = [
+  'echo ${x:-$(gh pr merge 7)}',
   'gh pr merge 7 -R o/r --squash', 'gh pr merge', 'cd repo && gh pr merge 7', 'env gh pr merge 7', 'GH_REPO=o/r gh pr merge 7', 'gh pr merge "7"',
   'gh pr merge feature-branch', '/usr/bin/gh pr merge 7', 'gh api -X PUT repos/o/r/pulls/7/merge', 'n=7; gh api -X PUT repos/o/r/pulls/$n/merge',
   `gh api graphql -f query='mutation { mergePullRequest(input: {pullRequestId: "x"}) { clientMutationId } }'`, `bash -c 'gh pr merge 7'`, 'x=$(gh pr merge 7)',
@@ -276,6 +277,7 @@ const MUST_BLOCK_AT_ROUND_3 = [
   `gh api repos/o/r/issues/8/comments -f body="${VERDICT}"`, `gh pr edit 8 --body "${VERDICT}"`, `GH_REPO=o/r gh pr comment 8 --body "Gate 3.9/5 (S, round 4)"`,
 ]
 const MUST_BLOCK_LEDGER = [
+  'cp -t <D> x.json', 'cp --target-directory=<D> x.json',
   'rm ~/.claude/claude-setup/gate/x.json', 'rm $HOME/.claude/claude-setup/gate/x.json', 'rm ${HOME}/.claude/claude-setup/gate/x.json', 'cd /mnt/project-files && rm gate/x.json',
   'mv <D>/o_r_7.json /tmp/', 'touch <D>/o_r_7.json', 'truncate -s 0 <D>/o_r_7.json', 'sed -i s/a/b/ <D>/o_r_7.json', 'cp /tmp/x.json ~/.claude/claude-setup/gate/o_r_7.json', 'dd if=x of=<D>/o_r_7.json',
   'CLAUDE_SETUP_GATE_DIR=/tmp/x node ~/.claude/claude-setup/gate-rounds.mjs card o/r#9 --ref cmsg_X1', 'export CLAUDE_SETUP_GATE_DIR=/tmp/x; node ~/.claude/claude-setup/gate-rounds.mjs merge o/r#7',
