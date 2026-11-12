@@ -7,8 +7,8 @@ import { mkdtempSync, readdirSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { acquireSlot, blenderCount, releaseSlot } from './laptop-slots.mjs'
-import { parseAcMinutes, parseArgs, powerProblems, gpuProblem, ramShort } from './laptop-job.mjs'
+import { MAX_BLENDER, MAX_RENDERS, acquireSlot, blenderCount, releaseSlot } from './laptop-slots.mjs'
+import { parseAcMinutes, parseArgs, powerProblems, gpuProblem, ramShort, heartbeatProblem, progressProblem } from './laptop-job.mjs'
 
 const script = fileURLToPath(new URL('./laptop-job.mjs', import.meta.url))
 const run = (flags, ...cmd) => spawnSync('node', [script, '--no-gpu', ...flags, '--', ...cmd], { encoding: 'utf8', env: { ...process.env, LAPTOP_JOB_LOG: process.platform === 'win32' ? 'NUL' : '/dev/null' } })
@@ -57,17 +57,17 @@ test('kills grandchildren and still reports (POSIX)', { skip: process.platform =
   assert.match(lastLine(r), /^JOB TIMEOUT job:/)
 })
 
-test('render slots: at most 2 held, a stale slot is reused, release frees one', () => {
+test('one global Blender lock: at most 1 job holds the slot, a stale slot is reused, release frees it (companyxy report 10)', () => {
+  assert.equal(MAX_RENDERS, 1, 'one job at a time on the laptop (about 3.6 GB RAM free)')
   const dir = mkdtempSync(join(tmpdir(), 'slots-'))
   const alive = (pid) => pid !== 999
   const a = acquireSlot({ dir, pid: 11, alive })
-  const b = acquireSlot({ dir, pid: 12, alive })
-  assert.ok(a && b)
-  assert.equal(acquireSlot({ dir, pid: 13, alive }), null)
+  assert.ok(a)
+  assert.equal(acquireSlot({ dir, pid: 12, alive }), null, 'the second job waits')
   releaseSlot(a)
   assert.ok(acquireSlot({ dir, pid: 14, alive }))
   assert.equal(acquireSlot({ dir, pid: 15, alive }), null)
-  assert.ok(acquireSlot({ dir, pid: 16, alive: () => false }))
+  assert.ok(acquireSlot({ dir, pid: 16, alive: () => false }), 'a dead holder is taken over')
 })
 
 test('counts Blender instances from tasklist, null when unreadable', () => {
@@ -76,7 +76,7 @@ test('counts Blender instances from tasklist, null when unreadable', () => {
   assert.equal(blenderCount(() => ({ error: new Error('no tasklist') })), null)
 })
 
-test('the third parallel job queues instead of failing and all three finish OK', async () => {
+test('the second parallel job queues instead of failing and both finish OK', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'slots-run-'))
   const env = { ...process.env, LAPTOP_JOB_LOCK_DIR: dir, LAPTOP_JOB_POLL_MS: '100', LAPTOP_JOB_LOG: process.platform === 'win32' ? 'NUL' : '/dev/null' }
   const start = (n) => new Promise((resolve) => {
@@ -86,15 +86,16 @@ test('the third parallel job queues instead of failing and all three finish OK',
     c.on('close', (code) => resolve({ code, out, at: Date.now() }))
   })
   const t0 = Date.now()
-  const jobs = [start(1), start(2)]
+  const jobs = [start(1)]
   await new Promise((r) => setTimeout(r, 600))
-  assert.equal(readdirSync(dir).length, 2)
-  jobs.push(start(3))
-  const [r1, r2, r3] = await Promise.all(jobs)
-  assert.deepEqual([r1.code, r2.code, r3.code], [0, 0, 0])
-  assert.match(r3.out, /QUEUED j3/)
-  assert.ok(r3.at - t0 >= 2800, `third job ran after a slot freed (${r3.at - t0} ms)`)
+  assert.equal(readdirSync(dir).length, 1)
+  jobs.push(start(2))
+  const [r1, r2] = await Promise.all(jobs)
+  assert.deepEqual([r1.code, r2.code], [0, 0])
+  assert.match(r2.out, /QUEUED j2/)
+  assert.ok(r2.at - t0 >= 2800, `second job ran after the slot freed (${r2.at - t0} ms)`)
   assert.equal(readdirSync(dir).length, 0)
+  assert.equal(MAX_BLENDER, 2, 'one job plus yskills\' own Blender')
 })
 
 test('a job that waits longer than --queue-min ends BLOCKED', () => {
@@ -152,4 +153,20 @@ test('a job stopped with "now" goes back to the queue', async () => {
   assert.equal(endState('JOB STOPPED x: STOP file says now', 1), '.json')
   assert.equal(endState('JOB OK x: finished in 1 min', 0), '.done')
   assert.equal(endState('JOB FAIL x: exit code 1', 1), '.fail')
+})
+
+// Companyxy report 2026-11-12, point 6: the animator waited hours on crashed renders (4/96 and 0 frames) without checking.
+test('heartbeat: a Blender job must name a progress file, and a stale progress file kills it', () => {
+  const MIN = 60000
+  assert.match(progressProblem(['blender.exe', '-b', 'x.blend', '-a'], {}), /--progress-file/)
+  assert.equal(progressProblem(['blender.exe', '-b', 'x.blend', '-a'], { progressFile: 'frames.json' }), null)
+  assert.equal(progressProblem(['blender.exe', '-b'], { noProgress: 'one-frame still' }), null, 'a named reason lifts it')
+  assert.equal(progressProblem(['node', '-e', '0'], {}), null, 'only Blender jobs need one')
+  const start = 1_000_000_000
+  assert.equal(heartbeatProblem({ now: start + 5 * MIN, started: start, mtimeMs: start + 4 * MIN, heartbeatMin: 10 }), null)
+  assert.match(heartbeatProblem({ now: start + 25 * MIN, started: start, mtimeMs: start + 4 * MIN, heartbeatMin: 10 }), /no progress for 21 min/)
+  assert.match(heartbeatProblem({ now: start + 31 * MIN, started: start, mtimeMs: null, heartbeatMin: 10 }), /never wrote/, 'a job that never wrote it dies too')
+  assert.equal(heartbeatProblem({ now: start + 25 * MIN, started: start, mtimeMs: null, heartbeatMin: 10 }), null, 'grace for a heavy first frame')
+  assert.equal(heartbeatProblem({ now: start + 15 * MIN, started: start, mtimeMs: start - 900 * MIN, heartbeatMin: 10 }), null, 'a file left by the earlier run gets the first-frame grace on a resume')
+  assert.equal(parseArgs(['--progress-file', 'p.json', '--heartbeat-min', '7', '--', 'x']).opt.heartbeatMin, 7)
 })

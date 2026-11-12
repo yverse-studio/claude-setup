@@ -11,6 +11,8 @@ longer matches the laptop is a bug: fix the page, not your memory.
 
 Standing calls for every scene and character (adult main character, base + delta, generic scripts, refs, efficient renders): [`operator/roles/project-manager.md`](../.claude/skills/operator/roles/project-manager.md), Don't make him repeat.
 
+Before any of this: the order concept, cast, look, world, outline, pilot is in [`preproduction-workflow.md`](preproduction-workflow.md); nothing is modelled for a character without an approved sheet.
+
 ## Where things live
 
 The folder tree, the scene slots and the step-by-step for building a scene by hand live in **one place**:
