@@ -87,6 +87,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   try { hash = execFileSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim() } catch { hash = 'nogit' }
   const card = buildCard({ hash })
   const out = process.argv[2] ?? './COORDINATOR-CARD.md'
+  if (out.startsWith('-')) { console.error(`coordinator-card: "${out}" is a flag, not an output path (usage: node scripts/coordinator-card.mjs [out-path])`); process.exit(2) }
   writeFileSync(out, card)
   const idx = buildIndex({ hash })
   const idxOut = join(dirname(out), 'COORDINATOR-RULES-INDEX.md')
