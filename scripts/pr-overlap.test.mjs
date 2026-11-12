@@ -29,6 +29,7 @@ test('rank puts a real overlap before one that only shares the hot files (MAP, C
 // stale or self branch (squash merges leave their branch behind, and 37 of them drowned the first version in noise).
 test('otherBranches finds a recent branch that touches the same file, not merged, squash-merged, stale or self', () => {
   const dir = mkdtempSync(join(tmpdir(), 'overlap-'))
+  try {
   const git = (env, ...a) => execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...a], { cwd: dir, encoding: 'utf8', env: { ...process.env, ...env } }).trim()
   const put = (f, s) => writeFileSync(join(dir, f), s)
   git({}, 'init', '-q', '-b', 'main')
@@ -48,5 +49,13 @@ test('otherBranches finds a recent branch that touches the same file, not merged
   assert.deepEqual(overlaps(['shared.md'], found), [{ name: 'pr-443', files: ['shared.md'] }])
   git({}, 'checkout', '-q', '--detach', 'HEAD') // a detached HEAD must not warn about its own branch
   assert.deepEqual(otherBranches({ cwd: dir, base: 'main', head: 'HEAD' }).map((b) => b.name).sort(), ['pr-443', 'pr-unrelated'])
-  rmSync(dir, { recursive: true, force: true })
+  // pre-pr runs right before a push: my own origin copy lags my branch and must not be reported as another branch.
+  git({}, 'checkout', '-q', 'pr-444'); git({}, 'update-ref', 'refs/remotes/origin/pr-444', 'HEAD'); put('shared.md', '444b\n'); git({}, 'commit', '-qam', 'feat: 444 follow-up')
+  assert.deepEqual(otherBranches({ cwd: dir, base: 'main', head: 'HEAD' }).map((b) => b.name).sort(), ['pr-443', 'pr-unrelated'])
+  // a one-line squash and a reworded open branch: whole-line match only
+  git({}, 'checkout', '-q', '-b', 'pr-open', root); put('other.md', 'o\n'); git({}, 'commit', '-qam', 'feat: reworded')
+  git({}, 'checkout', '-q', 'main'); put('sq.md', 'two\n'); git({}, 'commit', '-qam', 'feat: reworded squash (#10)')
+  git({}, 'checkout', '-q', 'pr-444')
+  assert.ok(otherBranches({ cwd: dir, base: 'main', head: 'HEAD' }).some((b) => b.name === 'pr-open'), 'a substring of a squash title does not hide an open branch')
+  } finally { rmSync(dir, { recursive: true, force: true }) }
 })

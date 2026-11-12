@@ -32,12 +32,14 @@ const SQUASH_LOOKBACK = 400 // base commits whose message is searched for a bran
 export function otherBranches({ cwd, base, head, days = RECENT_DAYS }) {
   const bare = base.replace(/^origin\//, '')
   const self = new Set(git(cwd, 'for-each-ref', '--points-at', head, '--format=%(refname:short)'))
-  const skip = new Set([base, head, `origin/${head}`, 'origin/HEAD', bare, `origin/${bare}`, ...self])
+  const cur = git(cwd, 'rev-parse', '--abbrev-ref', head)[0] // my own branch and its origin twin, which lags before a push
+  const skip = new Set([base, head, cur, `origin/${cur}`, 'origin/HEAD', bare, `origin/${bare}`, ...self])
   const since = Date.now() / 1000 - days * 86400
-  const baseMessages = git(cwd, 'log', base, '-n', String(SQUASH_LOOKBACK), '--format=%B').join('\n')
+  // Whole lines only: a squash body lists each commit subject as `* subject`, a one-commit squash is `subject (#n)`.
+  const merged = new Set(git(cwd, 'log', base, '-n', String(SQUASH_LOOKBACK), '--format=%B').map((l) => l.replace(/^\* /, '').replace(/ \(#\d+\)$/, '').trim()))
   const rows = git(cwd, 'for-each-ref', '--no-merged', base, '--format=%(refname:short)\t%(committerdate:unix)\t%(subject)', 'refs/heads', 'refs/remotes/origin')
     .map((r) => { const [name, when, ...subject] = r.split('\t'); return { name, when: Number(when), subject: subject.join('\t') } })
-    .filter((r) => !skip.has(r.name) && r.when >= since && !(r.subject && baseMessages.includes(r.subject)))
+    .filter((r) => !skip.has(r.name) && r.when >= since && !(r.subject && merged.has(r.subject)))
   const local = new Set(rows.filter((r) => !r.name.startsWith('origin/')).map((r) => r.name)) // a local branch wins over its origin twin
   return rows.filter((r) => !(r.name.startsWith('origin/') && local.has(r.name.slice(7)))).map(({ name }) => ({ name, files: filesSince(cwd, base, name) }))
 }
