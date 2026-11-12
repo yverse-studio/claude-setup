@@ -2241,9 +2241,11 @@ export function updateLock(session, check) {
 // Reviewer, a rejected Reviewer spawn recovers (#475 gate round 1 and follow-up).
 export const COORDINATOR_RELAY = /^\s*(?:<system-note>[^<]*<\/system-note>\s*)*(?:<system-reminder>\s*)?A message from this project[’']s coordinator session[^\n]*\n\s*<coordinator-relay>\s*<relay\b[^>]*\bfrom=\\?"coordinator"/
 const spawnRoleFile = (session) => join(tmpdir(), `claude-setup-spawnrole-${String(session).replace(/\W/g, '')}`)
-async function relayRebrief(session, prompt, cwd, model) {
+// The coordinator often sends only the lines the start brief lacked (#479 part 2: VacationGame's Critic, our Director), so the relay is read
+// together with the spawn brief from the transcript: the relay's lines come first and win, the spawn brief fills the gaps.
+async function relayRebrief(session, prompt, cwd, model, spawnBrief = '') {
   if (!COORDINATOR_RELAY.test(prompt)) return
-  const text = prompt.replace(/\\n/g, '\n')
+  const text = [prompt, spawnBrief].filter(Boolean).join('\n').replace(/\\n/g, '\n')
   updateLock(session, await briefCheck(text, cwd, model, true))
   const stamp = join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)
   if (existsSync(lockFile(session)) || read(stamp).trim()) return
@@ -2342,7 +2344,10 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           const model = sessionModel(transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : '') ?? (read(join(tmpdir(), `claude-setup-model-${String(session).replace(/[^A-Za-z0-9]/g, '')}`)).trim() || null)
           const checkNow = midWork ? '' : await briefCheck(brief, cwd, model)
           if (spawned || (lookup && brief !== prompt)) updateLock(session, checkNow)
-          else if (existsSync(lockFile(session)) && /\bRole:/.test(prompt)) await relayRebrief(session, prompt, cwd, model)
+          else if (existsSync(lockFile(session)) && COORDINATOR_RELAY.test(prompt)) {
+            const spawnBrief = transcriptPath && existsSync(transcriptPath) ? spawnPrompt(prompt, read(transcriptPath)) : prompt
+            await relayRebrief(session, prompt, cwd, model, spawnBrief === prompt ? '' : spawnBrief)
+          }
           const context = [checkNow, spawned || (lookup && brief !== prompt) ? await gateBriefContext(brief, model) : '', spawned || (lookup && brief !== prompt) ? await guardLine() : '', modelOnce(brief, transcriptPath, session), await roleContext(brief, cwd, session), promptContext(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
           if (context) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: context } }))
           return

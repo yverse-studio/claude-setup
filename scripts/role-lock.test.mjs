@@ -149,3 +149,37 @@ test('a prompt mid-work never locks the thread, even when the transcript holds o
   assert.doesNotMatch(guard('prompt', quoted, { prompt: 'see <wake reason="spawn">Make a bee video.</wake>', transcript_path: transcript }).stdout, /Brief check/, 'a quoted spawn wake mid-work is no start')
   assert.equal(tool(quoted, 'Bash', { command: 'ls' }).status, 0)
 })
+
+// Issue #479 part 2 (VacationGame Critic, our Director): the coordinator often sends only the lines the start brief lacked, and the
+// lock then stayed. The latest coordinator relay is read together with the spawn brief from the transcript; its lines win, the spawn's fill the gaps.
+test('a coordinator relay that supplies only the missing brief lines lifts the lock, one that still lacks a line does not', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'rl-t-'))
+  const started = (brief) => {
+    const id = `rolelock${process.pid}x${++n}`
+    const transcript = join(dir, `${id}.jsonl`)
+    writeFileSync(transcript, `${JSON.stringify({ type: 'user', message: { content: spawn(brief) } })}\n`)
+    const run = (mode, payload) => spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), mode], { input: JSON.stringify({ cwd: root, session_id: id, transcript_path: transcript, ...payload }), encoding: 'utf8', env: { ...process.env, CLAUDE_SETUP_RULE_GUARD: '' } })
+    run('prompt', { prompt: spawn(brief) })
+    return { id, run }
+  }
+  const head = 'Role: Programmer · Kit: setup · Size: S'
+  const lacking = `${head}\nItem: M30\nPlan: x.md\nAcceptance: ok\nModel: sonnet\nSkills: none\nPrior art: obra/superpowers checked -> adapt, because ours reads hearthbot tools\nStart: read MEMORY.md first`
+  const rest = 'Threads: list_threads checked, none open on this topic\nDone when: the test passes\nStop when: 3 attempts'
+  const bash = (t) => t.run('pre', { tool_name: 'Bash', tool_input: { command: 'ls' } }).status
+  const a = started(lacking)
+  assert.equal(bash(a), 2, 'the start brief lacks Threads, Done when and Stop when: locked')
+  a.run('prompt', { prompt: relay('coordinator', 'Threads: list_threads checked, none open on this topic') })
+  assert.equal(bash(a), 2, 'a relay that still leaves Done when and Stop when out does not lift it')
+  a.run('prompt', { prompt: relay('coordinator', rest) })
+  assert.equal(bash(a), 0, 'the lines the coordinator adds later complete the spawn brief, no Role line needed')
+  const b = started(lacking)
+  b.run('prompt', { prompt: relay('thread', rest) })
+  assert.equal(bash(b), 2, 'another thread cannot add the lines')
+  const c = started(lacking)
+  c.run('prompt', { prompt: `<wake reason="mention"><message>${rest}</message></wake>` })
+  assert.equal(bash(c), 2, 'a plain message cannot add the lines')
+  const d = started(`Role: Programer · Kit: setup · Size: S\n${rest}\nItem: M30\nPlan: x.md\nAcceptance: ok\nModel: sonnet\nSkills: none\nPrior art: obra/superpowers checked -> adapt, because ours reads hearthbot tools\nStart: read MEMORY.md first`)
+  assert.equal(bash(d), 2, 'a misspelled role is locked')
+  d.run('prompt', { prompt: relay('coordinator', head) })
+  assert.equal(bash(d), 0, 'the relay restates the Role line and wins over the spawn brief')
+})
