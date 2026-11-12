@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { MAX_BLENDER, MAX_RENDERS, acquireSlot, blenderCount, ledgerCli, ledgerList, ledgerSignIn, ledgerSignOut, releaseSlot } from './laptop-slots.mjs'
-import { parseAcMinutes, parseArgs, powerProblems, gpuProblem, ramShort, heartbeatProblem, progressProblem, heavyApp } from './laptop-job.mjs'
+import { parseAcMinutes, parseArgs, powerProblems, gpuProblem, ramShort, heartbeatProblem, progressProblem, heavyApp, ramNeedGb, claimRam } from './laptop-job.mjs'
 
 const script = fileURLToPath(new URL('./laptop-job.mjs', import.meta.url))
 const run = (flags, ...cmd) => spawnSync('node', [script, '--no-gpu', ...flags, '--', ...cmd], { encoding: 'utf8', env: { ...process.env, LAPTOP_JOB_LOG: process.platform === 'win32' ? 'NUL' : '/dev/null' } })
@@ -214,4 +214,19 @@ test('RAM ledger: two jobs with one name do not sign each other out', () => {
   ledgerSignIn({ who: 'pov', app: 'blender', pid: 2, dir })
   ledgerSignOut('pov', 1, dir)
   assert.deepEqual(ledgerList({ dir, alive: () => true }).map((r) => r.pid), [2])
+})
+
+test('a Blender or RenPy job claims 4 GB in the RAM ledger by default, other jobs nothing, --ram-gb wins', () => {
+  assert.equal(ramNeedGb(parseArgs(['--', 'blender', '-b']).opt, ['blender', '-b'], {}), 4)
+  assert.equal(ramNeedGb(parseArgs(['--', 'node', 'x.js']).opt, ['node', 'x.js'], {}), 0)
+  assert.equal(ramNeedGb(parseArgs(['--ram-gb', '1.5', '--', 'node', 'x.js']).opt, ['node', 'x.js'], {}), 1.5)
+  assert.equal(ramNeedGb(parseArgs(['--ram-gb', '0', '--', 'blender']).opt, ['blender'], {}), 0)
+})
+test('claimRam: fits -> null, does not fit -> the WAIT text with the holders, broken ledger -> warns and lets the job run', () => {
+  const { opt } = parseArgs(['--name', 'pov', '--', 'blender'])
+  assert.equal(claimRam(opt, ['blender'], 'job:pov:1', () => ({ ok: true })), null)
+  const wait = claimRam(opt, ['blender'], 'job:pov:1', () => ({ ok: false, available: 1.2, live: [{ owner: 'animator-3', gb: 4 }] }))
+  assert.match(wait, /need 4 GB, available 1.2 GB; claims: animator-3 4 GB/)
+  assert.equal(claimRam(opt, ['blender'], 'job:pov:1', () => { throw new Error('no STUDIO_ROOT') }), null)
+  assert.equal(claimRam(parseArgs(['--', 'node']).opt, ['node'], 'x', () => { throw new Error('must not be called') }), null)
 })
