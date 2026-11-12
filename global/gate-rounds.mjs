@@ -147,9 +147,10 @@ export function parseShell(text, depth = 0) {
   const cmds = []
   let bad = false, argv = [], redirs = [], word = '', has = false, mode = null // mode: the next word is a redirect target ('redir') or noise ('drop')
   const pending = [] // heredoc delimiters waiting for the next newline
+  let own = null // the heredoc body of the command being read, filled in by reference when the newline comes
   let herestr = null // <<< word: input of the command, read as code when a shell runs it
   const flush = () => { if (has) { if (mode === 'redir') redirs.push(word); else if (mode === 'here') herestr = word; else if (mode === 'amp') { if (!/^\d*-?$/.test(word)) redirs.push(word) } else if (mode !== 'drop') argv.push(word); mode = null }; word = ''; has = false }
-  const end = () => { flush(); if (argv.length || redirs.length) cmds.push(herestr === null ? { argv, redirs } : { argv, redirs, body: herestr }); argv = []; redirs = []; mode = null; herestr = null }
+  const end = () => { flush(); if (argv.length || redirs.length) cmds.push({ argv, redirs, ...(herestr === null ? {} : { body: herestr }), ...(own ? { ref: own } : {}) }); own = null; argv = []; redirs = []; mode = null; herestr = null }
   const inner = (t) => { if (depth < 4 && t.trim()) { const r = parseShell(t, depth + 1); cmds.push(...r.cmds); bad ||= r.bad } }
   const close = (i) => { // the matching ) of a $( ): parens in a heredoc body do not count
     let d = 0, here = []
@@ -185,10 +186,10 @@ export function parseShell(text, depth = 0) {
     if (c === '#' && !has) { while (i < text.length && text[i] !== '\n') i++; i--; continue }
     if (c === '\n') {
       end()
-      for (const { d, idx } of pending.splice(0)) { // a heredoc body is data: skip to its delimiter line
+      for (const { d, own: o } of pending.splice(0)) { // a heredoc body is data: skip to its delimiter line
         let j = i + 1, body = ''
         while (j < text.length) { const e = text.indexOf('\n', j); const line = text.slice(j, e < 0 ? text.length : e); j = e < 0 ? text.length : e + 1; if (line.trim() === d) break; body += `${line}\n` }
-        if (cmds[idx]) cmds[idx].body = (cmds[idx].body ?? '') + body // read as code only when a shell runs it
+        o.body += body // read as code only when a shell runs it
         i = j - 1
       }
       continue
@@ -202,7 +203,7 @@ export function parseShell(text, depth = 0) {
         while (text[j] === ' ') j++
         let d = ''
         for (; j < text.length && !/[\s;|&<>)]/.test(text[j]); j++) if (!"'\"\\".includes(text[j])) d += text[j]
-        if (d) pending.push({ d, idx: cmds.length })
+        if (d) { own ??= { body: '' }; pending.push({ d, own }) }
         i = j - 1; continue
       }
       mode = 'drop'; continue
@@ -245,7 +246,7 @@ function simple(c) {
     break
   }
   if (a.length && ['export', 'declare', 'typeset'].includes(base(a[0]))) env ||= a.some((x) => SETUP_VAR.test(x))
-  return { a0: a.length ? base(a[0]) : '', args: a.slice(1), redirs: c.redirs, env, body: c.body }
+  return { a0: a.length ? base(a[0]) : '', args: a.slice(1), redirs: c.redirs, env, body: c.body ?? c.ref?.body }
 }
 // Every simple command of the text, also what sits in $( ), backticks and bash -c '...'.
 export function simpleCommands(text, depth = 0) {

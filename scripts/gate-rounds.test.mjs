@@ -264,7 +264,7 @@ test('ordinary work is never blocked, a verdict is read from the opening line on
 // <D> is the temp ledger dir. Add a line first when a finding comes in, then fix the code.
 const VERDICT = 'Gate 4/5 (M, round 4)'
 const MUST_BLOCK_AT_ROUND_1 = [
-  'gh api -X PUT repos/{owner}/{repo}/pulls/1/merge', 'bash <<< "gh pr merge 1"', "sh <<<'gh pr merge 1'", 'bash <<EOF 2>&1 | tee /tmp/log\ngh pr merge 1\nEOF', 'timeout --signal KILL 30 gh pr merge 1',
+  'gh api -X PUT repos/{owner}/{repo}/pulls/1/merge', 'bash <<< "gh pr merge 1"', "sh <<<'gh pr merge 1'", 'bash <<EOF 2>&1 | tee /tmp/log\ngh pr merge 1\nEOF', 'timeout --signal KILL 30 gh pr merge 1', 'bash <<EOF $(echo a) | cat\ngh pr merge 1\nEOF',
   'timeout --kill-after 5 30 gh pr merge 1', 'sudo --user root gh pr merge 1', 'sudo -Eu root gh pr merge 1', 'sudo -uroot gh pr merge 1', 'env -uS gh pr merge 1', 'env --unset FOO gh pr merge 1',
   'echo ${x:-$(gh pr merge 7)}',
   'gh pr merge 7 -R o/r --squash', 'gh pr merge', 'cd repo && gh pr merge 7', 'env gh pr merge 7', 'GH_REPO=o/r gh pr merge 7', 'gh pr merge "7"',
