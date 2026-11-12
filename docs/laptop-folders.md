@@ -16,8 +16,7 @@ Root today = `C:\Studio`  (the only drive path allowed in this repo; this line c
 - **No symlink, no junction, no stub folder** for an old path: a stale path must fail loudly. Moving the root is one new value of
   `STUDIO_ROOT`; moving a folder is one changed line in `config/paths.json` plus the holders below.
 - `scripts/paths-lint.test.mjs` (in `pre-pr.mjs` and CI) is red on a drive path, a home-folder path under the Users folder, a path through the
-  profile's Documents folder, or an entry of `dead_names` in any tracked file. Test data carries the line marker `path-lint: fixture`;
-  `docs/archive/**` is exempt. A move adds its old names to `dead_names` in the same change.
+  profile's Documents folder, or an entry of `dead_names` in any tracked file. Test data carries the line marker `path-lint: fixture`. A move adds its old names to `dead_names` in the same change.
 
 ## The three rules
 
