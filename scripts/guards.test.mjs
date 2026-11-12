@@ -2,7 +2,7 @@
 // never/always rules honest. Run: node --test scripts/guards.test.mjs
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { cpSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, symlinkSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
@@ -1121,7 +1121,7 @@ test('rule-guard: a thread\'s first reply carries the hook-built start receipt',
   const rules = readFileSync(join(root, 'CLAUDE.md'), 'utf8')
   const t0 = brief
   const line0 = threadReceipt('Programmer', 'Role: Programmer · Kit: setup · Size: S', t0, rules)
-  assert.match(line0, /^Thread · Programmer · setup · S · item \? · skills: none · rules #[0-9a-f]{7}$/, 'no Item line: item ?')
+  assert.match(line0, /^Thread · Programmer · setup · S · item \? · skills: none · rules #[0-9a-f]{7} · missing: none$/, 'no Item line: item ?')
   assert.match(threadReceipt('Planner', 'Role: Planner · Kit: setup · Size: M\nItem: M12', t0, rules), /^Thread · Planner · setup · M · item M12 · skills:/, 'the real brief shape and its Masterplan item')
   assert.match(threadReceipt('Planner', 'Role: Planner · Kit: setup · Size: M\nItem: new', t0, rules), /item new ·/, 'a new item')
   assert.match(threadReceipt('Programmer', 'Role: · Kit: · Size:', t0, rules), /· \? · \? · item \?/, 'template text reads as ?')
@@ -1137,6 +1137,62 @@ test('rule-guard: a thread\'s first reply carries the hook-built start receipt',
   assert.equal(receiptMissing(post, { text: 'Zweite' }, line1, sent), null, 'only the first reply carries it')
   const blocked = [t1, use('p1', post, { text: `${line1}\nHi` }), res('p1', 'PreToolUse hook error: rule-guard: too long')].join('\n')
   assert.match(receiptMissing(post, { text: 'Zweite' }, line1, blocked) ?? '', /start receipt/, 'a blocked try never went out')
+})
+
+// yskills 2026-11-12: design skills were not loadable in project threads and the threads only said so when asked. The plugin
+// cache kept an old copy (only `publish`), so the receipt now lists what cannot load and the thread reads the file instead.
+test('rule-guard: a skill that cannot load shows in the receipt and its file is read first', async () => {
+  const { skillStatus, missingNote, threadReceipt, fallbackUnread, roleOf, toolCalls } = await import('../global/rule-guard.mjs')
+  const home = mkdtempSync(join(tmpdir(), 'skills-home-'))
+  try {
+    const cache = join(home, '.claude', 'plugins', 'cache', 'setup-skills')
+    mkdirSync(join(cache, 'skills', 'publish'), { recursive: true })
+    writeFileSync(join(cache, 'skills', 'publish', 'SKILL.md'), '# publish')
+    writeFileSync(join(home, '.claude', 'plugins', 'installed_plugins.json'), JSON.stringify({ plugins: { 'setup-skills@x': [{ installPath: cache }] } }))
+    const names = ['impeccable', 'publish', 'design-critic']
+    const status = skillStatus(names, { root, home, cwd: home })
+    assert.deepEqual(status.loaded, ['publish'])
+    assert.equal(missingNote(status), 'missing: impeccable, design-critic (read .claude/skills/impeccable/SKILL.md, .claude/agents/design-critic.md instead)')
+    assert.equal(missingNote({ missing: [] }), 'missing: none')
+    assert.match(missingNote({ missing: [{ name: 'nope', path: null }] }), /no file for nope/, 'a name with no file anywhere is still said')
+    const full = join(home, 'full')
+    cpSync(join(root, 'mods', 'setup-skills'), join(full, 'setup-skills'), { recursive: true, dereference: true })
+    writeFileSync(join(home, '.claude', 'plugins', 'installed_plugins.json'), JSON.stringify({ plugins: { 'setup-skills@x': [{ installPath: join(full, 'setup-skills') }] } }))
+    assert.deepEqual(skillStatus(['impeccable', 'ui-review'], { root, home, cwd: home }).missing, [], 'a fresh plugin copy carries the design skills')
+    assert.ok(existsSync(join(full, 'setup-skills', 'skills', 'ui-review', 'scripts', 'design-check.mjs')), 'design-check.mjs resolves from the skill folder')
+    const brief = 'Role: Designer · Kit: game · Size: M'
+    const line = threadReceipt('Designer', brief, '', readFileSync(join(root, 'CLAUDE.md'), 'utf8'), status)
+    assert.match(line, / · missing: impeccable, design-critic \(read /, 'the receipt carries it')
+    const reads = (arg) => JSON.stringify({ type: 'assistant', message: { content: [{ type: 'tool_use', id: 'r1', name: 'Read', input: arg }] } })
+    assert.match(fallbackUnread(status, '') ?? '', /impeccable\/SKILL\.md.*design-critic\.md/, 'unread fallback files are named')
+    assert.equal(fallbackUnread(status, [reads({ file_path: '/x/.claude/skills/impeccable/SKILL.md' }), reads({ file_path: '/x/.claude/agents/design-critic.md' })].join('\n')), null)
+    assert.equal(fallbackUnread({ loaded: [], missing: [] }, ''), null, 'nothing missing, nothing to read')
+    assert.ok(toolCalls)
+    assert.equal(roleOf('Role: Designer · Kit: game', readFileSync(join(root, 'docs/TEAMS.md'), 'utf8'))?.name, 'Designer')
+  } finally { rmSync(home, { recursive: true, force: true }) }
+})
+
+test('rule-guard: every role names only skills it can load and the hook blocks a first reply until the fallback is read', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'receipt-skills-'))
+  const id = `sk${process.pid}`
+  const rolefile = join(tmpdir(), `claude-setup-role-${id}`)
+  try {
+    writeFileSync(rolefile, 'Designer')
+    symlinkSync(root, join(dir, 'claude-setup')) // the thread runs outside the checkout, as a project thread does
+    const spawned = JSON.stringify({ type: 'user', message: { content: '<wake reason="spawn">Role: Designer · Kit: game · Size: M</wake>' } })
+    const run = (transcript, text = 'Hi (◕‿◕)') => { writeFileSync(join(dir, 't.jsonl'), transcript); return spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'pre'], { input: JSON.stringify({ cwd: dir, session_id: id, transcript_path: join(dir, 't.jsonl'), tool_name: 'mcp__hearthbot__post_message', tool_input: { text } }), encoding: 'utf8', env: { ...process.env, CLAUDE_SETUP_HOME: dir } }) }
+    const blocked = run(spawned)
+    const receipt = blocked.stderr.match(/Teams\): (Thread · .*)/)?.[1] ?? ''
+    assert.match(receipt, /missing: /)
+    const unread = run(spawned, `${receipt}\nHi (◕‿◕)`)
+    assert.equal(unread.status, 2, 'the right receipt is not enough: the fallback files are read first')
+    assert.match(unread.stderr, /read what stands in for it[\s\S]*impeccable\/SKILL\.md/)
+    const read = (f) => JSON.stringify({ type: 'assistant', message: { content: [{ type: 'tool_use', id: `r${f.length}`, name: 'Read', input: { file_path: `/home/user/claude-setup/${f}` } }] } })
+    const done = [spawned, ...['.claude/skills/impeccable/SKILL.md', '.claude/skills/ui-review/SKILL.md', '.claude/agents/design-critic.md'].map(read)].join('\n')
+    assert.equal(run(done, `${receipt}\nHi (◕‿◕)`).status, 0, 'files read, receipt copied: the reply goes out')
+    assert.equal(blocked.status, 2)
+    assert.match(blocked.stderr, /missing: frontend-design, impeccable, ui-review, design-critic \(read \.claude\/skills\/impeccable\/SKILL\.md, \.claude\/skills\/ui-review\/SKILL\.md, \.claude\/agents\/design-critic\.md instead; no file for frontend-design\)/, 'an empty home says what is missing, with the file to read')
+  } finally { rmSync(rolefile, { force: true }); rmSync(dir, { recursive: true, force: true }) }
 })
 
 test('rule-guard: the receipt check runs only in a spawned thread', () => {
