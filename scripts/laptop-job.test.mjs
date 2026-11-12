@@ -7,8 +7,8 @@ import { mkdtempSync, readdirSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { MAX_BLENDER, MAX_RENDERS, acquireSlot, blenderCount, releaseSlot } from './laptop-slots.mjs'
-import { parseAcMinutes, parseArgs, powerProblems, gpuProblem, ramShort, heartbeatProblem, progressProblem } from './laptop-job.mjs'
+import { MAX_BLENDER, MAX_RENDERS, acquireSlot, blenderCount, ledgerList, ledgerSignIn, ledgerSignOut, releaseSlot } from './laptop-slots.mjs'
+import { parseAcMinutes, parseArgs, powerProblems, gpuProblem, ramShort, heartbeatProblem, progressProblem, heavyApp } from './laptop-job.mjs'
 
 const script = fileURLToPath(new URL('./laptop-job.mjs', import.meta.url))
 const run = (flags, ...cmd) => spawnSync('node', [script, '--no-gpu', ...flags, '--', ...cmd], { encoding: 'utf8', env: { ...process.env, LAPTOP_JOB_LOG: process.platform === 'win32' ? 'NUL' : '/dev/null' } })
@@ -169,4 +169,26 @@ test('heartbeat: a Blender job must name a progress file, and a stale progress f
   assert.equal(heartbeatProblem({ now: start + 25 * MIN, started: start, mtimeMs: null, heartbeatMin: 10 }), null, 'grace for a heavy first frame')
   assert.equal(heartbeatProblem({ now: start + 15 * MIN, started: start, mtimeMs: start - 900 * MIN, heartbeatMin: 10 }), null, 'a file left by the earlier run gets the first-frame grace on a resume')
   assert.equal(parseArgs(['--progress-file', 'p.json', '--heartbeat-min', '7', '--', 'x']).opt.heartbeatMin, 7)
+})
+
+test('RAM ledger: sign in, list, sign out, and a dead pid drops out', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'ledger-'))
+  ledgerSignIn({ who: 'pov render', app: 'blender', pid: 111, dir })
+  ledgerSignIn({ who: 'vn-test', app: 'renpy', pid: 222, dir })
+  assert.deepEqual(ledgerList({ dir, alive: () => true }).map((r) => r.who).sort(), ['pov render', 'vn-test'])
+  ledgerSignOut('vn-test', dir)
+  assert.deepEqual(ledgerList({ dir, alive: () => true }).map((r) => r.who), ['pov render'])
+  assert.deepEqual(ledgerList({ dir, alive: () => false }), [])
+  assert.deepEqual(ledgerList({ dir, alive: () => true }), [])
+})
+test('RAM ledger: Blender and Ren\'Py commands are heavy, others are not', () => {
+  assert.equal(heavyApp(['blender', '-b']), 'blender')
+  assert.equal(heavyApp(['renpy.exe', 'game']), 'renpy')
+  assert.equal(heavyApp(['node', 'x.js']), null)
+})
+test('RAM ledger: a Ren\'Py job signs in while it runs and out when it ends', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'ledger-run-'))
+  const r = spawnSync('node', [script, '--no-gpu', '--name', 'vn', '--', 'node', '-e', `const s=require('fs'),p=require('path');console.log('LEDGER '+s.readdirSync(p.join(process.env.LAPTOP_JOB_LOCK_DIR,'ledger')).join())`, 'renpy'], { encoding: 'utf8', env: { ...process.env, LAPTOP_JOB_LOCK_DIR: dir, LAPTOP_JOB_LOG: '/dev/null' } })
+  assert.match(r.stdout, /LEDGER vn\.json/)
+  assert.deepEqual(readdirSync(join(dir, 'ledger')), [])
 })

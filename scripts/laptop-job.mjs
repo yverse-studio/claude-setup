@@ -8,10 +8,11 @@ import { spawn, spawnSync } from 'node:child_process'
 import { appendFileSync, existsSync, readFileSync, statSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { freemem } from 'node:os'
-import { MAX_BLENDER, MAX_RENDERS, acquireSlot, blenderCount, releaseSlot, slotsHeld } from './laptop-slots.mjs'
+import { MAX_BLENDER, MAX_RENDERS, acquireSlot, blenderCount, ledgerList, ledgerSignIn, ledgerSignOut, releaseSlot, slotsHeld } from './laptop-slots.mjs'
 
 const KILL_GRACE_MS = 5000
 let heldSlot = null
+let ledgerName = null
 let runningChild = null
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 const KEEP_AWAKE_PS = `Add-Type -MemberDefinition '[DllImport("kernel32.dll")] public static extern uint SetThreadExecutionState(uint f);' -Name P -Namespace W; while ($true) { [W.P]::SetThreadExecutionState(0x80000001) | Out-Null; Start-Sleep 30 }`
@@ -78,6 +79,7 @@ const statusLine = (state, name, why) => `JOB ${state} ${name}: ${why}`
 
 function finish(line, code) {
   releaseSlot(heldSlot)
+  if (ledgerName) ledgerSignOut(ledgerName)
   console.log(line)
   const log = process.env.LAPTOP_JOB_LOG ?? 'laptop-job.log'
   try { appendFileSync(log, `${new Date().toISOString()} ${line}\n`) } catch (e) { console.error(`WARN could not write ${log}: ${e.message}`) }
@@ -103,9 +105,15 @@ export function stopState(file = process.env.LAPTOP_STOP_FILE ?? 'STOP') {
   try { return /now/i.test(readFileSync(file, 'utf8')) ? 'now' : 'pause' } catch { return 'pause' }
 }
 
+// Blender and Ren'Py are the two RAM-heavy starts; both sign in to the RAM ledger (scripts/laptop-slots.mjs).
+export const heavyApp = (cmd) => (/blender/i.test(cmd.join(' ')) ? 'blender' : /renpy/i.test(cmd.join(' ')) ? 'renpy' : null)
+const isHeavy = (cmd) => heavyApp(cmd) !== null
+const ledgerText = () => ledgerList().map((r) => `${r.who} (${r.app}, pid ${r.pid})`).join(', ') || 'empty'
+
 // Waits for a render slot (and a free Blender instance when the command is Blender); null when queueMin ran out.
 async function waitForSlot(opt, cmd) {
   const isBlender = /blender/i.test(cmd.join(' '))
+  const heavy = isHeavy(cmd)
   const pollMs = Number(process.env.LAPTOP_JOB_POLL_MS ?? 5000)
   const maxBlender = Number(process.env.LAPTOP_MAX_BLENDER ?? MAX_BLENDER)
   let deadline = Date.now() + opt.queueMin * 60000
@@ -120,14 +128,14 @@ async function waitForSlot(opt, cmd) {
       continue
     }
     const count = isBlender ? blenderCount() : null
-    const ramLow = isBlender && ramShort(Number(process.env.LAPTOP_MIN_FREE_GB ?? 2.5))
+    const ramLow = heavy && ramShort(Number(process.env.LAPTOP_MIN_FREE_GB ?? 2.5))
     if (!(count !== null && count >= maxBlender) && !ramLow) {
       const slot = acquireSlot({ max: Number(process.env.LAPTOP_MAX_RENDERS ?? MAX_RENDERS) })
       if (slot) return slot
     }
     if (Date.now() > deadline) return null
     if (!told) { console.log(`QUEUED ${opt.name}: waiting for a free render slot (max ${MAX_RENDERS} renders, ${maxBlender} Blender instances, ${ramLow ? 'RAM low' : 'RAM ok'})`); told = true }
-    if (ramLow && Date.now() >= nextRamNote) { console.log(`RAM low ${opt.name}: ${(freemem() / 2 ** 30).toFixed(1)} GB free; top: ${topRam()}`); nextRamNote = Date.now() + 10 * 60000 }
+    if (ramLow && Date.now() >= nextRamNote) { console.log(`RAM low ${opt.name}: ${(freemem() / 2 ** 30).toFixed(1)} GB free; top: ${topRam()}; ledger: ${ledgerText()}`); nextRamNote = Date.now() + 10 * 60000 }
     await sleep(pollMs)
   }
 }
@@ -149,6 +157,8 @@ async function main() {
     const busy = gpuProblem(opt.gpuMaxUsedMb)
     if (busy) finish(statusLine('BLOCKED', opt.name, `${busy}; close the app or pass --gpu-max-used-mb`), 3)
   }
+  const app = heavyApp(cmd)
+  if (app) { ledgerName = opt.name; ledgerSignIn({ who: opt.name, app, pid: process.pid }) }
   const awake = win ? spawn('powershell', ['-NoProfile', '-Command', KEEP_AWAKE_PS], { stdio: 'ignore' }) : null
   const child = spawn(cmd[0], cmd.slice(1), { stdio: ['ignore', 'pipe', 'pipe'], detached: !win })
   runningChild = child
@@ -197,5 +207,5 @@ function killChild() {
   if (process.platform === 'win32') spawnSync('taskkill', ['/PID', String(runningChild.pid), '/T', '/F'])
   else { try { process.kill(-runningChild.pid, 'SIGKILL') } catch { runningChild.kill('SIGKILL') } }
 }
-for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => { killChild(); releaseSlot(heldSlot); process.exit(130) })
+for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => { killChild(); releaseSlot(heldSlot); if (ledgerName) ledgerSignOut(ledgerName); process.exit(130) })
 if (process.argv[1] === fileURLToPath(import.meta.url)) main().catch((e) => { killChild(); finish(statusLine('FAIL', 'job', `watchdog error: ${e.message}`), 1) })

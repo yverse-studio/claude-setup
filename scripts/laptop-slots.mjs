@@ -1,7 +1,7 @@
 // Counting lock for laptop Blender jobs. Home of the rule: docs/pc-claude-user.md (Blender limits).
 // One lock file per running render in a shared dir; a file whose pid is dead is stale and reused.
 import { spawnSync } from 'node:child_process'
-import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -50,4 +50,30 @@ export function blenderCount(run = (cmd, args) => spawnSync(cmd, args, { encodin
   const r = run('tasklist', ['/FI', 'IMAGENAME eq blender.exe', '/NH'])
   if (r.error || r.status !== 0) return null
   return (r.stdout.match(/blender\.exe/gi) ?? []).length
+}
+
+// RAM ledger (yskills 2026-11-12): whoever starts Blender or Ren'Py signs in and signs out again, so "who holds the RAM"
+// is a list, not a guess. One file per entry; an entry whose pid is dead is stale and dropped when the list is read.
+const ledgerDir = (dir) => join(dir, 'ledger')
+const ledgerFile = (who, dir) => join(ledgerDir(dir), `${who.replace(/[^\w.-]/g, '_')}.json`)
+
+export function ledgerSignIn({ who, app, pid = process.pid, dir = slotDir(), now = Date.now() }) {
+  mkdirSync(ledgerDir(dir), { recursive: true })
+  writeFileSync(ledgerFile(who, dir), JSON.stringify({ who, app, pid, at: now }))
+}
+
+export const ledgerSignOut = (who, dir = slotDir()) => rmSync(ledgerFile(who, dir), { force: true })
+
+export function ledgerList({ dir = slotDir(), alive = pidAlive } = {}) {
+  let names = []
+  try { names = readdirSync(ledgerDir(dir)) } catch { return [] }
+  const rows = []
+  for (const name of names) {
+    const file = join(ledgerDir(dir), name)
+    let row = null
+    try { row = JSON.parse(readFileSync(file, 'utf8')) } catch { /* half-written: dropped below */ }
+    if (row && alive(row.pid)) rows.push(row)
+    else rmSync(file, { force: true })
+  }
+  return rows
 }
