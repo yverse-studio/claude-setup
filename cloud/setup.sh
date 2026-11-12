@@ -1546,7 +1546,7 @@ import { createHash } from 'node:crypto'
 import { existsSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
 import { isIP } from 'node:net'
 import { homedir, tmpdir } from 'node:os'
-import { dirname, join, relative } from 'node:path'
+import { basename, dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const OWNER = 'yskills'
@@ -1629,14 +1629,23 @@ export const bareAgreement = (text) => YES.test(text.replace(/^[\s*_>]+/, '').sp
 // Role, size and "just do it" are read from the spawn brief only, never from files the thread read later.
 // M50 PR 3 (research/2026-11-12-planner-vs-plan-mode.md): Claude Code's Plan mode refuses edits until the plan is approved; a thread has no Plan mode, so this is its
 // stand-in. A Planner writes only the plan files (and project-files); no other edit, commit, push, branch or PR until PLAN.md starts with `Status: PASSED`.
-const PLAN_FILE = /(^|[\\/])(PLAN\.md|features\.json|PLAN\.json|HANDOFF\.md)$|[\\/]mnt[\\/]project-files[\\/]/
+const PLAN_NAMES = /^(PLAN\.md|features\.json|PLAN\.json|HANDOFF\.md)$/
+const PASSED = /Status:[ \t]*PASSED/i
 export function plannerReadOnly(tool, input = {}, role = '', cwd = process.cwd()) {
   if (role !== 'Planner') return null
-  const edits = /^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) && !PLAN_FILE.test(String(input.file_path ?? input.notebook_path ?? ''))
-  const ships = /^mcp__github__(create_pull_request|push_files|create_or_update_file|create_branch|delete_file|merge_pull_request)$/.test(tool) || (tool === 'Bash' && /\bgit\s+(commit|push|checkout\s+-b|switch\s+-c|branch)\b/.test(String(input.command ?? '')))
-  if (!edits && !ships) return null
-  if (/^Status:[ \t]*PASSED\b/m.test(read(join(cwd, 'PLAN.md')).slice(0, 400))) return null
-  return 'rule-guard: a Planner is read-only until its plan passed the gate (the stand-in for Plan mode, research/2026-11-12-planner-vs-plan-mode.md): write only PLAN.md, features.json, PLAN.json (scripts/plan.mjs) and the plan report in project-files; no source edit, commit, branch or PR. The gate named in your brief sets `Status: PASSED 5/5` on the first line of PLAN.md; a builder thread does the building.'
+  const file = resolve(cwd, String(input.file_path ?? input.notebook_path ?? '')) // resolved: `..` cannot reach out of the allowed places
+  const isEdit = /^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool)
+  const planFile = isEdit && (PLAN_NAMES.test(basename(file)) || file.startsWith('/mnt/project-files/'))
+  const cmd = String(input.command ?? '')
+  // Bash: no write-shaped command (git write verbs even behind options, gh, redirects, tee, sed -i) and none that names the pass line; plan.mjs and read-only commands stay.
+  const writes = tool === 'Bash' && !/^\s*node\s+\S*plan\.mjs\b/.test(cmd) && (/\bgit\b[^|;&\n]*\b(commit|push|branch|checkout|switch|reset|rebase|merge|apply|am|cherry-pick|stash|tag|rm|mv|restore)\b/.test(cmd) || /\bgh\s+(pr|api|repo|issue)\b/.test(cmd) || /(^|[^>-])>>?\s*[^\s&]/.test(cmd.replace(/\d>&\d|2>\s*\/dev\/null/g, '')) || /\b(tee|sed\s+-i|perl\s+-pi|mkdir|touch|cp|mv|rm)\b/.test(cmd))
+  const ships = /^mcp__github__(create_pull_request|push_files|create_or_update_file|create_branch|delete_file|merge_pull_request)$/.test(tool)
+  // Self-approval: the Planner never writes the pass line itself; the gate thread (a Reviewer) sets it.
+  if (planFile && PASSED.test(JSON.stringify(input.content ?? input.new_string ?? input.edits ?? ''))) return 'rule-guard: the gate sets `Status: PASSED`, not the Planner (research/2026-11-12-planner-vs-plan-mode.md): write `Status: gate round <n>` and hand the plan to the Reviewer named in your brief\'s Gate line.'
+  if (tool === 'Bash' && PASSED.test(cmd)) return 'rule-guard: the gate sets `Status: PASSED`, not the Planner (research/2026-11-12-planner-vs-plan-mode.md).'
+  if (!(isEdit && !planFile) && !ships && !writes) return null
+  if (/^Status:[ \t]*PASSED\b/.test(read(join(cwd, 'PLAN.md')).slice(0, 200))) return null // first line only
+  return 'rule-guard: a Planner is read-only until its plan passed the gate (the stand-in for Plan mode, research/2026-11-12-planner-vs-plan-mode.md): write only PLAN.md, features.json, PLAN.json (scripts/plan.mjs) and the plan report in project-files; no source edit, commit, branch or PR, no write-shaped shell command. The gate named in your brief sets `Status: PASSED 5/5` on the first line of PLAN.md; a builder thread does the building.'
 }
 export function grillMissing(tool, input, transcript) {
   const writesPlan = (/^(Write|Edit)$/.test(tool) && /(^|[\\/])PLAN\.md$/.test(String(input.file_path ?? ''))) || tool === 'mcp__github__create_pull_request'

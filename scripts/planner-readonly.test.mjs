@@ -16,12 +16,12 @@ const pre = (id, cwd, tool, input) => spawnSync(process.execPath, [join(root, 'g
 test('a Planner writes only the plan files: source edits, commits, branches and PRs are refused until PLAN.md says PASSED', () => {
   const cwd = mkdtempSync(join(tmpdir(), 'planro-'))
   const planner = as('Planner')
-  for (const [tool, input] of [['Edit', { file_path: '/repo/src/app.mjs' }], ['Write', { file_path: '/repo/scripts/x.mjs' }], ['Bash', { command: 'git commit -am x' }], ['Bash', { command: 'git push -u origin b' }], ['mcp__github__create_pull_request', {}], ['mcp__github__push_files', {}]]) {
+  for (const [tool, input] of [['Edit', { file_path: '/repo/src/app.mjs' }], ['Write', { file_path: '/repo/scripts/x.mjs' }], ['Bash', { command: 'git commit -am x' }], ['Bash', { command: 'git push -u origin b' }], ['mcp__github__create_pull_request', {}], ['mcp__github__push_files', {}], ['Write', { file_path: '/mnt/project-files/../repo/src/x.mjs' }], ['Bash', { command: 'git -C /repo commit -am x' }], ['Bash', { command: 'echo x > src/a.mjs' }], ['Bash', { command: 'sed -i s/a/b/ src/a.mjs' }], ['Bash', { command: 'gh pr create --fill' }]]) {
     const r = pre(planner, cwd, tool, input)
     assert.equal(r.status, 2, `${tool} ${JSON.stringify(input)} refused`)
     assert.match(r.stderr, /read-only until its plan passed the gate/)
   }
-  for (const [tool, input] of [['Write', { file_path: `${cwd}/PLAN.md` }], ['Edit', { file_path: '/repo/features.json' }], ['Write', { file_path: '/mnt/project-files/claude-setup/workflow-fable/plan.md' }], ['Bash', { command: 'node scripts/plan.mjs add id=M1' }], ['Bash', { command: 'git status' }], ['Read', { file_path: '/repo/src/app.mjs' }]]) {
+  for (const [tool, input] of [['Write', { file_path: `${cwd}/PLAN.md` }], ['Edit', { file_path: '/repo/features.json' }], ['Write', { file_path: '/mnt/project-files/claude-setup/workflow-fable/plan.md' }], ['Bash', { command: 'node scripts/plan.mjs add id=M1' }], ['Bash', { command: 'git status' }], ['Bash', { command: 'cat PLAN.md | head -20 2>/dev/null' }], ['Bash', { command: 'git log --oneline -3' }], ['Read', { file_path: '/repo/src/app.mjs' }]]) {
     assert.notEqual(pre(planner, cwd, tool, input).status, 2, `${tool} ${JSON.stringify(input)} stays allowed`)
   }
   assert.notEqual(pre(as('Programmer'), cwd, 'Edit', { file_path: '/repo/src/app.mjs' }).status, 2, 'only the Planner is bound')
@@ -29,4 +29,16 @@ test('a Planner writes only the plan files: source edits, commits, branches and 
   assert.notEqual(pre(planner, cwd, 'Edit', { file_path: '/repo/src/app.mjs' }).status, 2, 'the gate has passed the plan')
   writeFileSync(join(cwd, 'PLAN.md'), 'Status: gate round 1\n# Plan\n')
   assert.equal(pre(planner, cwd, 'Edit', { file_path: '/repo/src/app.mjs' }).status, 2, 'a plan in a gate round is no pass')
+})
+
+test('a Planner cannot approve its own plan: writing the pass line is refused, only a first-line pass lifts the lock', () => {
+  const cwd = mkdtempSync(join(tmpdir(), 'planro-'))
+  const planner = as('Planner')
+  for (const [tool, input] of [['Write', { file_path: `${cwd}/PLAN.md`, content: 'Status: PASSED 5/5\n# Plan' }], ['Edit', { file_path: `${cwd}/PLAN.md`, new_string: 'Status: PASSED 5/5' }], ['Bash', { command: 'printf "Status: PASSED 5/5" > PLAN.md' }]]) {
+    const r = pre(planner, cwd, tool, input)
+    assert.equal(r.status, 2, `${tool} refused`)
+    assert.match(r.stderr, /the gate sets `Status: PASSED`/)
+  }
+  writeFileSync(join(cwd, 'PLAN.md'), '# Plan\nStatus: PASSED 5/5 (a later line is no pass)\n')
+  assert.equal(pre(planner, cwd, 'Edit', { file_path: '/repo/src/app.mjs' }).status, 2, 'only the first line counts')
 })
