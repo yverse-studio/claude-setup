@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
-import { cli, gateBrief, needsPicture, mergeProblem, parseHeadline, readLedger, recordRound, roundProblem } from '../global/gate-rounds.mjs'
+import { cli, gateBrief, namesLook, pictureOk, mergeProblem, parseHeadline, readLedger, recordRound, roundProblem } from '../global/gate-rounds.mjs'
 
 const root = join(fileURLToPath(import.meta.url), '..', '..')
 const PR = { owner: 'yverse-studio', repo: 'vacation-game', issue_number: 13 }
@@ -148,26 +148,18 @@ test('imported history: a PR that already ran 11 rounds needs the director and t
   assert.equal(s.run('init', ASSET, '--round', '2').code, 2, 'init runs once')
 })
 
-test('briefs: a gate round without Asset, round 4 without the director, a new hub without a picture card are blocked', () => {
+test('briefs: a gate round without Asset and round 4 without the director are blocked', () => {
   const s = session(); const dir = join(s.dir, 'gate')
   assert.match(gateBrief('Role: Programmer\nRound: 2', { dir }), /needs an `Asset:/)
   assert.match(gateBrief('Role: Programmer\nRound: 4\nAsset: shell', { dir, model: 'sonnet-test' }), /no ledger/)
   s.run('init', 'shell', '--round', '3')
   assert.match(gateBrief('Role: Programmer\nRound: 4\nAsset: shell', { dir, model: 'sonnet-test' }), /needs a Fable director/)
   assert.equal(gateBrief('Role: Planner\nRound: 4\nAsset: shell', { dir, model: 'fable-test' }), '', 'the Fable thread that becomes the director may start')
-  assert.match(gateBrief('Role: Designer\nBuild the new hub for the village', { dir }), /Picture card: <link>/)
-  assert.equal(gateBrief('Role: Designer\nBuild the new hub\nPicture card: #cmsg_01ABC', { dir }), '')
   assert.equal(gateBrief('Role: Programmer\nFix the login bug', { dir }), '', 'an ordinary brief is not touched')
   assert.equal(gateBrief('Round: 1\nAsset: brand-new', { dir }), '')
   assert.equal(gateBrief('Role: Programmer\nAsset: brand-new', { dir }), '', 'an Asset: line without Round: is fine')
 })
 
-test('a PR that brings a new hub, start screen or style needs its picture card link', () => {
-  const s = session()
-  const open = (body) => s.hook('mcp__github__create_pull_request', { owner: 'yverse-studio', repo: 'vacation-game', title: 'feat: new start screen', body })
-  assert.match(open('A start screen with a map.').stderr, /Picture card/)
-  assert.equal(open('Picture card: https://claude.ai/code/project/x?thread=cmsg_01\nA start screen.').status, 0)
-})
 
 test('the ledger CLI is wired in both installers and the cloud setup (checked by scripts/check.mjs too)', () => {
   for (const f of ['install.mjs', 'cloud/setup.sh']) assert.match(readFileSync(join(root, f), 'utf8'), /gate-rounds\.mjs/, f)
@@ -211,16 +203,41 @@ test('a corrupt ledger is refused, never reset', () => {
   assert.equal(s.run('status', ASSET).code, 2)
 })
 
-test('ordinary prompts and briefs are never blocked: the picture rule fires only on NEW hubs, screens and styles', () => {
-  for (const t of ['fix: main menu button overlaps on phones', 'docs: push image to Docker Hub', 'docs: Coding-Stil vereinheitlicht', 'Keep the art style as is, fix collisions', 'please fix the start screen text', 'the HQ hub shows wrong rows', 'new Docker Hub image', 'Fix the camera clipping in the new hub (PR #13 merged last week).', 'Task: fix the new start screen text overlap at 390px.', 'Add German strings to the new main menu.', 'Bug: new hub NPC stuck', 'Füge Texte zum neuen Hauptmenü hinzu', 'Behebe den Fehler im neuen Hub']) assert.equal(needsPicture(t), false, t)
-  for (const t of ['feat: new hub for the village', 'Build a new start screen', 'Design the new hub for the village', 'neuer Startbildschirm mit Karte', 'redesign the main menu', 'a new art style for the game']) assert.equal(needsPicture(t), true, t)
+// ---- picture card: one exact table. The hook never guesses new or existing; a text that names a hub, start screen, menu or style carries the line.
+const NAMES = ['Build the new hub for the village', 'Fix the camera clipping in the new hub', 'Make the new main menu buttons bigger', 'neues Hauptmenü', 'neues Hauptmenue', 'neuer Startbildschirm mit Karte', 'a new art style for the game', 'Move the shop into a new hub', 'Add German strings to the main menu', 'the HQ hub shows wrong rows', 'Title screen music', 'visual style guide']
+const NAMES_NOTHING = ['fix: button overlaps on phones', 'docs: push image to Docker Hub', 'new GitHub hub badge', 'docs: Coding-Stil vereinheitlicht', 'The new screenshots look right at 390px and 1440px', 'feat: new button style for the shop', 'add a new CSS style for errors', 'Take a new look at the spacing']
+const LINES = [['Picture card: #cmsg_01ABC', true], ['Picture card: https://claude.ai/code/project/x?thread=cmsg_01', true], ['Picture card: none, because it is a text fix on the live menu', true], ['Picture card: none', false], ['Picture card: none, because', false], ['Picture card: https://example.com', false], ['Picture card first is the rule', false]]
+
+test('picture card: a text that names a thing at all needs the line, a text that names nothing never does', () => {
+  for (const t of NAMES) assert.equal(namesLook(t), true, t)
+  for (const t of NAMES_NOTHING) assert.equal(namesLook(t), false, t)
+  for (const [line, ok] of LINES) assert.equal(pictureOk(`Note\n${line}\nmore`), ok, line)
+})
+
+test('picture card: a PR that names a thing without the line is refused, with the link or none-because it passes, no title exemption', () => {
   const s = session()
+  const open = (title, body) => s.hook('mcp__github__create_pull_request', { owner: 'a', repo: 'b', title, body })
+  for (const title of ['feat: new hub', 'fix: new hub button overlaps', 'docs: reword the main menu rule']) assert.match(open(title, 'x').stderr, /Picture card/, title)
+  assert.match(open('feat: x', 'A start screen with a map.').stderr, /none, because/, 'both forms are named')
+  assert.equal(open('feat: new hub', 'Picture card: #cmsg_01ABC').status, 0)
+  assert.equal(open('fix: hub button', 'Picture card: none, because the hub exists, this is a text fix').status, 0)
+  assert.equal(open('feat: button', 'nothing about looks').status, 0)
+  assert.match(open('feat: new hub', 'Picture card: https://example.com').stderr, /Picture card/, 'a URL without a card id is no picture card')
+})
+
+test('picture card: a brief gets context, never a stop, from the picture rule alone', () => {
+  const s = session(); const dir = join(s.dir, 'gate')
+  const note = gateBrief('Role: Designer\nBuild the new hub for the village', { dir })
+  assert.match(note, /Picture check/)
+  assert.match(note, /Picture card: none, because/)
+  assert.doesNotMatch(note, /Do no work: send this reason|Gate check/, 'the picture rule alone never stops a thread')
+  assert.equal(gateBrief('Role: Designer\nBuild the new hub\nPicture card: #cmsg_01ABC', { dir }), '')
+  assert.equal(gateBrief('Role: Programmer\nPicture card: none, because text fix on the live menu\nFix the main menu label', { dir }), '')
+  assert.equal(gateBrief('Role: Programmer\nFix the login bug', { dir }), '')
+  assert.match(gateBrief('Role: Designer\nRound: 2\nBuild the new hub', { dir }), /Gate check.*needs an `Asset:/, 'the round checks still block')
   const prompt = (p) => spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'prompt'], { input: JSON.stringify({ cwd: s.dir, session_id: 'p1', transcript_path: s.transcript, prompt: p }), encoding: 'utf8', env: { ...s.env, TMPDIR: s.dir } }).stdout
-  assert.doesNotMatch(prompt('please build a new hub for me'), /Gate check/, 'a plain message to a non-spawned session is not a brief')
-  assert.match(prompt('<wake reason="spawn">Role: Designer\nBuild a new hub</wake>'), /Picture card/)
-  assert.equal(needsPicture('Picture card: https://example.com'), false)
-  const open = (body) => s.hook('mcp__github__create_pull_request', { owner: 'a', repo: 'b', title: 'feat: new hub', body })
-  assert.match(open('Picture card: https://example.com').stderr, /Picture card/, 'a URL without a card id is no picture card')
+  assert.doesNotMatch(prompt('please build a new hub for me'), /Picture check|Gate check/, 'a plain message to a non-spawned session is not a brief')
+  assert.match(prompt('<wake reason="spawn">Role: Designer\nBuild a new hub</wake>'), /Picture check/)
 })
 
 test('the brief and the hook read one ledger whatever the case of the asset', () => {
@@ -243,7 +260,6 @@ test('fail closed: a merge needs a counted pass, a PR without any gate round doe
 
 test('ordinary work is never blocked, a verdict is read from the opening line only', () => {
   const s = session(); const post = (body) => s.hook('mcp__github__add_issue_comment', { ...PR, body })
-  for (const t of ['The new screenshots look right at 390px and 1440px', 'Take a new look at the spacing', 'feat: new button style for the shop', 'docs: new code style section', 'add a new CSS style for errors']) assert.equal(needsPicture(t), false, t)
   assert.equal(gateBrief('Fix the gate round counter false block in global/gate-rounds.mjs', {}), '', 'a brief ABOUT the counter is no gate-round brief')
   s.gate(1, '3.0'); s.gate(2, '3.0'); s.gate(3, '3.5')
   assert.equal(post('> Gate 3/5 (S, round 2)\n\nFixed the two findings above.').status, 0, 'a quoted old verdict is talk')
@@ -256,9 +272,6 @@ test('ordinary work is never blocked, a verdict is read from the opening line on
   assert.equal(p.hook('mcp__github__merge_pull_request', MERGE).status, 0, '"Gate pass" is a pass')
   const q = session(); q.gate(1, '4.6'); q.gate(2, '3.0'); q.gate(3, '4.6')
   assert.equal(q.gate(4, '4.6').status, 0, 'polish counts from the latest passing run')
-  assert.equal(needsPicture('docs: reword the rule that a new hub or start screen needs a picture card first'), false)
-  assert.equal(s.hook('mcp__github__create_pull_request', { owner: 'a', repo: 'b', title: 'fix: new hub button overlaps', body: 'x' }).status, 0)
-  assert.equal(s.hook('mcp__github__create_pull_request', { owner: 'a', repo: 'b', title: 'feat: new hub', body: 'x' }).status, 2)
 })
 
 // ---- The Bash corpus (Fable director, gate round 4): every finding of rounds 1 to 4 is one line here, run through the real hook.

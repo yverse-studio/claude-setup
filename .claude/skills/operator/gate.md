@@ -242,8 +242,12 @@ How to undo a merge, by kind of change (write the line into the PR's "undo" line
   hook only reads.
 - **Picture card first** (vacation-game 2026-11-12: a hub nobody asked for was built and nearly merged): a new hub, start
   screen, main menu or art style is shown to yskills as ONE card of pictures (2 or 3 directions, references from current
-  games of that kind, per `roles/designer.md`, Vote cards) before any build; the brief and the PR body carry
-  `Picture card: <link>`. A brief or `create_pull_request` that names one without the line is refused by the hook.
+  games of that kind, per `roles/designer.md`, Vote cards) before any build. The hook does not guess whether a text means a new
+  one or an existing one: a PR (title or body) that names a hub, start screen, title screen, main menu or art or visual style must
+  carry a `Picture card:` line, either the card link (`Picture card: <cmsg link>`) or `Picture card: none, because <reason>` (work
+  on one that exists). `create_pull_request` without it is refused. A thread brief that names one without the line is never
+  stopped for this: the thread gets a note to do no work and tell the coordinator if the brief introduces a new one, or to go on
+  and say so in its first reply if it works on an existing one. Round and Asset checks still stop a brief.
 
 **Important or hard PRs** (auth, payments, database migrations, secrets, anything that can lose
 data or money, the last PR before launch, any PR that needed a second gate round) merge at 5/5
