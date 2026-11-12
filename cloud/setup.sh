@@ -1307,7 +1307,7 @@ function bashProblem(cmd, dir, ctx) {
       if (verb === 'init' && !(Number(s.args[s.args.indexOf('--round') + 1]) >= 1)) return 'gate ledger: init imports the rounds that already ran: --round <n> with n of 1 or more (gate.md, Rounds).'
       if (verb === 'direct' && !/fable/i.test(ctx.model ?? '')) return `gate ledger: only a Fable session records the director, this one runs on ${ctx.model ?? 'an unknown model'}. Ask the coordinator for a Fable thread (docs/TEAMS.md, Models line).`
       if (['card', 'picture', 'waive'].includes(verb) && !(ref && cardProof(ref, ctx.calls ?? []))) return `gate ledger: "${verb}" needs --ref <cmsg id> of a request_decision card this session posted (it was not found in this session).`
-      if (verb === 'waive' && !(ctx.humanAfter?.(ref))) return 'gate ledger: waive needs yskills\' own answer on that card in this session; none arrived yet.'
+      if (verb === 'waive' && !(ctx.humanAfter?.(ref))) return 'gate ledger: waive needs yskills\' tap on the FIRST option of that card in this session (the card lists the option that frees the gate first); none arrived yet, or he tapped another option.'
       if (verb === 'record' && namedProblem(s.args[at + 2])) return namedProblem(s.args[at + 2])
       let body = null // the content this check read: a record grant carries its digest (finding 2)
       if (verb === 'post' || verb === 'record') {
@@ -2777,7 +2777,8 @@ export function handsOff(tool, input = {}, role = '', root = '') {
 // checked against the asset's ledger. Fail closed: a check that throws refuses the call (research 2026-11-12: a crashing hook does not block).
 // M53 slice 2: a waive needs yskills' own answer to that card: a row the app wrote with the human origin (fromHuman of the counter; a scheduled or
 // typed-by-a-thread row never has it) that opens with the principal wake and names the card in its decision_id note (the real tap row,
-// scripts/fixtures/m53/real-human-rows.jsonl). Any other message of yskills after the card, a stop or pause word included, answers nothing.
+// scripts/fixtures/m53/real-human-rows.jsonl). Any other message of yskills after the card, a stop or pause word included, answers nothing, and so does a tap on any option but the first:
+// a waive card lists the option that frees the gate first (gate.md, Rounds), so a "no" frees nothing.
 // `counter` is the loaded gate-rounds module.
 const humanAfter = (transcript, ref, counter) => {
   const id = String(ref).match(/cmsg_\w+/)?.[0]
@@ -2787,7 +2788,7 @@ const humanAfter = (transcript, ref, counter) => {
   // as text quoted inside a relay, a cited message or a tool result.
   const text = (r) => typeof r.message?.content === 'string' ? r.message.content : (Array.isArray(r.message?.content) ? r.message.content.map((c) => (c?.type === 'text' ? c.text ?? '' : '')).join('\n') : '')
   const WAKE = /^\s*<wake\b[^>]*>\s*(?:<project\b[^>]*>\s*)?(?:<thread\b[^>]*>\s*)?<message\b(?=[^>]*\bfrom="human")(?=[^>]*\btrust="principal")/
-  const answer = (r) => counter.fromHuman(r) && !(Array.isArray(r.message?.content) && r.message.content.some((c) => c?.type === 'tool_result')) && WAKE.test(text(r)) && text(r).includes(`<system-note>decision_id=${id}</system-note>`)
+  const answer = (r) => counter.fromHuman(r) && !(Array.isArray(r.message?.content) && r.message.content.some((c) => c?.type === 'tool_result')) && WAKE.test(text(r)) && text(r).includes(`<system-note>decision_id=${id}</system-note>`) && text(r).includes('<system-note>option_index=0</system-note>')
   return at >= 0 && rows.slice(at + 1).some(answer)
 }
 // A cached cloud image can lack the counter (its pasted setup predates it) and its start hook, the old team-guard, never fetches it

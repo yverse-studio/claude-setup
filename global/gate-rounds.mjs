@@ -399,7 +399,7 @@ function bashProblem(cmd, dir, ctx) {
       if (verb === 'init' && !(Number(s.args[s.args.indexOf('--round') + 1]) >= 1)) return 'gate ledger: init imports the rounds that already ran: --round <n> with n of 1 or more (gate.md, Rounds).'
       if (verb === 'direct' && !/fable/i.test(ctx.model ?? '')) return `gate ledger: only a Fable session records the director, this one runs on ${ctx.model ?? 'an unknown model'}. Ask the coordinator for a Fable thread (docs/TEAMS.md, Models line).`
       if (['card', 'picture', 'waive'].includes(verb) && !(ref && cardProof(ref, ctx.calls ?? []))) return `gate ledger: "${verb}" needs --ref <cmsg id> of a request_decision card this session posted (it was not found in this session).`
-      if (verb === 'waive' && !(ctx.humanAfter?.(ref))) return 'gate ledger: waive needs yskills\' own answer on that card in this session; none arrived yet.'
+      if (verb === 'waive' && !(ctx.humanAfter?.(ref))) return 'gate ledger: waive needs yskills\' tap on the FIRST option of that card in this session (the card lists the option that frees the gate first); none arrived yet, or he tapped another option.'
       if (verb === 'record' && namedProblem(s.args[at + 2])) return namedProblem(s.args[at + 2])
       let body = null // the content this check read: a record grant carries its digest (finding 2)
       if (verb === 'post' || verb === 'record') {

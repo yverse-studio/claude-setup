@@ -128,6 +128,8 @@ const HUMAN = readFileSync(join(root, 'scripts/fixtures/m53/real-human-rows.json
 const TAP = withText(HUMAN, HUMAN.message.content)
 const tapOf = (card) => withText(HUMAN, HUMAN.message.content.replaceAll('cmsg_CARD123', card))
 const asText = (row, text) => withText(row, text)
+// The same real tap on another option of that card (synthetic: the metadata is real, option and option_index are swapped). Option 0 is the one that frees the gate.
+const tapOption = (i) => withText(HUMAN, HUMAN.message.content.replace('<system-note>option=A</system-note>', `<system-note>option=${'ABCD'[i]}</system-note>`).replace('<system-note>option_index=0</system-note>', `<system-note>option_index=${i}</system-note>`))
 
 test('the real card answer: a human origin that is no scheduled row, and a decision_id naming the card', () => {
   assert.equal(HUMAN.origin.kind, 'human')
@@ -139,11 +141,16 @@ test('the real card answer: a human origin that is no scheduled row, and a decis
   assert.equal(fromHuman(realRow('wake')), false, 'a harness status wake is not yskills')
   assert.equal(fromHuman(realRow('coordinator-relay', 1)), false, 'a coordinator relay is not yskills')
   assert.equal(fromHuman(undefined), false)
+  assert.equal(fromHuman({ ...TAP, turnOrigin: 'system' }), false, 'a human origin on a row of another turn kind (gate 513, finding 4)')
+  assert.equal(fromHuman({ ...TAP, type: 'attachment' }), false, 'a row that is no user row')
 })
 
 test('waive: only the real answer to that card counts, nothing a thread can schedule, type or quote', () => {
   assert.equal(waives([TAP]), true, 'the real tap on cmsg_CARD123')
   assert.equal(waives([tapOf('cmsg_OTHER999')]), false, 'a real tap on another card')
+  assert.equal(waives([tapOption(1)]), false, 'a real tap on the second option (a "no") frees nothing (gate 513, finding 1)')
+  assert.equal(waives([tapOption(2)]), false)
+  assert.equal(waives([tapOption(1), TAP]), true, 'a "no" first, the real "yes" later still counts')
   assert.equal(waives([userRow(PRINCIPAL('ok nimm es'))]), false, 'a principal wake without the human origin (a thread\'s own text) is no answer')
   assert.equal(waives([userRow(PRINCIPAL('ok nimm es'), { origin: PROJECTS, promptSource: 'system' })]), false, 'a wake the projects server delivered as a relay is not yskills\' message')
   assert.equal(waives([{ ...TAP, origin: undefined }]), false, 'the real text without its origin')
@@ -197,12 +204,15 @@ test('mutation 4: a WAKE pattern without ^ accepts the real answer quoted inside
   assert.equal(waives([quoted], guard), true)
   assert.equal(waives([quoted]), false)
 })
-test('mutation 6: dropping the decision_id check lets any message of yskills waive, a stop word too', () => {
+test('mutation 6: dropping the decision_id check lets a real tap on another card waive', () => {
   const guard = mutated('rule-guard.mjs', ' && text(r).includes(`<system-note>decision_id=${id}</system-note>`)', '')
-  const stop = { ...TAP, message: { role: 'user', content: PRINCIPAL('stop') } }
-  assert.equal(waives([stop], guard), true)
-  assert.equal(waives([stop]), false)
   assert.equal(waives([tapOf('cmsg_OTHER999')], guard), true)
+  assert.equal(waives([tapOf('cmsg_OTHER999')]), false)
+})
+test('mutation 8: dropping the option check lets a tap on "no" waive', () => {
+  const guard = mutated('rule-guard.mjs', " && text(r).includes('<system-note>option_index=0</system-note>')", '')
+  assert.equal(waives([tapOption(1)], guard), true)
+  assert.equal(waives([tapOption(1)]), false)
 })
 test('mutation 7: a fromHuman without the turn check accepts a scheduled row that claims the origin', () => {
   const guard = mutated('gate-rounds.mjs', " && r.turnOrigin === 'human' && !selfScheduled(r)", '')
@@ -254,7 +264,7 @@ const withBrokenCounter = (guard) => {
 const REAL_RELAY = () => withText(realRow('coordinator-relay', 1), leadIn(FIX))
 test('a counter that cannot load: a real coordinator relay lifts nothing, a card is not waived', () => {
   assert.equal(lifts(REAL_RELAY(), withBrokenCounter(mutated('rule-guard.mjs', 'const origin = await projectsOrigin()', 'const origin = await projectsOrigin()'))), false)
-  assert.equal(waives([userRow(PRINCIPAL('ok nimm es'))], withBrokenCounter(mutated('rule-guard.mjs', 'const origin = await projectsOrigin()', 'const origin = await projectsOrigin()'))), false)
+  assert.equal(waives([TAP], withBrokenCounter(mutated('rule-guard.mjs', 'const origin = await projectsOrigin()', 'const origin = await projectsOrigin()'))), false)
 })
 test('mutation 5: a counter-load fallback that accepts every row lets the relay lift', () => {
   const guard = withBrokenCounter(mutated('rule-guard.mjs', 'catch { return () => false } }', 'catch { return () => true } }'))

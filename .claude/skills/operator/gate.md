@@ -226,7 +226,7 @@ How to undo a merge, by kind of change (write the line into the PR's "undo" line
   4. **A merge needs a counted pass** (fail closed; director ruling, PR #444 round 4): the merge is refused when the asset has no [guard: hook global/gate-rounds.mjs]
      ledger or its last round is not a pass (4.5, 4.8 important), whatever the reason. A verdict posted in another shape is never
      counted, so it can never lead to a merge. Only yskills' answer on a card frees a version under the threshold
-     (`gate-rounds.mjs waive <asset> --ref <cmsg id>`, the hook needs his reply in the session).
+     (`gate-rounds.mjs waive <asset> --ref <cmsg id>`; the hook needs his tap on the **first** option of that `request_decision` card, so the card lists the option that frees the merge first; a typed reply or a tap on another option frees nothing).
   5. **Two doors for gh**, because the hook reads no gh comment text: a merge is `mcp__github__merge_pull_request` or [guard: hook global/gate-rounds.mjs]
      `node ~/.claude/claude-setup/gate-rounds.mjs merge <owner/repo#n> [--squash|--merge|--rebase] [--auto] [--delete-branch]`;
      a verdict is the comment tool or `gate-rounds.mjs post <owner/repo#n> --body-file <f>`; a named asset without a PR (a plan, a video, an
