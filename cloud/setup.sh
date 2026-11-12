@@ -675,7 +675,7 @@ export function badTitle(title, text, teams) {
 
 // Persistent role threads, partly (research 2026-11-12; yskills picked "partly, per plan or PR"): a role thread is
 // reused for the next job of the same plan or PR, so a start while that role has an open thread must say why it is new.
-// The board is the last thread listing of the transcript; a resolved or done thread is not reusable, a Tester at L is always fresh.
+// A resolved or done thread is not reusable; a Tester at L and every Reviewer are always fresh.
 // The board is the last full thread listing of the transcript (rule-guard's openThreads: any nesting, filtered listings skipped, threads resolved since dropped).
 export const boardThreads = (transcript) => openThreads(toolCalls(String(transcript)))
 export const openSameRole = (board, role) => board.filter((t) => new RegExp(`^\\s*${role.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*·`, 'i').test(t.title)).map((t) => t.title)
@@ -684,8 +684,8 @@ export function reuseBlock(text, teams, board) {
   const role = teams && board?.length && roleOf(plain, teams)
   if (!role?.row || role.name === 'Reviewer' || (role.name === 'Tester' && /\bSize:[ \t]*L\b/i.test(plain))) return null
   const open = openSameRole(board, role.name)
-  if (!open.length || /^[ \t>-]*Reuse:[ \t]*none\b[^\n]*\([^)<\n][^)\n]{7,}\)/im.test(plain)) return null
-  return `${role.name} thread already open: "${open[0]}". Give the work to it with message_thread (same plan or PR; docs/TEAMS.md, Reuse rule), or add \`Reuse: none (<why: other plan or PR, long context, parallel read job>)\` to the brief and retry`
+  if (!open.length || /^[ \t>-]*Reuse:[ \t]*none\b[^\n]*\([ \t]*[^)<\s][^)\n]*\)/im.test(plain)) return null
+  return `${role.name} thread already open: "${open[0]}". Run list_threads again first (the board goes stale when threads resolve themselves); if it is still open, give the work to it with message_thread (same plan or PR; docs/TEAMS.md, Reuse rule), or add \`Reuse: none (<why: other plan or PR, long context, parallel read job>)\` to the brief and retry`
 }
 
 // unread: the boot files a thread start still needs (empty when read or when no transcript was given).
@@ -1916,7 +1916,7 @@ export function threadBoard(calls) {
 }
 
 // The threads still open on the last full listing (working, blocked, review_ready, not resolved, not resolved since): team-guard's
-// Reuse check (docs/TEAMS.md, Reuse rule). Same listing rules as threadBoard; null when the session never listed its threads.
+// Reuse check (docs/TEAMS.md, Reuse rule). Same listing rules as threadBoard; [] when the session never listed its threads.
 const OPEN_STATES = new Set(['working', 'blocked', 'review_ready'])
 export function openThreads(calls) {
   const i = calls.findLastIndex((c) => LIST.test(c.name) && c.result && !c.input.state && !c.input.since && !c.input.cursor)

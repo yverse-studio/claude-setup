@@ -669,7 +669,7 @@ export function threadBoard(calls) {
 }
 
 // The threads still open on the last full listing (working, blocked, review_ready, not resolved, not resolved since): team-guard's
-// Reuse check (docs/TEAMS.md, Reuse rule). Same listing rules as threadBoard; null when the session never listed its threads.
+// Reuse check (docs/TEAMS.md, Reuse rule). Same listing rules as threadBoard; [] when the session never listed its threads.
 const OPEN_STATES = new Set(['working', 'blocked', 'review_ready'])
 export function openThreads(calls) {
   const i = calls.findLastIndex((c) => LIST.test(c.name) && c.result && !c.input.state && !c.input.since && !c.input.cursor)
