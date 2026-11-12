@@ -1,5 +1,3 @@
-> **Move in progress: until gate G12 the tree is still in Documents.** (Remove this line after G12.)
-
 # Laptop folders (Claude user, Windows): the one home of the structure rules
 
 Everything we work on lives under one root folder, each folder holds one kind of thing, each thing exists once.
@@ -61,9 +59,11 @@ No scripts inside an asset: data and at most one recipe file; build scripts live
 │  ├─ clothes/        CL_<name>/ (source/ files/ fitted/<figure>.blend reference/ gate/)   accessories as CL_acc-*
 │  ├─ parts/          {hair,eyes,skin}/PT_<name>/ (source/ files/ reference/)
 │  ├─ rooms/          <room>/ (<room>.blend reference/ export/ gate/)
-│  ├─ props/          OB_<name>/ (source/ files/) · nsfw/OB_<name>/
-│  ├─ anims/          interaction/ (two-figure actions; reference/{boards,camera,poses,motion,contact}/ for all, <action>/ with its own reference/ gate/)
-│  │                  AN_<name>/ (solo clips) · nsfw/ · _source/{video,games}/ (raw, read-only)
+│  ├─ props/          <category>/OB_<name>/ (source/ files/; furniture, office, street, travel, weapon) · nsfw/OB_<name>/
+│  ├─ anims/          <sfw|nsfw>/<solo|pair>/<type>/ : sfw/solo/{locomotion,idle,gesture,action}/AN_<name>/ · sfw/pair/kiss/ · nsfw/pair/<position>/
+│  │                  nsfw/reference/{boards,camera,poses,motion,contact}/
+│  │                  _engine/ (pair engine: core, projects, docs) · _retarget/ (tools)
+│  │                  _source/ (raw, read-only): free packs at the top, 18+ ones in nsfw/_source/{video,games}/
 │  └─ sounds/         {foley,ambience,human,music,ui}/SN_<name>/ · nsfw/
 ├─ projects/          games/<name>/ videos/<name>/ films/<name>/   README names its repo; STATUS.md
 │  └─ games/<name>/   reference/look/ · ch<NN>/<scene>/ (<scene>.blend reference/ preview/ render/ gate/ STATUS.md)
@@ -77,8 +77,8 @@ the owner's own folders (Private18, ComfyUI, venv folders) stay in the Documents
 ```
 
 Technical folder names are English (`poses`, `motion`, `contact`, `camera`, `boards`, `face`, `body`). A video that advertises a game
-lives in that game's `marketing/social/<post>/`; `projects/videos/` holds stand-alone channel content. Pair actions stay in
-`lib/anims/interaction/` until chapter 1 is done. The folder name is the asset's ID (`CH_rika`) and is never renamed after creation.
+lives in that game's `marketing/social/<post>/`; `projects/videos/` holds stand-alone channel content. Pair positions live in
+`lib/anims/nsfw/pair/<position>/` (18+) or `lib/anims/sfw/pair/<name>/`; the engine that builds them is `lib/anims/_engine/` (owner 2026-11-12: rating, then cast, then type). The folder name is the asset's ID (`CH_rika`) and is never renamed after creation.
 
 ## Copies, 18+, backup (summary; tests in the rules spec)
 
