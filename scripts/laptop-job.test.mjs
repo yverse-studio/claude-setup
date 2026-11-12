@@ -204,6 +204,7 @@ test('RAM ledger CLI: a hand sign-in with a live pid survives the list, out remo
   assert.throws(() => ledgerCli(['in', 'x', 'renpy'], dir), /usage/)
   assert.throws(() => ledgerCli(['in', 'x', 'excel', '5'], dir), /usage/)
   assert.throws(() => ledgerCli(['in', 'x', 'renpy', '1.5'], dir), /usage/)
+  assert.throws(() => ledgerCli(['in', 'x', 'renpy', '0'], dir), /usage/)
   assert.throws(() => ledgerCli(['in', 'x', 'renpy', '99999999'], dir), /usage/)
 })
 
