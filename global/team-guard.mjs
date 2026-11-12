@@ -32,7 +32,8 @@ try { ({ roleOf } = await import('./rule-guard.mjs')) } catch { /* no rule-guard
 
 export const POINTER = 'Team rule (claude-setup docs/TEAMS.md): route every task on its own (task picks the kit, not the project; then size S/M/L), call only the roles it needs, as thread or subagent as the roster says, and pass `model` from the role\'s row on every thread start and Agent call.'
 export const PM_FILE = '.claude/skills/operator/roles/project-manager.md'
-export const BOOT_FILES = ['CLAUDE.md', 'docs/TEAMS.md', 'docs/MAP.md', PM_FILE, 'config/persona.json']
+export const CHECKLISTS = '.claude/skills/operator/checklists.md' // M48: the topics a Reviewer brief may name; in the boot copy so the guard knows them outside claude-setup too
+export const BOOT_FILES = ['CLAUDE.md', 'docs/TEAMS.md', 'docs/MAP.md', PM_FILE, 'config/persona.json', CHECKLISTS]
 const RAW = 'https://raw.githubusercontent.com/yverse-studio/claude-setup/main/'
 const MARK = '# Working for yskills' // first line of claude-setup's CLAUDE.md
 
@@ -287,6 +288,18 @@ export function badRole(text, teams) {
   return exact ? null : `Role: ${role.row ? line.split(/[\s·|,(]/)[0] : role.name} is no role in docs/TEAMS.md (Roster): pick one of ${names.join(', ')}, or \`Role: none\` for a small task with no role`
 }
 
+// M48: a Reviewer brief may carry `Topic: <name>`; the names are the `## ` headings of the checklist file (the one source for this guard,
+// scripts/brief.mjs and rule-guard's topic card).
+export const topicNames = (checklists) => String(checklists).split('\n').filter((l) => /^## \S/.test(l)).map((l) => l.slice(3).trim())
+export function badTopic(text, checklists) {
+  const plain = text.replace(/[*_`]/g, '')
+  const topic = plain.match(/^[ \t>-]*Topic:[ \t]*([^\n]*)/im)?.[1].trim()
+  const names = topicNames(checklists)
+  if (topic === undefined || !names.length) return null
+  if (!/^[ \t>-]*Role:[ \t]*Reviewer\b/im.test(plain)) return `Topic: ${topic} belongs to a Reviewer brief only (${CHECKLISTS})`
+  return names.some((n) => n.toLowerCase() === topic.toLowerCase()) ? null : `Topic: ${topic} is no topic in ${CHECKLISTS}: pick one of ${names.join(', ')}`
+}
+
 export function badTeam(text, teams) {
   const plain = text.replace(/[*_`]/g, '')
   const rows = teams ? kitRows(teams) : []
@@ -316,7 +329,7 @@ export function badTitle(title, text, teams) {
 }
 
 // unread: the boot files a thread start still needs (empty when read or when no transcript was given).
-export function decide(tool, input = {}, dirs = [], unread = [], teams = '') {
+export function decide(tool, input = {}, dirs = [], unread = [], teams = '', checklists = '') {
   const kind = AGENT.test(tool) ? 'Agent' : THREAD_START.test(tool) ? 'thread' : null
   if (kind === 'thread' && unread.length) return { block: `team-guard: read the rules before starting a thread: ${unread.join(' and ')} (in ~/.claude/claude-setup/ or the claude-setup repo; docs/MAP.md, Start here). 2026-10-26 a coordinator skipped them and guessed every model. Read them, then retry.` }
   if (kind === 'thread' && !stamped(briefText(input))) return { block: 'team-guard: every thread brief starts with the stamp line `Role: <one role from docs/TEAMS.md Roster> · Kit: <kit> · Size: <S|M|L>` (operator/briefs.md); a small task with no role says `Role: none`. The thread loads its playbook from it. Add the line, then retry.' }
@@ -328,6 +341,8 @@ export function decide(tool, input = {}, dirs = [], unread = [], teams = '') {
     if (unknown) found.push(`${unknown}. Start the role the Roster names for this task (claude-setup docs/TEAMS.md, Roster)`)
     const team = badTeam(text, teams)
     if (team) found.push(`${team}. Look the task up in claude-setup docs/TEAMS.md (Spawn rule, Sizes, Kits) and fix the stamp line`)
+    const topic = badTopic(text, checklists)
+    if (topic) found.push(`${topic}. Use a topic the checklist file lists, or drop the line for a plain Reviewer`)
     const title = badTitle(input.title, text, teams)
     if (title) found.push(`a ${title} thread is titled \`${title} · <what>\` (claude-setup docs/TEAMS.md, Roster "Runs as"), e.g. "${title} · Bienen-Video"; fix the title`)
     const lines = missingLines(text)
@@ -403,7 +418,8 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         .filter((f) => !(session && existsSync(mark(f === 'CLAUDE.md' ? 'rules' : 'teams'))))
       const unread = read ? need.filter((f) => !read.has(f)) : []
       const teams = THREAD_START.test(tool) ? text(join(cwd, 'docs', 'TEAMS.md')) || text(join(dir, 'docs', 'TEAMS.md')) : ''
-      const out = decide(tool, input, [join(cwd, '.claude', 'agents'), join(home, '.claude', 'agents')], unread, teams)
+      const checklists = THREAD_START.test(tool) ? text(join(cwd, CHECKLISTS)) || text(join(dir, CHECKLISTS)) : ''
+      const out = decide(tool, input, [join(cwd, '.claude', 'agents'), join(home, '.claude', 'agents')], unread, teams, checklists)
       if (out.block) { process.stderr.write(out.block); process.exitCode = 2 }
     } catch {
       // A guard must never break a tool call.

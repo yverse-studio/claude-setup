@@ -309,7 +309,21 @@ function receiptBlock(tool, input, session, cwd, agentId, transcript) {
   return receiptMissing(tool, input, threadReceipt(role, brief, t, rules, status), t) ?? (receiptSent(t) ? null : fallbackUnread(status, t))
 }
 
-function roleContext(prompt, cwd, session) {
+// M48: a Reviewer brief with a valid `Topic:` is given that topic's checklist plus the Scored gates section of gate.md instead of the code playbook.
+const mdSection = (text, heading, prefix = false) => { const m = new RegExp(`\\n## ${heading.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}${prefix ? '' : '$'}`, 'm').exec(text); if (!m) return ''; const b = text.indexOf('\n## ', m.index + 1); return text.slice(m.index + 1, b < 0 ? undefined : b).trim() }
+export async function topicPlaybook(brief, root) {
+  let guard
+  try { guard = await import(new URL('./team-guard.mjs', import.meta.url)) } catch { return null }
+  const plain = brief.replace(/[*_`]/g, '')
+  const topic = plain.match(/^[ \t>-]*Topic:[ \t]*([^\n]*)/im)?.[1].trim()
+  const checklists = read(join(root, guard.CHECKLISTS)) || fetchRaw(guard.CHECKLISTS)
+  if (!topic || !/^[ \t>-]*Role:[ \t]*Reviewer\b/im.test(plain) || guard.badTopic(plain, checklists)) return null
+  const name = guard.topicNames(checklists).find((n) => n.toLowerCase() === topic.toLowerCase())
+  const scored = mdSection(read(join(root, '.claude/skills/operator/gate.md')) || fetchRaw('.claude/skills/operator/gate.md'), 'Scored gates', true)
+  return { name, text: `Topic: ${name}. Your whole job is this checklist, scored by the rule below; judge only these rows.\n\n${mdSection(checklists, name)}\n\n${scored}` }
+}
+
+async function roleContext(prompt, cwd, session) {
   const once = join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)
   // Only a session's brief: a project wake that is not the spawn one quotes other threads' briefs.
   if (!session || existsSync(once) || (/<(wake|relay|coordinator-relay)\b/.test(prompt) && !/<(wake|relay)\b[^>]*reason="spawn"/.test(prompt))) return ''
@@ -317,6 +331,8 @@ function roleContext(prompt, cwd, session) {
   const role = roleOf(prompt, read(join(root, 'docs', 'TEAMS.md')))
   if (!role) return ''
   writeFileSync(once, role.name)
+  const topic = role.name === 'Reviewer' ? await topicPlaybook(prompt, root) : null
+  if (topic) return roleCard({ ...role, path: `${'.claude/skills/operator/checklists.md'} (${topic.name}) and gate.md, Scored gates` }, topic.text)
   return roleCard(role, role.path ? read(join(root, role.path)) || fetchRaw(role.path) : '')
 }
 
@@ -346,7 +362,7 @@ export async function briefCheck(prompt, cwd, model = null) {
   const brief = prompt.replace(/\\[nt]/g, '\n').replace(/<\/?(wake|message|thread|project|relay|coordinator-relay|cited|note|system-note)\b[^>]*>/g, '\n')
   const missing = guard.missingLines(brief)
   const why = !guard.stamped(brief) ? 'no `Role: · Kit: · Size:` stamp line'
-    : guard.badTeam(brief, teams) ?? (missing.length ? `brief lines missing: ${missing.join(', ')}` : null)
+    : guard.badTeam(brief, teams) ?? guard.badTopic(brief, read(join(setupRoot(cwd), guard.CHECKLISTS))) ?? (missing.length ? `brief lines missing: ${missing.join(', ')}` : null)
   if (why) return `Brief check (docs/TEAMS.md): this start breaks the team rules: ${why}. Do no work: send this reason and the corrected Role, Kit and Size to the coordinator (message_coordinator), then stop.`
   // The coordinator runs without hooks, so its model pick and gate brief are checked here, on the thread side.
   const wrong = model && guard.wrongModel(brief, model, teams)
@@ -791,7 +807,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           const brief = lookup ? spawnPrompt(prompt, read(transcriptPath)) : prompt
           if (session && (spawned || (lookup && brief !== prompt))) writeFileSync(briefOnce, '')
           const model = sessionModel(transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : '') ?? (read(join(tmpdir(), `claude-setup-model-${String(session).replace(/[^A-Za-z0-9]/g, '')}`)).trim() || null)
-          const context = [await briefCheck(brief, cwd, model), spawned || (lookup && brief !== prompt) ? await gateBriefContext(brief, model) : '', spawned ? await guardLine() : '', modelOnce(brief, transcriptPath, session), roleContext(brief, cwd, session), promptContext(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
+          const context = [await briefCheck(brief, cwd, model), spawned || (lookup && brief !== prompt) ? await gateBriefContext(brief, model) : '', spawned ? await guardLine() : '', modelOnce(brief, transcriptPath, session), await roleContext(brief, cwd, session), promptContext(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
           if (context) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: context } }))
           return
         }
