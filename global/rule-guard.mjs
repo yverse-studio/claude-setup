@@ -22,6 +22,7 @@
 // CLAUDE_SETUP_RULE_GUARD=off turns it off. It never breaks a tool call on its own errors.
 
 import { execFileSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { isIP } from 'node:net'
 import { homedir, tmpdir } from 'node:os'
@@ -272,7 +273,7 @@ export function roleOf(prompt, teams) {
 
 export function roleCard(role, playbook) {
   if (!role.row) return `rule-guard: the brief names Role: ${role.name}, which is not in the Roster of claude-setup docs/TEAMS.md. Ask the coordinator which role you are (message_coordinator) before any work.`
-  const head = `rule-guard: you are the ${role.name} of this task, one role only (docs/TEAMS.md, Coordinator or thread). ${role.row}`
+  const head = `rule-guard: you are the ${role.name} of this task, one role only (docs/TEAMS.md, Coordinator or thread). ${role.row} Write \`Role: ${role.name} · ${role.path ?? 'no playbook'}\` plus the skills you loaded as the first line of your first checklist, so yskills sees it.`
   if (playbook && head.length + playbook.length < CARD_MAX) return `${head} Your playbook, ${role.path}, follows; work by it.\n\n${playbook}`
   if (!role.path) return `${head} Your playbook is linked in that Roster row of claude-setup docs/TEAMS.md; Read it before any other work.`
   return `${head} Before any other work, Read your playbook ${role.path} of claude-setup${playbook ? '' : ' (add_repo it if it is not here)'}.`
@@ -289,6 +290,18 @@ function setupRoot(cwd) {
   return join(homedir(), '.claude', 'claude-setup')
 }
 const fetchRaw = (path) => { try { return execFileSync('curl', ['-fsSL', '--max-time', '3', RAW + path], { encoding: 'utf8', timeout: 4000 }) } catch { return '' } }
+
+// Wires the receipt: only a thread whose role card was injected (roleContext wrote the role file) and only its own calls, not a subagent's.
+function receiptBlock(tool, input, session, cwd, agentId, transcript) {
+  if (tool !== 'mcp__hearthbot__post_message' || !session || agentId) return null
+  const role = read(join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)).trim()
+  if (!role) return null
+  const t = transcript()
+  if (!/reason=\\?"spawn/.test(t)) return null // a hooked project chat that was handed a brief is no thread (the canary covers it)
+  const root = setupRoot(cwd)
+  const rules = ['CLAUDE.md', 'docs/TEAMS.md'].map((f) => read(join(root, f))).join('\n')
+  return receiptMissing(tool, input, threadReceipt(role, spawnPrompt('', t), t, rules), t)
+}
 
 function roleContext(prompt, cwd, session) {
   const once = join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)
@@ -374,7 +387,10 @@ export function spawnPrompt(prompt, transcript) {
       const entry = JSON.parse(line)
       const content = entry.message?.content
       const text = typeof content === 'string' ? content : (content ?? []).map((c) => c?.text ?? '').join('\n')
-      if (entry.type === 'user' && /^\s*<(wake|relay)\b[^>]*reason="spawn"/.test(text)) found.push(text)
+      // A project thread's first entry starts with a <session-context> block, the spawn wake follows it
+      // (2026-11-12: anchored at the entry's start, the lookup found no brief and no role card arrived).
+      const body = text.replace(/^\s*<session-context\b[\s\S]*?<\/session-context[^>]*>\s*/, '')
+      if (entry.type === 'user' && /^\s*<(wake|relay)\b[^>]*reason="spawn"/.test(body)) found.push(body)
     } catch { /* not a JSON line */ }
   }
   return found.length ? found.join('\n') : prompt
@@ -509,6 +525,27 @@ export function canaryMissing(tool, input, line, transcript) {
   // Until one reply carried a canary and went out (a blocked try has a hook error as its result; a later rules hash still counts).
   if (toolCalls(t).some((c) => c.name === tool && c.result && !/rule-guard:|hook error/i.test(c.result) && String(c.input.text ?? '').trimStart().startsWith('Luna · rules #'))) return null
   return `rule-guard: your first reply in this session opens with the canary line, verbatim, so yskills sees the rules loaded (docs/USING.md, Start a project): ${line.trim()}`
+}
+
+// The thread's start receipt (yskills 2026-11-12: "every thread says its role loaded, with its skills, enforced by a hook, not just text").
+// The line is built here from what the transcript really shows: the brief's Role/Kit/Size, the Skill tool calls so far, and a hash of
+// the rule files (the same one as the coordinator canary). The model only copies it; a first reply without it is blocked once with the
+// exact line. It proves the role card was injected and which skills were called, not that the model heeds them. Only a post_message
+// is checked: a thread whose first visible act is a decision card shows no receipt there (accepted, documented in docs/MAP.md).
+export function threadReceipt(role, brief, transcript, rules) {
+  const tag = (k) => brief.replace(/[*_`]/g, '').match(new RegExp(`${k}:[ \\t]*([A-Za-z0-9-]+)`))?.[1] ?? '?'
+  const skills = [...new Set(toolCalls(transcript).filter((c) => c.name === 'Skill').map((c) => String(c.input.skill ?? '')).filter(Boolean))]
+  const hash = rules.includes(MARK) ? createHash('sha256').update(rules.replace(/\r/g, '')).digest('hex').slice(0, 7) : 'none'
+  const item = brief.replace(/[*_`]/g, '').match(/\bItem:[ \t]*(M\d+|new)/)?.[1] ?? '?' // the coordinator's Masterplan id (roles/project-manager.md, Masterplan)
+  return `Thread · ${role} · ${tag('Kit')} · ${tag('Size')} · item ${item} · skills: ${skills.join(', ') || 'none'} · rules #${hash}`
+}
+
+export function receiptMissing(tool, input, line, transcript) {
+  if (tool !== 'mcp__hearthbot__post_message' || !line) return null
+  if (String(input.text ?? '').trimStart().startsWith(line)) return null
+  // Until one reply carried a receipt and went out (a blocked try has a hook error as its result).
+  if (toolCalls(transcript).some((c) => c.name === tool && c.result && !/rule-guard:|hook error/i.test(c.result) && String(c.input.text ?? '').trimStart().startsWith('Thread · '))) return null
+  return `rule-guard: a thread's first reply opens with its start receipt, verbatim, so yskills sees the role loaded (CLAUDE.md, Teams): ${line}`
 }
 
 export function toolCalls(transcript) {
@@ -667,6 +704,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         const sessionTranscript = () => [transcriptPath, agentTranscript(transcriptPath, agentId)].filter((p) => p && existsSync(p)).map(read).join('\n')
         const block = decide(tool, input ?? {}, process.env, session ? read(shipped).split('\n') : [], () => threadBoard(toolCalls(transcript())))
           ?? canaryMissing(tool, input ?? {}, session ? read(join(process.env.CLAUDE_SETUP_HOME || homedir(), '.claude', 'claude-setup', 'booted', `${String(session).replace(/\W/g, '')}.canary`)) : '', transcript)
+          ?? receiptBlock(tool, input ?? {}, session, cwd, agentId, transcript)
           ?? proposeSkillsBlocked(tool)
           ?? opensWindow(tool, input ?? {})
           ?? archivistFiles(tool, input ?? {}, session ? read(join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)) : '')
