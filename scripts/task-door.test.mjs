@@ -392,10 +392,18 @@ test('round 4, M2: the checklist comes from the installed copy; a differing one 
     const installed = join(t.dir, '.claude', 'claude-setup', CHECKLISTS)
     mkdirSync(join(installed, '..'), { recursive: true })
     copyFileSync(join(root, CHECKLISTS), installed)
-    writeFileSync(join(t.dir, CHECKLISTS), `${readFileSync(join(root, CHECKLISTS), 'utf8')}\n- the author added a line\n`)
+    // The fixture's topic is HUD/UI: the author weakens a row inside that section of the working directory's copy.
+    const own = readFileSync(join(root, CHECKLISTS), 'utf8').replace('**Design check:**', '**Design check (optional):**')
+    assert.notEqual(own, readFileSync(join(root, CHECKLISTS), 'utf8'))
+    writeFileSync(join(t.dir, CHECKLISTS), own)
+    const weak = ledger.planCheckBrief(ASSET, { dir: t.gate, checklists: own })
+    assert.notEqual(weak, t.brief, 'the edit reaches the HUD/UI brief')
+    assert.equal(t.pre({ prompt: weak, model: 'opus' }).status, 2, 'team-guard refuses the brief rendered from the working directory copy')
     assert.equal(t.pre({ prompt: t.brief, model: 'opus' }).status, 0, 'the brief of the installed checklist passes team-guard')
-    t.check('Plan check pass')
-    assert.equal(t.ledger().planCheck.result, 'pass', 'and is recorded by rule-guard')
+    t.check('Plan check pass', { input: { prompt: weak, model: 'opus', run_in_background: false } })
+    assert.equal(t.ledger().planCheck, undefined, 'the weakened brief is not recorded by rule-guard')
+    t.check('Plan check pass', { id: 'u2' })
+    assert.equal(t.ledger().planCheck.result, 'pass', 'the installed one is')
   } finally { t.done() }
 })
 
@@ -445,6 +453,10 @@ test('director ruling on (b): an interpreter that takes its code from stdin hold
       `node scripts/x.mjs ${paths[2]}`, `cp ${l} /tmp/x.json`, `node - <<'EOF'\nconsole.log(1)\nEOF`, `echo hi | node -e "console.log(1)"`,
     ]) assert.equal(t.bash(c).status, 0, c)
     // Widened: a flag's value, a versioned name, perl -E, deno eval, bun eval. Each refused with the literal path, each passes without.
+    for (const p of paths) for (const m of ['gate-rounds', 'task-ledger']) { // "node -" reads stdin as the script, so naming the counter after it is not a counter call
+      const c = `node - /root/.claude/claude-setup/${m}.mjs status x <<'EOF'\n${code(p)}\nEOF`
+      assert.equal(t.bash(c).status, 2, c)
+    }
     const wide = (p) => [
       `python3 -c"open('${p}','w')"`, `node -pe"require('fs').writeFileSync('${p}','{}')"`, `node <(echo "require('fs').writeFileSync('${p}','{}')")`,
       `python3 -W error <<EOF\nopen('${p}','w')\nEOF`, `node -r x <<EOF\nrequire('fs').writeFileSync('${p}','{}')\nEOF`, `python3.12 <<EOF\nopen('${p}','w')\nEOF`,

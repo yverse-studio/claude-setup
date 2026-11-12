@@ -8,8 +8,12 @@
 // not Opus or above, not a fresh agent or not in the foreground, any verb or export that writes planCheck from a caller's value, `approve`
 // without its proof, and a Write, redirect, writer or inline script that holds a literal ledger, grants, guard or transcript path. Not stopped,
 // because the evidence would be fabricated: a transcript, ledger or grant file written another way than by its literal path, a copy of a guard,
-// a script file, a glob or variable that hides a name, a guard run by hand on a transcript the thread wrote, a read-only word that runs code
-// of its own (awk system(), sed e; find -exec and a git alias are read like bash -c). The next step is a writer
+// a script file, a glob or variable that hides a name, a guard run by hand on a transcript the thread wrote, a read-only tool's own write or
+// escape (find -fprintf, git diff --output=, sed w, awk system(), sed e), git config keys other than alias that run code (core.fsmonitor,
+// diff.external, core.sshCommand, core.pager), an alias supplied through the environment (--config-env, GIT_CONFIG_*), xargs as a launcher.
+// What the Bash branch does read: find -exec and a git alias like bash -c; an interpreter with an eval flag or subcommand, or in a call that
+// feeds stdin (heredoc, here-string, pipe, process substitution), is inline code, and the literal-path test runs over the whole call (accepted
+// cost: cat <ledger> | python3 -m json.tool is refused; read it with cat, jq or the status verb). The next step is a writer
 // outside the sandbox (a CI workflow), not a longer list here.
 // CLI: task-ledger.mjs plan <asset> <PLAN.md> | approve <asset> <ref> | status <asset> | brief <asset>
 import { createHash } from 'node:crypto'
