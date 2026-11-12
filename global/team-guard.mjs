@@ -252,6 +252,18 @@ const named = (cell, role) => cell.replace(/`/g, '').split(/[,;()]/).map((i) => 
 // A Skipped item with a condition ("Marketer before the first playable", "Content Designer (unless ...)") skips nobody outright.
 const skips = (cell, role) => cell.replace(/`/g, '').split(/[,;]/).map((i) => i.trim().replace(/^(and|then|plus) /i, ''))
   .some((i) => !/[(]|\b(before|unless|until|after)\b/i.test(i) && i.toLowerCase() === role.toLowerCase())
+// The names docs/TEAMS.md lists: Roster roles (a table row `| Name ([`file.md`](...)) |`) and Kits (`| `kit` ...`). The one source for this
+// guard and for scripts/brief.mjs.
+export const rosterNames = (teams) => String(teams).split('\n').filter((l) => /^\| [A-Z][\w ]* \(\[`/.test(l)).map((l) => l.slice(2, l.indexOf(' (')))
+export const kitNames = (teams) => (teams ? kitRows(teams).map((r) => r.kit) : [])
+
+// #453 left this gap: a brief may name any Role. It names a Roster role, or `Role: none` for a mini task (operator/briefs.md).
+export function badRole(text, teams) {
+  const names = rosterNames(teams)
+  const role = names.length ? roleOf(text.replace(/[*_`]/g, ''), teams) : null
+  return role && !role.row ? `Role: ${role.name} is no role in docs/TEAMS.md (Roster): pick one of ${names.join(', ')}, or \`Role: none\` for a small task with no role` : null
+}
+
 export function badTeam(text, teams) {
   const plain = text.replace(/[*_`]/g, '')
   const rows = teams ? kitRows(teams) : []
@@ -289,6 +301,8 @@ export function decide(tool, input = {}, dirs = [], unread = [], teams = '') {
     // One refusal lists every problem (companyxy 2026-11-12: one line per round cost an extra round per thread).
     const text = briefText(input)
     const found = []
+    const unknown = badRole(text, teams)
+    if (unknown) found.push(`${unknown}. Start the role the Roster names for this task (claude-setup docs/TEAMS.md, Roster)`)
     const team = badTeam(text, teams)
     if (team) found.push(`${team}. Look the task up in claude-setup docs/TEAMS.md (Spawn rule, Sizes, Kits) and fix the stamp line`)
     const title = badTitle(input.title, text, teams)
