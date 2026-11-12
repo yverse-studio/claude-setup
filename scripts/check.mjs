@@ -84,6 +84,8 @@ if (plugins) {
   if (ruleGuard?.replace(/\r/g, '').trim() !== readFileSync(join(root, 'global/rule-guard.mjs'), 'utf8').replace(/\r/g, '').trim()) errors.push('cloud/setup.sh rule guard differs from global/rule-guard.mjs')
   const gateRounds = sh.match(/<<'GATE'\r?\n([\s\S]*?)\r?\nGATE\r?\n/)?.[1]
   if (gateRounds?.replace(/\r/g, '').trim() !== readFileSync(join(root, 'global/gate-rounds.mjs'), 'utf8').replace(/\r/g, '').trim()) errors.push('cloud/setup.sh gate rounds differs from global/gate-rounds.mjs')
+  const taskLedger = sh.match(/<<'TASK'\r?\n([\s\S]*?)\r?\nTASK\r?\n/)?.[1]
+  if (taskLedger?.replace(/\r/g, '').trim() !== readFileSync(join(root, 'global/task-ledger.mjs'), 'utf8').replace(/\r/g, '').trim()) errors.push('cloud/setup.sh task ledger differs from global/task-ledger.mjs')
   const team = sh.match(/<<'TEAM'\r?\n([\s\S]*?)\r?\nTEAM\r?\n/)?.[1]
   if (team?.replace(/\r/g, '').trim() !== readFileSync(join(root, 'global/team-guard.mjs'), 'utf8').replace(/\r/g, '').trim()) errors.push('cloud/setup.sh team guard differs from global/team-guard.mjs')
 }
