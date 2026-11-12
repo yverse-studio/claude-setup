@@ -32,7 +32,7 @@ reaction stays real.
 ## Recording (once)
 
 The exact ask, the drop folder and the reading script: [`record.md`](record.md). Files land in
-`projects/videos/twin/raw/` (under `STUDIO_ROOT`).
+`lib/footage/<date>-twin/source/` (under `STUDIO_ROOT`).
 
 ## The tool (laptop, RTX 4060 8 GB)
 
@@ -41,8 +41,8 @@ The exact ask, the drop folder and the reading script: [`record.md`](record.md).
 
 | Step | Command | Writes |
 |---|---|---|
-| 1 Check the raw files | `python twin.py check twin-raw` | `CHECK OK` or one `PROBLEM` line each (sample rate, length, clipping, noise, vertical, resolution) |
-| 2 Prepare, once | `python twin.py prep twin-raw twin` | `twin/voice/*-ref.wav` (a clean ~12 s clip per mood), `twin/face/<mood>.mp4` (25 fps), `twin/twin.json` |
+| 1 Check the raw files | `python twin.py check lib/footage/<date>-twin/source` | `CHECK OK` or one `PROBLEM` line each (sample rate, length, clipping, noise, vertical, resolution) |
+| 2 Prepare, once | `python twin.py prep lib/footage/<date>-twin/source twin` | `twin/voice/*-ref.wav` (a clean ~12 s clip per mood), `twin/face/<mood>.mp4` (25 fps), `twin/twin.json` |
 | 3 Say a script | `python twin.py say twin --text-file line.txt --mood talk --out out/<slug>` | `voice.wav`, `words.json`, `face.mp4`, `critic/`, `report.json` |
 | Tools present | `python twin.py doctor` | ok or MISS per tool and the GPU line |
 

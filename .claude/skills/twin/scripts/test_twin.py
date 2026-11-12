@@ -1,4 +1,7 @@
+import os
 import unittest
+from pathlib import Path
+from unittest import mock
 
 import twin
 
@@ -94,6 +97,17 @@ class Say(unittest.TestCase):
         cfg = twin.musetalk_config(r"C:\twin\face\talk.mp4", "out/voice.wav")  # path-lint: fixture
         self.assertIn('video_path: "C:/twin/face/talk.mp4"', cfg)  # path-lint: fixture
         self.assertTrue(cfg.startswith("task_0:"))
+
+
+class ToolsDir(unittest.TestCase):
+    def test_env_wins_then_studio_ai_folder_then_stops(self):
+        with mock.patch.dict(os.environ, {"TWIN_TOOLS": "/x/t", "STUDIO_ROOT": "/s"}, clear=True):
+            self.assertEqual(twin.tools_dir(), Path("/x/t"))
+        with mock.patch.dict(os.environ, {"STUDIO_ROOT": "/s"}, clear=True):
+            self.assertEqual(twin.tools_dir(), Path("/s/tools/ai"))
+        with mock.patch.dict(os.environ, {}, clear=True):
+            with self.assertRaises(SystemExit):
+                twin.tools_dir()
 
 
 if __name__ == "__main__":
