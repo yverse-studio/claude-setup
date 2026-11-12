@@ -264,6 +264,8 @@ test('ordinary work is never blocked, a verdict is read from the opening line on
 // <D> is the temp ledger dir. Add a line first when a finding comes in, then fix the code.
 const VERDICT = 'Gate 4/5 (M, round 4)'
 const MUST_BLOCK_AT_ROUND_1 = [
+  'gh api -X PUT repos/{owner}/{repo}/pulls/1/merge', 'bash <<< "gh pr merge 1"', "sh <<<'gh pr merge 1'", 'bash <<EOF 2>&1 | tee /tmp/log\ngh pr merge 1\nEOF', 'timeout --signal KILL 30 gh pr merge 1',
+  'timeout --kill-after 5 30 gh pr merge 1', 'sudo --user root gh pr merge 1', 'sudo -Eu root gh pr merge 1', 'env --unset FOO gh pr merge 1',
   'echo ${x:-$(gh pr merge 7)}',
   'gh pr merge 7 -R o/r --squash', 'gh pr merge', 'cd repo && gh pr merge 7', 'env gh pr merge 7', 'GH_REPO=o/r gh pr merge 7', 'gh pr merge "7"',
   'gh pr merge feature-branch', '/usr/bin/gh pr merge 7', 'gh api -X PUT repos/o/r/pulls/7/merge', 'n=7; gh api -X PUT repos/o/r/pulls/$n/merge',
@@ -278,6 +280,7 @@ const GH_COMMENTS_PASS = [
   `gh api repos/o/r/issues/8/comments -f body="${VERDICT}"`, `gh pr edit 8 --body "${VERDICT}"`, `GH_REPO=o/r gh pr comment 8 --body "Gate 3.9/5 (S, round 4)"`,
 ]
 const MUST_BLOCK_LEDGER = [
+  'echo x >& <D>/o_r_7.json', 'echo x >&<D>/o_r_7.json',
   'cd /tmp > <D>/o_r_7.json',
   
   'sed -Ei s/a/b/ <D>/o_r_7.json', 
@@ -294,6 +297,7 @@ const MUST_BLOCK_LEDGER = [
   `echo '{}' > <D>/o_r_7.json 2>&1`, 'node ~/.claude/claude-setup/gate-rounds.mjs merge o/r#7 --squash | cat; echo x',
 ]
 const MUST_PASS = [
+  `git commit -m "$(cat <<'EOF'\nfix: gate (round counter\n\nmore\nEOF\n)"`, `git commit -m "$(cat <<'EOF'\nfix: gate counts rounds\n\n1) the counter\n2) the \`gh pr merge\` door\nIt's done\nEOF\n)"`, 'echo x >&2', 'ls nope >&/dev/null', 'gh api repos/{owner}/{repo}/pulls/1',
   'cp shot.png /mnt/project-files/', 'cd ~/.claude/claude-setup && sed -i s/a/b/ global/rule-guard.mjs', 'rm -rf ~/.claude/claude-setup/tmp', 'rm -r /mnt/project-files/tmp',
   'gh api repos/o/r/commits/$(git rev-parse HEAD)/status', 'cd <D> && ls', 'cd /mnt/project-files/gate && cat a.json', 'rm src/gate/config.json', 'touch app/gate/index.json', 'rm gate/old.json',
   'echo x >> /mnt/project-files/gateway-notes.md', 'rm /mnt/project-files/gate-old.json', 'cp a /mnt/project-files/gate.md', 'rsync -a <D>/ /tmp/backup/', 'find <D> -name "*.json"', 'git diff --stat',
@@ -347,6 +351,8 @@ test('cli merge and post: a counted pass merges through gh, a verdict through po
   assert.equal(cli(['merge', ASSET], env).code, 2, 'no counted round, no merge')
   assert.equal(cli(['post', ASSET, '--body-file', f], env).code, 0)
   assert.equal(readLedger(join(s.dir, 'gate'), ASSET).rounds.length, 1)
+  assert.equal(cli(['merge', ASSET, '--squash', '--rebase'], env).code, 2, 'one merge kind only')
+  assert.equal(cli(['merge', ASSET, '-d'], env).code, 2, 'no unknown flags')
   assert.equal(cli(['merge', ASSET, '--squash', '--delete-branch'], env).code, 0)
   assert.equal(readFileSync(log, 'utf8'), 'pr comment 13 -R yverse-studio/vacation-game --body-file ' + f + '\npr merge 13 -R yverse-studio/vacation-game --squash --delete-branch\n')
 })
@@ -358,6 +364,15 @@ test('a verdict through plain gh is not counted, so it never leads to a merge; t
   assert.equal(s.hook('mcp__github__merge_pull_request', MERGE).status, 2)
   s.run('init', 'o/r#07', '--round', '2')
   assert.equal(readLedger(join(s.dir, 'gate'), 'o/r#7').rounds.length, 2)
+})
+
+test('post: a gh that fails leaves the ledger alone', () => {
+  const s = session()
+  const bin = join(s.dir, 'bin'); mkdirSync(bin)
+  writeFileSync(join(bin, 'gh'), '#!/bin/sh\nexit 1\n', { mode: 0o755 })
+  const f = join(s.dir, 'v.md'); writeFileSync(f, 'Gate 4.9/5 (S, round 1)\n')
+  assert.equal(cli(['post', ASSET, '--body-file', f], { ...s.env, PATH: `${bin}:${process.env.PATH}` }).code, 2)
+  assert.equal(readLedger(join(s.dir, 'gate'), ASSET).rounds.length, 0)
 })
 
 test('the doors refuse what cannot be proven', () => {

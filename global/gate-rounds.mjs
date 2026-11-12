@@ -147,10 +147,20 @@ export function parseShell(text, depth = 0) {
   const cmds = []
   let bad = false, argv = [], redirs = [], word = '', has = false, mode = null // mode: the next word is a redirect target ('redir') or noise ('drop')
   const pending = [] // heredoc delimiters waiting for the next newline
-  const flush = () => { if (has) { if (mode === 'redir') redirs.push(word); else if (mode !== 'drop') argv.push(word); mode = null }; word = ''; has = false }
-  const end = () => { flush(); if (argv.length || redirs.length) cmds.push({ argv, redirs }); argv = []; redirs = []; mode = null }
+  let herestr = null // <<< word: input of the command, read as code when a shell runs it
+  const flush = () => { if (has) { if (mode === 'redir') redirs.push(word); else if (mode === 'here') herestr = word; else if (mode === 'amp') { if (!/^\d*-?$/.test(word)) redirs.push(word) } else if (mode !== 'drop') argv.push(word); mode = null }; word = ''; has = false }
+  const end = () => { flush(); if (argv.length || redirs.length) cmds.push(herestr === null ? { argv, redirs } : { argv, redirs, body: herestr }); argv = []; redirs = []; mode = null; herestr = null }
   const inner = (t) => { if (depth < 4 && t.trim()) { const r = parseShell(t, depth + 1); cmds.push(...r.cmds); bad ||= r.bad } }
-  const close = (i) => { let d = 0; for (let j = i; j < text.length; j++) { if (text[j] === '(') d++; else if (text[j] === ')' && --d === 0) return j } return -1 }
+  const close = (i) => { // the matching ) of a $( ): parens in a heredoc body do not count
+    let d = 0, here = []
+    for (let j = i; j < text.length; j++) {
+      if (text[j] === '\n' && here.length) { for (const h of here.splice(0)) { for (;;) { const e = text.indexOf('\n', j + 1); const line = text.slice(j + 1, e < 0 ? text.length : e); j = e < 0 ? text.length : e; if (line.trim() === h || e < 0) break } } continue }
+      const m = text[j] === '<' && text.slice(j).match(/^<<-?\s*(['"]?)([\w-]+)\1/)
+      if (m && text[j - 1] !== '<') { here.push(m[2]); j += m[0].length - 1; continue }
+      if (text[j] === '(') d++; else if (text[j] === ')' && --d === 0) return j
+    }
+    return -1
+  }
   const tick = (i) => text.indexOf('`', i + 1)
   for (let i = 0; i < text.length; i++) {
     const c = text[i]
@@ -175,24 +185,24 @@ export function parseShell(text, depth = 0) {
     if (c === '#' && !has) { while (i < text.length && text[i] !== '\n') i++; i--; continue }
     if (c === '\n') {
       end()
-      for (const d of pending.splice(0)) { // a heredoc body is data: skip to its delimiter line
+      for (const { d, idx } of pending.splice(0)) { // a heredoc body is data: skip to its delimiter line
         let j = i + 1, body = ''
         while (j < text.length) { const e = text.indexOf('\n', j); const line = text.slice(j, e < 0 ? text.length : e); j = e < 0 ? text.length : e + 1; if (line.trim() === d) break; body += `${line}\n` }
-        if (cmds.length) cmds[cmds.length - 1].body = (cmds[cmds.length - 1].body ?? '') + body // read as code only when a shell runs it
+        if (cmds[idx]) cmds[idx].body = (cmds[idx].body ?? '') + body // read as code only when a shell runs it
         i = j - 1
       }
       continue
     }
     if (c === '<') {
       flush()
-      if (text[i + 1] === '<' && text[i + 2] === '<') { mode = 'drop'; i += 2; continue }
+      if (text[i + 1] === '<' && text[i + 2] === '<') { mode = 'here'; i += 2; continue }
       if (text[i + 1] === '<') {
         let j = i + 2
         if (text[j] === '-') j++
         while (text[j] === ' ') j++
         let d = ''
         for (; j < text.length && !/[\s;|&<>)]/.test(text[j]); j++) if (!"'\"\\".includes(text[j])) d += text[j]
-        if (d) pending.push(d)
+        if (d) pending.push({ d, idx: cmds.length })
         i = j - 1; continue
       }
       mode = 'drop'; continue
@@ -200,10 +210,11 @@ export function parseShell(text, depth = 0) {
     if (c === '>') {
       if (has && /^\d+$/.test(word)) { word = ''; has = false } else flush()
       if (text[i + 1] === '>') i++
-      if (text[i + 1] === '&') { mode = 'drop'; i++ } else { if (text[i + 1] === '|') i++; mode = 'redir' }
+      if (text[i + 1] === '&') { mode = 'amp'; i++ } else { if (text[i + 1] === '|') i++; mode = 'redir' }
       continue
     }
     if (c === '&' && text[i + 1] === '>') continue
+    if ((c === '{' || c === '}') && has) { word += c; continue } // gh api repos/{owner}/{repo}: a brace inside a word is the word
     if (';|&(){}'.includes(c)) { if (c === '&' || c === '|') { while (text[i + 1] === c) i++ } end(); continue }
     if (/\s/.test(c)) { flush(); continue }
     word += c; has = true
@@ -213,6 +224,7 @@ export function parseShell(text, depth = 0) {
 }
 
 const KEYWORDS = new Set(['if', 'then', 'else', 'elif', 'do', 'while', 'until', '!'])
+const LONG_VALUE = new Set(['--signal', '--kill-after', '--user', '--group', '--host', '--prompt', '--chdir', '--close-from', '--role', '--type', '--unset', '--other-user', '--login-class'])
 const WRAP_VALUE = { sudo: 'ugCDRThprtU', env: 'uCS' } // one-letter options of a wrapper that take a value
 const SETUP_VAR = /^CLAUDE_SETUP_[A-Z_]+=/
 function simple(c) {
@@ -221,10 +233,10 @@ function simple(c) {
     while (a.length && /^[A-Za-z_]\w*=/.test(a[0])) { env ||= SETUP_VAR.test(a[0]); a.shift() }
     const w = a.length ? base(a[0]) : ''
     if (KEYWORDS.has(w)) { a.shift(); continue }
-    if (WRAPPERS.has(w)) { a.shift(); while (a.length && (a[0].startsWith('-') || /^[A-Za-z_]\w*=/.test(a[0]))) { env ||= SETUP_VAR.test(a[0]); const f = a.shift(); if (/^-[A-Za-z]$/.test(f) && (WRAP_VALUE[w] ?? '').includes(f[1])) a.shift() } continue }
+    if (WRAPPERS.has(w)) { a.shift(); while (a.length && (a[0].startsWith('-') || /^[A-Za-z_]\w*=/.test(a[0]))) { env ||= SETUP_VAR.test(a[0]); const f = a.shift(); if ((/^-[A-Za-z]+$/.test(f) && (WRAP_VALUE[w] ?? '').includes(f.at(-1))) || LONG_VALUE.has(f)) a.shift() } continue }
     if (w === 'timeout' || w === 'nice') { // own flags (some take a value), timeout also its duration
       a.shift()
-      while (a.length && a[0].startsWith('-')) { const v = /^-[ksn]$/.test(a[0]) || a[0] === '--adjustment'; a.shift(); if (v) a.shift() }
+      while (a.length && a[0].startsWith('-')) { const v = /^-[ksn]$/.test(a[0]) || LONG_VALUE.has(a[0]) || a[0] === '--adjustment'; a.shift(); if (v) a.shift() }
       if (w === 'timeout') a.shift()
       continue
     }
@@ -363,16 +375,18 @@ export function cli(argv, env = process.env) {
         const why = mergeProblem(l)
         if (why) return fail(why)
         const kinds = ['--squash', '--merge', '--rebase']
-        const flags = rest.filter((f) => [...kinds, '--auto', '--delete-branch'].includes(f))
+        const flags = rest
+        if (flags.some((f) => ![...kinds, '--auto', '--delete-branch'].includes(f)) || flags.filter((f) => kinds.includes(f)).length > 1) return fail('merge: only one of --squash --merge --rebase, plus --auto and --delete-branch')
         execFileSync('gh', ['pr', 'merge', m[2], '-R', m[1], ...(flags.some((f) => kinds.includes(f)) ? [] : ['--squash']), ...flags], { stdio: 'inherit', env })
-        return { code: 0, text: 'merged' }
+        return { code: 0, text: flags.includes('--auto') ? 'auto-merge enabled' : 'merged' }
       }
       const file = flag(rest, '--body-file')
       const head = file ? parseHeadline(read(file)) : null
       if (!head) return fail('post: --body-file <f> must start with the verdict headline "Gate <score>/5 (<size>, round <n>)"')
-      const bad = verdictProblem(dir, asset, head, false)
+      const bad = verdictProblem(dir, asset, head, true)
       if (bad) return fail(bad)
       execFileSync('gh', ['pr', 'comment', m[2], '-R', m[1], '--body-file', file], { stdio: 'inherit', env })
+      verdictProblem(dir, asset, head, false) // counted only once it is on the PR
       return { code: 0, text: 'posted' }
     } catch (e) { return fail(`${cmd}: gh failed (${String(e.message).slice(0, 120)})`) }
   }
