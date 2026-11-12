@@ -62,11 +62,11 @@ export function takeGrant(dir, verb, asset, ref, now = Date.now()) {
   return g.exp > now && g.verb === verb && g.asset === String(asset).toLowerCase() && g.ref === grantKey(ref)
 }
 
-// ---- who may post a verdict (finding 2): a verdict is counted only from a gate session (role Tester, Reviewer, Evaluator) or when the
+// ---- who may post a verdict (finding 2): a verdict is counted only from a gate session (a gate role: Tester, Reviewer, Evaluator, Critic ...) or when the
 // headline came out of a fresh reviewer subagent of this session (gate.md: S and M run in the author thread with one fresh code-reviewer).
 // A Programmer that types its own "Gate 5/5" has neither, so it can neither pass nor merge itself.
 const norm = (t) => String(t).replace(/[*_`#>\s]+/g, ' ').trim().toLowerCase()
-const GATE_ROLE = /^(tester|reviewer|evaluator)$/i // exact Roster name from the role stamp, never a prefix (security review 2026-11-12)
+const GATE_ROLE = /^(tester|reviewer|security|legal|playtester|hook checker|critic|story editor|evaluator)$/i // the list of rule-guard's GATE_ROLES (a test keeps them equal); exact Roster name from the role stamp, never a prefix (security review 2026-11-12)
 // Real reviewer agents only (an invented subagent_type does not vouch), the verdict must open the reviewer's own result, and the prompt the
 // builder gave it must not already contain that verdict (security review 2026-11-12, finding 2: a self-attested proof).
 const REVIEWER = /^(code-reviewer|evaluator|security-reviewer|typescript-reviewer|vue-reviewer|database-reviewer|design-critic|legal-reviewer|red-team)$/
@@ -306,7 +306,7 @@ export function simpleCommands(text, depth = 0) {
 }
 
 const GUARD_FILE = /\.claude[\\/]claude-setup[\\/](?:rule-guard|team-guard|gate-rounds|task-ledger)\.mjs$/
-const CLI_VERBS = ['status', 'check', 'init', 'direct', 'card', 'picture', 'waive', 'merge', 'post']
+const CLI_VERBS = ['status', 'check', 'init', 'direct', 'card', 'picture', 'waive', 'merge', 'post', 'record']
 const MERGE_DOOR = /pulls\/[^\s/]*\/merge|mergePullRequest|enablePullRequestAutoMerge/
 
 // gh decided by command position only: a merge goes through the counter. Comments are never read here: a verdict posted through plain gh
@@ -350,7 +350,7 @@ function bashProblem(cmd, dir, ctx) {
       if (verb === 'direct' && !/fable/i.test(ctx.model ?? '')) return `gate ledger: only a Fable session records the director, this one runs on ${ctx.model ?? 'an unknown model'}. Ask the coordinator for a Fable thread (docs/TEAMS.md, Models line).`
       if (['card', 'picture', 'waive'].includes(verb) && !(ref && cardProof(ref, ctx.calls ?? []))) return `gate ledger: "${verb}" needs --ref <cmsg id> of a request_decision card this session posted (it was not found in this session).`
       if (verb === 'waive' && !(ctx.humanAfter?.(ref))) return 'gate ledger: waive needs yskills\' own answer on that card in this session; none arrived yet.'
-      if (verb === 'post') {
+      if (verb === 'post' || verb === 'record') {
         const body = read(s.args[s.args.indexOf('--body-file') + 1] ?? '')
         const why = authorProblem(body, ctx)
         if (why) return why
@@ -407,7 +407,8 @@ const USAGE = `usage: gate-rounds.mjs <cmd> <asset> [...]   asset = owner/repo#p
   picture --ref <cmsg id>     record the picture card for a new hub, start screen or style
   waive --ref <cmsg id>       yskills answered the card: a below-threshold version may merge
   merge [--squash|--merge|--rebase] [--auto] [--delete-branch]   merge owner/repo#n if its last round passed (runs gh)
-  post --body-file <f>        count the verdict headline at the top of <f>, then post it with gh`
+  post --body-file <f>        count the verdict headline at the top of <f>, then post it with gh
+  record --body-file <f>      count the verdict headline at the top of <f> for a named asset (no PR, no gh): a video, an image set`
 const flag = (args, name) => { const i = args.indexOf(name); return i < 0 ? null : args[i + 1] }
 
 export function cli(argv, env = process.env) {
@@ -434,6 +435,14 @@ export function cli(argv, env = process.env) {
     if (lastRound(l) < FREE_ROUNDS) return fail(`direct: a director comes after round ${FREE_ROUNDS}, the ledger stands at ${lastRound(l)}`)
     if (!plan || read(plan).trim().length < 200) return fail('direct: --plan <file> with the Fable plan (goal, constraints, what changes, done-test) is required')
     return save({ ...l, director: { model: DIRECTOR, plan, round: lastRound(l), at: new Date().toISOString() } })
+  }
+  if (cmd === 'record') {
+    if (/#\d+$/.test(String(asset))) return fail('record: only a named asset (no owner/repo#n); a PR verdict goes through "post" or the comment tool (gate.md, Rounds)')
+    const file = flag(rest, '--body-file')
+    const head = file ? parseHeadline(read(file)) : null
+    if (!head) return fail('record: --body-file <f> must start with the verdict headline "Gate <score>/5 (<size>, round <n>)"')
+    const bad = verdictProblem(dir, asset, head, false)
+    return bad ? fail(bad) : { code: 0, text: `recorded: ${asset} stands at round ${lastRound(readLedger(dir, asset))}` }
   }
   if (cmd === 'merge' || cmd === 'post') {
     const m = String(asset).match(/^([\w.-]+\/[\w.-]+)#(\d+)$/)
