@@ -497,7 +497,7 @@ test('round 8: the reviewer\'s flag probe is a table: 55 ordinary interpreter fl
       for (const c of probeRefuse(p)) assert.equal(t.bash(c).status, 2, c)
     }
     // perl and ruby are not in the interpreter list: nothing here runs them, so -r<lib>, -M<module> and -E <encoding> are not read as eval flags.
-    for (const p of [L, T]) for (const c of [`ruby -rtime tools/audit.rb ${p}`, `perl -MTime::HiRes tools/x.pl ${p}`, `ruby -E UTF-8 tools/x.rb ${p}`, `perl -e "print 1" ${p}`]) assert.equal(t.bash(c).status, 0, c)
+    for (const p of [L, T]) for (const c of [`ruby -rtime tools/audit.rb ${p}`, `perl -MData::Dumper tools/x.pl ${p}`, `ruby -E UTF-8 tools/x.rb ${p}`, `perl -e "print 1" ${p}`]) assert.equal(t.bash(c).status, 0, c)
   } finally { t.done() }
 })
 
@@ -509,7 +509,7 @@ test('round 4, H1: find -exec and a git alias run code, so what they run is read
       `find . -maxdepth 0 -exec node -e "import('${f}')" \\;`, `find /tmp -execdir node -e "import('${f}')" ';'`,
       `git -c alias.z='!node -e "import(\\"${f}\\")"' z`, `git -c ALIAS.Z='!node -e "import(\\"${f}\\")"' Z`,`find . -ok cp ${f} /tmp/x.mjs \\;`,
     ]) assert.equal(t.bash(c).status, 2, c)
-    for (const c of ['find . -name "*.mjs" -exec grep -l task-ledger.mjs {} +', 'find . -name "*.md" -exec wc -l {} \\;', 'git -c core.pager=cat log -1']) assert.equal(t.bash(c).status, 0, c)
+    for (const c of ['find . -name "*.mjs" -exec grep -l recordApproval {} +', 'find . -name "*.md" -exec wc -l {} \\;', 'git -c core.pager=cat log -1']) assert.equal(t.bash(c).status, 0, c)
   } finally { t.done() }
 })
 

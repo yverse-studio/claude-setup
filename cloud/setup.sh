@@ -594,30 +594,9 @@ export function wrongModel(text, model, teams) {
   return allowed.length && tier && !allowed.includes(tier) ? { role: role.name, allowed, tier } : null
 }
 
-// The brief block's must-have lines (operator/briefs.md). Blind test 2026-10-27: a fresh coordinator
-// started threads with only a title and a guess, and nothing stopped it.
-const BRIEF_LINES = [
-  // M30 (plan section 5): the masterplan item, the plan the thread builds and what counts as accepted, one field each.
-  ['Item: (M<n> from PLAN.json, or new)', /^[ \t>-]*Item:[ \t]*(M\d+|new)\b/im],
-  ['Plan: (the plan file or card this thread builds)', /^[ \t>-]*Plan:[ \t]*[^<\s]/im],
-  ['Acceptance: (what counts as accepted)', /^[ \t>-]*Acceptance:[ \t]*[^<\s]/im],
-  ['Model:', /^[ \t>-]*Model:[ \t]*[^<\s]/im],
-  ['Skills:', /^[ \t>-]*Skills:[ \t]*[^<\s]/im],
-  ['Done when:', /\bDone when:[ \t]*\n?[ \t]*[^<\s]/i],
-  ['Stop when:', /\bStop when:[ \t]*\n?[ \t]*[^<\s]/i],
-  ['Start: (read MEMORY.md first)', /^[ \t>-]*Start:[^\n]*MEMORY\.md/im],
-  // Companyxy 2026-11-12: finished threads stayed open and work lay twice. The coordinator lists the threads before every start.
-  ['Threads: (list_threads checked, none open on this topic)', /^[ \t>-]*Threads:[ \t]*[^<\s][^\n]{8,}$/im],
-]
 // A task that asks for research names its Researcher subagent (docs/TEAMS.md, Kits; yskills 2026-11-12:
 // a Planner did the SOTA research itself). The brief block's own "No extra ... research" does not trigger it.
 const ASKS_RESEARCH = /\b(SOTA|state of the art|research (on|about|into|what)|recherch\w*)\b/i
-// Companyxy 2026-11-12 (point 3): about 20 fit rounds because bodies and outfits were built before cast sheets with measures and a
-// look lock existed (docs/preproduction-workflow.md). A modelling job of a Programmer or Animator on a game or story kit names both.
-const SHEET_LINES = [
-  ['Sheet: (approved cast sheet, docs/preproduction-workflow.md)', /^[ \t>-]*Sheet:[ \t]*[^<\n]*\.md\b/im],
-  ['Look-Lock: (owner card of the look)', /^[ \t>-]*Look-Lock:[ \t]*[^<\n]*(https?:\/\/|card)/im],
-]
 // Gate rounds 1 to 6 chased verbs and body words and every round found more. So there is no classifier: every Programmer or Animator brief
 // on a game or story kit names its approved cast sheet and look lock, or declares in one line that it is no body, face or outfit job:
 // `Sheet: n/a <why>` (10+ characters). A false "n/a" on a real modelling job is visible in the brief; a missing line is refused.
@@ -627,16 +606,52 @@ const needsSheet = (plain) => /^[ \t>-]*Role:[ \t]*(Programmer|Animator)\b/im.te
 // at size M or L names the Reviewer thread that gates its work before the owner sees it; the gate roles themselves need no such line.
 // A Gate line names a reviewer thread (`Gate: Reviewer · fit round 2 before owner`), or says in 10+ characters why the slice has no owner-facing
 // result (`Gate: n/a no owner-facing result, a CI script only`); the same shape as `Sheet: n/a`. `none`, `later` or `skipped` do not count.
-export const GATE_BUILDER_ROLES = '(?:Programmer|Designer|Animator|Game Designer|Content Designer|Sound Designer)'
+export const GATE_BUILDER_ROLES = '(?:Programmer|Designer|Animator|Story Writer|Game Designer|Content Designer|Sound Designer)'
 export const GATE_LINE = /^[ \t>-]*Gate:[ \t]*(?:(?:Reviewer|Tester)\b[^\n]*\bbefore owner\b[^\n]*|n\/a[ \t]+\S[^\n]{9,})$/im
-const needsGate = (plain) => new RegExp(`^[ \\t>-]*Role:[ \\t]*${GATE_BUILDER_ROLES}\\b`, 'im').test(plain) && /\bSize:[ \t]*[ML]\b/i.test(plain) && !GATE_LINE.test(plain)
+const needsGate = (plain) => new RegExp(`^[ \\t>-]*Role:[ \\t]*${GATE_BUILDER_ROLES}\\b`, 'im').test(plain) && /\bSize:[ \t]*[ML]\b/i.test(plain)
+const small = (plain) => /\bSize:[ \t]*S\b/i.test(plain)
+const gateRolePlain = (plain) => /^[ \t>-]*Role:[ \t]*(Tester|Reviewer|Security|Legal|Playtester|Hook Checker|Critic|Story Editor|Evaluator)\b/im.test(plain)
+// M50 (plan 2026-11-12-brief-fix-plan, section 4): ONE table row per line of a thread brief. `tpl` is the template line (docs/templates/thread-brief.md and
+// the refusal), `ok` says the line is there, `cls` says who closes a gap: judgment = only the coordinator can decide it (one refusal that lists every such
+// gap), recoverable = the thread fetches or fills it itself, derived = follows from Role, Kit and Size (the hook states it). `fill` is the thread's own
+// answer to a gap. `strict: false` rows are reported by decide() in their own words, not in missingLines().
+const line = (re) => (plain) => re.test(plain)
+const sizeCls = (plain) => (small(plain) ? 'recoverable' : 'judgment')
+export const BRIEF_FIELDS = [
+  { key: 'Item', name: 'Item: (M<n> from PLAN.json, or new)', tpl: 'Item: <PLAN.json item M<n> or new>', ok: line(/^[ \t>-]*Item:[^<\n]*?\b(M\d+|new)\b/im), clean: /^[ \t>-]*Item:[ \t]*(M\d+|new)[ \t]*$/im, cls: sizeCls, fill: (p) => `Item: ${p.match(/^[ \t>-]*Item:[^\n]*?\b(M\d+)\b/im)?.[1] ?? 'new'}` },
+  { key: 'Plan', name: 'Plan: (the plan file or card this thread builds)', tpl: 'Plan: <plan file or card it builds>', ok: line(/^[ \t>-]*Plan:[ \t]*[^<\s]/im), cls: sizeCls, fill: () => 'Plan: n/a, size S' },
+  { key: 'Acceptance', name: 'Acceptance: (what counts as accepted)', tpl: 'Acceptance: <what counts as accepted>', ok: line(/^[ \t>-]*Acceptance:[ \t]*[^<\s]/im), cls: sizeCls, fill: () => 'Acceptance: propose one from the task, say so in your first checklist line' },
+  { key: 'Model', name: 'Model:', tpl: 'Model: <model id of the role\'s Roster row>', ok: line(/^[ \t>-]*Model:[ \t]*[^<\s]/im), cls: () => 'derived', fill: () => 'Model: the model this thread runs on' },
+  { key: 'Skills', name: 'Skills:', tpl: 'Skills: <role file and skills the thread loads first>', ok: line(/^[ \t>-]*Skills:[ \t]*[^<\s]/im), cls: () => 'derived', fill: () => 'Skills: your role file from docs/TEAMS.md' },
+  { key: 'Done when', name: 'Done when:', tpl: 'Done when: <command and expected output, or the screenshot that proves it>', ok: line(/\bDone when:[ \t]*\n?[ \t]*[^<\s]/i), cls: () => 'recoverable', fill: () => 'Done when: the Acceptance line, proven by a command or screenshot' },
+  { key: 'Stop when', name: 'Stop when:', tpl: 'Stop when: <rounds or attempts, never tokens>', ok: line(/\bStop when:[ \t]*\n?[ \t]*[^<\s]/i), cls: () => 'recoverable', fill: () => 'Stop when: 3 gate rounds without 5/5, then report to the coordinator' },
+  { key: 'Start', name: 'Start: (read MEMORY.md first)', tpl: 'Start: read MEMORY.md first, then <the files this task needs>', ok: line(/^[ \t>-]*Start:[^\n]*MEMORY\.md/im), cls: () => 'derived', fill: () => 'Start: read MEMORY.md first' },
+  // Companyxy 2026-11-12: finished threads stayed open and work lay twice. The thread lists the threads itself before it builds.
+  { key: 'Threads', name: 'Threads: (list_threads checked, none open on this topic)', tpl: 'Threads: <list_threads checked: none open on this topic | continues <title of the open thread>>', ok: line(/^[ \t>-]*Threads:[ \t]*[^<\s][^\n]{8,}$/im), cls: () => 'recoverable', fill: () => 'Threads: call list_threads yourself and reuse an open thread of this topic' },
+  { key: 'Prior art', strict: false, tpl: 'Prior art: <sources named: repo, path, URL, #n> -> copy | adapt | reuse | build, because <why>', ok: (p) => !needsPriorArt(p), cls: (p) => (gateRolePlain(p) ? 'derived' : 'recoverable'), fill: (p) => (gateRolePlain(p) ? 'Prior art: .claude/skills/operator/gate.md and the kit\'s checks -> adapt, because the gate rules exist' : 'Prior art: to find: the repo and docs first, sources named before you build') },
+  { key: 'Gate', name: 'Gate: <Reviewer thread> before owner, or `Gate: n/a <why no owner-facing result>` (a builder, designer or animator brief at size M or L)', tpl: 'Gate: <Reviewer thread> before owner (M or L)', applies: needsGate, ok: line(GATE_LINE), cls: () => 'recoverable', fill: () => 'Gate: ask the coordinator (message_coordinator) for the Reviewer thread, then write `Gate: Reviewer · <what> before owner`' },
+  { key: 'Sheet', name: 'Sheet: (approved cast sheet, docs/preproduction-workflow.md)', tpl: 'Sheet: <approved cast sheet .md, or `n/a <why no body, face or outfit job>`; Programmer or Animator on a game or story kit>', applies: needsSheet, ok: line(/^[ \t>-]*Sheet:[ \t]*[^<\n]*\.md\b/im), cls: () => 'judgment' },
+  { key: 'Look-Lock', name: 'Look-Lock: (owner card of the look)', tpl: 'Look-Lock: <owner card link of the approved look; not needed with `Sheet: n/a`>', applies: needsSheet, ok: line(/^[ \t>-]*Look-Lock:[ \t]*[^<\n]*(https?:\/\/|card)/im), cls: () => 'judgment' },
+  { key: 'Researcher', name: 'Researcher: (the task asks for research)', tpl: 'Researcher: <subagent and model, or the Researcher thread; research tasks only>', applies: (p) => ASKS_RESEARCH.test(p) && !/\bRole:[ \t]*Researcher\b/i.test(p), ok: line(/^[ \t>-]*Researcher:[ \t]*[^<\s]/im), cls: () => 'recoverable', fill: () => 'Researcher: ask the coordinator for a Researcher thread (message_coordinator) and go on meanwhile' },
+  { key: 'Tester', strict: false, tpl: 'Tester: <Tester thread; size L Programmer only>', applies: (p) => /^[ \t>-]*Role:[ \t]*Programmer\b/im.test(p), ok: (p) => !needsTester(p), cls: () => 'judgment' },
+]
 export function missingLines(text) {
   const plain = text.replace(/[*_`]/g, '')
-  const lines = BRIEF_LINES.filter(([, re]) => !re.test(plain)).map(([name]) => name)
-  if (needsGate(plain)) lines.push('Gate: <Reviewer thread> before owner, or `Gate: n/a <why no owner-facing result>` (a builder, designer or animator brief at size M or L)')
-  if (needsSheet(plain)) for (const [name, re] of SHEET_LINES) if (!re.test(plain)) lines.push(name)
-  if (ASKS_RESEARCH.test(plain) && !/\bRole:[ \t]*Researcher\b/i.test(plain) && !/^[ \t>-]*Researcher:[ \t]*[^<\s]/im.test(plain)) lines.push('Researcher: (the task asks for research)')
-  return lines
+  return BRIEF_FIELDS.filter((f) => f.strict !== false && (f.applies?.(plain) ?? true) && !f.ok(plain)).map((f) => f.name)
+}
+// The same table sorted by who closes the gap. Acceptance and Done when are one datum: either satisfies both.
+export function classify(text) {
+  const plain = text.replace(/[*_`]/g, '')
+  const out = { judgment: [], recoverable: [], derived: [] }
+  const has = (k) => BRIEF_FIELDS.find((f) => f.key === k).ok(plain)
+  for (const f of BRIEF_FIELDS) {
+    // A line that is there but in the wrong format (`Item: PLAN.json item M29`) is a derived repair, never a gap.
+    if (f.clean && f.ok(plain) && !f.clean.test(plain)) out.derived.push({ key: f.key, tpl: f.tpl, fill: f.fill(plain) })
+    if (!(f.applies?.(plain) ?? true) || f.ok(plain) || (f.key === 'Acceptance' && has('Done when')) || (f.key === 'Done when' && has('Acceptance'))) continue
+    const cls = f.cls(plain)
+    out[cls].push({ key: f.key, tpl: f.tpl, fill: f.fill?.(plain) })
+  }
+  return out
 }
 
 // Kit and size checked against docs/TEAMS.md, not only their format (blind test 2026-10-27: "Kit: content",
@@ -654,6 +669,19 @@ const skips = (cell, role) => cell.replace(/`/g, '').split(/[,;]/).map((i) => i.
 export const rosterNames = (teams) => String(teams).split('\n').filter((l) => /^\| [A-Z][\w ]* \(\[`/.test(l)).map((l) => l.slice(2, l.indexOf(' (')))
 export const kitNames = (teams) => (teams ? kitRows(teams).map((r) => r.kit) : [])
 
+// The one answer to "which role may I name on this kit": a Roster role fits a kit by the same rule badTeam applies (a refusal lists these, so nobody guesses).
+export function rolesForKit(teams, kit) {
+  const row = kitRows(teams).find((r) => r.kit === String(kit).toLowerCase())
+  if (!row) return []
+  const media = ['video', 'social'].includes(row.kit)
+  return rosterNames(teams).filter((n) => {
+    const film = rosterOf(teams, 'Film').includes(`| ${n} (`)
+    const social = rosterOf(teams, 'Social').includes(`| ${n} (`)
+    const story = rosterOf(teams, 'Story').includes(`| ${n} (`)
+    return ['Reviewer', 'Researcher'].includes(n) || (story ? row.kit === 'story' : social ? row.kit === 'social' : film ? media : media ? named(row.team, n) : !skips(row.skipped, n))
+  })
+}
+
 // #453 left this gap: a brief may name any Role. It names a Roster role, or `Role: none` for a mini task (operator/briefs.md).
 export function badRole(text, teams) {
   const names = rosterNames(teams)
@@ -663,7 +691,10 @@ export function badRole(text, teams) {
   // roleOf matches a name by its start: `Programmers` or `Programmer-X` must not pass as the Programmer (a name ends at a space, `·`, `|`, `,` or `(`).
   const line = plain.match(/^[\s>-]*Role:[ \t]*([^\n]*)/m)?.[1].trim() ?? ''
   const exact = role.row && /^$|^[\s·|,(]/.test(line.slice(role.name.length))
-  return exact ? null : `Role: ${role.row ? line.split(/[\s·|,(]/)[0] : role.name} is no role in docs/TEAMS.md (Roster): pick one of ${names.join(', ')}, or \`Role: none\` for a small task with no role`
+  const kit = plain.match(/\bKit:[ \t]*([\w-]+)/i)?.[1]
+  const onKit = kit ? rolesForKit(teams, kit) : []
+  const pick = onKit.length ? `on the ${kit.toLowerCase()} kit pick one of ${onKit.join(', ')}` : `pick one of ${names.join(', ')}`
+  return exact ? null : `Role: ${role.row ? line.split(/[\s·|,(]/)[0] : role.name} is no role in docs/TEAMS.md (Roster): ${pick}, or \`Role: none\` for a small task with no role`
 }
 
 // M48: a Reviewer brief may carry `Topic: <name>`; the names are the `## ` headings of the checklist file (the one source for this guard,
@@ -696,9 +727,10 @@ export function badTeam(text, teams) {
   if (role.name === 'Planner' && size === 'S') return 'a Planner thread runs at size M or L only; size S starts the Programmer (docs/TEAMS.md, Sizes)'
   const film = rosterOf(teams, 'Film').includes(`| ${role.name} (`)
   const social = rosterOf(teams, 'Social').includes(`| ${role.name} (`)
+  const story = rosterOf(teams, 'Story').includes(`| ${role.name} (`)
   const media = ['video', 'social'].includes(kit)
-  const fits = ['Reviewer', 'Researcher'].includes(role.name) || (social ? kit === 'social' : film ? media : media ? named(row.team, role.name) : !skips(row.skipped, role.name))
-  return fits ? null : `the ${role.name} is not on the \`${kit}\` kit's team (docs/TEAMS.md, Kits: team "${row.team}", skipped "${row.skipped}"); start the role that row names`
+  const fits = ['Reviewer', 'Researcher'].includes(role.name) || (story ? kit === 'story' : social ? kit === 'social' : film ? media : media ? named(row.team, role.name) : !skips(row.skipped, role.name))
+  return fits ? null : `the ${role.name} is not on the \`${kit}\` kit's team (docs/TEAMS.md, Kits: team "${row.team}", skipped "${row.skipped}"); pick one of ${rolesForKit(teams, kit).join(', ')}`
 }
 
 // A size M or L thread's title is `<Role> · <what>` (docs/TEAMS.md, Roster "Runs as"); test project 2026-10-27: a bee video thread
@@ -873,9 +905,10 @@ cat > "$HOME/.claude/claude-setup/gate-rounds.mjs" <<'GATE'
 // CLI: gate-rounds.mjs status|check|init|direct|card|picture|waive <asset> ...   (usage text below)
 // Fail closed: a gate-shaped call whose check throws is refused. CLAUDE_SETUP_RULE_GUARD=off turns the hook (not the CLI) off.
 import { execFileSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { basename, join, normalize } from 'node:path'
+import { basename, join, normalize, posix } from 'node:path'
 
 export const THRESHOLD = 4.5
 export const IMPORTANT_THRESHOLD = 4.8
@@ -919,16 +952,20 @@ export const GRANT_SECONDS = 120
 const grantFile = (dir, verb, asset) => join(dir, 'grants', `${verb}.${basename(fileOf(dir, asset))}`)
 // The hook reads the command before the shell expands it, the CLI after: both sides key the grant on the same form (gate round 1 of the #450 re-land).
 export const grantKey = (ref, home = homedir()) => { const v = String(ref ?? '').trim().replace(/^(['"])(.*)\1$/, '$2'); return v ? normalize(v.replace(/^(?:~|\$HOME|\$\{HOME\})(?=\/|$)/, home)) : '' }
-export function issueGrant(dir, verb, asset, ref, now = Date.now()) {
+// A record grant also carries the sha256 of the body the hook read (security review 2026-11-12, round 2, finding 2): the path alone let a body be
+// swapped between the hook and the CLI. The CLI hashes the one read it counts; a record grant without a digest opens nothing.
+export const digest = (text) => createHash('sha256').update(String(text)).digest('hex')
+export function issueGrant(dir, verb, asset, ref, now = Date.now(), body = null) {
   mkdirSync(join(dir, 'grants'), { recursive: true })
-  writeFileSync(grantFile(dir, verb, asset), `${JSON.stringify({ verb, asset: String(asset).toLowerCase(), ref: grantKey(ref), exp: now + GRANT_SECONDS * 1000 })}\n`)
+  writeFileSync(grantFile(dir, verb, asset), `${JSON.stringify({ verb, asset: String(asset).toLowerCase(), ref: grantKey(ref), exp: now + GRANT_SECONDS * 1000, ...(body === null ? {} : { sha: digest(body) }) })}\n`)
 }
-export function takeGrant(dir, verb, asset, ref, now = Date.now()) {
+export function takeGrant(dir, verb, asset, ref, now = Date.now(), body = null) {
   const f = grantFile(dir, verb, asset)
   let g
   try { g = JSON.parse(readFileSync(f, 'utf8')) } catch { return false }
   try { unlinkSync(f) } catch { /* already taken */ }
-  return g.exp > now && g.verb === verb && g.asset === String(asset).toLowerCase() && g.ref === grantKey(ref)
+  const sameBody = verb !== 'record' ? true : typeof g.sha === 'string' && body !== null && g.sha === digest(body)
+  return g.exp > now && g.verb === verb && g.asset === String(asset).toLowerCase() && g.ref === grantKey(ref) && sameBody
 }
 
 // ---- who may post a verdict (finding 2): a verdict is counted only from a gate session (a gate role: Tester, Reviewer, Evaluator, Critic ...) or when the
@@ -1053,7 +1090,7 @@ function verdictProblem(dir, asset, head, dry) {
 // text, and each fix moved the line). One small tokenizer gives argv lists; text inside quotes, a commit message or an echo is data.
 const base = (p) => String(p).split(/[\\/]/).pop().replace(/\.exe$/i, '')
 const WRAPPERS = new Set(['env', 'command', 'sudo', 'time', 'nohup', 'exec', 'builtin'])
-const WRITERS = new Set(['rm', 'unlink', 'shred', 'mv', 'tee', 'truncate', 'dd', 'ln', 'install', 'touch', 'chmod', 'chown', 'rsync', 'cp', 'set-content', 'add-content', 'out-file', 'remove-item', 'new-item', 'copy-item', 'move-item', 'del', 'ri'])
+const WRITERS = new Set(['rm', 'unlink', 'shred', 'mv', 'tee', 'truncate', 'dd', 'ln', 'install', 'touch', 'chmod', 'chown', 'rsync', 'cp', 'curl', 'wget', 'patch', 'split', 'unzip', 'set-content', 'add-content', 'out-file', 'remove-item', 'new-item', 'copy-item', 'move-item', 'del', 'ri'])
 const SHELLS = new Set(['bash', 'sh', 'zsh', 'dash'])
 
 export function parseShell(text, depth = 0) {
@@ -1143,7 +1180,7 @@ const LONG_VALUE = new Set(['--signal', '--kill-after', '--user', '--group', '--
 // getopt: in a short cluster the first value-taking letter ends it; the value is the rest of the word, or the next word when nothing follows
 const needsValue = (f, opts) => { if (!/^-[A-Za-z]/.test(f)) return false; for (let k = 1; k < f.length; k++) if (opts.includes(f[k])) return k === f.length - 1; return false }
 const WRAP_VALUE = { sudo: 'ugCDRThprtU', env: 'uCS' } // one-letter options of a wrapper that take a value
-const SETUP_VAR = /^CLAUDE_SETUP_[A-Z_]+=/
+const SETUP_VAR = /^(?:CLAUDE_SETUP_[A-Z_]+|HOME|USERPROFILE)=/ // HOME moves the CLI's default ledger dir just like the CLAUDE_SETUP_* ones
 function simple(c) {
   let a = [...c.argv], env = false
   for (;;) {
@@ -1215,7 +1252,26 @@ function ghProblem(s) {
 // guard file, as a redirect target or an argument of a writer. Shell tricks around it are a named Limit (gate.md, Rounds).
 // The session stamps the guards write in the temp dir: the role (who may post a verdict, hands-off) and the brief lock.
 const STAMP = /claude-setup-(?:role|spawnrole|badbrief|model|brief|artifacts)-/
-const READ_ONLY = new Set(['cat', 'grep', 'rg', 'ls', 'head', 'tail', 'wc', 'diff', 'git', 'stat', 'file', 'less', 'echo', 'printf', 'find', 'test', 'cd', 'sed', 'awk'])
+// A path compared lexically (security review 2026-11-12, round 2, finding 1): .., ./ and // collapse and backslashes read as slashes, so
+// <dir>/x/../ledger.json is the ledger. A NAME= prefix of a word is kept.
+const lexical = (p) => posix.normalize(String(p).replace(/\\/g, '/'))
+const lexicalWord = (w) => { const m = String(w).match(/^([-\w]*=)?([\s\S]*)$/); return `${m[1] ?? ''}${lexical(m[2])}` }
+// What may name the counter file without being the counter (finding 3): plain reads only. find, awk and sed (as a script) can run code or write
+// a copy, so they are out; git and sed stay for the checkout's own work, but only in their safe forms below, and no read writes through a redirect.
+const READ_ONLY = new Set(['cat', 'grep', 'rg', 'ls', 'head', 'tail', 'wc', 'diff', 'stat', 'file', 'less', 'echo', 'printf', 'test', 'cd'])
+const EXEC_ARG = /^(?:-exec(?:dir)?|-ok(?:dir)?|-delete|-fprint\w*|--in-place\S*|--pre(?:-glob)?(?:=.*)?|--output(?:=.*)?|--ext-diff|--textconv|--(?:log|LOG)-file(?:=.*)?|--compile|--open-files-in-pager(?:=.*)?|-O\S*)$/
+const GIT_SAFE = new Set(['add', 'commit', 'diff', 'log', 'show', 'status', 'blame', 'ls-files', 'rev-parse', 'checkout', 'restore', 'grep']) // the subcommand must be the first word: no -c, no -C
+const SED_FLAGS = /^-(?:[nEr]+i?|i)$/ // no -e, -f, --expression or a backup suffix: the script is the first plain word
+const SED_SCRIPT = /^(?:\d+(?:,(?:\d+|\$))?p|s(.)(?:(?!\1)[^\\]|\\.)*\1(?:(?!\1)[^\\]|\\.)*\1[gIpimM0-9]*)$/ // Np, N,Mp or a plain s///flags: no w, e or r command
+function readsOnly(s) {
+  const c = base(s.a0).toLowerCase()
+  if (s.redirs.some((r) => r !== '/dev/null') || s.args.some((a) => EXEC_ARG.test(a))) return false
+  if (c === 'git') return GIT_SAFE.has(s.args[0])
+  if (c === 'sed') { const plain = s.args.filter((a) => !a.startsWith('-') || a === '-'); return s.args.filter((a) => a.startsWith('-')).every((a) => SED_FLAGS.test(a)) && SED_SCRIPT.test(plain[0] ?? '') }
+  if (c === 'less') return !s.args.some((a) => /^-[a-zA-Z]*[oO]/.test(a))
+  if (c === 'file') return !s.args.some((a) => /^-[a-zA-Z]*C/.test(a))
+  return READ_ONLY.has(c)
+}
 // `node <script>` whose first non-flag argument is gate-rounds.mjs, with no flag that runs other code first.
 const isCounterCall = (s) => s.a0 === 'node' && !s.args.includes('-') && !s.args.some((a) => /^(-e|-p|--eval|--print|--import|-r|--require|--input-type|--loader|--experimental-loader)/.test(a)) && ['gate-rounds.mjs', 'task-ledger.mjs'].includes(base(s.args.find((a) => !a.startsWith('-')) ?? ''))
 const INTERPRETERS = /^(node(js)?|python[\d.]*|pypy[\d.]*|bun|deno)$/
@@ -1242,13 +1298,14 @@ function bashProblem(cmd, dir, ctx) {
   const { list, bad } = simpleCommands(cmd)
   if (bad && /\bgh\b|gate/.test(cmd)) return 'gate ledger: this command has unbalanced quotes and mentions gh or gate, so it cannot be read; write it plainly (gate.md, Rounds).'
   // Only the ledger itself is protected: the dir, a file directly in it and grants/. Files below gate/<asset>/ (images, PLAN-REVIEW.md) are free (transition rule 6).
-  const dirRe = dir ? new RegExp(`^(?:[-\\w]*=)?${dir.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\/+$/, '')}(?:/(?:grants(?:/.*)?|[^/]*))?$`) : null
-  const named = (w) => !/\s/.test(w) && (STAMP.test(w) || dirRe?.test(w) || /^(?:[-\w]*=)?(?:.*\/)?(?:project-files|\.claude\/claude-setup)\/gate(?:\/(?:grants(?:\/.*)?|[^/]*))?$/.test(w) || GUARD_FILE.test(w) || /\.claude\/projects\/\S*\.jsonl$/.test(w)) // a session transcript is written by the harness only
+  const dirRe = dir ? new RegExp(`^(?:[-\\w]*=)?${lexical(dir).replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\/+$/, '')}(?:/(?:grants(?:/.*)?|[^/]*))?$`) : null
+  // each word is tested as typed and with its .., ./ and // collapsed (finding 1): <dir>/x/../ledger.json names the ledger
+  const named = (w) => !/\s/.test(w) && [w, lexicalWord(w)].some((x) => STAMP.test(x) || dirRe?.test(x) || /^(?:[-\w]*=)?(?:.*\/)?(?:project-files|\.claude\/claude-setup)\/gate(?:\/(?:grants(?:\/.*)?|[^/]*))?$/.test(x) || GUARD_FILE.test(x) || /\.claude\/projects\/\S*\.jsonl$/.test(x)) // a session transcript is written by the harness only
   const msg = 'gate ledger: the round counter is written only by gate-rounds.mjs (gate.md, Rounds), never by hand; the installed guards change only through a claude-setup PR.'
   if (list.some((s) => s.env) && list.some((s) => s.a0 === 'node' && s.args.some((a) => ['gate-rounds.mjs', 'task-ledger.mjs'].includes(base(a))))) return 'gate ledger: CLAUDE_SETUP_* variables (the ledger dir, the guard switch) are not set in a call that runs the counter or the task ledger; they would point it at another ledger (gate.md, Rounds).'
   // Finding 1: the counter is run as `node <path>/gate-rounds.mjs <verb>` and nothing else. Any other command that names the file and is
   // not a plain read (a copy, node -e, an import, a symlink) is refused, so the proofs cannot be walked around by renaming the script.
-  if (/(?:gate-rounds|task-ledger)\.mjs/.test(cmd) && !list.every((s) => isCounterCall(s) || READ_ONLY.has(base(s.a0).toLowerCase()))) return 'gate ledger: gate-rounds.mjs and task-ledger.mjs are run only as "node ~/.claude/claude-setup/<file> <verb> <asset> ..." (gate.md, Rounds); copying them, importing it or running it through node -e is refused, because the proofs live in this hook and in the CLI.'
+  if (/(?:gate-rounds|task-ledger)\.mjs/.test(cmd) && !list.every((s) => isCounterCall(s) || readsOnly(s))) return 'gate ledger: gate-rounds.mjs and task-ledger.mjs are run only as "node ~/.claude/claude-setup/<file> <verb> <asset> ..." (gate.md, Rounds); copying them, importing it or running it through node -e is refused, because the proofs live in this hook and in the CLI.'
   for (const s of list) {
     if (s.a0 === 'gh') { const r = ghProblem(s); if (r) return r }
     if (s.redirs.some((r) => !/\s/.test(r) && (named(r) || GUARD_FILE.test(r)))) return msg
@@ -1260,6 +1317,9 @@ function bashProblem(cmd, dir, ctx) {
       const at = s.args.indexOf(script)
       const verb = s.args[at + 1]
       if (!CLI_VERBS.includes(verb) || ['status', 'check'].includes(verb)) continue
+      // Round 2, finding 4 of the review: only the installed copy is the counter. A file of that name in a checkout or /tmp can be edited, and merge needs no grant.
+      if (!GUARD_FILE.test(script)) return `gate ledger: "${verb}" runs only from the installed copy, "node ~/.claude/claude-setup/gate-rounds.mjs ${verb} ..."; a file of that name anywhere else is not the counter (gate.md, Rounds).`
+      if (verb === 'merge') { const why = mergeProblem(readLedger(dir, s.args[at + 2])); if (why) return why } // the hook checks the pass itself, not only the CLI
       if (list.length !== 1 || /\$\(|`/.test(cmd)) return `gate ledger: "${verb}" runs as the only command of the call, without substitution, so its proof can be read (gate.md, Rounds).`
       const ref = s.args[s.args.indexOf('--ref') + 1]
       if (verb === 'init' && !(Number(s.args[s.args.indexOf('--round') + 1]) >= 1)) return 'gate ledger: init imports the rounds that already ran: --round <n> with n of 1 or more (gate.md, Rounds).'
@@ -1267,15 +1327,16 @@ function bashProblem(cmd, dir, ctx) {
       if (['card', 'picture', 'waive'].includes(verb) && !(ref && cardProof(ref, ctx.calls ?? []))) return `gate ledger: "${verb}" needs --ref <cmsg id> of a request_decision card this session posted (it was not found in this session).`
       if (verb === 'waive' && !(ctx.humanAfter?.(ref))) return 'gate ledger: waive needs yskills\' own answer on that card in this session; none arrived yet.'
       if (verb === 'record' && namedProblem(s.args[at + 2])) return namedProblem(s.args[at + 2])
+      let body = null // the content this check read: a record grant carries its digest (finding 2)
       if (verb === 'post' || verb === 'record') {
-        const body = read(s.args[s.args.indexOf('--body-file') + 1] ?? '')
+        body = read(grantKey(s.args[s.args.indexOf('--body-file') + 1] ?? ''))
         const why = authorProblem(body, ctx)
         if (why) return why
       }
-      if (!ctx.dry && GRANTED.includes(verb)) issueGrant(dir, verb, s.args[at + 2], grantRef(verb, s.args, ref))
+      if (!ctx.dry && GRANTED.includes(verb)) issueGrant(dir, verb, s.args[at + 2], grantRef(verb, s.args, ref), Date.now(), verb === 'record' ? body : null)
       continue
     }
-    const writes = WRITERS.has(s.a0.toLowerCase()) || (s.a0 === 'sed' && s.args.some((x) => /^-[a-zA-Z]*i|^--in-place/.test(x)))
+    const writes = WRITERS.has(s.a0.toLowerCase()) || (s.a0 === 'sort' && s.args.some((x) => /^-[a-zA-Z]*o|^--output/.test(x))) || (s.a0 === 'perl' && s.args.some((x) => /^-[a-zA-Z]*i/.test(x))) || (s.a0 === 'sed' && s.args.some((x) => /^-[a-zA-Z]*i|^--in-place/.test(x)))
     const toCp = /^(cp|copy-item|rsync)$/i.test(s.a0) && !s.args.some((x) => /^-[a-zA-Z]*t|^--t/.test(x)) // only the destination is written
     if (writes && (toCp ? s.args.slice(-1) : s.args).some(named)) return msg
   }
@@ -1292,12 +1353,20 @@ const assetOf = (input) => {
 // PreToolUse. ctx: { dir, model, calls (the session's tool calls), humanAfter(ref), dry }. Returns a reason or null. dry: check only; the
 // hook runs it first and commits (dry false) only when no other guard refused, so a refused post is never counted.
 // A Write or Edit target that is the ledger: a file directly in the ledger dir (or the project-files/gate folder) or under grants/.
-const ledgerFile = (file, dir) => [dir, '/mnt/project-files/gate'].some((d) => { const root = `${String(d).replace(/\/+$/, '')}/`; if (!file.startsWith(root) && !file.includes('project-files/gate/')) return false; const rel = file.includes('project-files/gate/') && !file.startsWith(root) ? file.split('project-files/gate/').pop() : file.slice(root.length); return !rel.includes('/') || rel.startsWith('grants/') })
+// The path is read lexically first (finding 1): <dir>/x/../ledger.json, <dir>/./l.json and <dir>//l.json are the ledger, not a file below x/.
+const ledgerFile = (file, dir) => {
+  const f = lexical(file)
+  return [dir, '/mnt/project-files/gate'].some((d) => {
+    const root = `${lexical(d).replace(/\/+$/, '')}/`
+    const rel = f.startsWith(root) ? f.slice(root.length) : f.includes('project-files/gate/') ? f.split('project-files/gate/').pop() : null
+    return rel !== null && (!rel.includes('/') || rel.startsWith('grants/'))
+  })
+}
 export function gateStep(tool, input = {}, ctx = {}) {
   const dir = ctx.dir ?? ledgerDir()
   const file = String(input.file_path ?? '')
   if (/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) && STAMP.test(file)) return 'gate ledger: the role stamp and the brief lock of a session are written only by the hooks (security review 2026-11-12), never by hand.'
-  if (/^(Write|Edit)$/.test(tool) && ledgerFile(file, dir)) return 'gate ledger: the round counter is written only by gate-rounds.mjs (gate.md, Rounds), never by hand.'
+  if (/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) && ledgerFile(file, dir)) return 'gate ledger: the round counter is written only by gate-rounds.mjs (gate.md, Rounds), never by hand.'
   if (/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) && (GUARD_FILE.test(file) || /\.claude\/projects\/.*\.jsonl$/.test(file.replace(/\\/g, '/')))) return 'gate ledger: the installed guards are changed only through claude-setup (a PR), never in place.'
   if (tool === 'Bash' || tool === 'PowerShell') return bashProblem(String(input.command ?? ''), dir, ctx)
   if (tool === 'mcp__github__create_pull_request') {
@@ -1338,9 +1407,10 @@ export function cli(argv, env = process.env) {
   const fail = (t) => ({ code: 2, text: t })
   if (cmd === 'status') return { code: 0, text: JSON.stringify(l, null, 2) }
   if (cmd === 'check') return roundProblem(l, Number(rest[0])) ? fail(roundProblem(l, Number(rest[0]))) : { code: 0, text: 'ok' }
+  const bodyText = cmd === 'record' ? read(flag(rest, '--body-file') ?? '') : null // read once: this text is hashed for the grant and then counted
   if (GRANTED.includes(cmd)) {
     const key = cmd === 'init' ? flag(rest, '--round') : cmd === 'direct' ? flag(rest, '--plan') : cmd === 'record' ? flag(rest, '--body-file') : flag(rest, '--ref')
-    if (!takeGrant(dir, cmd, asset, key)) return fail(`${cmd}: refused: the hook (global/rule-guard.mjs) checks the proof for this verb and leaves a short grant; none was found for this call. Run it as "node ~/.claude/claude-setup/gate-rounds.mjs ${cmd} <asset> ..." in a session where the hook is on (gate.md, Rounds).`)
+    if (!takeGrant(dir, cmd, asset, key, Date.now(), bodyText)) return fail(`${cmd}: refused: the hook (global/rule-guard.mjs) checks the proof for this verb and leaves a short grant; none was found for this call (a record body that changed after the hook read it counts as none). Run it as "node ~/.claude/claude-setup/gate-rounds.mjs ${cmd} <asset> ..." in a session where the hook is on (gate.md, Rounds).`)
   }
   if (cmd === 'init') {
     const n = Number(flag(rest, '--round'))
@@ -1356,7 +1426,7 @@ export function cli(argv, env = process.env) {
   if (cmd === 'record') {
     if (namedProblem(asset)) return fail(namedProblem(asset))
     const file = flag(rest, '--body-file')
-    const head = file ? parseHeadline(read(file)) : null
+    const head = file ? parseHeadline(bodyText) : null
     if (!head) return fail('record: --body-file <f> must start with the verdict headline "Gate <score>/5 (<size>, round <n>)"')
     const bad = verdictProblem(dir, asset, head, false)
     return bad ? fail(bad) : { code: 0, text: `recorded: ${asset} stands at round ${lastRound(readLedger(dir, asset))}` }
@@ -2095,24 +2165,44 @@ export const GATE_PRIOR = /^[ \t>-]*Prior art:[^\n]*\bgate\.md\b/im
 
 export const stripTags = (t) => t.replace(/\\[nt]/g, '\n').replace(/<\/?(wake|message|thread|project|relay|coordinator-relay|cited|note|system-note)\b[^>]*>/g, '\n')
 
+// The template a refusal carries, so the coordinator needs no file: the stamp with the role filled in, then one line per applicable row of BRIEF_FIELDS.
+export const templateFor = (guard, role, size = 'M') => {
+  const plain = `Role: ${role} · Kit: <kit> · Size: ${size}`
+  return [`Role: ${role} · Kit: <kit> · Size: <S|M|L>`, ...guard.BRIEF_FIELDS.filter((f) => f.applies?.(plain) ?? true).map((f) => f.tpl)].join('\n')
+}
+// M50: ONE refusal lists every judgment gap (role, kit, size, topic, model, and at size M or L Item, Plan, Acceptance; Sheet; Tester at size L) with the role's
+// template; what follows from Role, Kit and Size or what the thread can fetch itself is no block: the thread is told how it fills each line (`Brief repair`).
 export async function briefCheck(prompt, cwd, model = null, any = false) {
   if (!any && !/<(wake|relay)\b[^>]*reason=\\?"spawn/.test(prompt)) return ''
   let guard
   try { guard = await import(new URL('./team-guard.mjs', import.meta.url)) } catch { return '' }
   const teams = read(join(setupRoot(cwd), 'docs', 'TEAMS.md'))
   const brief = stripTags(prompt)
-  const missing = guard.missingLines(brief)
-  const why = !guard.stamped(brief) ? 'no `Role: · Kit: · Size:` stamp line'
-    : !roleOf(brief, teams)?.row ? 'the Role line names no role of the Roster (docs/TEAMS.md); "none" or a role of your own is not allowed in a thread'
-    : guard.badTeam(brief, teams) ?? guard.badTopic(brief, read(join(setupRoot(cwd), guard.CHECKLISTS))) ?? (missing.length ? `brief lines missing: ${missing.join(', ')}` : null)
-  if (why) return `Brief check (docs/TEAMS.md): this start breaks the team rules: ${why}. Do no work: send this reason and the corrected Role, Kit and Size to the coordinator (message_coordinator), then stop.`
-  // The coordinator runs without hooks, so its model pick and gate brief are checked here, on the thread side.
+  const plain = brief.replace(/[*_`]/g, '')
+  const found = []
+  const role = guard.stamped(brief) ? roleOf(brief, teams) : null
+  const kit = plain.match(/\bKit:[ \t]*([\w-]+)/i)?.[1]?.toLowerCase()
+  if (!guard.stamped(brief)) found.push('no `Role: · Kit: · Size:` stamp line')
+  else if (!role?.row) found.push(`the Role line names no role of the Roster (docs/TEAMS.md); "none" or a role of your own is not allowed in a thread${kit && guard.rolesForKit(teams, kit).length ? `; on the \`${kit}\` kit pick one of ${guard.rolesForKit(teams, kit).join(', ')}` : ''}${/^[ \t>-]*Role:[ \t]*(Fable )?director\b/im.test(plain) ? '; a gate director round is `Role: Reviewer` on Fable (docs/TEAMS.md, Models; gate.md, Rounds)' : ''}`)
+  const team = guard.stamped(brief) && guard.badTeam(brief, teams)
+  // issue #479 part 1: a gate director round is no thread role of its own.
+  // issue #479 part 1: a gate director round is no thread role of its own; the hint rides on a refusal that already exists (Director is a valid role on the video kit).
+  const director = /^[ \t>-]*Role:[ \t]*(Fable )?director\b/im.test(plain) ? '; a gate director round is `Role: Reviewer` on Fable (docs/TEAMS.md, Models; gate.md, Rounds)' : ''
+  if (team) found.push(`${team}${director}`)
+  const topic = guard.badTopic(brief, read(join(setupRoot(cwd), guard.CHECKLISTS)))
+  if (topic) found.push(topic)
+  const sorted = guard.classify(brief)
+  found.push(...sorted.judgment.map((f) => `${f.key} is missing or still a <placeholder>`))
   const wrong = model && guard.wrongModel(brief, model, teams)
-  if (wrong) return `Model check (docs/TEAMS.md, Roster): this thread runs on ${wrong.tier}, but the ${wrong.role} runs on ${wrong.allowed.join(' or ')}. Do no work: tell the coordinator (message_coordinator) to restart it on that model, then stop.`
-  const gate = roleOf(brief, teams)?.name
-  if (gate && GATE_ROLES.test(gate) && !GATE_PRIOR.test(brief.replace(/[*_`]/g, ''))) return `Gate check (.claude/skills/operator/gate.md): a ${gate} brief names the gate rules in its \`Prior art:\` line (gate.md and the kit's checks). Do no work: ask the coordinator (message_coordinator) for the brief with them, then stop.`
-  const role = guard.stamped(brief) && /\bSize:[ \t]*[ML]\b/i.test(brief.replace(/[*_`]/g, '')) && roleOf(brief, teams)?.name
-  return role ? `Title check (docs/TEAMS.md, Roster "Runs as"): this thread's title starts with \`${role} · \`; if it does not, rename_thread to \`${role} · <what>\` first.` : ''
+  if (wrong) found.push(`this thread runs on ${wrong.tier}, but the ${wrong.role} runs on ${wrong.allowed.join(' or ')}: ask the coordinator to restart it on that model`)
+  if (found.length) return `Brief check (docs/TEAMS.md): this start breaks the team rules in ${found.length} place${found.length === 1 ? '' : 's'}: ${found.map((f, i) => `(${i + 1}) ${f}`).join(' ')}. Do no work: send ALL of this to the coordinator in one message (message_coordinator) together with this template for a ${role?.name ?? '<Role>'}, then stop:\n${templateFor(guard, role?.name ?? '<Role>', plain.match(/\bSize:[ \t]*([SML])\b/i)?.[1])}`
+  // Nothing the coordinator must decide is missing: the thread closes the rest itself and says so in its first checklist line.
+  const mine = [...sorted.derived, ...sorted.recoverable]
+  const notes = mine.length ? [`Brief repair (no block): the brief lacks ${mine.map((f) => f.key).join(', ')}. Work as if it read: ${mine.map((f) => f.fill).join(' | ')}. Name the repaired lines in your first checklist line.`] : []
+  const gate = role?.name
+  if (gate && GATE_ROLES.test(gate) && !GATE_PRIOR.test(plain) && !mine.some((f) => f.key === 'Prior art')) notes.push(`Brief repair (no block): a ${gate} brief names gate.md and the kit's checks in its \`Prior art:\` line; read .claude/skills/operator/gate.md first.`)
+  if (role && /\bSize:[ \t]*[ML]\b/i.test(plain)) notes.push(`Title check (docs/TEAMS.md, Roster "Runs as"): this thread's title starts with \`${role.name} · \`; if it does not, rename_thread to \`${role.name} · <what>\` first.`)
+  return notes.join('\n')
 }
 
 // Spawn rule 4 (proven 2026-11-08: the hook-less coordinator started a thread with no `model` and `Model: default`
@@ -2537,7 +2627,7 @@ const withoutOlderStamps = (sources) => { let seen = false; return sources.map((
 export function relayContext(prompt, transcript) {
   const relays = coordinatorRelays(transcript).filter((t) => t.trim() !== prompt.trim())
   const spawn = spawnPrompt(prompt, String(transcript))
-  return withoutOlderStamps([prompt, ...relays.reverse(), spawn === prompt ? '' : spawn].filter(Boolean)).slice(1).join('\n')
+  return withoutOlderStamps([prompt, ...relays.reverse(), spawn === prompt ? '' : spawn].filter(Boolean).map(stripTags)).slice(1).join('\n') // tags off first: a spawn brief's Role sits right behind its wake tag
 }
 // M50: a thread locked since its spawn has no role stamp and built nothing (the lock refuses every tool outside LOCK_FREE), so its first lift may take any
 // role, a gate role too; one that holds a stamp keeps it (#475: a builder never becomes the reviewer of its own work).
