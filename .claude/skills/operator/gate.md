@@ -240,6 +240,10 @@ How to undo a merge, by kind of change (write the line into the PR's "undo" line
   `gate-rounds.mjs` other than as `node <path>/gate-rounds.mjs <verb>` or a plain read is refused; a verdict counts only from a Tester or Reviewer session or
   when a real reviewer agent (code-reviewer, evaluator, security-reviewer and the like) of the session returned that headline as the opening of its own result, from a prompt that did not hold it (a builder cannot pass or merge its own work); the session's role stamp and brief lock in the temp dir are protected like the ledger path; the human answer on a card is read from
   the wake's own wrapper, never from tags quoted in a relay or a result.
+  Round 2 of that review (tests `finding 1` to `finding 4`): a path is compared with its `..`, `./` and `//` collapsed; a `record` grant carries the sha256 of the body the
+  hook read and the CLI counts only that text; find, awk, `git -c`, a sed script and any redirect no longer pass as a plain read of the counter file; init, direct, card,
+  picture, waive, record, post and merge run only from the installed copy, and the hook checks a merge's pass itself; `HOME=` on a counter call is refused like `CLAUDE_SETUP_*`; MultiEdit and NotebookEdit are refused on the ledger.
+  Still open (follow-up): symlinked parents, `cd` plus a relative name, other merge doors (`gh api .../merges`, graphql, xargs), a reviewer proof that names no asset; the real lock for a builder with a gh token is a server-side required check.
   Limits, said plainly: the ledger lives in the project's shared folder (one project's threads share it); a session without
   hooks (the project chat) cannot be stopped itself, but every thread it starts checks its brief, and no merge works without a
   counted pass. `CLAUDE_SETUP_RULE_GUARD=off` is the one off switch; nobody sets it. It stops careless and honest-mistake
