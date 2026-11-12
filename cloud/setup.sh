@@ -944,6 +944,20 @@ export function writeLedger(dir, ledger) {
 }
 export const lastRound = (l) => l.rounds.at(-1)?.n ?? 0
 
+// ---- who sent a transcript row (M53, gate round 11 of #474): the text says who wrote it, the origin says who delivered it. A thread can
+// schedule its own prompt (CronCreate, ScheduleWakeup, send_later); the harness then writes that text as an isMeta user row, word for word.
+// Nothing a thread can schedule or type carries the projects server's origin. One definition each; rule-guard and task-ledger use these.
+// A scheduled or notification-driven row: a cron or wakeup (turnOrigin scheduled, wakeupSource), or a send_later notification (live 2026-11-12:
+// turnOrigin task_notification, origin task-notification with no projects-relay subkind). None of them is a person or the coordinator.
+export const selfScheduled = (r) => r?.turnOrigin === 'scheduled' || r?.turnOrigin === 'task_notification' || !!r?.wakeupSource
+  || (r?.origin?.kind === 'task-notification' && r.origin.subkind !== 'projects-relay')
+export const fromProjects = (r) => {
+  const o = r?.type === 'attachment' ? r.attachment?.origin : r?.origin
+  return o?.kind === 'task-notification' && o?.subkind === 'projects-relay' && !selfScheduled(r)
+}
+// yskills' "stop", "stopp", "pause", "halt" (the stop note of the prompt hook, and no answer to a card).
+export const STOP_WORD = /^\W*(stop+|stopp+|pause|halt)\W*$/i
+
 // ---- grants (security review 2026-11-12, finding 1): the proofs for init, direct, card, picture and waive are read by the hook, and the
 // CLI refuses those verbs without the short grant the hook leaves after it checked them. A call that bypasses the hook (a copy of this
 // file, node -e, an import) reaches the CLI without a grant and is refused there too, so the filename in argv is no longer the lock.
@@ -1231,6 +1245,8 @@ function ghProblem(s) {
 // guard file, as a redirect target or an argument of a writer. Shell tricks around it are a named Limit (gate.md, Rounds).
 // The session stamps the guards write in the temp dir: the role (who may post a verdict, hands-off) and the brief lock.
 const STAMP = /claude-setup-(?:role|spawnrole|badbrief|model|brief|artifacts)-/
+// The session transcripts (M53): every origin proof reads them, so a thread never writes one by hand.
+const TRANSCRIPT = /\.claude[\\/]projects[\\/](?:.*[\\/])?[^\\/]*\.jsonl$/
 // A path compared lexically (security review 2026-11-12, round 2, finding 1): .., ./ and // collapse and backslashes read as slashes, so
 // <dir>/x/../ledger.json is the ledger. A NAME= prefix of a word is kept.
 const lexical = (p) => posix.normalize(String(p).replace(/\\/g, '/'))
@@ -1259,8 +1275,8 @@ function bashProblem(cmd, dir, ctx) {
   // Only the ledger itself is protected: the dir, a file directly in it and grants/. Files below gate/<asset>/ (images, PLAN-REVIEW.md) are free (transition rule 6).
   const dirRe = dir ? new RegExp(`^(?:[-\\w]*=)?${lexical(dir).replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\/+$/, '')}(?:/(?:grants(?:/.*)?|[^/]*))?$`) : null
   // each word is tested as typed and with its .., ./ and // collapsed (finding 1): <dir>/x/../ledger.json names the ledger
-  const named = (w) => !/\s/.test(w) && [w, lexicalWord(w)].some((x) => STAMP.test(x) || dirRe?.test(x) || /^(?:[-\w]*=)?(?:.*\/)?(?:project-files|\.claude\/claude-setup)\/gate(?:\/(?:grants(?:\/.*)?|[^/]*))?$/.test(x) || GUARD_FILE.test(x))
-  const msg = 'gate ledger: the round counter is written only by gate-rounds.mjs (gate.md, Rounds), never by hand; the installed guards change only through a claude-setup PR.'
+  const named = (w) => !/\s/.test(w) && [w, lexicalWord(w)].some((x) => STAMP.test(x) || dirRe?.test(x) || /^(?:[-\w]*=)?(?:.*\/)?(?:project-files|\.claude\/claude-setup)\/gate(?:\/(?:grants(?:\/.*)?|[^/]*))?$/.test(x) || GUARD_FILE.test(x) || TRANSCRIPT.test(x))
+  const msg = 'gate ledger: the round counter is written only by gate-rounds.mjs (gate.md, Rounds), never by hand; the installed guards change only through a claude-setup PR, and a session transcript (~/.claude/projects/**/*.jsonl) is never written by hand (M53).'
   if (list.some((s) => s.env) && list.some((s) => s.a0 === 'node' && s.args.some((a) => base(a) === 'gate-rounds.mjs'))) return 'gate ledger: CLAUDE_SETUP_* variables (the ledger dir, the guard switch) are not set in a call that runs the counter; they would point it at another ledger (gate.md, Rounds).'
   // Finding 1: the counter is run as `node <path>/gate-rounds.mjs <verb>` and nothing else. Any other command that names the file and is
   // not a plain read (a copy, node -e, an import, a symlink) is refused, so the proofs cannot be walked around by renaming the script.
@@ -1322,6 +1338,8 @@ export function gateStep(tool, input = {}, ctx = {}) {
   const dir = ctx.dir ?? ledgerDir()
   const file = String(input.file_path ?? '')
   if (/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) && STAMP.test(file)) return 'gate ledger: the role stamp and the brief lock of a session are written only by the hooks (security review 2026-11-12), never by hand.'
+  const target = file || String(input.notebook_path ?? '')
+  if (/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) && TRANSCRIPT.test(lexical(target))) return 'gate ledger: a session transcript (~/.claude/projects/**/*.jsonl) is never written by hand: the origin proofs of the role lock, waive and approve read it (M53, plan section 7).'
   if (/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) && ledgerFile(file, dir)) return 'gate ledger: the round counter is written only by gate-rounds.mjs (gate.md, Rounds), never by hand; a verdict the hook missed is counted by its gate role with "gate-rounds.mjs record <name> --body-file <f>" (a PR: "gate-rounds.mjs post <owner/repo#n> --body-file <f>").'
   if (/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) && /\.claude[\\/]claude-setup[\\/](gate-rounds|task-ledger|card-render|rule-guard|team-guard)\.mjs$/.test(file)) return 'gate ledger: the installed guards are changed only through claude-setup (a PR), never in place.'
   if (tool === 'Bash' || tool === 'PowerShell') return bashProblem(String(input.command ?? ''), dir, ctx)
@@ -2097,11 +2115,11 @@ export function pageText(html) {
 }
 
 const VIDEO = /\b(instagram\.com|tiktok\.com|youtube\.com|youtu\.be)\/\S+|\.(mp4|mov|webm)\b/i
-export function promptContext(prompt = '') {
+export function promptContext(prompt = '', stopWord = null) { // stopWord: STOP_WORD of the counter, the one definition (M53)
   const notes = []
   if (VIDEO.test(prompt)) notes.push('rule-guard: this message has a video. CLAUDE.md, Videos: run watch.py of the watch skill first (plain, no WebSearch in its place), then a verdict per video.')
   const said = (prompt.match(/<message[^>]*trigger="true"[^>]*>([\s\S]*?)<\/message>/)?.[1] ?? prompt).trim()
-  if (/^\W*(stop+|stopp+|pause|halt)\W*$/i.test(said)) notes.push('rule-guard: yskills said stop. Stop at once, do not argue, say in one line what was left half done (CLAUDE.md, How to work).')
+  if (stopWord?.test(said)) notes.push('rule-guard: yskills said stop. Stop at once, do not argue, say in one line what was left half done (CLAUDE.md, How to work).')
   return notes.join('\n')
 }
 
@@ -2677,14 +2695,17 @@ export function updateLock(session, check) {
 // and a gate role only for a thread that holds no stamp yet (relayRebrief; #475, M50).
 export const COORDINATOR_RELAY = /^\s*(?:<system-note>[^<]*<\/system-note>\s*)*(?:<system-reminder>\s*)?A message from this project[’']s coordinator session[^\n]*\n\s*<coordinator-relay>\s*<relay\b[^>]*\bfrom=\\?"coordinator"/
 // M50: a relay that reaches a working thread is a `queued_command` attachment, whose text starts with the bare `<relay from="coordinator"` (live
-// 2026-11-12: the lead-in line is added only when the harness shows it). The bare form counts only as such an attachment, an entry only the harness writes.
+// 2026-11-12: the lead-in line is added only when the harness shows it). M53: either form counts only on a row the projects server delivered
+// (`origin` = fromProjects of the counter): the text is who wrote it, the origin is who delivered it, so a thread's own scheduled prompt
+// (an isMeta row with the same text) is no relay.
 const BRIEF_LINE = /^[ \t>*_`-]*(Role|Kit|Gate|Prior art|Model|Skills|Done when|Stop when|Start|Threads|Item|Plan|Acceptance):/im // a relay that corrects the brief; other relays do not count toward the card
 const BARE_RELAY = /^\s*<relay\b[^>]*\bfrom=\\?"coordinator"/
 // The coordinator often sends only the lines the start brief lacked (#479 part 2: VacationGame's Critic, our Director), so the relay is read
 // together with the earlier coordinator relays and the spawn brief from the transcript: the newest relay's lines come first and win,
 // older relays and the spawn brief fill the gaps.
 // Every coordinator relay of the transcript, oldest first: a user entry, or a queued_command attachment when it reached a working thread.
-export function coordinatorRelays(transcript) {
+// `origin` decides whether the row came from the projects server; without one no row counts (fail closed).
+export function coordinatorRelays(transcript, origin = () => false) {
   const relays = []
   for (const line of String(transcript).split('\n')) {
     try {
@@ -2692,16 +2713,15 @@ export function coordinatorRelays(transcript) {
       const content = entry.message?.content
       const text = entry.type === 'attachment' && entry.attachment?.type === 'queued_command' ? String(entry.attachment.prompt ?? '')
         : entry.type === 'user' ? (typeof content === 'string' ? content : (content ?? []).map((c) => c?.text ?? '').join('\n')) : ''
-      // A bare relay is the harness's own entry: a queued_command attachment, or a user entry with isMeta (live 2026-11-12, gate round 1 of #490); a typed one never counts.
-      if (entry.type === 'attachment' || entry.isMeta === true ? BARE_RELAY.test(text) || COORDINATOR_RELAY.test(text) : COORDINATOR_RELAY.test(text)) relays.push(text)
+      if (origin(entry) && (BARE_RELAY.test(text) || COORDINATOR_RELAY.test(text))) relays.push(text)
     } catch { /* not a JSON line */ }
   }
   return relays
 }
 // A newer source's stamp line replaces an older one instead of adding to it (a corrected Role must not leave the old Size M behind).
 const withoutOlderStamps = (sources) => { let seen = false; return sources.map((t) => { const had = /^[ \t>*_`-]*Role:/im.test(t); const out = seen ? t.replace(/^[ \t>*_`-]*Role:[^\n]*$/gim, '') : t; seen ||= had; return out }) }
-export function relayContext(prompt, transcript) {
-  const relays = coordinatorRelays(transcript).filter((t) => t.trim() !== prompt.trim())
+export function relayContext(prompt, transcript, origin) {
+  const relays = coordinatorRelays(transcript, origin).filter((t) => t.trim() !== prompt.trim())
   const spawn = spawnPrompt(prompt, String(transcript))
   return withoutOlderStamps([prompt, ...relays.reverse(), spawn === prompt ? '' : spawn].filter(Boolean).map(stripTags)).slice(1).join('\n') // tags off first: a spawn brief's Role sits right behind its wake tag
 }
@@ -2710,13 +2730,15 @@ export function relayContext(prompt, transcript) {
 // The third refused relay asks for one card; the lock stays and a complete relay still lifts it. Returns that note, or ''.
 async function relayRebrief(session, prompt, cwd, model, transcript = '') {
   if (!COORDINATOR_RELAY.test(prompt) && !BARE_RELAY.test(prompt)) return ''
-  const context = relayContext(prompt, transcript)
+  const origin = await projectsOrigin()
+  if (!coordinatorRelays(transcript, origin).some((t) => t.trim() === prompt.trim())) return '' // no row of the projects server holds this text: a scheduled or typed prompt lifts nothing
+  const context = relayContext(prompt, transcript, origin)
   const text = stripTags([prompt, context].join('\n'))
   updateLock(session, await briefCheck(text, cwd, model, true))
   await countRelay(session)
   const stamp = join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)
   if (existsSync(lockFile(session))) {
-    if (coordinatorRelays(transcript).filter((t) => t.trim() !== prompt.trim() && BRIEF_LINE.test(t)).length < 2) return ''
+    if (coordinatorRelays(transcript, origin).filter((t) => t.trim() !== prompt.trim() && BRIEF_LINE.test(t)).length < 2) return ''
     const note = 'Three relays did not lift the lock: post one card to yskills with request_decision that names the lines still missing, then stay idle; a complete relay lifts the lock at any time.'
     if (!read(lockFile(session)).includes('request_decision')) writeFileSync(lockFile(session), `${read(lockFile(session)).slice(0, 300)}\n${note}`)
     return note
@@ -2742,7 +2764,10 @@ export function handsOff(tool, input = {}, role = '', root = '') {
 
 // Gate round counter (global/gate-rounds.mjs, operator/gate.md Rounds): a gate post, a merge, a ledger write or a director/card record is
 // checked against the asset's ledger. Fail closed: a check that throws refuses the call (research 2026-11-12: a crashing hook does not block).
-const humanAfter = (transcript, ref) => {
+// M53 slice 1 (interim): a row the thread scheduled itself never counts, and a stop or pause word is no answer to a card. The positive origin rule
+// for yskills' own rows follows in slice 2, after one real principal row is captured. `counter` is the loaded gate-rounds module.
+const humanAfter = (transcript, ref, counter) => {
+  const self = counter.selfScheduled
   const id = String(ref).match(/cmsg_\w+/)?.[0]
   const rows = transcript.split('\n').map((l) => { try { return JSON.parse(l) } catch { return null } }).filter(Boolean)
   const at = rows.findIndex((r) => id && JSON.stringify(r.message?.content ?? '').includes(id))
@@ -2750,11 +2775,15 @@ const humanAfter = (transcript, ref) => {
   // as text quoted inside a relay, a cited message or a tool result.
   const text = (r) => typeof r.message?.content === 'string' ? r.message.content : (Array.isArray(r.message?.content) ? r.message.content.map((c) => (c?.type === 'text' ? c.text ?? '' : '')).join('\n') : '')
   const WAKE = /^\s*<wake\b[^>]*>\s*(?:<project\b[^>]*>\s*)?(?:<thread\b[^>]*>\s*)?<message\b(?=[^>]*\bfrom="human")(?=[^>]*\btrust="principal")/
-  const human = (r) => r.type === 'user' && !(Array.isArray(r.message?.content) && r.message.content.some((c) => c?.type === 'tool_result')) && WAKE.test(text(r))
+  const said = (r) => (text(r).match(/<message\b[^>]*>([\s\S]*?)<\/message>/)?.[1] ?? '').trim()
+  const human = (r) => r.type === 'user' && !self(r) && !(Array.isArray(r.message?.content) && r.message.content.some((c) => c?.type === 'tool_result')) && WAKE.test(text(r)) && !counter.STOP_WORD.test(said(r))
   return at >= 0 && rows.slice(at + 1).some(human)
 }
 // A cached cloud image can lack the counter (its pasted setup predates it) and its start hook, the old team-guard, never fetches it
 // (each session restarts from the cache): the first call that needs it installs it with the refresh that now sits in this dir (2026-11-12).
+// The counter's one origin check; a counter that cannot load means no row counts: the lock stays, a waive is refused (M53).
+const stopWord = async () => { try { return (await loadCounter()).STOP_WORD } catch { return null } }
+const projectsOrigin = async () => { try { return (await loadCounter()).fromProjects } catch { return () => false } }
 async function loadCounter() {
   const url = new URL('./gate-rounds.mjs', import.meta.url)
   try { return await import(url) } catch (e) {
@@ -2774,7 +2803,7 @@ export async function gateBlock(tool, input, transcript, model, dry = false, rol
   }
   try {
     const t = transcript()
-    const why = mod.gateStep(tool, input, { model, dry, role, calls: /gate-rounds\.mjs|\bGate\b/.test(JSON.stringify(input)) ? withReports(toolCalls(t), transcriptPath) : [], humanAfter: (ref) => humanAfter(t, ref) })
+    const why = mod.gateStep(tool, input, { model, dry, role, calls: /gate-rounds\.mjs|\bGate\b/.test(JSON.stringify(input)) ? withReports(toolCalls(t), transcriptPath) : [], humanAfter: (ref) => humanAfter(t, ref, mod) })
     return why ? `rule-guard: ${why}` : null
   } catch (e) { return `rule-guard: gate ledger check failed (${String(e.message).slice(0, 80)}); refused, fail closed (operator/gate.md, Rounds).` }
 }
@@ -2847,7 +2876,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           const guard = isStart ? await guardLine() : ''
           const card = isStart ? await cardLine() : ''
           if (isStart) await countStart({ session, brief, checkNow, modelNote, guard, card })
-          const context = [checkNow, relayNote, isStart ? await gateBriefContext(brief, model) : '', guard, card, modelNote, await roleContext(brief, cwd, session), promptContext(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
+          const context = [checkNow, relayNote, isStart ? await gateBriefContext(brief, model) : '', guard, card, modelNote, await roleContext(brief, cwd, session), promptContext(prompt, await stopWord()), persona(setupRoot(cwd))].filter(Boolean).join('\n')
           if (context) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: context } }))
           return
         }
@@ -2863,7 +2892,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         const sessionTranscript = () => [transcriptPath, agentTranscript(transcriptPath, agentId)].filter((p) => p && existsSync(p)).map(read).join('\n')
         const gateRole = session ? read(join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)).trim() : ''
         // M50: a relay that reached the thread mid-turn may never have fired the prompt hook; the transcript has it, so a locked thread re-reads it at its next tool call.
-        if (session && existsSync(lockFile(session))) { const t = transcript(); const last = coordinatorRelays(t).at(-1); if (last) await relayRebrief(session, last, cwd, knownModel(session, t), t) }
+        if (session && existsSync(lockFile(session))) { const t = transcript(); const last = coordinatorRelays(t, await projectsOrigin()).at(-1); if (last) await relayRebrief(session, last, cwd, knownModel(session, t), t) }
         let block = lockBlock(tool, session)
           ?? handsOff(tool, input ?? {}, gateRole, setupRoot(cwd))
           ?? (await gateBlock(tool, input ?? {}, transcript, sessionModel(transcript()), true, gateRole, transcriptPath))
