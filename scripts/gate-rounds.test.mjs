@@ -81,12 +81,9 @@ test('a card must really be posted in the session; then three more rounds run, t
   assert.equal(s.gate(10, '4.0').status, 2)
 })
 
-test('the ledger cannot be edited by hand', () => {
+test('the installed guards and the ledger files cannot be written with Write or Edit', () => {
   const s = session()
   assert.match(s.hook('Write', { file_path: `${s.dir}/gate/yverse-studio_vacation-game_13.json`, content: '{}' }).stderr, /written only by gate-rounds\.mjs/)
-  assert.match(s.hook('Bash', { command: `echo '{}' > ${s.dir}/gate/x.json` }).stderr, /one plain command/)
-  for (const c of [`node gate-rounds.mjs direct ${ASSET} --plan p; node -e "1"`, `node gate-rounds.mjs card ${ASSET} --ref cmsg_X1 && echo`, `node -e "import('./gate-rounds.mjs')"`, `node gate-rounds.mjs record ${ASSET} 1 5`, `FOO=1 node gate-rounds.mjs card $(echo ${ASSET}) --ref cmsg_X1`]) assert.match(s.hook('Bash', { command: c }).stderr, /one plain command/, c)
-  assert.equal(s.hook('Bash', { command: `node ~/.claude/claude-setup/gate-rounds.mjs status ${ASSET}` }).status, 0, 'reading the ledger goes through status')
   assert.match(s.hook('Write', { file_path: '/root/.claude/claude-setup/gate-rounds.mjs', content: 'x' }).stderr, /installed guards are changed only through claude-setup/)
 })
 
@@ -136,10 +133,6 @@ test('a counter that cannot load refuses gate-shaped calls (fail closed), other 
   assert.equal(run('mcp__github__add_issue_comment', { ...PR, body: 'thanks' }).status, 0)
 })
 
-test('a PR without any gate round is not blocked at merge (not every repo uses the counter)', () => {
-  assert.equal(session().hook('mcp__github__merge_pull_request', { owner: 'a', repo: 'b', pullNumber: 1 }).status, 0)
-})
-
 test('a broken ledger path fails closed', () => {
   const s = session()
   s.env.CLAUDE_SETUP_GATE_DIR = join(s.transcript, 'gate') // a file as parent: mkdir fails
@@ -180,16 +173,6 @@ test('the ledger CLI is wired in both installers and the cloud setup (checked by
 })
 
 const MERGE = { owner: 'yverse-studio', repo: 'vacation-game', pullNumber: 13 }
-
-test('every merge door: auto-merge and gh pr merge are checked like the merge tool', () => {
-  const s = session(); s.gate(1, '3.0')
-  assert.equal(s.hook('mcp__github__enable_pr_auto_merge', MERGE).status, 2)
-  assert.match(s.hook('Bash', { command: 'gh pr merge 13 -R Yverse-Studio/Vacation-Game --squash' }).stderr, /no merge below the threshold/)
-  assert.match(s.hook('Bash', { command: 'gh pr merge 13 --squash' }).stderr, /no merge below the threshold/, 'no -R: every ledger of that PR number counts')
-  assert.equal(s.hook('Bash', { command: 'gh pr merge 99 --squash' }).status, 0)
-  assert.equal(s.hook('PowerShell', { command: `Set-Content ${s.env.CLAUDE_SETUP_GATE_DIR}/x.json 1` }).status, 2, 'PowerShell is guarded like Bash')
-  assert.equal(s.hook('Bash', { command: `rm -rf ${s.env.CLAUDE_SETUP_GATE_DIR}` }).status, 2)
-})
 
 test('only a real verdict line counts: German headline counts, talk about the gate does not', () => {
   const s = session()
@@ -246,50 +229,100 @@ test('the brief and the hook read one ledger whatever the case of the asset', ()
   assert.equal(readLedger(dir, 'yverse-studio/vg#13').rounds.length, 3)
 })
 
-test('gh pr merge: URL form, flags before the number and a missing number are all handled; a chained ledger edit still fails', () => {
-  const s = session(); s.gate(1, '3.0')
-  for (const c of ['gh pr merge https://github.com/yverse-studio/vacation-game/pull/13 --squash', 'gh pr merge --squash -R github.com/yverse-studio/vacation-game 13', 'gh pr merge --repo yverse-studio/vacation-game 13']) assert.match(s.hook('Bash', { command: c }).stderr, /no merge below the threshold/, c)
-  assert.match(s.hook('Bash', { command: 'gh pr merge --squash' }).stderr, /needs the PR number/)
-  for (const c of ['gh pr merge 99 && echo x', 'echo $(gh pr merge 99)', 'gh pr merge 99; gh pr merge 13']) assert.match(s.hook('Bash', { command: c }).stderr, /one plain command/, c)
-  assert.match(s.hook('Bash', { command: `gh pr merge 99 && rm -rf ${s.env.CLAUDE_SETUP_GATE_DIR}` }).stderr, /one plain command/)
+
+test('fail closed: a merge needs a counted pass, a PR without any gate round does not merge', () => {
+  const s = session()
+  const none = s.hook('mcp__github__merge_pull_request', MERGE)
+  assert.equal(none.status, 2)
+  assert.match(none.stderr, /no gate round|counted pass/i)
+  assert.equal(s.hook('mcp__github__enable_pr_auto_merge', MERGE).status, 2)
+  s.gate(1, '4.6')
+  assert.equal(s.hook('mcp__github__merge_pull_request', MERGE).status, 0)
 })
 
-test('review round 2: ordinary work is never blocked, and the doors it found are closed', () => {
+test('ordinary work is never blocked, a verdict is read from the opening line only', () => {
   const s = session(); const post = (body) => s.hook('mcp__github__add_issue_comment', { ...PR, body })
-  // false blocks
-  for (const c of ['node ~/.claude/claude-setup/rule-guard.mjs read https://example.com', 'node --test scripts/gate-rounds.test.mjs', 'git add global/gate-rounds.mjs && git commit -m "fix: x"', 'git diff -- global/gate-rounds.mjs', 'cat /mnt/project-files/gateway-notes.md', `cat ${s.env.CLAUDE_SETUP_GATE_DIR}/x.json`]) assert.equal(s.hook('Bash', { command: c }).status, 0, c)
   for (const t of ['The new screenshots look right at 390px and 1440px', 'Take a new look at the spacing', 'feat: new button style for the shop', 'docs: new code style section', 'add a new CSS style for errors']) assert.equal(needsPicture(t), false, t)
   assert.equal(gateBrief('Fix the gate round counter false block in global/gate-rounds.mjs', {}), '', 'a brief ABOUT the counter is no gate-round brief')
   s.gate(1, '3.0'); s.gate(2, '3.0'); s.gate(3, '3.5')
   assert.equal(post('> Gate 3/5 (S, round 2)\n\nFixed the two findings above.').status, 0, 'a quoted old verdict is talk')
   assert.equal(post('Gate 3.5/5 (S, round 3)\nhistory: Gate 3/5 (S, round 1)').status, 0, 'only the opening line is the verdict')
   assert.equal(readLedger(join(s.dir, 'gate'), ASSET).rounds.length, 3)
-  // doors
   const v = session(); v.hook('mcp__github__add_issue_comment', { ...PR, body: 'Gate 4.2/5 (L)' })
   assert.equal(readLedger(join(v.dir, 'gate'), ASSET).rounds.length, 1, 'a verdict without a round is the next round')
   assert.equal(v.hook('mcp__github__merge_pull_request', MERGE).status, 2)
-  assert.match(v.hook('Bash', { command: 'gh api -X PUT repos/yverse-studio/vacation-game/pulls/13/merge' }).stderr, /no merge below the threshold/)
-  const g = session()
-  g.hook('Bash', { command: `gh pr comment 13 -R yverse-studio/vacation-game --body 'Gate 3.0/5 (S, round 1)'` })
-  assert.equal(readLedger(join(g.dir, 'gate'), ASSET).rounds.length, 1, 'a verdict posted with gh is counted')
-  assert.equal(g.hook('Bash', { command: `gh pr comment 13 -R yverse-studio/vacation-game --body 'Gate 5/5 (S, round 1)'` }).status, 2, 'and cannot be rescored')
-  // pass handling
   const p = session(); p.hook('mcp__github__add_issue_comment', { ...PR, body: 'Gate pass (S, round 1)' })
   assert.equal(p.hook('mcp__github__merge_pull_request', MERGE).status, 0, '"Gate pass" is a pass')
   const q = session(); q.gate(1, '4.6'); q.gate(2, '3.0'); q.gate(3, '4.6')
   assert.equal(q.gate(4, '4.6').status, 0, 'polish counts from the latest passing run')
-})
-
-test('review round 3: gh verdicts in odd forms, the rule\'s own text, stderr redirects and node --check', () => {
-  const s = session(); const h = (c) => s.hook('Bash', { command: c })
-  for (const c of [`gh pr comment 11 --body 'Gate 4.2/5 (M, round 1)'`, `gh pr comment 11 -R o/r --body-file r.md # Gate 4.2/5`, `gh pr comment 11 -R o/r --body "$(cat <<'EOF'\nGate 4.2/5 (M, round 1)\nEOF\n)"`, `gh pr edit 11 --body 'Gate 4.2/5 (M, round 1)'`]) assert.match(h(c).stderr, /checked only in the plain form/, c)
-  assert.equal(h(`gh pr comment https://github.com/yverse-studio/vacation-game/pull/13 --body 'Gate 3.0/5 (S, round 1)'`).status, 0)
-  assert.equal(readLedger(join(s.dir, 'gate'), ASSET).rounds.length, 1, 'URL form counted')
-  assert.equal(h(`gh pr review -R yverse-studio/vacation-game 13 -b 'Gate 3.0/5 (S, round 2)'`).status, 0)
-  assert.equal(readLedger(join(s.dir, 'gate'), ASSET).rounds.length, 2, 'review form with -R before the number counted')
-  assert.match(h('gh api -X PUT repos/{owner}/{repo}/pulls/7/merge').stderr, /names the repo literally/)
-  for (const c of [`ls ${s.env.CLAUDE_SETUP_GATE_DIR}/ 2>/dev/null`, `cat ${s.env.CLAUDE_SETUP_GATE_DIR}/x.json 2>&1`, 'node --check global/gate-rounds.mjs', `node ~/.claude/claude-setup/gate-rounds.mjs status ${ASSET} 2>&1`]) assert.equal(h(c).status, 0, c)
   assert.equal(needsPicture('docs: reword the rule that a new hub or start screen needs a picture card first'), false)
   assert.equal(s.hook('mcp__github__create_pull_request', { owner: 'a', repo: 'b', title: 'fix: new hub button overlaps', body: 'x' }).status, 0)
   assert.equal(s.hook('mcp__github__create_pull_request', { owner: 'a', repo: 'b', title: 'feat: new hub', body: 'x' }).status, 2)
+})
+
+// ---- The Bash corpus (Fable director, gate round 4): every finding of rounds 1 to 4 is one line here, run through the real hook.
+// <D> is the temp ledger dir. Add a line first when a finding comes in, then fix the code.
+const VERDICT = 'Gate 4/5 (M, round 4)'
+const MUST_BLOCK_AT_ROUND_1 = [
+  'gh pr merge 7 -R o/r --squash', 'gh pr merge', 'cd repo && gh pr merge 7', 'env gh pr merge 7', 'GH_REPO=o/r gh pr merge 7', 'gh pr merge "7"',
+  'gh pr merge feature-branch', '/usr/bin/gh pr merge 7', 'gh api -X PUT repos/o/r/pulls/7/merge', 'n=7; gh api -X PUT repos/o/r/pulls/$n/merge',
+  `gh api graphql -f query='mutation { mergePullRequest(input: {pullRequestId: "x"}) { clientMutationId } }'`, `bash -c 'gh pr merge 7'`, 'x=$(gh pr merge 7)',
+  'gh pr merge 99 -R o/r', 'gh pr merge https://github.com/o/r/pull/7', 'sudo gh pr merge 7 && echo done', 'echo hi | gh pr merge 7', 'echo $(gh pr merge 7)', 'bash -c "echo a" && gh pr merge 7',
+]
+const MUST_BLOCK_AT_ROUND_3 = [
+  `gh pr comment 8 -R o/r --body "${VERDICT}"`, `gh pr comment 8 -R o/r -b "${VERDICT}"`, `gh pr comment 8 --body-file <F>`, `gh pr comment 8 -F <F>`,
+  `gh pr comment 8 -R o/r --body "$(cat <<'EOF'\n${VERDICT}\nEOF\n)"`, `gh pr review 8 --comment --body "${VERDICT}"`, `gh issue comment 8 --body "${VERDICT}"`,
+  `gh api repos/o/r/issues/8/comments -f body="${VERDICT}"`, `gh pr edit 8 --body "${VERDICT}"`, `GH_REPO=o/r gh pr comment 8 --body "Gate 3.9/5 (S, round 4)"`,
+]
+const MUST_BLOCK_LEDGER = [
+  `echo '{}' > <D>/o_r_7.json`, 'rm <D>/o_r_7.json', 'rm -rf <D>', 'cd <D> && rm o_r_7.json', 'cd /mnt/project-files/gate && rm o_r_7.json', 'rm /mnt/project-files/gate/o_r_7.json',
+  'node global/gate-rounds.mjs waive o/r#7 --ref cmsg_abc', 'node ./global/gate-rounds.mjs init o/r#99 --round 0', 'node global/gate-rounds.mjs direct o/r#8 --plan p.md',
+  'node ~/.claude/claude-setup/gate-rounds.mjs status o/r#7 && node ~/.claude/claude-setup/gate-rounds.mjs init o/r#9 --round 0',
+  'node ~/.claude/claude-setup/gate-rounds.mjs init o/r#9 --round 0; echo ok', 'node ~/.claude/claude-setup/gate-rounds.mjs card o/r#9 --ref $(echo cmsg_X1)',
+  'cp x.json <D>/o_r_7.json', 'tee <D>/o_r_7.json < x.json', 'echo x >> ~/.claude/claude-setup/rule-guard.mjs', 'rm ~/.claude/claude-setup/gate-rounds.mjs', 'bash -c "rm <D>/o_r_7.json"',
+  `echo '{}' > <D>/o_r_7.json 2>&1`, 'node ~/.claude/claude-setup/gate-rounds.mjs merge o/r#7 --squash | cat; echo x',
+]
+const MUST_PASS = [
+  'git commit -m "docs: gh pr merge is checked by the ledger"', 'grep -rn "gh pr merge" docs/', 'echo "gh pr merge 7" >> notes.md', 'git log --grep="Gate 4.2/5"',
+  'node --test scripts/gate-rounds.test.mjs 2>&1 | tail -5', 'node scripts/pre-pr.mjs --body /tmp/b.md', 'cat ~/.claude/claude-setup/gate-rounds.mjs | head', 'ls /mnt/project-files/gate/',
+  'ls <D>/ 2>/dev/null', 'cat <D>/x.json 2>&1', 'cat /mnt/project-files/gate/a_b_1.json | jq .rounds', 'cat /mnt/project-files/gateway-notes.md',
+  'node ~/.claude/claude-setup/gate-rounds.mjs status o/r#7 | head -5', 'cd /home/user/claude-setup && node global/gate-rounds.mjs status o/r#7', 'node ~/.claude/claude-setup/gate-rounds.mjs check o/r#7 4 && echo ok',
+  'gh pr comment 9 -R o/r --body "The gate flagged two things in round 1"', `gh pr comment 9 -R o/r --body "$(cat <<'EOF'\nFixed the review notes.\nEOF\n)"`,
+  'gh pr view 7 --json mergeable', 'gh pr create --title "feat: x" --body "Gate 5/5 will follow"', 'git diff origin/main...HEAD -- global/gate-rounds.mjs', 'cp global/gate-rounds.mjs /tmp/x.mjs',
+  'node install.mjs', 'bash cloud/setup.sh', 'sed -i s/a/b/ global/gate-rounds.mjs', 'git checkout main -- global/gate-rounds.mjs', 'node -e "console.log(1)"', 'node --check global/gate-rounds.mjs',
+  'git add global/gate-rounds.mjs && git commit -m "fix: x"', 'node ~/.claude/claude-setup/rule-guard.mjs read https://example.com', 'echo "a > b" | wc -l', 'echo it\'s fine',
+]
+
+test('corpus: every Bash command that must be blocked is, every ordinary one passes', () => {
+  const at1 = session(); at1.gate(1, '4.2')
+  const at3 = session(); for (const n of [1, 2, 3]) at3.gate(n, '3.8')
+  const verdictFile = join(at3.dir, 'v.md'); writeFileSync(verdictFile, `${VERDICT}\n1 CI pass\n`)
+  const sub = (s, c) => c.replaceAll('<D>', s.env.CLAUDE_SETUP_GATE_DIR).replaceAll('<F>', verdictFile)
+  const miss = []
+  for (const c of MUST_BLOCK_AT_ROUND_1) if (at1.hook('Bash', { command: c }).status !== 2) miss.push(`should block: ${c}`)
+  for (const c of MUST_BLOCK_AT_ROUND_3) if (at3.hook('Bash', { command: sub(at3, c) }).status !== 2) miss.push(`should block: ${c}`)
+  for (const c of MUST_BLOCK_LEDGER) if (at1.hook('Bash', { command: sub(at1, c) }).status !== 2) miss.push(`should block: ${c}`)
+  for (const c of MUST_PASS) if (at1.hook('Bash', { command: sub(at1, c) }).status !== 0) miss.push(`should pass: ${c}`)
+  assert.deepEqual(miss, [])
+  assert.equal(readLedger(join(at3.dir, 'gate'), ASSET).rounds.length, 3, 'no blocked verdict was counted')
+})
+
+test('PowerShell is read like Bash, the merge tool counts the same ledger', () => {
+  const s = session(); s.gate(1, '3.0')
+  assert.equal(s.hook('PowerShell', { command: `Set-Content ${s.env.CLAUDE_SETUP_GATE_DIR}/x.json 1` }).status, 2)
+  assert.equal(s.hook('PowerShell', { command: 'gh pr merge 7' }).status, 2)
+})
+
+test('unbalanced quotes: unknown, refused only if gh or gate is in the command', () => {
+  const s = session()
+  assert.equal(s.hook('Bash', { command: 'echo "it is open' }).status, 0)
+  assert.equal(s.hook('Bash', { command: 'gh pr merge "7' }).status, 2)
+})
+
+test('the doors work: post counts the verdict then runs gh, merge refuses a PR without a counted pass', () => {
+  const s = session()
+  assert.match(s.run('merge', ASSET).text, /counted pass|no gate round/i)
+  const f = join(s.dir, 'v.md'); writeFileSync(f, 'Gate 3.0/5 (S, round 1)\nx')
+  assert.equal(s.run('post', 'not-an-asset', '--body-file', f).code, 2)
+  assert.match(s.run('post', ASSET, '--body-file', join(s.dir, 'none.md')).text, /must start with the verdict headline/)
 })

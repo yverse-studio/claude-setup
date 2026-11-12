@@ -735,7 +735,8 @@ cat > "$HOME/.claude/claude-setup/gate-rounds.mjs" <<'GATE'
 //   rounds 1-3: judged at 4.5 (4.8 when important)   rounds 4-6: only with a Fable director   round 7+: only with a card to yskills
 // CLI: gate-rounds.mjs status|check|init|direct|card|picture|waive <asset> ...   (usage text below)
 // Fail closed: a gate-shaped call whose check throws is refused. CLAUDE_SETUP_RULE_GUARD=off turns the hook (not the CLI) off.
-import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 
@@ -762,7 +763,6 @@ export function readLedger(dir, asset) {
   if (!existsSync(f)) return blank(asset)
   return { ...blank(asset), ...JSON.parse(readFileSync(f, 'utf8')) }
 }
-const ledgersOfPr = (dir, n) => { try { return readdirSync(dir).filter((f) => f.endsWith(`_${n}.json`)).map((f) => JSON.parse(readFileSync(join(dir, f), 'utf8'))) } catch (e) { if (e.code === 'ENOENT') return []; throw e } }
 export function writeLedger(dir, ledger) {
   mkdirSync(dir, { recursive: true })
   const f = fileOf(dir, ledger.asset)
@@ -809,7 +809,9 @@ export function recordRound(l, { round, score, important }, at = new Date().toIS
 }
 
 export function mergeProblem(l) {
-  if (!l.rounds.length || lastPass(l) || l.waived) return null
+  if (l.waived) return null
+  if (!l.rounds.length) return `${l.asset}: no gate round is counted for this PR, so it cannot merge (a merge cannot be taken back). The gate posts its verdict first, as "Gate <score>/5 (<size>, round <n>)" with the comment tool; then the merge works (gate.md, Rounds).`
+  if (lastPass(l)) return null
   const r = l.rounds.at(-1)
   return `${l.asset}: the last gate round (${r.n}) scored ${r.score ?? 'no score'}, under ${threshold(l.important)}: no merge below the threshold, no exception. Fix it (next round ${r.n + 1}), or put ONE card to yskills; only his answer on it frees a merge (gate-rounds.mjs waive).`
 }
@@ -863,6 +865,145 @@ function verdictProblem(dir, asset, head, dry) {
   if (!dry) writeLedger(dir, recordRound(l, { ...head, round }))
   return null
 }
+// ---- Bash, decided by command position (Fable director, gate round 4: regexes over the raw string cannot tell a command from quoted
+// text, and each fix moved the line). One small tokenizer gives argv lists; text inside quotes, a commit message or an echo is data.
+const base = (p) => String(p).split(/[\\/]/).pop().replace(/\.exe$/i, '')
+const WRAPPERS = new Set(['env', 'command', 'sudo', 'time', 'nohup', 'exec', 'builtin'])
+const READERS = new Set(['cat', 'ls', 'head', 'tail', 'grep', 'rg', 'jq', 'wc', 'stat', 'less', 'diff'])
+const SHELLS = new Set(['bash', 'sh', 'zsh', 'dash'])
+
+export function parseShell(text, depth = 0) {
+  const cmds = []
+  let bad = false, argv = [], redirs = [], word = '', has = false, mode = null // mode: the next word is a redirect target ('redir') or noise ('drop')
+  const pending = [] // heredoc delimiters waiting for the next newline
+  const flush = () => { if (has) { if (mode === 'redir') redirs.push(word); else if (mode !== 'drop') argv.push(word); mode = null }; word = ''; has = false }
+  const end = () => { flush(); if (argv.length || redirs.length) cmds.push({ argv, redirs }); argv = []; redirs = []; mode = null }
+  const inner = (t) => { if (depth < 4 && t.trim()) { const r = parseShell(t, depth + 1); cmds.push(...r.cmds); bad ||= r.bad } }
+  const close = (i) => { let d = 0; for (let j = i; j < text.length; j++) { if (text[j] === '(') d++; else if (text[j] === ')' && --d === 0) return j } return -1 }
+  const tick = (i) => text.indexOf('`', i + 1)
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i]
+    if (c === "'") { const j = text.indexOf("'", i + 1); if (j < 0) { bad = true; break } word += text.slice(i + 1, j); has = true; i = j; continue }
+    if (c === '"') {
+      has = true
+      let j = i + 1
+      for (; j < text.length && text[j] !== '"'; j++) {
+        if (text[j] === '\\') { word += text[j + 1] ?? ''; j++; continue }
+        if (text[j] === '$' && text[j + 1] === '(') { const k = close(j + 1); if (k < 0) { bad = true; break } word += text.slice(j, k + 1); inner(text.slice(j + 2, k)); j = k; continue }
+        if (text[j] === '`') { const k = tick(j); if (k < 0) { bad = true; break } word += text.slice(j, k + 1); inner(text.slice(j + 1, k)); j = k; continue }
+        word += text[j]
+      }
+      if (bad || j >= text.length) { bad = true; break }
+      i = j; continue
+    }
+    if (c === '\\') { word += text[i + 1] ?? ''; has = true; i++; continue }
+    if (c === '$' && text[i + 1] === '(') { const k = close(i + 1); if (k < 0) { bad = true; break } word += text.slice(i, k + 1); has = true; inner(text.slice(i + 2, k)); i = k; continue }
+    if (c === '`') { const k = tick(i); if (k < 0) { bad = true; break } word += text.slice(i, k + 1); has = true; inner(text.slice(i + 1, k)); i = k; continue }
+    if (c === '#' && !has) { while (i < text.length && text[i] !== '\n') i++; i--; continue }
+    if (c === '\n') {
+      end()
+      for (const d of pending.splice(0)) { // a heredoc body is data: skip to its delimiter line
+        let j = i + 1
+        while (j < text.length) { const e = text.indexOf('\n', j); const line = text.slice(j, e < 0 ? text.length : e); j = e < 0 ? text.length : e + 1; if (line.trim() === d) break }
+        i = j - 1
+      }
+      continue
+    }
+    if (c === '<') {
+      flush()
+      if (text[i + 1] === '<' && text[i + 2] === '<') { mode = 'drop'; i += 2; continue }
+      if (text[i + 1] === '<') {
+        let j = i + 2
+        if (text[j] === '-') j++
+        while (text[j] === ' ') j++
+        let d = ''
+        for (; j < text.length && !/[\s;|&<>)]/.test(text[j]); j++) if (!"'\"\\".includes(text[j])) d += text[j]
+        if (d) pending.push(d)
+        i = j - 1; continue
+      }
+      mode = 'drop'; continue
+    }
+    if (c === '>') {
+      if (has && /^\d+$/.test(word)) { word = ''; has = false } else flush()
+      if (text[i + 1] === '>') i++
+      if (text[i + 1] === '&') { mode = 'drop'; i++ } else { if (text[i + 1] === '|') i++; mode = 'redir' }
+      continue
+    }
+    if (c === '&' && text[i + 1] === '>') continue
+    if (';|&(){}'.includes(c)) { if (c === '&' || c === '|') { while (text[i + 1] === c) i++ } end(); continue }
+    if (/\s/.test(c)) { flush(); continue }
+    word += c; has = true
+  }
+  end()
+  return { cmds, bad }
+}
+
+function simple(c) {
+  let a = [...c.argv]
+  for (;;) {
+    while (a.length && /^[A-Za-z_]\w*=/.test(a[0])) a.shift()
+    if (a.length && WRAPPERS.has(base(a[0]))) { a.shift(); while (a.length && (a[0].startsWith('-') || /^[A-Za-z_]\w*=/.test(a[0]))) a.shift(); continue }
+    break
+  }
+  return { a0: a.length ? base(a[0]) : '', args: a.slice(1), redirs: c.redirs }
+}
+// Every simple command of the text, also what sits in $( ), backticks and bash -c '...'.
+export function simpleCommands(text, depth = 0) {
+  const { cmds, bad: unread } = parseShell(text)
+  const list = []
+  let bad = unread
+  for (const c of cmds) {
+    const s = simple(c)
+    list.push(s)
+    const i = s.args.indexOf('-c')
+    if (SHELLS.has(s.a0) && i >= 0 && s.args[i + 1] !== undefined && depth < 3) { const r = simpleCommands(s.args[i + 1], depth + 1); list.push(...r.list); bad ||= r.bad }
+  }
+  return { list, bad }
+}
+
+const GUARD_FILE = /\.claude[\\/]claude-setup[\\/](?:rule-guard|team-guard|gate-rounds)\.mjs$/
+const CLI_VERBS = ['status', 'check', 'init', 'direct', 'card', 'picture', 'waive', 'merge', 'post']
+const MERGE_DOOR = /pulls\/[^\s/]*\/merge|mergePullRequest|enablePullRequestAutoMerge/
+
+function ghProblem(s) {
+  const i = s.args.indexOf('pr')
+  if ((i >= 0 && s.args[i + 1] === 'merge') || (s.args[0] === 'api' && s.args.some((a) => MERGE_DOOR.test(a)))) return 'gate ledger: a merge goes through the counter (gate.md, Rounds): the merge tool mcp__github__merge_pull_request, or "node ~/.claude/claude-setup/gate-rounds.mjs merge <owner/repo#n> [--squash|--merge|--rebase] [--auto] [--delete-branch]". It refuses a PR without a counted pass.'
+  const comments = (s.args[0] === 'pr' && /^(comment|review|edit)$/.test(s.args[1])) || (s.args[0] === 'issue' && s.args[1] === 'comment') || s.args[0] === 'api'
+  if (!comments) return null
+  const texts = [...s.args]
+  s.args.forEach((a, j) => { if (/^(--body-file|-F)$/.test(a) && s.args[j + 1]) texts.push(read(s.args[j + 1])) })
+  const verdict = texts.some((t) => String(t).split('\n').some((l) => HEADLINE.test(l.replace(/^(?:--?[\w-]+=|\w+=)/, ''))))
+  return verdict ? 'gate ledger: a verdict headline ("Gate <score>/5 ... round <n>") is posted with the comment tool, or "node ~/.claude/claude-setup/gate-rounds.mjs post <owner/repo#n> --body-file <f>" (it counts the round, then runs gh). A verdict through plain gh is not counted (gate.md, Rounds).' : null
+}
+
+function bashProblem(cmd, dir, ctx) {
+  const { list, bad } = simpleCommands(cmd)
+  if (bad && /\bgh\b|gate/.test(cmd)) return 'gate ledger: this command has unbalanced quotes and mentions gh or gate, so it cannot be read; write it plainly (gate.md, Rounds).'
+  const inLedger = (op) => (dir && String(op).includes(dir)) || /project-files\/gate(?:\/|$)/.test(op)
+  const msg = 'gate ledger: the round counter is written only by gate-rounds.mjs (gate.md, Rounds), never by hand; the installed guards change only through a claude-setup PR.'
+  for (const s of list) {
+    if (s.a0 === 'gh') { const r = ghProblem(s); if (r) return r }
+    if (s.redirs.some((r) => inLedger(r) || GUARD_FILE.test(r))) return msg
+    if (s.a0 === 'cd') { if (s.args.some(inLedger)) return msg; continue }
+    const script = s.a0 === 'node' ? s.args.find((a) => !a.startsWith('-')) : null
+    if (script && base(script) === 'gate-rounds.mjs') {
+      const at = s.args.indexOf(script)
+      const verb = s.args[at + 1]
+      if (!CLI_VERBS.includes(verb) || ['status', 'check'].includes(verb)) continue
+      if (list.length !== 1 || /\$\(|`/.test(cmd)) return `gate ledger: "${verb}" runs as the only command of the call, without substitution, so its proof can be read (gate.md, Rounds).`
+      const ref = s.args[s.args.indexOf('--ref') + 1]
+      if (verb === 'init' && !(Number(s.args[s.args.indexOf('--round') + 1]) >= 1)) return 'gate ledger: init imports the rounds that already ran: --round <n> with n of 1 or more (gate.md, Rounds).'
+      if (verb === 'direct' && !/fable/i.test(ctx.model ?? '')) return `gate ledger: only a Fable session records the director, this one runs on ${ctx.model ?? 'an unknown model'}. Ask the coordinator for a Fable thread (docs/TEAMS.md, Models line).`
+      if (['card', 'picture', 'waive'].includes(verb) && !(ref && cardProof(ref, ctx.calls ?? []))) return `gate ledger: "${verb}" needs --ref <cmsg id> of a request_decision card this session posted (it was not found in this session).`
+      if (verb === 'waive' && !(ctx.humanAfter?.(ref))) return 'gate ledger: waive needs yskills\' own answer on that card in this session; none arrived yet.'
+      continue
+    }
+    if (READERS.has(s.a0) || ['node', 'bash', 'sh', 'zsh', 'git'].includes(s.a0)) continue
+    if (s.args.some((a) => inLedger(a) || GUARD_FILE.test(a))) return msg
+  }
+  return null
+}
+
 const POSTS = /^mcp__github__(add_issue_comment|pull_request_review_write|update_pull_request|add_reply_to_pull_request_comment|add_comment_to_pending_review)$/
 const MERGES = /^mcp__github__(merge_pull_request|enable_pr_auto_merge)$/
 const assetOf = (input) => {
@@ -877,53 +1018,7 @@ export function gateStep(tool, input = {}, ctx = {}) {
   const file = String(input.file_path ?? '')
   if (/^(Write|Edit)$/.test(tool) && (file.includes('project-files/gate/') || (file.startsWith(`${dir}/`) && file.endsWith('.json')))) return 'gate ledger: the round counter is written only by gate-rounds.mjs (gate.md, Rounds), never by hand.'
   if (/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool) && /\.claude[\\/]claude-setup[\\/](gate-rounds|rule-guard|team-guard)\.mjs$/.test(file)) return 'gate ledger: the installed guards are changed only through claude-setup (a PR), never in place.'
-  if (tool === 'Bash' || tool === 'PowerShell') {
-    const cmd = String(input.command ?? '')
-    // gh api .../pulls/<n>/merge is a merge door too.
-    const apiMerge = cmd.match(/\bgh\s+api\b[^\n]*?repos\/([\w.-]+\/[\w.-]+)\/pulls\/(\d+)\/merge/)
-    if (apiMerge) return mergeProblem(readLedger(dir, `${apiMerge[1].toLowerCase()}#${apiMerge[2]}`))
-    if (/\bgh\s+api\b[^\n]*pulls\/[^\s/]+\/merge/.test(cmd)) return 'gate ledger: a "gh api ... /merge" call names the repo literally (repos/owner/repo/pulls/N/merge), so its ledger can be checked (gate.md, Rounds).'
-    // A verdict posted with gh counts like one posted with the tool; a gate-shaped gh post must say its repo, PR and headline plainly.
-    if (/\bgh\s+pr\s+(?:comment|review|edit)\b/.test(cmd) && /\bGate\s+(?:\d(?:[.,]\d+)?\s*\/\s*5|fail|pass)/i.test(cmd)) {
-      const bare = cmd.replace(/(['"])[\s\S]*?\1/g, ' ')
-      const url = cmd.match(/github\.com\/([\w.-]+\/[\w.-]+)\/pull\/(\d+)/)
-      const repo = url?.[1] ?? cmd.match(/(?:-R|--repo)[ =]\s*(?:[\w.-]+\/)?([\w.-]+\/[\w.-]+)/)?.[1]
-      const n = url?.[2] ?? bare.replace(/(?:-R|--repo)[ =]?\s*\S+/g, ' ').match(/\b(?:comment|review|edit)\b\s+(?:\S+\s+)*?(\d+)(?=\s|$)/)?.[1]
-      const body = cmd.match(/(?:--body|-b)[ =]\s*(['"])([\s\S]*?)\1/)?.[2]
-      const head = body && !/\$\(|`/.test(body) ? parseHeadline(body) : null
-      if (!repo || !n || !head) return 'gate ledger: a verdict posted with gh is checked only in the plain form: gh pr comment|review|edit <N> -R <owner/repo> --body \'Gate <score>/5 (<size>, round <n>) ...\' (headline first, no $(...), no --body-file), so its ledger can be counted (gate.md, Rounds).'
-      const bad = verdictProblem(dir, `${repo.toLowerCase()}#${n}`, head, ctx.dry)
-      if (bad) return bad
-    }
-    // gh pr merge goes through the same ledger as the merge tool.
-    if (/\bgh\s+pr\s+merge\b/.test(cmd)) {
-      if (/[;&|`\n<>]|\$\(/.test(cmd) || (cmd.match(/\/pull\/\d+/g) ?? []).length > 1) return 'gate ledger: run "gh pr merge" as one plain command (no chains, pipes, substitution or a second PR), so its ledger can be checked (gate.md, Rounds).'
-      const url = cmd.match(/github\.com\/([\w.-]+\/[\w.-]+)\/pull\/(\d+)/)
-      const n = url?.[2] ?? cmd.match(/\bmerge\s+(?:-\S+(?:\s+(?![\d-])\S+)?\s+)*(\d+)/)?.[1]
-      const repo = url?.[1] ?? cmd.match(/(?:-R|--repo)[ =]\s*(?:[\w.-]+\/)?([\w.-]+\/[\w.-]+)/)?.[1]
-      if (!n) return 'gate ledger: "gh pr merge" needs the PR number in the command (a number, or the PR URL), so its ledger can be checked (gate.md, Rounds).'
-      const ledgers = repo ? [readLedger(dir, `${repo.toLowerCase()}#${n}`)] : ledgersOfPr(dir, n)
-      const why = ledgers.map(mergeProblem).find(Boolean)
-      if (why) return why // no early success: the gate-file checks below still run
-    }
-    // Only a command that RUNS the counter or WRITES the ledger or the installed guards is held to the plain form; reading, git, tests and
-    // the page reader pass (a false block here stops ordinary claude-setup work).
-    const w = cmd.replace(/\d*>&\d+|\d+>\s*\/dev\/null/g, ' ') // 2>&1 and 2>/dev/null are no writes
-    const WRITES = /(?:>|\btee\b|\bsed\s+-\S*i|\b(?:rm|mv|cp|ln|truncate|dd|install|touch|chmod|perl|python3?|ruby)\b|\bnode\b(?!\s+--(?:check|test)\b)|Set-Content|Out-File|Remove-Item|Move-Item|Copy-Item|Add-Content)/
-    const ledger = (cmd.includes(dir) || /project-files[\\/]gate[\\/]/.test(cmd)) && WRITES.test(w)
-    const guards = /\.claude[\\/]claude-setup[\\/](?:rule-guard|team-guard|gate-rounds)\.mjs/.test(cmd) && /(?:>|\btee\b|\bsed\s+-\S*i|\b(?:rm|mv|cp|ln|truncate|dd|install|perl|python3?|ruby)\b|Set-Content|Out-File|Remove-Item|Move-Item|Copy-Item|Add-Content)/.test(cmd) && !/rule-guard\.mjs\s+read\b/.test(cmd)
-    const runs = /\bnode\s+(?!-{1,2}(?:check|test)\b)(?:-\S+\s+)*[\w~./-]*gate-rounds\.mjs\b/.test(cmd) || /\b(?:-e|--eval|-p|--print)\b[^\n]*gate-rounds|import\s*\([^)]*gate-rounds|require\([^)]*gate-rounds/.test(cmd)
-    if (!ledger && !guards && !runs) return null
-    // One plain command in one known form: no pipes, chains, substitution, redirects, node -e or imports (a parser differential is a bypass).
-    const plain = /^\s*node\s+[\w~./-]*gate-rounds\.mjs\s+(status|check|init|direct|card|picture|waive)\s+[\w./#-]+(?:\s+(?:--(?:plan|ref|round)\s+[\w./#:@-]+|[\w.]+))*\s*$/.exec(w)
-    if (!plain) return 'gate ledger: run the round counter only as one plain command, "node ~/.claude/claude-setup/gate-rounds.mjs <status|check|init|direct|card|picture|waive> <asset> [--plan f|--ref id|--round n]", and never touch the gate files another way (gate.md, Rounds).'
-    const verb = plain[1]
-    const ref = cmd.match(/--ref\s+(\S+)/)?.[1]
-    if (verb === 'direct' && !/fable/i.test(ctx.model ?? '')) return `gate ledger: only a Fable session records the director, this one runs on ${ctx.model ?? 'an unknown model'}. Ask the coordinator for a Fable thread (docs/TEAMS.md, Models line).`
-    if (['card', 'picture', 'waive'].includes(verb) && !(ref && cardProof(ref, ctx.calls ?? []))) return `gate ledger: "${verb}" needs --ref <cmsg id> of a request_decision card this session posted (it was not found in this session).`
-    if (verb === 'waive' && !(ctx.humanAfter?.(ref))) return 'gate ledger: waive needs yskills\' own answer on that card in this session; none arrived yet.'
-    return null
-  }
+  if (tool === 'Bash' || tool === 'PowerShell') return bashProblem(String(input.command ?? ''), dir, ctx)
   if (tool === 'mcp__github__create_pull_request') {
     const text = /^(?:fix|docs|test|chore|ci|perf)\b/i.test(input.title ?? '') ? '' : `${input.title ?? ''}\n${input.body ?? ''}` // a fix of something already built is no new look
     return needsPicture(text) && !pictureRef(text) ? 'gate check: this PR introduces a hub, start screen or style but its body has no `Picture card: <link>` line. Pictures with references from current games go to yskills as a card BEFORE the build (gate.md, Picture card first).' : null
@@ -944,7 +1039,9 @@ const USAGE = `usage: gate-rounds.mjs <cmd> <asset> [...]   asset = owner/repo#p
   direct --plan <file>        record the Fable director (the hook allows it only from a Fable session)
   card --ref <cmsg id>        record the card to yskills (the hook checks this session posted it)
   picture --ref <cmsg id>     record the picture card for a new hub, start screen or style
-  waive --ref <cmsg id>       yskills answered the card: a below-threshold version may merge`
+  waive --ref <cmsg id>       yskills answered the card: a below-threshold version may merge
+  merge [--squash|--merge|--rebase] [--auto] [--delete-branch]   merge owner/repo#n if its last round passed (runs gh)
+  post --body-file <f>        count the verdict headline at the top of <f>, then post it with gh`
 const flag = (args, name) => { const i = args.indexOf(name); return i < 0 ? null : args[i + 1] }
 
 export function cli(argv, env = process.env) {
@@ -959,7 +1056,7 @@ export function cli(argv, env = process.env) {
   if (cmd === 'check') return roundProblem(l, Number(rest[0])) ? fail(roundProblem(l, Number(rest[0]))) : { code: 0, text: 'ok' }
   if (cmd === 'init') {
     const n = Number(flag(rest, '--round'))
-    if (l.rounds.length || !(n >= 0)) return fail('init: only for an asset without a ledger, with --round <n>')
+    if (l.rounds.length || !(n >= 1)) return fail('init: only for an asset without a ledger, with --round <n> (1 or more: the rounds that already ran)')
     return save({ ...l, rounds: Array.from({ length: n }, (_, i) => ({ n: i + 1, score: null, pass: false, at: 'imported' })) })
   }
   if (cmd === 'direct') {
@@ -967,6 +1064,27 @@ export function cli(argv, env = process.env) {
     if (lastRound(l) < FREE_ROUNDS) return fail(`direct: a director comes after round ${FREE_ROUNDS}, the ledger stands at ${lastRound(l)}`)
     if (!plan || read(plan).trim().length < 200) return fail('direct: --plan <file> with the Fable plan (goal, constraints, what changes, done-test) is required')
     return save({ ...l, director: { model: DIRECTOR, plan, round: lastRound(l), at: new Date().toISOString() } })
+  }
+  if (cmd === 'merge' || cmd === 'post') {
+    const m = String(asset).match(/^([\w.-]+\/[\w.-]+)#(\d+)$/)
+    if (!m) return fail(`${cmd}: the asset must be owner/repo#n`)
+    try {
+      if (cmd === 'merge') {
+        const why = mergeProblem(l)
+        if (why) return fail(why)
+        const kinds = ['--squash', '--merge', '--rebase']
+        const flags = rest.filter((f) => [...kinds, '--auto', '--delete-branch'].includes(f))
+        execFileSync('gh', ['pr', 'merge', m[2], '-R', m[1], ...(flags.some((f) => kinds.includes(f)) ? [] : ['--squash']), ...flags], { stdio: 'inherit' })
+        return { code: 0, text: 'merged' }
+      }
+      const file = flag(rest, '--body-file')
+      const head = file ? parseHeadline(read(file)) : null
+      if (!head) return fail('post: --body-file <f> must start with the verdict headline "Gate <score>/5 (<size>, round <n>)"')
+      const bad = verdictProblem(dir, asset, head, false)
+      if (bad) return fail(bad)
+      execFileSync('gh', ['pr', 'comment', m[2], '-R', m[1], '--body-file', file], { stdio: 'inherit' })
+      return { code: 0, text: 'posted' }
+    } catch (e) { return fail(`${cmd}: gh failed (${String(e.message).slice(0, 120)})`) }
   }
   const ref = flag(rest, '--ref')
   if (!ref || !cmsg.test(ref)) return fail(`${cmd}: --ref <cmsg id> is required`)
