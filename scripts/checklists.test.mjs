@@ -21,7 +21,9 @@ test('the checklist file has the seven topics, each with a body', () => {
   for (const t of TOPICS) {
     const body = checklists.split(/^## /m).find((s) => s.startsWith(`${t}\n`)) ?? ''
     assert.ok(body.split('\n').slice(1).join('').trim().length > 20, `${t} has a body`)
+    assert.ok((body.match(/^\d+\. \*\*/gm) ?? []).length >= 5, `${t} has 5 or more numbered rows`)
   }
+  assert.doesNotMatch(checklists, /TODO\(Opus gate\)/, 'no placeholder left')
 })
 
 test('badTopic: an unknown Topic and a Topic on a non-Reviewer brief are refused, a known or absent one passes', () => {
