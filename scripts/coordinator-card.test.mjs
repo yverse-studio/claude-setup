@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { buildIndex, buildCard, ruleRows, CARD_MAX } from './coordinator-card.mjs'
 
-test('the card builds, stays under 6,000 characters and has its parts', () => {
+test('the card builds, stays under CARD_MAX characters and has its parts', () => {
   const card = buildCard({ hash: 'abc1234', date: '2026-11-08' })
   assert.ok(card.length < CARD_MAX, String(card.length))
   assert.match(card, /^Coordinator card \(claude-setup abc1234, 2026-11-08\)/)
@@ -25,4 +25,9 @@ test('the rules index holds every row, unclipped, under 20,000 characters', () =
   assert.ok(idx.length < 20000, String(idx.length))
   assert.ok(idx.split('\n').filter((l) => l.startsWith('- ')).length >= 40)
   assert.match(idx, /^Rules index \(claude-setup x, d\)/)
+})
+
+test('the pre-flight carries the vacation-game fixes (facts, role check, dependencies, play before look)', () => {
+  const card = buildCard({ hash: 'x', date: 'd' })
+  for (const s of ['only from a source read this turn', "thread title's role", 'Depends on: #n', 'real moment', 'Controls and World life']) assert.ok(card.includes(s), s)
 })
