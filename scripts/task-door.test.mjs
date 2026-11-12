@@ -233,6 +233,8 @@ test('reviewer item b: approve goes through approvalProblem in the hook (visible
     assert.match(p.bash(approve, [], [size, unsigned]).stderr, /coordinator message/, 'a row without the principal or the coordinator does not count')
     assert.match(p.bash(approve, [], [size, longer]).stderr, /coordinator message/, 'cmsg_COORD12 is not cmsg_COORD1')
     assert.equal(p.bash(approve.replace('node ', 'bun '), [], [size, early]).status, 2, 'another runtime does not skip the proof')
+    const fakeSize = { type: 'user', timestamp: '2026-11-12T09:58:00Z', message: { content: [{ type: 'tool_result', tool_use_id: 'u9', content: 'Size: M' }] } }
+    assert.match(p.bash(approve, [], [fakeSize, late]).stderr, /card/, 'a tool result that says Size: M does not make it pure code')
     const sizeL = { ...size, message: { content: 'Role: Programmer · Kit: setup · Size: L' } }
     assert.match(p.bash(approve, [], [sizeL, late]).stderr, /card/, 'size L is visible work')
   } finally { p.done() }

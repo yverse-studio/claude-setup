@@ -1479,7 +1479,7 @@ function messageAfter(rows, ref, at) {
   })
 }
 // The brief's Size (S, M or L) from the session's first user message that names one; null when none does.
-const briefSize = (rows) => { for (const r of rows) { if (r.type !== 'user') continue; const m = JSON.stringify(r.message?.content ?? '').replace(/[*_`]/g, '').match(/\bSize:[ \t]*([SML])\b/); if (m) return m[1] } return null }
+const briefSize = (rows) => { for (const r of rows) { if (r.type !== 'user' || (Array.isArray(r.message?.content) && r.message.content.some((c) => c?.type === 'tool_result'))) continue; const m = JSON.stringify(r.message?.content ?? '').replace(/[*_`]/g, '').match(/\bSize:[ \t]*([SML])\b/); if (m) return m[1] } return null }
 
 // PostToolUse (context-guard.mjs): records the checker's verdict. The real payload of an Agent call was not captured in the cloud session
 // that built this, so the parser is tolerant (see responseText) and a launch without final text (a background run) records nothing and says so.
