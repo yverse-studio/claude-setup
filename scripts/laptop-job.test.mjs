@@ -186,7 +186,7 @@ test('RAM ledger: Blender and Ren\'Py commands are heavy, others are not', () =>
   assert.equal(heavyApp(['renpy.exe', 'game']), 'renpy')
   assert.equal(heavyApp(['node', 'x.js']), null)
   assert.equal(heavyApp(['node', 'build.mjs', 'renpy-assets']), null)
-  assert.equal(heavyApp(['C:\\Games\\renpy-8\\renpy.exe', 'game']), 'renpy')
+  assert.equal(heavyApp(['tools/renpy-8/renpy.exe', 'game']), 'renpy')
 })
 test('RAM ledger: a Ren\'Py job signs in while it runs and out when it ends', () => {
   const dir = mkdtempSync(join(tmpdir(), 'ledger-run-'))
