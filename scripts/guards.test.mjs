@@ -6,7 +6,7 @@ import { cpSync, existsSync, mkdirSync, symlinkSync, mkdtempSync, readdirSync, r
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { studioPath } from './paths.mjs'
 
 const root = join(fileURLToPath(import.meta.url), '..', '..')
@@ -593,6 +593,62 @@ test('team guard: refresh replaces an installed guard with main\'s ES module cop
     assert.match(readFileSync(join(dir, 'rule-guard.mjs'), 'utf8'), /\/\/ new/)
     assert.deepEqual(readdirSync(dir).filter((f) => f.includes('.new')), [], 'no download is left behind')
   } finally { process.env.PATH = old; for (const d of [dir, bin]) rmSync(d, { recursive: true, force: true }) }
+})
+
+// Live bug 2026-11-12: a cloud image pasted before the round counter existed never got it, because refresh only
+// updated guards already on disk; rule-guard then said "counter could not load" and refused posts and merges.
+test('team guard: refresh fetches a guard file the image never installed', async () => {
+  const { refresh, GUARD_FILES } = await import('../global/team-guard.mjs')
+  const dir = mkdtempSync(join(tmpdir(), 'refresh-'))
+  const bin = mkdtempSync(join(tmpdir(), 'fakecurl-'))
+  const old = process.env.PATH
+  try {
+    writeFileSync(join(bin, 'curl'), `#!/bin/sh\nwhile [ $# -gt 0 ]; do\n  if [ "$1" = "-o" ]; then out="$2"; url="$3"; shift 3\n    mkdir -p "$(dirname "$out")"\n    case "$url" in *global/*) printf '#!/usr/bin/env node\\n// new\\n' > "$out" ;; *CLAUDE.md) echo '# Working for yskills' > "$out" ;; *) echo doc > "$out" ;; esac\n  else shift; fi\ndone\n`, { mode: 0o755 })
+    writeFileSync(join(dir, 'rule-guard.mjs'), '#!/usr/bin/env node\n// old\n')
+    process.env.PATH = `${bin}:${old}`
+    if (process.platform === 'win32') return
+    refresh(dir)
+    for (const f of GUARD_FILES) assert.ok(existsSync(join(dir, f)), `${f} is installed by the refresh`)
+    assert.match(readFileSync(join(dir, 'rule-guard.mjs'), 'utf8'), /\/\/ new/, 'an installed guard is still replaced')
+    assert.deepEqual(readdirSync(dir).filter((f) => f.includes('.new')), [], 'no download is left behind')
+    rmSync(join(dir, 'context-guard.mjs'), { force: true })
+    refresh(dir, ['rule-guard.mjs'])
+    assert.ok(!existsSync(join(dir, 'context-guard.mjs')), 'a partial refresh (only) fetches only what it was asked for')
+  } finally { process.env.PATH = old; for (const d of [dir, bin]) rmSync(d, { recursive: true, force: true }) }
+})
+
+// Gate review 2026-11-12: a cloud container restarts from the cached image every session, so the old start hook
+// never installs the new counter. The first call that needs it must fetch it itself, from an image that has
+// only the two guards (the live case), not from a dir the new refresh already filled.
+test('rule guard: a missing round counter is fetched on first use, a verdict post is then judged', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'cachedimage-'))
+  const bin = mkdtempSync(join(tmpdir(), 'fakecurl-'))
+  const old = process.env.PATH
+  try {
+    for (const f of ['rule-guard.mjs', 'team-guard.mjs']) cpSync(join(root, 'global', f), join(dir, f))
+    writeFileSync(join(bin, 'curl'), `#!/bin/sh\nwhile [ $# -gt 0 ]; do\n  if [ "$1" = "-o" ]; then out="$2"; url="$3"; shift 3\n    mkdir -p "$(dirname "$out")"\n    case "$url" in *global/gate-rounds.mjs) printf '#!/usr/bin/env node\\nexport const gateStep = () => "counter says no"\\nexport const gateBrief = () => ""\\n' > "$out" ;; esac\n  else shift; fi\ndone\n`, { mode: 0o755 })
+    process.env.PATH = `${bin}:${old}`
+    if (process.platform === 'win32') return
+    const { gateBlock } = await import(pathToFileURL(join(dir, 'rule-guard.mjs')).href)
+    const post = { owner: 'o', repo: 'r', pullNumber: 1, body: 'Gate 5/5 (S, round 1)' }
+    assert.match(await gateBlock('mcp__github__add_issue_comment', post, () => '', 'sonnet', true), /counter says no/, 'the fetched counter judged the post')
+    assert.ok(existsSync(join(dir, 'gate-rounds.mjs')), 'the counter is installed')
+  } finally { process.env.PATH = old; for (const d of [dir, bin]) rmSync(d, { recursive: true, force: true }) }
+})
+
+// Plan M47: a thread's start proof names the guard version and any missing guard file.
+test('team guard: the version line names the guards in force and the ones missing', async () => {
+  const { guardVersion, GUARD_FILES } = await import('../global/team-guard.mjs')
+  const dir = mkdtempSync(join(tmpdir(), 'version-'))
+  try {
+    for (const f of GUARD_FILES) writeFileSync(join(dir, f), `#!/usr/bin/env node\n// ${f}\n`)
+    const full = guardVersion(dir)
+    assert.match(full, new RegExp(`^Guards in this session: [0-9a-f]{8} \\(${GUARD_FILES.length}/${GUARD_FILES.length} installed\\)\\.$`))
+    writeFileSync(join(dir, 'rule-guard.mjs'), '#!/usr/bin/env node\n// changed\n')
+    assert.notEqual(guardVersion(dir), full, 'a changed guard changes the version')
+    rmSync(join(dir, GUARD_FILES.at(-1)))
+    assert.match(guardVersion(dir), new RegExp(`MISSING ${GUARD_FILES.at(-1).replace('.', '\\.')}`))
+  } finally { rmSync(dir, { recursive: true, force: true }) }
 })
 
 // Routing test 2026-10-27: `card` runs beside `start`, so it must not build the card with the image's old guard.

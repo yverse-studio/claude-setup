@@ -52,7 +52,7 @@ export function rulesLoaded(cwd, home) {
 // replaces the copy only when it arrived whole. The .new names carry the pid, so two starts never share one.
 // The guards update themselves the same way (yskills 2026-10-27: a rule change on main must reach
 // every session without a cloud rebuild): an installed guard is replaced by main's copy when that
-// copy arrived whole and passes `node --check`. A new hook entry still needs install.mjs or a rebuild.
+// copy arrived whole and passes `node --check`; a guard added to GUARD_FILES later is installed the same way. A new hook entry still needs install.mjs or a rebuild.
 export const GUARD_FILES = ['context-guard.mjs', 'compact-guard.mjs', 'attempt-guard.mjs', 'team-guard.mjs', 'rule-guard.mjs', 'gate-rounds.mjs']
 const parses = (f) => { try { execFileSync(process.execPath, ['--check', f], { stdio: 'ignore', timeout: 2000 }); return true } catch { return false } }
 // Two downloads, so a guard missing on main (renamed, or not merged yet) never costs the boot files,
@@ -69,7 +69,7 @@ function fetchAll(dir, files, url, seconds) {
   return files.map((f) => ({ f, tmp: tmp(f), got: existsSync(tmp(f)) && statSync(tmp(f)).size > 0, ok }))
 }
 export function refresh(dir, only = null) {
-  const guards = GUARD_FILES.filter((f) => existsSync(join(dir, f)) && (!only || only.includes(f)))
+  const guards = GUARD_FILES.filter((f) => !only || only.includes(f)) // a guard missing on disk is fetched too: an image pasted before a guard existed never had it (2026-11-12)
   const boot = only ? [] : fetchAll(dir, BOOT_FILES, (f) => RAW + f, 2.5)
   const code = fetchAll(dir, guards, (f) => `${RAW}global/${f}`, 1.5)
   for (const { f, tmp, got, ok } of [...boot, ...code]) {
@@ -77,6 +77,16 @@ export function refresh(dir, only = null) {
     if (whole) renameSync(tmp, join(dir, f))
     else rmSync(tmp, { force: true })
   }
+}
+
+// The version of the guards this session runs, for the thread's start proof (plan M47: merged must mean live):
+// a short hash over the installed GUARD_FILES, and the names of any missing one.
+export function guardVersion(dir) {
+  const have = GUARD_FILES.filter((f) => existsSync(join(dir, f)))
+  const hash = createHash('sha256')
+  for (const f of have) hash.update(`${f}\0${text(join(dir, f))}`)
+  const missing = GUARD_FILES.filter((f) => !have.includes(f))
+  return `Guards in this session: ${hash.digest('hex').slice(0, 8)} (${have.length}/${GUARD_FILES.length} installed${missing.length ? `, MISSING ${missing.join(', ')}: tell the coordinator` : ''}).`
 }
 
 export const modelFile = (session) => join(tmpdir(), `claude-setup-model-${String(session).replace(/[^A-Za-z0-9]/g, '')}`)
