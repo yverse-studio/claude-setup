@@ -216,7 +216,7 @@ function simple(c) {
     if (a.length && WRAPPERS.has(base(a[0]))) { a.shift(); while (a.length && (a[0].startsWith('-') || /^[A-Za-z_]\w*=/.test(a[0]))) a.shift(); continue }
     break
   }
-  return { a0: a.length ? base(a[0]) : '', args: a.slice(1), redirs: c.redirs }
+  return { a0: a.length ? base(a[0]) : '', args: a.slice(1), redirs: c.redirs, env: c.argv.some((w) => /^CLAUDE_SETUP_[A-Z_]+=/.test(w)) }
 }
 // Every simple command of the text, also what sits in $( ), backticks and bash -c '...'.
 export function simpleCommands(text, depth = 0) {
@@ -227,6 +227,7 @@ export function simpleCommands(text, depth = 0) {
     const s = simple(c)
     list.push(s)
     const i = s.args.indexOf('-c')
+    if (s.a0 === 'eval' && depth < 3) { const r = simpleCommands(s.args.join(' '), depth + 1); list.push(...r.list); bad ||= r.bad }
     if (SHELLS.has(s.a0) && i >= 0 && s.args[i + 1] !== undefined && depth < 3) { const r = simpleCommands(s.args[i + 1], depth + 1); list.push(...r.list); bad ||= r.bad }
   }
   return { list, bad }
@@ -253,10 +254,11 @@ function bashProblem(cmd, dir, ctx) {
   const inLedger = (op) => (dir && String(op).includes(dir)) || /project-files\/gate(?:\/|$)/.test(op)
   const msg = 'gate ledger: the round counter is written only by gate-rounds.mjs (gate.md, Rounds), never by hand; the installed guards change only through a claude-setup PR.'
   for (const s of list) {
+    if (s.env) return 'gate ledger: CLAUDE_SETUP_* variables (the ledger dir, the guard switch) are not set from a command; they would point the counter at another ledger (gate.md, Rounds).'
     if (s.a0 === 'gh') { const r = ghProblem(s); if (r) return r }
     if (s.redirs.some((r) => inLedger(r) || GUARD_FILE.test(r))) return msg
     if (s.a0 === 'cd') { if (s.args.some(inLedger)) return msg; continue }
-    const script = s.a0 === 'node' ? s.args.find((a) => !a.startsWith('-')) : null
+    const script = s.a0 === 'node' ? s.args.find((a) => base(a) === 'gate-rounds.mjs') ?? s.args.find((a) => !a.startsWith('-')) : null
     if (script && base(script) === 'gate-rounds.mjs') {
       const at = s.args.indexOf(script)
       const verb = s.args[at + 1]

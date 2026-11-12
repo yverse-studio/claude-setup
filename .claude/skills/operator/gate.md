@@ -234,7 +234,7 @@ How to undo a merge, by kind of change (write the line into the PR's "undo" line
   hooks (the project chat) cannot be stopped itself, but every thread it starts checks its brief, and no gate post or merge
   works without the ledger. `CLAUDE_SETUP_RULE_GUARD=off` is the one off switch; nobody sets it. It stops careless and
   honest-mistake releases, not an agent that writes its own script around the hook (a variable, `node -e` with fs, or a script
-  file that writes the ledger is outside what the hook reads, and is not chased); the hook does not know who posts a
+  file that writes the ledger is outside what the hook reads, and is not chased; setting `CLAUDE_SETUP_*` in a command is refused); the hook does not know who posts a
   verdict (rounds 1 to 3 are free, so a poster can claim a pass), and a PR merged by a person in the GitHub UI is outside it.
   The next step if that proves too weak is a counter a CI workflow writes (a PR label) that the hook only reads.
 - **Picture card first** (vacation-game 2026-11-12: a hub nobody asked for was built and nearly merged): a new hub, start
