@@ -22,7 +22,7 @@ Builds and fits the parts of a character on the one base: body, face, hair, eyes
 
 ## Does not
 
-- Animate scenes (Animator), write story (Story Writer), make taste calls on a look (yskills and the Designer), or judge its own work (the gate).
+- Decide what a character wears (Costume Designer), sew a new garment or run a cloth simulation (Cloth Artist), build rooms or props (Environment Artist), animate scenes (Animator), write story (Story Writer), make taste calls on a look (yskills and the Designer), or judge its own work (the gate).
 - Start another thread; work for another role goes to the coordinator in one line with `message_coordinator`.
 
 ## Co-founder

@@ -605,7 +605,7 @@ const ASKS_RESEARCH = /\b(SOTA|state of the art|research (on|about|into|what)|re
 // on a game or story kit names its approved cast sheet and look lock, or declares in one line that it is no body, face or outfit job:
 // `Sheet: n/a <why>` (10+ characters). A false "n/a" on a real modelling job is visible in the brief; a missing line is refused.
 // The one list of roles whose game and story brief names a cast sheet (scripts/brief.mjs imports it: a third copy of this list let the generator drop Character TD).
-export const SHEET_ROLES = ['Programmer', 'Animator', 'Character TD']
+export const SHEET_ROLES = ['Programmer', 'Animator', 'Character TD', 'Costume Designer', 'Cloth Artist']
 export const needsSheetRole = (role) => SHEET_ROLES.some((r) => r.toLowerCase() === String(role).trim().toLowerCase())
 const needsSheet = (plain) => new RegExp(`^[ \\t>-]*Role:[ \\t]*(${SHEET_ROLES.join('|')})\\b`, 'im').test(plain) && /\bKit:[ \t]*(game|story)\b/i.test(plain)
   && !/^[ \t>-]*Sheet:[ \t]*n\/a[ \t]+\S[^\n]{9,}$/im.test(plain)
@@ -613,7 +613,7 @@ const needsSheet = (plain) => new RegExp(`^[ \\t>-]*Role:[ \\t]*(${SHEET_ROLES.j
 // at size M or L names the Reviewer thread that gates its work before the owner sees it; the gate roles themselves need no such line.
 // A Gate line names a reviewer thread (`Gate: Reviewer · fit round 2 before owner`), or says in 10+ characters why the slice has no owner-facing
 // result (`Gate: n/a no owner-facing result, a CI script only`); the same shape as `Sheet: n/a`. `none`, `later` or `skipped` do not count.
-export const GATE_BUILDER_ROLES = '(?:Planner|Programmer|Designer|Animator|Character TD|Story Writer|Game Designer|Content Designer|Sound Designer)'
+export const GATE_BUILDER_ROLES = '(?:Planner|Programmer|Designer|Animator|Character TD|Costume Designer|Cloth Artist|Environment Artist|Story Writer|Game Designer|Content Designer|Sound Designer)'
 export const GATE_LINE = /^[ \t>-]*Gate:[ \t]*(?:(?:Reviewer|Tester)\b[^\n]*\bbefore owner\b[^\n]*|n\/a[ \t]+\S[^\n]{9,})$/im
 const needsGate = (plain) => new RegExp(`^[ \\t>-]*Role:[ \\t]*${GATE_BUILDER_ROLES}\\b`, 'im').test(plain) && /\bSize:[ \t]*[ML]\b/i.test(plain)
 const small = (plain) => /\bSize:[ \t]*S\b/i.test(plain)
@@ -638,7 +638,7 @@ export const BRIEF_FIELDS = [
   { key: 'Prior art', strict: false, tpl: 'Prior art: <sources named: repo, path, URL, #n> -> copy | adapt | reuse | build, because <why>', ok: (p) => !needsPriorArt(p), cls: (p) => (gateRolePlain(p) ? 'derived' : 'recoverable'), fill: (p) => (gateRolePlain(p) ? 'Prior art: .claude/skills/operator/gate.md and the kit\'s checks -> adapt, because the gate rules exist' : 'Prior art: to find: the repo and docs first, sources named before you build') },
   { key: 'Gate', name: 'Gate: <Reviewer thread> before owner, or `Gate: n/a <why no owner-facing result>` (a builder, designer or animator brief at size M or L)', tpl: 'Gate: <Reviewer thread> before owner (M or L)', applies: needsGate, ok: line(GATE_LINE), cls: () => 'recoverable', fill: () => 'Gate: ask the coordinator (message_coordinator) for the Reviewer thread, then write `Gate: Reviewer · <what> before owner`' },
   { key: 'Sheet', name: 'Sheet: (approved cast sheet, docs/preproduction-workflow.md)', tpl: 'Sheet: <approved cast sheet .md, or `n/a <why no body, face or outfit job>`; Programmer or Animator on a game or story kit>', applies: needsSheet, ok: line(/^[ \t>-]*Sheet:[ \t]*[^<\n]*\.md\b/im), cls: () => 'judgment' },
-  { key: 'Look-Lock', name: 'Look-Lock: (owner card of the look)', tpl: 'Look-Lock: <owner card link of the approved look; not needed with `Sheet: n/a`>', applies: needsSheet, ok: line(/^[ \t>-]*Look-Lock:[ \t]*[^<\n]*(https?:\/\/|card)/im), cls: () => 'judgment' },
+  { key: 'Look-Lock', name: 'Look-Lock: (owner card of the look)', tpl: 'Look-Lock: <owner card link of the approved look (https or #cmsg_...); not needed with `Sheet: n/a`>', applies: needsSheet, ok: line(/^[ \t>-]*Look-Lock:[ \t]*[^<\n]*(https?:\/\/|card|#cmsg_?\w)/im), cls: () => 'judgment' },
   { key: 'Researcher', name: 'Researcher: (the task asks for research)', tpl: 'Researcher: <subagent and model, or the Researcher thread; research tasks only>', applies: (p) => ASKS_RESEARCH.test(p) && !/\bRole:[ \t]*Researcher\b/i.test(p), ok: line(/^[ \t>-]*Researcher:[ \t]*[^<\s]/im), cls: () => 'recoverable', fill: () => 'Researcher: ask the coordinator for a Researcher thread (message_coordinator) and go on meanwhile' },
   { key: 'Tester', strict: false, tpl: 'Tester: <Tester thread; size L Programmer only>', applies: (p) => /^[ \t>-]*Role:[ \t]*Programmer\b/im.test(p), ok: (p) => !needsTester(p), cls: () => 'judgment' },
 ]
@@ -1609,7 +1609,7 @@ const today = () => new Date().toISOString().slice(0, 10)
 const PREFLIGHT = `## Before every reply
 
 - How we work, one loop: every thread has a role from the Roster (only a mini or unclear task has \`Role: none\`); the role loads its playbook, skills and workflows from claude-setup; what it lacks a Researcher finds; what holds for every project goes back to claude-setup. team-guard refuses a brief with no Role line or an unknown role or kit name; rule-guard's start receipt shows the role loaded and ends with \`card #<hash>\`: another hash than this card's header means Read this card again.
-- Downloads/assets: Character TD runs \`asset-intake\`; Archivist indexes after the gate.
+- Downloads/assets: Character TD runs \`asset-intake\`; Archivist indexes after the gate. Clothes: Costume Designer sheet first; new build: Cloth Artist; rooms: Environment Artist.
 - Luna: at most 15 lines / 1,500 characters, at least one kaomoji, result first, in his language.
 - Facts (code, PR, device, model, plan) only from a source read this turn and linked: PLAN.json, NOW.md, list_threads, a thread's last reply. None in reach: "prüfe ich", ask the owning thread; silent for a thread until it answered; a dropped device is one line the same turn.
 - Every start_thread passes \`model\` and a brief copied from briefs/<role>.md (section Thread brief). Before a message_thread with work: same role and topic as the thread's title, thread not done; else a new thread. Folder moves and cleanups never go to a builder.
@@ -1653,6 +1653,7 @@ export function compact(full) {
 const BRIEF_SECTION = `## Thread brief
 
 Copy briefs/<role>.md of this folder (one per Roster role, its Model line inside; kits and sizes per role in ROSTER.md), fill every <...>, paste it as the brief, pass its Model as \`model\`. Nothing else is added or written from memory.
+Pre-flight: role on its kit in ROSTER.md; Sheet a .md path or \`n/a <why>\`; Look-Lock a card link; Round only with Asset.
 A refusal names every gap at once: send those lines to the same thread with message_thread, never a new thread.
 A device thread passes \`message_id\` (yskills' message or your own project-chat post), never \`project_post_id\` or \`auto_attach=false\`.`
 

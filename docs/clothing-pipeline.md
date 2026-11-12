@@ -19,6 +19,10 @@ character is built: [`character-workflow.md`](character-workflow.md).
 
 Rule that follows: **fit per base, never per character.** Characters differ only by key values.
 
+## Who does what
+
+Three roles, each handing a file to the next ([`TEAMS.md`](TEAMS.md), Roster): the **Costume Designer** writes the wardrobe sheet and marks each piece `lib`, `download` or `new build`; the **Character TD** fits a `lib` or `download` piece (the pipeline below, `asset-intake`, `garment-fit`); the **Cloth Artist** builds a `new build` piece and owns every cloth simulation, then hands in the same Done report.
+
 ## Reuse first
 
 **Before any download:** `python tools/laptop/clothes_dupe.py <url or id>` (laptop copy of the wardrobe check; HAVE or NEW per source, exit 1 on HAVE). A download command for sketchfab, booth, fab, cgtrader or blenderkit is blocked until that call ran for the same source in the session [guard: hook global/rule-guard.mjs, `dupeCheckMissing`]; the PR quotes its output line (companyxy 2026-11-12: garments were fetched twice).

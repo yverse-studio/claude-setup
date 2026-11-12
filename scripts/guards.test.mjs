@@ -322,6 +322,22 @@ test('team guard: an unknown or wrong role is refused with the roles that kit ac
   assert.deepEqual(rolesForKit(teams, 'nonsense'), [])
 })
 
+// Pro team map (yskills 2026-11-12): clothes get a designer and a builder, rooms an owner; all three are thread roles on game and story only.
+test('team guard: Costume Designer, Cloth Artist and Environment Artist start on game and story with a Gate line; the two clothes roles name their sheet', async () => {
+  const { decide } = await import('../global/team-guard.mjs')
+  const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
+  const brief = (role, kit, { gate = true, sheet = true } = {}) => ({ brief: `Role: ${role} · Kit: ${kit} · Size: M\nPrior art: docs/clothing-pipeline.md checked; adapt, because the pipeline exists${FULL.replace(/\nGate:[^\n]*/, '')}${gate ? '\nGate: Reviewer · gate the hand-in before owner' : ''}${sheet ? '\nSheet: characters/mira/SHEET.md\nLook-Lock: [Mira look](#cmsg_01D5edTu)' : ''}`, title: `${role} · mira`, model: 'claude-x-1' })
+  for (const role of ['Costume Designer', 'Cloth Artist', 'Environment Artist']) {
+    for (const kit of ['game', 'story']) assert.deepEqual(decide('mcp__hearthbot__start_thread', brief(role, kit), [], [], teams), {}, `${role} passes on ${kit}`)
+    for (const kit of ['site', 'setup']) assert.match(decide('mcp__hearthbot__start_thread', brief(role, kit), [], [], teams).block ?? '', /not on the `\w+` kit's team/, `${role} is skipped on ${kit}`)
+    assert.match(decide('mcp__hearthbot__start_thread', brief(role, 'story', { gate: false }), [], [], teams).block ?? '', /Gate:/, `${role} at size M without the Gate line is refused`)
+  }
+  for (const role of ['Costume Designer', 'Cloth Artist']) assert.match(decide('mcp__hearthbot__start_thread', brief(role, 'story', { sheet: false }), [], [], teams).block ?? '', /Sheet:/, `${role} names the cast sheet`)
+  assert.deepEqual(decide('mcp__hearthbot__start_thread', brief('Environment Artist', 'story', { sheet: false }), [], [], teams), {}, 'a room has no cast sheet')
+  for (const film of ['Producer', 'Director']) assert.match(decide('mcp__hearthbot__start_thread', brief(film, 'story'), [], [], teams).block ?? '', /not on the `story` kit's team/, `the film ${film} stays off the story kit, so no doc may name it there`)
+  assert.doesNotMatch(readFileSync(join(root, 'docs/game-pipeline.md'), 'utf8'), /`(Producer|Director) · CH/, 'the chapter table names only roles a story brief can start')
+})
+
 // Asset intake PR: the Character TD is a Roster role on the game and story kits (yskills 2026-11-12: fitting is a 3D modeller's job).
 test('team guard: a Character TD thread starts on game and story, needs the Gate and Sheet lines, a typo in the role blocks', async () => {
   const { decide } = await import('../global/team-guard.mjs')
@@ -1447,6 +1463,8 @@ test('gate fixes: Sheet: must be a .md path and Look-Lock: a link or card, "late
   const b = (extra) => `Role: Programmer · Kit: game · Size: M${FULL}\nFit the character outfit.\n${extra}`
   assert.equal(missingLines(b('Sheet: later\nLook-Lock: later')).length, 2)
   assert.equal(missingLines(b('Sheet: characters/mira/SHEET.md\nLook-Lock: owner card https://claude.ai/c/1')).length, 0)
+  assert.equal(missingLines(b('Sheet: characters/mira/SHEET.md\nLook-Lock: [Mira look](#cmsg_01D5edTu)')).length, 0, 'a card link inside the project is a #cmsg link (GameDev 2026-11-12: six starts refused on it)')
+  assert.equal(missingLines(b('Sheet: characters/mira/SHEET.md\nLook-Lock: #later')).length, 1)
 })
 
 // Gate rounds 1 to 6 of PR 445 chased verbs and body words; the rule is now a plain one: no classifier.
