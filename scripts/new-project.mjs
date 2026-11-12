@@ -255,7 +255,7 @@ export function workerIsOurs(worker, pinnedId) {
   return (worker.tags || []).includes(WORKER_TAG) || (Boolean(pinnedId) && worker.id === pinnedId)
 }
 
-async function ensureWorker(cf, name, previewSecret, { adopt, provenOnly, pinnedId }) {
+export async function ensureWorker(cf, name, previewSecret, { adopt, provenOnly, pinnedId }) {
   let page = 1
   for (;;) {
     const r = await cf(`/workers/workers?per_page=100&page=${page}`)
@@ -276,7 +276,7 @@ async function ensureWorker(cf, name, previewSecret, { adopt, provenOnly, pinned
       previews_base_config: { env: { BETTER_AUTH_SECRET: { type: 'secret_text', text: previewSecret } } },
     },
   })
-  log('worker', `created ${name} ${created.json.result.id}`)
+  log('worker', `created ${name} ${created.json.result.id} (to pin it later: "worker": "${created.json.result.id}" in projects/${name}.json)`)
   return created.json.result
 }
 
@@ -322,13 +322,24 @@ export function repoIdForms(repo, org, name) {
   ]
 }
 
-export const REFRESH_FIX = `Cloudflare learns of new repositories from the GitHub app; when a repo made after the link stays unknown (2026-10-08: runs 7 and 8 answered 8000008 "disconnected from your Git account" until the app was saved again), open https://github.com/organizations/<org>/settings/installations > Cloudflare Workers and Pages > Configure, switch Repository access to "Only select repositories" and back to "All repositories", press Save, then push the branch again`
+export const REFRESH_FIX = `first check repo_id and owner_id: Cloudflare answers 8000008 too when they are not this repo's numeric GitHub ids (2026-11-10: run 41 sent the names and failed six times, run 42 sent the numeric ids and connected a repo made the same day with no click). Only when the ids are right and it still fails (2026-10-08, runs 7 and 8): open https://github.com/organizations/<org>/settings/installations > Cloudflare Workers and Pages > Configure, switch Repository access to "Only select repositories" and back to "All repositories", press Save, then run again`
+
+// A typo in the repo_id / owner_id inputs must not connect the Worker to another repo of ours:
+// when Cloudflare names the connection it saved, the names must be this org and repo.
+export function assertConnectionNames(result, org, name, label) {
+  const same = (a, b) => String(a).toLowerCase() === String(b).toLowerCase()
+  const got = { org: result.provider_account_name, name: result.repo_name }
+  if ((got.org && !same(got.org, org)) || (got.name && !same(got.name, name))) {
+    throw new Error(`Cloudflare saved the connection (${label}) for ${got.org || '?'}/${got.name || '?'}, not ${org}/${name}: check the repo_id and owner_id inputs`)
+  }
+  if (!got.org && !got.name) log('repo connection', `Cloudflare's answer names no repo (${label}); the ids could not be cross-checked`)
+}
 
 // Saves the repository connection Workers Builds needs before a build configuration can exist
 // (PUT /builds/repos/connections, "the repository connection required by build triggers").
 // The public API lists neither connected Git accounts nor their repositories and offers no
 // re-sync, so this upsert is the only way to see whether Cloudflare knows the repo yet: it is
-// retried while Cloudflare catches up with a repo created moments ago, with every answer logged.
+// retried in case Cloudflare lags behind a repo created moments ago (run 42 needed no retry), with every answer logged.
 export async function connectRepo(cf, { repo, org, name, tries = CONNECT_TRIES, waitMs = CONNECT_WAIT_MS }) {
   const forms = repoIdForms(repo, org, name)
   let refused = []
@@ -338,10 +349,11 @@ export async function connectRepo(cf, { repo, org, name, tries = CONNECT_TRIES, 
       const git = { provider_type: 'github', provider_account_name: org, repo_name: name, ...ids }
       const r = await cf('/builds/repos/connections', { method: 'PUT', body: git })
       if (r.ok && r.json?.success && r.json?.result) {
+        assertConnectionNames(r.json.result, org, name, label)
         log('repo connection', `Cloudflare knows ${org}/${name} by ${label}`)
         return git
       }
-      // Only "disconnected from your Git account" means Cloudflare has not seen the repo yet;
+      // Only "disconnected from your Git account" (wrong ids, or a repo Cloudflare does not know) is retried;
       // every other answer (cfClient already throws on 401, 403 and 5xx) stops the run at once.
       const unknownRepo = r.status === 404 && (r.json?.errors || []).some((e) => e.code === 8000008)
       if (!unknownRepo) throw new Error(`Cloudflare PUT /builds/repos/connections (${label}): ${errorsOf(r)}`)

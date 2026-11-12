@@ -22,7 +22,7 @@ What every session does at start:
 | Coordinator (project chat) | `/mnt/project-files/claude-setup/COORDINATOR-CARD.md` (Spawn rule, Models, Sizes, Roster, Kits, pre-flight; built by `scripts/coordinator-card.mjs`), then `MEMORY.md`, the thread board | `roles/project-manager.md` Session start; a part the card lacks only through a setup thread (the coordinator has no Bash and no repo); reconciles board and state |
 | Thread | its brief (first line `Role: · Kit: · Size:`), `MEMORY.md`; its Roster row and playbook arrive in context by themselves (`rule-guard`) | `add_repo` claude-setup, `CLAUDE.md`, this section, [`TEAMS.md`](TEAMS.md) (Coordinator or thread), never the Spawn rule; for a product also that repo's `CLAUDE.md` and `docs/LESSONS.md` |
 | Claude Code on the laptop | first `git fetch && checkout main && pull` of the claude-setup clone ([`pc-claude-user.md`](pc-claude-user.md), Fresh main first), then `~/.claude/CLAUDE.md` | the project's `CLAUDE.md`; auto-memory is a scratchpad |
-| New claude.ai project | the generated boot text | as a coordinator; its first session sweeps old memory into the repo |
+| New claude.ai project | `hi Luna`, then the coordinator card (`docs/USING.md`, Start a project) | as a coordinator; its first session sweeps old memory into the repo |
 | Plain chat (no project) | yskills' user preferences | this section; the `operator` skill sizes the job; no memory |
 
 The thread board is read at every coordinator start and wins over memory.
@@ -191,7 +191,7 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 | Deploys, the workflows' detail, the two Cloudflare routes, deploy lessons | `publish` skill | `CLAUDE.md`, `docs/USING.md` |
 | Live == main (deploy watch every 15 min, `deploy-drift` issues), the preview journey (`journey` status) and preview login | `publish` skill (live smoke test; Preview journey and preview login), `scripts/deploy-watch.mjs`, `scripts/journey.mjs` (verify), template `scripts/journey-gate.mjs` + `.github/workflows/journey.yml` | `gate.md` (UI PRs, Live check after the merge), `roles/tester.md`, `docs/TEAMS.md` (Sizes) |
 | Money and shop law | `sell` skill | `docs/WORKFLOW.md` (Selling) |
-| Project instructions text (a pointer to this repo) | `operator/templates/project-instructions.md` | the live text in each project's settings |
+| Starting a new claude.ai project (`hi Luna`, card, instructions text, Cloud environment + restart) | `docs/USING.md` (Start a project) | the live text in each project's settings |
 | An idea or change for a live project | `docs/TEAMS.md` (Sizes, Pipeline) | `CLAUDE.md`, `roles/project-manager.md` |
 | How a video or ad is made (roles, pipeline, video lessons) | `video-studio` skill | operator `SKILL.md`, `roles/marketer.md`, `market` |
 | Free sound library (CC0 SFX and music, manifest with licence proof, BPM, loudness) | `video-studio/sound/README.md`, checked by `video-studio/scripts/sound_library.py` | `video-studio/roles/sound.md`, `sound-kit.md` |
