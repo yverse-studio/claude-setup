@@ -476,7 +476,7 @@ const probePass = (L) => [
   `node --stack-trace-limit=50 x.mjs ${L}`, `node --inspect x.mjs ${L}`, `node --es-module-specifier-resolution=node x.mjs ${L}`, `node --throw-deprecation x.mjs ${L}`,
   `python3 -m json.tool ${L}`, `python3 -u x.py ${L}`, `python3 -X dev x.py ${L}`, `python3 -Xdev x.py ${L}`, `python3 -W error x.py ${L}`, `python3 -Werror::DeprecationWarning x.py ${L}`,
   `python3 -m pytest -x -k cache ${L}`, `python3 -B -E -s x.py ${L}`, `python3 -OO x.py ${L}`, `python3 -I x.py -c ${L}`, `python3 -mjson.tool ${L}`, `python3 -q x.py ${L}`,
-  `python3 -Wdefault x.py ${L}`, `python3 -Xfaulthandler x.py ${L}`, `python3 -Xpycache_prefix=/tmp x.py ${L}`, `python3 -mpytest tests ${L}`, `python3 -mcProfile x.py ${L}`, `python3 -m cProfile x.py ${L}`,
+  `node --print-bytecode x.js ${L}`, `python3 -Xcpu_count=4 x.py ${L}`,`python3 -Wdefault x.py ${L}`, `python3 -Xfaulthandler x.py ${L}`, `python3 -Xpycache_prefix=/tmp x.py ${L}`, `python3 -mpytest tests ${L}`, `python3 -mcProfile x.py ${L}`, `python3 -m cProfile x.py ${L}`,
   `pypy3 x.py ${L}`, `bun run x.ts ${L}`, `bun x.ts ${L}`, `bun --hot x.ts ${L}`, `bun -b x.ts ${L}`, `bun test ${L}`, `bun --preload ./p.ts x.ts ${L}`, `bun --define a=b x.ts ${L}`, `bun --env-file=.env x.ts ${L}`,
   `deno run -A x.ts ${L}`, `deno run --allow-read x.ts ${L}`, `deno test ${L}`, `deno -A x.ts ${L}`, `deno --allow-env x.ts ${L}`, `deno task build ${L}`,
 ]
@@ -485,12 +485,12 @@ const probeRefuse = (L) => [
   `node --no-warnings -e "x('${L}')"`, `python3 -c "x('${L}')"`, `python3 -Ic "x('${L}')"`, `python3 -u -c "x('${L}')"`, `python3.12 -c "x('${L}')"`, `pypy3 -c "x('${L}')"`,
   `bun -e "x('${L}')"`, `bun --eval "x('${L}')"`, `bun -p "x('${L}')"`, `bun eval "x('${L}')"`, `deno eval "x('${L}')"`, `nodejs -e "x('${L}')"`,
 ]
-test('round 8: the reviewer\'s flag probe is a table: 55 ordinary interpreter flag forms pass and 19 eval forms are refused, with a ledger and a transcript path; perl and ruby are not in the rule', () => {
+test('round 8: the reviewer\'s flag probe is a table: 57 ordinary interpreter flag forms pass and 19 eval forms are refused, with a ledger and a transcript path; perl and ruby are not in the rule', () => {
   const t = door()
   try {
     const L = join(t.gate, `${ASSET}.json`)
     const T = '/root/.claude/projects/-home-user/abc.jsonl'
-    assert.equal(probePass(L).length, 55)
+    assert.equal(probePass(L).length, 57)
     assert.equal(probeRefuse(L).length, 19)
     for (const p of [L, T]) {
       for (const c of probePass(p)) assert.equal(t.bash(c).status, 0, c)

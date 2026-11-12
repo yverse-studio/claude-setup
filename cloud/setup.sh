@@ -1215,7 +1215,7 @@ export function simpleCommands(text, depth = 0) {
   }
   return { list, bad }
 }
-// The commands a READ_ONLY first word runs itself: what follows find -exec|-execdir|-ok|-okdir up to ; or +, and the body of a git
+// The commands find and git run themselves: what follows find -exec|-execdir|-ok|-okdir up to ; or +, and the body of a git
 // -c alias.<n>=!<cmd>. Each is handed back as shell text, so it is read like bash -c.
 const quote = (a) => `'${String(a).replace(/'/g, `'\\''`)}'`
 function runsOthers(s) {
@@ -1280,8 +1280,8 @@ const INTERPRETERS = /^(node(js)?|python[\d.]*|pypy[\d.]*|bun|deno)$/
 // clusters like -pe, --eval, --print; python/pypy: -c after clusters of flags without a value.
 // The subcommand `eval` (deno eval, bun eval) is eval too. Code on stdin and a flag after a non-flag argument (node -r a.js -e ...) are Limits.
 const EVAL_FLAGS = [
-  [/^(?:node(?:js)?|bun|deno)$/, /^-(?:[a-zA-Z]*[ep]|-eval|-print)/],
-  [/^(?:python[\d.]*|pypy[\d.]*)$/, /^-[bBdEhIiOPqRsSuvVxX]*c/],
+  [/^(?:node(?:js)?|bun|deno)$/, /^-(?:[a-zA-Z]*[ep]|-eval(?:=|$)|-print(?:=|$))/],
+  [/^(?:python[\d.]*|pypy[\d.]*)$/, /^-[bBdEhIiOPqRsSuvVx]*c/],
 ]
 const evalish = (s) => {
   const flags = []
@@ -1488,8 +1488,8 @@ cat > "$HOME/.claude/claude-setup/task-ledger.mjs" <<'TASK'
 // escape (find -fprintf, git diff --output=, sed w, awk system(), sed e), git config keys other than alias that run code (core.fsmonitor,
 // diff.external, core.sshCommand, core.pager), an alias supplied through the environment (--config-env, GIT_CONFIG_*), xargs as a launcher,
 // a ledger path written non-canonically (gate/./x.json, gate//x.json, gate/a/../x.json), code on stdin (a heredoc, here-string, pipe or
-// process substitution into an interpreter: "cat > x.mjs <<EOF ... EOF; node x.mjs" in one call is a script file and does the same), and an
-// eval flag after a non-flag argument (node -r a.js -e ...), an eval flag of an interpreter other than node, bun, deno, python, pypy.
+// process substitution into an interpreter: "cat > x.mjs <<EOF ... EOF; node x.mjs" in one call is a script file and does the same), an
+// eval flag after a non-flag argument (node -r a.js -e ...), and an eval flag of an interpreter other than node, bun, deno, python, pypy.
 // What the Bash branch does read: find -exec and a git alias like bash -c; an interpreter of the list with its own eval flag (before its first
 // non-flag argument) or the eval subcommand is inline code, and the literal-path test runs over that command's own arguments. The next step
 // is a writer outside the sandbox (a CI workflow), not a longer list here.
