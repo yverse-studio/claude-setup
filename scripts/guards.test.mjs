@@ -1239,3 +1239,11 @@ test('gate round 2: needsSheet matches garment and figure jobs, not everyday gam
   for (const task of ['Make the character jump higher', 'Fix the character controller camera', 'Fix the cast list UI', 'Fix the body text font on the menu', 'Add an outfit shop screen']) assert.equal(need(task), 0, task)
   for (const task of ['Refit the dress on Luna', 'Fix the skirt clipping on the hips', 'Sculpt the new face for Mira', 'Fit the new character outfit', 'Rig and weight-paint the body']) assert.equal(need(task), 2, task)
 })
+
+test('gate round 3: needsSheet ignores the Done line and UI work, catches coat, put-on and weights, accepts a declared n/a', async () => {
+  const { missingLines } = await import('../global/team-guard.mjs')
+  const need = (task, done = 'Done when: the change is merged and the build is green') => missingLines(`Role: Programmer · Kit: game · Size: M${FULL.replace(/Done when:[^\n]*Stop when:/, `${done}. Stop when:`)}\n${task}`).length
+  for (const task of ['Add an outfit shop screen', 'Make the outfit shop screen scroll on mobile', 'Change the dress-up menu button colour', 'Move the wardrobe button to the top bar', 'Create a uniform loading spinner', 'Swap the clothing tab order', 'Model the save data for outfits in Pinia', 'Fit the body text into the dialog box']) assert.equal(need(task), 0, task)
+  for (const task of ['Tailor the coat for Kai', 'Put the lingerie set on Nova', 'Fix the hands mesh weights on Mira', 'Give Luna a new hairstyle and earrings, fit them to her head', 'Refit the dress on Luna', 'Fix the skirt clipping on the hips']) assert.equal(need(task), 2, task)
+  assert.equal(need('Fit the outfit to the new UI preview screen\nSheet: n/a this is a screen layout job, no model changes'), 0, 'a declared exception passes')
+})

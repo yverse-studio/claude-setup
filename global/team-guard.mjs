@@ -229,15 +229,19 @@ const SHEET_LINES = [
   ['Sheet: (approved cast sheet, docs/preproduction-workflow.md)', /^[ \t>-]*Sheet:[ \t]*[^<\n]*\.md\b/im],
   ['Look-Lock: (owner card of the look)', /^[ \t>-]*Look-Lock:[ \t]*[^<\n]*(https?:\/\/|card)/im],
 ]
-const GARMENT = /\b(outfits?|garments?|dress(es)?|skirts?|clothes|clothing|shirts?|blouses?|jackets?|lingerie|stockings|tights|uniforms?|wardrobe)\b/i
-const FIGURE = /\b(body|bodies|face|faces|figure)\b/i
-const MODEL_VERB = /\b(re-?fit(ting)?|fit(ting)?|sculpt(ing)?|model(l?ing)?|rig(ging)?|retopo\w*|shape.?keys?|weight.?paint\w*|skinning)\b/i
-const GARMENT_VERB = /\b(clip(ping|s)?|poke\w*|swap|move|make|build|create|dress(ing)?|put on|change)\b/i
-// A garment job (a garment word plus a fitting or building verb) or a figure job (body or face plus a modelling verb); not "face the player", "fit on 390px" or "rig the camera".
+const GARMENT = /\b(outfits?|garments?|dress(es)?|skirts?|clothes|clothing|shirts?|blouses?|jackets?|coats?|lingerie|stockings|tights|uniforms?|bras?|panties|earrings|hair(style|do)?)\b/i
+const FIGURE = /\b(body|bodies|face|faces|figure|hands?|breasts?|chest)\b/i
+const MODEL_VERB = /\b(re-?fit(ting)?|sculpt(ing)?|retopo\w*|shape.?keys?|weight.?paint\w*|(mesh )?weights|skinning|tailor(ing)?|rig(ging)?|model(l?ing)?)\b/i
+const FIT_VERB = /\b(re-?fit(ting)?|fit(ting)?|clip(ping|s)?|poke[sd]?|put\b[^.\n]{0,40}\bon|dress(ing)? \w+ in)\b/i
+// A garment job (a garment word plus a fitting verb) or a figure job (body or face plus a modelling verb). Not "face the player",
+// "fit on 390px", "rig the camera", "outfit shop screen". The brief's own lines do not count. A real exception is declared:
+// `Sheet: n/a <why this is no body, face or outfit job>`.
 const needsSheet = (plain) => {
   if (!(/^[ \t>-]*Role:[ \t]*(Programmer|Animator)\b/im.test(plain) && /\bKit:[ \t]*(game|story)\b/i.test(plain))) return false
-  const task = plain.replace(/^[ \t>-]*(Model|Prior art|Skills|Start|Stop when|Threads|Item|Researcher|Tester|Role):.*$/gim, '')
-  return (GARMENT.test(task) && (MODEL_VERB.test(task) || GARMENT_VERB.test(task))) || (FIGURE.test(task) && MODEL_VERB.test(task))
+  if (/^[ \t>-]*Sheet:[ \t]*n\/a\s+\S[^\n]{9,}$/im.test(plain)) return false
+  const task = plain.replace(/^[ \t>-]*(Model|Prior art|Skills|Start|Stop when|Done when|Threads|Item|Researcher|Tester|Role)\b.*$/gim, '')
+  const ui = /\b(UI|HUD|menu|screen|button|tab|dialog|shop|scroll|font|text|loading|spinner|pinia|save data)\b/i.test(task)
+  return (GARMENT.test(task) && FIT_VERB.test(task)) || (GARMENT.test(task) && MODEL_VERB.test(task) && !ui) || (FIGURE.test(task) && MODEL_VERB.test(task) && !ui)
 }
 export function missingLines(text) {
   const plain = text.replace(/[*_`]/g, '')
