@@ -1581,10 +1581,10 @@ cat > "$HOME/.claude/claude-setup/rule-guard.mjs" <<'RULE'
 
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { existsSync, readdirSync, readFileSync, realpathSync, unlinkSync, writeFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
 import { isIP } from 'node:net'
 import { homedir, tmpdir } from 'node:os'
-import { basename, dirname, join, relative, resolve } from 'node:path'
+import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const OWNER = 'yskills'
@@ -1665,48 +1665,6 @@ export const bareAgreement = (text) => YES.test(text.replace(/^[\s*_>]+/, '').sp
 
 // Grill first (CLAUDE.md): a Planner at size M or L posts at least one grill card before it writes the plan or opens a PR.
 // Role, size and "just do it" are read from the spawn brief only, never from files the thread read later.
-// M50 PR 3 (research/2026-11-12-planner-vs-plan-mode.md): Claude Code's Plan mode refuses edits until the plan is approved; a thread has no Plan mode, so this is its
-// stand-in. A Planner writes only the plan files (and project-files); no other edit, commit, push, branch or PR until PLAN.md starts with `Status: PASSED`.
-const PLAN_NAMES = /^(PLAN\.md|features\.json|PLAN\.json|HANDOFF\.md)$/
-const PASSED = /Status:[ \t]*PASSED/i
-const real = (f) => { try { return realpathSync(f) } catch { try { return join(realpathSync(dirname(f)), basename(f)) } catch { return f } } } // symlinks resolved, also for a file not yet written
-// Read-only shell: every segment starts with a listed command; no redirect, substitution or write flag. plan.mjs and the page reader run only in their exact form.
-const READ_CMD = /^\s*(cd|cat|ls|head|tail|grep|wc|cut|tr|pwd|echo|date|stat|file|jq|diff|git(\s+-C\s+\S+)?\s+(status|log|diff|show|ls-files|rev-parse|blame|branch\s+(-a|-r|--list)|remote\s+-v))(\s|$)/
-const PLAN_CMD = /^\s*node scripts\/plan\.mjs(\s+[\w .,=:/@+'"-]*)?$/
-const PAGE_CMD = /^\s*node (~|\/root|\/home\/user)\/\.claude\/claude-setup\/rule-guard\.mjs read https?:\/\/[^\s;&|$`<>()'"\\]+\s*$/
-const readOnlyShell = (cmd) => {
-  if (PLAN_CMD.test(cmd) || PAGE_CMD.test(cmd)) return true
-  const c = cmd.replace(/\d?>&\d|\d?>\s*\/dev\/null/g, '')
-  if (/[`<>\n\r]|\$\(|\$\{/.test(c) || /&/.test(c.replace(/&&/g, ''))) return false // a lone & would start a second command
-  return c.split(/\|\||&&|[|;]/).every((seg) => READ_CMD.test(seg) && !/\bgit\b[^|]*\s(--output|-o|-c)\b/.test(seg))
-}
-// The text the plan file will hold after this edit: a split `Status: PA` + `SSED` cannot slip past a per-field match.
-function planAfter(tool, input, file) {
-  if (tool === 'Write') return String(input.content ?? '')
-  let text = read(file)
-  for (const e of tool === 'MultiEdit' ? (input.edits ?? []) : [input]) {
-    const from = String(e.old_string ?? '')
-    const to = String(e.new_string ?? '')
-    text = e.replace_all ? text.split(from).join(to) : text.replace(from, () => to)
-  }
-  return text
-}
-export function plannerReadOnly(tool, input = {}, role = '', cwd = process.cwd()) {
-  if (role !== 'Planner') return null
-  const file = real(resolve(cwd, String(input.file_path ?? input.notebook_path ?? ''))) // resolved: `..` and symlinks cannot reach out of the allowed places
-  const isEdit = /^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool)
-  const inFiles = file.startsWith(real('/mnt/project-files') + '/')
-  const planFile = isEdit && !/(^|\/)\.git(\/|$)/.test(file) && (PLAN_NAMES.test(basename(file)) || inFiles) // never a .git folder: its config could run commands
-  const cmd = String(input.command ?? '')
-  const writes = tool === 'Bash' && !readOnlyShell(cmd)
-  const ships = /^mcp__github__(create_pull_request|push_files|create_or_update_file|create_branch|delete_file|merge_pull_request)$/.test(tool)
-  // Self-approval: the Planner never writes the pass line itself; the gate thread (a Reviewer) sets it.
-  if (planFile && basename(file) === 'PLAN.md' && /^Status:[ \t]*PASSED/i.test(planAfter(tool, input, file).trimStart())) return 'rule-guard: the gate sets `Status: PASSED`, not the Planner (research/2026-11-12-planner-vs-plan-mode.md): write `Status: gate round <n>` and hand the plan to the Reviewer named in your brief\'s Gate line.'
-  if (tool === 'Bash' && PASSED.test(cmd)) return 'rule-guard: the gate sets `Status: PASSED`, not the Planner (research/2026-11-12-planner-vs-plan-mode.md).'
-  if (!(isEdit && !planFile) && !ships && !writes) return null
-  if (/^Status:[ \t]*PASSED\b/.test(read(join(cwd, 'PLAN.md')).slice(0, 200))) return null // first line only
-  return 'rule-guard: a Planner is read-only until its plan passed the gate (the stand-in for Plan mode, research/2026-11-12-planner-vs-plan-mode.md): write only PLAN.md, features.json, PLAN.json (scripts/plan.mjs) and the plan report in project-files; no source edit, commit, branch or PR, no write-shaped shell command. The gate named in your brief sets `Status: PASSED 5/5` on the first line of PLAN.md; a builder thread does the building.'
-}
 export function grillMissing(tool, input, transcript) {
   const writesPlan = (/^(Write|Edit)$/.test(tool) && /(^|[\\/])PLAN\.md$/.test(String(input.file_path ?? ''))) || tool === 'mcp__github__create_pull_request'
   if (!writesPlan) return false
@@ -2554,7 +2512,6 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         if (session && existsSync(lockFile(session))) { const t = transcript(); const last = coordinatorRelays(t).at(-1); if (last) await relayRebrief(session, last, cwd, knownModel(session, t), t) }
         let block = lockBlock(tool, session)
           ?? handsOff(tool, input ?? {}, gateRole, setupRoot(cwd))
-          ?? plannerReadOnly(tool, input ?? {}, gateRole, cwd)
           ?? (await gateBlock(tool, input ?? {}, transcript, sessionModel(transcript()), true, gateRole))
           ?? decide(tool, input ?? {}, process.env, session ? read(shipped).split('\n') : [], () => threadBoard(toolCalls(transcript())))
           ?? canaryMissing(tool, input ?? {}, session ? read(join(process.env.CLAUDE_SETUP_HOME || homedir(), '.claude', 'claude-setup', 'booted', `${String(session).replace(/\W/g, '')}.canary`)) : '', transcript)
