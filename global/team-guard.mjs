@@ -471,7 +471,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
       const checklists = THREAD_START.test(tool) ? text(join(cwd, CHECKLISTS)) || text(join(dir, CHECKLISTS)) : ''
       const board = THREAD_START.test(tool) && transcript ? boardThreads(text(transcript)) : []
       const out = decide(tool, input, [join(cwd, '.claude', 'agents'), join(home, '.claude', 'agents')], unread, teams, checklists, board)
-      if (!out.block) out.block = planCheckPre(tool, input ?? {}, { agentId, checklists: text(join(cwd, CHECKLISTS)) || text(join(dir, CHECKLISTS)) })
+      if (!out.block) out.block = planCheckPre(tool, input ?? {}, { agentId, checklists: text(join(dir, CHECKLISTS)) || text(join(cwd, CHECKLISTS)) })
       if (out.block) { process.stderr.write(out.block); process.exitCode = 2 }
     } catch {
       // A guard must never break a tool call.

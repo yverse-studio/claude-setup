@@ -814,7 +814,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
       const checklists = THREAD_START.test(tool) ? text(join(cwd, CHECKLISTS)) || text(join(dir, CHECKLISTS)) : ''
       const board = THREAD_START.test(tool) && transcript ? boardThreads(text(transcript)) : []
       const out = decide(tool, input, [join(cwd, '.claude', 'agents'), join(home, '.claude', 'agents')], unread, teams, checklists, board)
-      if (!out.block) out.block = planCheckPre(tool, input ?? {}, { agentId, checklists: text(join(cwd, CHECKLISTS)) || text(join(dir, CHECKLISTS)) })
+      if (!out.block) out.block = planCheckPre(tool, input ?? {}, { agentId, checklists: text(join(dir, CHECKLISTS)) || text(join(cwd, CHECKLISTS)) })
       if (out.block) { process.stderr.write(out.block); process.exitCode = 2 }
     } catch {
       // A guard must never break a tool call.
@@ -1119,6 +1119,7 @@ export function parseShell(text, depth = 0) {
       continue
     }
     if (c === '&' && text[i + 1] === '>') continue
+    if (c === '{' && text[i + 1] === '}' && !has && (i + 2 >= text.length || /[\s;]/.test(text[i + 2]))) { word = '{}'; has = true; i++; continue } // find's {} is a word
     if ((c === '{' || c === '}') && has) { word += c; continue } // gh api repos/{owner}/{repo}: a brace inside a word is the word
     if (';|&(){}'.includes(c)) { if (c === '&' || c === '|') { while (text[i + 1] === c) i++ } end(); continue }
     if (/\s/.test(c)) { flush(); continue }
@@ -1164,8 +1165,27 @@ export function simpleCommands(text, depth = 0) {
     if (SHELLS.has(s.a0) && s.body && i < 0 && depth < 3) { const r = simpleCommands(s.body, depth + 1); list.push(...r.list); bad ||= r.bad }
     if (s.a0 === 'eval' && depth < 3) { const r = simpleCommands(s.args.join(' '), depth + 1); list.push(...r.list); bad ||= r.bad }
     if (SHELLS.has(s.a0) && i >= 0 && s.args[i + 1] !== undefined && depth < 3) { const r = simpleCommands(s.args[i + 1], depth + 1); list.push(...r.list); bad ||= r.bad }
+    if (depth < 3) for (const inner of runsOthers(s)) { const r = simpleCommands(inner, depth + 1); list.push(...r.list); bad ||= r.bad }
   }
   return { list, bad }
+}
+// The commands a READ_ONLY first word runs itself: what follows find -exec|-execdir|-ok|-okdir up to ; or +, and the body of a git
+// -c alias.<n>=!<cmd>. Each is handed back as shell text, so it is read like bash -c.
+const quote = (a) => `'${String(a).replace(/'/g, `'\\''`)}'`
+function runsOthers(s) {
+  const out = []
+  if (s.a0 === 'find') {
+    for (let j = 0; j < s.args.length; j++) {
+      if (!/^-(exec|execdir|ok|okdir)$/.test(s.args[j])) continue
+      let k = j + 1
+      while (k < s.args.length && s.args[k] !== ';' && s.args[k] !== '+') k++
+      out.push(s.args.slice(j + 1, k).map(quote).join(' '))
+    }
+  }
+  if (s.a0 === 'git') {
+    for (const a of s.args) { const m = /^alias\.[^=]+=!(.*)$/s.exec(a); if (m) out.push(m[1]) }
+  }
+  return out
 }
 
 const GUARDS = 'rule-guard|team-guard|context-guard|compact-guard|attempt-guard|gate-rounds|task-ledger' // every installed guard file (team-guard.mjs GUARD_FILES)
@@ -1355,7 +1375,8 @@ cat > "$HOME/.claude/claude-setup/task-ledger.mjs" <<'TASK'
 // not Opus or above, not a fresh agent or not in the foreground, any verb or export that writes planCheck from a caller's value, `approve`
 // without its proof, and a Write, redirect, writer or inline script that holds a literal ledger, grants, guard or transcript path. Not stopped,
 // because the evidence would be fabricated: a transcript, ledger or grant file written another way than by its literal path, a copy of a guard,
-// a script file, a glob or variable that hides a name, a guard run by hand on a transcript the thread wrote. The next step is a writer
+// a script file, a glob or variable that hides a name, a guard run by hand on a transcript the thread wrote, a read-only word that runs code
+// of its own (awk system(), sed e; find -exec and a git alias are read like bash -c). The next step is a writer
 // outside the sandbox (a CI workflow), not a longer list here.
 // CLI: task-ledger.mjs plan <asset> <PLAN.md> | approve <asset> <ref> | status <asset> | brief <asset>
 import { createHash } from 'node:crypto'
@@ -1483,10 +1504,11 @@ const AGENT = /^(Agent|Task)$/
 const CHECK_LINE = /^Plan check:[ \t]*(\S[^\n]*?)[ \t]*$/m
 const checkAsset = (prompt) => String(prompt ?? '').split('\n', 1)[0].match(CHECK_LINE)?.[1] ?? null
 
-// Where the checklist file sits: the working directory's checkout, else this guard's own folder (the boot copy beside the guards).
+// Where the checklist file sits: this guard's own folder (the installed copy beside the guards), the working directory's checkout only when
+// there is none: a thread's own checkout must not change what its checker is briefed with.
 export function loadChecklists(cwd = process.cwd()) {
   const here = dirname(fileURLToPath(import.meta.url))
-  for (const base of [cwd, here, join(here, '..')]) { const t = read(join(base, CHECKLISTS)); if (t) return t }
+  for (const base of [here, join(here, '..'), cwd]) { const t = read(join(base, CHECKLISTS)); if (t) return t }
   return ''
 }
 const checklistFor = (topic, checklists) => {
@@ -1589,12 +1611,13 @@ export function planChecksFromTranscript(text, { dir = ledgerDir(), checklists =
   if (agentId || !String(text).includes('Plan check: ')) return []
   const uses = new Map()
   const newest = new Map()
+  const mine = new Set() // every plan-check call of this transcript
   const notes = []
   for (const r of transcriptRows(text)) {
     for (const c of Array.isArray(r.message?.content) ? r.message.content : []) {
       if (c?.type === 'tool_use' && AGENT.test(c.name ?? '')) {
         const asset = checkAsset(c.input?.prompt)
-        if (asset) uses.set(c.id, { asset, input: c.input })
+        if (asset) { uses.set(c.id, { asset, input: c.input }); mine.add(c.id) }
       } else if (c?.type === 'tool_result' && uses.has(c.tool_use_id)) {
         const { asset, input } = uses.get(c.tool_use_id)
         uses.delete(c.tool_use_id)
@@ -1610,6 +1633,8 @@ export function planChecksFromTranscript(text, { dir = ledgerDir(), checklists =
     const want = { result: v.result, plan_hash: plan.hash, brief_hash: sha(planCheckBrief(asset, { dir, checklists })), model: String(v.input.model), tool_use_id: v.tool_use_id }
     const have = readLedger(dir, asset).planCheck
     if (have && Object.entries(want).every(([k, x]) => have[k] === x)) continue
+    // Another session's newer result stays: write over a row only when it came from this transcript or is older than this result.
+    if (have && !mine.has(have.tool_use_id) && !(Date.parse(v.at) > Date.parse(have.at))) continue
     recordPlanCheck(asset, { ...want, at: v.at }, dir)
     notes.push(`Plan check recorded: ${v.result} for ${asset}.`)
   }

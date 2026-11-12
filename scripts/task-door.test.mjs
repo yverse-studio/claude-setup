@@ -31,9 +31,9 @@ function door({ session = `s${process.pid}x${++seq}` } = {}) {
   const run = (script, mode, payload) => spawnSync(process.execPath, [join(root, 'global', script), ...(mode ? [mode] : [])], { input: JSON.stringify({ cwd: dir, session_id: session, ...payload }), encoding: 'utf8', env })
   const pre = (input, extra = {}) => run('team-guard.mjs', 'pre', { hook_event_name: 'PreToolUse', tool_name: 'Agent', tool_input: { run_in_background: false, ...input }, ...extra })
   // An Agent call and its tool_result as the harness writes them, and the next tool call (a status read) whose PreToolUse records the verdict.
-  const rowsFor = (text, { input = { prompt: brief, model: 'opus', run_in_background: false }, id = 'u1', shape = (x) => x } = {}) => [
+  const rowsFor = (text, { input = { prompt: brief, model: 'opus', run_in_background: false }, id = 'u1', shape = (x) => x, at = '2026-11-12T10:05:00Z' } = {}) => [
     { type: 'assistant', timestamp: '2026-11-12T10:00:00Z', message: { content: [{ type: 'tool_use', id, name: 'Agent', input }] } },
-    { type: 'user', timestamp: '2026-11-12T10:05:00Z', message: { content: [{ type: 'tool_result', tool_use_id: id, content: shape(text) }] } },
+    { type: 'user', timestamp: at, message: { content: [{ type: 'tool_result', tool_use_id: id, content: shape(text) }] } },
   ]
   const check = (text, opts, extra = {}) => { const r = bash(`node ~/.claude/claude-setup/task-ledger.mjs status ${ASSET}`, [], rowsFor(text, opts), extra); return r }
   const bash = (command, calls = [], extra = [], more = {}) => {
@@ -114,7 +114,7 @@ for (const [name, shape] of Object.entries(SHAPES)) {
       assert.equal(c.tool_use_id, 'u1')
       assert.equal(c.at, '2026-11-12T10:05:00Z')
       assert.match(c.model, /opus/)
-      const again = t.check('**Plan check fail**\n3. no: Method contradicts MAIN', { shape, id: 'u2' })
+      const again = t.check('**Plan check fail**\n3. no: Method contradicts MAIN', { shape, id: 'u2', at: '2026-11-12T10:30:00Z' })
       assert.equal(t.ledger().planCheck.result, 'fail')
       assert.match(again.stdout, /Plan check recorded: fail/)
     } finally { t.done() }
@@ -363,6 +363,59 @@ test('director item 4: the name rule covers task-ledger.mjs: only "node <path>/t
       `setsid node ${f} approve x cmsg_1`, `ln -s ${f} /tmp/x.mjs`,
     ]) assert.equal(t.bash(c).status, 2, c)
     for (const c of [`cat ${f}`, `grep -n recordApproval ${f}`, `node ${f} status ${ASSET}`, `node ${f} brief ${ASSET}`, 'node --test scripts/task-ledger.test.mjs', 'git commit -m "fix: task-ledger.mjs reads the plan"', `head -20 ${f} | wc -l`]) assert.equal(t.bash(c).status, 0, c)
+  } finally { t.done() }
+})
+
+test('round 4, M1: an old session\'s pass does not overwrite a newer fail from another session', () => {
+  const t = door()
+  try {
+    const at = (rows, stamp) => rows.map((r) => ({ ...r, timestamp: stamp }))
+    const rowsA = at(t.rowsFor('Plan check pass', { id: 'a1' }), '2026-11-12T10:05:00Z')
+    const rowsB = at(t.rowsFor('Plan check fail\n3. no', { id: 'b1' }), '2026-11-12T11:00:00Z')
+    t.bash(`node ~/.claude/claude-setup/task-ledger.mjs status ${ASSET}`, [], rowsA)
+    assert.equal(t.ledger().planCheck.result, 'pass')
+    t.bash(`node ~/.claude/claude-setup/task-ledger.mjs status ${ASSET}`, [], rowsB)
+    assert.equal(t.ledger().planCheck.result, 'fail')
+    t.bash(`node ~/.claude/claude-setup/task-ledger.mjs status ${ASSET}`, [], rowsA)
+    assert.equal(t.ledger().planCheck.result, 'fail', 'A\'s next call leaves B\'s newer fail')
+    assert.equal(t.ledger().planCheck.tool_use_id, 'b1')
+  } finally { t.done() }
+})
+
+test('round 4, M2: the checklist comes from the installed copy; a differing one in the working directory does not change the brief', () => {
+  const t = door()
+  try {
+    const installed = join(t.dir, '.claude', 'claude-setup', CHECKLISTS)
+    mkdirSync(join(installed, '..'), { recursive: true })
+    copyFileSync(join(root, CHECKLISTS), installed)
+    writeFileSync(join(t.dir, CHECKLISTS), `${readFileSync(join(root, CHECKLISTS), 'utf8')}\n- the author added a line\n`)
+    assert.equal(t.pre({ prompt: t.brief, model: 'opus' }).status, 0, 'the brief of the installed checklist passes team-guard')
+    t.check('Plan check pass')
+    assert.equal(t.ledger().planCheck.result, 'pass', 'and is recorded by rule-guard')
+  } finally { t.done() }
+})
+
+test('round 4, L1: when reading the verdict throws, the hook says so instead of swallowing it', () => {
+  const session = `s${process.pid}L1`
+  const t = door({ session })
+  const mark = join(tmpdir(), `claude-setup-plancheck-${session}`)
+  try {
+    mkdirSync(mark, { recursive: true }) // the "seen" file cannot be written: a refused plan check (Sonnet) must still be reported, once, as an error
+    const r = t.check('Plan check pass', { input: { prompt: t.brief, model: 'sonnet', run_in_background: false } })
+    assert.match(`${r.stdout}${r.stderr}`, /Plan check: could not read the transcript/)
+    assert.equal(r.status, 0, 'the hook does not block the tool call')
+  } finally { rmSync(mark, { recursive: true, force: true }); t.done() }
+})
+
+test('round 4, H1: find -exec and a git alias run code, so what they run is read like bash -c', () => {
+  const t = door()
+  try {
+    const f = '/root/.claude/claude-setup/task-ledger.mjs'
+    for (const c of [
+      `find . -maxdepth 0 -exec node -e "import('${f}')" \\;`, `find /tmp -execdir node -e "import('${f}')" ';'`,
+      `git -c alias.z='!node -e "import(\\"${f}\\")"' z`, `find . -ok cp ${f} /tmp/x.mjs \\;`,
+    ]) assert.equal(t.bash(c).status, 2, c)
+    for (const c of ['find . -name "*.mjs" -exec grep -l task-ledger.mjs {} +', 'find . -name "*.md" -exec wc -l {} \\;', 'git -c core.pager=cat log -1']) assert.equal(t.bash(c).status, 0, c)
   } finally { t.done() }
 })
 

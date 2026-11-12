@@ -259,6 +259,7 @@ export function parseShell(text, depth = 0) {
       continue
     }
     if (c === '&' && text[i + 1] === '>') continue
+    if (c === '{' && text[i + 1] === '}' && !has && (i + 2 >= text.length || /[\s;]/.test(text[i + 2]))) { word = '{}'; has = true; i++; continue } // find's {} is a word
     if ((c === '{' || c === '}') && has) { word += c; continue } // gh api repos/{owner}/{repo}: a brace inside a word is the word
     if (';|&(){}'.includes(c)) { if (c === '&' || c === '|') { while (text[i + 1] === c) i++ } end(); continue }
     if (/\s/.test(c)) { flush(); continue }
@@ -304,8 +305,27 @@ export function simpleCommands(text, depth = 0) {
     if (SHELLS.has(s.a0) && s.body && i < 0 && depth < 3) { const r = simpleCommands(s.body, depth + 1); list.push(...r.list); bad ||= r.bad }
     if (s.a0 === 'eval' && depth < 3) { const r = simpleCommands(s.args.join(' '), depth + 1); list.push(...r.list); bad ||= r.bad }
     if (SHELLS.has(s.a0) && i >= 0 && s.args[i + 1] !== undefined && depth < 3) { const r = simpleCommands(s.args[i + 1], depth + 1); list.push(...r.list); bad ||= r.bad }
+    if (depth < 3) for (const inner of runsOthers(s)) { const r = simpleCommands(inner, depth + 1); list.push(...r.list); bad ||= r.bad }
   }
   return { list, bad }
+}
+// The commands a READ_ONLY first word runs itself: what follows find -exec|-execdir|-ok|-okdir up to ; or +, and the body of a git
+// -c alias.<n>=!<cmd>. Each is handed back as shell text, so it is read like bash -c.
+const quote = (a) => `'${String(a).replace(/'/g, `'\\''`)}'`
+function runsOthers(s) {
+  const out = []
+  if (s.a0 === 'find') {
+    for (let j = 0; j < s.args.length; j++) {
+      if (!/^-(exec|execdir|ok|okdir)$/.test(s.args[j])) continue
+      let k = j + 1
+      while (k < s.args.length && s.args[k] !== ';' && s.args[k] !== '+') k++
+      out.push(s.args.slice(j + 1, k).map(quote).join(' '))
+    }
+  }
+  if (s.a0 === 'git') {
+    for (const a of s.args) { const m = /^alias\.[^=]+=!(.*)$/s.exec(a); if (m) out.push(m[1]) }
+  }
+  return out
 }
 
 const GUARDS = 'rule-guard|team-guard|context-guard|compact-guard|attempt-guard|gate-rounds|task-ledger' // every installed guard file (team-guard.mjs GUARD_FILES)

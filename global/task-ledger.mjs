@@ -8,7 +8,8 @@
 // not Opus or above, not a fresh agent or not in the foreground, any verb or export that writes planCheck from a caller's value, `approve`
 // without its proof, and a Write, redirect, writer or inline script that holds a literal ledger, grants, guard or transcript path. Not stopped,
 // because the evidence would be fabricated: a transcript, ledger or grant file written another way than by its literal path, a copy of a guard,
-// a script file, a glob or variable that hides a name, a guard run by hand on a transcript the thread wrote. The next step is a writer
+// a script file, a glob or variable that hides a name, a guard run by hand on a transcript the thread wrote, a read-only word that runs code
+// of its own (awk system(), sed e; find -exec and a git alias are read like bash -c). The next step is a writer
 // outside the sandbox (a CI workflow), not a longer list here.
 // CLI: task-ledger.mjs plan <asset> <PLAN.md> | approve <asset> <ref> | status <asset> | brief <asset>
 import { createHash } from 'node:crypto'
@@ -136,10 +137,11 @@ const AGENT = /^(Agent|Task)$/
 const CHECK_LINE = /^Plan check:[ \t]*(\S[^\n]*?)[ \t]*$/m
 const checkAsset = (prompt) => String(prompt ?? '').split('\n', 1)[0].match(CHECK_LINE)?.[1] ?? null
 
-// Where the checklist file sits: the working directory's checkout, else this guard's own folder (the boot copy beside the guards).
+// Where the checklist file sits: this guard's own folder (the installed copy beside the guards), the working directory's checkout only when
+// there is none: a thread's own checkout must not change what its checker is briefed with.
 export function loadChecklists(cwd = process.cwd()) {
   const here = dirname(fileURLToPath(import.meta.url))
-  for (const base of [cwd, here, join(here, '..')]) { const t = read(join(base, CHECKLISTS)); if (t) return t }
+  for (const base of [here, join(here, '..'), cwd]) { const t = read(join(base, CHECKLISTS)); if (t) return t }
   return ''
 }
 const checklistFor = (topic, checklists) => {
@@ -242,12 +244,13 @@ export function planChecksFromTranscript(text, { dir = ledgerDir(), checklists =
   if (agentId || !String(text).includes('Plan check: ')) return []
   const uses = new Map()
   const newest = new Map()
+  const mine = new Set() // every plan-check call of this transcript
   const notes = []
   for (const r of transcriptRows(text)) {
     for (const c of Array.isArray(r.message?.content) ? r.message.content : []) {
       if (c?.type === 'tool_use' && AGENT.test(c.name ?? '')) {
         const asset = checkAsset(c.input?.prompt)
-        if (asset) uses.set(c.id, { asset, input: c.input })
+        if (asset) { uses.set(c.id, { asset, input: c.input }); mine.add(c.id) }
       } else if (c?.type === 'tool_result' && uses.has(c.tool_use_id)) {
         const { asset, input } = uses.get(c.tool_use_id)
         uses.delete(c.tool_use_id)
@@ -263,6 +266,8 @@ export function planChecksFromTranscript(text, { dir = ledgerDir(), checklists =
     const want = { result: v.result, plan_hash: plan.hash, brief_hash: sha(planCheckBrief(asset, { dir, checklists })), model: String(v.input.model), tool_use_id: v.tool_use_id }
     const have = readLedger(dir, asset).planCheck
     if (have && Object.entries(want).every(([k, x]) => have[k] === x)) continue
+    // Another session's newer result stays: write over a row only when it came from this transcript or is older than this result.
+    if (have && !mine.has(have.tool_use_id) && !(Date.parse(v.at) > Date.parse(have.at))) continue
     recordPlanCheck(asset, { ...want, at: v.at }, dir)
     notes.push(`Plan check recorded: ${v.result} for ${asset}.`)
   }
