@@ -47,6 +47,12 @@ test('Gate point names asset and topic, Still needed is a list or nothing', () =
   assert.deepEqual(checkPlan(ok.replace('nothing', '- the card answer from yskills'), { topic: 'HUD/UI' }), [])
 })
 
+test('a prose line under Still needed fails, only a list or the word nothing passes', () => {
+  assert.ok(checkPlan(ok.replace('nothing', 'the card answer'), { topic: 'HUD/UI' }).some((g) => /Still needed/.test(g)))
+  assert.ok(checkPlan(ok.replace('nothing', 'nothing\nand more prose'), { topic: 'HUD/UI' }).some((g) => /Still needed/.test(g)))
+  assert.deepEqual(checkPlan(ok.replace('nothing', 'Nichts'), { topic: 'HUD/UI' }), [])
+})
+
 test('German headings count the same', () => {
   const de = ok.replace('## Goal', '## Ziel').replace('## References', '## Referenzen').replace('## Method', '## Methode').replace('## Risks', '## Risiken')
     .replace('## Acceptance', '## Kriterien').replace('### Measured', '### Gemessen').replace('### By eye', '### Nach Sicht').replace('## Gate point', '## Gate-Punkt').replace('## Still needed', '## Ich brauche noch')

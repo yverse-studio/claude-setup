@@ -1231,6 +1231,7 @@ cat > "$HOME/.claude/claude-setup/task-ledger.mjs" <<'TASK'
 // CLI: task-ledger.mjs plan <asset> <PLAN.md> | approve <asset> <ref> | status <asset>
 import { createHash } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { cardProof, ledgerDir, readLedger, writeLedger } from './gate-rounds.mjs'
 
@@ -1305,7 +1306,7 @@ export function registerPlan(asset, planPath, session, dir = ledgerDir()) {
   const gaps = checkPlan(text, { topic: topicOf(text) })
   if (gaps.length) throw new Error(`${planPath} fails the plan check: ${gaps.join('; ')}`)
   const l = readLedger(dir, asset)
-  writeLedger(dir, { ...l, plan: { path: planPath, hash: sha(text), author_session: session ?? null, at: new Date().toISOString() } })
+  writeLedger(dir, { ...l, plan: { path: resolve(planPath), hash: sha(text), author_session: session ?? null, at: new Date().toISOString() } })
 }
 // Called by the door (the hook), never by the author: the hash must be the registered plan's, the result pass or fail.
 export function recordPlanCheck(asset, { result, plan_hash: planHash, brief_hash: briefHash, model }, dir = ledgerDir()) {

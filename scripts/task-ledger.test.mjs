@@ -80,6 +80,19 @@ test('editing PLAN.md after approval makes planReady false, re-registering alone
   } finally { t.done() }
 })
 
+test('a plan registered by a relative path is still found from another working directory', () => {
+  const t = setup()
+  const here = process.cwd()
+  try {
+    process.chdir(t.dir)
+    registerPlan('duck-hud', 'PLAN.md', 's1', t.dir)
+    checked(t.dir, 'duck-hud')
+    recordApproval('duck-hud', { by: 'c', ref: 'cmsg_x1' }, t.dir)
+    process.chdir(tmpdir())
+    assert.equal(planReady('duck-hud', t.dir), true, 'the stored path is absolute')
+  } finally { process.chdir(here); t.done() }
+})
+
 test('a ledger file that does not parse throws, nothing is reset', () => {
   const t = setup()
   try {
