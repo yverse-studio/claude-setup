@@ -17,6 +17,8 @@ and yskills had to say it twice. This page is the fix.
 
 ## Body, then outfits (the fixed order)
 
+**Step 0, before any model (companyxy 2026-11-12: about 20 fit rounds):** the character has an approved cast sheet with measures and an owner-card look lock ([`preproduction-workflow.md`](preproduction-workflow.md), template [`templates/character-bible.md`](templates/character-bible.md)); `node scripts/pipeline-gates.mjs sheet <SHEET.md>` must say OK. The brief names `Sheet:` and `Look-Lock:` (team-guard blocks one without). The gates below (fit against every `BT_` and `CH_` state, look switches per state via `scripts/blender/look_switches.py`, driver dump check, fresh `thumb.jpg`) are listed in [`gate.md`](../.claude/skills/operator/gate.md), Asset PRs, Pipeline gates.
+
 The one order for every character, in every plan and masterplan (yskills 2026-11-12: "erst body perfekt dann
 outfits", "das hätte der workflow sein müssen klar einfach und direkt"):
 

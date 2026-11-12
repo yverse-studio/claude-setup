@@ -262,6 +262,16 @@ for (const f of anyText('.')) {
   }
 }
 
+// Pipeline gates (companyxy error report 2026-11-12): gate.md names each script call, the guard files carry their checks.
+{
+  const gate = readFileSync(join(root, '.claude/skills/operator/gate.md'), 'utf8')
+  for (const call of ['pipeline-gates.mjs sheet', 'pipeline-gates.mjs fit', 'pipeline-gates.mjs look', 'pipeline-gates.mjs drivers', 'pipeline-gates.mjs previews', 'clothes_dupe.py']) {
+    if (!gate.includes(call)) errors.push(`.claude/skills/operator/gate.md: Asset PRs lacks the pipeline gate \`${call}\``)
+  }
+  const ci = existsSync(join(root, '.github/workflows/ci.yml')) ? readFileSync(join(root, '.github/workflows/ci.yml'), 'utf8') : null   // a test copy of the repo drops .github
+  if (ci) for (const t of ['scripts/pipeline-gates.test.mjs', 'scripts/laptop-job.test.mjs', 'unittest discover -s scripts/blender']) if (!ci.includes(t)) errors.push(`.github/workflows/ci.yml does not run ${t}`)
+}
+
 // Standing calls (roles/project-manager.md; yskills 2026-11-05): the section and its seven items must exist.
 {
   const f = '.claude/skills/operator/roles/project-manager.md'

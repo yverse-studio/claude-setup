@@ -8,6 +8,7 @@
 //   --quick        skip the node test line (the git pre-push hook uses it; CI still runs the tests).
 import { execFileSync, spawnSync } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -28,6 +29,22 @@ export function ciSteps(yml) {
     body: 'node scripts/pr-lessons-check.mjs <body>',
     tests,
   }
+}
+
+// Companyxy 2026-11-12 (point 11): 25 checks were already red on main and blocked a doc patch. When anything fails, check.mjs
+// also runs on a clean copy of the base: a red base is fixed first, as its own PR, before the feature goes on.
+export function diagnoseRed({ failed, baseOk }) {
+  if (!failed.length) return null
+  if (baseOk === false) return `main is red too (scripts/check.mjs fails on ${base} itself): fix main first, as its own small PR, then rebase this branch. Do not push this change on top of a red main.`
+  if (baseOk === null) return `could not check main (no worktree); run node scripts/check.mjs on a fresh ${base} before blaming your branch.`
+  return 'main is green: the failures are your branch\'s.'
+}
+function baseCheckOk() {
+  const dir = join(tmpdir(), `pre-pr-base-${process.pid}`)
+  try {
+    execFileSync('git', ['worktree', 'add', '--detach', '-q', dir, base], { cwd: root, stdio: 'ignore' })
+    return spawnSync('node', ['scripts/check.mjs'], { cwd: dir, stdio: 'ignore' }).status === 0
+  } catch { return null } finally { spawnSync('git', ['worktree', 'remove', '--force', dir], { cwd: root, stdio: 'ignore' }) }
 }
 
 const results = []
@@ -52,6 +69,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   else { results.push(['PR body', null]); console.log('open PR body: not checked here; run again with --body <file> before gh pr create (Prior art: ... -> copy|adapt|build, because ...; Lessons: <repo path>)') }
   if (!quick && steps.tests) { const [cmd, ...argv] = steps.tests.split(/\s+/); step('tests (CI line)', cmd, argv) }
   const failed = results.filter(([, ok]) => ok === false)
+  if (failed.length) console.log(diagnoseRed({ failed: failed.map(([n]) => n), baseOk: baseCheckOk() }))
   console.log(failed.length ? `pre-pr: ${failed.length} failing: ${failed.map(([n]) => n).join(', ')}. Fix the code, not the check.` : 'pre-pr: clean (CI runs the same steps)')
   process.exit(failed.length ? 1 : 0)
 }

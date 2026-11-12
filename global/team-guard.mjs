@@ -223,9 +223,18 @@ const BRIEF_LINES = [
 // A task that asks for research names its Researcher subagent (docs/TEAMS.md, Kits; yskills 2026-11-12:
 // a Planner did the SOTA research itself). The brief block's own "No extra ... research" does not trigger it.
 const ASKS_RESEARCH = /\b(SOTA|state of the art|research (on|about|into|what)|recherch\w*)\b/i
+// Companyxy 2026-11-12 (point 3): about 20 fit rounds because bodies and outfits were built before cast sheets with measures and a
+// look lock existed (docs/preproduction-workflow.md). A modelling job of a Programmer or Animator on a game or story kit names both.
+const SHEET_LINES = [
+  ['Sheet: (approved cast sheet, docs/preproduction-workflow.md)', /^[ \t>-]*Sheet:[ \t]*[^<\s]/im],
+  ['Look-Lock: (owner card of the look)', /^[ \t>-]*Look-Lock:[ \t]*[^<\s]/im],
+]
+const needsSheet = (plain) => /^[ \t>-]*Role:[ \t]*(Programmer|Animator)\b/im.test(plain) && /\bKit:[ \t]*(game|story)\b/i.test(plain)
+  && /\b(body|bodies|outfit|garment|clothes|clothing|face|fit|fitting|rig|model(l?ing)?)\b/i.test(plain.replace(/^[ \t>-]*(Model|Prior art|Skills|Start|Stop when|Threads|Item|Researcher|Tester):.*$/gim, ''))
 export function missingLines(text) {
   const plain = text.replace(/[*_`]/g, '')
   const lines = BRIEF_LINES.filter(([, re]) => !re.test(plain)).map(([name]) => name)
+  if (needsSheet(plain)) for (const [name, re] of SHEET_LINES) if (!re.test(plain)) lines.push(name)
   if (ASKS_RESEARCH.test(plain) && !/\bRole:[ \t]*Researcher\b/i.test(plain) && !/^[ \t>-]*Researcher:[ \t]*[^<\s]/im.test(plain)) lines.push('Researcher: (the task asks for research)')
   return lines
 }

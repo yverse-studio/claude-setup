@@ -84,6 +84,7 @@ Claims: a claim from yskills, a lesson or another thread is checked first (repo,
 Prior art: <our repos and branches, skills, plugins, public setups checked> -> copy | adapt | build, because <why> (every size; team-guard blocks one without; the PR repeats it, CI checks).
 Threads: <`list_threads` checked this turn: `none open on <topic>` or `continues <open thread title>`; team-guard blocks a start without it (companyxy 2026-11-12: finished threads stayed open and work lay twice)>
 Item: <the PLAN.json item this thread works on, e.g. `M3`, or `new` (roles/project-manager.md, Masterplan); the thread sets it with `node scripts/plan.mjs set` at start and at its Done: line; its start receipt shows it>
+Sheet: <path of the approved cast sheet> and Look-Lock: <owner card link of the approved look>, only for a body, face, outfit or fit job (Programmer or Animator) on a game or story kit; team-guard blocks one without (docs/preproduction-workflow.md, companyxy 2026-11-12: about 20 fit rounds before any sheet existed).
 Researcher: <the Researcher subagent and its model, e.g. `general-purpose, sonnet, writes research/<date>-<topic>.md`> (a task that asks for research only; docs/TEAMS.md, Kits; team-guard blocks one without).
 Tester: <the `Tester · <app>` thread> (size L Programmer briefs only; docs/TEAMS.md, Tester first; team-guard blocks one without).
 Literal mode: yskills' words are orders, done as said. No "yes, but", no offers, no alternatives

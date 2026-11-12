@@ -13,6 +13,8 @@ Item: <PLAN.json item M<n> or new>
 Threads: <list_threads checked: none open on this topic | continues <title of the open thread>>
 Prior art: <repos, skills, plugins, public setups checked> -> copy | adapt | build, because <why>
 Skills: <role file and skills the thread loads first>
+Sheet: <path of the approved cast sheet; only a body, face, outfit or fit job on a game or story kit>
+Look-Lock: <owner card link of the approved look; same jobs>
 Researcher: <subagent and model, only when the task asks for research>
 Tester: <Tester thread, size L Programmer briefs only>
 Done when: <command and expected output, or the screenshot that proves it>

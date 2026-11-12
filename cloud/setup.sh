@@ -561,9 +561,18 @@ const BRIEF_LINES = [
 // A task that asks for research names its Researcher subagent (docs/TEAMS.md, Kits; yskills 2026-11-12:
 // a Planner did the SOTA research itself). The brief block's own "No extra ... research" does not trigger it.
 const ASKS_RESEARCH = /\b(SOTA|state of the art|research (on|about|into|what)|recherch\w*)\b/i
+// Companyxy 2026-11-12 (point 3): about 20 fit rounds because bodies and outfits were built before cast sheets with measures and a
+// look lock existed (docs/preproduction-workflow.md). A modelling job of a Programmer or Animator on a game or story kit names both.
+const SHEET_LINES = [
+  ['Sheet: (approved cast sheet, docs/preproduction-workflow.md)', /^[ \t>-]*Sheet:[ \t]*[^<\s]/im],
+  ['Look-Lock: (owner card of the look)', /^[ \t>-]*Look-Lock:[ \t]*[^<\s]/im],
+]
+const needsSheet = (plain) => /^[ \t>-]*Role:[ \t]*(Programmer|Animator)\b/im.test(plain) && /\bKit:[ \t]*(game|story)\b/i.test(plain)
+  && /\b(body|bodies|outfit|garment|clothes|clothing|face|fit|fitting|rig|model(l?ing)?)\b/i.test(plain.replace(/^[ \t>-]*(Model|Prior art|Skills|Start|Stop when|Threads|Item|Researcher|Tester):.*$/gim, ''))
 export function missingLines(text) {
   const plain = text.replace(/[*_`]/g, '')
   const lines = BRIEF_LINES.filter(([, re]) => !re.test(plain)).map(([name]) => name)
+  if (needsSheet(plain)) for (const [name, re] of SHEET_LINES) if (!re.test(plain)) lines.push(name)
   if (ASKS_RESEARCH.test(plain) && !/\bRole:[ \t]*Researcher\b/i.test(plain) && !/^[ \t>-]*Researcher:[ \t]*[^<\s]/im.test(plain)) lines.push('Researcher: (the task asks for research)')
   return lines
 }
@@ -1392,6 +1401,23 @@ export function blenderDocsMissing(tool, input = {}, transcript = '') {
   if (!missing.length) return null
   return `rule-guard: vor dem ersten Blender-Aufruf dieser Session erst lesen (Read): ${missing.map(([name]) => name).join(' und ')}. Dann nochmal.`
 }
+// Companyxy 2026-11-12 (point 8): a garment is downloaded only after `clothes_dupe.py <url or id>` said NEW for that source
+// (docs/clothing-pipeline.md, Reuse first). transcript: the session's transcript text (or a function returning it).
+const GARMENT_SOURCE = /https?:\/\/[^\s"']*(sketchfab\.com|booth\.pm|fab\.com|cgtrader\.com|blenderkit\.com|blendkit\.com)[^\s"']*/gi
+const DOWNLOAD = /\b(curl|wget|Invoke-WebRequest|iwr|Start-BitsTransfer|yt-dlp|aria2c)\b/i
+export function dupeCheckMissing(tool, input = {}, transcript = '') {
+  const command = shellCommand(tool, input)
+  if (!command || !DOWNLOAD.test(command)) return null
+  const urls = command.match(GARMENT_SOURCE) ?? []
+  if (!urls.length) return null
+  const ran = (c) => /clothes_dupe\.py/.test(c)
+  const idOf = (u) => u.replace(/[?#].*$/, '').replace(/\/(download|files?)\/?$/i, '').split('/').filter(Boolean).pop() ?? u
+  const earlier = toolCalls(typeof transcript === 'function' ? transcript() : transcript).map((c) => String(c.input?.command ?? '')).filter(ran)
+  const before = command.split(/&&|;|\|/).filter(ran).join(' ')
+  const unchecked = urls.filter((u) => !(earlier.concat(before).some((c) => c.includes(idOf(u)))))
+  if (!unchecked.length) return null
+  return `rule-guard: before a garment download run \`python tools/laptop/clothes_dupe.py ${unchecked[0].slice(0, 90)}\` and read HAVE or NEW (docs/clothing-pipeline.md, Reuse first; companyxy 2026-11-12: garments came twice). HAVE: refit the item you have. NEW: run this command again after it.`
+}
 const listProcs = () => {
   if (process.env.CLAUDE_SETUP_PROCS !== undefined) return process.env.CLAUDE_SETUP_PROCS // tests: a fake process list
   try {
@@ -1448,6 +1474,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           ?? opensWindow(tool, input ?? {})
           ?? archivistFiles(tool, input ?? {}, session ? read(join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)) : '')
           ?? kaomojiMissing(tool, input ?? {})
+          ?? dupeCheckMissing(tool, input ?? {}, sessionTranscript)
           ?? blenderServerBusy(tool, input ?? {}, listProcs)
           ?? blenderDocsMissing(tool, input ?? {}, sessionTranscript)
           ?? (grillMissing(tool, input ?? {}, transcript) ? 'rule-guard: a Planner at size M or L grills first (CLAUDE.md, No fog; operator SKILL.md, Grill first): post the real-moment question (when it comes from his life) and up to 2 request_decision cards (goal, taste), each with your recommended answer, then write the plan on the answers (or the recommendations while he is away).' : null)

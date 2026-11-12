@@ -1181,3 +1181,31 @@ test('rule guard: the Claude app browser is blocked, Owner-Chrome and others are
   assert.equal(decide('mcp__claude-in-chrome__navigate', { url: 'https://example.com' }, {}), null, 'Owner-Chrome passes')
   assert.equal(decide('mcp__plugin_playwright_playwright__browser_navigate', { url: 'https://example.com' }, {}), null, 'headless Playwright passes')
 })
+
+// Companyxy report 2026-11-12, point 3: bodies and outfits were built before cast sheets with measures and a look lock
+// existed (about 20 fit rounds). A modelling brief on a game or story kit names its approved sheet and look lock.
+test('team guard: a body, outfit or fit brief on a game kit needs a Sheet: and a Look-Lock: line', async () => {
+  const { missingLines } = await import('../global/team-guard.mjs')
+  const brief = (more) => `Role: Programmer · Kit: game · Size: L${FULL}\n${more}`
+  assert.deepEqual(missingLines(brief('Fit the school outfit to Mira.')), ['Sheet: (approved cast sheet, docs/preproduction-workflow.md)', 'Look-Lock: (owner card of the look)'])
+  assert.deepEqual(missingLines(brief('Fit the school outfit to Mira.\nSheet: characters/mira/SHEET.md\nLook-Lock: https://claude.ai/card/1 2026-11-12')), [])
+  assert.deepEqual(missingLines(brief('Fit the outfit.\nSheet: <path>\nLook-Lock: <card>')).length, 2, 'placeholders do not count')
+  assert.deepEqual(missingLines(brief('Fix the login page copy.')), [], 'no modelling, no sheet')
+  assert.deepEqual(missingLines(`Role: Planner · Kit: game · Size: M${FULL}\nWrite the cast sheet and body plan for Mira.`), [], 'the cast stage itself writes the sheet')
+  assert.deepEqual(missingLines(`Role: Programmer · Kit: app · Size: M${FULL}\nFit the outfit.`), [], 'only game and story kits')
+})
+
+// Companyxy report 2026-11-12, point 8: garments were downloaded twice because nothing checked the wardrobe first.
+test('rule guard: a garment download needs clothes_dupe.py on the same source earlier in the session', async () => {
+  const { dupeCheckMissing } = await import('../global/rule-guard.mjs')
+  const url = 'https://sketchfab.com/3d-models/school-uniform-0123456789abcdef0123456789abcdef'
+  const seen = (command) => JSON.stringify({ message: { content: [{ type: 'tool_use', id: 't1', name: 'Bash', input: { command } }] } })
+  const dl = { command: `curl -L -o inbox/uniform.zip "${url}/download"` }
+  assert.match(dupeCheckMissing('Bash', dl, '') ?? '', /clothes_dupe\.py/)
+  assert.equal(dupeCheckMissing('Bash', dl, seen(`python tools/laptop/clothes_dupe.py ${url}`)), null, 'checked first')
+  assert.equal(dupeCheckMissing('Bash', { command: `python tools/laptop/clothes_dupe.py ${url} && curl -L -o x.zip ${url}` }, ''), null, 'same command, dupe check first')
+  assert.match(dupeCheckMissing('Bash', dl, seen('python tools/laptop/clothes_dupe.py https://sketchfab.com/3d-models/other-ffffffffffffffffffffffffffffffff')) ?? '', /clothes_dupe/, 'another source does not count')
+  assert.equal(dupeCheckMissing('Bash', { command: 'curl -L https://example.com/readme.txt -o r.txt' }, ''), null, 'not a garment source')
+  assert.equal(dupeCheckMissing('Bash', { command: `git log ${url}` }, ''), null, 'not a download')
+  assert.equal(dupeCheckMissing('Write', {}, ''), null)
+})
