@@ -2,11 +2,17 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { buildIndex, buildCard, ruleRows, CARD_MAX } from './coordinator-card.mjs'
 
-test('the card builds, stays under 6,000 characters and has its parts', () => {
+test('the card builds, stays under CARD_MAX characters and has its parts', () => {
   const card = buildCard({ hash: 'abc1234', date: '2026-11-08' })
   assert.ok(card.length < CARD_MAX, String(card.length))
   assert.match(card, /^Coordinator card \(claude-setup abc1234, 2026-11-08\)/)
   for (const s of ['Pre-flight', 'Spawn rule', 'One home per rule', 'Roster']) assert.ok(card.includes(s), s)
+})
+
+test('the pre-flight carries the masterplan duty (roles/project-manager.md, Masterplan)', () => {
+  const card = buildCard({ hash: 'x', date: 'd' })
+  const pre = card.split('## Spawn rule')[0]
+  for (const s of ['## Masterplan', 'update_memory', 'Stand', 'write_custom_view', 'roles/project-manager.md']) assert.ok(pre.includes(s), s)
 })
 
 test('the index lines are rule → home, cut at 60 characters', () => {

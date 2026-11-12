@@ -39,7 +39,7 @@ the board was hours stale (2026-10-11 audit). A row without a source is marked u
 
 **Plan first** (yskills 2026-10-26: style work went one-off file, re-measure, restructure into a library, 3 PRs; rule: `CLAUDE.md`, Plan first). Every non-trivial change, whatever the repo or kit (the `setup` kit included), before the first file: [advisory]
 
-1. **Research once:** best practice and state of the art for this change, one WebSearch per open fact (a Haiku subagent for big reads). Skip what the repo or `docs/research/` already answers.
+1. **Research once:** best practice and state of the art for this change, one WebSearch per open fact (a Haiku subagent for big reads; a brief that asks for it names its Researcher, `docs/TEAMS.md`, Kits). Skip what the repo or `docs/research/` already answers.
 2. **Placement check:** search the repo and claude-setup for what exists; pick the home (`docs/MAP.md`, One home per rule); ask whether it still works at 10 times the size (a library with an index, not a one-off file); a new kind of thing gets its MAP row in the same PR.
 3. **Short plan:** 5 lines in the PR body or `PROGRESS.md`: what, where, why there, what is out. Under auto-run build at once; no card unless a real fork.
 4. **Stick to it:** build exactly the plan. New facts that change it (a measurement, a failed premise) update the plan line first and say so in one line; never silently restructure mid-way. [advisory]
