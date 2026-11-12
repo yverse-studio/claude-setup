@@ -90,7 +90,7 @@ A thread that cannot open a PR itself (cloud, GitHub App disconnected) writes th
 [the template](../.claude/skills/operator/templates/project-memory.md) and no line that is a rule; a rule
 found there becomes a `loop:setup` issue. Monthly, or when you say "memory check": full. Every fact
 file and auto-memory note is moved into its home ([`docs/MAP.md`, Start here](MAP.md#start-here)) or
-deleted, the raw copy archived under `docs/archive/` first, and you get three lines on what moved and
+deleted (git history keeps the raw copy), and you get three lines on what moved and
 what went. Claude Code's built-in auto-memory on your PC (`~/.claude/projects/*/memory/`) stays a
 scratchpad that the full check empties.
 
