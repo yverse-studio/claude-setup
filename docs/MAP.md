@@ -86,7 +86,6 @@ lives outside this repo.
 | Base + delta (characters) | `docs/base-delta.md` | The fixed rule (body fixes go into the base, characters only get details), scale 1, the delta file, rebuild (`scripts/blender/delta*.py`), the marker proof, topology break, scale migration, the Blender RAM check |
 | Using it (for yskills) | `docs/USING.md` | One phone page: how to start an app, deploy or delete a page in one shot, what you see, what it costs |
 | Project registry | `projects/` | One `<name>.json` per project the `new-project` workflow made; `delete-project` needs it |
-| GitHub owner migration (plan B if the account stays suspended) | `docs/github-migration.md`, `scripts/migration/` | Inventory of clones and bundles, copy to a new owner, the hands steps and what points at the old owner |
 | GitHub rules (what GitHub forbids, what we do: no 18+ on GitHub, no bulk activity, one account, no big binaries; small changes batched as patches, not own PRs) | `docs/github-rules.md` | The AUP rows and our rule per row |
 | After launch | `docs/LOOP.md` | Errors and feedback become issues and fix threads |
 | Setup loop | operator `SKILL.md` (Setup loop) | Friction with this repo becomes a `loop:setup` issue, then a fix thread through the gate; without the GitHub App a block in the [lessons inbox](../.claude/skills/operator/templates/lessons-inbox.md) |
