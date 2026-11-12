@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync, mkdtempSync, mkdirSync, copyFileSync, chmodSync, writeFileSync } from 'node:fs'
+import { readFileSync, readdirSync, mkdtempSync, mkdirSync, copyFileSync, chmodSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { spawnSync } from 'node:child_process'
@@ -9,10 +9,20 @@ import { ciSteps, cleanEnv as cleanEnvForTest } from './pre-pr.mjs'
 test('pre-pr mirrors the CI test line and the three PR checks', () => {
   const yml = readFileSync(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8')
   const s = ciSteps(yml)
-  assert.match(s.tests, /^node --test .*scripts\/pre-pr\.test\.mjs/)
+  assert.match(s.tests, /^node --test .*scripts\/\*\.test\.mjs/, 'every scripts/*.test.mjs runs, by glob')
   assert.match(yml, /floor-guard\.mjs --base origin/)
   assert.match(yml, /pr-lessons-check\.mjs/)
   assert.equal(s.check, 'node scripts/check.mjs')
+})
+
+// 2026-11-12: seven test files (forged-relay, task-ledger, brief-fields ...) ran neither in CI nor in pre-pr, because the
+// line listed tests by name. A new test under scripts/ must run without anyone adding its name.
+test('the CI test line runs every scripts/*.test.mjs and keeps the tests outside scripts/', () => {
+  const yml = readFileSync(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8')
+  const args = ciSteps(yml).tests.split(/\s+/).slice(2)
+  assert.ok(readdirSync(new URL('.', import.meta.url)).filter((f) => f.endsWith('.test.mjs')).length > 30, 'the glob matches the test folder')
+  assert.ok(args.includes('scripts/*.test.mjs'), 'the glob is on the line')
+  for (const f of ['.claude/skills/publish/templates/new-project/test/preview-login.test.mjs', '.claude/skills/game-3d/scripts/check-assets.test.mjs', '.claude/skills/game-3d/scripts/gdd-check.test.mjs', '.claude/skills/game-3d/scripts/audio-check.test.mjs', '.claude/skills/ui-review/scripts/design-check.test.mjs', '.claude/skills/ui-review/scripts/copy-check.test.mjs', '.claude/skills/market/scripts/analytics-check.test.mjs', '.claude/skills/operator/templates/loop/loop.test.mjs', '.claude/skills/operator/templates/mailbox/mailbox.test.mjs']) assert.ok(args.includes(f), `${f} stays on the line`)
 })
 
 test('the git pre-push hook runs pre-pr only where the repo has one', () => {
