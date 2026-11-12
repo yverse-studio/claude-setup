@@ -23,7 +23,7 @@
 
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { isIP } from 'node:net'
 import { homedir, tmpdir } from 'node:os'
 import { dirname, join, relative } from 'node:path'
@@ -301,7 +301,11 @@ function receiptBlock(tool, input, session, cwd, agentId, transcript) {
   if (!/reason=\\?"spawn/.test(t)) return null // a hooked project chat that was handed a brief is no thread (the canary covers it)
   const root = setupRoot(cwd)
   const rules = ['CLAUDE.md', 'docs/TEAMS.md'].map((f) => read(join(root, f))).join('\n')
-  return receiptMissing(tool, input, threadReceipt(role, spawnPrompt('', t), t, rules), t)
+  const brief = spawnPrompt('', t).replace(/<\/?(wake|message|thread|project|relay|coordinator-relay|cited|note|system-note)\b[^>]*>/g, '\n')
+  const path = roleOf(brief, read(join(root, 'docs', 'TEAMS.md')))?.path
+  // No checkout (only the boot copy): nothing can be checked, so the receipt says that instead of a false `none`.
+  const status = existsSync(join(root, 'config', 'plugins.json')) ? skillStatus(wanted(root, path ? read(join(root, path)) : '', brief), { root, cwd }) : { loaded: [], missing: [], unknown: true }
+  return receiptMissing(tool, input, threadReceipt(role, brief, t, rules, status), t) ?? (receiptSent(t) ? null : fallbackUnread(status, t))
 }
 
 function roleContext(prompt, cwd, session) {
@@ -533,19 +537,56 @@ export function canaryMissing(tool, input, line, transcript) {
 // the rule files (the same one as the coordinator canary). The model only copies it; a first reply without it is blocked once with the
 // exact line. It proves the role card was injected and which skills were called, not that the model heeds them. Only a post_message
 // is checked: a thread whose first visible act is a decision card shows no receipt there (accepted, documented in docs/MAP.md).
-export function threadReceipt(role, brief, transcript, rules) {
+// The skills and agents a role names (the backticked words of its playbook's `Uses:` line, plus the brief's `Skills:` words),
+// kept to names claude-setup really has: a skill folder, an agent file or a global plugin. A word that is none of those is prose.
+function wanted(root, playbook, brief) {
+  const ls = (d) => { try { return readdirSync(join(root, d)) } catch { return [] } }
+  const known = new Set([...ls('.claude/skills'), ...ls('.claude/agents').map((f) => f.replace(/\.md$/, '')), ...[...read(join(root, 'config', 'plugins.json')).matchAll(/"id":\s*"([\w-]+)@/g)].map((m) => m[1])])
+  const uses = playbook.match(/^[ \t>-]*\**Uses:?\**[^\n]*/m)?.[0] ?? ''
+  const said = brief.replace(/[*_`]/g, '').match(/^[ \t>-]*Skills:([^\n]*)/m)?.[1] ?? ''
+  return [...new Set([...[...uses.matchAll(/`([a-z0-9-]+)`/g)].map((m) => m[1]), ...said.split(/[^a-z0-9-]+/)])].filter((n) => known.has(n))
+}
+
+// Whether each name can really load in this thread (design skills were absent in project threads and nothing said so: the plugin cache
+// kept an old copy). A skill or agent loads from the user's skills, an installed plugin or the checkout the thread runs in.
+// `missing` names the claude-setup file to read instead. Pure fs, so a test can point it at a fake home.
+export function skillStatus(names, { root, home = process.env.CLAUDE_SETUP_HOME || homedir(), cwd = process.cwd() } = {}) {
+  let plugins = []
+  try { plugins = Object.values(JSON.parse(read(join(home, '.claude', 'plugins', 'installed_plugins.json'))).plugins ?? {}).flat().map((p) => p.installPath) } catch { /* no plugins installed */ }
+  const bases = [join(home, '.claude'), join(cwd, '.claude'), ...plugins].filter(Boolean)
+  const found = (n) => bases.some((b) => existsSync(join(b, 'skills', n, 'SKILL.md')) || existsSync(join(b, 'agents', `${n}.md`)) || existsSync(join(b, n, 'skills', n, 'SKILL.md')))
+  const fallback = (n) => [`.claude/skills/${n}/SKILL.md`, `.claude/agents/${n}.md`].find((f) => existsSync(join(root, f))) ?? null
+  const loaded = names.filter(found)
+  return { loaded, missing: names.filter((n) => !found(n)).map((n) => ({ name: n, path: fallback(n) })) }
+}
+export function missingNote({ missing, unknown }) {
+  if (unknown) return 'missing: unknown (no claude-setup checkout here; add_repo yverse-studio/claude-setup and read your role skills from it)'
+  if (!missing.length) return 'missing: none'
+  const files = missing.filter((m) => m.path), bare = missing.filter((m) => !m.path)
+  return `missing: ${missing.map((m) => m.name).join(', ')} (${[files.length && `read ${files.map((m) => m.path).join(', ')} instead`, bare.length && `no file for ${bare.map((m) => m.name).join(', ')}`].filter(Boolean).join('; ')})`
+}
+// A thread that says a skill is missing must have read the file it uses instead (a Read or a shell command naming it) before its first reply.
+export function fallbackUnread(status, transcript) {
+  const calls = toolCalls(transcript)
+  const todo = status.missing.map((m) => m.path).filter((f) => f && !calls.some((c) => String(c.input.file_path ?? c.input.command ?? '').includes(f)))
+  return todo.length ? `rule-guard: a skill your role names cannot load here, so read what stands in for it before your first reply, then say so in it (receipt line: missing): ${todo.join(', ')} of claude-setup (CLAUDE.md, Never "can't").` : null
+}
+
+export function threadReceipt(role, brief, transcript, rules, status = { loaded: [], missing: [] }) {
   const tag = (k) => brief.replace(/[*_`]/g, '').match(new RegExp(`${k}:[ \\t]*([A-Za-z0-9-]+)`))?.[1] ?? '?'
   const skills = [...new Set(toolCalls(transcript).filter((c) => c.name === 'Skill').map((c) => String(c.input.skill ?? '')).filter(Boolean))]
   const hash = rules.includes(MARK) ? createHash('sha256').update(rules.replace(/\r/g, '')).digest('hex').slice(0, 7) : 'none'
   const item = brief.replace(/[*_`]/g, '').match(/\bItem:[ \t]*(M\d+|new)/)?.[1] ?? '?' // the coordinator's Masterplan id (roles/project-manager.md, Masterplan)
-  return `Thread · ${role} · ${tag('Kit')} · ${tag('Size')} · item ${item} · skills: ${skills.join(', ') || 'none'} · rules #${hash}`
+  return `Thread · ${role} · ${tag('Kit')} · ${tag('Size')} · item ${item} · skills: ${skills.join(', ') || 'none'} · rules #${hash} · ${missingNote(status)}`
 }
+
+// Until one reply carried a receipt and went out (a blocked try has a hook error as its result).
+const receiptSent = (transcript) => toolCalls(transcript).some((c) => c.name === 'mcp__hearthbot__post_message' && c.result && !/rule-guard:|hook error/i.test(c.result) && String(c.input.text ?? '').trimStart().startsWith('Thread · '))
 
 export function receiptMissing(tool, input, line, transcript) {
   if (tool !== 'mcp__hearthbot__post_message' || !line) return null
   if (String(input.text ?? '').trimStart().startsWith(line)) return null
-  // Until one reply carried a receipt and went out (a blocked try has a hook error as its result).
-  if (toolCalls(transcript).some((c) => c.name === tool && c.result && !/rule-guard:|hook error/i.test(c.result) && String(c.input.text ?? '').trimStart().startsWith('Thread · '))) return null
+  if (receiptSent(transcript)) return null
   return `rule-guard: a thread's first reply opens with its start receipt, verbatim, so yskills sees the role loaded (CLAUDE.md, Teams): ${line}`
 }
 
@@ -682,6 +723,34 @@ const listProcs = () => {
 // A subagent's own tool calls live next to the session transcript: <session>/subagents/agent-<id>.jsonl.
 const agentTranscript = (transcriptPath, agentId) => (transcriptPath && agentId ? join(transcriptPath.replace(/\.jsonl$/, ''), 'subagents', `agent-${String(agentId).replace(/[^\w-]/g, '')}.jsonl`) : '')
 
+
+// Gate round counter (global/gate-rounds.mjs, operator/gate.md Rounds): a gate post, a merge, a ledger write or a director/card record is
+// checked against the asset's ledger. Fail closed: a check that throws refuses the call (research 2026-11-12: a crashing hook does not block).
+const humanAfter = (transcript, ref) => {
+  const id = String(ref).match(/cmsg_\w+/)?.[0]
+  const rows = transcript.split('\n').map((l) => { try { return JSON.parse(l) } catch { return null } }).filter(Boolean)
+  const at = rows.findIndex((r) => id && JSON.stringify(r.message?.content ?? '').includes(id))
+  const human = (r) => r.type === 'user' && !(Array.isArray(r.message?.content) && r.message.content.some((c) => c?.type === 'tool_result')) && /<message\b[^>]*\bfrom=\\?"human\\?"[^>]*\btrust=\\?"principal\\?"/.test(JSON.stringify(r.message?.content ?? ''))
+  return at >= 0 && rows.slice(at + 1).some(human)
+}
+export async function gateBlock(tool, input, transcript, model, dry = false) {
+  if (!/^(Write|Edit|MultiEdit|NotebookEdit|Bash|PowerShell)$|^mcp__github__/.test(tool)) return null
+  let mod
+  try { mod = await import(new URL('./gate-rounds.mjs', import.meta.url)) } catch (e) {
+    // Fail closed for gate-shaped calls: a missing or broken counter must not open the gate.
+    const shaped = /^mcp__github__(merge_pull_request|enable_pr_auto_merge)$/.test(tool) || /\bgh\s+pr\s+merge\b/.test(String(input?.command ?? '')) || /gate-rounds|\bGate\b[^\n]*\bround\s+\d/i.test(JSON.stringify(input))
+    return shaped ? `rule-guard: the gate round counter (gate-rounds.mjs) could not load (${String(e.message).slice(0, 60)}); gate posts, merges and ledger calls are refused until it is installed (operator/gate.md, Rounds).` : null
+  }
+  try {
+    const t = transcript()
+    const why = mod.gateStep(tool, input, { model, dry, calls: /gate-rounds\.mjs/.test(JSON.stringify(input)) ? toolCalls(t) : [], humanAfter: (ref) => humanAfter(t, ref) })
+    return why ? `rule-guard: ${why}` : null
+  } catch (e) { return `rule-guard: gate ledger check failed (${String(e.message).slice(0, 80)}); refused, fail closed (operator/gate.md, Rounds).` }
+}
+export async function gateBriefContext(brief, model) {
+  try { return (await import(new URL('./gate-rounds.mjs', import.meta.url))).gateBrief(brief, { model }) } catch { return '' }
+}
+
 if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/').split('/').pop())) {
   const mode = process.argv[2]
   if (mode === 'read') {
@@ -706,7 +775,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           const brief = lookup ? spawnPrompt(prompt, read(transcriptPath)) : prompt
           if (session && (spawned || (lookup && brief !== prompt))) writeFileSync(briefOnce, '')
           const model = sessionModel(transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : '') ?? (read(join(tmpdir(), `claude-setup-model-${String(session).replace(/[^A-Za-z0-9]/g, '')}`)).trim() || null)
-          const context = [await briefCheck(brief, cwd, model), modelOnce(brief, transcriptPath, session), roleContext(brief, cwd, session), promptContext(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
+          const context = [await briefCheck(brief, cwd, model), spawned || (lookup && brief !== prompt) ? await gateBriefContext(brief, model) : '', modelOnce(brief, transcriptPath, session), roleContext(brief, cwd, session), promptContext(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
           if (context) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: context } }))
           return
         }
@@ -720,7 +789,8 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         const shipped = join(tmpdir(), `claude-setup-artifacts-${String(session).replace(/\W/g, '')}`)
         const transcript = () => (transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : '')
         const sessionTranscript = () => [transcriptPath, agentTranscript(transcriptPath, agentId)].filter((p) => p && existsSync(p)).map(read).join('\n')
-        const block = decide(tool, input ?? {}, process.env, session ? read(shipped).split('\n') : [], () => threadBoard(toolCalls(transcript())))
+        let block = (await gateBlock(tool, input ?? {}, transcript, sessionModel(transcript()), true))
+          ?? decide(tool, input ?? {}, process.env, session ? read(shipped).split('\n') : [], () => threadBoard(toolCalls(transcript())))
           ?? canaryMissing(tool, input ?? {}, session ? read(join(process.env.CLAUDE_SETUP_HOME || homedir(), '.claude', 'claude-setup', 'booted', `${String(session).replace(/\W/g, '')}.canary`)) : '', transcript)
           ?? receiptBlock(tool, input ?? {}, session, cwd, agentId, transcript)
           ?? proposeSkillsBlocked(tool)
@@ -731,6 +801,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           ?? blenderServerBusy(tool, input ?? {}, listProcs)
           ?? blenderDocsMissing(tool, input ?? {}, sessionTranscript)
           ?? (grillMissing(tool, input ?? {}, transcript) ? 'rule-guard: a Planner at size M or L grills first (CLAUDE.md, No fog; operator SKILL.md, Grill first): post the real-moment question (when it comes from his life) and up to 2 request_decision cards (goal, taste), each with your recommended answer, then write the plan on the answers (or the recommendations while he is away).' : null)
+        if (!block) block = await gateBlock(tool, input ?? {}, transcript, sessionModel(transcript()), false) // commit the round only now: no other guard refused the post
         if (!block && session && tool === 'Artifact' && input?.url && input.file_path) writeFileSync(shipped, `${input.file_path}\n`, { flag: 'a' })
         if (block) { process.stderr.write(block); process.exitCode = 2 }
         else {
