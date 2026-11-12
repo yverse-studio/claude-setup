@@ -37,3 +37,4 @@ Report what the evidence says even when it kills the idea, and suggest what to d
 Added at the end of each project (operator step 9): date, project and its type, what to do differently. Newest last; merge duplicates.
 
 - 2026-10-07 (Claude Setup, 3D game path): judge an engine by what cloud threads can run and look at headless, not by features; name every price (Steam Direct 100 $, licences, asset services) and what only yskills' hands can do, and check exact library versions on npm instead of trusting blog dates.
+- 2026-11-12 (GameDev, story game): search for how the pros order pre-production returns blogs, not primary sources; say so, write the stage order with an exit lock each (`docs/preproduction-workflow.md`) and compare it with the project's own files before proposing fixes.

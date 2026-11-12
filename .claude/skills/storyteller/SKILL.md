@@ -15,7 +15,7 @@ Project specifics (the cast, the chapter plan, explicit text) live in the game's
 1. **Content line**: every character is an adult fictional original or an adult version stated on page; no
    minors; explicit scenes are present-day adults only, flashbacks stay non-explicit. Explicit
    text lives only in the private game repo or behind the game's 18+ gate.
-2. **Bible first**: cast sheets, relations, world, the preset. No bible yet: write it before chapter 1.
+2. **Bible first**: cast sheets, relations, world, the preset. No bible yet: write it before chapter 1. Order and locks: `docs/preproduction-workflow.md`; sheet template `docs/templates/character-bible.md`.
 3. **Ladder** (`03`): name each chapter's rung in the plan; escalate one rung per scene, never skip one; start
    early (first teasing beat by chapter 2 or 3) and keep a steady curve to the finale.
 4. **Preset per chapter** (`04`), never mid-beat.

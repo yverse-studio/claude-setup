@@ -276,7 +276,7 @@ test('check.mjs fails when a lessons file is not linked from docs/MAP.md or the 
 // `model:` passes; SessionStart prints the TEAMS.md pointer.
 const teamFile = join(root, 'global/team-guard.mjs')
 // The brief block's must-have lines (operator/briefs.md); a thread start without them is blocked.
-const FULL = '\nModel: claude-x-1\nSkills: roles/programmer.md\nDone when: node --test passes. Stop when: two rounds.\nStart: read MEMORY.md, then CLAUDE.md\nPrior art: none, because a test brief'
+const FULL = '\nThreads: list_threads checked, none open on this topic\nModel: claude-x-1\nSkills: roles/programmer.md\nDone when: node --test passes. Stop when: two rounds.\nStart: read MEMORY.md, then CLAUDE.md\nPrior art: none, because a test brief'
 const runTeam = (mode, payload, env = {}) => spawnSync(process.execPath, [teamFile, mode], {
   input: JSON.stringify(payload), encoding: 'utf8', timeout: 5000, env: { ...process.env, CLAUDE_CODE_CHILD_SESSION: '', ...env },
 })
@@ -310,7 +310,7 @@ test('team guard: blocks Agent and thread starts without model, passes with one'
 test('team guard: an Animator thread starts on the game and story kits, on Sonnet, not on site or setup', async () => {
   const { decide } = await import('../global/team-guard.mjs')
   const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
-  const brief = (kit, size = 'M') => ({ brief: `Role: Animator · Kit: ${kit} · Size: ${size}\nPrior art: scene kit and our blender-body skill checked; adapt, because the key-pose library exists${FULL}`, title: 'Animator · fenster', model: 'claude-x-1' })
+  const brief = (kit, size = 'M') => ({ brief: `Role: Animator · Kit: ${kit} · Size: ${size}\nPrior art: scene kit and our blender-body skill checked; adapt, because the key-pose library exists${FULL}\nSheet: n/a scene animation, no body or outfit model change`, title: 'Animator · fenster', model: 'claude-x-1' })
   for (const kit of ['game', 'story']) assert.deepEqual(decide('mcp__hearthbot__start_thread', brief(kit), [], [], teams), {}, `Animator passes on ${kit}`)
   for (const kit of ['site', 'app', 'setup']) assert.match(decide('mcp__hearthbot__start_thread', brief(kit), [], [], teams).block ?? '', /not on the `\w+` kit's team/, `Animator is skipped on ${kit}`)
   assert.match(decide('mcp__hearthbot__start_thread', { ...brief('game'), model: 'claude-opus-x' }, [], [], teams).block ?? '', /runs on sonnet/, 'the Animator runs on Sonnet')
@@ -861,13 +861,13 @@ test('team guard: kit, size, role and brief lines are checked against TEAMS.md',
   assert.equal(badTeam('Role: Tester · Kit: app · Size: L', teams), null)
   assert.ok(missingLines('Model: <id for this role>\nSkills: <role doc>').includes('Model:'), 'an unfilled Model placeholder does not count')
   assert.ok(!missingLines('Done when:\n  node --test passes').includes('Done when:'), 'the value may start on the next line')
-  assert.deepEqual(missingLines('Role: Producer · Kit: video · Size: M\nMake a bee video.'), ['Model:', 'Skills:', 'Done when:', 'Stop when:', 'Start: (read MEMORY.md first)'])
+  assert.deepEqual(missingLines('Role: Producer · Kit: video · Size: M\nMake a bee video.'), ['Model:', 'Skills:', 'Done when:', 'Stop when:', 'Start: (read MEMORY.md first)', 'Threads: (list_threads checked, none open on this topic)'])
   assert.deepEqual(missingLines(`Role: Planner · Kit: setup · Size: M${FULL}\nDone when: SOTA research on plan tracking is summarized`), ['Researcher: (the task asks for research)'], 'a research task names its Researcher')
   assert.deepEqual(missingLines(`Role: Planner · Kit: setup · Size: M${FULL}\nDone when: research on best practice summarized\nResearcher: general-purpose, sonnet`), [])
   assert.deepEqual(missingLines(`Role: Programmer · Kit: app · Size: S${FULL}\nFollow best practices for tests.`), [], 'an order to follow best practice is no research ask')
   assert.deepEqual(missingLines(`Role: Researcher · Kit: app · Size: M${FULL}\nFind the SOTA for offline sync.`), [], 'the Researcher itself names none')
   assert.deepEqual(missingLines(`Role: Programmer · Kit: app · Size: S${FULL}\nShortest reply. No extra subagents, research, screenshots or re-reads.`), [], 'the brief block itself is no research ask')
-  assert.deepEqual(missingLines('Done when: <a check>. Stop when: <budget>'), ['Model:', 'Skills:', 'Done when:', 'Stop when:', 'Start: (read MEMORY.md first)'], 'unfilled placeholders do not count')
+  assert.deepEqual(missingLines('Done when: <a check>. Stop when: <budget>'), ['Model:', 'Skills:', 'Done when:', 'Stop when:', 'Start: (read MEMORY.md first)', 'Threads: (list_threads checked, none open on this topic)'], 'unfilled placeholders do not count')
 })
 
 // Luna (yskills 2026-10-27): every reply to him carries a kaomoji; nothing else is touched.
@@ -1151,4 +1151,84 @@ test('rule-guard: the receipt check runs only in a spawned thread', () => {
     assert.match(run(spawned).stderr, /start receipt/)
     assert.equal(run(JSON.stringify({ type: 'user', message: { content: 'Role: Programmer · Kit: setup · Size: S' } })).status, 0, 'a pasted brief in a project chat is no thread')
   } finally { rmSync(rolefile, { force: true }); rmSync(dir, { recursive: true, force: true }) }
+})
+
+// Companyxy report 2026-11-12, point 1: almost every thread start failed the brief check one line at a time, so each
+// start cost an extra round. One refusal now lists every problem and points at a fixed, tested template.
+test('team guard: a bad brief is refused once with every problem and a template that itself passes', async () => {
+  const { decide, missingLines, stamped, needsPriorArt, needsTester } = await import('../global/team-guard.mjs')
+  const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
+  const bad = decide('mcp__hearthbot__start_thread', { title: 'Fix it', instructions: 'Role: Programmer · Kit: app · Size: L\nBuild the thing.', model: 'claude-x-1' }, [], [], teams).block ?? ''
+  for (const part of [/Threads:/, /Model:/, /Skills:/, /Done when:/, /Stop when:/, /Start:/, /Prior art:/, /Tester:/, /docs\/templates\/thread-brief\.md/]) assert.match(bad, part, `one refusal names ${part}`)
+  const tpl = readFileSync(join(root, 'docs/templates/thread-brief.md'), 'utf8')
+  const block = tpl.match(/```\n([\s\S]*?)```/)?.[1] ?? ''
+  assert.ok(block, 'the template has one fenced brief block')
+  const filled = block.replace(/<[^>\n]+>/g, (m) => (m === '<S|M|L>' ? 'M' : /^<kit/.test(m) ? 'setup' : /^<Role/.test(m) ? 'Programmer' : 'something concrete for this task'))
+  assert.deepEqual(missingLines(filled), [], 'a filled template has every must-have line')
+  assert.ok(stamped(filled) && !needsPriorArt(filled) && !needsTester(filled))
+  const unfilled = missingLines(block)
+  assert.ok(unfilled.length >= 4, 'the unfilled template does not pass by itself')
+  assert.equal(decide('mcp__hearthbot__start_thread', { title: 'Programmer · Fix it', instructions: filled, model: 'claude-x-1' }, [], [], teams).block, undefined, 'a filled template starts the thread')
+})
+
+// Companyxy report 2026-11-12, point 2: a Researcher opened the Claude app's built-in browser instead of yskills' own
+// Chrome on the laptop. The app browser is blocked unless the environment says yskills asked for it.
+test('rule guard: the Claude app browser is blocked, Owner-Chrome and others are not', async () => {
+  const { decide } = await import('../global/rule-guard.mjs')
+  const app = (name, env = {}) => decide(`mcp__remote-devices__Claude_Browser__${name}`, { url: 'https://example.com' }, env)
+  for (const name of ['navigate', 'tabs_create', 'browser_batch', 'preview_start']) assert.match(app(name) ?? '', /Owner-Chrome[\s\S]*claude-in-chrome/, name)
+  assert.equal(app('navigate', { CLAUDE_SETUP_BROWSER: 'app' }), null, 'yskills asked for the app browser in his own words')
+  assert.equal(decide('mcp__claude-in-chrome__navigate', { url: 'https://example.com' }, {}), null, 'Owner-Chrome passes')
+  assert.equal(decide('mcp__plugin_playwright_playwright__browser_navigate', { url: 'https://example.com' }, {}), null, 'headless Playwright passes')
+})
+
+// Companyxy report 2026-11-12, point 8: garments were downloaded twice because nothing checked the wardrobe first.
+test('rule guard: a garment download needs clothes_dupe.py on the same source earlier in the session', async () => {
+  const { dupeCheckMissing } = await import('../global/rule-guard.mjs')
+  const url = 'https://sketchfab.com/3d-models/school-uniform-0123456789abcdef0123456789abcdef'
+  const seen = (command) => JSON.stringify({ message: { content: [{ type: 'tool_use', id: 't1', name: 'Bash', input: { command } }] } })
+  const dl = { command: `curl -L -o inbox/uniform.zip "${url}/download"` }
+  assert.match(dupeCheckMissing('Bash', dl, '') ?? '', /clothes_dupe\.py/)
+  assert.equal(dupeCheckMissing('Bash', dl, seen(`python tools/laptop/clothes_dupe.py ${url}`)), null, 'checked first')
+  assert.equal(dupeCheckMissing('Bash', { command: `python tools/laptop/clothes_dupe.py ${url} && curl -L -o x.zip ${url}` }, ''), null, 'same command, dupe check first')
+  assert.match(dupeCheckMissing('Bash', dl, seen('python tools/laptop/clothes_dupe.py https://sketchfab.com/3d-models/other-ffffffffffffffffffffffffffffffff')) ?? '', /clothes_dupe/, 'another source does not count')
+  assert.equal(dupeCheckMissing('Bash', { command: 'curl -L https://example.com/readme.txt -o r.txt' }, ''), null, 'not a garment source')
+  assert.equal(dupeCheckMissing('Bash', { command: `git log ${url}` }, ''), null, 'not a download')
+  assert.equal(dupeCheckMissing('Write', {}, ''), null)
+})
+
+// Gate review of PR 445: the first versions of these guards had false positives and a matcher gap.
+test('gate fixes: no sheet demand for HUD or camera work, every app browser tool reaches the hook, dupe ids and hosts', async () => {
+  const { missingLines } = await import('../global/team-guard.mjs')
+  const { dupeCheckMissing } = await import('../global/rule-guard.mjs')
+  assert.equal(missingLines(`Role: Programmer · Kit: game · Size: M${FULL}\nFit the new character outfit`).length, 2)
+  for (const f of ['install.mjs', 'cloud/setup.sh']) assert.match(readFileSync(join(root, f), 'utf8'), /mcp__\.\*Claude_Browser__\.\*\|/, `${f} routes every Claude_Browser tool to rule-guard`)
+  const seen = (command) => JSON.stringify({ message: { content: [{ type: 'tool_use', id: 't1', name: 'Bash', input: { command } }] } })
+  const uid = '0123456789abcdef0123456789abcdef'
+  assert.equal(dupeCheckMissing('Bash', { command: `curl -L -o a.zip https://sketchfab.com/3d-models/school-uniform-${uid}/download` }, seen(`python clothes_dupe.py ${uid}`)), null, 'the bare id counts')
+  assert.equal(dupeCheckMissing('Bash', { command: 'curl -L -o a.zip https://myprefab.com/items/1' }, ''), null, 'myprefab.com is not fab.com')
+  assert.match(dupeCheckMissing('Bash', { command: 'curl -L -o a.zip https://www.fab.com/listings/0123456789abcdef-0123-4567-89ab-0123456789ab' }, '') ?? '', /clothes_dupe/)
+})
+
+test('gate fixes: Sheet: must be a .md path and Look-Lock: a link or card, "later" does not count', async () => {
+  const { missingLines } = await import('../global/team-guard.mjs')
+  const b = (extra) => `Role: Programmer · Kit: game · Size: M${FULL}\nFit the character outfit.\n${extra}`
+  assert.equal(missingLines(b('Sheet: later\nLook-Lock: later')).length, 2)
+  assert.equal(missingLines(b('Sheet: characters/mira/SHEET.md\nLook-Lock: owner card https://claude.ai/c/1')).length, 0)
+})
+
+// Gate rounds 1 to 6 of PR 445 chased verbs and body words; the rule is now a plain one: no classifier.
+test('team guard: every Programmer or Animator brief on a game or story kit names its cast sheet and look lock, or declares n/a', async () => {
+  const { missingLines } = await import('../global/team-guard.mjs')
+  const brief = (more, role = 'Programmer', kit = 'game') => `Role: ${role} · Kit: ${kit} · Size: L${FULL}\n${more}`
+  const both = ['Sheet: (approved cast sheet, docs/preproduction-workflow.md)', 'Look-Lock: (owner card of the look)']
+  for (const task of ['Fit the school outfit to Mira.', "Make Nova's legs longer", 'Put a hoodie on Kai', 'Make the HUD fit on 390px', 'Rig the camera dolly']) assert.deepEqual(missingLines(brief(task)), both, task)
+  assert.deepEqual(missingLines(brief('Fit the school outfit to Mira.\nSheet: characters/mira/SHEET.md\nLook-Lock: https://claude.ai/card/1 2026-11-12')), [])
+  assert.equal(missingLines(brief('Fit the outfit.\nSheet: <path>\nLook-Lock: <card>')).length, 2, 'placeholders do not count')
+  assert.equal(missingLines(brief('Make the HUD fit on 390px.\nSheet: n/a this is a HUD layout job, no model changes')).length, 0, 'a declared exception passes')
+  assert.equal(missingLines(brief('Make the HUD.\nSheet: n/a no')).length, 2, 'a one-word reason does not')
+  assert.equal(missingLines(brief('Make the HUD.\nSheet: n/a\nModel: sonnet because the role says so')).length, 2, 'a bare n/a does not borrow the next line as its reason')
+  assert.equal(missingLines(brief('Make the HUD.', 'Animator', 'story')).length, 2, 'Animator on the story kit too')
+  assert.deepEqual(missingLines(brief('Fix the login page copy.', 'Programmer', 'app')), [], 'only game and story kits')
+  assert.deepEqual(missingLines(brief('Write the cast sheet and body plan for Mira.', 'Planner', 'game')), [], 'the cast stage itself writes the sheet')
 })

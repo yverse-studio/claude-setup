@@ -555,13 +555,27 @@ const BRIEF_LINES = [
   ['Done when:', /\bDone when:[ \t]*\n?[ \t]*[^<\s]/i],
   ['Stop when:', /\bStop when:[ \t]*\n?[ \t]*[^<\s]/i],
   ['Start: (read MEMORY.md first)', /^[ \t>-]*Start:[^\n]*MEMORY\.md/im],
+  // Companyxy 2026-11-12: finished threads stayed open and work lay twice. The coordinator lists the threads before every start.
+  ['Threads: (list_threads checked, none open on this topic)', /^[ \t>-]*Threads:[ \t]*[^<\s][^\n]{8,}$/im],
 ]
 // A task that asks for research names its Researcher subagent (docs/TEAMS.md, Kits; yskills 2026-11-12:
 // a Planner did the SOTA research itself). The brief block's own "No extra ... research" does not trigger it.
 const ASKS_RESEARCH = /\b(SOTA|state of the art|research (on|about|into|what)|recherch\w*)\b/i
+// Companyxy 2026-11-12 (point 3): about 20 fit rounds because bodies and outfits were built before cast sheets with measures and a
+// look lock existed (docs/preproduction-workflow.md). A modelling job of a Programmer or Animator on a game or story kit names both.
+const SHEET_LINES = [
+  ['Sheet: (approved cast sheet, docs/preproduction-workflow.md)', /^[ \t>-]*Sheet:[ \t]*[^<\n]*\.md\b/im],
+  ['Look-Lock: (owner card of the look)', /^[ \t>-]*Look-Lock:[ \t]*[^<\n]*(https?:\/\/|card)/im],
+]
+// Gate rounds 1 to 6 chased verbs and body words and every round found more. So there is no classifier: every Programmer or Animator brief
+// on a game or story kit names its approved cast sheet and look lock, or declares in one line that it is no body, face or outfit job:
+// `Sheet: n/a <why>` (10+ characters). A false "n/a" on a real modelling job is visible in the brief; a missing line is refused.
+const needsSheet = (plain) => /^[ \t>-]*Role:[ \t]*(Programmer|Animator)\b/im.test(plain) && /\bKit:[ \t]*(game|story)\b/i.test(plain)
+  && !/^[ \t>-]*Sheet:[ \t]*n\/a[ \t]+\S[^\n]{9,}$/im.test(plain)
 export function missingLines(text) {
   const plain = text.replace(/[*_`]/g, '')
   const lines = BRIEF_LINES.filter(([, re]) => !re.test(plain)).map(([name]) => name)
+  if (needsSheet(plain)) for (const [name, re] of SHEET_LINES) if (!re.test(plain)) lines.push(name)
   if (ASKS_RESEARCH.test(plain) && !/\bRole:[ \t]*Researcher\b/i.test(plain) && !/^[ \t>-]*Researcher:[ \t]*[^<\s]/im.test(plain)) lines.push('Researcher: (the task asks for research)')
   return lines
 }
@@ -609,16 +623,22 @@ export function decide(tool, input = {}, dirs = [], unread = [], teams = '') {
   const kind = AGENT.test(tool) ? 'Agent' : THREAD_START.test(tool) ? 'thread' : null
   if (kind === 'thread' && unread.length) return { block: `team-guard: read the rules before starting a thread: ${unread.join(' and ')} (in ~/.claude/claude-setup/ or the claude-setup repo; docs/MAP.md, Start here). 2026-10-26 a coordinator skipped them and guessed every model. Read them, then retry.` }
   if (kind === 'thread' && !stamped(briefText(input))) return { block: 'team-guard: every thread brief starts with the stamp line `Role: <one role from docs/TEAMS.md Roster> · Kit: <kit> · Size: <S|M|L>` (operator/briefs.md); a small task with no role says `Role: none`. The thread loads its playbook from it. Add the line, then retry.' }
-  const team = kind === 'thread' && badTeam(briefText(input), teams)
-  if (team) return { block: `team-guard: ${team}. Look the task up in claude-setup docs/TEAMS.md (Spawn rule, Sizes, Kits), fix the stamp line, then retry.` }
-  const title = kind === 'thread' && badTitle(input.title, briefText(input), teams)
-  if (title) return { block: `team-guard: a ${title} thread is titled \`${title} · <what>\` (claude-setup docs/TEAMS.md, Roster "Runs as"), e.g. "${title} · Bienen-Video". Fix the title, then retry.` }
-  const lines = kind === 'thread' ? missingLines(briefText(input)) : []
-  if (lines.length) return { block: `team-guard: the brief misses ${lines.join(', ')} (claude-setup .claude/skills/operator/briefs.md, Every thread brief starts with). Copy that block, fill each line for this task, then retry.` }
-  if (kind === 'thread' && needsPriorArt(briefText(input))) return { block: 'team-guard: every brief names what already exists before anything is built (CLAUDE.md, Work for the future): add a line `Prior art: <our repos, skills, plugins, public setups checked> -> copy | adapt | build, because <why>` (or `to find: <where the Researcher looks>`), then retry.' }
-  if (kind === 'thread' && needsTester(briefText(input))) return { block: 'team-guard: a size L Programmer thread starts only after its Tester thread (claude-setup docs/TEAMS.md, Sizes). Start `Tester · <app>` first, then put a line `Tester: <its thread id or title>` in this brief and retry.' }
-  const wrong = kind === 'thread' && wrongModel(briefText(input), input.model, teams)
-  if (wrong) return { block: `team-guard: the ${wrong.role} runs on ${wrong.allowed.join(' or ')} (claude-setup docs/TEAMS.md, Roster), not ${wrong.tier}. Pass that model. For an exception the row names (e.g. "Opus writes the weekly plan") add \`Model: <tier> (<why>)\` to the brief; if yskills named this model, say "yskills named <model>". Then retry.` }
+  if (kind === 'thread') {
+    // One refusal lists every problem (companyxy 2026-11-12: one line per round cost an extra round per thread).
+    const text = briefText(input)
+    const found = []
+    const team = badTeam(text, teams)
+    if (team) found.push(`${team}. Look the task up in claude-setup docs/TEAMS.md (Spawn rule, Sizes, Kits) and fix the stamp line`)
+    const title = badTitle(input.title, text, teams)
+    if (title) found.push(`a ${title} thread is titled \`${title} · <what>\` (claude-setup docs/TEAMS.md, Roster "Runs as"), e.g. "${title} · Bienen-Video"; fix the title`)
+    const lines = missingLines(text)
+    if (lines.length) found.push(`the brief misses ${lines.join(', ')} (claude-setup .claude/skills/operator/briefs.md, Every thread brief starts with)`)
+    if (needsPriorArt(text)) found.push('add a line `Prior art: <our repos, skills, plugins, public setups checked> -> copy | adapt | build, because <why>` (or `to find: <where the Researcher looks>`; CLAUDE.md, Work for the future)')
+    if (needsTester(text)) found.push('a size L Programmer thread starts only after its Tester thread (claude-setup docs/TEAMS.md, Sizes): start `Tester · <app>` first, then put a line `Tester: <its thread id or title>` in this brief')
+    const wrong = wrongModel(text, input.model, teams)
+    if (wrong) found.push(`the ${wrong.role} runs on ${wrong.allowed.join(' or ')} (claude-setup docs/TEAMS.md, Roster), not ${wrong.tier}. Pass that model. For an exception the row names (e.g. "Opus writes the weekly plan") add \`Model: <tier> (<why>)\` to the brief; if yskills named this model, say "yskills named <model>"`)
+    if (found.length) return { block: `team-guard: ${found.length === 1 ? found[0] : `${found.length} problems in this brief: ${found.map((f, i) => `(${i + 1}) ${f}`).join(' ')}`}. Copy the fixed template claude-setup docs/templates/thread-brief.md, fill every line once, then retry.` }
+  }
   const own = kind === 'Agent' && downgraded(input, dirs)
   if (own) return { block: `team-guard: the ${input.subagent_type} agent runs on ${own} (its agent file in claude-setup .claude/agents), not ${input.model}. Drop \`model\` or pass ${own}, then retry.` }
   if (!kind || String(input.model ?? '').trim()) return {}
@@ -1358,6 +1378,7 @@ export function decide(tool, input = {}, env = {}, published = [], board = null)
   const republish = input.file_path && !input.type_url && published.includes(input.file_path)
   const newArtifact = (tool === 'Artifact' && !input.url && !input.asset && !republish && [undefined, 'publish'].includes(input.action)) || tool === 'mcp__remote-devices__create_artifact'
   if (newArtifact && env.CLAUDE_SETUP_NEW_ARTIFACT !== 'yes') return 'rule-guard: the Company XY Artifact is the only Artifact there is (CLAUDE.md, Dashboard): no votes, galleries or one-off pages. Update it with its `url` (docs/hq-rows.md) or write a file under /mnt/project-files/. If yskills asked for a new one in his own words, say so in one line and retry with CLAUDE_SETUP_NEW_ARTIFACT=yes in the environment.'
+  if (/^mcp__.*Claude_Browser__/.test(tool) && env.CLAUDE_SETUP_BROWSER !== 'app') return "rule-guard: your browser is yskills' Owner-Chrome on the laptop (CLAUDE.md, Tools; companyxy 2026-11-12: a Researcher opened the Claude app's browser instead). Load the `mcp__claude-in-chrome__*` tools with ToolSearch and use them for every web action; for a plain page use `node ~/.claude/claude-setup/rule-guard.mjs read <url>`. Only when yskills asked for the app browser in his own words: say so in one line and retry with CLAUDE_SETUP_BROWSER=app in the environment."
   if (tool === 'WebFetch' && env.CLAUDE_CODE_REMOTE === 'true') return `rule-guard: in a cloud thread every WebFetch makes yskills press Allow (CLAUDE.md, Cloud threads). Read the whole page without a prompt: node ~/.claude/claude-setup/rule-guard.mjs read '${String(input.url ?? '<url>').replace(/'/g, '')}' (plain text, first ${PAGE_MAX} chars; add a number for more). For a video run the watch skill.`
   return null
 }
@@ -1807,6 +1828,23 @@ export function blenderDocsMissing(tool, input = {}, transcript = '') {
   if (!missing.length) return null
   return `rule-guard: vor dem ersten Blender-Aufruf dieser Session erst lesen (Read): ${missing.map(([name]) => name).join(' und ')}. Dann nochmal.`
 }
+// Companyxy 2026-11-12 (point 8): a garment is downloaded only after `clothes_dupe.py <url or id>` said NEW for that source
+// (docs/clothing-pipeline.md, Reuse first). transcript: the session's transcript text (or a function returning it).
+const GARMENT_SOURCE = /https?:\/\/(?:[^\s"'/]*\.)?(?:sketchfab\.com|booth\.pm|fab\.com|cgtrader\.com|blenderkit\.com|blendkit\.com)[^\s"']*/gi
+const DOWNLOAD = /\b(curl|wget|Invoke-WebRequest|iwr|Start-BitsTransfer|yt-dlp|aria2c)\b/i
+export function dupeCheckMissing(tool, input = {}, transcript = '') {
+  const command = shellCommand(tool, input)
+  if (!command || !DOWNLOAD.test(command)) return null
+  const urls = command.match(GARMENT_SOURCE) ?? []
+  if (!urls.length) return null
+  const ran = (c) => /clothes_dupe\.py/.test(c)
+  const idOf = (u) => { const last = u.replace(/[?#].*$/, '').replace(/\/(download|files?)\/?$/i, '').split('/').filter(Boolean).pop() ?? u; const tail = last.split('-').pop(); return tail.length >= 8 ? tail : last }   // sketchfab: name-<uid>
+  const earlier = toolCalls(typeof transcript === 'function' ? transcript() : transcript).map((c) => String(c.input?.command ?? '')).filter(ran)
+  const before = command.split(/&&|;|\|/).filter(ran).join(' ')
+  const unchecked = urls.filter((u) => !(earlier.concat(before).some((c) => c.includes(idOf(u)))))
+  if (!unchecked.length) return null
+  return `rule-guard: before a garment download run \`python tools/laptop/clothes_dupe.py ${unchecked[0].slice(0, 90)}\` and read HAVE or NEW (docs/clothing-pipeline.md, Reuse first; companyxy 2026-11-12: garments came twice). HAVE: refit the item you have. NEW: run this command again after it.`
+}
 const listProcs = () => {
   if (process.env.CLAUDE_SETUP_PROCS !== undefined) return process.env.CLAUDE_SETUP_PROCS // tests: a fake process list
   try {
@@ -1892,6 +1930,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           ?? opensWindow(tool, input ?? {})
           ?? archivistFiles(tool, input ?? {}, session ? read(join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)) : '')
           ?? kaomojiMissing(tool, input ?? {})
+          ?? dupeCheckMissing(tool, input ?? {}, sessionTranscript)
           ?? blenderServerBusy(tool, input ?? {}, listProcs)
           ?? blenderDocsMissing(tool, input ?? {}, sessionTranscript)
           ?? (grillMissing(tool, input ?? {}, transcript) ? 'rule-guard: a Planner at size M or L grills first (CLAUDE.md, No fog; operator SKILL.md, Grill first): post the real-moment question (when it comes from his life) and up to 2 request_decision cards (goal, taste), each with your recommended answer, then write the plan on the answers (or the recommendations while he is away).' : null)
@@ -1944,7 +1983,7 @@ const teamHooks = [["SessionStart", "startup|clear|compact", "start"], ["Session
 for (const event of new Set(teamHooks.map(([e]) => e))) s.hooks[event] = (s.hooks[event] || []).filter((h) => !JSON.stringify(h).includes("team-brief.mjs") && !JSON.stringify(h).includes("team-guard.mjs"))
 for (const [event, matcher, mode] of teamHooks) s.hooks[event].push({ matcher, hooks: [team(mode)] })
 const rule = (mode) => ({ type: "command", command: `node "${require("os").homedir()}/.claude/claude-setup/rule-guard.mjs" ${mode}`, timeout: 5 })
-for (const [event, matcher, mode] of [["PreToolUse", "Bash|PowerShell|Write|Edit|Artifact|WebFetch|mcp__github__.*|mcp__hearthbot__post_message|mcp__remote-devices__create_artifact|mcp__Blender__.*|mcp__.*(navigate|browser_batch|tabs_create.*|preview_start)|propose_skills|mcp__.*propose_skills", "pre"], ["UserPromptSubmit", "", "prompt"], ["Stop", "", "stop"]]) {
+for (const [event, matcher, mode] of [["PreToolUse", "Bash|PowerShell|Write|Edit|Artifact|WebFetch|mcp__github__.*|mcp__hearthbot__post_message|mcp__remote-devices__create_artifact|mcp__Blender__.*|mcp__.*Claude_Browser__.*|mcp__.*(navigate|browser_batch|tabs_create.*|preview_start)|propose_skills|mcp__.*propose_skills", "pre"], ["UserPromptSubmit", "", "prompt"], ["Stop", "", "stop"]]) {
   s.hooks[event] = (s.hooks[event] || []).filter((h) => !JSON.stringify(h).includes("rule-guard.mjs"))
   s.hooks[event].push({ ...(matcher ? { matcher } : {}), hooks: [rule(mode)] })
 }

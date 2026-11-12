@@ -30,3 +30,21 @@ test('the hook recognises only real yverse-studio remotes', () => {
   assert.equal(ours('https://evil.example/github.com/yverse-studio/x'), 'no')
   assert.equal(ours('https://github.com/other/yverse-studio/x'), 'no')
 })
+
+// Companyxy report 2026-11-12, point 11: a doc patch was blocked by 25 failing checks that were already red on main.
+test('pre-pr tells a red main from a red branch: main first, as its own PR', async () => {
+  const { diagnoseRed } = await import('./pre-pr.mjs')
+  assert.equal(diagnoseRed({ failed: [], baseOk: true }), null, 'nothing failed, nothing to say')
+  assert.match(diagnoseRed({ failed: ['check.mjs'], baseOk: false }), /main is red[\s\S]*fix main first[\s\S]*own[\s\S]*PR/i)
+  assert.match(diagnoseRed({ failed: ['check.mjs'], baseOk: true }), /your branch/i)
+  assert.match(diagnoseRed({ failed: ['tests (CI line)'], baseOk: null }), /could not check main/i)
+})
+
+test('baseCheckOk runs the failing steps on the base too: red tests on main are not blamed on the branch', async () => {
+  const { baseCheckOk } = await import('./pre-pr.mjs')
+  const calls = []
+  const run = (cmd, argv) => { calls.push([cmd, ...argv].join(' ')); return { status: /--test/.test(argv.join(' ')) ? 1 : 0 } }
+  assert.equal(baseCheckOk(['tests (CI line)'], run), false)
+  assert.ok(calls.some((c) => /^node --test /.test(c)), 'the CI test line ran on the base')
+  assert.equal(baseCheckOk(['check.mjs'], run), true)
+})
