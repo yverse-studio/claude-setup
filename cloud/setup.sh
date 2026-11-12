@@ -836,9 +836,9 @@ export function mergeProblem(l) {
   return `${l.asset}: the last gate round (${r.n}) scored ${r.score ?? 'no score'}, under ${threshold(l.important)}: no merge below the threshold, no exception. Fix it (next round ${r.n + 1}), or put ONE card to yskills; only his answer on it frees a merge (gate-rounds.mjs waive).`
 }
 
-// ---- picture card: a hub, start screen, menu or style is shown as pictures from current games before anything is built. The hook does not
+// ---- picture card: a hub, start screen, main menu or art/visual style is shown as pictures from current games before anything is built. The hook does not
 // guess whether a text means a NEW one: a text that names one at all carries a `Picture card:` line (the card link, or `none, because <reason>`).
-const THING = /\b(?:hubs?|start[\s_-]*(?:screens?|bildschirm\w*)|(?:title|titel)[\s_-]*(?:screens?|bildschirm\w*)|main[\s_-]*menus?|haupt[\s_-]*men(?:ü|ue|u)\w*|art[\s_-]*styles?|visual[\s_-]*styles?)(?![\p{L}\d])/iu
+const THING = /\b(?:hubs?|start[\s_-]*(?:screens?|bildschirm\w*)|(?:title|titel)[\s_-]*(?:screens?|bildschirm\w*)|main[\s_-]*menus?|haupt[\s_-]*men(?:ü|ue|u)\w*|art[\s_-]*styles?|visual[\s_-]*styles?|(?:kunst|grafik|art)[\s_-]*stil\w*|visuell\w*[\s_-]+stil\w*)(?![\p{L}\d])/iu
 export const namesLook = (text) => THING.test(String(text).replace(/docker[\s_-]*hub|github[\s_-]*hub|hub\.docker\.com/gi, ''))
 const PICTURE_LINE = /^[ \t>*_-]*Picture card:[ \t*_`]*(?:\[[^\]]*\]\()?(#?cmsg_\w+|https?:\/\/[^\s)]*cmsg_\w+[^\s)]*)/im
 const PICTURE_NONE = /^[ \t>*_-]*Picture card:[ \t*_`]*none,[ \t]*because[ \t]+(?![<.\s])\S/im
@@ -866,8 +866,8 @@ export function gateBrief(brief, { model = null, dir = ledgerDir() } = {}) {
     }
   }
   const block = out.length ? `Gate check (.claude/skills/operator/gate.md, Rounds): ${out.join('; ')}. Do no work: send this reason to the coordinator (message_coordinator), then stop.` : ''
-  // The picture rule never stops a thread: the brief names a hub, start screen, menu or style without the line, so the thread decides which it is.
-  const note = namesLook(brief) && !pictureOk(brief) ? `Picture check (gate.md, Picture card first): this brief names a hub, start screen, menu or style without ${PICTURE_ASK}. If it introduces a new one, do no work and tell the coordinator (message_coordinator); if it works on an existing one, go on and say so in your first reply.` : ''
+  // The picture rule never stops a thread: the brief names a hub, start screen, main menu or art/visual style without the line, so the thread decides which it is.
+  const note = namesLook(brief) && !pictureOk(brief) ? `Picture check (gate.md, Picture card first): this brief names a hub, start screen, main menu or art/visual style without ${PICTURE_ASK}. If it introduces a new one, do no work and tell the coordinator (message_coordinator); if it works on an existing one, go on and say so in your first reply.` : ''
   return [block, note].filter(Boolean).join('\n')
 }
 
@@ -1078,7 +1078,7 @@ export function gateStep(tool, input = {}, ctx = {}) {
   if (tool === 'Bash' || tool === 'PowerShell') return bashProblem(String(input.command ?? ''), dir, ctx)
   if (tool === 'mcp__github__create_pull_request') {
     const text = `${input.title ?? ''}\n${input.body ?? ''}`
-    return namesLook(text) && !pictureOk(text) ? `gate check: this PR names a hub, start screen, menu or style but its body has no ${PICTURE_ASK}. A new one is shown to yskills as pictures with references from current games BEFORE the build; for work on an existing one write the "none, because" line.` : null
+    return namesLook(text) && !pictureOk(text) ? `gate check: this PR names a hub, start screen, main menu or art/visual style but its body has no ${PICTURE_ASK}. A new one is shown to yskills as pictures with references from current games BEFORE the build; for work on an existing one write the "none, because" line.` : null
   }
   const asset = assetOf(input)
   if (!asset) return null
