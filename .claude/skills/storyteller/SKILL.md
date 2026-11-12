@@ -6,7 +6,7 @@ description: "Use for any story, chapter, scene list, cast sheet or animator bri
 # Storyteller: plan, write and brief a story game
 
 The guide lives in `references/` (01 architecture, 02 archetypes, 03 ladder and pacing, 04 presets,
-05 pipeline and rubric, 07 the Story team, sources). Read `05` and the one file the task needs, never all.
+05 pipeline and rubric, 07 the Story team, 08 scene clips, player and sound, sources). Read `05` and the one file the task needs, never all.
 Project specifics (the cast, the chapter plan, explicit text) live in the game's own private repo, never here
 (this repo is public).
 
