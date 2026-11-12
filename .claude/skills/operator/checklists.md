@@ -19,7 +19,7 @@ others come from the home linked in the row.
 4. **Motion poses:** arm raised past the shoulder, sit and stride, front and side cams: the sleeve follows the arm bone and the hem the thigh, with no webbing from armpit to waist or between the legs (named views; clearance row per pose as in row 1).
 5. **Look switches and drivers:** `pipeline-gates.mjs look <look_states.json>` and `drivers <drivers.json>` print OK.
 6. **Reuse proof:** a downloaded piece shows its `clothes_dupe.py` line (HAVE or NEW); a built one names the library search that found nothing that fits.
-7. **Fabric and colour:** contact sheet with 4 angles at 390 and 1440 px, office lights, mid-tone background: no washed-out fabric, white blotches, gaps or tears at hems; a recoloured texture keeps a luminance range of at least 80 % of its source *(set here; flat recolour, plan section 10)*.
+7. **Fabric and colour:** contact sheet with 4 angles at 390 and 1440 px, office lights, mid-tone background: no washed-out fabric, white blotches, gaps or tears at hems; a recoloured texture keeps a luminance range of at least 80 % of its source *(set here)*.
 8. **Previews:** `pipeline-gates.mjs previews <folder>` finds no `thumb.jpg` older than the final render.
 
 ## Hair
@@ -30,7 +30,7 @@ others come from the home linked in the row.
 4. **Colour:** root, mid and tip sampled on the render and on the reference, each pair within ΔE2000 10 *(set here)*; checked in the game export as the game renders it (three-vrm), and in Blender.
 5. **Motion:** fringe and side strands lag the head by 2 to 3 frames, the eyes stay uncovered for more than half the loop ([`roles/animator.md`](roles/animator.md), Motion quality gate, row 5).
 6. **In frame and rendered:** crown inside the frame on the sheet; the hair visible in every render that needs it (`hide_render` off), listed yes or no.
-7. **Order:** the hair's PASS row exists before the owner sees any picture of it (`gate.md`, Owner-facing results; Saki hair, plan section 10).
+7. **Order:** the hair's PASS row exists before the owner sees any picture of it (`gate.md`, Owner-facing results).
 
 ## Character
 
@@ -47,7 +47,7 @@ others come from the home linked in the row.
 
 1. **Reference (K.O.):** the plan's link to the owner's reference card (M28), or 3 to 6 captures in `design/reference/`; each HUD element names the capture it takes from ([`roles/designer.md`](roles/designer.md), Art direction first).
 2. **Design check:** `node .claude/skills/ui-review/scripts/design-check.mjs` passes (Direction with three captures, palette, type scale, `## Bar`).
-3. **Palette match:** 5 or more colours sampled from the HUD screenshot each map to a role of the `## Palette` table within ΔE2000 10 *(set here)*; mean HUD panel luminance within 15 % of the reference capture's *(set here; the all-black HUD, plan section 10)*.
+3. **Palette match:** 5 or more colours sampled from the HUD screenshot each map to a role of the `## Palette` table within ΔE2000 10 *(set here)*; mean HUD panel luminance within 15 % of the reference capture's *(set here)*.
 4. **Contrast:** every text pair 4.5:1, large text and UI parts 3:1; in grayscale the player, danger and pickups still read (named view).
 5. **Slop:** `design-critic` names 0 patterns from [`SLOP.md`](../ui-review/SLOP.md), pattern 14 (web-dashboard HUD) included.
 6. **Sizes:** screenshots at 390 and 1440 px, 320 px walked: no sideways scroll, targets 24 px or more, 44 px for the main action.
@@ -87,5 +87,5 @@ others come from the home linked in the row.
 4. **Converted and sane:** the engine format (GLB, VRM or `.blend`) opens headless; size within 2 % of the source's stated size *(set here)*; normals face outward.
 5. **Every body base, for wearables (K.O.):** one preview per `BT_` base and per `CH_` key, and `pipeline-gates.mjs fit` prints OK; previews newer than the fit (`previews` OK).
 6. **Rating:** the catalog `rating` field is set; an 18+ asset sits under an `nsfw/` folder and appears on no git server and in no cloud project file.
-7. **Routing:** body, face, hair and clothes go through the Character TD; props, rooms, sounds and anims to the role that owns their kind (plan section 15).
+7. **Routing:** the report names, per asset, its kind from `docs/laptop-folders.md` and the Roster role (`docs/TEAMS.md`) that took it in; wearables (body, face, hair, clothes) go to the role whose row owns garment fitting.
 8. **Placed, with proof:** per asset the report lists folder path, catalog id and preview path; a list of downloads alone fails.
