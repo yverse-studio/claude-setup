@@ -60,3 +60,10 @@ test('hands off: a Social Lead does not write the script or the hook itself, the
   assert.equal(tool(as('Writer'), 'Write', { file_path: '/w/devlog-script.md', content: 'x' }).status, 0, 'the owner may')
   assert.equal(tool(as('Programmer'), 'Write', { file_path: '/w/script.mjs', content: 'x' }).status, 0, 'other roles are not bound by this row')
 })
+
+// Security review 2026-11-12 (re-land of #450): the gate role is the exact Roster name from the role stamp, never a prefix.
+test('only an exact gate role counts as the verdict author', async () => {
+  const { authorProblem } = await import('../global/gate-rounds.mjs')
+  for (const role of ['Reviewer', 'tester', 'Evaluator']) assert.equal(authorProblem('Gate 5/5 (S, round 1)', { role }), null, role)
+  for (const role of ['Reviewer-ish', 'Testers', 'gate', 'Reviewer · x', 'Programmer']) assert.match(authorProblem('Gate 5/5 (S, round 1)', { role }) ?? '', /builder cannot pass/, role)
+})

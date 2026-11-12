@@ -64,7 +64,7 @@ export function takeGrant(dir, verb, asset, ref, now = Date.now()) {
 // headline came out of a fresh reviewer subagent of this session (gate.md: S and M run in the author thread with one fresh code-reviewer).
 // A Programmer that types its own "Gate 5/5" has neither, so it can neither pass nor merge itself.
 const norm = (t) => String(t).replace(/[*_`#>\s]+/g, ' ').trim().toLowerCase()
-const GATE_ROLE = /^\s*(tester|reviewer|evaluator|gate)\b/i
+const GATE_ROLE = /^(tester|reviewer|evaluator)$/i // exact Roster name from the role stamp, never a prefix (security review 2026-11-12)
 // Real reviewer agents only (an invented subagent_type does not vouch), the verdict must open the reviewer's own result, and the prompt the
 // builder gave it must not already contain that verdict (security review 2026-11-12, finding 2: a self-attested proof).
 const REVIEWER = /^(code-reviewer|evaluator|security-reviewer|typescript-reviewer|vue-reviewer|database-reviewer|design-critic|legal-reviewer|red-team)$/
