@@ -1545,3 +1545,62 @@ test('team guard (M30): a Reviewer or Researcher thread starts on every kit, a P
   assert.ok(badTeam('Role: Programmer · Kit: video · Size: M', teams))
   assert.ok(badTeam('Role: Planner · Kit: social · Size: M', teams))
 })
+
+// S9 (#551): 18+ paths never reach GitHub. Three doors: the pre-push hook, push_files / create_or_update_file, the --no-verify deny.
+test('neverPush: names a Private18 folder, nacht-*.rpy, kontakt_sex* and a .neverpush prefix, and nothing else', async () => {
+  const { neverPush } = await import('../global/rule-guard.mjs')
+  assert.deepEqual(neverPush(['src/a.ts', 'game/Private18/x.png', 'game/nacht-02.rpy', 'kontakt_sex_1.png', 'docs/readme.md', 'game/nachtigall.rpy']), ['game/Private18/x.png', 'game/nacht-02.rpy', 'kontakt_sex_1.png'])
+  assert.deepEqual(neverPush(['secret/a.png', 'secretary/b.png'], ['secret']), ['secret/a.png'], 'a prefix is a folder, not a string start')
+})
+
+test('neverpush CLI: ok only on its exact line, blocks with the path, a rule-guard without the mode does not say ok', () => {
+  const script = join(root, 'global/rule-guard.mjs')
+  const run = (input) => spawnSync(process.execPath, [script, 'neverpush'], { input, encoding: 'utf8' })
+  assert.equal(run('src/a.ts\n').stdout.trim(), 'neverpush: ok')
+  const bad = run('src/a.ts\nPrivate18/x.png\n')
+  assert.equal(bad.status, 1)
+  assert.match(bad.stdout, /Private18\/x\.png/)
+})
+
+test('pre-push hook: a range whose middle commit adds a Private18 path is blocked and names it, PRE_PR_SKIP does not skip, a neutral range passes', () => {
+  if (process.platform === 'win32') return
+  const home = mkdtempSync(join(tmpdir(), 'np-home-'))
+  const repo = mkdtempSync(join(tmpdir(), 'np-repo-'))
+  try {
+    mkdirSync(join(home, '.claude', 'claude-setup'), { recursive: true })
+    cpSync(join(root, 'global/rule-guard.mjs'), join(home, '.claude', 'claude-setup', 'rule-guard.mjs'))
+    const env = { ...process.env, CLAUDE_SETUP_HOME: home, PRE_PR_SKIP: '1' }
+    for (const k of Object.keys(env)) if (k.startsWith('GIT_')) delete env[k]
+    const g = (...a) => spawnSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...a], { cwd: repo, env, encoding: 'utf8' })
+    g('init', '-q', '-b', 'main')
+    const commit = (file) => { mkdirSync(join(repo, join(file, '..')), { recursive: true }); writeFileSync(join(repo, file), 'x'); g('add', '-A'); g('commit', '-q', '-m', file) }
+    commit('a.txt')
+    const base = g('rev-parse', 'HEAD').stdout.trim()
+    commit('b.txt'); commit('Private18/x.png'); commit('c.txt')
+    const head = g('rev-parse', 'HEAD').stdout.trim()
+    const hook = join(root, 'global/git-hooks/pre-push')
+    const push = (url, lsha, rsha) => spawnSync('sh', [hook, 'origin', url], { cwd: repo, env, input: `refs/heads/main ${lsha} refs/heads/main ${rsha}\n`, encoding: 'utf8' })
+    const blocked = push('https://github.com/yverse-studio/x', head, base)
+    assert.equal(blocked.status, 1, blocked.stdout + blocked.stderr)
+    assert.match(blocked.stdout, /Private18\/x\.png/)
+    const mid = g('rev-parse', 'HEAD~2').stdout.trim()
+    assert.equal(push('https://github.com/yverse-studio/x', mid, base).status, 0, 'a neutral range passes')
+    assert.equal(push('https://example.org/x.git', head, base).status, 0, 'a non-GitHub remote is untouched')
+    rmSync(join(home, '.claude', 'claude-setup', 'rule-guard.mjs'))
+    assert.equal(push('https://github.com/other/x', mid, base).status, 1, 'a missing guard copy blocks')
+    writeFileSync(join(home, '.claude', 'claude-setup', 'rule-guard.mjs'), '// old, no neverpush mode\n')
+    assert.equal(push('https://github.com/other/x', mid, base).status, 1, 'an old copy without the mode blocks')
+  } finally { for (const d of [home, repo]) rmSync(d, { recursive: true, force: true }) }
+})
+
+test('rule guard: push_files and create_or_update_file with a nacht-*.rpy path are blocked, a neutral one is not', () => {
+  const script = join(root, 'global/rule-guard.mjs')
+  const pre = (tool, tool_input) => spawnSync(process.execPath, [script, 'pre'], { input: JSON.stringify({ tool_name: tool, tool_input, cwd: tmpdir(), session_id: 'np1' }), encoding: 'utf8' }).stderr
+  assert.match(pre('mcp__github__push_files', { owner: 'o', repo: 'r', branch: 'b', message: 'm', files: [{ path: 'game/nacht-03.rpy', content: 'x' }] }), /neverPush[\s\S]*nacht-03\.rpy/)
+  assert.match(pre('mcp__github__create_or_update_file', { owner: 'o', repo: 'r', branch: 'b', message: 'm', path: 'a/Private18/b.png', content: 'x' }), /neverPush/)
+  assert.doesNotMatch(pre('mcp__github__push_files', { owner: 'o', repo: 'r', branch: 'b', message: 'm', files: [{ path: 'src/a.ts', content: 'x' }] }), /neverPush/)
+})
+
+test('settings: both files deny git push --no-verify', () => {
+  for (const f of ['global/settings.json', '.claude/settings.json']) assert.ok(JSON.parse(readFileSync(join(root, f), 'utf8')).permissions.deny.includes('Bash(git push* --no-verify*)'), f)
+})

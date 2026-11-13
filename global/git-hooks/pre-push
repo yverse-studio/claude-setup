@@ -3,6 +3,19 @@
 # folder). A yverse-studio repo that ships scripts/pre-pr.mjs gets its CI pre-check before every push, on every machine,
 # with or without Claude hooks (yskills 2026-11-08: laptop PRs only went red in CI). Other remotes and repos without the
 # script are untouched; a repo's own .git/hooks/pre-push still runs afterwards. Skip once with PRE_PR_SKIP=1 (say why in the PR).
+refs=$(cat)
+# S9 (#551): 18+ paths never reach GitHub, for every github.com remote, whoever pushes. The paths of every commit in the pushed
+# range go to rule-guard's neverpush mode; the push passes only on its exact line "neverpush: ok", so a missing, old or broken
+# copy blocks too. PRE_PR_SKIP does not skip this, and settings deny `git push --no-verify`.
+case "$2" in
+  *github.com*)
+    paths=$(printf '%s\n' "$refs" | while read -r lref lsha rref rsha; do
+      case "$lsha" in ""|0000000000000000000000000000000000000000) continue ;; esac
+      case "$rsha" in 0000000000000000000000000000000000000000) git log --name-only --pretty=format: "$lsha" --not --remotes ;; *) git log --name-only --pretty=format: "$rsha..$lsha" ;; esac
+    done)
+    verdict=$(printf '%s\n' "$paths" | node "${CLAUDE_SETUP_HOME:-$HOME}/.claude/claude-setup/rule-guard.mjs" neverpush 2>&1)
+    if [ "$verdict" != "neverpush: ok" ]; then echo "pre-push: blocked, ${verdict:-the neverpush check did not run}"; exit 1; fi ;;
+esac
 remote_url=$(git remote get-url origin 2>/dev/null)
 case "$remote_url" in
   https://github.com/yverse-studio/*|git@github.com:yverse-studio/*|ssh://git@github.com/yverse-studio/*) ours=1 ;;
@@ -14,5 +27,5 @@ if [ -n "$ours" ] && [ -z "$PRE_PR_SKIP" ] && [ -f scripts/pre-pr.mjs ]; then
 fi
 own="$(git rev-parse --git-common-dir 2>/dev/null)/hooks/pre-push"
 # .git/hooks/pre-push can be a copy of this very file; exec-ing it would loop forever (issue #419), so skip an identical one.
-if [ -x "$own" ] && ! [ "$own" -ef "$0" ] && ! cmp -s "$own" "$0"; then exec "$own" "$@"; fi
+if [ -x "$own" ] && ! [ "$own" -ef "$0" ] && ! cmp -s "$own" "$0"; then printf '%s\n' "$refs" | "$own" "$@"; exit $?; fi
 exit 0
