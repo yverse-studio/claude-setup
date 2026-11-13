@@ -1286,7 +1286,7 @@ const COUNTER = /gate-rounds\.mjs/
 const TEXT_BODY = new Set(['cat', 'tee', 'echo', 'printf', 'gh', 'git'])
 // echo and printf print their words, but printf -v (also -vX, -xv, $'-v') assigns them to a variable, and a word or an unquoted heredoc can run or assign
 // ($( ), backticks, ${X:=...}) before it prints: a word or body that holds the file name and expands is no data and its command is no plain read (reviews of the B7 change).
-const EXPANDS = /\$\(|`|\$\{[^}]*:?=/
+const EXPANDS = /\$\(|`|\$\{/ // any ${ fails closed: the brace forms that assign (${X:=...}, ${X=...}) are not told apart from the rest
 const printfOption = (s) => s.a0 === 'printf' && s.args.some((a) => a.startsWith('-') || /\$|`/.test(a)) // any option or expansion word fails closed
 const printsWords = (s) => s.a0 === 'echo' || (s.a0 === 'printf' && !printfOption(s))
 const expands = (s) => [...s.words, ...s.redirs].some((w) => COUNTER.test(w) && EXPANDS.test(w)) || (!!s.body && COUNTER.test(s.body) && EXPANDS.test(s.body))
