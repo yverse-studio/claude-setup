@@ -1751,7 +1751,7 @@ export function renderBrief(role, teams, fields = BRIEF_FIELDS) {
     const f = rows.get(key)
     if (key === 'Topic') { if (role === 'Reviewer') lines.push('Topic: <checklist topic> (delete unless a topic gate)'); continue }
     if (f.applies && !probes.some((p) => f.applies(p))) continue
-    if (key === 'Model') lines.push(`Model: ${role === 'Planner' ? `<${modelFor(role, 'M', teams)} at size M | ${modelFor(role, 'L', teams)} at size L>` : modelFor(role, 'M', teams)}`)
+    if (key === 'Model') lines.push(`Model: ${modelFor(role, 'M', teams)}`) // S5: the Planner is Fable at every size now, so no per-size choice is offered
     else if (key === 'Skills') lines.push(`Skills: ${info.path ?? f.tpl.slice(8)}`)
     else if (key === 'Prior art' && gateRole) lines.push(`Prior art: .claude/skills/operator/gate.md and the <kit>'s checks (docs/TEAMS.md, Kits) -> adapt, because the gate rules and checks already exist`)
     else if (key === 'Gate' && !new RegExp(`^${GATE_BUILDER_ROLES}$`).test(role)) continue

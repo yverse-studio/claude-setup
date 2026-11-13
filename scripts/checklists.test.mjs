@@ -14,7 +14,7 @@ const root = join(fileURLToPath(import.meta.url), '..', '..')
 const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
 const checklists = readFileSync(join(root, CHECKLISTS), 'utf8')
 const SONNET = teams.match(/Sonnet \((claude-[\w.-]+)\)/)[1]
-const OPUS = teams.match(/Opus \((claude-[\w.-]+)\)/)[1]
+const OPUS = teams.match(/Fable \((claude-[\w.-]+)\)/)[1] // S5: the Reviewer row is Fable (the name stays: it is the gate thread's model)
 const TOPICS = ['Garment', 'Hair', 'Character', 'HUD/UI', 'Animation', 'Scene render', 'Asset-Intake']
 const REVIEWER = (topic) => `Role: Reviewer · Kit: game · Size: M\nModel: ${OPUS}\nItem: M48\nPlan: gate.md\nAcceptance: verdict\nThreads: list_threads checked, none open\nPrior art: .claude/skills/operator/gate.md and the game kit's checks -> adapt, because they exist\nSkills: x\n${topic ? `Topic: ${topic}\n` : ''}Done when: verdict\nStop when: two rounds\nStart: read MEMORY.md first`
 
