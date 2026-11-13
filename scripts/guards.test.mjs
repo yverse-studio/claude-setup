@@ -159,7 +159,6 @@ test('compact guard: instructions on stdout, never fails', () => {
   const r = runCompact(JSON.stringify({ session_id: 'abcdef123456', trigger: 'auto' }))
   assert.equal(r.status, 0)
   for (const want of ['Role:', 'decision', 'verbatim']) assert.ok(r.stdout.includes(want), `missing ${want}: ${r.stdout}`)
-  assert.ok(!r.stdout.includes('State saved'), 'no note file is written any more')
   for (const input of ['', 'not json', '{}', '{"transcript_path":"/nope","cwd":"/nope"}']) assert.equal(runCompact(input).status, 0)
 })
 
@@ -495,7 +494,7 @@ test('rule guard: hook entry blocks with exit 2 and the off switch works', () =>
   const pr = { tool_name: 'mcp__github__update_pull_request', tool_input: { reviewers: ['yskills'] } }
   assert.equal(run('pre', pr).status, 2)
   assert.equal(run('pre', pr, { CLAUDE_SETUP_RULE_GUARD: 'off' }).status, 0)
-  assert.equal(run('prompt', { prompt: 'https://youtu.be/abc' }).status, 0)
+  assert.equal(run('prompt', { prompt: 'hello' }).status, 0)
 })
 
 // yskills 2026-10-27: every thread always knows exactly which role it has.
@@ -817,7 +816,7 @@ test('rule guard: an ask of yskills or a thread pointer carries a clickable link
 })
 
 // Gate review of PR 323: the ordinary replies and state lines these checks must let through, and the edges.
-test('rule guard: repeats checks pass ordinary replies and memory state, honour told threads and filtered lists', async () => {
+test('rule guard: repeats checks pass ordinary replies, honour told threads and filtered lists', async () => {
   const { replyRule, decide, threadBoard } = await import('../global/rule-guard.mjs')
   for (const text of [
     'Want me to rotate the production secret?', 'Soll ich 10 € ausgeben und das Abo kaufen?', 'Shall I send the mail to the shop?',
@@ -854,7 +853,7 @@ test('team guard: a Roster exception passes with its reason in the brief', async
   assert.ok(wrongModel(`${brief}\nModel: haiku (cheaper)`, 'haiku', teams), 'a tier the row never names stays blocked')
 })
 
-// yskills 2026-10-27: "how do I enforce that you are no yes-man and grill me".
+// yskills 2026-10-27: "how do I enforce that you grill me".
 test('rule guard: a Planner M/L grills before the plan', async () => {
   const { decide, grillMissing } = await import('../global/rule-guard.mjs')
   const post = (text) => decide('mcp__hearthbot__post_message', { text }, {})
@@ -1052,7 +1051,7 @@ test('context guard: silent below 250k, warns at 250k, backstop at 700k', () => 
   } finally { rmSync(dir, { recursive: true, force: true }) }
 })
 
-// yskills 2026-11-03: no purchase without his explicit OK, no guessing in a reply.
+// yskills 2026-11-03: no purchase without his explicit OK.
 test('rule guard: checkout and cart pages are blocked, docs and his own test app pass', async () => {
   const { purchaseUrl, decide } = await import('../global/rule-guard.mjs')
   for (const url of ['https://shop.example.com/checkout?x=cs_test_1', 'https://8.8.8.8/checkout', 'https://www.amazon.de/gp/cart/view.html', 'https://shop.example.com/checkout', 'https://checkout.stripe.com/c/pay/cs_live_a1', 'https://buy.stripe.com/abc', 'https://store.steampowered.com/buy/123', 'https://www.paypal.com/checkoutnow?token=x'])

@@ -4,10 +4,10 @@
 // Turns CLAUDE.md rules that were text only into checks (audit 2026-10-27: 17 of 20 rules had no
 // guard and were skipped whenever CLAUDE.md did not load).
 // pre: refuses (exit 2) a review request or assignee for yskills on a PR (No GitHub mails), a
-// thread reply over the length cap
-// (Replies), a new Artifact besides the Company XY one (Dashboard), a commit message that is not
-// conventional (Code), WebFetch in a cloud thread (Cloud threads: WebSearch, no Allow taps), and a reply that asks yskills for an Allow or a go, posts `Done:` without proof, or
-// says nothing is open while the last thread board shows open threads, or asks him for something or names a
+// thread reply over the length cap (Replies), a new Artifact besides the Company XY one (Dashboard),
+// a commit message that is not conventional (Code), WebFetch in a cloud thread (Cloud threads:
+// WebSearch, no Allow taps), and a reply that asks yskills for an Allow or a go, posts `Done:`
+// without proof, or says nothing is open while the last thread board shows open threads, or asks him for something or names a
 // thread without a clickable link (replyRule).
 // stop: a thread that posted `Done:` resolves itself.
 // prompt: a bare "stop" gets the matching CLAUDE.md line put next to the message, and
