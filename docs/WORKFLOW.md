@@ -17,7 +17,7 @@ batches, pay for ads and live keys.
 
 After launch, steps 5 and 6 repeat for every improvement the weekly numbers suggest.
 
-Auto-run, pauses and taste calls: `CLAUDE.md` (How to work).
+Auto-run, pauses and taste calls: `CLAUDE.md` (Hard rules).
 
 ## PC work
 
@@ -68,6 +68,8 @@ A fix removes the cause, not the symptom (yskills 2026-11-08): name the rule, ch
 Every checked thread start writes one file `brief-log/<date>-<session>.json` in its project's `claude-setup` folder (global/card-render.mjs, `logStart`): project, role, kit, size, guard version, card hash and one outcome: clean, repaired, refused, wrong-model (a restart is needed) or duplicate (reserved). Relays on a refused start are added to its file. `node scripts/brief-stats.mjs [folder] [--days N]` prints the count and the false-start rate (refused, wrong-model, duplicate over all starts). Zero starts from a project means the hook does not run there.
 
 ## Learning
+
+Own a mistake in one line, then fix it.
 
 Every correction, every failed gate round with a catchable cause and every test project ends as
 a rule, skill line, test or check in this repo. Every ask of yskills becomes an open thread or a line in its home the same turn (`roles/project-manager.md`, Asks ledger). A skill idea is a PR via `new-skill`, never a `propose_skills` card; friction with this setup is a `loop:setup` issue. Memory holds state only [guard: hook global/rule-guard.mjs]; a rule lives in one file, the others link it [guard: test scripts/check.mjs]. Every PR body has a `Lessons:` line. [guard: test scripts/pr-lessons-check.test.mjs] That is the memory: committed, reviewed, loaded

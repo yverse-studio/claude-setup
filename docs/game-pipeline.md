@@ -6,7 +6,7 @@ is done and what we learned. It needs repo access (claude-setup) and, for 3D wor
 (the folders below). State: 2026-10-20.
 
 **Keep it current.** Whoever adds or moves a folder, changes a step or learns a lesson updates
-this page in the same PR or turn (rule: `CLAUDE.md`, Work for the future). A path here that no
+this page in the same PR or turn (rule: `CLAUDE.md`, Hard rules, `Prior art:`; `docs/WORKFLOW.md`, Learning). A path here that no
 longer matches the laptop is a bug: fix the page, not your memory.
 
 Standing calls for every scene and character (adult main character, base + delta, generic scripts, refs, efficient renders): [`operator/roles/project-manager.md`](../.claude/skills/operator/roles/project-manager.md), Don't make him repeat.

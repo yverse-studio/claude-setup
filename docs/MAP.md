@@ -42,7 +42,7 @@ Each thread reads only the Read-first files of its own role from its Kits row. A
 | Loads | What | Cost (tokens, est.) |
 |---|---|---|
 | Every session | `CLAUDE.md` (~0.8k), one line per skill and agent | ~5k |
-| Every session without a checkout (project chat, product repos) | `CLAUDE.md`, put into context by `team-guard` (`scripts/check.mjs` keeps it under 9,800 characters) | ~4.5k |
+| Every session without a checkout (project chat, product repos) | `CLAUDE.md`, put into context by `team-guard` (`scripts/check.mjs` keeps it under 9,800 characters, `config/rule-budget.json` caps the file at 3,500 bytes) | ~1k |
 | When a matching file is opened | `.claude/rules/ecc/{typescript,vue,nuxt,web}/*` (`paths:` frontmatter) | up to ~9k |
 | When a skill is used | its `SKILL.md`, then the files it links | 0.5k to 6k per skill |
 | When an agent is started | its `.claude/agents/<name>.md`, in its own context | 1k to 2k |

@@ -1696,8 +1696,8 @@ cat > "$HOME/.claude/claude-setup/rule-guard.mjs" <<'RULE'
 // or rule-guard.mjs read <url> [max chars] to read a whole web page as text without an Allow prompt.
 // Turns CLAUDE.md rules that were text only into checks (audit 2026-10-27: 17 of 20 rules had no
 // guard and were skipped whenever CLAUDE.md did not load).
-// pre: refuses (exit 2) a review request or assignee for yskills on a PR (No GitHub mails), a
-// thread reply over the length cap (Replies), a new Artifact besides the Company XY one (docs/USING.md, The world),
+// pre: refuses (exit 2) a review request or assignee for yskills on a PR (CLAUDE.md, Hard rules), a
+// thread reply over the length cap (CLAUDE.md, How to work), a new Artifact besides the Company XY one (docs/USING.md, The world),
 // a commit message that is not conventional (Code), WebFetch in a cloud thread (docs/tech-traps.md, Cloud threads:
 // WebSearch, no Allow taps), and a reply that asks yskills for an Allow or a go, posts `Done:`
 // without proof, or says nothing is open while the last thread board shows open threads, or asks him for something or names a
@@ -2235,7 +2235,7 @@ export function unresolved(transcript) {
       }
     } catch { continue } // a line that is not JSON
   }
-  return finished ? 'rule-guard: this thread posted its Done: line or its hand-off, so it is finished: call set_thread_resolved (resolved: true) as the last step (CLAUDE.md, one thread per plan or PR, closed when done). If yskills still owes an answer, say so in one line instead and stop.' : null
+  return finished ? 'rule-guard: this thread posted its Done: line or its hand-off, so it is finished: call set_thread_resolved (resolved: true) as the last step (docs/TEAMS.md, one thread per plan or PR; docs/WORKFLOW.md). If yskills still owes an answer, say so in one line instead and stop.' : null
 }
 
 // The transcript's tool calls in order, each with its result text and time: [{ name, input, result, at }].

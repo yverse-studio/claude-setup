@@ -2,7 +2,7 @@
 
 yskills (2026-10-26): "run everything without me except for money or really big stuff". This page is
 the one home of how that is set up. The ask rule itself (what needs yskills) is in `CLAUDE.md`
-(How to work); the settings live in `global/settings.json`.
+(Hard rules); the settings live in `global/settings.json`.
 
 ## The only things that wait for yskills
 
@@ -14,7 +14,7 @@ asking, except a live project or a database (yskills 2026-10-26: "only serious l
 databases"): `delete-project` runs unasked and itself refuses every live project (`PROTECTED` in
 `scripts/delete-project.mjs`; deleting one needs his yes and a PR that drops it there), while raw
 `wrangler delete`, `d1 delete`, `r2 bucket delete` and `gh repo delete` ask. Everything else runs, and a card for any other choice
-goes on with its recommendation (`CLAUDE.md`, Cards).
+goes on with its recommendation (operator `SKILL.md`, Cards).
 
 ## Layer 1: our own rules
 
