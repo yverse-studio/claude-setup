@@ -250,8 +250,6 @@ export function wrongModel(text, model, teams) {
   // The first tier is the thread's own; a later one only for Fable or a size L exception ("Opus on L"), never a subagent's.
   const allowed = TIERS.filter((t, _i, all) => parts.some((p, i) => p.includes(t) && (i === 0 ? all.filter((x) => p.includes(x)).indexOf(t) === 0 : t === 'fable' || (sizeL && /\bon l\b/.test(p)))))
   const tier = TIERS.find((t) => String(model).toLowerCase().includes(t))
-  // M30: a Planner at size L is a hard task (Models line): Fable only; `Model: opus (<why>)` above is the way out when Fable is unavailable.
-  if (role.name === 'Planner' && sizeL) allowed.splice(0, allowed.length, 'fable')
   return allowed.length && tier && !allowed.includes(tier) ? { role: role.name, allowed, tier } : null
 }
 

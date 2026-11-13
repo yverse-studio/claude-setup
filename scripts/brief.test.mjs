@@ -56,7 +56,7 @@ test('for every Roster role x kit x size the generated brief passes team-guard, 
   let refused = 0
   for (const role of rosterNames(teams)) for (const kit of kitNames(teams)) for (const size of ['S', 'M', 'L']) {
     let out
-    try { out = buildBrief({ role, kit, size, ...FIELDS, tester: 'Tester · x', researcher: 'Researcher, sonnet', teams }) } catch (e) {
+    try { out = buildBrief({ role, kit, size, ...FIELDS, tester: 'Tester · x', researcher: 'Researcher, opus', teams }) } catch (e) {
       assert.ok(e instanceof BriefError, `${role}/${kit}/${size}: ${e.message}`)
       // The backstop (decide() after building) is not a reason: a refusal there means the generator built what the guard refuses.
       assert.doesNotMatch(e.message, /fails team-guard/, `${role}/${kit}/${size} built a brief the guard refuses: ${e.message}`)

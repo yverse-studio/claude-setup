@@ -89,9 +89,9 @@ export const modelCell = (row) => row.match(/Model: (.*?)\.?$/)?.[1] ?? ''
 export const tierOf = (row) => TIERS.find((t) => (modelCell(row).split(';')[0]).toLowerCase().includes(t)) // undefined: the row names none (the Project Manager's is set by yskills)
 const runsAs = (row) => row.match(/Runs as: (.*?)\. Model:/)?.[1] ?? ''
 export const stub = (role, kit, size) => `Role: ${role} · Kit: ${kit} · Size: ${size}`
-// The model a thread of this role starts on at this size: the first tier its Roster row names, a Planner at size L is Fable only (team-guard wrongModel).
+// The model a thread of this role starts on at this size: the first tier its Roster row names (team-guard wrongModel).
 export const modelFor = (role, size, teams) => {
-  const tier = role === 'Planner' && size === 'L' ? 'fable' : tierOf(roleOf(stub(role, 'setup', size), teams).row)
+  const tier = tierOf(roleOf(stub(role, 'setup', size), teams).row)
   return tier ? modelIds(teams)[tier] : undefined
 }
 // The sizes a role may start on a kit: the sizes the guard accepts (a Planner never at S).

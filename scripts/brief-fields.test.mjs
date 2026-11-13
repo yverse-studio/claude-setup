@@ -69,7 +69,7 @@ test('live fixtures: the Gate line without "before owner" is repaired, a Directo
   assert.doesNotMatch(noOwner, /^Brief check/)
   assert.match(noOwner, /^Brief repair[^\n]*Gate[\s\S]*before owner/, 'precisely reported: what the thread does about the Gate line')
   const director = await check(`Role: Director · Kit: setup · Size: M\n${FULL_M}`)
-  assert.match(director, /^Brief check[\s\S]*Programmer, [\s\S]*Reviewer[\s\S]*Role: Reviewer/, 'the kit\'s thread roles and the gate director hint')
+  assert.match(director, /^Brief check[\s\S]*Programmer, [\s\S]*Reviewer[\s\S]*Role: Reviewer` \(or Designer\)/, 'the kit\'s thread roles and the gate director hint')
   assert.doesNotMatch(await check(`Role: Director · Kit: video · Size: M\n${FULL_M}`), /^Brief check/, 'a Director on the video kit is a valid start, the gate hint rides only on a refusal')
   assert.match(await check(`Role: Programmer · Kit: setup · Size: M\n${FULL_M.replace('Item: M50', 'Item: <PLAN.json item M<n> or new>')}`), /^Brief check[\s\S]*Item is missing/, 'the untouched Item placeholder is refused at size M')
   assert.match(await check(`Kit: setup · Size: M\n${FULL_M}`), /^Brief check[\s\S]*no `Role: · Kit: · Size:` stamp/)

@@ -14,9 +14,9 @@ const root = join(fileURLToPath(import.meta.url), '..', '..')
 const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
 const checklists = readFileSync(join(root, CHECKLISTS), 'utf8')
 const SONNET = teams.match(/Sonnet \((claude-[\w.-]+)\)/)[1]
-const OPUS = teams.match(/Fable \((claude-[\w.-]+)\)/)[1] // S5: the Reviewer row is Fable (the name stays: it is the gate thread's model)
+const FABLE = teams.match(/Fable \((claude-[\w.-]+)\)/)[1] // S5: the Reviewer row is Fable (the name stays: it is the gate thread's model)
 const TOPICS = ['Garment', 'Hair', 'Character', 'HUD/UI', 'Animation', 'Scene render', 'Asset-Intake']
-const REVIEWER = (topic) => `Role: Reviewer · Kit: game · Size: M\nModel: ${OPUS}\nItem: M48\nPlan: gate.md\nAcceptance: verdict\nThreads: list_threads checked, none open\nPrior art: .claude/skills/operator/gate.md and the game kit's checks -> adapt, because they exist\nSkills: x\n${topic ? `Topic: ${topic}\n` : ''}Done when: verdict\nStop when: two rounds\nStart: read MEMORY.md first`
+const REVIEWER = (topic) => `Role: Reviewer · Kit: game · Size: M\nModel: ${FABLE}\nItem: M48\nPlan: gate.md\nAcceptance: verdict\nThreads: list_threads checked, none open\nPrior art: .claude/skills/operator/gate.md and the game kit's checks -> adapt, because they exist\nSkills: x\n${topic ? `Topic: ${topic}\n` : ''}Done when: verdict\nStop when: two rounds\nStart: read MEMORY.md first`
 
 test('the checklist file has the seven topics, each with a body', () => {
   assert.deepEqual(topicNames(checklists), TOPICS)
@@ -37,7 +37,7 @@ test('badTopic: an unknown Topic and a Topic on a non-Reviewer brief are refused
 })
 
 test('team-guard blocks a thread start with an unknown Topic and lets a known one through', () => {
-  const start = (topic) => decide('mcp__hearthbot__start_thread', { brief: REVIEWER(topic), title: 'Reviewer · M48', model: OPUS }, [], [], teams, checklists)
+  const start = (topic) => decide('mcp__hearthbot__start_thread', { brief: REVIEWER(topic), title: 'Reviewer · M48', model: FABLE }, [], [], teams, checklists)
   assert.match(start('Cooking').block ?? '', /Topic: Cooking is no topic/)
   assert.deepEqual(start('Garment'), {})
 })
@@ -73,7 +73,7 @@ test('the checklist file is part of the boot copy, and a thread start outside cl
       writeFileSync(dest, readFileSync(join(root, f), 'utf8'))
     }
     const start = (topic) => spawnSync(process.execPath, [join(root, 'global/team-guard.mjs'), 'pre'], {
-      input: JSON.stringify({ cwd, tool_name: 'mcp__hearthbot__start_thread', tool_input: { brief: REVIEWER(topic), title: 'Reviewer · M48', model: OPUS } }),
+      input: JSON.stringify({ cwd, tool_name: 'mcp__hearthbot__start_thread', tool_input: { brief: REVIEWER(topic), title: 'Reviewer · M48', model: FABLE } }),
       encoding: 'utf8', timeout: 5000, env: { ...process.env, CLAUDE_SETUP_HOME: home, CLAUDE_SETUP_BOOT_FETCH: 'off', CLAUDE_CODE_CHILD_SESSION: '' },
     })
     assert.match(start('Cooking').stderr, /Topic: Cooking is no topic/)

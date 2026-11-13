@@ -592,8 +592,6 @@ export function wrongModel(text, model, teams) {
   // The first tier is the thread's own; a later one only for Fable or a size L exception ("Opus on L"), never a subagent's.
   const allowed = TIERS.filter((t, _i, all) => parts.some((p, i) => p.includes(t) && (i === 0 ? all.filter((x) => p.includes(x)).indexOf(t) === 0 : t === 'fable' || (sizeL && /\bon l\b/.test(p)))))
   const tier = TIERS.find((t) => String(model).toLowerCase().includes(t))
-  // M30: a Planner at size L is a hard task (Models line): Fable only; `Model: opus (<why>)` above is the way out when Fable is unavailable.
-  if (role.name === 'Planner' && sizeL) allowed.splice(0, allowed.length, 'fable')
   return allowed.length && tier && !allowed.includes(tier) ? { role: role.name, allowed, tier } : null
 }
 
@@ -1086,8 +1084,8 @@ export function gateBrief(brief, { model = null, dir = ledgerDir() } = {}) {
     else {
       const l = readLedger(dir, asset)
       const why = l.rounds.length ? roundProblem(l, round) : round > 1 ? `${asset} has no ledger: import its history first with "gate-rounds.mjs init ${asset} --round ${round - 1}"` : null
-      // The Fable Designer thread that becomes the director is the one start allowed to name a directed round before the director exists (a Fable Reviewer or Planner is not the director since S5).
-      const directorStart = /fable/i.test(model ?? '') && /^[ \t>*_`-]*Role:[ \t]*Designer\b/im.test(brief) && round > FREE_ROUNDS && round <= DIRECTED_ROUNDS && round === lastRound(l) + 1 && !l.director && !lastPass(l)
+      // The Fable Designer or Reviewer thread (the setup kit has no Designer) that becomes the director is the one start allowed to name a directed round before the director exists; a Fable Planner is not.
+      const directorStart = /fable/i.test(model ?? '') && /^[ \t>-]*Role:[ \t]*(Designer|Reviewer)\b/im.test(String(brief).replace(/[*_`]/g, '')) && round > FREE_ROUNDS && round <= DIRECTED_ROUNDS && round === lastRound(l) + 1 && !l.director && !lastPass(l)
       if (why && !directorStart) out.push(why)
     }
   }
@@ -1685,9 +1683,9 @@ export const modelCell = (row) => row.match(/Model: (.*?)\.?$/)?.[1] ?? ''
 export const tierOf = (row) => TIERS.find((t) => (modelCell(row).split(';')[0]).toLowerCase().includes(t)) // undefined: the row names none (the Project Manager's is set by yskills)
 const runsAs = (row) => row.match(/Runs as: (.*?)\. Model:/)?.[1] ?? ''
 export const stub = (role, kit, size) => `Role: ${role} · Kit: ${kit} · Size: ${size}`
-// The model a thread of this role starts on at this size: the first tier its Roster row names, a Planner at size L is Fable only (team-guard wrongModel).
+// The model a thread of this role starts on at this size: the first tier its Roster row names (team-guard wrongModel).
 export const modelFor = (role, size, teams) => {
-  const tier = role === 'Planner' && size === 'L' ? 'fable' : tierOf(roleOf(stub(role, 'setup', size), teams).row)
+  const tier = tierOf(roleOf(stub(role, 'setup', size), teams).row)
   return tier ? modelIds(teams)[tier] : undefined
 }
 // The sizes a role may start on a kit: the sizes the guard accepts (a Planner never at S).
@@ -2381,11 +2379,11 @@ export async function briefCheck(prompt, cwd, model = null, any = false) {
   const role = guard.stamped(brief) ? roleOf(brief, teams) : null
   const kit = plain.match(/\bKit:[ \t]*([\w-]+)/i)?.[1]?.toLowerCase()
   if (!guard.stamped(brief)) found.push('no `Role: · Kit: · Size:` stamp line')
-  else if (!role?.row) found.push(`the Role line names no role of the Roster (docs/TEAMS.md); "none" or a role of your own is not allowed in a thread${kit && guard.rolesForKit(teams, kit).length ? `; on the \`${kit}\` kit pick one of ${guard.rolesForKit(teams, kit).join(', ')}` : ''}${/^[ \t>-]*Role:[ \t]*(Fable )?director\b/im.test(plain) ? '; a gate director round is `Role: Reviewer` on Fable (docs/TEAMS.md, Models; gate.md, Rounds)' : ''}`)
+  else if (!role?.row) found.push(`the Role line names no role of the Roster (docs/TEAMS.md); "none" or a role of your own is not allowed in a thread${kit && guard.rolesForKit(teams, kit).length ? `; on the \`${kit}\` kit pick one of ${guard.rolesForKit(teams, kit).join(', ')}` : ''}${/^[ \t>-]*Role:[ \t]*(Fable )?director\b/im.test(plain) ? '; a gate director round is `Role: Reviewer` (or Designer) on Fable (docs/TEAMS.md, Models; gate.md, Rounds)' : ''}`)
   const team = guard.stamped(brief) && guard.badTeam(brief, teams)
   // issue #479 part 1: a gate director round is no thread role of its own.
   // issue #479 part 1: a gate director round is no thread role of its own; the hint rides on a refusal that already exists (Director is a valid role on the video kit).
-  const director = /^[ \t>-]*Role:[ \t]*(Fable )?director\b/im.test(plain) ? '; a gate director round is `Role: Reviewer` on Fable (docs/TEAMS.md, Models; gate.md, Rounds)' : ''
+  const director = /^[ \t>-]*Role:[ \t]*(Fable )?director\b/im.test(plain) ? '; a gate director round is `Role: Reviewer` (or Designer) on Fable (docs/TEAMS.md, Models; gate.md, Rounds)' : ''
   if (team) found.push(`${team}${director}`)
   const topic = guard.badTopic(brief, read(join(setupRoot(cwd), guard.CHECKLISTS)))
   if (topic) found.push(topic)
