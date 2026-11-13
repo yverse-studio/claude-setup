@@ -3,6 +3,33 @@
 # folder). A yverse-studio repo that ships scripts/pre-pr.mjs gets its CI pre-check before every push, on every machine,
 # with or without Claude hooks (yskills 2026-11-08: laptop PRs only went red in CI). Other remotes and repos without the
 # script are untouched; a repo's own .git/hooks/pre-push still runs afterwards. Skip once with PRE_PR_SKIP=1 (say why in the PR).
+refs=$(cat)
+# S9 (#551): 18+ paths never reach GitHub, for every github.com remote, whoever pushes. The paths of every commit in the pushed
+# range go to rule-guard's neverpush mode; the push passes only on its exact line "neverpush: ok", so a missing, old or broken
+# copy blocks too. PRE_PR_SKIP does not skip this, and settings deny `git push --no-verify`.
+dest=$(printf '%s' "$2" | tr 'A-Z' 'a-z')
+case "$dest" in
+  *github.com*|*local_proxy*|*127.0.0.1*) # a cloud session's origin is a local proxy to GitHub
+    tmp=$(mktemp)
+    export GIT_NO_REPLACE_OBJECTS=1 # a replace ref changes what git log shows, not what the push sends
+    while read -r lref lsha rref rsha; do
+      case "$lsha" in ""|0000000000000000000000000000000000000000) continue ;; esac
+      # A ref that peels to no commit (a tag on a tree) lists nothing in git log, so it blocks instead of passing.
+      git cat-file -e "$lsha^{commit}" 2>/dev/null || { echo "pre-push: blocked, $lref does not point at a commit"; rm -f "$tmp"; exit 1; }
+      # -z keeps odd paths unquoted; merges and gitlinks are listed whatever log.diffMerges or diff.ignoreSubmodules say. A new branch or unknown remote sha skips only what the destination
+      # itself reports (ls-remote, and only when no insteadOf rewrites the URL again, so no local tracking ref is trusted: it may come from another remote); when ls-remote fails the
+      # whole history is listed.
+      if git cat-file -e "$rsha^{commit}" 2>/dev/null; then revs="$rsha..$lsha"
+      else revs=$( { printf '%s\n' "$lsha"; [ "$(git ls-remote --get-url "$2" 2>/dev/null)" = "$2" ] && git ls-remote "$2" 2>/dev/null | cut -f1 | git cat-file --batch-check 2>/dev/null | awk '$2=="commit"||$2=="tag"{print "^" $1}'; } ); fi
+      printf '%s\n' "$revs" | git -c core.quotePath=false -c log.showRoot=true log -z --diff-merges=separate --ignore-submodules=none --name-only --pretty=format: --stdin >> "$tmp" || { echo "pre-push: blocked, could not list the pushed paths"; rm -f "$tmp"; exit 1; }
+    done <<EOF
+$refs
+EOF
+    verdict=$(tr '\0' '\n' < "$tmp" | node "${CLAUDE_SETUP_HOME:-$HOME}/.claude/claude-setup/rule-guard.mjs" neverpush 2>&1)
+    rm -f "$tmp"
+    unset GIT_NO_REPLACE_OBJECTS
+    if [ "$verdict" != "neverpush: ok" ]; then echo "pre-push: blocked, ${verdict:-the neverpush check did not run}"; exit 1; fi ;;
+esac
 remote_url=$(git remote get-url origin 2>/dev/null)
 case "$remote_url" in
   https://github.com/yverse-studio/*|git@github.com:yverse-studio/*|ssh://git@github.com/yverse-studio/*) ours=1 ;;
@@ -14,5 +41,5 @@ if [ -n "$ours" ] && [ -z "$PRE_PR_SKIP" ] && [ -f scripts/pre-pr.mjs ]; then
 fi
 own="$(git rev-parse --git-common-dir 2>/dev/null)/hooks/pre-push"
 # .git/hooks/pre-push can be a copy of this very file; exec-ing it would loop forever (issue #419), so skip an identical one.
-if [ -x "$own" ] && ! [ "$own" -ef "$0" ] && ! cmp -s "$own" "$0"; then exec "$own" "$@"; fi
+if [ -x "$own" ] && ! [ "$own" -ef "$0" ] && ! cmp -s "$own" "$0"; then printf '%s\n' "$refs" | "$own" "$@"; exit $?; fi
 exit 0

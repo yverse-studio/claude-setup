@@ -1037,9 +1037,33 @@ export async function gateBriefContext(brief, model) {
   try { return (await loadCounter()).gateBrief(brief, { model }) } catch { return '' }
 }
 
+// S9 (#551): 18+ paths never reach GitHub. A path with a Private18 segment, a nacht-*.rpy or kontakt_sex* file, or under a prefix
+// in the repo's .neverpush. Three doors share this: the pre-push hook (CLI mode neverpush), push_files / create_or_update_file, and
+// the settings deny on `git push --no-verify`. Door 2 covers push_files, create_or_update_file and delete_file.
+const NEVER_FILE = /^(nacht-.*\.rpy|kontakt_sex.*)$/i
+export function neverPush(paths, prefixes = []) {
+  // Spellings collapse first: backslashes, ".", "..", empty segments, surrounding blanks; prefixes compare without case.
+  const norm = (p) => { const out = []; for (const s of String(p).trim().replace(/\\/g, '/').split('/')) { if (s === '..') out.pop(); else if (s && s !== '.') out.push(s.trim()) } return out.join('/') }
+  const pre = prefixes.map((x) => String(x).trim()).filter((x) => x && !x.startsWith('#')).map((x) => `${norm(x).toLowerCase()}/`)
+  return paths.filter((p) => { const n = norm(p); return n.split('/').some((s) => s.toLowerCase() === 'private18') || NEVER_FILE.test(n.split('/').pop()) || pre.some((x) => `${n.toLowerCase()}/`.startsWith(x)) })
+}
+const neverPrefixes = (cwd) => { try { return read(join(cwd, '.neverpush')).split(/\r?\n/) } catch { return [] } }
+function neverPushBlock(tool, input, cwd) {
+  if (!/^mcp__github__(push_files|create_or_update_file|delete_file)$/.test(tool)) return null
+  const paths = [...(Array.isArray(input.files) ? input.files.map((f) => f?.path) : []), input.path].filter(Boolean)
+  const hit = neverPush(paths, neverPrefixes(cwd))
+  return hit.length ? `rule-guard: neverPush: ${hit.join(', ')} never goes to GitHub (a Private18 folder, nacht-*.rpy, kontakt_sex* or a .neverpush prefix); leave it out of the push.` : null
+}
+
 if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/').split('/').pop())) {
   const mode = process.argv[2]
-  if (mode === 'read') {
+  if (mode === 'neverpush') {
+    // The pre-push hook pipes the paths of every commit in the pushed range; the push passes only on the exact line "neverpush: ok".
+    const paths = readFileSync(0, 'utf8').split(/\r?\n/).filter(Boolean)
+    const hit = neverPush(paths, neverPrefixes(process.cwd()))
+    if (hit.length) { console.log(`neverpush: blocked, ${[...new Set(hit)].join(', ')} never goes to GitHub`); process.exit(1) }
+    console.log('neverpush: ok')
+  } else if (mode === 'read') {
     const [url, max = PAGE_MAX] = process.argv.slice(3)
     if (!/^https?:\/\//.test(url ?? '')) { console.error('usage: rule-guard.mjs read <http(s) url> [max chars]'); process.exit(1) }
     try {
@@ -1095,6 +1119,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         // S2 (#543): a thread's post_message renders the open plan issues for the coordinator, who has no hooks and no GitHub tool. Never blocks.
         if (tool === 'mcp__hearthbot__post_message') { try { (await import(new URL('./card-render.mjs', import.meta.url))).refreshIssues(() => planIssues(cwd)) } catch { /* same */ } }
         let block = lockBlock(tool, session)
+          ?? neverPushBlock(tool, input ?? {}, cwd)
           ?? handsOff(tool, input ?? {}, gateRole, setupRoot(cwd))
           ?? (await gateBlock(tool, input ?? {}, transcript, sessionModel(transcript()), true, gateRole, transcriptPath))
           ?? decide(tool, input ?? {}, process.env, session ? read(shipped).split('\n') : [], () => threadBoard(toolCalls(transcript())))
