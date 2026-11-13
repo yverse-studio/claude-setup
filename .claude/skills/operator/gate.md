@@ -243,6 +243,9 @@ How to undo a merge, by kind of change (write the line into the PR's "undo" line
      ran rounds before the ledger existed is imported once: `gate-rounds.mjs init <asset> --round <n>`. Nobody edits the file by
      hand (the hook refuses it). A defect that fails the same check twice still gets a diagnosis before the next fix
      (`character-workflow.md`, step 4); three failed rounds on one asset still mean a re-plan, now the Fable director.
+  7. **One reviewer thread, up to 3 rounds** (yskills, CompanyXY 2026-11-13, #576): for owner-facing results and named assets, one Reviewer thread may run all gate rounds of one asset, at most 3 in a row; [guard: hook global/gate-rounds.mjs]
+     the ledger holds the round, so the thread counts up with no new brief. Every FAIL lists numbered fixes, each with tile and location. The last round, or the gate after 3 FAILs, may go to a fresh reviewer (habituation).
+     (Only the count and the round-4 director wall are enforced; the per-thread cap, the numbered fixes and the fresh reviewer are not.)
   Three bypasses closed (security review of 2026-11-12, tests `bypass 1` to `bypass 3` in `scripts/gate-rounds.test.mjs`): the proofs for init, direct, card,
   picture and waive sit in the CLI too (it refuses them without the short one-use grant the hook leaves after it checked the proof), and a command that names
   `gate-rounds.mjs` other than as `node <path>/gate-rounds.mjs <verb>` or a plain read is refused; a verdict counts only from a Tester or Reviewer session or

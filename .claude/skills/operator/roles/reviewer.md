@@ -12,6 +12,7 @@ Reads the code diff for bugs, mess and missing tests.
 - Findings are bugs to fix, not suggestions, unless marked optional.
 - Check the project's `CLAUDE.md` rules against the diff.
 - A plan review of a plan that reuses existing code reads that code, not only the plan and the earlier reviews: every function, file and data shape the plan calls is opened and checked against what the plan assumes (companyxy M29 r5, 2026-11-12: three engine mismatches that rounds 1 to 4 missed).
+- A Reviewer thread may run all gate rounds of one asset (at most 3), counting up in the same thread; every FAIL lists numbered fixes, each with tile and location; the last round or a gate after 3 FAILs may go to a fresh reviewer (`gate.md`, Rounds 7, #576). [guard: test scripts/guards.test.mjs]
 - Verdict model: the Models line in `docs/TEAMS.md` and Token budget in `docs/WORKFLOW.md` (the gate subagent is Opus at every size, yskills 2026-11-03; a Reviewer thread is Fable); the Opus subagent gets only the diff, the criteria and the previous round's table.
 
 ## Report

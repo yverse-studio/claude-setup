@@ -1795,3 +1795,10 @@ test('gate.md: plan reviews are pass/fail, once; the score-rule pin in check.mjs
   assert.match(rounds, /\*\*Plan reviews are pass\/fail, once\.\*\*[^\n]*second FAIL[^\n]*card/)
   assert.doesNotMatch(readFileSync(join(root, 'scripts/check.mjs'), 'utf8'), /Scored gates \(the score rule\)/)
 })
+
+// #576 (yskills, CompanyXY 2026-11-13): one Reviewer thread may run all gate rounds of an asset (max 3); fixes are numbered with tile and location.
+test('gate.md and the Reviewer role: one reviewer thread runs up to 3 rounds of an asset', () => {
+  const gate = readFileSync(join(root, '.claude/skills/operator/gate.md'), 'utf8')
+  assert.match(gate, /One reviewer thread, up to 3 rounds[\s\S]*numbered fixes, each with tile and location[\s\S]*fresh reviewer/)
+  assert.match(readFileSync(join(root, '.claude/skills/operator/roles/reviewer.md'), 'utf8'), /all gate rounds of one asset \(at most 3\)[^\n]*numbered fixes/)
+})
