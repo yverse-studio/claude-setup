@@ -418,9 +418,10 @@ export function planIssues(cwd) {
   const open = get(`repos/${repo}/issues?labels=plan&state=open&per_page=100`)
   if (!open) return null
   const since = new Date(Date.now() - 86_400_000).toISOString()
-  const closed = get(`repos/${repo}/issues?labels=plan&state=closed&per_page=100&since=${since}`) ?? []
+  const closedGot = get(`repos/${repo}/issues?labels=plan&state=closed&per_page=100&since=${since}`)
+  const closed = closedGot ?? []
   const map = (i) => ({ number: i.number, title: String(i.title ?? ''), state: i.state, labels: (i.labels ?? []).map((l) => l.name ?? l), updated: i.updated_at, closed: i.closed_at })
-  return { repo, truncated: open.length >= 100, issues: [...open, ...closed].filter((i) => !i.pull_request).map(map) }
+  return { repo, truncated: open.length >= 100, closedMissing: closedGot === null, issues: [...open, ...closed].filter((i) => !i.pull_request).map(map) }
 }
 async function itemContext(brief, cwd, session) {
   const once = join(tmpdir(), `claude-setup-item-${String(session).replace(/\W/g, '')}`)
