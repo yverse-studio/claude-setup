@@ -1601,8 +1601,16 @@ test('rule guard: push_files and create_or_update_file with a nacht-*.rpy path a
   assert.doesNotMatch(pre('mcp__github__push_files', { owner: 'o', repo: 'r', branch: 'b', message: 'm', files: [{ path: 'src/a.ts', content: 'x' }] }), /neverPush/)
 })
 
-test('settings: both files deny git push --no-verify', () => {
-  for (const f of ['global/settings.json', '.claude/settings.json']) assert.ok(JSON.parse(readFileSync(join(root, f), 'utf8')).permissions.deny.includes('Bash(git push* --no-verify*)'), f)
+test('settings: both files deny --no-verify in any position (-C, -c forms too) and a -c core.hooksPath override', () => {
+  for (const f of ['global/settings.json', '.claude/settings.json']) {
+    const deny = JSON.parse(readFileSync(join(root, f), 'utf8')).permissions.deny
+    assert.ok(deny.includes('Bash(git*push*--no-verify*)'), f)
+    assert.ok(deny.includes('Bash(git*-c*core.hooksPath*)'), f)
+    // Claude Code reads * as "anything": both forms the coordinator named match.
+    const re = (rule) => new RegExp(`^${rule.slice(5, -1).replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*')}$`)
+    assert.match('git -C ../wt push --no-verify origin main', re('Bash(git*push*--no-verify*)'))
+    assert.match('git -c core.hooksPath=/dev/null push origin main', re('Bash(git*-c*core.hooksPath*)'))
+  }
 })
 
 test('pre-push hook: an umlaut path, a merge commit and an unknown remote sha cannot slip a Private18 path past neverpush', () => {

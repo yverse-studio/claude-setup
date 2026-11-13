@@ -205,7 +205,8 @@
       "Bash(gh workflow run delete-project*--ref*)",
       "Bash(gh workflow run delete-project* -r*)",
       "Bash(pkill *wrangler*)",
-      "Bash(git push* --no-verify*)",
+      "Bash(git*push*--no-verify*)",
+      "Bash(git*-c*core.hooksPath*)",
       "Bash(killall *wrangler*)"
     ]
   },
