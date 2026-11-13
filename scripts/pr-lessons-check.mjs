@@ -42,8 +42,19 @@ export function checkRender(body) {
   return !(/\b[0-5]\/5\b/.test(body) && ASSET.test(body)) || RENDER.test(body)
 }
 
+// S3 (#544, software factory): every PR names its issue, so GitHub Issues stay the one plan. No escape line: work without an issue opens one first.
+const ISSUE_LINE = /^\s*(?:[-*]\s+)?(?:fix(?:e[sd])?|close[sd]?|resolve[sd]?)\b:?\s+#(\d+)\b/i
+export const ISSUE_MESSAGE = 'PR body needs a line `Fixes #<issue number>` (or Closes / Resolves) naming the issue this PR does; no issue yet: open one with the `plan` label first (.github/pull_request_template.md)'
+export function issueNumber(body) {
+  for (const l of body.split(/\r?\n/)) { const m = l.match(ISSUE_LINE); if (m) return Number(m[1]) }
+  return null
+}
+export const checkIssue = (body) => issueNumber(body) !== null
+
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const body = readFileSync(process.argv[2] ?? 0, 'utf8')
-  const missing = [!checkLessons(body) && MESSAGE, !checkPriorArt(body) && PRIOR_MESSAGE, !checkFixHasCheck(process.env.PR_TITLE, body) && FIX_MESSAGE, !checkRender(body) && RENDER_MESSAGE].filter(Boolean)
+  const args = process.argv.slice(2).filter((a) => a !== '--issue')
+  const body = readFileSync(args[0] ?? 0, 'utf8')
+  if (process.argv.includes('--issue')) { const n = issueNumber(body); if (n === null) { console.error(ISSUE_MESSAGE); process.exit(1) } console.log(n); process.exit(0) } // CI: prints the number to verify against the issue list
+  const missing = [!checkIssue(body) && ISSUE_MESSAGE, !checkLessons(body) && MESSAGE, !checkPriorArt(body) && PRIOR_MESSAGE, !checkFixHasCheck(process.env.PR_TITLE, body) && FIX_MESSAGE, !checkRender(body) && RENDER_MESSAGE].filter(Boolean)
   if (missing.length) { console.error(missing.join('\n')); process.exit(1) }
 }
