@@ -73,7 +73,7 @@ test('the first rule is the one loop (yskills 2026-11-12): role, playbook, Resea
 
 // S1 of the spec-to-review plan: team-guard refuses an unknown role or kit now, so the card must not tell the chat to check by hand,
 // and the index carries one ready Role/Kit/Model/Skills line per Roster role (the chat has no Bash to run scripts/brief.mjs).
-test('the card says team-guard refuses an unknown role or kit; the index lists every Roster role with its kits, model and playbook', () => {
+test('the card says a bad Role, Kit or Size locks the thread; the index lists every Roster role with its kits, model and playbook', () => {
   const card = buildCard({ hash: 'x', date: '2026-11-12' })
   assert.match(card, /a brief with no Role line, an unknown role or an unknown kit starts a thread that locks itself/)
   assert.doesNotMatch(card, /team-guard refuses a brief with no Role line/)

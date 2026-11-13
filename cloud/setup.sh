@@ -342,8 +342,7 @@ ATTEMPT
 cat > "$HOME/.claude/claude-setup/team-guard.mjs" <<'TEAM'
 #!/usr/bin/env node
 // Team guard. Usage: team-guard.mjs start|pre (hook entries SessionStart, PreToolUse).
-// Without a claude-setup checkout, start puts CLAUDE.md itself and card the coordinator card (Spawn
-// rule, Models line, Sizes, Roster and Kits, one line each) into context; each counts as read.
+// Without a claude-setup checkout, start puts CLAUDE.md itself into context; it counts as read.
 // start: refreshes the boot files (CLAUDE.md, docs/TEAMS.md, docs/MAP.md) from main into
 // ~/.claude/claude-setup/ and puts the TEAMS.md pointer into every new session; a session without a
 // claude-setup checkout (the project chat has none, so its CLAUDE.md never loaded; 2026-10-26 the
@@ -362,11 +361,10 @@ cat > "$HOME/.claude/claude-setup/team-guard.mjs" <<'TEAM'
 // thread start also needs a kit from the Kits table, a size that kit allows, a role on that kit's team
 // (badTeam), and the brief block's Model, Skills, Done when, Stop when and Start lines (missingLines).
 // CLAUDE_SETUP_TEAM_GUARD=off turns it off. It never breaks a tool call on its own errors.
-import { execFileSync, spawnSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { homedir, tmpdir } from 'node:os'
-import { fileURLToPath } from 'node:url'
 import { dirname, join, resolve } from 'node:path'
 // rule-guard sits beside this file (GUARD_FILES); without it only the model-tier check is skipped.
 let roleOf = () => null
@@ -482,9 +480,6 @@ export function coordinatorCard(teams, pm = '') {
   ].filter(Boolean).join('\n\n')
 }
 
-export function inRepo(cwd) {
-  for (let d = cwd; ; d = dirname(d)) { if (existsSync(join(d, '.git'))) return true; if (dirname(d) === d) return false }
-}
 // Session markers older than a week go; a session that old is never resumed (CLAUDE.md, Tokens).
 const WEEK = 7 * 24 * 3600 * 1000
 function sweep(folder) {
@@ -804,7 +799,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
   process.stdin.on('data', (c) => { raw += c })
   process.stdin.on('end', () => {
     try {
-      const { tool_name: tool = '', tool_input: input, cwd = process.cwd(), transcript_path: transcript, session_id: session, source, model } = JSON.parse(raw || '{}')
+      const { tool_name: tool = '', tool_input: input, cwd = process.cwd(), transcript_path: transcript, session_id: session, model } = JSON.parse(raw || '{}')
       const mark = (kind) => join(dir, 'booted', `${String(session).replace(/\W/g, '')}.${kind}`)
       const say = (context) => process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: context } }))
       if (mode === 'start') {
@@ -822,7 +817,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
       const read = transcript && existsSync(transcript) ? readBootFiles(transcript) : null
       // A card this session got at start counts as read.
       const need = (rulesLoaded(cwd, home) ? ['TEAMS.md'] : ['CLAUDE.md', 'TEAMS.md'])
-        .filter((f) => !(session && existsSync(mark(f === 'CLAUDE.md' ? 'rules' : 'teams'))))
+        .filter((f) => !(session && f === 'CLAUDE.md' && existsSync(mark('rules'))))
       const unread = read ? need.filter((f) => !read.has(f)) : []
       const teams = THREAD_START.test(tool) ? text(join(cwd, 'docs', 'TEAMS.md')) || text(join(dir, 'docs', 'TEAMS.md')) : ''
       const checklists = THREAD_START.test(tool) ? text(join(cwd, CHECKLISTS)) || text(join(dir, CHECKLISTS)) : ''

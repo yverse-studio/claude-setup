@@ -74,8 +74,8 @@ Claude's job. `docs/MAP.md` names the one home of each rule; everywhere else lin
   the attribution. [guard: hook global/rule-guard.mjs]
 - An idea or change for a product, or "continue the project": `docs/TEAMS.md` sizes and staffs it,
   never one catch-all thread; one thread per plan or PR. A thread that posted its `Done:` line or
-  its hand-off resolves itself (`set_thread_resolved`) as the last step; the coordinator closes or
-  nudges finished threads before it stops. [guard: hook global/rule-guard.mjs]
+  its hand-off resolves itself (`set_thread_resolved`) as the last step; the coordinator sweeps
+  finished threads before it stops (advisory). [guard: hook global/rule-guard.mjs]
 - Videos: an Instagram, TikTok or YouTube link or a video file is a request to watch it: run
   the `watch` skill first, never WebSearch, then a verdict per video. [guard: hook global/rule-guard.mjs]
 - Lessons stick: every ask of yskills becomes an open thread or a line in its home the same turn
