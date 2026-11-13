@@ -135,9 +135,12 @@ test('a brief with a token-count stop or hand-off line is refused with the hando
   const sonnetId = teams.match(/Sonnet \((claude-[\w.-]+)\)/)[1]
   const base = ['Role: Programmer · Kit: setup · Size: S', 'Item: new', 'Plan: n/a, size S', 'Acceptance: ok', 'Threads: none open on this topic', 'Prior art: obra/superpowers -> adapt, because it exists', 'Skills: x', 'Done when: x', 'Start: read MEMORY.md first']
   const problems = (extra) => briefProblems([...base, ...extra, 'Stop when: 3 rounds'].join('\n'), { model: sonnetId, title: 'Programmer · x', teams })
-  for (const bad of ['At ~200k context post status and stop.', 'Stop at 30000 tokens.', 'hand off at 250k', 'Post a status when 80% of context is used, then stop.', 'Übergabe bei 200k Tokens: stop']) {
+  for (const bad of ['At ~200k context post status and stop.', 'Stop at 30000 tokens.', 'hand off at 250k tokens', 'Post a status when 80% of context is used, then stop.', 'Übergabe bei 200k Tokens', 'ÜBERGABE bei 200k Kontext', 'Stopp bei 250k Tokens, dann Übergabe', 'Bei 80% Kontext übergeben', 'Hand over at 200K context', 'Wrap up and report when context reaches 200k', 'Stop when: context is at 70 %', '- stop at 0.2M tokens', 'Bei 200k Kontext Status posten und stoppen']) {
     const out = problems([bad]).join('\n')
     assert.match(out, /token count[\s\S]*role change, quality loss or a milestone/, `refused: ${bad}`)
   }
-  for (const ok of ['Stop when: 3 gate rounds without 5/5, then report', 'Output: a 4k px render', 'Tools and sources: docs/WORKFLOW.md, Handoff triggers']) assert.doesNotMatch(problems([ok]).join('\n'), /token count/, `passes: ${ok}`)
+  for (const ok of ['Stop when: 3 gate rounds without 5/5, then report', 'Output: a 4k px render', 'Tools and sources: docs/WORKFLOW.md, Handoff triggers', 'Acceptance: the endpoint answers status 200 for 100k users', 'Acceptance: HTTP status 404 for an unknown id, 2k rows seeded',
+    'Acceptance: bundle stays under 250k, status check green', 'Acceptance: the texture is 4k and the status bar shows the frame', 'Acceptance: the stop button shows after 2k ms; 1.5k stars, status badge green',
+    'Done when: the page loads for 100k users without a stop; status is "merged" and the file is under 50k bytes', 'Stop when: the render needs more than 8k samples; stop and ask before spending 5k EUR',
+    'Item: #587 the brief check refuses a stop at 200k tokens', 'Plan: never stop at a token count (the 250k rule is outdated)', 'Stop when: 2 failed attempts, then post the status; <rounds or attempts, never tokens>']) assert.doesNotMatch(problems([ok]).join('\n'), /token count/, `passes: ${ok}`)
 })

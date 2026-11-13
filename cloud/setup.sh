@@ -651,10 +651,13 @@ export function reuseBlock(text, teams, board) {
 
 // A thread hands off only on a role change, quality loss or a milestone, never at a token count (docs/WORKFLOW.md, Handoff triggers; 2026-11-08 decision). A brief line that
 // asks for a stop, hand-off or status report at a token or context amount ("at ~200k context post status and stop", "stop at 30000 tokens") caused three needless hand-offs on 2026-11-13.
-const AMOUNT = String.raw`(?:~?\d+(?:[.,]\d+)?\s*k\b|\b\d[\d.,]*\s*tokens?\b|\b\d+\s*%\s*(?:of\s+)?(?:the\s+)?context)`
-const ACT = String.raw`\b(?:stop|hand[- ]?off|übergabe|status)\b`
-const TOKEN_STOP = new RegExp(`${ACT}[^\\n]*${AMOUNT}|${AMOUNT}[^\\n]*${ACT}`, 'i')
-export const tokenStopLine = (text) => String(text).replace(/[*_`]/g, '').split('\n').find((l) => TOKEN_STOP.test(l))?.trim().slice(0, 100)
+const NUM = String.raw`~?\d[\d.,]*\s*[kKmM]?`
+// An amount counts only next to a token or context word (a bare "100k users" or "status 200" is no hand-off); a line that states the rule itself (never, not, nie) is skipped, and so is an `Item:` line (it quotes the issue's title).
+const AMOUNT = String.raw`(?:${NUM}\s*(?:of\s+)?(?:the\s+)?(?:tokens?|context|kontext)(?![\p{L}\d])|(?:context|kontext)(?![\p{L}\d])[^\n]{0,12}?${NUM}\s*%?|\d+\s*%\s*(?:of\s+)?(?:the\s+)?(?:context|kontext)(?![\p{L}\d]))`
+const ACT = String.raw`(?<![\p{L}\d])(?:stop|stops|stopp|stoppe|stoppen|hand[- ]?off|hand over|handover|übergabe|übergeben|übergebe|wrap up|status|report|reports|bericht|berichte|berichten)(?![\p{L}\d])`
+const RULE_WORDS = /(?<![\p{L}\d])(?:never|not|no|nie|niemals|nicht|kein|keine)(?![\p{L}\d])/iu
+const TOKEN_STOP = new RegExp(`${ACT}[^\n]*${AMOUNT}|${AMOUNT}[^\n]*${ACT}`, 'iu')
+export const tokenStopLine = (text) => String(text).replace(/[*_`]/g, '').split('\n').find((l) => !/^[ \t>-]*Item:/i.test(l) && !RULE_WORDS.test(l) && TOKEN_STOP.test(l))?.trim().slice(0, 100)
 
 // One list of everything wrong with a thread brief, the one validator of the start hook and of `team-guard.mjs check` (CompanyXY 2026-11-13: a coordinator that
 // cannot run the guard before it starts finds the errors one thread at a time).
@@ -677,7 +680,7 @@ export function briefProblems(text, { model, title: threadTitle, teams = '', che
   const idOf = (tier) => String(teams).match(new RegExp(`\\b${tier} \\((claude-[\\w.-]+)\\)`, 'i'))?.[1]
   if (wrong) found.push(`the ${wrong.role} runs on ${wrong.allowed.map((t) => (idOf(t) ? `${t} (${idOf(t)})` : t)).join(' or ')} (claude-setup docs/TEAMS.md, Roster), not ${wrong.tier}. Pass that model id. For an exception the row names (e.g. "Opus writes the weekly plan") add \`Model: <tier> (<why>)\` to the brief; if yskills named this model, say "yskills named <model>"`)
   const tokenStop = tokenStopLine(text)
-  if (tokenStop) found.push(`the brief asks for a stop or hand-off at a token count ("${tokenStop}"): a thread hands off only on a role change, quality loss or a milestone, never at a token count, and works through auto-compact otherwise (docs/WORKFLOW.md, Handoff triggers). Drop the line; \`Stop when:\` names rounds or attempts`)
+  if (tokenStop) found.push(`the brief asks for a stop or hand-off at a token count ("${tokenStop}"): a thread hands off only on a role change, quality loss or a milestone, never at a token count, and works through auto-compact otherwise (docs/WORKFLOW.md, Handoff triggers). Drop or reword the line (a false hit: say the amount with its unit, e.g. \`100k users\`, not next to a stop word); \`Stop when:\` names rounds or attempts`)
   const reuse = reuseBlock(text, teams, board)
   if (reuse) found.push(reuse)
   return found
