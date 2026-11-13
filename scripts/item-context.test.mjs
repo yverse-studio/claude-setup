@@ -228,4 +228,9 @@ test('X1a: an item can only take locks away: stamp words in it are ignored and i
   const env2 = withRoster(setup(t))
   stub(env2, { ...issue, body: 'Size: S\nPlan: p.md' })
   assert.match(run(env2, storyBrief('#7'), `item-s${process.pid}-${n++}`), /Brief check[^\n]*Acceptance/, 'a Size: S line in the item does not relax a size M brief')
+  for (const sneaky of ['note: __Size: S__', 'foo_Size: S', '**Size: S**']) {
+    const env3 = withRoster(setup(t))
+    stub(env3, { ...issue, body: sneaky })
+    assert.match(run(env3, storyBrief('#7'), `item-t${process.pid}-${n++}`), /Brief check[^\n]*Acceptance/, `${sneaky} does not relax the size`)
+  }
 })

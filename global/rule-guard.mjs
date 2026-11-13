@@ -460,11 +460,12 @@ export async function briefCheck(prompt, cwd, model = null, any = false) {
   if (topic) found.push(topic)
   // X1a (#539): the item's lines count as part of the brief (one fetch, shared with itemContext), so a field it holds is no gap.
   const item = fetchItem(brief, cwd)
-  // The item can only take locks away: lines that hold a stamp word (Role, Kit, Size, Model, Item) are dropped, and a judgment gap stays one only if the brief alone has it too.
-  const itemText = item && !item.error ? String(item.body).slice(0, ITEM_CAP).replace(/^brief:[ \t]*/gim, '').split('\n').filter((l) => !/\b(Role|Kit|Size|Model|Item)\b/i.test(l)).join('\n') : ''
+  // The item can only fill a gap the brief has: applies, size and every stamp word come from the brief alone; the item's lines only decide whether a field of the brief's own gap list is there.
+  const itemText = item && !item.error ? String(item.body).slice(0, ITEM_CAP).replace(/^brief:[ \t]*/gim, '').split('\n').filter((l) => !/Role|Kit|Size|Model|Item/i.test(l)).join('\n') : ''
   const own = guard.classify(brief)
-  const sorted = itemText ? guard.classify(`${brief}\n${itemText}`) : own
-  if (itemText) sorted.judgment = sorted.judgment.filter((f) => own.judgment.some((o) => o.key === f.key))
+  const merged = `${brief}\n${itemText}`.replace(/[*_`]/g, '')
+  const filled = (k) => guard.BRIEF_FIELDS.find((f) => f.key === k)?.ok(merged) || (k === 'Acceptance' && /\bDone when:[ \t]*\n?[ \t]*[^<\s]/i.test(merged)) || (k === 'Done when' && /^[ \t>-]*Acceptance:[ \t]*[^<\s]/im.test(merged))
+  const sorted = itemText ? { derived: own.derived, judgment: own.judgment.filter((f) => !filled(f.key)), recoverable: own.recoverable.filter((f) => !filled(f.key)) } : own
   found.push(...sorted.judgment.map((f) => `${f.key} is missing or still a <placeholder>`))
   const wrong = model && guard.wrongModel(brief, model, teams)
   if (wrong) found.push(`this thread runs on ${wrong.tier}, but the ${wrong.role} runs on ${wrong.allowed.join(' or ')}: ask the coordinator to restart it on that model`)
