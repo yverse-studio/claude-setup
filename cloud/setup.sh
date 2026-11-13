@@ -2341,12 +2341,11 @@ export async function briefCheck(prompt, cwd, model = null, any = false) {
   if (topic) found.push(topic)
   // X1a (#539): the item's lines count as part of the brief (one fetch, shared with itemContext), so a field it holds is no gap.
   const item = fetchItem(brief, cwd)
-  // The item can only fill a gap the brief has: applies, size and every stamp word come from the brief alone; the item's lines only decide whether a field of the brief's own gap list is there.
-  const itemText = item && !item.error ? String(item.body).slice(0, ITEM_CAP).replace(/^brief:[ \t]*/gim, '').split('\n').filter((l) => !/^[ \t>*_`-]*(Role|Kit|Size|Model|Item)\b/i.test(l)).join('\n') : ''
+  // X1a (#539), kept small: the item fills only Sheet and Look-Lock (the two lines a short brief lacked); every other lock, size and stamp word comes from the brief alone.
+  const itemPlain = item && !item.error ? String(item.body).slice(0, ITEM_CAP).replace(/^brief:[ \t]*/gim, '').replace(/[*_`]/g, '') : ''
   const own = guard.classify(brief)
-  const itemPlain = itemText.replace(/[*_`]/g, '') // the item is tested alone: a field cannot span the join with the brief's last line
-  const filled = (k) => guard.BRIEF_FIELDS.find((f) => f.key === k)?.ok(itemPlain) || (k === 'Acceptance' && /\bDone when:[ \t]*\n?[ \t]*[^<\s]/i.test(itemPlain)) || (k === 'Done when' && /^[ \t>-]*Acceptance:[ \t]*[^<\s]/im.test(itemPlain))
-  const sorted = itemText ? { derived: own.derived, judgment: own.judgment.filter((f) => !filled(f.key)), recoverable: own.recoverable.filter((f) => !filled(f.key)) } : own
+  const itemHas = (k) => guard.BRIEF_FIELDS.find((f) => f.key === k)?.ok(itemPlain)
+  const sorted = itemPlain ? { ...own, judgment: own.judgment.filter((f) => !(['Sheet', 'Look-Lock'].includes(f.key) && itemHas(f.key))) } : own
   found.push(...sorted.judgment.map((f) => `${f.key} is missing or still a <placeholder>`))
   const wrong = model && guard.wrongModel(brief, model, teams)
   if (wrong) found.push(`this thread runs on ${wrong.tier}, but the ${wrong.role} runs on ${wrong.allowed.join(' or ')}: ask the coordinator to restart it on that model`)
@@ -2356,7 +2355,7 @@ export async function briefCheck(prompt, cwd, model = null, any = false) {
   const notes = mine.length ? [`Brief repair (no block): the brief lacks ${mine.map((f) => f.key).join(', ')}. Work as if it read: ${mine.map((f) => f.fill).join(' | ')}. Name the repaired lines in your first checklist line.`] : []
   const gate = role?.name
   if (gate && GATE_ROLES.test(gate) && !GATE_PRIOR.test(plain) && !mine.some((f) => f.key === 'Prior art')) notes.push(`Brief repair (no block): a ${gate} brief names gate.md and the kit's checks in its \`Prior art:\` line; read .claude/skills/operator/gate.md first.`)
-  if (item && !item.error && /\bv([2-9]|\d\d+)\b/i.test(`${item.head.replace(/^.*?\): /, '')}\n${itemText.match(/^[ \t>-]*Asset:[^\n]*/im)?.[0] ?? ''}`) && !/^[ \t>-]*Basis:[ \t]*[^<\s]/im.test(itemText)) notes.push('Item check: this item is a version above 1 and has no `Basis:` line. Find the passed predecessor in LIVE.md, write Basis and Assets into the item, then build from those files.')
+  if (item && !item.error && /\bv([2-9]|\d\d+)\b/i.test(`${item.head.replace(/^.*?\): /, '')}\n${itemPlain.match(/^[ \t>-]*Asset:[^\n]*/im)?.[0] ?? ''}`) && !/^[ \t>-]*Basis:[ \t]*[^<\s]/im.test(itemPlain)) notes.push('Item check: this item is a version above 1 and has no `Basis:` line. Find the passed predecessor in LIVE.md, write Basis and Assets into the item, then build from those files.')
   if (role && /\bSize:[ \t]*[ML]\b/i.test(plain)) notes.push(`Title check (docs/TEAMS.md, Roster "Runs as"): this thread's title starts with \`${role.name} · \`; if it does not, rename_thread to \`${role.name} · <what>\` first.`)
   return notes.join('\n')
 }

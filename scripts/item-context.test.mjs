@@ -189,12 +189,13 @@ test('one normaliser for the Item token: classify repairs `m3` and `NEW`, the re
 const storyBrief = (item) => `<wake reason="spawn"><relay>\nRole: Programmer · Kit: game · Size: M · Model: sonnet\nItem: ${item}\n</relay></wake>`
 // The brief check reads the Roster of docs/TEAMS.md from the repo it runs in; CI has no ~/.claude/claude-setup, so the test repo carries a copy.
 const withRoster = (env) => { spawnSync('mkdir', ['-p', join(env.repo, 'docs')]); for (const f of ['CLAUDE.md', 'docs/TEAMS.md']) writeFileSync(join(env.repo, f), readFileSync(join(root, f))); return env }
+const fullBrief = (item) => `<wake reason="spawn"><relay>\nRole: Programmer · Kit: game · Size: M · Model: sonnet\nItem: ${item}\nPlan: plan.md\nAcceptance: it is on.\n</relay></wake>`
 const full = 'Scope: the lamp.\nPlan: plan.md\nAcceptance: it is on.\nSheet: sheets/lamp.md\nLook-Lock: https://claude.ai/code/x#cmsg_ABCDEF123'
 
 test('X1a: a blocking field the brief lacks but the item has does not lock; without it the thread is locked as before', (t) => {
   const env = withRoster(setup(t))
   stub(env, { ...issue, body: full })
-  const ok = run(env, storyBrief('#7'), `item-m${process.pid}-${n++}`)
+  const ok = run(env, fullBrief('#7'), `item-m${process.pid}-${n++}`)
   assert.doesNotMatch(ok, /Brief check/, 'the item holds Sheet and Look-Lock')
   assert.match(ok, /Fix the lamp/, 'the issue is still in the context')
   const env2 = withRoster(setup(t))
@@ -212,10 +213,10 @@ test('X1a: one fetch per prompt, shared by the brief check and the context', (t)
 test('X1a: a v6 item without Basis gets one start note, with Basis none', (t) => {
   const env = withRoster(setup(t))
   stub(env, { ...issue, title: 'Build lamp v6', body: full })
-  assert.match(run(env, storyBrief('#7'), `item-p${process.pid}-${n++}`), /Basis/)
+  assert.match(run(env, fullBrief('#7'), `item-p${process.pid}-${n++}`), /Basis/)
   const env2 = withRoster(setup(t))
   stub(env2, { ...issue, title: 'Build lamp v6', body: `${full}\nBasis: v5 files, 1:1` })
-  assert.doesNotMatch(run(env2, storyBrief('#7'), `item-q${process.pid}-${n++}`), /find the passed predecessor/)
+  assert.doesNotMatch(run(env2, fullBrief('#7'), `item-q${process.pid}-${n++}`), /find the passed predecessor/)
 })
 
 test('X1a: an item can only take locks away: stamp words in it are ignored and it cannot add a Sheet duty', (t) => {
@@ -241,6 +242,6 @@ test('X1a: a field cannot span the join of the brief and the item: a bare `Done 
   const bare = `<wake reason="spawn"><relay>\nRole: Programmer · Kit: game · Size: M · Model: sonnet\nItem: #7\nDone when:</relay></wake>`
   assert.match(run(env, bare, `item-u${process.pid}-${n++}`), /Brief check[^\n]*Acceptance/)
   const env2 = withRoster(setup(t))
-  stub(env2, { ...issue, body: 'Acceptance: the item list renders.\nPlan: p.md\nSheet: s.md\nLook-Lock: https://x.y/z' })
-  assert.doesNotMatch(run(env2, storyBrief('#7'), `item-v${process.pid}-${n++}`), /Brief check/, 'a legitimate line that contains the word item still fills')
+  stub(env2, { ...issue, body: 'Scope: the item list renders.\nSheet: s.md\nLook-Lock: https://x.y/z' })
+  assert.doesNotMatch(run(env2, fullBrief('#7'), `item-v${process.pid}-${n++}`), /Brief check/, 'a line that contains the word item still fills Sheet and Look-Lock')
 })
