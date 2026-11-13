@@ -338,6 +338,10 @@ const MUST_BLOCK_LEDGER = [
   "python3 - <<'E'\nopen('global/gate-rounds.mjs', 'w').write('x')\nE", "node <<'E'\nrequire('fs').copyFileSync('global/gate-rounds.mjs', '/tmp/c.mjs')\nE", 'echo x | tee global/gate-rounds.mjs', "cat <<'E' > global/gate-rounds.mjs\nx\nE",
   'node < global/gate-rounds.mjs', 'node <(cat global/gate-rounds.mjs)',
   // security review of the B7 change: a pipe carries the file, or text that imports it, into an interpreter, so a call with a pipe keeps the strict rule
+  // second review of the B7 change: a NAME=value word holds the path, printf -v assigns it, and an unquoted heredoc runs its $( )
+  'X=~/.claude/claude-setup/gate-rounds.mjs node -e "import(process.env.X)"', 'env X=~/.claude/claude-setup/gate-rounds.mjs node -e "import(process.env.X)"',
+  'F=~/.claude/claude-setup/gate-rounds.mjs; node -e "import(process.argv[1])" "$F"', 'printf -v X %s ~/.claude/claude-setup/gate-rounds.mjs; cp "$X" /tmp/c.mjs',
+  'gh pr comment 1 --body-file - <<E\n$(cp ~/.claude/claude-setup/gate-rounds.mjs /tmp/c)\nE', 'tee /dev/null <<E\n`cp ~/.claude/claude-setup/gate-rounds.mjs /tmp/c`\nE',
   'cat global/gate-rounds.mjs | node', 'cat global/gate-""rounds.mjs | node', "cp 'gate-rounds'.mjs /tmp/x.mjs",'grep -n x global/gate-rounds.mjs | cut -c1-80', `echo "import('/home/u/.claude/claude-setup/gate-rounds.mjs')" | node`, "cat <<'E' | node\nimport('x/gate-rounds.mjs')\nE", 'grep x global/gate-rounds.mjs | tee /tmp/c.mjs',
   'cat global/gate-rounds.mjs > /tmp/c.mjs', 'git show HEAD:global/gate-rounds.mjs > /tmp/c.mjs', 'rg --pre "cp global/gate-rounds.mjs /tmp/c.mjs" x .', 'less -o /tmp/c.mjs global/gate-rounds.mjs', 'file -C -m global/gate-rounds.mjs',
 ]
