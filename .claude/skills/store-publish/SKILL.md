@@ -34,7 +34,7 @@ Marker **[U]** = not tested yet; the first real run confirms or fixes it, then L
 | APK hosting | GitHub Release of the app repo, no new service | needs a **public** repo (below) |
 | Tracks | internal first, closed test next, production only after yskills presses it | production needs Google's 14-day closed test (12 testers) on new personal accounts |
 
-**Secrets exception:** `CLAUDE.md` says projects keep no secrets in GitHub. The signing key and the
+**Secrets exception:** `docs/USING.md` (The world) says projects keep no secrets in GitHub. The signing key and the
 Play service account cannot live anywhere else, because the APK is built in Actions. They live only
 in the app repo's Actions secrets (names below), are set from the laptop, and are never printed.
 One keystore is shared by all games, so one leak exposes all of them: keep the laptop file private and
@@ -96,7 +96,7 @@ rotate only on yskills' word (rotating a secret is an ask-first item).
    registered by a verified developer (research file, Google Play "Gotcha 2026") [U].
 8. **Google Play, once per game (hands steps 1 and 2 first).** Upload the AAB from the first run
    (run artifact `android-0.1.0`; yskills downloads it from the run page) by hand to Testing > Internal testing > Create new release [U]. After that every tag uploads automatically.
-9. **Service account (hands step 3, once), then secret per game** (same CLAUDE.md exception as step 5:
+9. **Service account (hands step 3, once), then secret per game** (same exception as step 5:
    the Play key lives only in this game repo's Actions secrets, never printed): `PLAY_SERVICE_ACCOUNT_JSON` from the
    JSON file on the laptop: `Get-Content -Raw <file> | gh secret set PLAY_SERVICE_ACCOUNT_JSON -R $r`.
 10. **Release again.** New tag `v0.2.0` builds, releases and uploads to `internal`; yskills installs

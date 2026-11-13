@@ -1662,8 +1662,8 @@ cat > "$HOME/.claude/claude-setup/rule-guard.mjs" <<'RULE'
 // Turns CLAUDE.md rules that were text only into checks (audit 2026-10-27: 17 of 20 rules had no
 // guard and were skipped whenever CLAUDE.md did not load).
 // pre: refuses (exit 2) a review request or assignee for yskills on a PR (No GitHub mails), a
-// thread reply over the length cap (Replies), a new Artifact besides the Company XY one (Dashboard),
-// a commit message that is not conventional (Code), WebFetch in a cloud thread (Cloud threads:
+// thread reply over the length cap (Replies), a new Artifact besides the Company XY one (docs/USING.md, The world),
+// a commit message that is not conventional (Code), WebFetch in a cloud thread (docs/tech-traps.md, Cloud threads:
 // WebSearch, no Allow taps), and a reply that asks yskills for an Allow or a go, posts `Done:`
 // without proof, or says nothing is open while the last thread board shows open threads, or asks him for something or names a
 // thread without a clickable link (replyRule).
@@ -1749,7 +1749,7 @@ export function replyRule(text, attached = [], board = null) {
 
 // published: the file paths this session already published to an existing Artifact (republishing by
 // the same file_path without `url` is how the Artifact tool updates it).
-// Grill first (CLAUDE.md): a Planner at size M or L posts at least one grill card before it writes the plan or opens a PR.
+// Grill first (operator SKILL.md): a Planner at size M or L posts at least one grill card before it writes the plan or opens a PR.
 // Role, size and "just do it" are read from the spawn brief only, never from files the thread read later.
 export function grillMissing(tool, input, transcript) {
   const writesPlan = (/^(Write|Edit)$/.test(tool) && /(^|[\\/])PLAN\.md$/.test(String(input.file_path ?? ''))) || tool === 'mcp__github__create_pull_request'

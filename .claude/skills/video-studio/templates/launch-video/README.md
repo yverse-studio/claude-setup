@@ -19,7 +19,7 @@ No API key, no account and no paid plan. The only download is a headless Chrome 
 
 ## Run it
 
-1. Get the skill into scratch rather than installing it as a plugin: `git clone https://github.com/latent-spaces/brag <scratch>/brag`. If HEAD has moved past `669ab92`, read `git diff 669ab92..HEAD` first (CLAUDE.md, outside skills). Then run `npx hyperframes browser ensure`.
+1. Get the skill into scratch rather than installing it as a plugin: `git clone https://github.com/latent-spaces/brag <scratch>/brag`. If HEAD has moved past `669ab92`, read `git diff 669ab92..HEAD` first (`toolbox` SKILL.md, install rule). Then run `npx hyperframes browser ensure`.
 2. Give a subagent the run and point it at `<scratch>/brag/skills/brag/SKILL.md`. Say **"use the full brag"** (or pass `--full`), because on Opus 5.5 the skill otherwise hands off to `/brag-slim`. Also pass `--format vertical --duration 15` and the product repo path. Screenshots come from the local dev server (`npm run dev`), never from production. Numbers on screen must be real, taken from the live data or the HUD.
 3. The subagent checks with `npx hyperframes check` (0 errors) and `npx hyperframes snapshot --at 1,3,5,...`, looks at the stills, then renders with `npx hyperframes render --quality delivery --output <out>/brag.mp4`.
 4. For a trending sound, also render a no-music master: `--no-music`, or strip the audio and add a silent AAC track the way `templates/yland-film/comp.sh` does.

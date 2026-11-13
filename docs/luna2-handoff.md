@@ -109,7 +109,7 @@ deletes stay with Claude and yskills.
 ## Cost review 2026-10-29 (24 h: $128.84; Opus $71.94, Sonnet $56.87, Haiku $0.03)
 
 - Biggest cost: the ONE coordinator session ran all night and day; every turn re-read ~290 M cached tokens. Fix: a fresh
-  coordinator session from this handoff at each milestone (CLAUDE.md handoff limits), short replies, no re-reading big files.
+  coordinator session from this handoff at each milestone (`docs/WORKFLOW.md`, Handoff triggers), short replies, no re-reading big files.
 - Wasted subagent runs: the Halloween editor built a dropped concept (plan changed mid-run); the first twin clip had
   wrong lips but self-graded "pass"; duo 3D took 3 rounds before the method problem was named; mund ran 3 gate rounds,
   then the last round rendered without a fresh gate. Fixes: confirm the concept with yskills before launching a build;
