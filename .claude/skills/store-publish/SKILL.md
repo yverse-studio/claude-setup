@@ -69,7 +69,7 @@ rotate only on yskills' word (rotating a secret is an ask-first item).
    the workflow with the app id. `WEB_BUILD_CMD` (env of the build step) overrides `npm run build`.
 5. **Keystore and secrets (laptop route).** One RC session on the laptop (`start_rc_session`, folder
    `repos` of `STUDIO_ROOT`). Needs a JDK (`winget install EclipseAdoptium.Temurin.21.JDK`)
-   and `gh` as `yskills-claude`. This step is the CLAUDE.md exception: keys live in this game repo's
+   and `gh` as `yskills-claude`. This step is the exception to "no project has secrets in GitHub" (docs/USING.md, The world): keys live in this game repo's
    Actions secrets, nowhere else, never printed, and the one shared keystore means one leak exposes all games.
    First game only; later games reuse the file:
    ```powershell
