@@ -89,9 +89,9 @@ export const modelCell = (row) => row.match(/Model: (.*?)\.?$/)?.[1] ?? ''
 export const tierOf = (row) => TIERS.find((t) => (modelCell(row).split(';')[0]).toLowerCase().includes(t)) // undefined: the row names none (the Project Manager's is set by yskills)
 const runsAs = (row) => row.match(/Runs as: (.*?)\. Model:/)?.[1] ?? ''
 export const stub = (role, kit, size) => `Role: ${role} · Kit: ${kit} · Size: ${size}`
-// The model a thread of this role starts on at this size: the first tier its Roster row names, Fable for a Planner at size L (team-guard wrongModel).
+// The model a thread of this role starts on at this size: the first tier its Roster row names (team-guard wrongModel).
 export const modelFor = (role, size, teams) => {
-  const tier = role === 'Planner' && size === 'L' ? 'fable' : tierOf(roleOf(stub(role, 'setup', size), teams).row)
+  const tier = tierOf(roleOf(stub(role, 'setup', size), teams).row)
   return tier ? modelIds(teams)[tier] : undefined
 }
 // The sizes a role may start on a kit: the sizes the guard accepts (a Planner never at S).
@@ -155,7 +155,7 @@ export function renderBrief(role, teams, fields = BRIEF_FIELDS) {
     const f = rows.get(key)
     if (key === 'Topic') { if (role === 'Reviewer') lines.push('Topic: <checklist topic> (delete unless a topic gate)'); continue }
     if (f.applies && !probes.some((p) => f.applies(p))) continue
-    if (key === 'Model') lines.push(`Model: ${role === 'Planner' ? `<${modelFor(role, 'M', teams)} at size M | ${modelFor(role, 'L', teams)} at size L>` : modelFor(role, 'M', teams)}`)
+    if (key === 'Model') lines.push(`Model: ${modelFor(role, 'M', teams)}`) // S5: the Planner is Fable at every size now, so no per-size choice is offered
     else if (key === 'Skills') lines.push(`Skills: ${info.path ?? f.tpl.slice(8)}`)
     else if (key === 'Prior art' && gateRole) lines.push(`Prior art: .claude/skills/operator/gate.md and the <kit>'s checks (docs/TEAMS.md, Kits) -> adapt, because the gate rules and checks already exist`)
     else if (key === 'Gate' && !new RegExp(`^${GATE_BUILDER_ROLES}$`).test(role)) continue

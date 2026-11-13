@@ -71,5 +71,6 @@ export function subagentBlock({ agent, prompt = '' }, model, teams) {
   if (!model) return `guards (team-guard): the subagent "${agent}" has no model of its own, so it would inherit the parent's (docs/TEAMS.md, Spawn rule 4). Call the tier agent the role's Roster row names (${TIERS.join(', ')}) and retry.`
   const ref = typeof model === 'string' ? model : `${model.providerID}/${model.id}`
   const wrong = wrongModel(prompt, ref, teams)
-  return wrong ? `guards (team-guard): the ${wrong.role} runs on ${wrong.allowed.join(' or ')} (docs/TEAMS.md, Roster), not ${wrong.tier}. Call that tier's agent. For an exception the row names add \`Model: <tier> (<why>)\` to the prompt; if yskills named this model, say "yskills named <model>". Then retry.` : null
+  // The Reviewer cell names the thread's tier (Fable); a gate subagent stays Opus at every size (Models line).
+  return wrong && !(wrong.role === 'Reviewer' && wrong.tier === 'opus') ? `guards (team-guard): the ${wrong.role} runs on ${wrong.allowed.join(' or ')} (docs/TEAMS.md, Roster), not ${wrong.tier}. Call that tier's agent. For an exception the row names add \`Model: <tier> (<why>)\` to the prompt; if yskills named this model, say "yskills named <model>". Then retry.` : null
 }

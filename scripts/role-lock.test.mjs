@@ -245,7 +245,7 @@ test('fixture 1b (#1 and #7): a Director spawn on the setup kit and a spawn with
   assert.equal(director.bash(), 2)
   assert.match(director.run('prompt', { prompt: spawn('x') }).stdout, /./, 'the hook answers')
   appendFileSync(director.transcript, director.line({ type: 'attachment', attachment: { type: 'queued_command', prompt: queued('Role: Reviewer · Kit: setup · Size: M'), origin: PROJECTS } }))
-  assert.equal(director.bash(), 0, 'a gate director round is Role: Reviewer; a thread locked since its spawn may take it')
+  assert.equal(director.bash(), 0, 'a thread locked since its spawn may take a Roster role with a gate director round')
   assert.equal(director.stamp(), 'Reviewer')
   const bare = lockedThread(`Kit: setup · Size: S\n${BLOCKS}`)
   appendFileSync(bare.transcript, bare.line({ type: 'attachment', attachment: { type: 'queued_command', prompt: queued('Role: Programmer'), origin: PROJECTS } }))
