@@ -79,9 +79,7 @@ round on a build whose report fails or is missing is not run. `playtest-check.mj
 The one home of the score rule (yskills 2026-11-04: "4.5, then 2 more tries for 5/5, render the
 highest"). It applies to every gate that scores out of 5: scenes, clips, stills, bodies, figures,
 looks, the video and social Critic, any picture or taste gate. The five pass/fail PR checks above
-have no half points and stay at 5/5. Enforced by `scripts/check.mjs` (this section and its terms
-must exist; the old wording that a render needs 5/5 or his strip OK is banned).
-[guard: test scripts/check.mjs]
+have no half points and stay at 5/5.
 
 1. **Rubric.** The gate scores a fixed, numbered rubric written before round 1 (for scenes the
    five rows of `two-figure-scenes.md`: contact, body, hands, picture, motion), each row with its
@@ -205,6 +203,7 @@ How to undo a merge, by kind of change (write the line into the PR's "undo" line
   live without them.
 - **Less:** post the blocking findings as one PR review and stop. The builder fixes them; the next
   round re-runs the failed checks with fresh agents on the new head.
+- **Plan reviews are pass/fail, once.** (yskills 2026-11-13, C1 card.) A plan is reviewed once against one pass/fail list; no score, no rounds, no Director. A second FAIL goes to him as one card. Scores, rounds 1 to 6 and the Director stay for pictures, looks and code.
 - **A PASS needs no OK from yskills** (yskills 2026-11-12 16:43: "Es braucht mein OK nicht wenn gate bestanden, nur wenn 3 mal
   falsch und dann nochmal 3 mal mit Fable-Eingriff"). A passed gate (plan review, asset, scene or PR) is the go: the work goes on,
   the PR merges, and he gets the PASS line with its report, as information. He is asked only by the round-7 card of the counter
@@ -216,7 +215,7 @@ How to undo a merge, by kind of change (write the line into the PR's "undo" line
   `owner/repo#n` or a name) in `/mnt/project-files/gate/`, and `global/rule-guard.mjs` checks it on every gate post, merge and
   thread brief, so no thread and no coordinator can release a round. Every gate post, pass or fail, starts with the headline
   `Gate <score>/5 (<size>, round <n>)`, plus `[important]` for auth, payments, data or launch.
-  1. **Rounds 1 to 3** run at the score rule: pass at 4.5, at 4.8 when the PR is important (5/5 for the pass/fail checks).
+  1. **Rounds 1 to 3** (pictures, looks and code only) run at the score rule: pass at 4.5, at 4.8 when the PR is important (5/5 for the pass/fail checks).
   2. **Rounds 4 to 6** run only after a **Fable director** (`docs/TEAMS.md`, Models line) re-planned: the coordinator starts a
      Fable thread, it runs `node ~/.claude/claude-setup/gate-rounds.mjs direct <asset> --plan <file>` (the hook records it only
      from a Fable session) and the builders follow its plan. A round 4 without it is refused.
