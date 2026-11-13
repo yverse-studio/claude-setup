@@ -621,10 +621,12 @@ const gateRolePlain = (plain) => /^[ \t>-]*Role:[ \t]*(Tester|Reviewer|Security|
 // the refusal), `ok` says the line is there, `cls` says who closes a gap: judgment = only the coordinator can decide it (one refusal that lists every such
 // gap), recoverable = the thread fetches or fills it itself, derived = follows from Role, Kit and Size (the hook states it). `fill` is the thread's own
 // answer to a gap. `strict: false` rows are reported by decide() in their own words, not in missingLines().
+// Same source as ITEM_REF in rule-guard.mjs (the first token on the Item line wins); scripts/item-context.test.mjs pins it.
+export const ITEM_REF = /^[ \t>-]*Item:[^<\n]*?(?:\b(M\d+|new)\b|((?:[\w.-]+\/[\w.-]+)?#\d+))/im
 const line = (re) => (plain) => re.test(plain)
 const sizeCls = (plain) => (small(plain) ? 'recoverable' : 'judgment')
 export const BRIEF_FIELDS = [
-  { key: 'Item', name: 'Item: (#n of its issue, M<n> from PLAN.json, or new)', tpl: 'Item: <issue #n, PLAN.json item M<n> or new>', ok: line(/^[ \t>-]*Item:[^<\n]*?(?:\b(?:M\d+|new)\b|(?:[\w.-]+\/[\w.-]+)?#\d+)/im), clean: /^[ \t>-]*Item:[ \t]*(M\d+|new|(?:[\w.-]+\/[\w.-]+)?#\d+)[ \t]*$/im, cls: sizeCls, fill: (p) => `Item: ${p.match(/^[ \t>-]*Item:[ \t]*(?:(?:PLAN\.json item|issue)[ \t]+)?(M\d+|(?:[\w.-]+\/[\w.-]+)?#\d+)\b/im)?.[1] ?? 'new'}` },
+  { key: 'Item', name: 'Item: (#n of its issue, M<n> from PLAN.json, or new)', tpl: 'Item: <issue #n, PLAN.json item M<n> or new>', ok: line(ITEM_REF), clean: /^[ \t>-]*Item:[ \t]*(M\d+|new|(?:[\w.-]+\/[\w.-]+)?#\d+)[ \t]*$/im, cls: sizeCls, fill: (p) => { const m = p.match(ITEM_REF); return `Item: ${m ? (m[2] ?? m[1]).replace(/^m(?=\d)/, 'M').replace(/^NEW$/i, 'new') : 'new'}` } },
   { key: 'Plan', name: 'Plan: (the plan file or card this thread builds)', tpl: 'Plan: <plan file or card it builds>', ok: line(/^[ \t>-]*Plan:[ \t]*[^<\s]/im), cls: sizeCls, fill: () => 'Plan: n/a, size S' },
   { key: 'Acceptance', name: 'Acceptance: (what counts as accepted)', tpl: 'Acceptance: <what counts as accepted>', ok: line(/^[ \t>-]*Acceptance:[ \t]*[^<\s]/im), cls: sizeCls, fill: () => 'Acceptance: propose one from the task, say so in your first checklist line' },
   { key: 'Model', name: 'Model:', tpl: 'Model: <model id of the role\'s Roster row>', ok: line(/^[ \t>-]*Model:[ \t]*[^<\s]/im), cls: () => 'derived', fill: () => 'Model: the model this thread runs on' },
@@ -2223,9 +2225,12 @@ async function roleContext(prompt, cwd, session) {
 
 // S1 (#538): a thread's task is its issue. The brief's `Item:` line names it (`#7`, `owner/repo#7`, or `M3` of an offline PLAN.json); the hook puts its
 // title, state, labels and body (cap 3,000 chars) into the thread's first context, once per session. It never blocks: a failed fetch is one line.
-export const ITEM_REF = /^[ \t>-]*Item:[ \t]*(?:(?:PLAN\.json item|issue)[ \t]+)?((?:[\w.-]+\/[\w.-]+)?#\d+|M\d+)\b/im
+// The Item line has three readers that must agree (brief check `ok`/`fill` in team-guard.mjs, this context, the receipt): the FIRST token on the line wins,
+// `M<n>`, `new` or `#n` / `owner/repo#n`. team-guard.mjs holds the same source; scripts/item-context.test.mjs pins that they are equal.
+export const ITEM_REF = /^[ \t>-]*Item:[^<\n]*?(?:\b(M\d+|new)\b|((?:[\w.-]+\/[\w.-]+)?#\d+))/im
 const ITEM_CAP = 3000
-export const itemRef = (brief) => String(brief).replace(/[*`]/g, '').match(ITEM_REF)?.[1] ?? null
+export const itemToken = (brief) => { const m = String(brief).replace(/[*`]/g, '').match(ITEM_REF); return m ? (m[2] ?? m[1]).replace(/^m(?=\d)/, 'M') : null }
+export const itemRef = (brief) => { const t = itemToken(brief); return t && t.toLowerCase() !== 'new' ? t : null }
 // One shared deadline of 2 s for every route (the prompt hook's own limit is 5 s): each step gets what is left, at most `cap`.
 let deadline = 0
 const left = (cap) => Math.min(cap, deadline - Date.now())
@@ -2563,7 +2568,7 @@ export function threadReceipt(role, brief, transcript, rules, status = { loaded:
   const tag = (k) => brief.replace(/[*_`]/g, '').match(new RegExp(`${k}:[ \\t]*([A-Za-z0-9-]+)`))?.[1] ?? '?'
   const skills = [...new Set(toolCalls(transcript).filter((c) => c.name === 'Skill').map((c) => String(c.input.skill ?? '')).filter(Boolean))]
   const hash = rules.includes(MARK) ? createHash('sha256').update(rules.replace(/\r/g, '')).digest('hex').slice(0, 7) : 'none'
-  const item = brief.replace(/[*_`]/g, '').match(/^[ \t>-]*Item:[ \t]*(?:(?:PLAN\.json item|issue)[ \t]+)?(M\d+|new|(?:[\w.-]+\/[\w.-]+)?#\d+)\b/im)?.[1] ?? '?' // the coordinator's Masterplan id (roles/project-manager.md, Masterplan)
+  const item = itemToken(brief) ?? '?' // the Item line's first token (ITEM_REF): `M<n>` of PLAN.json, `new` or `#n` of its issue
   return `Thread · ${role} · ${tag('Kit')} · ${tag('Size')} · item ${item} · skills: ${skills.join(', ') || 'none'} · rules #${hash} · ${missingNote(status)}${card ? ` · card #${card}` : ''}`
 }
 

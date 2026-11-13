@@ -347,9 +347,12 @@ async function roleContext(prompt, cwd, session) {
 
 // S1 (#538): a thread's task is its issue. The brief's `Item:` line names it (`#7`, `owner/repo#7`, or `M3` of an offline PLAN.json); the hook puts its
 // title, state, labels and body (cap 3,000 chars) into the thread's first context, once per session. It never blocks: a failed fetch is one line.
-export const ITEM_REF = /^[ \t>-]*Item:[ \t]*(?:(?:PLAN\.json item|issue)[ \t]+)?((?:[\w.-]+\/[\w.-]+)?#\d+|M\d+)\b/im
+// The Item line has three readers that must agree (brief check `ok`/`fill` in team-guard.mjs, this context, the receipt): the FIRST token on the line wins,
+// `M<n>`, `new` or `#n` / `owner/repo#n`. team-guard.mjs holds the same source; scripts/item-context.test.mjs pins that they are equal.
+export const ITEM_REF = /^[ \t>-]*Item:[^<\n]*?(?:\b(M\d+|new)\b|((?:[\w.-]+\/[\w.-]+)?#\d+))/im
 const ITEM_CAP = 3000
-export const itemRef = (brief) => String(brief).replace(/[*`]/g, '').match(ITEM_REF)?.[1] ?? null
+export const itemToken = (brief) => { const m = String(brief).replace(/[*`]/g, '').match(ITEM_REF); return m ? (m[2] ?? m[1]).replace(/^m(?=\d)/, 'M') : null }
+export const itemRef = (brief) => { const t = itemToken(brief); return t && t.toLowerCase() !== 'new' ? t : null }
 // One shared deadline of 2 s for every route (the prompt hook's own limit is 5 s): each step gets what is left, at most `cap`.
 let deadline = 0
 const left = (cap) => Math.min(cap, deadline - Date.now())
@@ -687,7 +690,7 @@ export function threadReceipt(role, brief, transcript, rules, status = { loaded:
   const tag = (k) => brief.replace(/[*_`]/g, '').match(new RegExp(`${k}:[ \\t]*([A-Za-z0-9-]+)`))?.[1] ?? '?'
   const skills = [...new Set(toolCalls(transcript).filter((c) => c.name === 'Skill').map((c) => String(c.input.skill ?? '')).filter(Boolean))]
   const hash = rules.includes(MARK) ? createHash('sha256').update(rules.replace(/\r/g, '')).digest('hex').slice(0, 7) : 'none'
-  const item = brief.replace(/[*_`]/g, '').match(/^[ \t>-]*Item:[ \t]*(?:(?:PLAN\.json item|issue)[ \t]+)?(M\d+|new|(?:[\w.-]+\/[\w.-]+)?#\d+)\b/im)?.[1] ?? '?' // the coordinator's Masterplan id (roles/project-manager.md, Masterplan)
+  const item = itemToken(brief) ?? '?' // the Item line's first token (ITEM_REF): `M<n>` of PLAN.json, `new` or `#n` of its issue
   return `Thread · ${role} · ${tag('Kit')} · ${tag('Size')} · item ${item} · skills: ${skills.join(', ') || 'none'} · rules #${hash} · ${missingNote(status)}${card ? ` · card #${card}` : ''}`
 }
 

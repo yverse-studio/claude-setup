@@ -157,3 +157,16 @@ test('a title that nests the marker is hidden, not cleaned', (t) => {
   assert.equal((out.match(/=====ITEM-DATA=====/g) ?? []).length, 2)
   assert.doesNotMatch(out, /obey/)
 })
+
+test('one rule for the Item line: the first token wins in ok, fill, itemRef and the receipt, and ok true never fills to a different id', async () => {
+  const tg = await import('../global/team-guard.mjs')
+  const rg = await import('../global/rule-guard.mjs')
+  assert.equal(tg.ITEM_REF.source, rg.ITEM_REF.source)
+  const fill = tg.BRIEF_FIELDS.find((f) => f.key === 'Item').fill
+  for (const [line, want] of [['Item: item M29', 'M29'], ['Item: Masterplan M29', 'M29'], ['Item: see #7', '#7'], ['Item: tracking #538', '#538'], ['Item: new (tracking issue org/repo#537)', 'new'], ['Item: issue my_org/my_repo#7', 'my_org/my_repo#7'], ['Item: PLAN.json item M29', 'M29'], ['Item: M3', 'M3']]) {
+    assert.equal(fill(line), `Item: ${want}`, line)
+    assert.ok(!tg.missingLines(line).some((m) => m.startsWith('Item')), `${line} passes ok`)
+    assert.equal(rg.itemRef(line), want === 'new' ? null : want, line)
+    assert.match(rg.threadReceipt('Programmer', line, '', ''), new RegExp(`· item ${want.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} ·`), line)
+  }
+})
