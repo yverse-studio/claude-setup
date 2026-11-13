@@ -71,7 +71,7 @@ test('the first rule is the one loop (yskills 2026-11-12): role, playbook, Resea
   assert.match(readFileSync(new URL('../global/rule-guard.mjs', import.meta.url), 'utf8'), /export function threadReceipt\(role, brief/)
 })
 
-// S1 of the spec-to-review plan: team-guard refuses an unknown role or kit now, so the card must not tell the chat to check by hand,
+// S1 of the spec-to-review plan, corrected in S7: a bad Role, Kit or Size locks the thread, so the card must not tell the chat to check by hand,
 // and the index carries one ready Role/Kit/Model/Skills line per Roster role (the chat has no Bash to run scripts/brief.mjs).
 test('the card says a bad Role, Kit or Size locks the thread; the index lists every Roster role with its kits, model and playbook', () => {
   const card = buildCard({ hash: 'x', date: '2026-11-12' })

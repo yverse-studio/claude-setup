@@ -466,8 +466,7 @@ export function rulesCard(claude) {
 
 // The coordinator's slice of docs/TEAMS.md (Spawn rule, Models line, Sizes, one line per role and kit):
 // enough to start every thread with the right role and model; the rest of TEAMS.md and MAP.md only on demand.
-// pm: roles/project-manager.md, whose "Text only" section (the repeats no hook can judge) closes the card.
-export function coordinatorCard(teams, pm = '') {
+export function coordinatorCard(teams) {
   const roster = teams.split('\n').filter((l) => /^\| [A-Z][\w ]* \(\[`/.test(l)).map((l) => { const c = cells(l); return `- ${c[1].replace(/ \(\[.*$/, '')}: ${c[4]}; ${c[5]}` })
   const kits = section(teams, 'Kits', 'Models for tasks').split('\n').filter((l) => /^\| `/.test(l)).map((l) => { const c = cells(l); return `- ${c[1]}: ${c[3]}` })
   const sizes = section(teams, 'Sizes', 'Pipeline').split('\n').filter((l) => l.startsWith('|'))
@@ -476,7 +475,6 @@ export function coordinatorCard(teams, pm = '') {
     'Coordinator card (claude-setup docs/TEAMS.md, fresh from main): you are the coordinator here. Route every task with it; read the full TEAMS.md, MAP.md or a role file only when a task needs a part this card lacks, and roles/project-manager.md (Session start) at your first start.',
     section(teams, 'Spawn rule', 'Sizes'), `## Sizes\n\n${sizes.join('\n')}`,
     `## Roster (role: runs as; model)\n\n${roster.join('\n')}`, `## Kits (team at size L)\n\n${kits.join('\n')}`,
-    section(pm, 'Text only', 'Session start'),
   ].filter(Boolean).join('\n\n')
 }
 
@@ -1486,7 +1484,7 @@ A device thread passes \`message_id\` (yskills' message or your own project-chat
 
 export function buildCard({ teams, hash = 'nogit', date = today() }) {
   const head = `Coordinator card (claude-setup ${hash}, ${date}).\nYou are the project chat. You have no Bash and no repo: this card and MEMORY.md are your rules.\nA rule not on this card: Read COORDINATOR-RULES-INDEX.md in this folder; still unclear: ask a setup thread (size S); never guess.`
-  const full = coordinatorCard(teams, '') // '' drops the "Text only" section: it does not fit
+  const full = coordinatorCard(teams)
   if (!full) throw new Error('coordinator card: docs/TEAMS.md has no Roster or Kits rows')
   const card = [head, PREFLIGHT, BRIEF_SECTION, compact(full)].join('\n\n') + '\n'
   if (card.length >= CARD_MAX) throw new Error(`coordinator card is ${card.length} characters, limit ${CARD_MAX}: trim a pre-flight line or a Roster cell`)

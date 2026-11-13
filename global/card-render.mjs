@@ -66,7 +66,7 @@ A device thread passes \`message_id\` (yskills' message or your own project-chat
 
 export function buildCard({ teams, hash = 'nogit', date = today() }) {
   const head = `Coordinator card (claude-setup ${hash}, ${date}).\nYou are the project chat. You have no Bash and no repo: this card and MEMORY.md are your rules.\nA rule not on this card: Read COORDINATOR-RULES-INDEX.md in this folder; still unclear: ask a setup thread (size S); never guess.`
-  const full = coordinatorCard(teams, '') // '' drops the "Text only" section: it does not fit
+  const full = coordinatorCard(teams)
   if (!full) throw new Error('coordinator card: docs/TEAMS.md has no Roster or Kits rows')
   const card = [head, PREFLIGHT, BRIEF_SECTION, compact(full)].join('\n\n') + '\n'
   if (card.length >= CARD_MAX) throw new Error(`coordinator card is ${card.length} characters, limit ${CARD_MAX}: trim a pre-flight line or a Roster cell`)
