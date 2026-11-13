@@ -1039,11 +1039,13 @@ export async function gateBriefContext(brief, model) {
 
 // S9 (#551): 18+ paths never reach GitHub. A path with a Private18 segment, a nacht-*.rpy or kontakt_sex* file, or under a prefix
 // in the repo's .neverpush. Three doors share this: the pre-push hook (CLI mode neverpush), push_files / create_or_update_file, and
-// the settings deny on `git push --no-verify`.
+// the settings deny on `git push --no-verify`. Door 2 covers push_files, create_or_update_file and delete_file.
 const NEVER_FILE = /^(nacht-.*\.rpy|kontakt_sex.*)$/i
 export function neverPush(paths, prefixes = []) {
-  const pre = prefixes.map((x) => String(x).trim().replace(/\\/g, '/').replace(/^\.?\//, '')).filter((x) => x && !x.startsWith('#')).map((x) => x.replace(/\/*$/, '/'))
-  return paths.map((p) => String(p).replace(/\\/g, '/').replace(/^\.?\//, '')).filter((p) => p.split('/').some((s) => s.toLowerCase() === 'private18') || NEVER_FILE.test(p.split('/').pop()) || pre.some((x) => `${p}/`.startsWith(x)))
+  // Spellings collapse first: backslashes, ".", "..", empty segments, surrounding blanks; prefixes compare without case.
+  const norm = (p) => { const out = []; for (const s of String(p).trim().replace(/\\/g, '/').split('/')) { if (s === '..') out.pop(); else if (s && s !== '.') out.push(s.trim()) } return out.join('/') }
+  const pre = prefixes.map((x) => String(x).trim()).filter((x) => x && !x.startsWith('#')).map((x) => `${norm(x).toLowerCase()}/`)
+  return paths.filter((p) => { const n = norm(p); return n.split('/').some((s) => s.toLowerCase() === 'private18') || NEVER_FILE.test(n.split('/').pop()) || pre.some((x) => `${n.toLowerCase()}/`.startsWith(x)) })
 }
 const neverPrefixes = (cwd) => { try { return read(join(cwd, '.neverpush')).split(/\r?\n/) } catch { return [] } }
 function neverPushBlock(tool, input, cwd) {

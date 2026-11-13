@@ -744,14 +744,15 @@ refs=$(cat)
 # S9 (#551): 18+ paths never reach GitHub, for every github.com remote, whoever pushes. The paths of every commit in the pushed
 # range go to rule-guard's neverpush mode; the push passes only on its exact line "neverpush: ok", so a missing, old or broken
 # copy blocks too. PRE_PR_SKIP does not skip this, and settings deny `git push --no-verify`.
-case "$2" in
-  *github.com*)
+dest=$(printf '%s' "$2" | tr 'A-Z' 'a-z')
+case "$dest" in
+  *github.com*|*local_proxy*|*127.0.0.1*) # a cloud session's origin is a local proxy to GitHub
     tmp=$(mktemp)
     while read -r lref lsha rref rsha; do
       case "$lsha" in ""|0000000000000000000000000000000000000000) continue ;; esac
-      # -z keeps odd paths unquoted, -m lists merge commits too; an unknown remote sha falls back to "not on any remote yet".
-      if git cat-file -e "$rsha^{commit}" 2>/dev/null; then range="$rsha..$lsha"; else range="$lsha --not --remotes"; fi
-      git -c core.quotePath=false log -z -m --name-only --pretty=format: $range >> "$tmp" || { echo "pre-push: blocked, could not list the pushed paths"; rm -f "$tmp"; exit 1; }
+      # -z keeps odd paths unquoted, -m lists merge commits too; an unknown remote sha falls back to "not on the pushed remote yet" (only that remote's refs are excluded, a private second remote does not hide a commit).
+      if git cat-file -e "$rsha^{commit}" 2>/dev/null; then range="$rsha..$lsha"; else range="$lsha --not --remotes=$1"; fi
+      git -c core.quotePath=false -c log.showRoot=true log -z -m --name-only --pretty=format: $range >> "$tmp" || { echo "pre-push: blocked, could not list the pushed paths"; rm -f "$tmp"; exit 1; }
     done <<EOF
 $refs
 EOF
@@ -2689,11 +2690,13 @@ export async function gateBriefContext(brief, model) {
 
 // S9 (#551): 18+ paths never reach GitHub. A path with a Private18 segment, a nacht-*.rpy or kontakt_sex* file, or under a prefix
 // in the repo's .neverpush. Three doors share this: the pre-push hook (CLI mode neverpush), push_files / create_or_update_file, and
-// the settings deny on `git push --no-verify`.
+// the settings deny on `git push --no-verify`. Door 2 covers push_files, create_or_update_file and delete_file.
 const NEVER_FILE = /^(nacht-.*\.rpy|kontakt_sex.*)$/i
 export function neverPush(paths, prefixes = []) {
-  const pre = prefixes.map((x) => String(x).trim().replace(/\\/g, '/').replace(/^\.?\//, '')).filter((x) => x && !x.startsWith('#')).map((x) => x.replace(/\/*$/, '/'))
-  return paths.map((p) => String(p).replace(/\\/g, '/').replace(/^\.?\//, '')).filter((p) => p.split('/').some((s) => s.toLowerCase() === 'private18') || NEVER_FILE.test(p.split('/').pop()) || pre.some((x) => `${p}/`.startsWith(x)))
+  // Spellings collapse first: backslashes, ".", "..", empty segments, surrounding blanks; prefixes compare without case.
+  const norm = (p) => { const out = []; for (const s of String(p).trim().replace(/\\/g, '/').split('/')) { if (s === '..') out.pop(); else if (s && s !== '.') out.push(s.trim()) } return out.join('/') }
+  const pre = prefixes.map((x) => String(x).trim()).filter((x) => x && !x.startsWith('#')).map((x) => `${norm(x).toLowerCase()}/`)
+  return paths.filter((p) => { const n = norm(p); return n.split('/').some((s) => s.toLowerCase() === 'private18') || NEVER_FILE.test(n.split('/').pop()) || pre.some((x) => `${n.toLowerCase()}/`.startsWith(x)) })
 }
 const neverPrefixes = (cwd) => { try { return read(join(cwd, '.neverpush')).split(/\r?\n/) } catch { return [] } }
 function neverPushBlock(tool, input, cwd) {

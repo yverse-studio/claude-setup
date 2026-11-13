@@ -1630,3 +1630,30 @@ test('pre-push hook: an umlaut path, a merge commit and an unknown remote sha ca
     assert.equal(push(head, '1234567890123456789012345678901234567890').status, 1, 'an unknown remote sha falls back and still sees the path')
   } finally { for (const d of [home, repo]) rmSync(d, { recursive: true, force: true }) }
 })
+
+test('pre-push hook: a private second remote, an upper-case host and a root commit cannot hide a Private18 path', () => {
+  if (process.platform === 'win32') return
+  const home = mkdtempSync(join(tmpdir(), 'np3-home-'))
+  const repo = mkdtempSync(join(tmpdir(), 'np3-repo-'))
+  try {
+    mkdirSync(join(home, '.claude', 'claude-setup'), { recursive: true })
+    cpSync(join(root, 'global/rule-guard.mjs'), join(home, '.claude', 'claude-setup', 'rule-guard.mjs'))
+    const env = { ...process.env, CLAUDE_SETUP_HOME: home, GIT_CONFIG_COUNT: '1', GIT_CONFIG_KEY_0: 'log.showRoot', GIT_CONFIG_VALUE_0: 'false' }
+    for (const k of Object.keys(env)) if (k.startsWith('GIT_') && !k.startsWith('GIT_CONFIG_')) delete env[k]
+    const g = (...a) => spawnSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...a], { cwd: repo, env, encoding: 'utf8' })
+    g('init', '-q', '-b', 'main')
+    mkdirSync(join(repo, 'Private18')); writeFileSync(join(repo, 'Private18', 'r.png'), 'x'); g('add', '-A'); g('commit', '-q', '-m', 'root')
+    const head = g('rev-parse', 'HEAD').stdout.trim()
+    g('update-ref', 'refs/remotes/nas/main', head) // a private second remote already holds the commit
+    const hook = join(root, 'global/git-hooks/pre-push')
+    const push = (url, rsha = '0'.repeat(40)) => spawnSync('sh', [hook, 'origin', url], { cwd: repo, env, input: `refs/heads/main ${head} refs/heads/main ${rsha}\n`, encoding: 'utf8' })
+    assert.equal(push('https://github.com/o/x').status, 1, 'the nas remote does not hide it, and a root commit is listed even with log.showRoot=false')
+    assert.equal(push('https://GitHub.com/o/x').status, 1, 'host case does not matter')
+    assert.equal(push('http://local_proxy@127.0.0.1:1234/git/o/x').status, 1, 'a cloud proxy origin counts as GitHub')
+  } finally { for (const d of [home, repo]) rmSync(d, { recursive: true, force: true }) }
+})
+
+test('neverPush: a prefix matches through ./, .. and blanks and without case', async () => {
+  const { neverPush } = await import('../global/rule-guard.mjs')
+  assert.equal(neverPush(['.//secret/a', 'x/../secret/a', ' secret/a', 'Secret/a', 'secretary/a'], ['secret']).length, 4)
+})
