@@ -2361,7 +2361,7 @@ export const knownModel = (session, transcript) => sessionModel(transcript) ?? (
 export const GATE_ROLES = /^(Tester|Reviewer|Security|Legal|Playtester|Hook Checker|Critic|Story Editor|Evaluator)$/i
 export const GATE_PRIOR = /^[ \t>-]*Prior art:[^\n]*\bgate\.md\b/im
 
-export const stripTags = (t) => t.replace(/\\[nt]/g, '\n').replace(/<\/?(wake|message|thread|project|relay|coordinator-relay|cited|note|system-note)\b[^>]*>/g, '\n')
+export const stripTags = (t) => t.replace(/\\[nt]/g, '\n').replace(/<\/?(wake|message|thread|project|project_claude_message|relay|coordinator-relay|cited|note|system-note)\b[^>]*>/g, '\n')
 
 // The template a refusal carries, so the coordinator needs no file: the stamp with the role filled in, then one line per applicable row of BRIEF_FIELDS.
 export const templateFor = (guard, role, size = 'M') => {
@@ -2832,13 +2832,14 @@ export function updateLock(session, check) {
 // straight after it), so a wrapper inside
 // a wake, a PR event, a task notification or another relay never counts (#475 follow-up). It then stamps the role once, as roleContext does for a spawn brief: a non-empty stamp is never changed,
 // and a gate role only for a thread that holds no stamp yet (relayRebrief; #475, M50).
-export const COORDINATOR_RELAY = /^\s*(?:<system-note>[^<]*<\/system-note>\s*)*(?:<system-reminder>\s*)?A message from this project[’']s coordinator session[^\n]*\n\s*<coordinator-relay>\s*<relay\b[^>]*\bfrom=\\?"coordinator"/
+export const COORDINATOR_RELAY = /^\s*(?:<project_claude_message\b[^>]*>\s*)?(?:<system-note>[^<]*<\/system-note>\s*)*(?:<system-reminder>\s*)?A message from this project[’']s coordinator session[^\n]*\n\s*<coordinator-relay>\s*<relay\b[^>]*\bfrom=\\?"coordinator"/
+// #573: a Remote Control thread gets the relay wrapped in `<project_claude_message ...>` (an optional first tag of both patterns).
 // M50: a relay that reaches a working thread is a `queued_command` attachment, whose text starts with the bare `<relay from="coordinator"` (live
 // 2026-11-12: the lead-in line is added only when the harness shows it). M53: either form counts only on a row the projects server delivered
 // (`origin` = fromProjects of the counter): the text is who wrote it, the origin is who delivered it, so a thread's own scheduled prompt
 // (an isMeta row with the same text) is no relay.
 const BRIEF_LINE = /^[ \t>*_`-]*(Role|Kit|Gate|Prior art|Model|Skills|Done when|Stop when|Start|Threads|Item|Plan|Acceptance):/im // a relay that corrects the brief; other relays do not count toward the card
-const BARE_RELAY = /^\s*<relay\b[^>]*\bfrom=\\?"coordinator"/
+const BARE_RELAY = /^\s*(?:<project_claude_message\b[^>]*>\s*)?<relay\b[^>]*\bfrom=\\?"coordinator"/
 // The coordinator often sends only the lines the start brief lacked (#479 part 2: VacationGame's Critic, our Director), so the relay is read
 // together with the earlier coordinator relays and the spawn brief from the transcript: the newest relay's lines come first and win,
 // older relays and the spawn brief fill the gaps.
