@@ -807,12 +807,14 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         // SessionStart names the session's model; rule-guard's brief check reads it before the first reply.
         if (session && typeof model === 'string' && model) writeFileSync(modelFile(session), model)
         if (process.env.CLAUDE_SETUP_BOOT_FETCH !== 'off') {
+          // S10 (a): this copy may be a cached image's old one, and the hook runs the installed file itself, so snapshot the running text before refresh replaces it.
+          const before = text(fileURLToPath(import.meta.url))
           refresh(dir)
-          // S10 (a): this copy may be a cached image's old one. When refresh installed a different team-guard, run that one once (the flag stops a loop, no second fetch) and print its answer.
+          // When refresh installed a different team-guard, run that one once (the flag stops a loop, no second fetch) and print its answer.
           const fresh = join(dir, 'team-guard.mjs')
-          if (process.env.CLAUDE_SETUP_START_RERUN !== '1' && existsSync(fresh) && text(fresh) !== text(fileURLToPath(import.meta.url))) {
-            const out = spawnSync(process.execPath, [fresh, 'start'], { input: raw, env: { ...process.env, CLAUDE_SETUP_START_RERUN: '1', CLAUDE_SETUP_BOOT_FETCH: 'off' }, encoding: 'utf8', timeout: 1500 }).stdout
-            if (out) return process.stdout.write(out)
+          if (process.env.CLAUDE_SETUP_START_RERUN !== '1' && existsSync(fresh) && text(fresh) !== before) {
+            const run = spawnSync(process.execPath, [fresh, 'start'], { input: raw, env: { ...process.env, CLAUDE_SETUP_START_RERUN: '1', CLAUDE_SETUP_BOOT_FETCH: 'off' }, encoding: 'utf8', timeout: 1500 })
+            if (run.status === 0 && run.stdout) return process.stdout.write(run.stdout)
           }
         }
         sweep(join(dir, 'booted'))

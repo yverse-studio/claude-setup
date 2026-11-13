@@ -669,14 +669,17 @@ test('team guard: start refreshes first and prints what the refreshed copy print
   try {
     const dir = join(home, '.claude', 'claude-setup')
     mkdirSync(dir, { recursive: true })
-    writeFileSync(join(dir, 'team-guard.mjs'), '#!/usr/bin/env node\n// old\n')
+    // The real hook runs the INSTALLED file, so the old copy is the guard itself, installed.
+    cpSync(teamFile, join(dir, 'team-guard.mjs'))
+    const runInstalled = (payload, env) => spawnSync(process.execPath, [join(dir, 'team-guard.mjs'), 'start'], { input: JSON.stringify(payload), encoding: 'utf8', timeout: 5000, env: { ...process.env, CLAUDE_CODE_CHILD_SESSION: '', ...env } })
     writeFileSync(join(bin, 'curl'), `#!/bin/sh\nwhile [ $# -gt 0 ]; do\n  if [ "$1" = "-o" ]; then out="$2"; url="$3"; shift 3\n    mkdir -p "$(dirname "$out")"\n    case "$url" in *global/team-guard.mjs) printf '#!/usr/bin/env node\\nimport "node:path"\\nprocess.stdout.write("fresh " + process.argv[2] + " " + (process.env.CLAUDE_SETUP_START_RERUN ?? "") + " " + process.env.CLAUDE_SETUP_BOOT_FETCH)\\n' > "$out" ;; *) echo doc > "$out" ;; esac\n  else shift; fi\ndone\n`, { mode: 0o755 })
     const env = { CLAUDE_SETUP_HOME: home, PATH: `${bin}:${process.env.PATH}` }
-    assert.equal(runTeam('start', { cwd, session_id: 'r1' }, env).stdout, 'fresh start 1 off', 'the refreshed copy ran once, with the loop flag and no second fetch')
-    assert.doesNotMatch(runTeam('start', { cwd, session_id: 'r2' }, { ...env, CLAUDE_SETUP_START_RERUN: '1' }).stdout, /^fresh/, 'with the flag set this copy answers itself')
-    writeFileSync(join(bin, 'curl'), '#!/bin/sh\nexit 7\n', { mode: 0o755 })
-    writeFileSync(join(dir, 'team-guard.mjs'), '#!/usr/bin/env node\n// prints nothing\n')
-    assert.match(runTeam('start', { cwd, session_id: 'r3' }, env).stdout, /Team rule|Boot \(claude-setup\)/, 'a new copy that prints nothing falls back to this one')
+    assert.equal(runInstalled({ cwd, session_id: 'r1' }, env).stdout, 'fresh start 1 off', 'the refreshed copy ran once, with the loop flag and no second fetch')
+    cpSync(teamFile, join(dir, 'team-guard.mjs'))
+    assert.doesNotMatch(runInstalled({ cwd, session_id: 'r2' }, { ...env, CLAUDE_SETUP_START_RERUN: '1' }).stdout, /^fresh/, 'with the flag set this copy answers itself')
+    cpSync(teamFile, join(dir, 'team-guard.mjs'))
+    writeFileSync(join(bin, 'curl'), `#!/bin/sh\nwhile [ $# -gt 0 ]; do\n  if [ "$1" = "-o" ]; then out="$2"; shift 3; mkdir -p "$(dirname "$out")"; printf '#!/usr/bin/env node\\n// prints nothing\\n' > "$out"; else shift; fi\ndone\n`, { mode: 0o755 })
+    assert.match(runInstalled({ cwd, session_id: 'r3' }, env).stdout, /Team rule|Boot \(claude-setup\)/, 'a new copy that prints nothing falls back to the running one')
   } finally { for (const d of [home, bin, cwd]) rmSync(d, { recursive: true, force: true }) }
 })
 
@@ -695,7 +698,7 @@ test('team guard: refresh fetches the pre-push hook, executable, and a cut-off d
     assert.ok(existsSync(hook), 'the hook is fetched')
     assert.ok((statSync(hook).mode & 0o111) !== 0, 'and executable')
     assert.match(readFileSync(hook, 'utf8'), /^#!\/bin\/sh/)
-    writeFileSync(join(bin, 'curl'), `#!/bin/sh\nwhile [ $# -gt 0 ]; do\n  if [ "$1" = "-o" ]; then out="$2"; shift 3; mkdir -p "$(dirname "$out")"; printf 'cut off' > "$out"; else shift; fi\ndone\nexit 18\n`, { mode: 0o755 })
+    writeFileSync(join(bin, 'curl'), `#!/bin/sh\nwhile [ $# -gt 0 ]; do\n  if [ "$1" = "-o" ]; then out="$2"; shift 3; mkdir -p "$(dirname "$out")"; printf '#!/bin/sh\\necho ha' > "$out"; else shift; fi\ndone\nexit 18\n`, { mode: 0o755 })
     runTeam('start', { cwd, session_id: 'h2' }, env)
     assert.match(readFileSync(hook, 'utf8'), /^#!\/bin\/sh\necho new/, 'a cut-off download keeps the installed hook')
   } finally { for (const d of [home, bin, cwd]) rmSync(d, { recursive: true, force: true }) }
