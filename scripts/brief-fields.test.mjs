@@ -96,3 +96,14 @@ test('briefs.md keeps no hand-written brief block: a fenced block with a Role st
   for (const block of briefs.match(/```[\s\S]*?```/g) ?? []) assert.doesNotMatch(block, /^Role: .*Kit: .*Size:/m, 'a brief block lives in docs/templates/thread-brief.md only')
   assert.match(briefs, /rows of `BRIEF_FIELDS`/)
 })
+
+// X1b (#540): the item holds the rest. Its template has exactly these lines and the brief file names the item as the place for them.
+const ITEM_LINES = ['Scope', 'Basis', 'Assets', 'Sheet', 'Look-Lock', 'Asset', 'Acceptance']
+test('X1b: the issue template holds the item lines and every brief file points at the item for the rest', async () => {
+  const tpl = readFileSync(join(root, '.github/ISSUE_TEMPLATE/plan.md'), 'utf8')
+  assert.match(tpl, /^---\n[\s\S]*labels:.*plan/m, 'the template sets the plan label')
+  for (const k of ITEM_LINES) assert.match(tpl, new RegExp(`^${k}:`, 'm'), `${k}: is an item line`)
+  assert.doesNotMatch(tpl, /^Reuse:/m, 'Reuse: is the thread-reuse line, Assets: is the item line')
+  const { briefFile } = await import('./brief.mjs')
+  for (const role of ['Programmer', 'Reviewer', 'Researcher', 'Planner']) assert.match(briefFile(role), /Scope, Basis and Assets live in the item/, `${role} brief file names the item`)
+})
