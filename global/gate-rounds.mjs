@@ -45,7 +45,7 @@ export const lastRound = (l) => l.rounds.at(-1)?.n ?? 0
 
 // ---- who sent a transcript row (M53, gate round 11 of #474): the text says who wrote it, the origin says who delivered it. A thread can
 // schedule its own prompt (CronCreate, ScheduleWakeup, send_later); the harness then writes that text as an isMeta user row, word for word.
-// Nothing a thread can schedule or type carries the projects server's origin. One definition each; rule-guard and task-ledger use these.
+// Nothing a thread can schedule or type carries the projects server's origin. One definition each; rule-guard uses these.
 // A scheduled or notification-driven row: a cron or wakeup (turnOrigin scheduled, wakeupSource), or a send_later notification (live 2026-11-12:
 // turnOrigin task_notification, origin task-notification with no projects-relay subkind). None of them is a person or the coordinator.
 export const selfScheduled = (r) => r?.turnOrigin === 'scheduled' || r?.turnOrigin === 'task_notification' || !!r?.wakeupSource

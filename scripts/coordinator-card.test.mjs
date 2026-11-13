@@ -258,7 +258,7 @@ test('the hook writes the count: a spawn prompt with a refused brief logs refuse
   process.env.CLAUDE_SETUP_PROJECT_FILES = out
   try {
     const brief = (role) => `<wake reason="spawn"><project id="chan_1" name="Demo Project" type="project">Role: ${role} · Kit: setup · Size: S\n</project></wake>`
-    await countStart({ session: 'h1', brief: brief('Programmer'), checkNow: REFUSED, modelNote: '', guard: 'Guards in this session: deadbeef (8/8 installed).', card: 'Card refreshed cafe1234: x' })
+    await countStart({ session: 'h1', brief: brief('Programmer'), checkNow: REFUSED, modelNote: '', guard: 'Guards in this session: deadbeef (7/7 installed).', card: 'Card refreshed cafe1234: x' })
     await countStart({ session: 'h2', brief: brief('Programmer'), checkNow: '', modelNote: '', guard: '', card: '' })
     const read1 = (s) => JSON.parse(readFileSync(join(out, 'claude-setup', 'brief-log', readdirSync(join(out, 'claude-setup', 'brief-log')).find((n) => n.endsWith(`-${s}.json`))), 'utf8'))
     assert.deepEqual([read1('h1').outcome, read1('h1').project, read1('h1').role, read1('h1').guard, read1('h1').card], ['refused', 'Demo Project', 'Programmer', 'deadbeef', 'cafe1234'])
