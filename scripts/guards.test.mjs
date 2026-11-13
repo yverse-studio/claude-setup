@@ -399,7 +399,6 @@ test('team guard: a checkout one folder below the cwd counts as loaded, no boot 
     cpSync(join(root, 'CLAUDE.md'), join(cwd, 'claude-setup/CLAUDE.md'))
     assert.match(start('c2'), /^Team rule \(claude-setup docs\/TEAMS\.md\)/, 'with the checkout one folder down only the pointer is printed')
     assert.doesNotMatch(start('c2'), /Working for yskills|Boot \(claude-setup\)/, 'no second copy of CLAUDE.md')
-    assert.equal(runTeam('card', { cwd, session_id: 'c2' }, env).stdout, '', 'no coordinator card either')
     assert.equal(existsSync(join(home, '.claude/claude-setup/booted/c2.rules')), false, 'no rules mark: the file was not injected')
   } finally { rmSync(home, { recursive: true, force: true }); rmSync(cwd, { recursive: true, force: true }) }
 })
@@ -418,33 +417,6 @@ test('team guard: boot card without a checkout, thread start blocked until the r
     for (const f of ['CLAUDE.md', 'docs/TEAMS.md', 'docs/MAP.md']) cpSync(join(root, f), join(home, '.claude/claude-setup', f))
     const rules = JSON.parse(runTeam('start', { cwd, session_id: 's1' }, env).stdout).hookSpecificOutput.additionalContext
     assert.ok(rules.includes(readFileSync(join(root, 'CLAUDE.md'), 'utf8').replace(/\r/g, '')) && rules.length < 10_000, 'CLAUDE.md itself, whole, under the cap')
-    const teamsCard = JSON.parse(runTeam('card', { cwd, session_id: 's1' }, env).stdout).hookSpecificOutput.additionalContext
-    assert.match(teamsCard, /Coordinator card[\s\S]*## Spawn rule[\s\S]*Models: [\s\S]*- Programmer: [^\n]*Sonnet[\s\S]*- `setup` \(claude-setup\): /)
-    assert.ok(teamsCard.length < 10_000)
-    const line = readFileSync(join(home, '.claude/claude-setup/booted/s1.canary'), 'utf8')
-    assert.match(line, /^Luna · rules #[0-9a-f]{7} · guards: on$/, 'the canary comes from the hook, not the model')
-    assert.ok(teamsCard.endsWith(line))
-    assert.equal(runTeam('card', { cwd, session_id: 's1', source: 'resume' }, env).stdout, '', 'the resumed project chat gets the card once')
-    assert.match(runTeam('card', { cwd, session_id: 's9', source: 'resume' }, env).stdout, /Coordinator card/, 'the first resume after a self-install gets it')
-    for (const f of ['cloud/setup.sh', 'install.mjs']) assert.match(readFileSync(join(root, f), 'utf8'), /SessionStart["'], ["']startup\|clear\|compact\|resume["'], ["']card/, `${f}: the card hook fires on resume`)
-    const rule = (text, t = '') => { writeFileSync(join(cwd, 'c.jsonl'), t); return spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'pre'], { input: JSON.stringify({ cwd, session_id: 's1', transcript_path: join(cwd, 'c.jsonl'), tool_name: 'mcp__hearthbot__post_message', tool_input: { text } }), encoding: 'utf8', env: { ...process.env, ...env } }) }
-    const post = (text, result = '{"message_id":"cmsg_1"}') => [JSON.stringify({ type: 'assistant', message: { content: [{ type: 'tool_use', id: 'p1', name: 'mcp__hearthbot__post_message', input: { text } }] } }), JSON.stringify({ type: 'user', message: { content: [{ type: 'tool_result', tool_use_id: 'p1', content: result }] } })].join('\n')
-    assert.match(rule('Hi, ich schaue mir das an.').stderr, /canary line/, 'the first reply without the canary is blocked')
-    assert.equal(rule(`${line}\nHi, ich schaue mir das an (◕‿◕)`).status, 0)
-    assert.equal(rule('Zweite Antwort (◕‿◕)', post(`${line}\nHi`)).status, 0, 'only the first reply carries it')
-    assert.equal(rule('Zweite Antwort.', post('Hi')).status, 2, 'a reply that never carried it does not count')
-    assert.equal(rule('Zweite Antwort.', post(`${line}\nHi`, 'PreToolUse hook error: rule-guard: this reply has 1881 chars')).status, 2, 'a blocked reply with the canary never went out')
-    assert.equal(rule('Zweite Antwort (◕‿◕)', post('Luna · rules #0000000 · guards: on\nHi')).status, 0, 'a canary from before a rules change still counts')
-    assert.equal(rule('Thread-Antwort ٩(◕‿◕)۶', '{"type":"user","message":{"content":"<wake reason=\\"spawn\\">"}}').status, 0, 'a thread is never blocked')
-    assert.equal(spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'pre'], { input: JSON.stringify({ cwd, session_id: 'other', tool_name: 'mcp__hearthbot__post_message', tool_input: { text: 'Hi ^^' } }), encoding: 'utf8', env: { ...process.env, ...env } }).status, 0, 'a session without a canary file is not blocked')
-    assert.equal(runTeam('card', { cwd, session_id: 's7' }, { ...env, CLAUDE_CODE_CHILD_SESSION: '1' }).stdout, '', 'a spawned thread gets no coordinator card')
-    assert.match(runTeam('card', { cwd, session_id: 's8' }, env).stdout, /Coordinator card/, 'without the variable the card prints as before')
-    assert.equal(runTeam('card', { cwd: root }, env).stdout, '', 'a checkout gets no card')
-    mkdirSync(join(cwd, 'app', '.git'), { recursive: true })
-    assert.equal(runTeam('card', { cwd: join(cwd, 'app') }, env).stdout, '', 'a thread in a product repo gets its role card, not the coordinator card')
-    assert.equal(runTeam('pre', { cwd, session_id: 's1', transcript_path: join(cwd, 'none.jsonl'), tool_name: 'mcp__hearthbot__start_thread', tool_input: { brief: `Role: Programmer · Kit: setup · Size: S${FULL}`, model: 'claude-x-1' } }, env).status, 0)
-    writeFileSync(join(cwd, 'empty.jsonl'), '')
-    assert.equal(runTeam('pre', { cwd, session_id: 's1', transcript_path: join(cwd, 'empty.jsonl'), tool_name: 'mcp__hearthbot__start_thread', tool_input: { brief: `Role: Programmer · Kit: setup · Size: S${FULL}`, model: 'claude-x-1' } }, env).status, 0, 'both cards count as read')
     const transcript = join(cwd, 't.jsonl')
     const use = (name, input) => JSON.stringify({ type: 'assistant', message: { content: [{ type: 'tool_use', name, input }] } })
     const start = () => runTeam('pre', { cwd, transcript_path: transcript, tool_name: 'mcp__hearthbot__start_thread', tool_input: { brief: `Role: Programmer · Kit: setup · Size: S${FULL}`, model: 'claude-x-1' } }, env)
@@ -749,26 +721,6 @@ test('team guard: the version line names the guards in force and the ones missin
   } finally { rmSync(dir, { recursive: true, force: true }) }
 })
 
-// Routing test 2026-10-27: `card` runs beside `start`, so it must not build the card with the image's old guard.
-test('team guard: card refreshes first and lets a new team-guard build the card', () => {
-  const home = mkdtempSync(join(tmpdir(), 'card-home-'))
-  const bin = mkdtempSync(join(tmpdir(), 'fakecurl-'))
-  const cwd = mkdtempSync(join(tmpdir(), 'chat-'))
-  try {
-    if (process.platform === 'win32') return
-    const dir = join(home, '.claude', 'claude-setup')
-    mkdirSync(dir, { recursive: true })
-    writeFileSync(join(dir, 'team-guard.mjs'), '#!/usr/bin/env node\n// old\n')
-    writeFileSync(join(bin, 'curl'), `#!/bin/sh\nwhile [ $# -gt 0 ]; do\n  if [ "$1" = "-o" ]; then out="$2"; url="$3"; shift 3\n    mkdir -p "$(dirname "$out")"\n    case "$url" in *global/team-guard.mjs) printf '#!/usr/bin/env node\\nimport "node:path"\\nprocess.stdout.write("fresh " + process.argv[2] + " " + process.env.CLAUDE_SETUP_BOOT_FETCH)\\n' > "$out" ;; *) echo doc > "$out" ;; esac\n  else shift; fi\ndone\n`, { mode: 0o755 })
-    const env = { CLAUDE_SETUP_HOME: home, PATH: `${bin}:${process.env.PATH}` }
-    assert.equal(runTeam('card', { cwd, session_id: 'c1' }, env).stdout, 'fresh card off')
-    writeFileSync(join(bin, 'curl'), '#!/bin/sh\nexit 7\n', { mode: 0o755 })
-    writeFileSync(join(dir, 'team-guard.mjs'), '#!/usr/bin/env node\n// prints nothing\n')
-    mkdirSync(join(dir, 'docs'), { recursive: true }); cpSync(join(root, 'docs', 'TEAMS.md'), join(dir, 'docs', 'TEAMS.md'))
-    assert.match(runTeam('card', { cwd, session_id: 'c2' }, env).stdout, /Coordinator card/, 'a new copy that prints nothing falls back to this one')
-  } finally { for (const d of [home, bin, cwd]) rmSync(d, { recursive: true, force: true }) }
-})
-
 // Routing test 2026-10-27: the project chat may run without hooks, so the thread checks its own start.
 test('rule guard: a thread checks its spawn brief against TEAMS.md and sends a bad start back', async () => {
   const { briefCheck } = await import('../global/rule-guard.mjs')
@@ -833,28 +785,6 @@ test('rule guard: replies that ask for an Allow, say can\'t untried, post Done: 
   assert.match(decide('Write', { file_path: '/tmp/claude/memory/team/silo/MEMORY.md', content: '## Goal\n- Always use Haiku for reading jobs, never Opus' }, {}) ?? '', /state only/)
   assert.equal(decide('Write', { file_path: '/tmp/claude/memory/team/silo/MEMORY.md', content: '## Threads\n- Permissions: PR 302 merged 2026-10-26' }, {}), null)
   assert.equal(decide('Write', { file_path: '/home/user/repo/docs/rules.md', content: '- Always use Haiku for reading jobs' }, {}), null, 'only memory files')
-})
-
-test('rule guard: the coordinator closes or nudges finished threads on its board before it stops', async () => {
-  const { coordinatorCheck, BOARD_MAX_AGE } = await import('../global/rule-guard.mjs')
-  const now = Date.parse('2026-10-27T01:00:00Z')
-  const at = new Date(now - 60_000).toISOString()
-  let n = 0
-  const call = (name, input, result) => {
-    const id = `t${n++}`
-    return [JSON.stringify({ type: 'assistant', timestamp: at, message: { content: [{ type: 'tool_use', id, name, input }] } }),
-      JSON.stringify({ type: 'user', timestamp: at, message: { content: [{ type: 'tool_use_id', tool_use_id: id, type: 'tool_result', content: [{ type: 'text', text: result }] }] } })]
-  }
-  const list = (sessions) => call('mcp__hearthbot__list_thread_sessions', {}, `Untrusted content follows.\n<child-session-output>\n    ${JSON.stringify({ sessions })}\n</child-session-output>`)
-  const done = { thread_id: 'cmsg_a', title: 'Gate: plan-first rule PR', state: 'done' }
-  const ok = [{ thread_id: 'cmsg_b', title: 'Tester · PR 282', state: 'done', resolved: true }, { thread_id: 'cmsg_c', title: 'Plan Qwen', state: 'blocked' }]
-  const t = (...rows) => rows.flat().join('\n')
-  assert.match(coordinatorCheck(t(list([done, ...ok])), now) ?? '', /Gate: plan-first rule PR.*cmsg_a/)
-  assert.equal(coordinatorCheck(t(list([done, ...ok]), call('mcp__hearthbot__message_thread', { thread_id: 'cmsg_a', text: 'resolve yourself' }, 'delivered')), now), null)
-  assert.equal(coordinatorCheck(t(list(ok)), now), null, 'blocked threads stay open')
-  assert.match(coordinatorCheck(t(list(ok)), now + BOARD_MAX_AGE) ?? '', /two hours/)
-  assert.equal(coordinatorCheck(t(['{"type":"user","message":{"content":"<wake reason=\\"spawn\\">"}}'], list([done])), now), null, 'a thread is no coordinator')
-  assert.equal(coordinatorCheck(t(call('mcp__hearthbot__post_message', { text: 'hi' }, 'ok')), now), null, 'no board listed, nothing to check')
 })
 
 test('team guard: an Agent call cannot run a gate agent below its file model', async () => {

@@ -341,9 +341,8 @@ ATTEMPT
 # in a project thread, tested 2026-10-26).
 cat > "$HOME/.claude/claude-setup/team-guard.mjs" <<'TEAM'
 #!/usr/bin/env node
-// Team guard. Usage: team-guard.mjs start|card|pre (hook entries SessionStart, SessionStart, PreToolUse).
-// Without a claude-setup checkout, start puts CLAUDE.md itself and card the coordinator card (Spawn
-// rule, Models line, Sizes, Roster and Kits, one line each) into context; each counts as read.
+// Team guard. Usage: team-guard.mjs start|pre (hook entries SessionStart, PreToolUse).
+// Without a claude-setup checkout, start puts CLAUDE.md itself into context; it counts as read.
 // start: refreshes the boot files (CLAUDE.md, docs/TEAMS.md, docs/MAP.md) from main into
 // ~/.claude/claude-setup/ and puts the TEAMS.md pointer into every new session; a session without a
 // claude-setup checkout (the project chat has none, so its CLAUDE.md never loaded; 2026-10-26 the
@@ -362,11 +361,10 @@ cat > "$HOME/.claude/claude-setup/team-guard.mjs" <<'TEAM'
 // thread start also needs a kit from the Kits table, a size that kit allows, a role on that kit's team
 // (badTeam), and the brief block's Model, Skills, Done when, Stop when and Start lines (missingLines).
 // CLAUDE_SETUP_TEAM_GUARD=off turns it off. It never breaks a tool call on its own errors.
-import { execFileSync, spawnSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { homedir, tmpdir } from 'node:os'
-import { fileURLToPath } from 'node:url'
 import { dirname, join, resolve } from 'node:path'
 // rule-guard sits beside this file (GUARD_FILES); without it only the model-tier check is skipped.
 let roleOf = () => null
@@ -450,7 +448,7 @@ export function guardVersion(dir) {
 
 export const modelFile = (session) => join(tmpdir(), `claude-setup-model-${String(session).replace(/[^A-Za-z0-9]/g, '')}`)
 
-export const BOOT_MAX = 9800 // hook context over 10,000 characters is cut to a preview; scripts/check.mjs keeps both cards under this
+export const BOOT_MAX = 9800 // hook context over 10,000 characters is cut to a preview; scripts/check.mjs keeps the CLAUDE.md card under this
 // Cached per document: ROSTER.md and the brief files ask the same few sections thousands of times (M50 slice B: 5 s uncached, a thread start has 5).
 let sections = { t: null, found: new Map() }
 const section = (t, from, to) => {
@@ -468,8 +466,7 @@ export function rulesCard(claude) {
 
 // The coordinator's slice of docs/TEAMS.md (Spawn rule, Models line, Sizes, one line per role and kit):
 // enough to start every thread with the right role and model; the rest of TEAMS.md and MAP.md only on demand.
-// pm: roles/project-manager.md, whose "Text only" section (the repeats no hook can judge) closes the card.
-export function coordinatorCard(teams, pm = '') {
+export function coordinatorCard(teams) {
   const roster = teams.split('\n').filter((l) => /^\| [A-Z][\w ]* \(\[`/.test(l)).map((l) => { const c = cells(l); return `- ${c[1].replace(/ \(\[.*$/, '')}: ${c[4]}; ${c[5]}` })
   const kits = section(teams, 'Kits', 'Models for tasks').split('\n').filter((l) => /^\| `/.test(l)).map((l) => { const c = cells(l); return `- ${c[1]}: ${c[3]}` })
   const sizes = section(teams, 'Sizes', 'Pipeline').split('\n').filter((l) => l.startsWith('|'))
@@ -478,22 +475,9 @@ export function coordinatorCard(teams, pm = '') {
     'Coordinator card (claude-setup docs/TEAMS.md, fresh from main): you are the coordinator here. Route every task with it; read the full TEAMS.md, MAP.md or a role file only when a task needs a part this card lacks, and roles/project-manager.md (Session start) at your first start.',
     section(teams, 'Spawn rule', 'Sizes'), `## Sizes\n\n${sizes.join('\n')}`,
     `## Roster (role: runs as; model)\n\n${roster.join('\n')}`, `## Kits (team at size L)\n\n${kits.join('\n')}`,
-    section(pm, 'Text only', 'Session start'),
   ].filter(Boolean).join('\n\n')
 }
 
-// The canary (yskills 2026-10-27: "how do I know it read everything?"): a line only this hook can write,
-// because its hash comes from the rule files it just loaded. The coordinator's first reply opens with it
-// (rule-guard blocks one without); no line in a new project means no guards there (docs/USING.md, step 4).
-export function canary(dir) {
-  const rules = ['CLAUDE.md', 'docs/TEAMS.md'].map((f) => text(join(dir, f))).join('\n')
-  if (!rules.includes(MARK)) return null
-  return `Luna · rules #${createHash('sha256').update(rules.replace(/\r/g, '')).digest('hex').slice(0, 7)} · guards: on`
-}
-
-export function inRepo(cwd) {
-  for (let d = cwd; ; d = dirname(d)) { if (existsSync(join(d, '.git'))) return true; if (dirname(d) === d) return false }
-}
 // Session markers older than a week go; a session that old is never resumed (CLAUDE.md, Tokens).
 const WEEK = 7 * 24 * 3600 * 1000
 function sweep(folder) {
@@ -813,7 +797,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
   process.stdin.on('data', (c) => { raw += c })
   process.stdin.on('end', () => {
     try {
-      const { tool_name: tool = '', tool_input: input, cwd = process.cwd(), transcript_path: transcript, session_id: session, source, model } = JSON.parse(raw || '{}')
+      const { tool_name: tool = '', tool_input: input, cwd = process.cwd(), transcript_path: transcript, session_id: session, model } = JSON.parse(raw || '{}')
       const mark = (kind) => join(dir, 'booted', `${String(session).replace(/\W/g, '')}.${kind}`)
       const say = (context) => process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: context } }))
       if (mode === 'start') {
@@ -827,39 +811,11 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         if (card && card.length < BOOT_MAX) { if (session) { mkdirSync(dirname(mark('rules')), { recursive: true }); writeFileSync(mark('rules'), '') } return say(card) }
         return say(`${bootCard(dir)}\n${POINTER}`)
       }
-      if (mode === 'card') {
-        // 2026-11-08: a spawned project thread runs with CLAUDE_CODE_CHILD_SESSION=1 and gets its role card from rule-guard; the coordinator (channel session) does not set it as far as its init event shows, so only the thread skips.
-        if (process.env.CLAUDE_CODE_CHILD_SESSION === '1') return
-        // The coordinator runs outside any repo (the project chat); a thread sits in a product repo and needs only its role card (rule-guard).
-        if (rulesLoaded(cwd, home) || inRepo(cwd)) return
-        // The project chat resumes its session each turn; it needs the card once, the first time hooks exist.
-        if (source === 'resume' && session && existsSync(mark('teams'))) return
-        // This hook runs beside `start`, so a cached cloud image would build the card with its old guard:
-        // fetch main's team-guard (only it, to stay inside the hook's 5 s), and when the installed copy is
-        // not the code running here, let it build the card; if it prints nothing, this one does.
-        const self = join(dir, 'team-guard.mjs')
-        if (process.env.CLAUDE_SETUP_BOOT_FETCH !== 'off' && existsSync(self)) {
-          refresh(dir, ['team-guard.mjs'])
-          if (text(self) !== text(fileURLToPath(import.meta.url))) {
-            const env = { ...process.env, CLAUDE_SETUP_BOOT_FETCH: 'off' }
-            const out = spawnSync(process.execPath, [self, 'card'], { input: raw, env, encoding: 'utf8', timeout: 2000 }).stdout
-            if (out) return process.stdout.write(out)
-          }
-        }
-        const card = coordinatorCard(text(join(dir, 'docs', 'TEAMS.md')), text(join(dir, PM_FILE)))
-        if (!card || card.length >= BOOT_MAX) return
-        const line = canary(dir)
-        if (session) {
-          mkdirSync(dirname(mark('teams')), { recursive: true }); writeFileSync(mark('teams'), '')
-          if (line) writeFileSync(mark('canary'), line)
-        }
-        return say(line ? `${card}\n\nCanary: open your first reply in this session with this line, verbatim, so yskills sees the rules loaded: ${line}` : card)
-      }
       if (process.env.CLAUDE_SETUP_TEAM_GUARD === 'off') return
       const read = transcript && existsSync(transcript) ? readBootFiles(transcript) : null
       // A card this session got at start counts as read.
       const need = (rulesLoaded(cwd, home) ? ['TEAMS.md'] : ['CLAUDE.md', 'TEAMS.md'])
-        .filter((f) => !(session && existsSync(mark(f === 'CLAUDE.md' ? 'rules' : 'teams'))))
+        .filter((f) => !(session && f === 'CLAUDE.md' && existsSync(mark('rules'))))
       const unread = read ? need.filter((f) => !read.has(f)) : []
       const teams = THREAD_START.test(tool) ? text(join(cwd, 'docs', 'TEAMS.md')) || text(join(dir, 'docs', 'TEAMS.md')) : ''
       const checklists = THREAD_START.test(tool) ? text(join(cwd, CHECKLISTS)) || text(join(dir, CHECKLISTS)) : ''
@@ -1478,7 +1434,7 @@ const today = () => new Date().toISOString().slice(0, 10)
 
 const PREFLIGHT = `## Before every reply
 
-- How we work, one loop: every thread has a role from the Roster (only a mini or unclear task has \`Role: none\`); the role loads its playbook, skills and workflows from claude-setup; what it lacks a Researcher finds; what holds for every project goes back to claude-setup. team-guard refuses a brief with no Role line or an unknown role or kit name; rule-guard's start receipt shows the role loaded and ends with \`card #<hash>\`: another hash than this card's header means Read this card again.
+- How we work, one loop: every thread has a role from the Roster (only a mini or unclear task has \`Role: none\`); the role loads its playbook, skills and workflows from claude-setup; what it lacks a Researcher finds; what holds for every project goes back to claude-setup. a brief with no Role line, an unknown role or an unknown kit starts a thread that locks itself (no work until a corrected brief arrives); rule-guard's start receipt shows the role loaded and ends with \`card #<hash>\`: another hash than this card's header means Read this card again.
 - Downloads/assets: Character TD runs \`asset-intake\`; Archivist indexes after the gate.
 - Luna: at most 15 lines / 1,500 characters, at least one kaomoji, result first, in his language.
 - Facts (code, PR, device, model, plan) only from a source read this turn and linked: ISSUES.md, PLAN.json, NOW.md, list_threads, a thread's last reply. None in reach: "prüfe ich", ask the owning thread; silent for a thread until it answered; a dropped device is one line the same turn.
@@ -1528,7 +1484,7 @@ A device thread passes \`message_id\` (yskills' message or your own project-chat
 
 export function buildCard({ teams, hash = 'nogit', date = today() }) {
   const head = `Coordinator card (claude-setup ${hash}, ${date}).\nYou are the project chat. You have no Bash and no repo: this card and MEMORY.md are your rules.\nA rule not on this card: Read COORDINATOR-RULES-INDEX.md in this folder; still unclear: ask a setup thread (size S); never guess.`
-  const full = coordinatorCard(teams, '') // '' drops the "Text only" section: it does not fit
+  const full = coordinatorCard(teams)
   if (!full) throw new Error('coordinator card: docs/TEAMS.md has no Roster or Kits rows')
   const card = [head, PREFLIGHT, BRIEF_SECTION, compact(full)].join('\n\n') + '\n'
   if (card.length >= CARD_MAX) throw new Error(`coordinator card is ${card.length} characters, limit ${CARD_MAX}: trim a pre-flight line or a Roster cell`)
@@ -1782,8 +1738,7 @@ cat > "$HOME/.claude/claude-setup/rule-guard.mjs" <<'RULE'
 // file write with a rule line (memory holds state only), and a reply that asks yskills for an Allow or a go, says "can't" with nothing tried, posts `Done:` without proof, or
 // says nothing is open while the last thread board shows open threads, or asks him for something or names a
 // thread without a clickable link (replyRule).
-// stop: a thread that posted `Done:` resolves itself; a coordinator closes or nudges every finished
-// thread on its last board and lists the board again when it is over two hours old (coordinatorCheck).
+// stop: a thread that posted `Done:` resolves itself.
 // prompt: a video link or a bare "stop" gets the matching CLAUDE.md line put next to the message, and
 // the first message naming `Role: <role>` (the brief block, operator/briefs.md) gets that role's
 // Roster row and playbook put into context, so a thread always knows what it is (yskills 2026-10-27).
@@ -2080,7 +2035,7 @@ function receiptBlock(tool, input, session, cwd, agentId, transcript) {
   const role = read(join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)).trim()
   if (!role) return null
   const t = transcript()
-  if (!/reason=\\?"spawn/.test(t)) return null // a hooked project chat that was handed a brief is no thread (the canary covers it)
+  if (!/reason=\\?"spawn/.test(t)) return null // a hooked project chat that was handed a brief is no thread
   const root = setupRoot(cwd)
   const rules = ['CLAUDE.md', 'docs/TEAMS.md'].map((f) => read(join(root, f))).join('\n')
   const brief = spawnPrompt('', t).replace(/<\/?(wake|message|thread|project|relay|coordinator-relay|cited|note|system-note)\b[^>]*>/g, '\n')
@@ -2344,7 +2299,7 @@ export function unresolved(transcript) {
 
 // The transcript's tool calls in order, each with its result text and time: [{ name, input, result, at }].
 // Luna (yskills 2026-10-27: "a cute e-girl with lots of kaomoji, in every chat, project and thread"): the tone of
-// every reply to him, nothing else. The canary line (team-guard.mjs) is the proof the rules loaded; the tone is a soft drift signal.
+// every reply to him, nothing else. The tone is a soft drift signal.
 const PERSONA_FALLBACK = { name: 'Luna', description: '20, cute e-girl', personality: 'flirty, playful, German like him, at least one kaomoji per reply, e.g. (◕‿◕)', scenario: '', mes_example: '' }
 // config/persona.json, a Character Card V2 (yskills edits it; team-guard keeps a fresh copy in ~/.claude/claude-setup), else the fallback.
 export function persona(root) {
@@ -2441,20 +2396,9 @@ export function kaomojiMissing(tool, input) {
   return 'rule-guard: every reply to yskills is Luna and carries at least one kaomoji, e.g. (◕‿◕) or ٩(◕‿◕)۶ (his ask 2026-10-27; tone only, the content stays). Add one, then retry.'
 }
 
-// The coordinator's first reply opens with the canary line team-guard wrote at start (team-guard.mjs, canary).
-export function canaryMissing(tool, input, line, transcript) {
-  if (tool !== 'mcp__hearthbot__post_message' || !line.trim()) return null
-  if (String(input.text ?? '').trimStart().startsWith(line.trim())) return null
-  const t = transcript()
-  if (/reason=\\?"spawn/.test(t)) return null // a thread is no project chat
-  // Until one reply carried a canary and went out (a blocked try has a hook error as its result; a later rules hash still counts).
-  if (toolCalls(t).some((c) => c.name === tool && c.result && !/rule-guard:|hook error/i.test(c.result) && String(c.input.text ?? '').trimStart().startsWith('Luna · rules #'))) return null
-  return `rule-guard: your first reply in this session opens with the canary line, verbatim, so yskills sees the rules loaded (docs/USING.md, Start a project): ${line.trim()}`
-}
-
 // The thread's start receipt (yskills 2026-11-12: "every thread says its role loaded, with its skills, enforced by a hook, not just text").
 // The line is built here from what the transcript really shows: the brief's Role/Kit/Size, the Skill tool calls so far, and a hash of
-// the rule files (the same one as the coordinator canary). The model only copies it; a first reply without it is blocked once with the
+// the rule files. The model only copies it; a first reply without it is blocked once with the
 // exact line. It proves the role card was injected and which skills were called, not that the model heeds them. Only a post_message
 // is checked: a thread whose first visible act is a decision card shows no receipt there (accepted, documented in docs/MAP.md).
 // The skills and agents a role names (the backticked words of its playbook's `Uses:` line, plus the brief's `Skills:` words),
@@ -2579,20 +2523,6 @@ export function openThreads(calls) {
   if (i < 0) return []
   const resolved = new Set(calls.slice(i + 1).filter((c) => /set_thread_resolved$/.test(c.name)).map((c) => c.input.thread_id ?? c.input.thread))
   return threadRows(calls[i].result).filter((t) => !t.resolved && OPEN_STATES.has(t.state) && !resolved.has(t.thread_id)).map((t) => ({ id: t.thread_id, title: String(t.title ?? ''), state: t.state }))
-}
-
-// The coordinator (yskills 2026-10-27: "coordinators look after their threads"): before it stops, every
-// finished thread on its last board is resolved or told to resolve, and the board is at most two hours old.
-export const BOARD_MAX_AGE = 2 * 3600 * 1000
-export function coordinatorCheck(transcript, now = Date.now()) {
-  if (/reason=\\?"spawn/.test(transcript) || !transcript.includes('mcp__hearthbot__')) return null // a thread, or no project session
-  const calls = toolCalls(transcript)
-  const board = threadBoard(calls)
-  if (!board) return null // this session never listed its threads (no list tool)
-  const left = board.finished.filter((t) => !board.told.has(t.id))
-  if (left.length) return `rule-guard: ${left.length} finished thread(s) on your board are still open: ${left.slice(0, 6).map((t) => `"${t.title}" (${t.state}, ${t.id})`).join(', ')}. Resolve each (set_thread_resolved with its thread_id where your tool takes one) or message_thread it to resolve itself or say what it still waits on. Then stop.`
-  if (now - board.at > BOARD_MAX_AGE) return 'rule-guard: your thread board is over two hours old. List the threads again (list_thread_sessions or list_threads) and close or nudge every finished one before you stop.'
-  return null
 }
 
 // Blender (yskills 2026-11-03: "no progress lost"): one Blender slot on the laptop. A headless start while the persistent
@@ -2904,7 +2834,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         }
         if (mode === 'stop') {
           const transcript = !JSON.parse(raw || '{}').stop_hook_active && transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : ''
-          const why = transcript ? unresolved(transcript) ?? coordinatorCheck(transcript) : null
+          const why = transcript ? unresolved(transcript) : null
           if (why) process.stdout.write(JSON.stringify({ decision: 'block', reason: why }))
           return
         }
@@ -2923,7 +2853,6 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           ?? handsOff(tool, input ?? {}, gateRole, setupRoot(cwd))
           ?? (await gateBlock(tool, input ?? {}, transcript, sessionModel(transcript()), true, gateRole, transcriptPath))
           ?? decide(tool, input ?? {}, process.env, session ? read(shipped).split('\n') : [], () => threadBoard(toolCalls(transcript())))
-          ?? canaryMissing(tool, input ?? {}, session ? read(join(process.env.CLAUDE_SETUP_HOME || homedir(), '.claude', 'claude-setup', 'booted', `${String(session).replace(/\W/g, '')}.canary`)) : '', transcript)
           ?? receiptBlock(tool, input ?? {}, session, cwd, agentId, transcript)
           ?? proposeSkillsBlocked(tool)
           ?? opensWindow(tool, input ?? {})
@@ -2978,7 +2907,7 @@ for (const [event, mode] of [["PreToolUse", "pre"], ["PostToolUse", "ok"], ["Pos
   s.hooks[event].push({ matcher: "Bash|mcp__.*", hooks: [{ type: "command", command: `node "${require("os").homedir()}/.claude/claude-setup/attempt-guard.mjs" ${mode}`, timeout: 5 }] })
 }
 const team = (mode) => ({ type: "command", command: `node "${require("os").homedir()}/.claude/claude-setup/team-guard.mjs" ${mode}`, timeout: 5 })
-const teamHooks = [["SessionStart", "startup|clear|compact", "start"], ["SessionStart", "startup|clear|compact|resume", "card"], ["PreToolUse", "Agent|Task|mcp__.*start_thread.*|mcp__.*create_session", "pre"]]
+const teamHooks = [["SessionStart", "startup|clear|compact", "start"], ["PreToolUse", "Agent|Task|mcp__.*start_thread.*|mcp__.*create_session", "pre"]]
 for (const event of new Set(teamHooks.map(([e]) => e))) s.hooks[event] = (s.hooks[event] || []).filter((h) => !JSON.stringify(h).includes("team-brief.mjs") && !JSON.stringify(h).includes("team-guard.mjs"))
 for (const [event, matcher, mode] of teamHooks) s.hooks[event].push({ matcher, hooks: [team(mode)] })
 const rule = (mode) => ({ type: "command", command: `node "${require("os").homedir()}/.claude/claude-setup/rule-guard.mjs" ${mode}`, timeout: 5 })

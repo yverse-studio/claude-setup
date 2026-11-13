@@ -42,7 +42,7 @@ Each thread reads only the Read-first files of its own role from its Kits row. A
 | Loads | What | Cost (tokens, est.) |
 |---|---|---|
 | Every session | `CLAUDE.md` (~2.4k), one line per skill and agent | ~5k |
-| Every session without a checkout (project chat, product repos) | `CLAUDE.md` and the coordinator card, put into context by `team-guard` (`scripts/check.mjs` keeps each under 9,800 characters) | ~4.5k |
+| Every session without a checkout (project chat, product repos) | `CLAUDE.md`, put into context by `team-guard` (`scripts/check.mjs` keeps it under 9,800 characters) | ~4.5k |
 | When a matching file is opened | `.claude/rules/ecc/{typescript,vue,nuxt,web}/*` (`paths:` frontmatter) | up to ~9k |
 | When a skill is used | its `SKILL.md`, then the files it links | 0.5k to 6k per skill |
 | When an agent is started | its `.claude/agents/<name>.md`, in its own context | 1k to 2k |
@@ -177,7 +177,7 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 | Models (the line, the model per role and per task) | `docs/TEAMS.md` (Models line, Roster) | everything else links it; CI fails on a model id outside that line |
 | Context guard numbers (warn 250k, backstop 700k) | `global/context-guard.mjs` | `CLAUDE.md`, `README.md` |
 | Handoff triggers | `docs/WORKFLOW.md` (Handoff triggers) | `CLAUDE.md`, `briefs.md`, `project-manager.md`, operator `SKILL.md` |
-| Hooks that enforce `CLAUDE.md` lines (no PR mails, real cards, reply cap, one Artifact, conventional commits, no WebFetch in the cloud, video and stop notes, the role card, the canary line, a thread's start receipt: proves the role card was injected and which skills ran and which of its role's skills cannot load here (the file to read instead, read before the reply), never that the role was followed; checked on `post_message` only, so a first decision card carries none; and Luna's kaomoji) | `global/rule-guard.mjs` (+ `scripts/guards.test.mjs`) | `CLAUDE.md` |
+| Hooks that enforce `CLAUDE.md` lines (no PR mails, real cards, reply cap, one Artifact, conventional commits, no WebFetch in the cloud, video and stop notes, the role card, a thread's start receipt: proves the role card was injected and which skills ran and which of its role's skills cannot load here (the file to read instead, read before the reply), never that the role was followed; checked on `post_message` only, so a first decision card carries none; and Luna's kaomoji) | `global/rule-guard.mjs` (+ `scripts/guards.test.mjs`) | `CLAUDE.md` |
 | `Prior art:`, `Lessons:` and `Fixes #n` lines in every PR body | `scripts/pr-lessons-check.mjs` | `CLAUDE.md`, `.github/pull_request_template.md`, `operator/briefs.md` |
 | Lessons inbox (the one file, block format, Seen rule, the Monday patch) | `operator/templates/lessons-inbox.md` | operator `SKILL.md` (Setup loop), `docs/WORKFLOW.md` (Learning), `briefs.md` |
 | Remote Control on the PC | `docs/WORKFLOW.md` (PC work) | operator `SKILL.md` |
