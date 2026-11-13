@@ -57,7 +57,7 @@ test('live fixtures: the Researcher start of 16:40 gets one refusal with every e
   const first = await check(`Role: Researcher · Kit: research · Size: M\nItem: PLAN.json item M29\nThreads: none\nPlan: p.md\nAcceptance: ok\nModel: opus\nSkills: s\nStart: read MEMORY.md first\nDone when: x\nStop when: y\nPrior art: .claude/skills/operator/gate.md -> adapt, because it exists`)
   assert.match(first, /^Brief check[\s\S]*Kit: research is no kit/, 'the kit is refused')
   assert.doesNotMatch(first.split('\n')[0], /Item|Threads/, 'Item and Threads are no refusal: the format is repaired, the thread lists threads itself')
-  assert.match(first, /Role: Researcher · Kit: <kit>[\s\S]*Item: <PLAN\.json item/, 'the refusal carries the Researcher template')
+  assert.match(first, /Role: Researcher · Kit: <kit>[\s\S]*Item: <issue #n, PLAN\.json item/, 'the refusal carries the Researcher template')
   const second = await check(`Role: Researcher · Kit: setup · Size: M\nItem: PLAN.json item M29\nThreads: none\nPlan: p.md\nAcceptance: ok\nModel: opus\nSkills: s\nStart: read MEMORY.md first\nDone when: x\nStop when: y\nPrior art: .claude/skills/operator/gate.md -> adapt, because it exists`)
   assert.doesNotMatch(second, /^Brief check/, 'the restart is not refused')
   assert.match(second, /^Brief repair[^\n]*Item[^\n]*Threads|^Brief repair[^\n]*Threads[^\n]*Item/, 'the repairs are named')

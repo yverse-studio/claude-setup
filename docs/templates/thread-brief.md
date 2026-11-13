@@ -9,7 +9,7 @@ Acceptance) is refused, all of them in one refusal with the role's template; the
 ```
 Role: <Role from docs/TEAMS.md Roster> · Kit: <kit from docs/TEAMS.md Kits> · Size: <S|M|L>
 Model: <model id of the role's Roster row>
-Item: <PLAN.json item M<n> or new>
+Item: <issue #n, PLAN.json item M<n> or new>
 Plan: <plan file or card it builds>
 Acceptance: <what counts as accepted>
 Threads: <list_threads checked: none open on this topic | continues <title of the open thread>>

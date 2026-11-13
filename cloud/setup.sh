@@ -624,7 +624,7 @@ const gateRolePlain = (plain) => /^[ \t>-]*Role:[ \t]*(Tester|Reviewer|Security|
 const line = (re) => (plain) => re.test(plain)
 const sizeCls = (plain) => (small(plain) ? 'recoverable' : 'judgment')
 export const BRIEF_FIELDS = [
-  { key: 'Item', name: 'Item: (M<n> from PLAN.json, or new)', tpl: 'Item: <PLAN.json item M<n> or new>', ok: line(/^[ \t>-]*Item:[^<\n]*?\b(M\d+|new)\b/im), clean: /^[ \t>-]*Item:[ \t]*(M\d+|new)[ \t]*$/im, cls: sizeCls, fill: (p) => `Item: ${p.match(/^[ \t>-]*Item:[^\n]*?\b(M\d+)\b/im)?.[1] ?? 'new'}` },
+  { key: 'Item', name: 'Item: (#n of its issue, M<n> from PLAN.json, or new)', tpl: 'Item: <issue #n, PLAN.json item M<n> or new>', ok: line(/^[ \t>-]*Item:[^<\n]*?(?:\b(?:M\d+|new)\b|(?:[\w.-]+\/[\w.-]+)?#\d+)/im), clean: /^[ \t>-]*Item:[ \t]*(M\d+|new|(?:[\w.-]+\/[\w.-]+)?#\d+)[ \t]*$/im, cls: sizeCls, fill: (p) => `Item: ${p.match(/^[ \t>-]*Item:[^\n]*?(\bM\d+\b|(?:[\w.-]+\/[\w.-]+)?#\d+)/im)?.[1] ?? 'new'}` },
   { key: 'Plan', name: 'Plan: (the plan file or card this thread builds)', tpl: 'Plan: <plan file or card it builds>', ok: line(/^[ \t>-]*Plan:[ \t]*[^<\s]/im), cls: sizeCls, fill: () => 'Plan: n/a, size S' },
   { key: 'Acceptance', name: 'Acceptance: (what counts as accepted)', tpl: 'Acceptance: <what counts as accepted>', ok: line(/^[ \t>-]*Acceptance:[ \t]*[^<\s]/im), cls: sizeCls, fill: () => 'Acceptance: propose one from the task, say so in your first checklist line' },
   { key: 'Model', name: 'Model:', tpl: 'Model: <model id of the role\'s Roster row>', ok: line(/^[ \t>-]*Model:[ \t]*[^<\s]/im), cls: () => 'derived', fill: () => 'Model: the model this thread runs on' },
@@ -2221,6 +2221,54 @@ async function roleContext(prompt, cwd, session) {
   return roleCard(role, role.path ? read(join(root, role.path)) || fetchRaw(role.path) : '')
 }
 
+// S1 (#538): a thread's task is its issue. The brief's `Item:` line names it (`#7`, `owner/repo#7`, or `M3` of an offline PLAN.json); the hook puts its
+// title, state, labels and body (cap 3,000 chars) into the thread's first context, once per session. It never blocks: a failed fetch is one line.
+export const ITEM_REF = /^[ \t>-]*Item:[ \t]*(?:PLAN\.json item[ \t]+)?((?:[\w.-]+\/[\w.-]+)?#\d+|M\d+)\b/im
+const ITEM_CAP = 3000
+export const itemRef = (brief) => String(brief).replace(/[*_`]/g, '').match(ITEM_REF)?.[1] ?? null
+function originRepo(cwd) {
+  try { return execFileSync('git', ['-C', cwd, 'remote', 'get-url', 'origin'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 2000 }).trim().match(/([\w.-]+)\/([\w.-]+?)(?:\.git)?$/)?.slice(1).join('/') ?? null } catch { return null }
+}
+// One fetch per process: the brief check and the context share it (X1a).
+const itemCache = new Map()
+export function fetchItem(brief, cwd, env = process.env) {
+  const ref = itemRef(brief)
+  if (!ref) return null
+  const key = `${ref}@${cwd}`
+  if (!itemCache.has(key)) itemCache.set(key, loadItem(ref, cwd, env))
+  return itemCache.get(key)
+}
+function loadItem(ref, cwd, env) {
+  if (ref.startsWith('M')) {
+    try {
+      const it = JSON.parse(read(env.PLAN_FILE || '/mnt/project-files/PLAN.json')).items?.find((i) => i.id === ref)
+      if (!it) return { ref, error: `PLAN.json has no item ${ref}` }
+      return { ref, head: `${ref} (${it.status ?? '?'}): ${it.title ?? ''}`, body: Object.entries(it).filter(([k]) => !['id', 'title', 'status'].includes(k)).map(([k, v]) => `${k}: ${v}`).join('\n') }
+    } catch { return { ref, error: `PLAN.json could not be read for ${ref}` } }
+  }
+  const [, owner, name, num] = ref.match(/^(?:([\w.-]+)\/([\w.-]+))?#(\d+)$/)
+  const repo = owner ? `${owner}/${name}` : originRepo(cwd)
+  if (!repo) return { ref, error: `no repo for ${ref}` }
+  const tries = [['gh', ['api', `repos/${repo}/issues/${num}`]], ['curl', ['-fsS', '--max-time', '2', `https://api.github.com/repos/${repo}/issues/${num}`]]]
+  for (const [cmd, args] of tries) {
+    try {
+      const j = JSON.parse(execFileSync(cmd, args, { encoding: 'utf8', timeout: 2500, stdio: ['ignore', 'pipe', 'ignore'] }))
+      if (j.title === undefined) continue
+      return { ref, repo, head: `#${num} (${repo}, ${j.state}${j.labels?.length ? `, labels: ${j.labels.map((l) => l.name ?? l).join(', ')}` : ''}): ${j.title}`, body: String(j.body ?? '') }
+    } catch { /* try the next route */ }
+  }
+  return { ref, repo, error: `could not fetch ${repo}#${num}` }
+}
+async function itemContext(brief, cwd, session) {
+  const once = join(tmpdir(), `claude-setup-item-${String(session).replace(/\W/g, '')}`)
+  if (!session || existsSync(once) || (/<(wake|relay|coordinator-relay)\b/.test(brief) && !/<(wake|relay)\b[^>]*reason="spawn"/.test(brief))) return ''
+  const item = fetchItem(brief, cwd)
+  if (!item) return ''
+  writeFileSync(once, '')
+  if (item.error) return `rule-guard: ${item.error}; read your issue yourself with mcp__github__issue_read (Item: ${item.ref}) before any work.`
+  return `rule-guard: your task, Item ${item.head}\n${item.body.slice(0, ITEM_CAP)}`
+}
+
 // The thread side of the team check (routing test 2026-10-27: a project chat may run without hooks, so a
 // bad start can reach the thread). The spawn brief is checked against docs/TEAMS.md with team-guard's own
 // rules; a bad one tells the thread to do no work and send the start back. Returns '' when it passes.
@@ -2503,7 +2551,7 @@ export function threadReceipt(role, brief, transcript, rules, status = { loaded:
   const tag = (k) => brief.replace(/[*_`]/g, '').match(new RegExp(`${k}:[ \\t]*([A-Za-z0-9-]+)`))?.[1] ?? '?'
   const skills = [...new Set(toolCalls(transcript).filter((c) => c.name === 'Skill').map((c) => String(c.input.skill ?? '')).filter(Boolean))]
   const hash = rules.includes(MARK) ? createHash('sha256').update(rules.replace(/\r/g, '')).digest('hex').slice(0, 7) : 'none'
-  const item = brief.replace(/[*_`]/g, '').match(/\bItem:[ \t]*(M\d+|new)/)?.[1] ?? '?' // the coordinator's Masterplan id (roles/project-manager.md, Masterplan)
+  const item = brief.replace(/[*_`]/g, '').match(/\bItem:[ \t]*(M\d+|new|(?:[\w.-]+\/[\w.-]+)?#\d+)/)?.[1] ?? '?' // the coordinator's Masterplan id (roles/project-manager.md, Masterplan)
   return `Thread · ${role} · ${tag('Kit')} · ${tag('Size')} · item ${item} · skills: ${skills.join(', ') || 'none'} · rules #${hash} · ${missingNote(status)}${card ? ` · card #${card}` : ''}`
 }
 
@@ -2897,7 +2945,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           const guard = isStart ? await guardLine() : ''
           const card = isStart ? await cardLine() : ''
           if (isStart) await countStart({ session, brief, checkNow, modelNote, guard, card })
-          const context = [checkNow, relayNote, isStart ? await gateBriefContext(brief, model) : '', guard, card, modelNote, await roleContext(brief, cwd, session), await stopNote(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
+          const context = [checkNow, relayNote, isStart ? await gateBriefContext(brief, model) : '', guard, card, modelNote, await roleContext(brief, cwd, session), await itemContext(brief, cwd, session), await stopNote(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
           if (context) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: context } }))
           return
         }
