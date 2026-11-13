@@ -649,7 +649,7 @@ export function reuseBlock(text, teams, board) {
   return `${role.name} thread already open: "${open[0]}". Run list_threads again first (the board goes stale when threads resolve themselves); if it is still open, give the work to it with message_thread (same plan or PR; docs/TEAMS.md, Reuse rule), or add \`Reuse: none (<why: other plan or PR, long context, parallel read job>)\` to the brief and retry`
 }
 
-// One list of everything wrong with a thread brief, the one validator of the start hook and of scripts/check-brief.mjs (CompanyXY 2026-11-13: a coordinator that
+// One list of everything wrong with a thread brief, the one validator of the start hook and of `team-guard.mjs check` (CompanyXY 2026-11-13: a coordinator that
 // cannot run the guard before it starts finds the errors one thread at a time).
 export function briefProblems(text, { model, title: threadTitle, teams = '', checklists = '', board = [] } = {}) {
   const found = []
@@ -695,6 +695,30 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
   const mode = process.argv[2]
   const home = process.env.CLAUDE_SETUP_HOME || homedir()
   const dir = join(home, '.claude', 'claude-setup')
+  if (mode === 'check') {
+    // `node ~/.claude/claude-setup/team-guard.mjs check <Role> <file|-> [--model <id>] [--title <title>]`: the start check on a brief, before start_thread (CompanyXY 2026-11-13).
+    // The same briefProblems the hook runs, every problem at once, and the exact model id of the role; exit 0 = passes, 1 = problems, 2 = bad call.
+    const args = process.argv.slice(3)
+    const flag = (name) => { const i = args.indexOf(`--${name}`); return i < 0 ? undefined : args.splice(i, 2)[1] }
+    const [model, title] = [flag('model'), flag('title')]
+    const [role, source] = args
+    const teams = text(join(process.cwd(), 'docs', 'TEAMS.md')) || text(join(dir, 'docs', 'TEAMS.md'))
+    const roles = [...teams.split('\n').filter((l) => /^\| [A-Z][\w ]* \(\[`/.test(l)).map((l) => l.slice(2, l.indexOf(' (')))]
+    if (!role || !source || !roles.includes(role)) { console.error(`usage: node team-guard.mjs check <Role> <file|-> [--model <id>] [--title <title>]; Role is one of ${roles.join(', ') || '(docs/TEAMS.md not found)'}`); process.exit(2) }
+    // not awaited at the top level: card-render imports this file, so awaiting it here would deadlock the module graph
+    void (async () => {
+      const brief = readFileSync(source === '-' ? 0 : source, 'utf8')
+      const { modelFor } = await import('./card-render.mjs')
+      const id = modelFor(role, brief.match(/\bSize:[ \t]*([SML])\b/i)?.[1]?.toUpperCase() ?? 'M', teams)
+      const found = briefProblems(brief, { model: model ?? id, title: title ?? `${role} · check`, teams, checklists: text(join(process.cwd(), CHECKLISTS)) || text(join(dir, CHECKLISTS)) })
+      const named = brief.replace(/[*_`]/g, '').match(/^[ \t>-]*Role:[ \t]*([^·|\n]*?)[ \t]*(?:[·|]|$)/im)?.[1]
+      if (named && named !== role) found.unshift(`the brief starts Role: ${named} but you named ${role}: one of them is wrong`)
+      if (found.length) found.forEach((f, i) => console.log(`(${i + 1}) ${f}`))
+      else console.log('ok: this brief passes the start check (the board of open threads is checked at the start itself: run list_threads first)')
+      if (id) console.log(`model: ${id} (pass this as \`model\`)`)
+      process.exit(found.length ? 1 : 0)
+    })()
+  }
   let raw = ''
   process.stdin.setEncoding('utf8')
   process.stdin.on('data', (c) => { raw += c })
@@ -1420,7 +1444,7 @@ const BRIEF_SECTION = `## Thread brief
 
 Copy briefs/<role>.md of this folder (one per Roster role, its Model line inside; kits and sizes per role in ROSTER.md), fill every <...>, paste it as the brief, pass its Model as \`model\`. Nothing else is added or written from memory.
 A refusal names every gap at once: send those lines to the same thread with message_thread, never a new thread.
-With Bash and a claude-setup checkout, run \`node scripts/check-brief.mjs <Role> <file|->\` before every start_thread: it lists every gap at once and prints the exact \`model\`.
+Run \`node ~/.claude/claude-setup/team-guard.mjs check <Role> <file|->\` before every start_thread: it lists every gap at once and prints the exact \`model\`.
 A device thread passes \`message_id\` (yskills' message or your own project-chat post), never \`project_post_id\` or \`auto_attach=false\`.`
 
 export function buildCard({ teams, hash = 'nogit', date = today() }) {

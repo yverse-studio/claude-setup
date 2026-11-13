@@ -1,4 +1,4 @@
-// check-brief.mjs (CompanyXY 2026-11-13, brief-fix item 3): the coordinator checks a brief with the guard's own validator before start_thread.
+// `team-guard.mjs check` (CompanyXY 2026-11-13, brief-fix item 3): the coordinator checks a brief with the guard's own validator before start_thread.
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
@@ -8,8 +8,9 @@ import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
 import { buildBrief } from './brief.mjs'
 
-const script = join(fileURLToPath(import.meta.url), '..', 'check-brief.mjs')
-const run = (args, input) => spawnSync(process.execPath, [script, ...args], { input, encoding: 'utf8' })
+const root = join(fileURLToPath(import.meta.url), '..', '..')
+const script = join(root, 'global', 'team-guard.mjs')
+const run = (args, input) => spawnSync(process.execPath, [script, 'check', ...args], { input, encoding: 'utf8', cwd: root })
 const teams = readFileSync(join(fileURLToPath(import.meta.url), '..', '..', 'docs/TEAMS.md'), 'utf8')
 const opusId = teams.match(/Opus \((claude-[\w.-]+)\)/)[1]
 const dir = mkdtempSync(join(tmpdir(), 'check-brief-'))
