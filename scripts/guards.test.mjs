@@ -1604,3 +1604,29 @@ test('rule guard: push_files and create_or_update_file with a nacht-*.rpy path a
 test('settings: both files deny git push --no-verify', () => {
   for (const f of ['global/settings.json', '.claude/settings.json']) assert.ok(JSON.parse(readFileSync(join(root, f), 'utf8')).permissions.deny.includes('Bash(git push* --no-verify*)'), f)
 })
+
+test('pre-push hook: an umlaut path, a merge commit and an unknown remote sha cannot slip a Private18 path past neverpush', () => {
+  if (process.platform === 'win32') return
+  const home = mkdtempSync(join(tmpdir(), 'np2-home-'))
+  const repo = mkdtempSync(join(tmpdir(), 'np2-repo-'))
+  try {
+    mkdirSync(join(home, '.claude', 'claude-setup'), { recursive: true })
+    cpSync(join(root, 'global/rule-guard.mjs'), join(home, '.claude', 'claude-setup', 'rule-guard.mjs'))
+    const env = { ...process.env, CLAUDE_SETUP_HOME: home }
+    for (const k of Object.keys(env)) if (k.startsWith('GIT_')) delete env[k]
+    const g = (...a) => spawnSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...a], { cwd: repo, env, encoding: 'utf8' })
+    const put = (file) => { mkdirSync(join(repo, join(file, '..')), { recursive: true }); writeFileSync(join(repo, file), 'x'); g('add', '-A'); g('commit', '-q', '-m', file) }
+    g('init', '-q', '-b', 'main'); put('a.txt')
+    const base = g('rev-parse', 'HEAD').stdout.trim()
+    put('Private18/ä.png')
+    const head = g('rev-parse', 'HEAD').stdout.trim()
+    const hook = join(root, 'global/git-hooks/pre-push')
+    const push = (lsha, rsha) => spawnSync('sh', [hook, 'origin', 'https://github.com/o/x'], { cwd: repo, env, input: `refs/heads/main ${lsha} refs/heads/main ${rsha}\n`, encoding: 'utf8' })
+    assert.equal(push(head, base).status, 1, 'an umlaut file name is not quoted past the check')
+    g('checkout', '-q', '-b', 'side', base); put('s.txt')
+    g('checkout', '-q', 'main'); g('merge', '-q', '--no-ff', '-m', 'merge', 'side')
+    g('checkout', '-q', '-b', 'x', base); g('merge', '-q', '--no-ff', '-m', 'm2', 'main')
+    assert.equal(push(g('rev-parse', 'x').stdout.trim(), base).status, 1, 'a merge commit is walked too')
+    assert.equal(push(head, '1234567890123456789012345678901234567890').status, 1, 'an unknown remote sha falls back and still sees the path')
+  } finally { for (const d of [home, repo]) rmSync(d, { recursive: true, force: true }) }
+})

@@ -746,11 +746,17 @@ refs=$(cat)
 # copy blocks too. PRE_PR_SKIP does not skip this, and settings deny `git push --no-verify`.
 case "$2" in
   *github.com*)
-    paths=$(printf '%s\n' "$refs" | while read -r lref lsha rref rsha; do
+    tmp=$(mktemp)
+    while read -r lref lsha rref rsha; do
       case "$lsha" in ""|0000000000000000000000000000000000000000) continue ;; esac
-      case "$rsha" in 0000000000000000000000000000000000000000) git log --name-only --pretty=format: "$lsha" --not --remotes ;; *) git log --name-only --pretty=format: "$rsha..$lsha" ;; esac
-    done)
-    verdict=$(printf '%s\n' "$paths" | node "${CLAUDE_SETUP_HOME:-$HOME}/.claude/claude-setup/rule-guard.mjs" neverpush 2>&1)
+      # -z keeps odd paths unquoted, -m lists merge commits too; an unknown remote sha falls back to "not on any remote yet".
+      if git cat-file -e "$rsha^{commit}" 2>/dev/null; then range="$rsha..$lsha"; else range="$lsha --not --remotes"; fi
+      git -c core.quotePath=false log -z -m --name-only --pretty=format: $range >> "$tmp" || { echo "pre-push: blocked, could not list the pushed paths"; rm -f "$tmp"; exit 1; }
+    done <<EOF
+$refs
+EOF
+    verdict=$(tr '\0' '\n' < "$tmp" | node "${CLAUDE_SETUP_HOME:-$HOME}/.claude/claude-setup/rule-guard.mjs" neverpush 2>&1)
+    rm -f "$tmp"
     if [ "$verdict" != "neverpush: ok" ]; then echo "pre-push: blocked, ${verdict:-the neverpush check did not run}"; exit 1; fi ;;
 esac
 remote_url=$(git remote get-url origin 2>/dev/null)
