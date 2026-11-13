@@ -382,7 +382,7 @@ function bashProblem(cmd, dir, ctx) {
   if (list.some((s) => s.env) && list.some((s) => s.a0 === 'node' && s.args.some((a) => base(a) === 'gate-rounds.mjs'))) return 'gate ledger: CLAUDE_SETUP_* variables (the ledger dir, the guard switch) are not set in a call that runs the counter; they would point it at another ledger (gate.md, Rounds).'
   // Finding 1: the counter is run as `node <path>/gate-rounds.mjs <verb>` and nothing else. Any other command that names the file and is
   // not a plain read (a copy, node -e, an import, a symlink) is refused, so the proofs cannot be walked around by renaming the script.
-  if (/gate-rounds\.mjs/.test(cmd) && !list.every((s) => isCounterCall(s) || readsOnly(s))) return 'gate ledger: gate-rounds.mjs is run only as "node ~/.claude/claude-setup/gate-rounds.mjs <verb> <asset> ..." (gate.md, Rounds); copying it, importing it or running it through node -e is refused, because the proofs live in this hook and in the CLI.'
+  if (/gate-rounds\.mjs/.test(cmd) && !list.every((s) => isCounterCall(s) || readsOnly(s))) return 'gate ledger: gate-rounds.mjs is run only as "node ~/.claude/claude-setup/gate-rounds.mjs <verb> <asset> ..." (gate.md, Rounds); copying it, importing it or running it through node -e is refused, because the proofs live in this hook and in the CLI. To read the file use the Read or Grep tool.'
   for (const s of list) {
     if (s.a0 === 'gh') { const r = ghProblem(s); if (r) return r }
     if (s.redirs.some((r) => !/\s/.test(r) && (named(r) || GUARD_FILE.test(r)))) return msg

@@ -19,11 +19,12 @@
 // thread start also needs a kit from the Kits table, a size that kit allows, a role on that kit's team
 // (badTeam), and the brief block's Model, Skills, Done when, Stop when and Start lines (missingLines).
 // CLAUDE_SETUP_TEAM_GUARD=off turns it off. It never breaks a tool call on its own errors.
-import { execFileSync } from 'node:child_process'
+import { execFileSync, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { homedir, tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 // rule-guard sits beside this file (GUARD_FILES); without it only the model-tier check is skipped.
 let roleOf = () => null
 let openThreads = () => []
@@ -69,16 +70,18 @@ function fetchAll(dir, files, url, seconds) {
   // curl -f writes nothing for a missing file; a cut-off run (ok false) keeps a guard only if it still parses.
   return files.map((f) => ({ f, tmp: tmp(f), got: existsSync(tmp(f)) && statSync(tmp(f)).size > 0, ok }))
 }
-const guardUrl = (f) => (GUARD_FILES.includes(f) ? `${RAW}global/${f}` : RAW + f)
+// The pre-push hook rides the guard download: git skips a hook without the exec bit and says nothing (S10).
+const PREPUSH = 'git-hooks/pre-push'
+const guardUrl = (f) => (GUARD_FILES.includes(f) || f === PREPUSH ? `${RAW}global/${f}` : RAW + f)
 export function refresh(dir, only = null) {
   const guards = GUARD_FILES.filter((f) => !only || only.includes(f)) // a guard missing on disk is fetched too: an image pasted before a guard existed never had it (2026-11-12)
   const boot = only ? [] : fetchAll(dir, BOOT_FILES, (f) => RAW + f, 2.5)
-  install(dir, [...boot, ...fetchAll(dir, guards, guardUrl, 1.5)])
+  install(dir, [...boot, ...fetchAll(dir, [...guards, ...(only ? [] : [PREPUSH])], guardUrl, 1.5)])
 }
 function install(dir, fetched) {
   for (const { f, tmp, got, ok } of fetched) {
-    const whole = got && (f.endsWith('.mjs') ? text(tmp).startsWith('#!/usr/bin/env node') && parses(tmp) : ok && (f !== 'CLAUDE.md' || text(tmp).includes(MARK)))
-    if (whole) renameSync(tmp, join(dir, f))
+    const whole = got && (f === PREPUSH ? ok && text(tmp).startsWith('#!/bin/sh') : f.endsWith('.mjs') ? text(tmp).startsWith('#!/usr/bin/env node') && parses(tmp) : ok && (f !== 'CLAUDE.md' || text(tmp).includes(MARK)))
+    if (whole) { renameSync(tmp, join(dir, f)); if (f === PREPUSH) chmodSync(join(dir, f), 0o755) }
     else rmSync(tmp, { force: true })
   }
 }
@@ -461,7 +464,17 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
       if (mode === 'start') {
         // SessionStart names the session's model; rule-guard's brief check reads it before the first reply.
         if (session && typeof model === 'string' && model) writeFileSync(modelFile(session), model)
-        if (process.env.CLAUDE_SETUP_BOOT_FETCH !== 'off') refresh(dir)
+        if (process.env.CLAUDE_SETUP_BOOT_FETCH !== 'off') {
+          // S10 (a): this copy may be a cached image's old one, and the hook runs the installed file itself, so snapshot the running text before refresh replaces it.
+          const before = text(fileURLToPath(import.meta.url))
+          refresh(dir)
+          // When refresh installed a different team-guard, run that one once (the flag stops a loop, no second fetch) and print its answer.
+          const fresh = join(dir, 'team-guard.mjs')
+          if (process.env.CLAUDE_SETUP_START_RERUN !== '1' && existsSync(fresh) && text(fresh) !== before) {
+            const run = spawnSync(process.execPath, [fresh, 'start'], { input: raw, env: { ...process.env, CLAUDE_SETUP_START_RERUN: '1', CLAUDE_SETUP_BOOT_FETCH: 'off' }, encoding: 'utf8', timeout: 1500 })
+            if (run.status === 0 && run.stdout) return process.stdout.write(run.stdout)
+          }
+        }
         sweep(join(dir, 'booted'))
         if (rulesLoaded(cwd, home)) return say(POINTER)
         const claude = text(join(dir, 'CLAUDE.md')).replace(/\r/g, '')
