@@ -1579,7 +1579,7 @@ test('team guard (M30): a brief without Item, Plan or Acceptance names each miss
   assert.deepEqual(missingLines(brief.replace(/\nItem:[^\n]*/, '\nItem: new')), [])
 })
 
-test('team guard (M30): a Planner at size L runs on Fable only; M still allows Opus; a stated reason passes', async () => {
+test('team guard (M30): a Planner at size L runs on Fable only; M needs Fable too; a stated reason passes', async () => {
   const { wrongModel } = await import('../global/team-guard.mjs')
   const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
   const id = (tier) => teams.match(new RegExp(`${tier} \\((claude-[\\w.-]+)\\)`, 'i'))[1]

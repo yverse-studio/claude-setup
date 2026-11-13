@@ -174,8 +174,8 @@ export function gateBrief(brief, { model = null, dir = ledgerDir() } = {}) {
     else {
       const l = readLedger(dir, asset)
       const why = l.rounds.length ? roundProblem(l, round) : round > 1 ? `${asset} has no ledger: import its history first with "gate-rounds.mjs init ${asset} --round ${round - 1}"` : null
-      // The Fable thread that becomes the director is the one start allowed to name a directed round before the director exists.
-      const directorStart = /fable/i.test(model ?? '') && round > FREE_ROUNDS && round <= DIRECTED_ROUNDS && round === lastRound(l) + 1 && !l.director && !lastPass(l)
+      // The Fable Designer thread that becomes the director is the one start allowed to name a directed round before the director exists (a Fable Reviewer or Planner is not the director since S5).
+      const directorStart = /fable/i.test(model ?? '') && /^[ \t>*_`-]*Role:[ \t]*Designer\b/im.test(brief) && round > FREE_ROUNDS && round <= DIRECTED_ROUNDS && round === lastRound(l) + 1 && !l.director && !lastPass(l)
       if (why && !directorStart) out.push(why)
     }
   }

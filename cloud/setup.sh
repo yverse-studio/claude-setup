@@ -1086,8 +1086,8 @@ export function gateBrief(brief, { model = null, dir = ledgerDir() } = {}) {
     else {
       const l = readLedger(dir, asset)
       const why = l.rounds.length ? roundProblem(l, round) : round > 1 ? `${asset} has no ledger: import its history first with "gate-rounds.mjs init ${asset} --round ${round - 1}"` : null
-      // The Fable thread that becomes the director is the one start allowed to name a directed round before the director exists.
-      const directorStart = /fable/i.test(model ?? '') && round > FREE_ROUNDS && round <= DIRECTED_ROUNDS && round === lastRound(l) + 1 && !l.director && !lastPass(l)
+      // The Fable Designer thread that becomes the director is the one start allowed to name a directed round before the director exists (a Fable Reviewer or Planner is not the director since S5).
+      const directorStart = /fable/i.test(model ?? '') && /^[ \t>*_`-]*Role:[ \t]*Designer\b/im.test(brief) && round > FREE_ROUNDS && round <= DIRECTED_ROUNDS && round === lastRound(l) + 1 && !l.director && !lastPass(l)
       if (why && !directorStart) out.push(why)
     }
   }
@@ -1685,7 +1685,7 @@ export const modelCell = (row) => row.match(/Model: (.*?)\.?$/)?.[1] ?? ''
 export const tierOf = (row) => TIERS.find((t) => (modelCell(row).split(';')[0]).toLowerCase().includes(t)) // undefined: the row names none (the Project Manager's is set by yskills)
 const runsAs = (row) => row.match(/Runs as: (.*?)\. Model:/)?.[1] ?? ''
 export const stub = (role, kit, size) => `Role: ${role} · Kit: ${kit} · Size: ${size}`
-// The model a thread of this role starts on at this size: the first tier its Roster row names, Fable for a Planner at size L (team-guard wrongModel).
+// The model a thread of this role starts on at this size: the first tier its Roster row names, a Planner at size L is Fable only (team-guard wrongModel).
 export const modelFor = (role, size, teams) => {
   const tier = role === 'Planner' && size === 'L' ? 'fable' : tierOf(roleOf(stub(role, 'setup', size), teams).row)
   return tier ? modelIds(teams)[tier] : undefined

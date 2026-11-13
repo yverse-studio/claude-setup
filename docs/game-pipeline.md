@@ -147,8 +147,8 @@ A render-based story game is made chapter by chapter, like a VN studio (yskills 
 | Step | Studio role | Our role, runs as, model | Hands over |
 |---|---|---|---|
 | 0 | Writer, script doctor | Story team (`storyteller` 07), threads | chapter text, Editor 5/5, scene tags and animation blocks in the text |
-| 1 | Producer / line producer: script breakdown | `Planner · CH<n>` thread, Opus (the film `Producer` is no role on this kit) | `needs.md`: per scene set, cast and outfit state, props, clips; each library hit with its path, each miss a job with role and wave |
-| 2 | Director / storyboard, reference researcher | `Designer · CH<n> shots` thread (the Designer as scene director), Opus; Researcher subagent, Sonnet | `shotlist.md` (one row per image or clip: slot, camera, pose, expression, outfit, light, sound cue, ref), `REFS.md` (per shot: ref file, what to copy), animation plan (intro, loop, finish beats) |
+| 1 | Producer / line producer: script breakdown | `Planner · CH<n>` thread, Fable (the film `Producer` is no role on this kit) | `needs.md`: per scene set, cast and outfit state, props, clips; each library hit with its path, each miss a job with role and wave |
+| 2 | Director / storyboard, reference researcher | `Designer · CH<n> shots` thread (the Designer as scene director), Opus; Researcher subagent, Opus | `shotlist.md` (one row per image or clip: slot, camera, pose, expression, outfit, light, sound cue, ref), `REFS.md` (per shot: ref file, what to copy), animation plan (intro, loop, finish beats) |
 | 3 | Modeller, rigger, costume, environment, props | Programmer threads, Sonnet (Fable only for rig weights or topology) | only the misses of `needs.md`, each in the library with its gate passed |
 | 4 | Layout / camera | planned in the shot list, done by the still builder | cameras as data per set, a framing check, a contact sheet with large labels |
 | 5 | Lighting, render, animation | still builder (Sonnet) with an Opus fix list per round; `Animator · <clip>` | previews with the ref beside each shot |

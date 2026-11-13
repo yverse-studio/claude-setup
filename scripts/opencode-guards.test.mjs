@@ -22,6 +22,7 @@ test('the role in the prompt decides the allowed tier (Roster)', () => {
   assert.match(subagentBlock(brief('Programmer'), model('opus'), teams), /Programmer runs on sonnet.*not opus/)
   assert.match(subagentBlock(brief('Reviewer'), { providerID: 'anthropic', id: model('haiku').split('/')[1] }, teams), /Reviewer runs on fable.*not haiku/)
   assert.match(subagentBlock(brief('Reviewer'), model('sonnet'), teams), /Reviewer runs on fable.*not sonnet/, 'S5: the Reviewer thread is Fable')
+  assert.equal(subagentBlock(brief('Reviewer'), model('opus'), teams), null, 'a gate subagent stays Opus (Models line)')
   assert.match(subagentBlock(brief('Planner'), model('opus'), teams), /Planner runs on fable.*not opus/, 'S5: the Planner is Fable, Opus only with a stated reason')
   assert.equal(subagentBlock({ agent: 'x', prompt: 'Role: Planner · Kit: setup · Size: M\nModel: opus (Fable unavailable)' }, model('opus'), teams), null)
   assert.equal(subagentBlock({ agent: 'x', prompt: 'Role: Programmer\nModel: opus (the checkpoint before done)' }, model('opus'), teams), null)
