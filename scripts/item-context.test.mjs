@@ -245,3 +245,12 @@ test('X1a: a field cannot span the join of the brief and the item: a bare `Done 
   stub(env2, { ...issue, body: 'Scope: the item list renders.\nSheet: s.md\nLook-Lock: https://x.y/z' })
   assert.doesNotMatch(run(env2, fullBrief('#7'), `item-v${process.pid}-${n++}`), /Brief check/, 'a line that contains the word item still fills Sheet and Look-Lock')
 })
+
+test('a Look-Lock needs a link or a card id: the bare word `card` is no look lock', async () => {
+  const tg = await import('../global/team-guard.mjs')
+  const row = tg.BRIEF_FIELDS.find((f) => f.key === 'Look-Lock')
+  assert.equal(row.ok('Look-Lock: no card yet'), false)
+  assert.equal(row.ok('Look-Lock: card'), false)
+  assert.ok(row.ok('Look-Lock: https://claude.ai/x'))
+  assert.ok(row.ok('Look-Lock: owner card #cmsg_ABCDEF123'))
+})
