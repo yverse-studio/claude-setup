@@ -403,18 +403,24 @@ export function planIssues(cwd) {
   deadline = Date.now() + 1500
   const repo = originRepo(cwd)
   if (!repo) return null
-  const path = `repos/${repo}/issues?labels=plan&state=all&per_page=100&sort=updated&direction=desc`
-  const tries = [['gh', ['api', path]], ['curl', ['-fsS', '--max-time', '0.8', `https://api.github.com/${path}`]]]
-  for (const [cmd, args] of tries) {
-    const t = cmd === 'gh' ? left(1100) : left(800)
-    if (t < 100) break
-    try {
-      const list = JSON.parse(execFileSync(cmd, args, { encoding: 'utf8', timeout: t, killSignal: 'SIGKILL', stdio: ['ignore', 'pipe', 'ignore'] }))
-      if (!Array.isArray(list)) continue
-      return { repo, truncated: list.length >= 100, issues: list.filter((i) => !i.pull_request).map((i) => ({ number: i.number, title: String(i.title ?? ''), state: i.state, labels: (i.labels ?? []).map((l) => l.name ?? l), updated: i.updated_at, closed: i.closed_at })) }
-    } catch { /* try the next route */ }
+  const get = (path) => {
+    for (const [cmd, args] of [['gh', ['api', path]], ['curl', ['-fsS', '--max-time', '0.8', `https://api.github.com/${path}`]]]) {
+      const t = cmd === 'gh' ? left(1100) : left(800)
+      if (t < 100) break
+      try {
+        const list = JSON.parse(execFileSync(cmd, args, { encoding: 'utf8', timeout: t, killSignal: 'SIGKILL', stdio: ['ignore', 'pipe', 'ignore'] }))
+        if (Array.isArray(list)) return list
+      } catch { /* try the next route */ }
+    }
+    return null
   }
-  return null
+  // Open issues first (a closed backlog never pushes a stalled open one off the page), then what closed in the last 24 h (best effort).
+  const open = get(`repos/${repo}/issues?labels=plan&state=open&per_page=100`)
+  if (!open) return null
+  const since = new Date(Date.now() - 86_400_000).toISOString()
+  const closed = get(`repos/${repo}/issues?labels=plan&state=closed&per_page=100&since=${since}`) ?? []
+  const map = (i) => ({ number: i.number, title: String(i.title ?? ''), state: i.state, labels: (i.labels ?? []).map((l) => l.name ?? l), updated: i.updated_at, closed: i.closed_at })
+  return { repo, truncated: open.length >= 100, issues: [...open, ...closed].filter((i) => !i.pull_request).map(map) }
 }
 async function itemContext(brief, cwd, session) {
   const once = join(tmpdir(), `claude-setup-item-${String(session).replace(/\W/g, '')}`)

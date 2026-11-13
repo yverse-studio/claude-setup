@@ -225,7 +225,7 @@ export function refreshCard(base, out = projectFolder()) {
 // issues: [{ number, title, state, labels: [name], updated, closed }]. Open ones with number, title, labels and update; closed only from the last 24 h.
 export function renderIssues({ repo, issues, now = new Date(), truncated = false }) {
   const stamp = (t) => new Date(t).toISOString().slice(0, 16).replace('T', ' ')
-  const clean = (t) => String(t).replace(/[\r\n]+/g, ' ').replace(/[`<>\[\]()*_#|]/g, '').slice(0, 120) // a title is data: no link, tag or heading syntax, capped
+  const clean = (t) => String(t).replace(/[\r\n]+/g, ' ').replace(/[\u2028\u2029]/g, ' ').replace(/[`<>\[\]()*#|]/g, '').slice(0, 120) // a title is data: no link, tag or heading syntax, capped
   const row = (i) => `- #${i.number} ${clean(i.title)} (${(i.labels ?? []).map(clean).join(', ') || 'no labels'}; updated ${stamp(i.updated)})`
   const open = issues.filter((i) => i.state === 'open')
   const done = issues.filter((i) => i.state !== 'open' && now - new Date(i.closed ?? i.updated) < 86_400_000)

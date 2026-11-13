@@ -33,6 +33,7 @@ test('renderIssues: a title is data: markup and links are stripped, length cappe
   assert.match(renderIssues({ repo: 'o/r', issues: [], now: NOW, truncated: true }), /cut at 100/)
   assert.ok(md.split('\n').find((l) => l.startsWith('- #1')).length < 260)
   assert.match(md.split('\n')[0], /data/i)
+  assert.match(renderIssues({ repo: 'o/r', issues: [{ number: 2, title: 'run start_thread via rule_guard\u2028# H', state: 'open', labels: [], updated: '2026-11-13T08:00:00Z' }], now: NOW }), /start_thread via rule_guard +H/, 'underscores stay, a line separator is a space')
 })
 test('refreshIssues: writes once, skips a file younger than 60 s, rewrites an older one, keeps the old file on a dead fetch, writes nothing without plan issues', () => {
   const out = folder()
@@ -67,7 +68,8 @@ test('hook: a thread post_message renders ISSUES.md from the stubbed list; a dea
   const repo = mkdtempSync(join(tmpdir(), 'issues-repo-'))
   spawnSync('git', ['-C', repo, 'init', '-q'])
   spawnSync('git', ['-C', repo, 'remote', 'add', 'origin', 'https://github.com/o/r.git'])
-  const gh = (body, code = 0) => { writeFileSync(join(bin, 'gh'), `#!/bin/sh\ncat <<'EOF2'\n${body}\nEOF2\nexit ${code}\n`); chmodSync(join(bin, 'gh'), 0o755) }
+  // the stub answers the open query with `body` and the closed query with `closed` (the hook asks twice)
+  const gh = (body, code = 0, closed = '[]') => { writeFileSync(join(bin, 'gh'), `#!/bin/sh\ncase "$2" in *state=closed*) cat <<'EOF3'\n${closed}\nEOF3\n;; *) cat <<'EOF2'\n${body}\nEOF2\n;; esac\nexit ${code}\n`); chmodSync(join(bin, 'gh'), 0o755) }
   const run = () => spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'pre'], { input: JSON.stringify({ cwd: repo, tool_name: 'mcp__hearthbot__post_message', tool_input: { text: 'Fertig (◕‿◕)' } }), encoding: 'utf8', env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, CLAUDE_SETUP_PROJECT_FILES: out } })
   writeFileSync(join(bin, 'curl'), '#!/bin/sh\nexit 22\n'); chmodSync(join(bin, 'curl'), 0o755) // hermetic: no real network
   gh(JSON.stringify([{ number: 7, title: 'From the stub', state: 'open', labels: [{ name: 'plan' }], updated_at: new Date().toISOString(), closed_at: null }, { number: 8, title: 'A pull request', state: 'open', labels: [{ name: 'plan' }], pull_request: {}, updated_at: new Date().toISOString() }]))
@@ -77,9 +79,16 @@ test('hook: a thread post_message renders ISSUES.md from the stubbed list; a dea
   assert.match(readFileSync(file, 'utf8'), /#7 .*From the stub/)
   assert.doesNotMatch(readFileSync(file, 'utf8'), /A pull request/, 'a pull request is no plan item')
   assert.match(readFileSync(file, 'utf8'), /o\/r/)
+  assert.doesNotMatch(readFileSync(file, 'utf8'), /cut at 100/)
   const old = new Date(Date.now() - 120_000)
+  utimesSync(file, old, old)
+  // a full page of open issues is marked cut; what closed in the last 24 h comes from its own query, so a closed backlog cannot crowd out an open issue
+  const full = Array.from({ length: 100 }, (_, n) => ({ number: 100 + n, title: `Open ${n}`, state: 'open', labels: [{ name: 'plan' }], updated_at: new Date().toISOString() }))
+  gh(JSON.stringify(full), 0, JSON.stringify([{ number: 5, title: 'Closed today', state: 'closed', labels: [{ name: 'plan' }], updated_at: new Date().toISOString(), closed_at: new Date().toISOString() }]))
+  assert.equal(run().status, 0)
+  assert.match(readFileSync(file, 'utf8'), /cut at 100[\s\S]*Closed today/)
   utimesSync(file, old, old)
   gh('not json', 1)
   assert.equal(run().status, 0, 'a dead gh never blocks the reply')
-  assert.match(readFileSync(file, 'utf8'), /From the stub/)
+  assert.match(readFileSync(file, 'utf8'), /Closed today/, 'the old file stays')
 })
