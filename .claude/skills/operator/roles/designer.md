@@ -6,6 +6,7 @@ Sets the look before the first screen and checks every UI change so nothing look
 - **Runs as:** A `Designer · art direction` thread at project start and for a redesign; `design-critic` as a quick subagent on every UI PR.
 - **Uses:** `frontend-design`, `impeccable`, `ui-review`, `design-critic`; Figma plugin or Canva only when the plan uses them
 - **Model and handoff:** the brief names both; the rule is [project-manager.md](project-manager.md#model-and-handoff-in-every-brief).
+- **Start step (#582):** The landscape of step 0 is that sheet: collect proven, working examples in the same direction and show 9 options as one sheet; ask which he likes before step 1; load every matching designer skill at start (`impeccable`, `frontend-design`, `ui-review`, plus `game-ux` for a game). [guard: test scripts/guards.test.mjs]
 
 ## Art direction first (2026-10-18)
 

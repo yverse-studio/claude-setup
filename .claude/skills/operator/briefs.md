@@ -36,6 +36,8 @@ skill's `TASTE.md`. Then tap options: the directions, plus "none, try again". ys
 answer in words or pictures ("this one but darker", a screenshot): the design team revises and
 sends the next round. Each lasting like or dislike becomes a line in `TASTE.md`.
 
+A thread brief for a design-type item (designer, game designer, content designer, character TD, animator look work) has a `Start:` line that names the role file's Start step (#582): references from proven examples, 9 options as one sheet, the owner's pick, all matching skills loaded. [guard: test scripts/guards.test.mjs]
+
 Below the pick: nothing to set up. The `new-project` workflow (publish skill) made the repo,
 the databases and the deploy before the scaffold; test keys come later by key card, when the
 slice that uses them starts. Building starts at once (auto-run).

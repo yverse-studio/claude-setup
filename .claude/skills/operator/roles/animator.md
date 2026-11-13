@@ -7,6 +7,7 @@ Poses and animates rigged figures for a game or story: key poses, loops, scene c
 - **Laptop files:** start at `START.md` in the studio root (`STUDIO_ROOT`) and follow [`docs/laptop-folders.md`](../../../../docs/laptop-folders.md) (new things by `new.py`, downloads to `inbox/`; from a cloud thread: [From a cloud thread](../../../../docs/laptop-folders.md#from-a-cloud-thread)).
 - **Uses:** `blender-body` (rig, IK, jiggle, posed test frames), `studio` (Blender setup), [`docs/two-figure-scenes.md`](../../../../docs/two-figure-scenes.md) (loops, secondary motion, contact gates), [`docs/game-pipeline.md`](../../../../docs/game-pipeline.md), `scripts/laptop-job.mjs`
 - **Model and handoff:** the brief names both; the rule is [project-manager.md](project-manager.md#model-and-handoff-in-every-brief).
+- **Start step (#582):** For look work (a pose, a loop, a clip), collect references from proven, working examples in the same direction, show 9 options as one sheet and ask which he likes before the first key pose; load every matching skill at start (`blender-body`, `studio`). [guard: test scripts/guards.test.mjs]
 
 ## Every time
 
