@@ -43,8 +43,8 @@ export function checkRender(body) {
 }
 
 // S3 (#544, software factory): every PR names its issue, so GitHub Issues stay the one plan. No escape line: work without an issue opens one first.
-const ISSUE_LINE = /^\s*(?:[-*]\s+)?(?:fix(?:es)?|close[sd]?|resolve[sd]?)\b:?\s+#(\d+)\b/i
-export const ISSUE_MESSAGE = 'PR body needs a line `Fixes #<issue number>` (or Closes / Resolves) naming the issue this PR does; no issue yet: open one with the `plan` label first (docs/MAP.md, Issues)'
+const ISSUE_LINE = /^\s*(?:[-*]\s+)?(?:fix(?:e[sd])?|close[sd]?|resolve[sd]?)\b:?\s+#(\d+)\b/i
+export const ISSUE_MESSAGE = 'PR body needs a line `Fixes #<issue number>` (or Closes / Resolves) naming the issue this PR does; no issue yet: open one with the `plan` label first (.github/pull_request_template.md)'
 export function issueNumber(body) {
   for (const l of body.split(/\r?\n/)) { const m = l.match(ISSUE_LINE); if (m) return Number(m[1]) }
   return null

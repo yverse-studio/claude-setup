@@ -2,7 +2,7 @@
 // Run: node --test scripts/pr-lessons-check.test.mjs
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { checkLessons, checkPriorArt, checkIssue, issueNumber, ISSUE_MESSAGE } from './pr-lessons-check.mjs'
 
 const body = (line) => `## What changes\nx\n\n${line}\n`
@@ -101,6 +101,7 @@ test('Prior art: a named source and a decision pass, a gesture fails, in the bri
 test('a PR body without a closing keyword and #n fails with the message; Fixes #12 passes; Fixes PR 12 fails', () => {
   assert.equal(checkIssue('## What changes\nx\n'), false)
   assert.match(ISSUE_MESSAGE, /Fixes #/)
+  assert.ok(existsSync(new URL('../.github/pull_request_template.md', import.meta.url)), 'the file the message points at exists')
   assert.ok(checkIssue(body('Fixes #12')))
   assert.equal(checkIssue(body('Fixes PR 12')), false)
   assert.equal(checkIssue(body('Fixes #')), false)
@@ -108,7 +109,7 @@ test('a PR body without a closing keyword and #n fails with the message; Fixes #
   assert.equal(checkIssue(body('Prefixes #12')), false)
 })
 test('every closing keyword, any case, bullet or other-repo prefix; the number comes back', () => {
-  for (const k of ['fix', 'Fixes', 'CLOSE', 'closes', 'Resolve', 'RESOLVES']) assert.ok(checkIssue(body(`${k} #7`)), k)
+  for (const k of ['fix', 'Fixes', 'Fixed', 'CLOSE', 'closes', 'Closed', 'Resolve', 'RESOLVES', 'resolved']) assert.ok(checkIssue(body(`${k} #7`)), k)
   assert.ok(checkIssue(body('- Fixes #7')))
   assert.ok(checkIssue(body('Fixes: #7')))
   assert.equal(issueNumber(body('Closes #543')), 543)
