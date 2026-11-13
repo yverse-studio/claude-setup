@@ -1,8 +1,8 @@
 # Copy deck: <name>
 
 Written by the Content Designer before the first screen, kept in `design/COPY.md`. Method and bar:
-[`roles/content-designer.md`](../roles/content-designer.md). German first, English second (CLAUDE.md,
-UI); every text exists in both, unless the project is English only: then add a `Languages: en` line under
+[`roles/content-designer.md`](../roles/content-designer.md). German first, English second (`ui-review`
+SKILL.md); every text exists in both, unless the project is English only: then add a `Languages: en` line under
 the title and write Terms as `term | never` and Strings as `where | text` (copy-check reads it).
 
 ## Voice

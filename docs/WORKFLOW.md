@@ -49,7 +49,7 @@ A thread hands off only at one of three triggers (yskills 2026-11-08: a forced h
 
 A second fresh thread for the same asset is trigger 2, never a routine restart: before it starts, the coordinator sends the handoff files to the Planner for a diagnosis, and the handoff file carries the gate round number and every approach already tried (2026-11-12: four "thread full, fresh thread" restarts on one garment in one night, `gate.md` Rounds).
 
-At a trigger: finish the step, write `/mnt/project-files/<project>/handoff/<date>-<topic>.md` (done, next, branch, PR, open asks), reply with its path, stop. A thread only waiting makes no tool call and ends the turn.
+At a trigger: finish the step, write `/mnt/project-files/<project>/handoff/<date>-<topic>.md` (done, next, branch, PR, open asks), reply with its path, stop. A thread only waiting makes no tool call and ends the turn. Idle 1 h or more: no resume, a fresh thread starts from the handoff file.
 
 Otherwise no handoff: compaction with the PreCompact guard (`global/compact-guard.mjs`) keeps Role/Kit/Size, branch, PR, asks and decisions; after a compaction SessionStart `compact` reloads the rules (team-guard start). The numbers in `global/context-guard.mjs` (their only home) are a backstop: its message asks for the trigger check and never orders a handoff. No brief, guide or prompt ties a handoff to a token count or a time (`scripts/check.mjs` fails on one).
 
@@ -70,7 +70,7 @@ Every checked thread start writes one file `brief-log/<date>-<session>.json` in 
 ## Learning
 
 Every correction, every failed gate round with a catchable cause and every test project ends as
-a rule, skill line, test or check in this repo. That is the memory: committed, reviewed, loaded
+a rule, skill line, test or check in this repo. Every ask of yskills becomes an open thread or a line in its home the same turn (`roles/project-manager.md`, Asks ledger). A skill idea is a PR via `new-skill`, never a `propose_skills` card; friction with this setup is a `loop:setup` issue. Memory holds state only [guard: hook global/rule-guard.mjs]; a rule lives in one file, the others link it [guard: test scripts/check.mjs]. Every PR body has a `Lessons:` line. [guard: test scripts/pr-lessons-check.test.mjs] That is the memory: committed, reviewed, loaded
 by every thread. No memory plugin or Obsidian: ECC hooks from the PC install don't run in cloud threads (only the settings hooks `cloud/setup.sh` writes, like the context guard), and the repo already
 does the job.
 

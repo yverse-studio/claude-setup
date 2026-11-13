@@ -66,7 +66,7 @@ rules. What it taught, and where it now lives:
   preview test and review, the coordinator posts results and blockers only (`operator`, `gate.md`,
   `briefs.md`, CLAUDE.md, `docs/WORKFLOW.md`).
 - Design: copy real life first, then make it better; state-of-the-art quality; cute cartoon or
-  pixel taste (CLAUDE.md UI, Designer playbook).
+  pixel taste (`ui-review` SKILL.md, Designer playbook).
 - Brainstorm first for every new project, a typed idea and an HQ request alike (`operator`,
   Project Manager playbook).
 - Model routing: the Models line in `docs/TEAMS.md`.

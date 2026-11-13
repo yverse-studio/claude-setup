@@ -18,6 +18,8 @@ goes on with its recommendation (`CLAUDE.md`, Cards).
 
 ## Layer 1: our own rules
 
+**The "can't" rule** (moved here from `CLAUDE.md`, S11a): try every route first (another tool, a workflow with the org token, the laptop via RC); a truly impossible step goes to yskills as one line plus exact steps, with a `Tried:` line, and the rest goes on. A refusal is reworded or split by nobody (Layer 3).
+
 No file in this repo may add a wait beyond the list above. A refused tool call is reported once in
 one line and the thread takes the workaround below; it never sits waiting for an Allow. [advisory]
 

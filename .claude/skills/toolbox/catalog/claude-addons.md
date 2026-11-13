@@ -1,7 +1,7 @@
 # Add-ons for Claude Code itself
 
 Checked 2026-10-03. Mostly tools pushed by Instagram and YouTube reels. Read any of them before
-installing (global CLAUDE.md), and never add one only because a video says so.
+installing (`toolbox` SKILL.md), and never add one only because a video says so.
 
 | Tool | Verdict | Why |
 |---|---|---|

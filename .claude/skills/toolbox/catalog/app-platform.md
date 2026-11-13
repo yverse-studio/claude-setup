@@ -1,12 +1,12 @@
 # App platform: auth, data, jobs, mobile, hosting
 
 Checked 2026-10-03. Plugins are `@claude-plugins-official` unless noted. Default stack is in the
-global CLAUDE.md (Nuxt 4 / Vue + Vite, Cloudflare Workers).
+`scaffold` SKILL.md (Nuxt 4 / Vue + Vite, Cloudflare Workers).
 
 | Need | Pick | Why / watch out | Add it |
 |---|---|---|---|
 | Hosting web apps | **Cloudflare Workers** (Nuxt preset) | Default; see MyPage and TellMeY | `cloudflare` plugin |
-| Long-running service, Docker | VPS + Docker + Caddy (Luna's setup), or **Render** | Costs money every month: only after yskills says yes (`CLAUDE.md`, Stack) | `render` plugin |
+| Long-running service, Docker | VPS + Docker + Caddy (Luna's setup), or **Render** | Costs money every month: only after yskills says yes (`CLAUDE.md`, How to work: ask first before money) | `render` plugin |
 | Other hosts | Vercel, Netlify | Only if a project needs them | `vercel` / `netlify-skills` plugins |
 | Database on Cloudflare | **D1** (SQLite) | Free tier, prepared statements | wrangler binding |
 | Postgres | **Neon** or **Supabase** | Supabase adds auth + storage + realtime | `neon` / `supabase` plugins |

@@ -59,7 +59,7 @@ files, tools or models.
 5. **Launch and after.** The loop reads errors and feedback every day (`docs/LOOP.md`).
 
 You read only the project chat: the coordinator posts every result, `Done:` line and card there
-(rule in `CLAUDE.md`, How to work); PR links and gate talk stay in the threads, and you open a
+(rule: `roles/project-manager.md`); PR links and gate talk stay in the threads, and you open a
 thread only when something is wrong. Plus the HQ rows (`docs/hq-rows.md`). Cards show options
 with one recommended; work continues on it unless it is money, a new service or deleting something live.
 
@@ -175,6 +175,20 @@ true, read the plan, then again with `dry_run` false. Every branch without an op
 One throwaway helper branch (`media-*`): run `delete-helper-branch.yml` with `repo` and `branch`. It tags
 `archive/<branch>` first and refuses any other name, the default branch and a branch with an open PR.
 A session's own safety check blocks raw `git push --delete`; this is the route.
+
+## The world (2026-10-08)
+
+- GitHub: every repo lives in the org `yverse-studio` (only Butzis-Spiel stays at `yskills/`).
+  Claude works as `yskills-claude`, an org Owner.
+- Hosting: new products run on Claude's own Cloudflare account at `https://<name>.yverse.workers.dev`
+  (duo-test stays on yskills'); two routes, workflows or laptop session: `publish` skill.
+- Secrets live only in claude-setup's GitHub Actions; app keys (Stripe, Google, mail) are Worker
+  secrets. No project has secrets in GitHub, the cloud environment or chat.
+- New page or app: `projects/<name>.json` plus the `new-project` workflow (repo, Worker, D1, first
+  deploy); removing one: `delete-project`. Steps are above; detail: `publish` skill.
+- Dashboard: the Company XY Artifact is the only Artifact there is (no votes, galleries or one-off
+  pages). Each project keeps `## Jetzt` in `PROGRESS.md`, reads open `ceo`
+  issues first (`docs/hq-rows.md`). New apps are threads in "Company XY", never a new project. [guard: hook global/rule-guard.mjs]
 
 ## A skill idea
 

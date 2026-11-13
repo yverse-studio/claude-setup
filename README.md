@@ -41,7 +41,7 @@ tools that are missing (gh, ffmpeg, docker, python, uv, fnm) with the install co
 
 | Piece | What | Where it comes from |
 |---|---|---|
-| `CLAUDE.md` | How Claude works for you: owns tasks end to end, verifies before pushing, screenshot-reviews UI, your default stack | `CLAUDE.md` |
+| `CLAUDE.md` | How Claude works for you: owns tasks end to end, verifies before pushing, owns the ask rule and the PR rules | `CLAUDE.md` |
 | Settings | Auto permission mode, an allow list and autoMode lines so routine work never prompts, asks only before deletes, secret rotation and npm publish, denies local deploys, force-push of `main` and reading `.env` and key files (a deny rule is not a sandbox), high effort, status line with context bar (`docs/permissions.md`) | `global/settings.json` |
 | 8 plugins on | frontend-design, security-guidance, TypeScript and Python LSP, Context7, Playwright, commit-commands, skill-creator (`/code-review` and the `claude-api` skill are built into Claude Code now) | Anthropic's official marketplace, `config/plugins.json` |
 | 8 plugins per project | superpowers (brainstorm, TDD, debugging; add with `claude plugin install superpowers@claude-plugins-official --scope project`), Cloudflare, Firebase, Stripe, Sentry, PostHog, Supabase, Vercel: installed but off; a repo turns one on in its `.claude/settings.json` | same |

@@ -5,6 +5,8 @@ description: "The file list for a new project skeleton, in order. Use for the sc
 
 # Scaffold
 
+**Stack for new projects** (moved here from `CLAUDE.md`, S11a): an existing repo's choices win. New: TypeScript, Node 24, npm; Nuxt 4 or Vue 3 + Vite, Pinia, Tailwind v4, `@nuxtjs/i18n` (de, en); D1/SQLite or Postgres with prepared statements; Vitest, Playwright, `vue-tsc`. Deploys: `publish`. Know-how by domain: `docs/MAP.md` (Expertise); story games with renders: `docs/game-pipeline.md` first.
+
 One thread, branch `scaffold`, one PR. Read `PLAN.md` first: it names the framework, whether the app
 has D1, logins, payments and which languages. Skip a line only when PLAN.md says the app doesn't
 need it, and say so in the PR. Follow the order; each step commits on its own.
