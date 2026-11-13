@@ -36,8 +36,6 @@ skill's `TASTE.md`. Then tap options: the directions, plus "none, try again". ys
 answer in words or pictures ("this one but darker", a screenshot): the design team revises and
 sends the next round. Each lasting like or dislike becomes a line in `TASTE.md`.
 
-A thread brief for a design-type item (designer, game designer, content designer, character TD, animator look work) has a `Start:` line that names the role file's Start step (#582): references from proven examples, 9 options as one sheet, the owner's pick, all matching skills loaded. [guard: test scripts/guards.test.mjs]
-
 Below the pick: nothing to set up. The `new-project` workflow (publish skill) made the repo,
 the databases and the deploy before the scaffold; test keys come later by key card, when the
 slice that uses them starts. Building starts at once (auto-run).
@@ -78,6 +76,8 @@ The fixed, tested copy of this block is [`docs/templates/thread-brief.md`](../..
 `team-guard` blocks a thread start whose brief lacks the `Item:`, `Plan:`, `Acceptance:`, `Threads:` (one `list_threads` look before every start), `Model:`, `Skills:`, `Done when:`, `Stop when:` or `Start: ... MEMORY.md` line, names a kit that is not in `docs/TEAMS.md` (Kits), a video or post at size S, a Planner at S, or a role that is not on its kit's team (blind test 2026-10-27). The thread checks the same rules on its spawn brief (rule-guard `briefCheck`), because a project chat may run without hooks: a bad start is sent back to the coordinator and no work starts (routing test 2026-10-27).
 
 The lines of a brief are the rows of `BRIEF_FIELDS` (`global/team-guard.mjs`); `docs/templates/thread-brief.md` and the coordinator's `briefs/<role>.md` are rendered from it (`global/card-render.mjs`, a test compares them), so no field is written out here: what a line means is in its role file and `gate.md` (Owner-facing results). What a brief carries beyond the fields:
+
+A thread brief for a design-type item (designer, game designer, content designer, character TD, animator look work) has a `Start:` line that, besides `MEMORY.md`, also names the role file's Start step (#582): references from proven examples, 9 options as one sheet, the owner's pick, all matching skills loaded. [guard: test scripts/guards.test.mjs]
 
 ```
 Handoff: at a trigger (docs/WORKFLOW.md, Handoff triggers): write
