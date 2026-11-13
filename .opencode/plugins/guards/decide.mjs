@@ -38,7 +38,7 @@ const FORCE = /(^|\s)(--force\S*|--mirror|-[a-zA-Z]*f[a-zA-Z]*)(\s|$)|\s\+\S*\b(
 const SHELL = [
   [(c) => new RegExp(`${AT}(npm|pnpm|yarn)\\s+run\\s+(deploy|ship)`, 'i').test(c), 'npm run deploy* / npm run ship* (CLAUDE.md, Before calling work done: never a deploy script; the merge is the deploy; deny Bash(npm run deploy *))'],
   [(c) => new RegExp(`${AT}(wrangler\\s+deploy|firebase\\s+deploy|vercel\\s[^\\n]*--prod)`, 'i').test(c), 'a direct deploy (wrangler, firebase, vercel --prod; CLAUDE.md, the merge is the deploy)'],
-  [(c) => new RegExp(`${AT}(pkill|killall|taskkill|Stop-Process)\\b[^\\n]*wrangler`, 'i').test(c), 'pkill *wrangler* (CLAUDE.md, Tools: stop a dev server by port, never pkill it)'],
+  [(c) => new RegExp(`${AT}(pkill|killall|taskkill|Stop-Process)\\b[^\\n]*wrangler`, 'i').test(c), 'pkill *wrangler* (docs/tech-traps.md, Tools: stop a dev server by port, never pkill it)'],
   [(c) => /\bgit\b[^\n]*\bpush\b/.test(c) && FORCE.test(c) && /\b(main|master)\b/.test(c), 'git push --force to main (CLAUDE.md, Ask first only before: force-pushing main; deny Bash(git push* --force*main*))'],
   [(c) => pushesMain(c), 'git push to main (CLAUDE.md, Auto-run: the gate merges every PR, that merge is the deploy; deny Bash(git push* origin main*))'],
 ]

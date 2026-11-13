@@ -33,7 +33,7 @@ In every project, a message with an Instagram, TikTok or YouTube link, or a vide
    - "like this", "style", "for later", or no words: the Take lines go to their home: a Take about look to `ui-review/TASTE.md` (Rejected or Liked, one dated line), a video-format Take to `video-studio/learnings.md`; the hook library is `social-team`'s.
    - An idea: one line in the idea backlog.
    - "edit this": only his own video. Someone else's video becomes "make one like it from our footage" (copyright).
-   - "explain", "is this true", or a tool tip: add the fact check. A tool goes through `toolbox` and the CLAUDE.md install rule before anything is installed.
+   - "explain", "is this true", or a tool tip: add the fact check. A tool goes through `toolbox` and the install rule in `toolbox` before anything is installed.
 
 Gemini is not used (yskills picked free and local, 2026-10-17). Tested 2026-10-17 in a cloud thread: a 61 s reel gave 8 frames and a full transcript in about 70 s. On 2026-10-18 the cloud reached no video host, so the laptop route above exists. Details: `research/video-watching-2026-10-17.md` (project files).
 

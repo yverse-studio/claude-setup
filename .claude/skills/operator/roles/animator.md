@@ -76,7 +76,7 @@ Measured on the strip and the bake, compared side by side with the reference loo
 
 ## External tools
 
-Checked 2026-11-01, this list is the record. Nothing is installed; every outside skill is read before installing (`CLAUDE.md`, Code).
+Checked 2026-11-01, this list is the record. Nothing is installed; every outside skill is read before installing (`toolbox` SKILL.md).
 
 - [`EL4CTEO/blender-skills`](https://github.com/EL4CTEO/blender-skills) (MIT, 22 skills, no network calls found): its `blender-animation` skill has a loop pop/hitch checker, a control-rig bake to an export skeleton and a bone-map retarget script. Adapt ideas into our own scripts; install only on yskills' OK.
 - Blender MCP servers (community `blender-mcp`, `dcc-mcp-blender`): the Blender Lab MCP add-on is already our route (`studio`); a second server adds no pose or loop capability we lack.

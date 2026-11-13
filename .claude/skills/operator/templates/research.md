@@ -20,7 +20,7 @@ and the like), and only then new code.
 | | | | | what it runs, sends, reads: yes/no |
 
 A pick from outside the official marketplace or ECC is read in full before it is installed or
-copied (CLAUDE.md, Code); a video or post is a lead, not a reason.
+copied (`toolbox`, install rule); a video or post is a lead, not a reason.
 
 ## 4. Built with Claude already
 Repos, skills, setups and posts where someone made this kind of product with Claude: what to reuse

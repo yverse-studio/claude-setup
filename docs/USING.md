@@ -59,7 +59,7 @@ files, tools or models.
 5. **Launch and after.** The loop reads errors and feedback every day (`docs/LOOP.md`).
 
 You read only the project chat: the coordinator posts every result, `Done:` line and card there
-(rule in `CLAUDE.md`, How to work); PR links and gate talk stay in the threads, and you open a
+(rule: `roles/project-manager.md`); PR links and gate talk stay in the threads, and you open a
 thread only when something is wrong. Plus the HQ rows (`docs/hq-rows.md`). Cards show options
 with one recommended; work continues on it unless it is money, a new service or deleting something live.
 

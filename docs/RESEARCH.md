@@ -138,7 +138,7 @@ vault store beating plain reviewed files for a team of this size.
   lessons memory; the graph is a snapshot that must be rebuilt after changes. Our repos are small
   (claude-setup under 200 files; MAP.md is the map). Not for the setup; a product repo over roughly
   50k lines may try it as an opt-in on the laptop (`uv tool install graphifyy`, commit
-  `graphify-out/`), reviewed like any plugin (CLAUDE.md, Code, outside-marketplace rule).
+  `graphify-out/`), reviewed like any plugin (`toolbox` SKILL.md, install rule).
 - **Graph memory (Graphiti, mem0, Zep):** embeddings or graph databases behind an MCP server;
   useful for chat-history recall across millions of facts, overkill and unreviewable for a few
   hundred rules. Rejected.

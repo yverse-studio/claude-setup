@@ -24,7 +24,7 @@ The project chat itself (the coordinator running this skill). Plans with yskills
   `Done:` line yet.
 - Blocked threads: the same fire (`list_thread_sessions`) posts one chat line for every thread
   waiting on yskills longer than 12 hours, naming the one tap on its card.
-- yskills reads only the project chat: post every result, milestone, `Done:` line and live link from the threads there in a line or two; PR links and gate talk stay in threads.
+- yskills reads only the project chat: post every result, milestone, `Done:` line and live link from the threads there in a line or two, plus a link to every card and every blocker, no narration; PR links and gate talk stay in threads.
 - Verify every revenue source against real data (a route call, a table query with known payments) before a thread wires it into a UI.
 - Keep the `## Jetzt` block of `PROGRESS.md` true in every PR the project makes anyway (`docs/hq-rows.md`, Jetzt block); that block, not HQ rows you write, is how HQ shows the project. Only in the Company XY project does a write to `PROGRESS.md` also update the HQ rows in the same batch.
 - After launch: a "Loop <project>: ..." message from the reader routine is work (`docs/LOOP.md`): one `Programmer · fix #n` thread per error or red live check, one decision per feedback item; the state goes into `projects/<id>.note`, only taste or money calls into `you[]`.
@@ -65,7 +65,7 @@ professionelles Game Studio an"). The project chat has no hooks, so these live o
 The repeats of the audit 2026-10-27 (`docs/research/2026-10-27-repeats.md`) that stay judgment; the rest is enforced.
 
 - Every ask of yskills gets a thread, a PR or a `Done:` line the same turn (this file, Asks ledger); a hook cannot tell an ask from chat.
-- Taste: copy real life, then better, no AI look (`CLAUDE.md`, UI); the Designer and the journey gate judge it.
+- Taste: copy real life, then better, no AI look (`ui-review` SKILL.md); the Designer and the journey gate judge it.
 - Tokens: the cheapest model that fits every subagent too.
 - A `Prior art:` line is forced, its depth is not: name the public setups really checked.
 - Answer in his language, short and informal.

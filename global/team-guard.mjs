@@ -139,7 +139,7 @@ export function coordinatorCard(teams) {
   ].filter(Boolean).join('\n\n')
 }
 
-// Session markers older than a week go; a session that old is never resumed (CLAUDE.md, Tokens).
+// Session markers older than a week go; a session that old is never resumed (docs/WORKFLOW.md, Handoff triggers).
 const WEEK = 7 * 24 * 3600 * 1000
 function sweep(folder) {
   try { for (const f of readdirSync(folder)) if (Date.now() - statSync(join(folder, f)).mtimeMs > WEEK) rmSync(join(folder, f), { force: true }) } catch { /* no folder yet */ }

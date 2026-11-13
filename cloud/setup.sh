@@ -371,7 +371,7 @@ export function coordinatorCard(teams) {
   ].filter(Boolean).join('\n\n')
 }
 
-// Session markers older than a week go; a session that old is never resumed (CLAUDE.md, Tokens).
+// Session markers older than a week go; a session that old is never resumed (docs/WORKFLOW.md, Handoff triggers).
 const WEEK = 7 * 24 * 3600 * 1000
 function sweep(folder) {
   try { for (const f of readdirSync(folder)) if (Date.now() - statSync(join(folder, f)).mtimeMs > WEEK) rmSync(join(folder, f), { force: true }) } catch { /* no folder yet */ }
@@ -1836,8 +1836,8 @@ export function decide(tool, input = {}, env = {}, published = [], board = null)
   }
   const republish = input.file_path && !input.type_url && published.includes(input.file_path)
   const newArtifact = (tool === 'Artifact' && !input.url && !input.asset && !republish && [undefined, 'publish'].includes(input.action)) || tool === 'mcp__remote-devices__create_artifact'
-  if (newArtifact && env.CLAUDE_SETUP_NEW_ARTIFACT !== 'yes') return 'rule-guard: the Company XY Artifact is the only Artifact there is (CLAUDE.md, Dashboard): no votes, galleries or one-off pages. Update it with its `url` (docs/hq-rows.md) or write a file under /mnt/project-files/. If yskills asked for a new one in his own words, say so in one line and retry with CLAUDE_SETUP_NEW_ARTIFACT=yes in the environment.'
-  if (/^mcp__.*Claude_Browser__/.test(tool) && env.CLAUDE_SETUP_BROWSER !== 'app') return "rule-guard: your browser is yskills' Owner-Chrome on the laptop (CLAUDE.md, Tools; companyxy 2026-11-12: a Researcher opened the Claude app's browser instead). Load the `mcp__claude-in-chrome__*` tools with ToolSearch and use them for every web action; for a plain page use `node ~/.claude/claude-setup/rule-guard.mjs read <url>`. Only when yskills asked for the app browser in his own words: say so in one line and retry with CLAUDE_SETUP_BROWSER=app in the environment."
+  if (newArtifact && env.CLAUDE_SETUP_NEW_ARTIFACT !== 'yes') return 'rule-guard: the Company XY Artifact is the only Artifact there is (docs/USING.md, The world): no votes, galleries or one-off pages. Update it with its `url` (docs/hq-rows.md) or write a file under /mnt/project-files/. If yskills asked for a new one in his own words, say so in one line and retry with CLAUDE_SETUP_NEW_ARTIFACT=yes in the environment.'
+  if (/^mcp__.*Claude_Browser__/.test(tool) && env.CLAUDE_SETUP_BROWSER !== 'app') return "rule-guard: your browser is yskills' Owner-Chrome on the laptop (docs/tech-traps.md, Tools; companyxy 2026-11-12: a Researcher opened the Claude app's browser instead). Load the `mcp__claude-in-chrome__*` tools with ToolSearch and use them for every web action; for a plain page use `node ~/.claude/claude-setup/rule-guard.mjs read <url>`. Only when yskills asked for the app browser in his own words: say so in one line and retry with CLAUDE_SETUP_BROWSER=app in the environment."
   if (tool === 'WebFetch' && env.CLAUDE_CODE_REMOTE === 'true') return `rule-guard: in a cloud thread every WebFetch makes yskills press Allow (docs/tech-traps.md, Cloud threads). Read the whole page without a prompt: node ~/.claude/claude-setup/rule-guard.mjs read '${String(input.url ?? '<url>').replace(/'/g, '')}' (plain text, first ${PAGE_MAX} chars; add a number for more). For a video run the watch skill.`
   return null
 }

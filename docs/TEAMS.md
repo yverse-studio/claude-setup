@@ -210,7 +210,7 @@ yskills 2026-11-12, role threads "like a real team"; research
 [`research/2026-11-12-persistent-role-threads-sota.md`](research/2026-11-12-persistent-role-threads-sota.md), verdict partly, yskills chose per plan or PR. A role thread
 serves one plan or PR and gets that plan's follow-up work (revise, fix within the same PR, the next part of a plan for a Planner, Designer or Animator) by `message_thread`, not a new start; a thread that posted its `Done:` is resolved and not reused, one that waits on review or yskills is; its
 memory is its files (`PLAN.md`, `PROGRESS.md`, `NOW.md`), and after a compaction it re-reads its role card and brief.
-Always fresh: the L gate `Tester`, every reviewer (an `Agent` subagent anyway), a new plan or PR, a thread idle over 1 h (CLAUDE.md, Tokens) or with
+Always fresh: the L gate `Tester`, every reviewer (an `Agent` subagent anyway), a new plan or PR, a thread idle over 1 h (`docs/WORKFLOW.md`, Handoff triggers) or with
 a long history, because a long context degrades and a woken thread re-pays its cache. A second thread of a writer role
 only for a parallel slice on other files (max three Programmers) and a second reader only for a parallel read job;
 it closes at its `Done:`. Work goes to the thread whose title role matches; a job no role fits becomes a new

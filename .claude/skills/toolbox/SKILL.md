@@ -54,7 +54,7 @@ vendor's docs (Context7 on the PC) before choosing.
 ## 3. Choose
 
 Per capability, prefer in this order: an official plugin or MCP server, a library that fits the
-stack in the global CLAUDE.md, a hosted API. For each pick note: cost model, API key or OAuth,
+stack in `scaffold` SKILL.md, a hosted API. For each pick note: cost model, API key or OAuth,
 license (e.g. Remotion is paid for companies over 3 people), DSGVO/GDPR impact, and whether it
 runs in Cloudflare Workers or needs a container/server. Present the stack in the PRD as one
 table; ask yskills only about picks that cost money or lock them in.
