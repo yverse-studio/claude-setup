@@ -29,7 +29,7 @@ export function checkLessons(body) {
 // yskills 2026-11-03: every miss becomes an automatic check, and a gate checks the numbers and looks at the real render.
 // A fix PR's Lessons: line names a test, check, guard or lint file (or "none, because"); a scored asset PR links its frames.
 const CHECK_PATH = /^Lessons: .*([\w-]+\.test\.\w+|check\w*\.\w+|[\w-]*guard\.\w+|lint\w*\.\w+)/
-export const FIX_MESSAGE = 'a fix PR turns its miss into a check: the Lessons: line names the test, check, guard or lint file that now catches it, or says "none, because <why no check can>" (CLAUDE.md, Lessons stick)'
+export const FIX_MESSAGE = 'a fix PR turns its miss into a check: the Lessons: line names the test, check, guard or lint file that now catches it, or says "none, because <why no check can>" (docs/WORKFLOW.md, Learning)'
 export function checkFixHasCheck(title, body) {
   if (!/^fix(\([^)]*\))?!?:/i.test(String(title ?? '').trim())) return true
   return body.split(/\r?\n/).some((l) => CHECK_PATH.test(l) || NONE.test(l.trimEnd()))

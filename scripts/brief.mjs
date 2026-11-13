@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // The thread brief generator (docs/templates/thread-brief.md): builds the brief block from a role, a kit and a size, reading the
 // Roster and Kits from docs/TEAMS.md, so what it prints always passes team-guard. It refuses what the guard would refuse (an unknown
-// role or kit, a role the kit does not allow) and names every field you did not give; it guesses none (CLAUDE.md, No fog).
+// role or kit, a role the kit does not allow) and names every field you did not give; it guesses none (operator SKILL.md, Grill first).
 // Usage: node scripts/brief.mjs --role <Role> --kit <kit> --size <S|M|L> --item <M<n>|new> --plan <file or card> --acceptance <text> --threads <text> --prior-art <text>
 //          --done <text> --stop <text> [--what <title words>] [--start <files>] [--skills <text>] [--sheet <path|n/a why>]
 //          [--look-lock <card link>] [--topic <checklist topic, Reviewer only>] [--tester <thread>] [--researcher <text>] [--gate <reviewer thread>] [--json]
