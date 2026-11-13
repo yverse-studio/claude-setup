@@ -424,11 +424,12 @@ export function reuseBlock(text, teams, board) {
 // "after 2k ms", "context 3 of 5" or "under 8k tokens" is none of that. A line that says "never" states the rule itself and is skipped, and so is an `Item:` line (it quotes the issue's title).
 const QTY = String.raw`(?:~?\d[\d.,]*\s?[kKmM](?![\p{L}\d])|\d{2,3}[.,]?\d{3}(?!\d)|\d{1,3}\s?%)`
 const TRIG = String.raw`(?<![\p{L}\d])(?:at|bei|ab|after|nach|past|over|above|once|when|wenn|reach|reaches|hit|hits|exceed|exceeds|pass|passes|über)(?![\p{L}\d])`
-const AMOUNT = String.raw`(?:${TRIG}\W{0,4}${QTY}\s?(?:of\s+)?(?:the\s+)?(?:tokens?|context|kontext|full|voll|used)(?![\p{L}\d])|(?:context|kontext)(?![\p{L}\d])[^\n]{0,25}?${QTY})`
+const AMOUNT = String.raw`(?:${TRIG}\W{0,4}${QTY}\s?(?:of\s+)?(?:the\s+)?(?:tokens?|context|kontext)(?![\p{L}\d])|(?:context|kontext)(?![\p{L}\d])\W{0,3}(?:window\s+)?(?:\w+\s+){0,1}?(?:${TRIG}\W{0,4}${QTY}|${QTY}\s?(?:full|voll|used)(?![\p{L}\d])))`
 const ACT = String.raw`(?<![\p{L}\d])(?:stop|stops|stopp|stoppe|stoppen|hand[- ]?off|hand over|handover|übergabe|übergeben|übergebe|übergib|beende|wrap up|pause)(?![\p{L}\d])`
 const TOKEN_STOP = new RegExp(`${ACT}[^\n]{0,120}${AMOUNT}|${AMOUNT}[^\n]{0,120}${ACT}`, 'iu')
-const STATES_RULE = /(?<![\p{L}\d])(?:never|nie|niemals)(?![\p{L}\d])/iu
-export const tokenStopLine = (text) => String(text).replace(/[*_`]/g, '').split('\n').find((l) => l.length < 400 && !/^[ \t>-]*Item:/i.test(l) && !STATES_RULE.test(l) && TOKEN_STOP.test(l))?.trim().slice(0, 100)
+const STATES_RULE = /(?<![\p{L}\d])(?:never|nie|niemals|refus\w*|reject\w*|verweiger\w*|max[_ ]?tokens)(?![\p{L}\d])/iu
+const LABEL = /^[ \t>-]*(?:context|kontext)\s*:/i
+export const tokenStopLine = (text) => String(text).replace(/[*_`]/g, '').split('\n').find((l) => l.length < 400 && !/^[ \t>-]*Item:/i.test(l) && !STATES_RULE.test(l) && !LABEL.test(l) && TOKEN_STOP.test(l))?.trim().slice(0, 100)
 
 // One list of everything wrong with a thread brief, the one validator of the start hook and of `team-guard.mjs check` (CompanyXY 2026-11-13: a coordinator that
 // cannot run the guard before it starts finds the errors one thread at a time).
