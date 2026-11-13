@@ -449,7 +449,7 @@ for (const t of ['project-memory', 'lessons']) {
 }
 const memoryTemplate = join(root, '.claude/skills/operator/templates/project-memory.md')
 if (existsSync(memoryTemplate) && statSync(memoryTemplate).size >= 3072) errors.push('templates/project-memory.md: 3 KB or more; the template must stay under 3072 bytes so a MEMORY.md in its shape does too, shorten the examples')
-if (existsSync(memoryTemplate) && !readFileSync(memoryTemplate, 'utf8').includes('PLAN.json')) errors.push('templates/project-memory.md: lacks its pointer to PLAN.json, the one living plan (roles/project-manager.md, Masterplan)')
+if (existsSync(memoryTemplate) && !readFileSync(memoryTemplate, 'utf8').includes('ISSUES.md')) errors.push('templates/project-memory.md: lacks its pointer to the plan issues and ISSUES.md (roles/project-manager.md, Masterplan)')
 if (!readFileSync(join(root, '.claude/skills/operator/roles/project-manager.md'), 'utf8').includes('\n## Masterplan\n')) errors.push('roles/project-manager.md: lacks the `## Masterplan` section, the one home of the coordinator\'s plan')
 
 // Kits: docs/TEAMS.md (Kits) has one row per project kind, and every "Read first" path resolves.

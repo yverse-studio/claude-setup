@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// The project's one living plan, PLAN.json (roles/project-manager.md, Masterplan). Threads change it only
+// The project's one living plan, PLAN.json (offline plan, roles/project-manager.md, Masterplan). Threads change it only
 // through this script, so the JSON never breaks and the rules hold: done needs evidence, wartet names what it
 // waits on, drop says why, ids are unique. The coordinator only reads the file.
 // Usage: node scripts/plan.mjs init goal=<text> | goal <text> | check | stand | set <id> key=value... | add key=value... [--file <path>]
@@ -29,7 +29,7 @@ export function problems(plan) {
   return [...out, ...depProblems(plan.items)]
 }
 
-// `deps` = comma list of item ids that must be done first (roles/project-manager.md, Masterplan). Checked on open items only:
+// `deps` = comma list of item ids that must be done first (offline plan; roles/project-manager.md, Masterplan). Checked on open items only:
 // ids exist, no self-dep, no dep on a dropped item (it never clears), no cycle. Once a plan uses `deps` anywhere, every M<n>
 // (and M<a>-M<b> range) named in an open item's waits_on or next must also be in its deps, so the graph is never hollow.
 const OPEN = (it) => !['done', 'drop'].includes(it.status)
