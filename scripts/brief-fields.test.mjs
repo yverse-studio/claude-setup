@@ -107,3 +107,22 @@ test('X1b: the issue template holds the item lines and every brief file points a
   const { briefFile } = await import('./brief.mjs')
   for (const role of ['Programmer', 'Reviewer', 'Researcher', 'Planner']) assert.match(briefFile(role), /Scope, Basis and Assets live in the item/, `${role} brief file names the item`)
 })
+
+// CompanyXY 2026-11-13 (brief-fix item 2): three starts of one Character TD each failed on a NEW line (Kit, then Gate, then model, then Sheet and Look-Lock).
+// A wrong Kit hid the Sheet lines, and the model refusal named a tier, not the id to pass. One refusal now lists everything, the id included.
+test('a brief with a wrong kit, a wrong model and no gate gets ONE refusal that also names Sheet, Look-Lock and the exact model id', async () => {
+  const { decide } = await import('../global/team-guard.mjs')
+  const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
+  const checklists = readFileSync(join(root, '.claude/skills/operator/checklists.md'), 'utf8')
+  const id = (tier) => teams.match(new RegExp(`${tier} \\((claude-[\\w.-]+)\\)`))[1]
+  const [opusId, sonnetId] = [id('Opus'), id('Sonnet')]
+  const brief = ['Role: Character TD · Kit: references · Size: M', 'Item: new', 'Plan: p.md', 'Acceptance: ok', 'Model: opus', 'Skills: blender-body', 'Done when: x', 'Stop when: 3', 'Start: read MEMORY.md first', 'Threads: none open on this topic'].join('\n')
+  const out = decide('mcp__hearthbot__start_thread', { prompt: brief, model: opusId, title: 'Character TD · Lily' }, [], [], teams, checklists, []).block
+  for (const part of [/Kit: references is no kit/, /Gate:/, /Sheet:/, /Look-Lock:/, /Prior art/, new RegExp(`runs on sonnet \\(${sonnetId}\\)`)]) assert.match(out, part)
+  // The same brief on a real kit lists the same gaps minus the kit: nothing new appears after the kit is fixed.
+  const fixed = decide('mcp__hearthbot__start_thread', { prompt: brief.replace('references', 'game'), model: opusId, title: 'Character TD · Lily' }, [], [], teams, checklists, []).block
+  for (const part of [/Gate:/, /Sheet:/, /Look-Lock:/, /Prior art/, new RegExp(`runs on sonnet \\(${sonnetId}\\)`)]) assert.match(fixed, part)
+  // A kit that is none of the game or story kits keeps the Sheet lines away.
+  const site = decide('mcp__hearthbot__start_thread', { prompt: brief.replace('references', 'site'), model: sonnetId, title: 'Character TD · Lily' }, [], [], teams, checklists, []).block
+  assert.doesNotMatch(site ?? '', /Sheet:/)
+})

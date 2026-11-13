@@ -62,6 +62,7 @@ const BRIEF_SECTION = `## Thread brief
 
 Copy briefs/<role>.md of this folder (one per Roster role, its Model line inside; kits and sizes per role in ROSTER.md), fill every <...>, paste it as the brief, pass its Model as \`model\`. Nothing else is added or written from memory.
 A refusal names every gap at once: send those lines to the same thread with message_thread, never a new thread.
+Run \`node ~/.claude/claude-setup/team-guard.mjs check <Role> <file|->\` before every start_thread: it lists every gap at once and prints the exact \`model\`.
 A device thread passes \`message_id\` (yskills' message or your own project-chat post), never \`project_post_id\` or \`auto_attach=false\`.`
 
 export function buildCard({ teams, hash = 'nogit', date = today() }) {
