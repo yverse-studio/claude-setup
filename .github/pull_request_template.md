@@ -4,6 +4,9 @@
 
 ## Checks
 
+Fixes #
+<!-- Fixes #<issue number>: the issue this PR does (open one with the plan label first); CI fails a PR without it -->
+
 Prior art: 
 <!-- Prior art: <what exists that was checked: our repos, skills, plugins, public setups> -> copy | adapt | build, because <why>; or Prior art: none, because <why> -->
 Lessons: 

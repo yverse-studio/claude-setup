@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  issues: read # the Fixes #n check asks whether #n is an open issue
 
 jobs:
   check:
@@ -31,6 +32,15 @@ jobs:
         run: |
           printf '%s' "$PR_BODY" > "$RUNNER_TEMP/pr-body.txt"
           node scripts/pr-lessons-check.mjs "$RUNNER_TEMP/pr-body.txt"
+      - name: Fixes #n is an open issue, not a PR
+        if: github.event_name == 'pull_request'
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          printf '%s' "$PR_BODY" > "$RUNNER_TEMP/pr-body.txt"
+          n=$(node scripts/pr-lessons-check.mjs "$RUNNER_TEMP/pr-body.txt" --issue)
+          gh api "repos/$GITHUB_REPOSITORY/issues/$n" --jq 'select(.state=="open" and (.pull_request|not)) | .number' | grep -qx "$n" || { echo "#$n is not an open issue (a PR, closed or missing): Fixes #<an open plan issue>"; exit 1; }
       - run: node --test scripts/*.test.mjs .claude/skills/publish/templates/new-project/test/preview-login.test.mjs .claude/skills/game-3d/scripts/check-assets.test.mjs .claude/skills/game-3d/scripts/gdd-check.test.mjs .claude/skills/game-3d/scripts/audio-check.test.mjs .claude/skills/ui-review/scripts/design-check.test.mjs .claude/skills/ui-review/scripts/copy-check.test.mjs .claude/skills/market/scripts/analytics-check.test.mjs .claude/skills/operator/templates/loop/loop.test.mjs .claude/skills/operator/templates/mailbox/mailbox.test.mjs
       - uses: actions/setup-python@v5
         with:
