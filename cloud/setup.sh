@@ -753,12 +753,12 @@ case "$dest" in
       case "$lsha" in ""|0000000000000000000000000000000000000000) continue ;; esac
       # A ref that peels to no commit (a tag on a tree) lists nothing in git log, so it blocks instead of passing.
       git cat-file -e "$lsha^{commit}" 2>/dev/null || { echo "pre-push: blocked, $lref does not point at a commit"; rm -f "$tmp"; exit 1; }
-      # -z keeps odd paths unquoted, -m lists merge commits too. A new branch or unknown remote sha skips only what the destination
-      # itself reports (ls-remote, so no local tracking ref is trusted: it may come from another remote); when ls-remote fails the
+      # -z keeps odd paths unquoted; merges and gitlinks are listed whatever log.diffMerges or diff.ignoreSubmodules say. A new branch or unknown remote sha skips only what the destination
+      # itself reports (ls-remote, and only when no insteadOf rewrites the URL again, so no local tracking ref is trusted: it may come from another remote); when ls-remote fails the
       # whole history is listed.
       if git cat-file -e "$rsha^{commit}" 2>/dev/null; then revs="$rsha..$lsha"
-      else revs=$( { printf '%s\n' "$lsha"; git ls-remote "$2" 2>/dev/null | cut -f1 | git cat-file --batch-check 2>/dev/null | awk '$2=="commit"||$2=="tag"{print "^" $1}'; } ); fi
-      printf '%s\n' "$revs" | git -c core.quotePath=false -c log.showRoot=true log -z -m --name-only --pretty=format: --stdin >> "$tmp" || { echo "pre-push: blocked, could not list the pushed paths"; rm -f "$tmp"; exit 1; }
+      else revs=$( { printf '%s\n' "$lsha"; [ "$(git ls-remote --get-url "$2" 2>/dev/null)" = "$2" ] && git ls-remote "$2" 2>/dev/null | cut -f1 | git cat-file --batch-check 2>/dev/null | awk '$2=="commit"||$2=="tag"{print "^" $1}'; } ); fi
+      printf '%s\n' "$revs" | git -c core.quotePath=false -c log.showRoot=true log -z --diff-merges=separate --ignore-submodules=none --name-only --pretty=format: --stdin >> "$tmp" || { echo "pre-push: blocked, could not list the pushed paths"; rm -f "$tmp"; exit 1; }
     done <<EOF
 $refs
 EOF

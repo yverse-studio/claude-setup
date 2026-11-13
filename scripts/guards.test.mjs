@@ -1742,3 +1742,41 @@ test('pre-push hook: a git replace ref cannot hide a Private18 commit that the p
     assert.match(r.stdout, /Private18\/s\.png/)
   } finally { for (const d of [home, repo]) rmSync(d, { recursive: true, force: true }) }
 })
+
+test('pre-push hook: log.diffMerges, diff.ignoreSubmodules and an insteadOf rewrite cannot hide a Private18 path', () => {
+  if (process.platform === 'win32') return
+  const home = mkdtempSync(join(tmpdir(), 'np8-home-'))
+  const top = mkdtempSync(join(tmpdir(), 'np8-top-'))
+  try {
+    mkdirSync(join(home, '.claude', 'claude-setup'), { recursive: true })
+    cpSync(join(root, 'global/rule-guard.mjs'), join(home, '.claude', 'claude-setup', 'rule-guard.mjs'))
+    const base = { ...process.env, CLAUDE_SETUP_HOME: home }
+    for (const k of Object.keys(base)) if (k.startsWith('GIT_')) delete base[k]
+    const cfg = (pairs) => ({ ...base, GIT_CONFIG_COUNT: String(pairs.length), ...Object.fromEntries(pairs.flatMap(([k, v], i) => [[`GIT_CONFIG_KEY_${i}`, k], [`GIT_CONFIG_VALUE_${i}`, v]])) })
+    const mk = (name) => { const d = join(top, name); mkdirSync(d); return d }
+    const git = (cwd, ...a) => spawnSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...a], { cwd, env: base, encoding: 'utf8' })
+    const hook = join(root, 'global/git-hooks/pre-push')
+    const run = (cwd, url, input, env) => spawnSync('sh', [hook, 'origin', url], { cwd, env, input, encoding: 'utf8' })
+    // 1: a file added inside a merge commit, log.diffMerges=off
+    const a = mk('a'); git(a, 'init', '-q', '-b', 'main'); writeFileSync(join(a, 'a.txt'), 'x'); git(a, 'add', '-A'); git(a, 'commit', '-q', '-m', 'base')
+    const b0 = git(a, 'rev-parse', 'HEAD').stdout.trim()
+    git(a, 'checkout', '-q', '-b', 'side'); writeFileSync(join(a, 's.txt'), 's'); git(a, 'add', '-A'); git(a, 'commit', '-q', '-m', 's')
+    git(a, 'checkout', '-q', 'main'); writeFileSync(join(a, 'm.txt'), 'm'); git(a, 'add', '-A'); git(a, 'commit', '-q', '-m', 'm')
+    git(a, 'merge', '-q', '--no-ff', '--no-commit', 'side'); mkdirSync(join(a, 'Private18')); writeFileSync(join(a, 'Private18', 's.png'), 'x'); git(a, 'add', '-A'); git(a, 'commit', '-q', '-m', 'merge')
+    const ah = git(a, 'rev-parse', 'HEAD').stdout.trim()
+    assert.equal(run(a, 'https://github.com/o/x', `refs/heads/main ${ah} refs/heads/main ${b0}\n`, cfg([['log.diffMerges', 'off']])).status, 1, 'a merge commit is listed whatever log.diffMerges says')
+    // 3: a gitlink at a Private18 path, diff.ignoreSubmodules=all
+    const c = mk('c'); git(c, 'init', '-q', '-b', 'main'); writeFileSync(join(c, 'a.txt'), 'x'); git(c, 'add', '-A'); git(c, 'commit', '-q', '-m', 'base')
+    const c0 = git(c, 'rev-parse', 'HEAD').stdout.trim()
+    git(c, 'update-index', '--add', '--cacheinfo', `160000,${c0},Private18/sub`); git(c, 'commit', '-q', '-m', 'gitlink')
+    const ch = git(c, 'rev-parse', 'HEAD').stdout.trim()
+    assert.equal(run(c, 'https://github.com/o/x', `refs/heads/main ${ch} refs/heads/main ${c0}\n`, cfg([['diff.ignoreSubmodules', 'all']])).status, 1, 'a gitlink path is listed whatever diff.ignoreSubmodules says')
+    // 2: insteadOf sends ls-remote to a private repo that holds the 18+ commit
+    const dest = join(top, 'github.com', 'o', 'x.git'); mkdirSync(dest, { recursive: true }); git(dest, 'init', '-q', '--bare', '-b', 'main')
+    const d = mk('d'); git(d, 'init', '-q', '-b', 'main'); mkdirSync(join(d, 'Private18')); writeFileSync(join(d, 'Private18', 'x.png'), 'x'); git(d, 'add', '-A'); git(d, 'commit', '-q', '-m', 'leak')
+    const priv = join(top, 'private.git'); git(top, 'clone', '-q', '--bare', d, priv)
+    git(d, 'checkout', '-q', '-b', 'feat'); writeFileSync(join(d, 'n.txt'), 'n'); git(d, 'add', '-A'); git(d, 'commit', '-q', '-m', 'neutral')
+    const dh = git(d, 'rev-parse', 'HEAD').stdout.trim()
+    assert.equal(run(d, dest, `refs/heads/feat ${dh} refs/heads/feat ${'0'.repeat(40)}\n`, cfg([[`url.${priv}.insteadOf`, dest]])).status, 1, 'ls-remote against a rewritten URL excludes nothing')
+  } finally { for (const x of [home, top]) rmSync(x, { recursive: true, force: true }) }
+})
