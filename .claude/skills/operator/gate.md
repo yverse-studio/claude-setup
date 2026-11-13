@@ -14,6 +14,10 @@ check is a hard yes or no from someone who didn't write the code.
 
 A check that doesn't apply passes; say "n/a" in the table. A reviewer verdict in checks 3 to 5 without quoted lines, the test-gap answer and a `Not judged:` list is not a pass ([`roles/reviewer.md`](roles/reviewer.md), Report).
 
+## Reviewers
+
+Reviewers run after code; `security-reviewer` on auth, payments and user input (moved here from `CLAUDE.md`, S11a).
+
 ## Gate size
 
 The PR's size decides which checks run; the headline names it: `Gate 5/5 (S, round <n>)`.

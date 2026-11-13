@@ -5,6 +5,8 @@ description: "Screenshot a web app at phone and desktop size, then design-critic
 
 # UI review
 
+**Every UI change** (moved here from `CLAUDE.md`, S11a): the project's `DESIGN.md` first (none: `frontend-design` and `impeccable`, one clear direction; art direction before any screen, `roles/designer.md`, its `## Bar` is what the Tester checks), nothing from `ui-review/SLOP.md`; screenshots at 390px and 1440px, `design-critic` review, fixes, screenshots in the PR. UI text is German first, English second, static files included.
+
 yskills' lasting likes and dislikes are in `TASTE.md` next to this file, the slop patterns that
 fail any screen in `SLOP.md`; the critic gets both with the screenshots and the references.
 

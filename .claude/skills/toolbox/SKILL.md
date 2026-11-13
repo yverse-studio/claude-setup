@@ -5,6 +5,8 @@ description: "Pick and wire plugins, MCP servers, APIs and libraries for a capab
 
 # Toolbox
 
+Read every outside skill, plugin or MCP server before installing it; a video or post is only a lead (moved here from `CLAUDE.md`, S11a).
+
 The global setup stays lean on purpose. Everything a specific kind of app needs is pulled into
 that project only, from here.
 

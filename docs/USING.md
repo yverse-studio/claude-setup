@@ -176,6 +176,20 @@ One throwaway helper branch (`media-*`): run `delete-helper-branch.yml` with `re
 `archive/<branch>` first and refuses any other name, the default branch and a branch with an open PR.
 A session's own safety check blocks raw `git push --delete`; this is the route.
 
+## The world (2026-10-08)
+
+- GitHub: every repo lives in the org `yverse-studio` (only Butzis-Spiel stays at `yskills/`).
+  Claude works as `yskills-claude`, an org Owner.
+- Hosting: new products run on Claude's own Cloudflare account at `https://<name>.yverse.workers.dev`
+  (duo-test stays on yskills'); two routes, workflows or laptop session: `publish` skill.
+- Secrets live only in claude-setup's GitHub Actions; app keys (Stripe, Google, mail) are Worker
+  secrets. No project has secrets in GitHub, the cloud environment or chat.
+- New page or app: `projects/<name>.json` plus the `new-project` workflow (repo, Worker, D1, first
+  deploy); removing one: `delete-project`. Steps are above; detail: `publish` skill.
+- Dashboard: the Company XY Artifact is the only Artifact there is (no votes, galleries or one-off
+  pages). Each project keeps `## Jetzt` in `PROGRESS.md`, reads open `ceo`
+  issues first (`docs/hq-rows.md`). New apps are threads in "Company XY", never a new project. [guard: hook global/rule-guard.mjs]
+
 ## A skill idea
 
 A thread that spots a repeated procedure may show a "Save skill" card. Ignore it: a saved card is an account skill outside git. Claude uses `new-skill` instead, and the skill arrives as part of the next claude-setup PR. Both plugins (`setup-skills`, `setup-domains`) load in every project thread by themselves; there is nothing to do per project.

@@ -55,7 +55,7 @@ lives outside this repo.
 
 | Part | Path | Owes |
 |---|---|---|
-| Working rules | `CLAUDE.md` | The world (org, accounts, secrets, the one deploy path), how Claude works for yskills (ask rule, co-founder, auto-run), code, UI, stack. Short; detail lives in the homes below |
+| Working rules | `CLAUDE.md` | how Claude works for yskills (ask rule, co-founder, auto-run), code. Short; detail lives in the homes below |
 | Front door | `README.md` | Install, what you get, cloud setup, how to change the repo |
 | This map | `docs/MAP.md` | Where things live, one home per rule |
 | Teams | `docs/TEAMS.md` | The Spawn rule, the Models line, sizes S/M/L, the one pipeline, the roster (every role's job, when it is called, thread or subagent, model) and the Kits |
@@ -136,14 +136,14 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 
 | Rule | Home | Others only link |
 |---|---|---|
-| Org, accounts, where secrets live | `CLAUDE.md` (The world) | `publish` skill, `docs/WORKFLOW.md` (PC work) |
+| Org, accounts, where secrets live | `docs/USING.md` (The world) | `publish` skill, `docs/WORKFLOW.md` (PC work) |
 | Coordinator card (what the project chat reads, its pre-flight) | `global/card-render.mjs` (output `/mnt/project-files/claude-setup/`: `COORDINATOR-CARD.md`, `ROSTER.md`, `briefs/<role>.md`, all rendered from `BRIEF_FIELDS` and `docs/TEAMS.md`; refreshed by every thread start when the card's hash is stale; CLI `scripts/coordinator-card.mjs`) | `roles/project-manager.md`, `operator/templates/project-instructions.md` |
 | Live board (who is doing what: one `NOW.md` per project, a line per job, 24 h archive) | `docs/USING.md` (Live board), template `docs/templates/NOW.md` | `CLAUDE.md` (How to work), `operator/briefs.md` (Done when), the laptop's `_claude/_queue/WHO.md` (name `who` in `config/paths.json`) stays a separate lane lock |
 | Masterplan (the plan is `plan` issues, `Fixes #n` in every PR, `ISSUES.md` is the coordinator's view with its "Stand?" answer, pings and Custom view, an offline project keeps `PLAN.json`) | `roles/project-manager.md` (Masterplan), `.github/ISSUE_TEMPLATE/plan.md`; offline: `docs/templates/PLAN.json`, `scripts/plan.mjs` + `scripts/plan.test.mjs` | coordinator card (pre-flight), `docs/research/2026-11-12-masterplan-sota.md` |
 | Close finished threads (resolve or nudge, the daily sweep) | `roles/project-manager.md` (Close threads) | coordinator card, `templates/loop/routine.md` (step 11), `global/rule-guard.mjs` (stop) |
 | Teams, roles, sizes, the pipeline, the Kits (routed per task), the model per role | `docs/TEAMS.md` | `CLAUDE.md` (Teams), `operator/SKILL.md`, `operator/run.md`, `roles/project-manager.md`; `global/team-guard.mjs` enforces `model` |
 | Deploy or delete a page (the steps) | `docs/USING.md` | operator `run.md`, `briefs.md`; detail in `publish` |
-| Where a lesson goes (the decision tree) | `docs/MAP.md` (Start here) | `CLAUDE.md` (Lessons stick), `docs/WORKFLOW.md` (Learning) |
+| Where a lesson goes (the decision tree) | `docs/MAP.md` (Start here) | `docs/WORKFLOW.md` (Learning) |
 | Pre-PR check (the one command that runs what CI runs; git pre-push hook on every machine) | `scripts/pre-pr.mjs` | `CLAUDE.md` (How to work), `global/git-hooks/pre-push`, `install.mjs`, `cloud/setup.sh`, `.github/workflows/ci.yml` |
 | Fixes remove the cause (workaround only on yskills' word, labelled, deleted later) | `docs/WORKFLOW.md` (Fixes) | `CLAUDE.md` (Code), operator `gate.md` (diagnosis after two failed checks), `roles/programmer.md` |
 | Project retro (errors and good practice at ship or delete) | `docs/WORKFLOW.md` (Learning, Project retro) | `publish` skill (Delete a project), `templates/lessons.md` |
@@ -152,7 +152,7 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 | Where a Blender job runs (cloud first, estimate before each job, laptop for GPU/MCP/asked/failed; measured render times) | `.claude/skills/studio/SKILL.md` (Where Blender runs) | `.claude/skills/video-studio/templates/blender-cloud/`, `operator/roles/animator.md` |
 | Long laptop jobs (watchdog, Blender limits, GPU and sleep check, one-line failure report, overnight run) | `docs/pc-claude-user.md` (Long laptop jobs) | `scripts/laptop-job.mjs`, `scripts/ram-ledger.mjs` (RAM claims, owner snapshot), `scripts/laptop-slots.mjs` (Blender limits: one job at a time, 2 instances; progress-file heartbeat), `operator/roles/project-manager.md`, `programmer.md`, `tester.md` |
 | Laptop drops, RC watchdog and broad permissions template | `docs/pc-claude-user.md` (Dropped sessions and permissions) | `scripts/laptop/rc-watchdog.ps1`, `scripts/laptop/install-rc-watchdog.ps1`, `scripts/laptop/claude-settings.template.json`, `scripts/laptop/install-claude-settings.ps1` |
-| Asks ledger (every ask of yskills becomes a thread or a rule in claude-setup; memory only points; blocked-thread sweep) | `CLAUDE.md` (Lessons stick) | `operator/roles/project-manager.md` |
+| Asks ledger (every ask of yskills becomes a thread or a rule in claude-setup; memory only points; blocked-thread sweep) | `docs/WORKFLOW.md` (Learning) | `operator/roles/project-manager.md` |
 | Ask rule (what needs yskills) | `CLAUDE.md` (How to work) | operator `SKILL.md`, `docs/USING.md` |
 | Every ask of yskills carries its clickable link (thread, PR, setting, folder) | `docs/pc-claude-user.md` (What still needs yskills' hands) | `CLAUDE.md`, coordinator card, `global/rule-guard.mjs` (replyRule) |
 | Permission prompts, the allow list and autoMode, safety-check refusals and the way around each | `docs/permissions.md` (settings in `global/settings.json`) | `CLAUDE.md`, operator `SKILL.md`, `gate.md`, `README.md`, `docs/pc-claude-user.md` |
@@ -161,7 +161,7 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 | How a game build is played before the gate (blind pass, full run, death, ad hooks; the report and its nine verdicts, Controls and World life first) | `operator/roles/playtester.md`, template `operator/templates/playtest-report.md`, checked in game CI by `publish/templates/new-game/scripts/playtest-check.mjs` (+ `scripts/playtest-check.test.mjs`) | `operator/run.md` (step 5), `game-3d` |
 | The words of a site or app (voice, terms, German and English strings, errors, empty states) | `operator/roles/content-designer.md`, template `operator/templates/copy-deck.md`, checked by `ui-review/scripts/copy-check.mjs` | `roles/tester.md`, `ui-review`, `SLOP.md` 9 |
 | What a site, app or game measures (events, money metric, legal basis, tools with prices, the weekly numbers line) | `operator/roles/analytics.md`, template `operator/templates/tracking-plan.md`, checked by `market/scripts/analytics-check.mjs` | `market` §5, `roles/tester.md`, `docs/hq-rows.md` |
-| Cards and votes (who posts them, the thread-to-coordinator loop, screenshots on a vote card per visual choice); yskills reads only the project chat | `CLAUDE.md` (How to work) | `briefs.md` (b) |
+| Cards and votes (who posts them, the thread-to-coordinator loop, screenshots on a vote card per visual choice); yskills reads only the project chat | operator `SKILL.md` (Cards), `roles/project-manager.md` | `briefs.md` (b) |
 | Co-founder | `CLAUDE.md` (How to work) | `roles/*.md` (one role-specific line each) |
 | No windows on yskills' screen (headless only, unless he asked) | `docs/pc-claude-user.md` (No windows) | `global/rule-guard.mjs` (`opensWindow`) |
 | Who looks at and judges work (only the gate and yskills; every other role executes and runs fixed scripts) | `docs/TEAMS.md` (Who checks) | `roles/animator.md`, `roles/character-td.md`, `roles/project-manager.md`, `docs/character-workflow.md`, `docs/game-pipeline.md`, `docs/two-figure-scenes.md` |
@@ -181,8 +181,8 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 | `Prior art:`, `Lessons:` and `Fixes #n` lines in every PR body | `scripts/pr-lessons-check.mjs` | `CLAUDE.md`, `.github/pull_request_template.md`, `operator/briefs.md` |
 | Lessons inbox (the one file, block format, Seen rule, the Monday patch) | `operator/templates/lessons-inbox.md` | operator `SKILL.md` (Setup loop), `docs/WORKFLOW.md` (Learning), `briefs.md` |
 | Remote Control on the PC | `docs/WORKFLOW.md` (PC work) | operator `SKILL.md` |
-| UI rules | `CLAUDE.md` (UI) | `roles/designer.md`, `ui-review` (screenshots, the load-once check, run videos via `desktop.sh`) |
-| What looks AI-made (the slop list) | `.claude/skills/ui-review/SLOP.md` | `CLAUDE.md` (UI), `design-critic`, `roles/designer.md`, `gate.md` check 5 |
+| UI rules | `ui-review` `SKILL.md` (Every UI change) | `roles/designer.md`, `ui-review` (screenshots, the load-once check, run videos via `desktop.sh`) |
+| What looks AI-made (the slop list) | `.claude/skills/ui-review/SLOP.md` | `ui-review` `SKILL.md`, `design-critic`, `roles/designer.md`, `gate.md` check 5 |
 | Art direction before any screen (references, palette, type) | `operator/roles/designer.md` (Art direction first), checked by `ui-review/scripts/design-check.mjs` | `gate.md` check 5, `game-3d`, the game template |
 | Style library (reusable style directions: tokens, captures, do/don't; first: young-cool) | [`ui-review/styles/README.md`](../.claude/skills/ui-review/styles/README.md) | `operator/roles/designer.md` (step 0), `ui-review/TASTE.md` |
 | How a game plays before it is built (core loop, run length, difficulty, feedback, ad hooks, references) | `operator/roles/game-designer.md`, template `operator/templates/game-design.md`, checked by `game-3d/scripts/gdd-check.mjs` | `game-3d` (§1b), `roles/tester.md` |
