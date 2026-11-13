@@ -7,8 +7,7 @@ Example: Ship Butzis-Spiel on Google Play by 2026-11-30; no live-money step with
 
 ## Plan
 
-One line: the plan and its status live in `/mnt/project-files/PLAN.json` (`roles/project-manager.md`,
-Masterplan). No item, status, thread or pending list here.
+One line: the plan and its status live in the issues with the label `plan` (view: `ISSUES.md` in the claude-setup folder; `roles/project-manager.md`, Masterplan). No item, status, thread or pending list here.
 
 ## Live
 

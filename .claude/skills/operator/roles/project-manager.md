@@ -48,7 +48,7 @@ professionelles Game Studio an"). The project chat has no hooks, so these live o
   ich", ask the thread that owns the code with `message_thread` (or start a size S `Programmer · check
   <question>` thread that runs a Researcher subagent; the Researcher is never a thread, `docs/TEAMS.md`
   Spawn rule 3), and answer when it comes back. A checked fact that changes the plan goes into its
-  `PLAN.json` item's evidence through the owning thread's `plan.mjs` (Masterplan, below), so the next session does not guess it again. Incident: "is the character still Microsoft?" was
+  issue's evidence (a comment from the owning thread; Masterplan, below), so the next session does not guess it again. Incident: "is the character still Microsoft?" was
   answered "MPFB2" from memory while the airport's `people.ts` still loaded Rocketbox; "the Critic does
   not run on Opus" was wrong too.
 - **One thread = one role, checked before every `message_thread` with work:** the work's role (by
@@ -58,7 +58,7 @@ professionelles Game Studio an"). The project chat has no hooks, so these live o
   builder, holiday photos were mixed up with the move, the Downloads leftovers stayed until yskills asked.
 - **Dependencies at once:** on every board read, a PR with a `Depends on: #n` line (`roles/programmer.md`)
   whose #n is parked, blocked or failing gets one project-chat line the same turn naming both PRs and the
-  fix (unpark #n, or cut the dependency); its `PLAN.json` item gets `wartet` with `waits_on` #n (Masterplan, below).
+  fix (unpark #n, or cut the dependency); its issue gets the label `waits` and a comment naming #n (Masterplan, below).
 
 ## Text only (no hook can judge it)
 
@@ -74,11 +74,11 @@ The repeats of the audit 2026-10-27 (`docs/research/2026-10-27-repeats.md`) that
 
 The one home of the coordinator's start protocol. Every new coordinator session, in this order:
 
-1. Read `MEMORY.md` (state, `templates/project-memory.md`), then `/mnt/project-files/PLAN.json`: what you work through (Masterplan, below; missing: start the `Planner` that writes it).
+1. Read `MEMORY.md` (state, `templates/project-memory.md`), then `ISSUES.md` in the claude-setup folder (the open `plan` issues; an offline project: its `PLAN.json`; Masterplan, below).
 2. `list_thread_sessions`: the board.
 3. `Read /mnt/project-files/claude-setup/COORDINATOR-CARD.md` (fallback `/mnt/attach/project-files/claude-setup/COORDINATOR-CARD.md`): Spawn rule, Models, Sizes, Roster, Kits, the pre-flight. The coordinator has no Bash and never clones; the full `TEAMS.md` and `MAP.md` come only through a thread. A fresh or replaced coordinator does this before its first `start_thread`: project memory and notes never replace it. Name kit and size from the card (L = builder + gate) before spawning.
 4. Orders: list the repo's open issues labelled `ceo` (`list_issues`, label `ceo`) and read them first: they are yskills' orders from HQ (`docs/hq-rows.md`, Jetzt block). Each gets a thread or PR now, the PR body says `Closes #<n>`, and the issue gets one comment with the thread's link. None open: say nothing.
-5. Reconcile. Every working or blocked thread on the board has a `PLAN.json` item with its link, and every `doing` or `wartet` item has a live thread or a named wait (Masterplan, below). The board wins: a mismatch goes into the next brief or a `plan update` thread. Every ask of yskills in the last day of chat has a thread, a PR or a `Done:` line (the asks ledger above).
+5. Reconcile. Every working or blocked thread on the board has an open issue, and every open issue marked `waits` has a live thread or a named wait (Masterplan, below). The board wins: a mismatch goes into the next brief or a `plan update` thread. Every ask of yskills in the last day of chat has a thread, a PR or a `Done:` line (the asks ledger above).
 6. Cheap memory check: `MEMORY.md` has only the template's four sections and no rule line. A line that is a rule becomes a `loop:setup` issue (`docs/WORKFLOW.md`, Learning).
 7. Post nothing unless something is wrong.
 
@@ -94,20 +94,9 @@ Five replies to yskills were struck through in one day, and he was told to open 
 
 ## Masterplan
 
-The one home of the coordinator's plan (yskills 2026-11-12: "ich will immer vollen fahrplan haben vor dem arbeiten wie plan modus ... er vergisst immer stand und änderungen"; he picked a file that threads write over memory on the same day). Research: [`docs/research/2026-11-12-masterplan-sota.md`](../../../../docs/research/2026-11-12-masterplan-sota.md). Every project keeps ONE living plan, `/mnt/project-files/PLAN.json` ([template](../../../../docs/templates/PLAN.json)): goal, items, decisions. Status lives nowhere else; memory only points to it. JSON, because models break Markdown status lists more often (Anthropic long-running harness), and only [`scripts/plan.mjs`](../../../../scripts/plan.mjs) changes it (`init goal=...`, `goal`, `add key=value`, `set <id> key=value`, `check`, `stand`), which refuses a `done` without evidence. The coordinator cannot write files, so it only reads the plan; threads write it.
-
-1. **Plan first.** Before the first build thread for a goal, a `Planner · <goal>` thread (size S goals: the thread itself) starts `PLAN.json` (`plan.mjs init goal=...`, then one `add` per item; the template only shows the shape): every item from now to the goal, in order, each `todo`. The coordinator posts it in the project chat (at most 15 lines) and work starts at once (auto-run, `CLAUDE.md`; yskills picked this 2026-11-12); he changes it any time.
-2. **Item:** `id` (`M1`, `M2`, ..., unique), `title`, `status`, `owner` (thread link or yskills), `evidence`, `waits_on`, `why`, `next`. Status: `todo`, `doing`, `wartet` (needs `waits_on`: a card, his hands, another item), `done` (needs `evidence`: PR, live URL, screenshot), `drop` (needs `why`). `deps` (comma list of ids that must be done first) makes the order checkable: `plan.mjs check` refuses unknown ids, self-deps, deps on a dropped item and cycles, and once a plan uses `deps`, every id named in an open item's `waits_on` or `next` must be in its `deps` (CompanyXY 2026-11-12: a hidden M15 ⇄ M35 cycle blocked six items). [guard: test scripts/plan.test.mjs]
-3. **Every brief names its item** on an `Item: M<n>` line (`briefs.md`); a new ask with no item yet says `Item: new` and the thread adds it (`plan.mjs add`). The thread sets its item `doing` at start, `wartet` when blocked, `done` with its link at its `Done:` line, in the same turn. A PR that finishes an item also ticks its slice in the product's `PLAN.md` and its `## Jetzt` in `PROGRESS.md` (vacation-game 2026-11-12: `PLAN.md` stale for two days).
-4. **Coordinator, on every event** (an ask, a thread start, a `Done:` or merge, a blocker, a decision): `Read` `PLAN.json` before the reply. A change no thread owns (yskills reorders, drops or adds) goes into the next brief as `Plan: <the change>`, or, with no thread due, one size S `Programmer · plan update` thread (Sonnet) that runs `plan.mjs` and resolves.
-5. **Two boards:** `PLAN.json` is what is to be done and how far it is; `NOW.md` (`docs/USING.md`, Live board) is which job runs right now. A job's NOW.md line names its item id.
-6. **Slim:** at most 25 open items; a `done` older than 7 days may move to `decisions` as one line.
-7. **Stall:** a `doing` item with no event for 24 h or two sessions: read its thread; stuck means `wartet` with the reason, or a new plan for it, said in one line.
-8. **"Stand?"** ("Stand und nächste Schritte", "status", "wo sind wir"): answer from `PLAN.json` only, in the shape `plan.mjs stand` prints, at most 10 lines: the goal, `x/y done`, what runs (links), what waits on him (link to the card or step), the next three `todo`.
-9. **Pings**, unasked, in one bundled project-chat message, only when needed (yskills picked this 2026-11-12): something waits on him (card, hands step, link); something visual to rate (screenshot or live link plus its card); a finished part (`Done:` line plus link); a question that changes the plan (a card). No ping for progress inside an item.
-10. **View:** after a status change, write the plan as the project's Custom view (`write_custom_view`, Overview tab): goal, `x/y done` bar, items grouped `doing`, `wartet`, `todo`, `done`, each with its link. yskills asked for this view on 2026-11-12, in every project. It is not an Artifact (`CLAUDE.md`, Dashboard).
-
-11. **The item holds the detail.** Open it from `.github/ISSUE_TEMPLATE/plan.md` (or the same lines in a `brief` field of a `PLAN.json` item): `Scope:`, `Basis:` (the passed vN files, taken 1:1), `Assets:` (gate-passed assets to reuse), `Sheet:`, `Look-Lock:`, `Asset:`, `Acceptance:`. The brief stays short and names the item; the thread reads the rest there.
+The plan is GitHub issues with the label `plan`, one per slice, opened from `.github/ISSUE_TEMPLATE/plan.md` (Scope, Basis, Assets, Sheet, Look-Lock, Asset, Acceptance); every PR names its issue with `Fixes #n`, and a brief names it on its `Item:` line (yskills 2026-11-13, software factory plan `workflow-fable/2026-11-13-software-factory-final.md`).
+`ISSUES.md` in the claude-setup folder beside the coordinator card is the coordinator's view: a thread's `post_message` hook renders it (`global/card-render.mjs`); the coordinator reads it before every reply, leaves writing to the threads, and answers "Stand?" from it in at most 10 lines (goal, done/open, what runs, what waits on him, next three).
+An offline or 18+ project keeps `/mnt/project-files/PLAN.json` ([template](../../../../docs/templates/PLAN.json)), changed through [`scripts/plan.mjs`](../../../../scripts/plan.mjs); its text stays off GitHub.
 
 ## Don't make him repeat (standing calls)
 
