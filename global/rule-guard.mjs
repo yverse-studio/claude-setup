@@ -398,6 +398,31 @@ function loadItem(ref, cwd, env) {
   }
   return { ref, repo, error: `could not fetch ${repo}#${num}` }
 }
+// S2 (#543): the open and recent `plan` issues of the repo, for the coordinator's ISSUES.md. null when nothing could be fetched.
+export function planIssues(cwd) {
+  deadline = Date.now() + 1500
+  const repo = originRepo(cwd)
+  if (!repo) return null
+  const get = (path) => {
+    for (const [cmd, args] of [['gh', ['api', path]], ['curl', ['-fsS', '--max-time', '0.8', `https://api.github.com/${path}`]]]) {
+      const t = cmd === 'gh' ? left(1100) : left(800)
+      if (t < 100) break
+      try {
+        const list = JSON.parse(execFileSync(cmd, args, { encoding: 'utf8', timeout: t, killSignal: 'SIGKILL', stdio: ['ignore', 'pipe', 'ignore'] }))
+        if (Array.isArray(list)) return list
+      } catch { /* try the next route */ }
+    }
+    return null
+  }
+  // Open issues first (a closed backlog never pushes a stalled open one off the page), then what closed in the last 24 h (best effort).
+  const open = get(`repos/${repo}/issues?labels=plan&state=open&per_page=100`)
+  if (!open) return null
+  const since = new Date(Date.now() - 86_400_000).toISOString()
+  const closedGot = get(`repos/${repo}/issues?labels=plan&state=closed&per_page=100&since=${since}`)
+  const closed = closedGot ?? []
+  const map = (i) => ({ number: i.number, title: String(i.title ?? ''), state: i.state, labels: (i.labels ?? []).map((l) => l.name ?? l), updated: i.updated_at, closed: i.closed_at })
+  return { repo, truncated: open.length >= 100, closedMissing: closedGot === null, issues: [...open, ...closed].filter((i) => !i.pull_request).map(map) }
+}
 async function itemContext(brief, cwd, session) {
   const once = join(tmpdir(), `claude-setup-item-${String(session).replace(/\W/g, '')}`)
   if (!session || existsSync(once) || (/<(wake|relay|coordinator-relay)\b/.test(brief) && !/<(wake|relay)\b[^>]*reason="spawn"/.test(brief))) return ''
@@ -1118,6 +1143,9 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         // M50: a relay that reached the thread mid-turn may never have fired the prompt hook; the transcript has it, so a locked thread re-reads it at its next tool call.
         let rebriefNote = ''
         if (session && existsSync(lockFile(session))) { const t = transcript(); const last = coordinatorRelays(t, await projectsOrigin()).at(-1); if (last) rebriefNote = await relayRebrief(session, last, cwd, knownModel(session, t), t) }
+        if (session && existsSync(lockFile(session))) rebriefNote = '' // the lock note is in the lock block's own text; only a lifted lock is news
+        // S2 (#543): a thread's post_message renders the open plan issues for the coordinator, who has no hooks and no GitHub tool. Never blocks.
+        if (tool === 'mcp__hearthbot__post_message') { try { (await import(new URL('./card-render.mjs', import.meta.url))).refreshIssues(() => planIssues(cwd)) } catch { /* same */ } }
         let block = lockBlock(tool, session)
           ?? handsOff(tool, input ?? {}, gateRole, setupRoot(cwd))
           ?? (await gateBlock(tool, input ?? {}, transcript, sessionModel(transcript()), true, gateRole, transcriptPath))
@@ -1134,7 +1162,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           ?? (grillMissing(tool, input ?? {}, transcript) ? 'rule-guard: a Planner at size M or L grills first (CLAUDE.md, No fog; operator SKILL.md, Grill first): post the real-moment question (when it comes from his life) and up to 2 request_decision cards (goal, taste), each with your recommended answer, then write the plan on the answers (or the recommendations while he is away).' : null)
         if (!block) block = await gateBlock(tool, input ?? {}, transcript, sessionModel(transcript()), false, gateRole, transcriptPath) // commit the round only now: no other guard refused the post
         if (!block && session && tool === 'Artifact' && input?.url && input.file_path) writeFileSync(shipped, `${input.file_path}\n`, { flag: 'a' })
-        if (block) { process.stderr.write(block); process.exitCode = 2 }
+        if (block) { process.stderr.write([block, rebriefNote].filter(Boolean).join('\n')); process.exitCode = 2 }
         else {
           const note = [rebriefNote, jetztWarning(tool, input ?? {}, cwd)].filter(Boolean).join('\n')
           if (note) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', additionalContext: note } }))
