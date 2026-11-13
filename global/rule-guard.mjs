@@ -311,7 +311,7 @@ function receiptBlock(tool, input, session, cwd, agentId, transcript) {
   if (!/reason=\\?"spawn/.test(t)) return null // a hooked project chat that was handed a brief is no thread (the canary covers it)
   const root = setupRoot(cwd)
   const rules = ['CLAUDE.md', 'docs/TEAMS.md'].map((f) => read(join(root, f))).join('\n')
-  const brief = spawnPrompt('', t).replace(/<\/?(wake|message|thread|project|project_claude_message|relay|coordinator-relay|cited|note|system-note)\b[^>]*>/g, '\n')
+  const brief = spawnPrompt('', t).replace(/<\/?(wake|message|thread|project|relay|coordinator-relay|cited|note|system-note)\b[^>]*>/g, '\n')
   const path = roleOf(brief, read(join(root, 'docs', 'TEAMS.md')))?.path
   // No checkout (only the boot copy): nothing can be checked, so the receipt says that instead of a false `none`.
   const status = existsSync(join(root, 'config', 'plugins.json')) ? skillStatus(wanted(root, path ? read(join(root, path)) : '', brief), { root, cwd }) : { loaded: [], missing: [], unknown: true }
@@ -455,7 +455,7 @@ export const knownModel = (session, transcript) => sessionModel(transcript) ?? (
 export const GATE_ROLES = /^(Tester|Reviewer|Security|Legal|Playtester|Hook Checker|Critic|Story Editor|Evaluator)$/i
 export const GATE_PRIOR = /^[ \t>-]*Prior art:[^\n]*\bgate\.md\b/im
 
-export const stripTags = (t) => t.replace(/\\[nt]/g, '\n').replace(/<\/?(wake|message|thread|project|relay|coordinator-relay|cited|note|system-note)\b[^>]*>/g, '\n')
+export const stripTags = (t) => t.replace(/\\[nt]/g, '\n').replace(/<\/?(wake|message|thread|project|project_claude_message|relay|coordinator-relay|cited|note|system-note)\b[^>]*>/g, '\n')
 
 // The template a refusal carries, so the coordinator needs no file: the stamp with the role filled in, then one line per applicable row of BRIEF_FIELDS.
 export const templateFor = (guard, role, size = 'M') => {
