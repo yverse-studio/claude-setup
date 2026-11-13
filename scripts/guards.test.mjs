@@ -1695,7 +1695,7 @@ test('pre-push hook: a new branch is not blocked for history the destination alr
     for (const k of Object.keys(env)) if (k.startsWith('GIT_')) delete env[k]
     const bare = join(top, 'github.com', 'o', 'x.git') // the destination; its path names github.com
     mkdirSync(bare, { recursive: true })
-    const run = (cwd, ...a) => spawnSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...a], { cwd, env, encoding: 'utf8' })
+    const run = (cwd, ...a) => spawnSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', '-c', 'core.hooksPath=/dev/null', ...a], { cwd, env, encoding: 'utf8' }) // a global core.hooksPath (the installed setup) must not run on the fixture's own pushes
     run(bare, 'init', '-q', '--bare', '-b', 'main')
     const repo = join(top, 'work'); mkdirSync(repo)
     run(repo, 'init', '-q', '-b', 'main'); mkdirSync(join(repo, 'Private18')); writeFileSync(join(repo, 'Private18', 'x.png'), 'x'); run(repo, 'add', '-A'); run(repo, 'commit', '-q', '-m', 'old leak')

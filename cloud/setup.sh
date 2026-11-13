@@ -649,6 +649,20 @@ export function reuseBlock(text, teams, board) {
   return `${role.name} thread already open: "${open[0]}". Run list_threads again first (the board goes stale when threads resolve themselves); if it is still open, give the work to it with message_thread (same plan or PR; docs/TEAMS.md, Reuse rule), or add \`Reuse: none (<why: other plan or PR, long context, parallel read job>)\` to the brief and retry`
 }
 
+// A thread hands off only on a role change, quality loss or a milestone, never at a token count (docs/WORKFLOW.md, Handoff triggers; 2026-11-08 decision). A brief line that
+// asks for a stop, hand-off or status report at a token or context amount ("at ~200k context post status and stop", "stop at 30000 tokens") caused three needless hand-offs on 2026-11-13.
+// Precision over reach: a refused start costs a round, so a line is flagged only when it holds a stop or hand-off word AND a threshold: a trigger word (at, bei, after, once, when,
+// reaches ...) then an amount (200k, 0.2M, 30000, 80 %) right before a token or context word, or the word context (not a label) then a trigger word and an amount. A span in quotes or backticks that holds a space is dropped first (a line quoting the wording is no stop line). A bare "100k users", "status 200",
+// "after 2k ms", "context 3 of 5" or "under 8k tokens" is none of that. A line that says "never" states the rule itself and is skipped, and so is an `Item:` line (it quotes the issue's title).
+const QTY = String.raw`(?:~?\d[\d.,]*\s?[kKmM](?![\p{L}\d])|\d{2,3}[.,]?\d{3}(?!\d)|\d{1,3}\s?%)`
+const TRIG = String.raw`(?<![\p{L}\d])(?:at|bei|ab|after|nach|past|over|above|once|when|wenn|reach|reaches|hit|hits|exceed|exceeds|pass|passes|über|before|vor)(?![\p{L}\d])`
+const AMOUNT = String.raw`(?:${TRIG}\W{0,4}${QTY}\s?(?:of\s+)?(?:the\s+)?(?:tokens?|context|kontext)(?![\p{L}\d])|(?:context|kontext)(?![\p{L}\d:])(?!\s*:)[^\n:;,.()]{0,15}?${TRIG}\W{0,4}${QTY})`
+const ACT = String.raw`(?<![\p{L}\d])(?:stop|stopp|stoppe|stoppen|hand[- ]?off|hand over|handover|übergabe|übergeben|übergebe|übergib|beende|wrap up|pause)(?![\p{L}\d])`
+const TOKEN_STOP = new RegExp(`${ACT}[^\n]{0,120}${AMOUNT}|${AMOUNT}[^\n]{0,120}${ACT}`, 'iu')
+const STATES_RULE = /(?<![\p{L}\d])(?:never|nie|niemals)(?![\p{L}\d])/iu
+const unquote = (l) => l.replace(/"[^"\n]*\s[^"\n]*"|“[^”\n]*\s[^”\n]*”|„[^“”\n]*\s[^“”\n]*[“”]|`[^`\n]*\s[^`\n]*`/g, '""')
+export const tokenStopLine = (text) => String(text).split('\n').map((l) => unquote(l).replace(/[*_`]/g, '')).find((l) => l.length < 400 && !/^[ \t>-]*Item:/i.test(l) && !STATES_RULE.test(l) && TOKEN_STOP.test(l))?.trim().slice(0, 100)
+
 // One list of everything wrong with a thread brief, the one validator of the start hook and of `team-guard.mjs check` (CompanyXY 2026-11-13: a coordinator that
 // cannot run the guard before it starts finds the errors one thread at a time).
 export function briefProblems(text, { model, title: threadTitle, teams = '', checklists = '', board = [] } = {}) {
@@ -669,6 +683,8 @@ export function briefProblems(text, { model, title: threadTitle, teams = '', che
   // The id to pass, from the Models line (CompanyXY 2026-11-13: a tier name left the coordinator guessing the id).
   const idOf = (tier) => String(teams).match(new RegExp(`\\b${tier} \\((claude-[\\w.-]+)\\)`, 'i'))?.[1]
   if (wrong) found.push(`the ${wrong.role} runs on ${wrong.allowed.map((t) => (idOf(t) ? `${t} (${idOf(t)})` : t)).join(' or ')} (claude-setup docs/TEAMS.md, Roster), not ${wrong.tier}. Pass that model id. For an exception the row names (e.g. "Opus writes the weekly plan") add \`Model: <tier> (<why>)\` to the brief; if yskills named this model, say "yskills named <model>"`)
+  const tokenStop = tokenStopLine(text)
+  if (tokenStop) found.push(`the brief asks for a stop or hand-off at a token count ("${tokenStop}"): a thread hands off only on a role change, quality loss or a milestone, never at a token count, and works through auto-compact otherwise (docs/WORKFLOW.md, Handoff triggers). Drop or reword the line (a false hit: say the amount with its unit, e.g. \`100k users\`, not next to a stop word, or quote the wording); \`Stop when:\` names rounds or attempts`)
   const reuse = reuseBlock(text, teams, board)
   if (reuse) found.push(reuse)
   return found
@@ -719,6 +735,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
       process.exit(found.length ? 1 : 0)
     })()
   }
+  if (mode && !['start', 'pre', 'check'].includes(mode)) { console.error(`team-guard: unknown mode "${mode}" (modes: start, pre, check); an old installed copy knows no \`check\`, it refreshes at the next session start`); process.exit(2) }
   let raw = ''
   process.stdin.setEncoding('utf8')
   process.stdin.on('data', (c) => { raw += c })
