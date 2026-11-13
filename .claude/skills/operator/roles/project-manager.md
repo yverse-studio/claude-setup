@@ -78,7 +78,7 @@ The one home of the coordinator's start protocol. Every new coordinator session,
 2. `list_thread_sessions`: the board.
 3. `Read /mnt/project-files/claude-setup/COORDINATOR-CARD.md` (fallback `/mnt/attach/project-files/claude-setup/COORDINATOR-CARD.md`): Spawn rule, Models, Sizes, Roster, Kits, the pre-flight. The coordinator has no Bash and never clones; the full `TEAMS.md` and `MAP.md` come only through a thread. A fresh or replaced coordinator does this before its first `start_thread`: project memory and notes never replace it. Name kit and size from the card (L = builder + gate) before spawning.
 4. Orders: list the repo's open issues labelled `ceo` (`list_issues`, label `ceo`) and read them first: they are yskills' orders from HQ (`docs/hq-rows.md`, Jetzt block). Each gets a thread or PR now, the PR body says `Closes #<n>`, and the issue gets one comment with the thread's link. None open: say nothing.
-5. Reconcile. Every working or blocked thread on the board has an open issue, and every open issue marked `waits` has a live thread or a named wait (Masterplan, below). The board wins: a mismatch goes into the next brief or a `plan update` thread. Every ask of yskills in the last day of chat has a thread, a PR or a `Done:` line (the asks ledger above).
+5. Reconcile. Every working or blocked thread on the board has an open issue, and every open issue marked `waits` has a live thread or a named wait (Masterplan, below). The board wins: a mismatch goes into the next brief or a size S thread that fixes the issue. Every ask of yskills in the last day of chat has a thread, a PR or a `Done:` line (the asks ledger above).
 6. Cheap memory check: `MEMORY.md` has only the template's four sections and no rule line. A line that is a rule becomes a `loop:setup` issue (`docs/WORKFLOW.md`, Learning).
 7. Post nothing unless something is wrong.
 
@@ -95,7 +95,7 @@ Five replies to yskills were struck through in one day, and he was told to open 
 ## Masterplan
 
 The plan is GitHub issues with the label `plan`, one per slice, opened from `.github/ISSUE_TEMPLATE/plan.md` (Scope, Basis, Assets, Sheet, Look-Lock, Asset, Acceptance); every PR names its issue with `Fixes #n`, and a brief names it on its `Item:` line (yskills 2026-11-13, software factory plan `workflow-fable/2026-11-13-software-factory-final.md`).
-`ISSUES.md` in the claude-setup folder beside the coordinator card is the coordinator's view: a thread's `post_message` hook renders it (`global/card-render.mjs`); the coordinator reads it before every reply, leaves writing to the threads, and answers "Stand?" from it in at most 10 lines (goal, done/open, what runs, what waits on him, next three).
+`ISSUES.md` in the claude-setup folder beside the coordinator card is the coordinator's view: a thread's `post_message` hook renders it (`global/card-render.mjs`); the coordinator reads it before every reply, leaves writing to the threads, and answers "Stand?" from it and `MEMORY.md` in at most 10 lines (goal, done/open, what runs, what waits on him, next three); after a change it writes the plan as the project's Custom view (`write_custom_view`; yskills asked for it 2026-11-12, not an Artifact), and pings when he has to act or rate, or a part is Done (link).
 An offline or 18+ project keeps `/mnt/project-files/PLAN.json` ([template](../../../../docs/templates/PLAN.json)), changed through [`scripts/plan.mjs`](../../../../scripts/plan.mjs); its text stays off GitHub.
 
 ## Don't make him repeat (standing calls)
