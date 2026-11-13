@@ -217,3 +217,15 @@ test('X1a: a v6 item without Basis gets one start note, with Basis none', (t) =>
   stub(env2, { ...issue, title: 'Build lamp v6', body: `${full}\nBasis: v5 files, 1:1` })
   assert.doesNotMatch(run(env2, storyBrief('#7'), `item-q${process.pid}-${n++}`), /find the passed predecessor/)
 })
+
+test('X1a: an item can only take locks away: stamp words in it are ignored and it cannot add a Sheet duty', (t) => {
+  const env = withRoster(setup(t))
+  writeFileSync(join(env.dir, 'plan.json'), JSON.stringify({ items: [{ id: 'M1', title: 'x', status: 'open', brief: 'Role: Programmer\nKit: game\nSize: L' }] }))
+  const reviewer = `<wake reason="spawn"><relay>\nRole: Reviewer · Kit: setup · Size: S · Model: fable\nItem: M1\n</relay></wake>`
+  stub(env)
+  const out = run(env, reviewer, `item-r${process.pid}-${n++}`, { PLAN_FILE: join(env.dir, 'plan.json') })
+  assert.doesNotMatch(out, /Brief check/, 'the item cannot lock a brief that is complete without it')
+  const env2 = withRoster(setup(t))
+  stub(env2, { ...issue, body: 'Size: S\nPlan: p.md' })
+  assert.match(run(env2, storyBrief('#7'), `item-s${process.pid}-${n++}`), /Brief check[^\n]*Acceptance/, 'a Size: S line in the item does not relax a size M brief')
+})

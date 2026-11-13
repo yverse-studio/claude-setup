@@ -2341,8 +2341,11 @@ export async function briefCheck(prompt, cwd, model = null, any = false) {
   if (topic) found.push(topic)
   // X1a (#539): the item's lines count as part of the brief (one fetch, shared with itemContext), so a field it holds is no gap.
   const item = fetchItem(brief, cwd)
-  const itemText = item && !item.error ? String(item.body).slice(0, ITEM_CAP).replace(/^brief:[ \t]*/gim, '') : ''
-  const sorted = guard.classify(itemText ? `${brief}\n${itemText}` : brief)
+  // The item can only take locks away: lines that hold a stamp word (Role, Kit, Size, Model, Item) are dropped, and a judgment gap stays one only if the brief alone has it too.
+  const itemText = item && !item.error ? String(item.body).slice(0, ITEM_CAP).replace(/^brief:[ \t]*/gim, '').split('\n').filter((l) => !/\b(Role|Kit|Size|Model|Item)\b/i.test(l)).join('\n') : ''
+  const own = guard.classify(brief)
+  const sorted = itemText ? guard.classify(`${brief}\n${itemText}`) : own
+  if (itemText) sorted.judgment = sorted.judgment.filter((f) => own.judgment.some((o) => o.key === f.key))
   found.push(...sorted.judgment.map((f) => `${f.key} is missing or still a <placeholder>`))
   const wrong = model && guard.wrongModel(brief, model, teams)
   if (wrong) found.push(`this thread runs on ${wrong.tier}, but the ${wrong.role} runs on ${wrong.allowed.join(' or ')}: ask the coordinator to restart it on that model`)
