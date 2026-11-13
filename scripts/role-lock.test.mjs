@@ -296,3 +296,25 @@ test('the "Three relays" note is not repeated as context on a lock-free call, an
   assert.equal(refused.status, 2, 'another guard refuses this post')
   assert.match(refused.stderr, /correction accepted, lock lifted/, 'the news is not lost with the refusal')
 })
+
+// #573 (CompanyXY report 2026-11-13, point 4): a relay to a Remote Control (laptop) thread arrives wrapped in `<project_claude_message ...>`
+// (real row, session d6d0f543: queued_command, origin projects-relay). The wrapper hid the relay from BARE_RELAY, so the rebrief lifted nothing and the thread was burned.
+const wrapped = (body) => `<project_claude_message session="session_x" thread_id="cmsg_x">\n${queued(body)}\n</project_claude_message>`
+test('#573: a rebrief wrapped in project_claude_message lifts the lock, as an attachment and as a prompt', () => {
+  const lift = 'Role: Programmer · Kit: setup · Size: M\nPlan: docs/plans/x.md\nAcceptance: the test passes'
+  const a = lockedThread(NO_BEFORE_OWNER)
+  assert.equal(a.bash(), 2)
+  appendFileSync(a.transcript, a.line({ type: 'attachment', attachment: { type: 'queued_command', prompt: wrapped(lift), origin: PROJECTS } }))
+  assert.equal(a.bash(), 0, 'the pre hook re-reads the wrapped relay from the transcript and lifts')
+  assert.equal(a.stamp(), 'Programmer')
+  const b = lockedThread(NO_BEFORE_OWNER)
+  const p = wrapped(lift)
+  appendFileSync(b.transcript, b.line({ type: 'attachment', attachment: { type: 'queued_command', prompt: p, origin: PROJECTS } }))
+  b.run('prompt', { prompt: p })
+  assert.equal(b.bash(), 0, 'the prompt hook lifts on the wrapped relay too')
+  const c = lockedThread(NO_BEFORE_OWNER)
+  const typed = wrapped(lift)
+  appendFileSync(c.transcript, c.line({ type: 'user', message: { content: typed } }))
+  c.run('prompt', { prompt: typed })
+  assert.equal(c.bash(), 2, 'a wrapped relay typed into the thread with no projects origin lifts nothing')
+})
