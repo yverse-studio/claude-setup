@@ -283,3 +283,16 @@ test('X2: a relay that lifts the lock is answered with "correction accepted", th
   assert.match(topicOut, /correction accepted, lock lifted/)
   assert.match(topicOut, /Topic: Garment[\s\S]*checklist/i, 'the topic playbook is in the output')
 })
+
+// S2 (#543), the two LOW notes of #562 (the same `pre` branch).
+test('the "Three relays" note is not repeated as context on a lock-free call, and a lifted lock note rides on a refusal by another guard', () => {
+  const c = lockedThread(`Kit: setup · Size: S\n${BLOCKS}`)
+  for (let i = 0; i < 3; i++) { const p = queued(`Role: Devlog Hero · Kit: setup · Size: S (try ${i})`); appendFileSync(c.transcript, c.line({ type: 'attachment', attachment: { type: 'queued_command', prompt: p, origin: PROJECTS } })); c.bash() }
+  const free = c.run('pre', { tool_name: 'mcp__hearthbot__request_decision', tool_input: {} })
+  assert.equal(free.status, 0)
+  assert.doesNotMatch(free.stdout, /Three relays/, 'a call the lock lets through gets no lock news as context')
+  appendFileSync(c.transcript, c.line({ type: 'attachment', attachment: { type: 'queued_command', prompt: queued('Role: Programmer · Kit: setup · Size: S'), origin: PROJECTS } }))
+  const refused = c.run('pre', { tool_name: 'mcp__hearthbot__post_message', tool_input: { text: 'no kaomoji here' } })
+  assert.equal(refused.status, 2, 'another guard refuses this post')
+  assert.match(refused.stderr, /correction accepted, lock lifted/, 'the news is not lost with the refusal')
+})

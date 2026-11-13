@@ -1600,7 +1600,7 @@ cat > "$HOME/.claude/claude-setup/card-render.mjs" <<'CARD'
 // briefs/<role>.md. All of it is rendered from docs/TEAMS.md, docs/MAP.md and BRIEF_FIELDS (global/team-guard.mjs); nothing in it is written by hand.
 // scripts/coordinator-card.mjs is the CLI over it, rule-guard calls refreshCard() when a thread starts (docs/MAP.md, Coordinator card).
 import { createHash, randomBytes } from 'node:crypto'
-import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { BRIEF_FIELDS, GATE_BUILDER_ROLES, GUARD_FILES, badRole, badTeam, coordinatorCard, kitNames, kitRows, rosterNames } from './team-guard.mjs'
 import { GATE_ROLES, roleOf } from './rule-guard.mjs'
@@ -1615,7 +1615,7 @@ const PREFLIGHT = `## Before every reply
 - How we work, one loop: every thread has a role from the Roster (only a mini or unclear task has \`Role: none\`); the role loads its playbook, skills and workflows from claude-setup; what it lacks a Researcher finds; what holds for every project goes back to claude-setup. team-guard refuses a brief with no Role line or an unknown role or kit name; rule-guard's start receipt shows the role loaded and ends with \`card #<hash>\`: another hash than this card's header means Read this card again.
 - Downloads/assets: Character TD runs \`asset-intake\`; Archivist indexes after the gate.
 - Luna: at most 15 lines / 1,500 characters, at least one kaomoji, result first, in his language.
-- Facts (code, PR, device, model, plan) only from a source read this turn and linked: PLAN.json, NOW.md, list_threads, a thread's last reply. None in reach: "prüfe ich", ask the owning thread; silent for a thread until it answered; a dropped device is one line the same turn.
+- Facts (code, PR, device, model, plan) only from a source read this turn and linked: ISSUES.md, PLAN.json, NOW.md, list_threads, a thread's last reply. None in reach: "prüfe ich", ask the owning thread; silent for a thread until it answered; a dropped device is one line the same turn.
 - Every start_thread passes \`model\` and a brief copied from briefs/<role>.md (section Thread brief). Before a message_thread with work: same role and topic as the thread's title, thread not done; else a new thread. Folder moves and cleanups never go to a builder.
 - A finished thread (done, failed, stopped, or review_ready idle 2 h with Done:/hand-off) gets set_thread_resolved or a nudge before you stop; relist when your board is 2 h old.
 - Every ask or pointer carries its clickable link ([title](#cmsg_…), URL, [Project settings](#project-settings/resources)); every ask of yskills gets a thread, a PR or a \`Done:\` line the same turn; a skill idea is a PR (\`new-skill\`), never a propose_skills card.
@@ -1624,7 +1624,7 @@ const PREFLIGHT = `## Before every reply
 - Hard round counter (hook): 3 rounds at 4.5 (4.8 important), 4-6 Fable director, 7+ a card; no merge below; you release none; a PASS needs no OK. 3 failed rounds on one asset: re-plan. A gate round's brief has the Round, Asset and Picture card lines (briefs/reviewer.md). Controls and World life first.
 - A new rule is a PR to claude-setup, never only a Project settings edit.
 - A second fresh thread for one asset is a quality-loss trigger: send the handoff files to the Planner for a diagnosis first, the handoff carries the round and every approach tried, and the restart is not posted (docs/WORKFLOW.md, Handoff triggers).
-- Plan: /mnt/project-files/PLAN.json is the one plan; threads write it (scripts/plan.mjs), you only Read it before every reply, then write_custom_view. "Stand?": goal, x/y done, doing, waits on him, next 3. Ping only when he must act, rate, or a part is Done (link).
+- Plan: read ISSUES.md in the claude-setup folder next to this card before every reply (/mnt/project-files/PLAN.json where no ISSUES.md exists, an offline project's plan); you never write it; a new ask is a thread with \`Item: new\`, which opens the issue. Then write_custom_view. "Stand?": goal, x/y done, doing, waits on him, next 3. Ping only when he must act, rate, or a part is Done (link).
 - Project instructions lack the line "Read /mnt/project-files/claude-setup/COORDINATOR-CARD.md first": call update_project_settings once, PREPEND operator/templates/project-instructions.md filled in, keep every existing line, say so in one line.`
 
 export function ruleRows(map) {
@@ -1814,6 +1814,28 @@ export function refreshCard(base, out = projectFolder()) {
     if (have === hash && existsSync(join(out, 'ROSTER.md'))) return null
     writeAll(out, renderAll({ base, hash }))
     return hash
+  } catch { return null }
+}
+
+// ---- S2 (#543): the coordinator has no hooks and no GitHub tool, so a thread's post_message hook renders the open `plan` issues into ISSUES.md beside the card.
+// issues: [{ number, title, state, labels: [name], updated, closed }]. Open ones with number, title, labels and update; closed only from the last 24 h.
+export function renderIssues({ repo, issues, now = new Date() }) {
+  const stamp = (t) => new Date(t).toISOString().slice(0, 16).replace('T', ' ')
+  const row = (i) => `- #${i.number} ${i.title} (${(i.labels ?? []).join(', ') || 'no labels'}; updated ${stamp(i.updated)})`
+  const open = issues.filter((i) => i.state === 'open')
+  const done = issues.filter((i) => i.state !== 'open' && now - new Date(i.closed ?? i.updated) < 86_400_000)
+  return `# Plan issues of ${repo}, ${stamp(now)} UTC; rendered by a thread's hook, do not edit.\n\n## Open\n\n${open.map(row).join('\n') || '- none'}\n\n## Closed in the last 24 h\n\n${done.map(row).join('\n') || '- none'}\n`
+}
+// `fetchIssues()` returns { repo, issues } or null. Skipped when the file is younger than 60 s or the repo has no plan issues; a dead fetch leaves the old file. Never throws.
+export function refreshIssues(fetchIssues, out = projectFolder(), now = new Date()) {
+  try {
+    if (!out) return null
+    const file = join(out, 'ISSUES.md')
+    if (existsSync(file) && now - statSync(file).mtime < 60_000) return null
+    const got = fetchIssues()
+    if (!got?.issues?.length) return null
+    safeWrite(file, renderIssues({ ...got, now }), 'ISSUES.md')
+    return file
   } catch { return null }
 }
 
@@ -2278,6 +2300,24 @@ function loadItem(ref, cwd, env) {
     } catch { /* try the next route */ }
   }
   return { ref, repo, error: `could not fetch ${repo}#${num}` }
+}
+// S2 (#543): the open and recent `plan` issues of the repo, for the coordinator's ISSUES.md. null when nothing could be fetched.
+export function planIssues(cwd) {
+  deadline = Date.now() + 1500
+  const repo = originRepo(cwd)
+  if (!repo) return null
+  const path = `repos/${repo}/issues?labels=plan&state=all&per_page=100&sort=updated&direction=desc`
+  const tries = [['gh', ['api', path]], ['curl', ['-fsS', '--max-time', '0.8', `https://api.github.com/${path}`]]]
+  for (const [cmd, args] of tries) {
+    const t = cmd === 'gh' ? left(1100) : left(800)
+    if (t < 100) break
+    try {
+      const list = JSON.parse(execFileSync(cmd, args, { encoding: 'utf8', timeout: t, killSignal: 'SIGKILL', stdio: ['ignore', 'pipe', 'ignore'] }))
+      if (!Array.isArray(list)) continue
+      return { repo, issues: list.filter((i) => !i.pull_request).map((i) => ({ number: i.number, title: String(i.title ?? ''), state: i.state, labels: (i.labels ?? []).map((l) => l.name ?? l), updated: i.updated_at, closed: i.closed_at })) }
+    } catch { /* try the next route */ }
+  }
+  return null
 }
 async function itemContext(brief, cwd, session) {
   const once = join(tmpdir(), `claude-setup-item-${String(session).replace(/\W/g, '')}`)
@@ -2999,6 +3039,9 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         // M50: a relay that reached the thread mid-turn may never have fired the prompt hook; the transcript has it, so a locked thread re-reads it at its next tool call.
         let rebriefNote = ''
         if (session && existsSync(lockFile(session))) { const t = transcript(); const last = coordinatorRelays(t, await projectsOrigin()).at(-1); if (last) rebriefNote = await relayRebrief(session, last, cwd, knownModel(session, t), t) }
+        if (session && existsSync(lockFile(session))) rebriefNote = '' // the lock note is in the lock block's own text; only a lifted lock is news
+        // S2 (#543): a thread's post_message renders the open plan issues for the coordinator, who has no hooks and no GitHub tool. Never blocks.
+        if (tool === 'mcp__hearthbot__post_message') { try { (await import(new URL('./card-render.mjs', import.meta.url))).refreshIssues(() => planIssues(cwd)) } catch { /* same */ } }
         let block = lockBlock(tool, session)
           ?? handsOff(tool, input ?? {}, gateRole, setupRoot(cwd))
           ?? (await gateBlock(tool, input ?? {}, transcript, sessionModel(transcript()), true, gateRole, transcriptPath))
@@ -3015,7 +3058,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           ?? (grillMissing(tool, input ?? {}, transcript) ? 'rule-guard: a Planner at size M or L grills first (CLAUDE.md, No fog; operator SKILL.md, Grill first): post the real-moment question (when it comes from his life) and up to 2 request_decision cards (goal, taste), each with your recommended answer, then write the plan on the answers (or the recommendations while he is away).' : null)
         if (!block) block = await gateBlock(tool, input ?? {}, transcript, sessionModel(transcript()), false, gateRole, transcriptPath) // commit the round only now: no other guard refused the post
         if (!block && session && tool === 'Artifact' && input?.url && input.file_path) writeFileSync(shipped, `${input.file_path}\n`, { flag: 'a' })
-        if (block) { process.stderr.write(block); process.exitCode = 2 }
+        if (block) { process.stderr.write([block, rebriefNote].filter(Boolean).join('\n')); process.exitCode = 2 }
         else {
           const note = [rebriefNote, jetztWarning(tool, input ?? {}, cwd)].filter(Boolean).join('\n')
           if (note) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', additionalContext: note } }))

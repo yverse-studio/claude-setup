@@ -18,7 +18,7 @@ test('the card builds, stays under CARD_MAX characters and has its parts', () =>
 test('the pre-flight carries the masterplan duty (roles/project-manager.md, Masterplan)', () => {
   const card = buildCard({ hash: 'x', date: 'd' })
   const pre = card.split('## Thread brief')[0]
-  for (const s of ['PLAN.json', 'plan.mjs', 'Stand', 'write_custom_view']) assert.ok(pre.includes(s), s)
+  for (const s of ['ISSUES.md', 'Item: new', 'Stand', 'write_custom_view']) assert.ok(pre.includes(s), s)
 })
 
 test('the card carries a pointer to the rendered brief files, not a template, and the two refusal and device lines (M50 slice B)', () => {
