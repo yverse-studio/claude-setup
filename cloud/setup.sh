@@ -1284,10 +1284,14 @@ const isCounterCall = (s) => s.a0 === 'node' && !s.args.some((a) => /^(-e|-p|--e
 // The words of echo and printf, and the heredoc of a text sink (cat, tee, echo, printf, gh, git), are data: B7, a read beside an unrelated command or a PR text is no way round the counter.
 const COUNTER = /gate-rounds\.mjs/
 const TEXT_BODY = new Set(['cat', 'tee', 'echo', 'printf', 'gh', 'git'])
-// echo and printf print their words (printf -v assigns them to a variable, which is no print); an unquoted heredoc runs its $( ) and backticks (review of the B7 change).
-const printfOption = (s) => s.a0 === 'printf' && s.args.some((a) => a.startsWith('-')) // -v, -vX, -xv ...: any option word fails closed
+// echo and printf print their words, but printf -v (also -vX, -xv, $'-v') assigns them to a variable, and a word or an unquoted heredoc can run or assign
+// ($( ), backticks, ${X:=...}) before it prints: a word or body that holds the file name and expands is no data and its command is no plain read (reviews of the B7 change).
+const EXPANDS = /\$\(|`|\$\{[^}]*:?=/
+const printfOption = (s) => s.a0 === 'printf' && s.args.some((a) => a.startsWith('-') || /\$|`/.test(a)) // any option or expansion word fails closed
 const printsWords = (s) => s.a0 === 'echo' || (s.a0 === 'printf' && !printfOption(s))
-const namesCounter = (s) => (printsWords(s) ? s.redirs : [...s.words, ...s.redirs]).some((w) => COUNTER.test(w)) || (!!s.body && COUNTER.test(s.body) && (!TEXT_BODY.has(s.a0) || /\$\(|`/.test(s.body)))
+const expands = (s) => [...s.words, ...s.redirs].some((w) => COUNTER.test(w) && EXPANDS.test(w)) || (!!s.body && COUNTER.test(s.body) && EXPANDS.test(s.body))
+const plainRead = (s) => readsOnly(s) && !expands(s)
+const namesCounter = (s) => (printsWords(s) && !expands(s) ? s.redirs : [...s.words, ...s.redirs]).some((w) => COUNTER.test(w)) || (!!s.body && COUNTER.test(s.body) && (!TEXT_BODY.has(s.a0) || EXPANDS.test(s.body)))
 function bashProblem(cmd, dir, ctx) {
   const { list, bad } = simpleCommands(cmd)
   if (bad && /\bgh\b|gate/.test(cmd)) return 'gate ledger: this command has unbalanced quotes and mentions gh or gate, so it cannot be read; write it plainly (gate.md, Rounds).'
@@ -1304,8 +1308,8 @@ function bashProblem(cmd, dir, ctx) {
   // Only a call without them is read command by command.
   const flows = /(?:^|[^|])\|(?!\|)|<\(|(?:^|[^<])<(?!<)/.test(cmd)
   // Both readings count: the parsed words (a quoted `gate-""rounds.mjs` is the file there) and the raw text (the dropped `<` words).
-  const wordRule = list.some(namesCounter) && !list.every((s) => !namesCounter(s) || isCounterCall(s) || readsOnly(s))
-  const strictRule = flows && (COUNTER.test(cmd) || list.some(namesCounter)) && !list.every((s) => isCounterCall(s) || readsOnly(s))
+  const wordRule = list.some(namesCounter) && !list.every((s) => !namesCounter(s) || isCounterCall(s) || plainRead(s))
+  const strictRule = flows && (COUNTER.test(cmd) || list.some(namesCounter)) && !list.every((s) => isCounterCall(s) || plainRead(s))
   if (wordRule || strictRule) return 'gate ledger: gate-rounds.mjs is run only as "node ~/.claude/claude-setup/gate-rounds.mjs <verb> <asset> ..." (gate.md, Rounds); copying it, importing it or running it through node -e is refused, because the proofs live in this hook and in the CLI.'
   for (const s of list) {
     if (s.a0 === 'gh') { const r = ghProblem(s); if (r) return r }

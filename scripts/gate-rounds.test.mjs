@@ -340,6 +340,8 @@ const MUST_BLOCK_LEDGER = [
   // security review of the B7 change: a pipe carries the file, or text that imports it, into an interpreter, so a call with a pipe keeps the strict rule
   // second review of the B7 change: a NAME=value word holds the path, printf -v assigns it, and an unquoted heredoc runs its $( )
   'X=~/.claude/claude-setup/gate-rounds.mjs node -e "import(process.env.X)"', 'env X=~/.claude/claude-setup/gate-rounds.mjs node -e "import(process.env.X)"',
+  'cat <<E\n$(cp ~/.claude/claude-setup/gate-rounds.mjs /tmp/c)\nE', 'echo <<E\n`cp ~/.claude/claude-setup/gate-rounds.mjs /tmp/c`\nE', // a plain read is no plain read when its heredoc runs the file name
+  'printf $\'-v\' X %s ~/.claude/claude-setup/gate-rounds.mjs; cp "$X" /tmp/c.mjs', 'echo ${X:=${HOME}/.claude/claude-setup/gate-rounds.mjs} >/dev/null; cp "$X" /tmp/c.mjs', 'echo <<E\n${X:=$HOME/.claude/claude-setup/gate-rounds.mjs}\nE\ncp "$X" /tmp/c.mjs',
   'printf -vX %s ~/.claude/claude-setup/gate-rounds.mjs; cp "$X" /tmp/c.mjs', 'printf -xv X %s ~/.claude/claude-setup/gate-rounds.mjs; cp "$X" /tmp/c.mjs',
   'F=~/.claude/claude-setup/gate-rounds.mjs; node -e "import(process.argv[1])" "$F"', 'printf -v X %s ~/.claude/claude-setup/gate-rounds.mjs; cp "$X" /tmp/c.mjs',
   'gh pr comment 1 --body-file - <<E\n$(cp ~/.claude/claude-setup/gate-rounds.mjs /tmp/c)\nE', 'tee /dev/null <<E\n`cp ~/.claude/claude-setup/gate-rounds.mjs /tmp/c`\nE',
