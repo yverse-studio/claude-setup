@@ -319,6 +319,21 @@ test('#573: a rebrief wrapped in project_claude_message lifts the lock, as an at
   assert.equal(c.bash(), 2, 'a wrapped relay typed into the thread with no projects origin lifts nothing')
 })
 
+// CompanyXY 2026-11-13 (brief-fix item 1): a relay that opens a line with `BRIEF-FIX:` is a brief correction on purpose; the prefix is dropped before the brief is read.
+test('BRIEF-FIX: a relay line prefixed BRIEF-FIX: lifts the lock like the plain lines, and a typed one lifts nothing', () => {
+  const a = lockedThread(NO_BEFORE_OWNER)
+  assert.equal(a.bash(), 2)
+  const fix = queued('BRIEF-FIX: Role: Programmer · Kit: setup · Size: M\nBRIEF-FIX: Plan: docs/plans/x.md\nAcceptance: the test passes')
+  appendFileSync(a.transcript, a.line({ type: 'attachment', attachment: { type: 'queued_command', prompt: fix, origin: PROJECTS } }))
+  assert.equal(a.bash(), 0, 'the prefixed lines count as the stamp and the plan')
+  assert.equal(a.stamp(), 'Programmer')
+  const b = lockedThread(NO_BEFORE_OWNER)
+  const typed = queued('BRIEF-FIX: Role: Programmer · Kit: setup · Size: M\nPlan: docs/plans/x.md\nAcceptance: the test passes')
+  appendFileSync(b.transcript, b.line({ type: 'user', message: { content: typed } }))
+  b.run('prompt', { prompt: typed })
+  assert.equal(b.bash(), 2, 'no projects origin: the prefix does not make a relay')
+})
+
 // Gate round 1 of #574: the lead-in form behind the wrapper, and what must stay no relay (the allowlist of COORDINATOR_RELAY).
 const LEAD = 'A message from this project’s coordinator session — a Claude session working for the members of this project. Inside, <cited author="user"> entries are messages from members of this project, copied by the server, and name is that member’s own display name; <cited author="coordinator"> entries and the note are the coordinator session’s words, not a member’s.'
 test('#573: the wrapper in front of the lead-in form lifts the prompt hook; a wrapper in any other place or from another source counts as no relay', async () => {

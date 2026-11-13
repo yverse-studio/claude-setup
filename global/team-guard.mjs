@@ -249,7 +249,9 @@ const ASKS_RESEARCH = /\b(SOTA|state of the art|research (on|about|into|what)|re
 // The one list of roles whose game and story brief names a cast sheet (scripts/brief.mjs imports it: a third copy of this list let the generator drop Character TD).
 export const SHEET_ROLES = ['Programmer', 'Animator', 'Character TD']
 export const needsSheetRole = (role) => SHEET_ROLES.some((r) => r.toLowerCase() === String(role).trim().toLowerCase())
-const needsSheet = (plain) => new RegExp(`^[ \\t>-]*Role:[ \\t]*(${SHEET_ROLES.join('|')})\\b`, 'im').test(plain) && /\bKit:[ \t]*(game|story)\b/i.test(plain)
+// A wrong kit (`Kit: references`) must not hide the Sheet lines until it is fixed (CompanyXY 2026-11-13: one new refusal per round): only a real kit without a body, face or outfit job skips them.
+const NO_SHEET_KITS = /^(site|app|video|social|setup|repo)$/i
+const needsSheet = (plain) => new RegExp(`^[ \\t>-]*Role:[ \\t]*(${SHEET_ROLES.join('|')})\\b`, 'im').test(plain) && !NO_SHEET_KITS.test(plain.match(/\bKit:[ \t]*([\w-]+)/i)?.[1] ?? '')
   && !/^[ \t>-]*Sheet:[ \t]*n\/a[ \t]+\S[^\n]{9,}$/im.test(plain)
 // CompanyXY 2026-11-12 (yskills 13:23, point 5): gates were planned only after the owner complained. A builder, designer or animator brief
 // at size M or L names the Reviewer thread that gates its work before the owner sees it; the gate roles themselves need no such line.
@@ -415,6 +417,31 @@ export function reuseBlock(text, teams, board) {
   return `${role.name} thread already open: "${open[0]}". Run list_threads again first (the board goes stale when threads resolve themselves); if it is still open, give the work to it with message_thread (same plan or PR; docs/TEAMS.md, Reuse rule), or add \`Reuse: none (<why: other plan or PR, long context, parallel read job>)\` to the brief and retry`
 }
 
+// One list of everything wrong with a thread brief, the one validator of the start hook and of scripts/check-brief.mjs (CompanyXY 2026-11-13: a coordinator that
+// cannot run the guard before it starts finds the errors one thread at a time).
+export function briefProblems(text, { model, title: threadTitle, teams = '', checklists = '', board = [] } = {}) {
+  const found = []
+  const unknown = badRole(text, teams)
+  if (unknown) found.push(`${unknown}. Start the role the Roster names for this task (claude-setup docs/TEAMS.md, Roster)`)
+  const team = badTeam(text, teams)
+  if (team) found.push(`${team}. Look the task up in claude-setup docs/TEAMS.md (Spawn rule, Sizes, Kits) and fix the stamp line`)
+  const topic = badTopic(text, checklists)
+  if (topic) found.push(`${topic}. Use a topic the checklist file lists, or drop the line for a plain Reviewer`)
+  const title = badTitle(threadTitle, text, teams)
+  if (title) found.push(`a ${title} thread is titled \`${title} · <what>\` (claude-setup docs/TEAMS.md, Roster "Runs as"), e.g. "${title} · Bienen-Video"; fix the title`)
+  const lines = missingLines(text)
+  if (lines.length) found.push(`the brief misses ${lines.join(', ')} (claude-setup .claude/skills/operator/briefs.md, Every thread brief starts with)`)
+  if (needsPriorArt(text)) found.push('add a line `Prior art: <the sources checked, named: owner/repo, path, URL, #PR> -> copy | adapt | reuse | build, because <why>` (a gesture like \"looked around\" fails; or `none, because <why nothing could exist>`, or `to find: <where the Researcher looks>`; CLAUDE.md, Work for the future)')
+  if (needsTester(text)) found.push('a size L Programmer thread starts only after its Tester thread (claude-setup docs/TEAMS.md, Sizes): start `Tester · <app>` first, then put a line `Tester: <its thread id or title>` in this brief')
+  const wrong = wrongModel(text, model, teams)
+  // The id to pass, from the Models line (CompanyXY 2026-11-13: a tier name left the coordinator guessing the id).
+  const idOf = (tier) => String(teams).match(new RegExp(`\\b${tier} \\((claude-[\\w.-]+)\\)`, 'i'))?.[1]
+  if (wrong) found.push(`the ${wrong.role} runs on ${wrong.allowed.map((t) => (idOf(t) ? `${t} (${idOf(t)})` : t)).join(' or ')} (claude-setup docs/TEAMS.md, Roster), not ${wrong.tier}. Pass that model id. For an exception the row names (e.g. "Opus writes the weekly plan") add \`Model: <tier> (<why>)\` to the brief; if yskills named this model, say "yskills named <model>"`)
+  const reuse = reuseBlock(text, teams, board)
+  if (reuse) found.push(reuse)
+  return found
+}
+
 // unread: the boot files a thread start still needs (empty when read or when no transcript was given).
 export function decide(tool, input = {}, dirs = [], unread = [], teams = '', checklists = '', board = []) {
   const kind = AGENT.test(tool) ? 'Agent' : THREAD_START.test(tool) ? 'thread' : null
@@ -422,24 +449,7 @@ export function decide(tool, input = {}, dirs = [], unread = [], teams = '', che
   if (kind === 'thread' && !stamped(briefText(input))) return { block: 'team-guard: every thread brief starts with the stamp line `Role: <one role from docs/TEAMS.md Roster> · Kit: <kit> · Size: <S|M|L>` (operator/briefs.md); a small task with no role says `Role: none`. The thread loads its playbook from it. Add the line, then retry.' }
   if (kind === 'thread') {
     // One refusal lists every problem (companyxy 2026-11-12: one line per round cost an extra round per thread).
-    const text = briefText(input)
-    const found = []
-    const unknown = badRole(text, teams)
-    if (unknown) found.push(`${unknown}. Start the role the Roster names for this task (claude-setup docs/TEAMS.md, Roster)`)
-    const team = badTeam(text, teams)
-    if (team) found.push(`${team}. Look the task up in claude-setup docs/TEAMS.md (Spawn rule, Sizes, Kits) and fix the stamp line`)
-    const topic = badTopic(text, checklists)
-    if (topic) found.push(`${topic}. Use a topic the checklist file lists, or drop the line for a plain Reviewer`)
-    const title = badTitle(input.title, text, teams)
-    if (title) found.push(`a ${title} thread is titled \`${title} · <what>\` (claude-setup docs/TEAMS.md, Roster "Runs as"), e.g. "${title} · Bienen-Video"; fix the title`)
-    const lines = missingLines(text)
-    if (lines.length) found.push(`the brief misses ${lines.join(', ')} (claude-setup .claude/skills/operator/briefs.md, Every thread brief starts with)`)
-    if (needsPriorArt(text)) found.push('add a line `Prior art: <the sources checked, named: owner/repo, path, URL, #PR> -> copy | adapt | reuse | build, because <why>` (a gesture like \"looked around\" fails; or `none, because <why nothing could exist>`, or `to find: <where the Researcher looks>`; CLAUDE.md, Work for the future)')
-    if (needsTester(text)) found.push('a size L Programmer thread starts only after its Tester thread (claude-setup docs/TEAMS.md, Sizes): start `Tester · <app>` first, then put a line `Tester: <its thread id or title>` in this brief')
-    const wrong = wrongModel(text, input.model, teams)
-    if (wrong) found.push(`the ${wrong.role} runs on ${wrong.allowed.join(' or ')} (claude-setup docs/TEAMS.md, Roster), not ${wrong.tier}. Pass that model. For an exception the row names (e.g. "Opus writes the weekly plan") add \`Model: <tier> (<why>)\` to the brief; if yskills named this model, say "yskills named <model>"`)
-    const reuse = reuseBlock(text, teams, board)
-    if (reuse) found.push(reuse)
+    const found = briefProblems(briefText(input), { model: input.model, title: input.title, teams, checklists, board })
     if (found.length) return { block: `team-guard: ${found.length === 1 ? found[0] : `${found.length} problems in this brief: ${found.map((f, i) => `(${i + 1}) ${f}`).join(' ')}`}. Copy the fixed template claude-setup docs/templates/thread-brief.md, fill every line once, then retry.` }
   }
   const own = kind === 'Agent' && downgraded(input, dirs)

@@ -879,7 +879,7 @@ export const COORDINATOR_RELAY = /^\s*(?:<project_claude_message\b[^>]*>\s*)?(?:
 // 2026-11-12: the lead-in line is added only when the harness shows it). M53: either form counts only on a row the projects server delivered
 // (`origin` = fromProjects of the counter): the text is who wrote it, the origin is who delivered it, so a thread's own scheduled prompt
 // (an isMeta row with the same text) is no relay.
-const BRIEF_LINE = /^[ \t>*_`-]*(Role|Kit|Gate|Prior art|Model|Skills|Done when|Stop when|Start|Threads|Item|Plan|Acceptance):/im // a relay that corrects the brief; other relays do not count toward the card
+const BRIEF_LINE = /^[ \t>*_`-]*(BRIEF-FIX|Role|Kit|Gate|Prior art|Model|Skills|Done when|Stop when|Start|Threads|Item|Plan|Acceptance):/im // a relay that corrects the brief; other relays do not count toward the card
 const BARE_RELAY = /^\s*(?:<project_claude_message\b[^>]*>\s*)?<relay\b[^>]*\bfrom=\\?"coordinator"/
 // The coordinator often sends only the lines the start brief lacked (#479 part 2: VacationGame's Critic, our Director), so the relay is read
 // together with the earlier coordinator relays and the spawn brief from the transcript: the newest relay's lines come first and win,
@@ -901,10 +901,12 @@ export function coordinatorRelays(transcript, origin = () => false) {
 }
 // A newer source's stamp line replaces an older one instead of adding to it (a corrected Role must not leave the old Size M behind).
 const withoutOlderStamps = (sources) => { let seen = false; return sources.map((t) => { const had = /^[ \t>*_`-]*Role:/im.test(t); const out = seen ? t.replace(/^[ \t>*_`-]*Role:[^\n]*$/gim, '') : t; seen ||= had; return out }) }
+// A line the coordinator opens with `BRIEF-FIX:` is a brief correction on purpose (CompanyXY 2026-11-13); the prefix goes, the line is read as itself.
+export const unfix = (t) => String(t).replace(/^([ \t>*_`-]*)BRIEF-FIX:[ \t]*/gim, '$1')
 export function relayContext(prompt, transcript, origin) {
   const relays = coordinatorRelays(transcript, origin).filter((t) => t.trim() !== prompt.trim())
   const spawn = spawnPrompt(prompt, String(transcript))
-  return withoutOlderStamps([prompt, ...relays.reverse(), spawn === prompt ? '' : spawn].filter(Boolean).map(stripTags)).slice(1).join('\n') // tags off first: a spawn brief's Role sits right behind its wake tag
+  return withoutOlderStamps([prompt, ...relays.reverse(), spawn === prompt ? '' : spawn].filter(Boolean).map((t) => unfix(stripTags(t)))).slice(1).join('\n') // tags off first: a spawn brief's Role sits right behind its wake tag
 }
 // M50: a thread locked since its spawn has no role stamp and built nothing (the lock refuses every tool outside LOCK_FREE), so its first lift may take any
 // role, a gate role too; one that holds a stamp keeps it (#475: a builder never becomes the reviewer of its own work).
@@ -914,7 +916,7 @@ async function relayRebrief(session, prompt, cwd, model, transcript = '') {
   const origin = await projectsOrigin()
   if (!coordinatorRelays(transcript, origin).some((t) => t.trim() === prompt.trim())) return '' // no row of the projects server holds this text: a scheduled or typed prompt lifts nothing
   const context = relayContext(prompt, transcript, origin)
-  const text = stripTags([prompt, context].join('\n'))
+  const text = unfix(stripTags([prompt, context].join('\n')))
   const wasLocked = existsSync(lockFile(session))
   updateLock(session, await briefCheck(text, cwd, model, true))
   await countRelay(session)
