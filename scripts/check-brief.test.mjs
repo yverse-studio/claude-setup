@@ -73,3 +73,12 @@ test('every rendered briefs/<role>.md template, filled in, passes the start chec
   }
   assert.ok(checked >= 20, `${checked} role and kit templates checked`)
 })
+
+// An old installed copy knows no `check` mode and printed nothing with exit 0 (coordinator 2026-11-13): an unknown mode now says so, and a pass always prints its line.
+test('team-guard: an unknown mode prints the modes and exits 2, never silence; a passing check prints "ok:"', () => {
+  const unknown = spawnSync(process.execPath, [script, 'chek', 'Programmer', '-'], { input: '', encoding: 'utf8', cwd: root })
+  assert.equal(unknown.status, 2)
+  assert.match(unknown.stderr, /unknown mode "chek".*start, pre, check/)
+  const { brief } = buildBrief({ role: 'Programmer', kit: 'setup', size: 'S', item: 'new', plan: 'n/a, size S', acceptance: 'the test passes', threads: 'list_threads checked, none open on this topic', priorArt: 'obra/superpowers -> adapt, because the skill exists', done: 'node --test', stop: '3 rounds', skills: '.claude/skills/operator/roles/programmer.md' })
+  assert.match(run(['Programmer', '-'], brief).stdout, /^ok: /m)
+})
