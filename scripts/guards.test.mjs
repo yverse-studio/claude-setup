@@ -684,7 +684,7 @@ test('rule guard: a missing round counter is fetched on first use, a verdict pos
   } finally { process.env.PATH = old; for (const d of [dir, bin]) rmSync(d, { recursive: true, force: true }) }
 })
 
-// M47 follow-up (fresh thread 2026-11-12 15:01: no guard line, no checklists.md, no attempt-guard.mjs): the cached image's old
+// M47 follow-up (fresh thread 2026-11-12 15:01: no guard line, no checklists.md, one guard file missing; the test uses attempt-guard.mjs as that guard): the cached image's old
 // team-guard runs the start refresh with its own old lists, so files added later never arrive. The fresh rule-guard on disk
 // fills in what its team-guard lists and the disk lacks, then names the version, on the spawn prompt and on the lookup path.
 test('rule guard: a thread start installs the guards and boot files an old image never listed, and names them', () => {
