@@ -107,6 +107,8 @@ The one home of the coordinator's plan (yskills 2026-11-12: "ich will immer voll
 9. **Pings**, unasked, in one bundled project-chat message, only when needed (yskills picked this 2026-11-12): something waits on him (card, hands step, link); something visual to rate (screenshot or live link plus its card); a finished part (`Done:` line plus link); a question that changes the plan (a card). No ping for progress inside an item.
 10. **View:** after a status change, write the plan as the project's Custom view (`write_custom_view`, Overview tab): goal, `x/y done` bar, items grouped `doing`, `wartet`, `todo`, `done`, each with its link. yskills asked for this view on 2026-11-12, in every project. It is not an Artifact (`CLAUDE.md`, Dashboard).
 
+11. **The item holds the detail.** Open it from `.github/ISSUE_TEMPLATE/plan.md` (or the same lines in a `brief` field of a `PLAN.json` item): `Scope:`, `Basis:` (the passed vN files, taken 1:1), `Assets:` (gate-passed assets to reuse), `Sheet:`, `Look-Lock:`, `Asset:`, `Acceptance:`. The brief stays short and names the item; the thread reads the rest there.
+
 ## Don't make him repeat (standing calls)
 
 yskills 2026-11-05: "ich wiederhole mich immer wegen den selben Dingen". These are his standing calls; every coordinator and thread follows them without asking again. Enforced by `scripts/check.mjs` (the section and its seven items must exist). [guard: test scripts/check.mjs]

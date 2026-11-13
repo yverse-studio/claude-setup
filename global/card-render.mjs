@@ -161,7 +161,7 @@ export function renderBrief(role, teams, fields = BRIEF_FIELDS) {
     else if (key === 'Gate' && !new RegExp(`^${GATE_BUILDER_ROLES}$`).test(role)) continue
     else lines.push(f.tpl)
   }
-  return `# Brief file: ${role}\n\nCopy the block, fill every <...>, delete the lines marked delete, start the thread with it as the brief, title \`${role} · <what>\` and \`model\` = the Model line (${modelFor(role, 'M', teams)} at size M). Sizes and kits are checked by team-guard; the block is rendered from BRIEF_FIELDS and docs/TEAMS.md (claude-setup global/card-render.mjs), never edited by hand.\n\n\`\`\`\n${lines.join('\n')}\n\`\`\`\n\nThen write the task itself under the block, in four short parts (taught, not checked):\n\n\`\`\`\n${TASK_PARTS.join('\n')}\n\`\`\`\n`
+  return `# Brief file: ${role}\n\nCopy the block, fill every <...>, delete the lines marked delete, start the thread with it as the brief, title \`${role} · <what>\` and \`model\` = the Model line (${modelFor(role, 'M', teams)} at size M). Scope, Basis and Assets live in the item (the Item: line), the thread reads them there. Sizes and kits are checked by team-guard; the block is rendered from BRIEF_FIELDS and docs/TEAMS.md (claude-setup global/card-render.mjs), never edited by hand.\n\n\`\`\`\n${lines.join('\n')}\n\`\`\`\n\nThen write the task itself under the block, in four short parts (taught, not checked):\n\n\`\`\`\n${TASK_PARTS.join('\n')}\n\`\`\`\n`
 }
 export const briefFileName = (role) => `${role.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.md`
 
@@ -202,7 +202,9 @@ export function writeAll(dir, files) {
   return written
 }
 // The project's shared folder: /mnt/project-files in a cloud thread. Absent (a laptop session): nothing to refresh.
+// Under `node --test` (NODE_TEST_CONTEXT, inherited by spawned hooks) only an explicit CLAUDE_SETUP_PROJECT_FILES counts: a test run never writes into the real folder (7,707 stray brief-log files, 2026-11-12).
 export function projectFolder(env = process.env) {
+  if (env.NODE_TEST_CONTEXT && !env.CLAUDE_SETUP_PROJECT_FILES) return null
   for (const d of [env.CLAUDE_SETUP_PROJECT_FILES, '/mnt/project-files', '/mnt/attach/project-files']) if (d && existsSync(d)) return join(d, 'claude-setup')
   return null
 }

@@ -277,7 +277,7 @@ for (const f of anyText('.')) {
     if (!gate.includes(call)) errors.push(`.claude/skills/operator/gate.md: Asset PRs lacks the pipeline gate \`${call}\``)
   }
   const ci = existsSync(join(root, '.github/workflows/ci.yml')) ? readFileSync(join(root, '.github/workflows/ci.yml'), 'utf8') : null   // a test copy of the repo drops .github
-  if (ci) for (const t of ['scripts/pipeline-gates.test.mjs', 'scripts/laptop-job.test.mjs', 'unittest discover -s scripts/blender']) if (!ci.includes(t)) errors.push(`.github/workflows/ci.yml does not run ${t}`)
+  if (ci) for (const t of ['scripts/*.test.mjs', 'unittest discover -s scripts/blender']) if (!ci.includes(t)) errors.push(`.github/workflows/ci.yml does not run ${t}`)
 }
 
 // Standing calls (roles/project-manager.md; yskills 2026-11-05): the section and its seven items must exist.

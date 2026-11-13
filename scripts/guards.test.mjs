@@ -385,6 +385,25 @@ test('team guard: SessionStart prints the TEAMS.md pointer', () => {
   assert.doesNotMatch(out.hookSpecificOutput.additionalContext, /Boot \(claude-setup\)/, 'a checkout loads CLAUDE.md itself')
 })
 
+// Cloud thread 2026-11-12: it starts in /home/user with the checkout in /home/user/claude-setup. The harness loads that
+// CLAUDE.md anyway (seen in the thread's own first message), so the boot card was a second copy (2.6k tokens per call).
+test('team guard: a checkout one folder below the cwd counts as loaded, no boot copy', () => {
+  const home = mkdtempSync(join(tmpdir(), 'team-home-'))
+  const cwd = mkdtempSync(join(tmpdir(), 'team-'))
+  const env = { CLAUDE_SETUP_HOME: home, CLAUDE_SETUP_BOOT_FETCH: 'off', CLAUDE_CODE_CHILD_SESSION: '' }
+  try {
+    for (const f of ['CLAUDE.md', 'docs/TEAMS.md', 'docs/MAP.md']) cpSync(join(root, f), join(home, '.claude/claude-setup', f))
+    const start = (id = 'c1') => JSON.parse(runTeam('start', { cwd, session_id: id }, env).stdout).hookSpecificOutput.additionalContext
+    assert.match(start(), /Working for yskills|Boot \(claude-setup\)/, 'without the checkout the boot copy is printed')
+    mkdirSync(join(cwd, 'claude-setup'))
+    cpSync(join(root, 'CLAUDE.md'), join(cwd, 'claude-setup/CLAUDE.md'))
+    assert.match(start('c2'), /^Team rule \(claude-setup docs\/TEAMS\.md\)/, 'with the checkout one folder down only the pointer is printed')
+    assert.doesNotMatch(start('c2'), /Working for yskills|Boot \(claude-setup\)/, 'no second copy of CLAUDE.md')
+    assert.equal(runTeam('card', { cwd, session_id: 'c2' }, env).stdout, '', 'no coordinator card either')
+    assert.equal(existsSync(join(home, '.claude/claude-setup/booted/c2.rules')), false, 'no rules mark: the file was not injected')
+  } finally { rmSync(home, { recursive: true, force: true }); rmSync(cwd, { recursive: true, force: true }) }
+})
+
 // Incident 2026-10-26: the project chat has no checkout, so CLAUDE.md never loaded and the
 // coordinator started threads with guessed models. Without a checkout the card names the files to
 // read, and a thread start waits until the transcript shows TEAMS.md and CLAUDE.md were read.
@@ -763,7 +782,7 @@ test('rule guard: a thread checks its spawn brief against TEAMS.md and sends a b
   const bad = await briefCheck(spawn('Role: Designer · Kit: content · Size: M\nFix it.'), root)
   assert.match(bad, /^Brief check[\s\S]*Kit: content is no kit/, 'M50: one refusal lists every judgment gap at once')
   const sizeM = await briefCheck(spawn('Role: Programmer · Kit: setup · Size: M\nFix it.'), root)
-  assert.match(sizeM, /^Brief check[\s\S]*Item is missing[\s\S]*Plan is missing[\s\S]*Acceptance is missing[\s\S]*Role: Programmer · Kit: <kit>[\s\S]*Item: <PLAN\.json item/, 'at size M the three decisions and the role template')
+  assert.match(sizeM, /^Brief check[\s\S]*Item is missing[\s\S]*Plan is missing[\s\S]*Acceptance is missing[\s\S]*Role: Programmer · Kit: <kit>[\s\S]*Item: <issue #n, PLAN\.json item/, 'at size M the three decisions and the role template')
   assert.doesNotMatch(sizeM.split('\n')[0], /Model|Skills|Start|Threads|Stop when/, 'what follows from the stamp is never in the refusal')
   assert.equal(await briefCheck('Role: Designer · Kit: content · Size: S', root), '', 'only the spawn wake')
   assert.match(await briefCheck(JSON.stringify(spawn(`Role: Programmer (debug) · Kit: setup · Size: M${FULL}`)), root), /^Title check/, 'an escaped wake, a role with a note')
@@ -1005,13 +1024,13 @@ test('team guard: kit, size, role and brief lines are checked against TEAMS.md',
   assert.equal(badTeam('Role: Tester · Kit: app · Size: L', teams), null)
   assert.ok(missingLines('Model: <id for this role>\nSkills: <role doc>').includes('Model:'), 'an unfilled Model placeholder does not count')
   assert.ok(!missingLines('Done when:\n  node --test passes').includes('Done when:'), 'the value may start on the next line')
-  assert.deepEqual(missingLines('Role: Producer · Kit: video · Size: M\nMake a bee video.'), ['Item: (M<n> from PLAN.json, or new)', 'Plan: (the plan file or card this thread builds)', 'Acceptance: (what counts as accepted)', 'Model:', 'Skills:', 'Done when:', 'Stop when:', 'Start: (read MEMORY.md first)', 'Threads: (list_threads checked, none open on this topic)'])
+  assert.deepEqual(missingLines('Role: Producer · Kit: video · Size: M\nMake a bee video.'), ['Item: (#n of its issue, M<n> from PLAN.json, or new)', 'Plan: (the plan file or card this thread builds)', 'Acceptance: (what counts as accepted)', 'Model:', 'Skills:', 'Done when:', 'Stop when:', 'Start: (read MEMORY.md first)', 'Threads: (list_threads checked, none open on this topic)'])
   assert.deepEqual(missingLines(`Role: Planner · Kit: setup · Size: M${FULL}\nDone when: SOTA research on plan tracking is summarized`), ['Researcher: (the task asks for research)'], 'a research task names its Researcher')
   assert.deepEqual(missingLines(`Role: Planner · Kit: setup · Size: M${FULL}\nDone when: research on best practice summarized\nResearcher: general-purpose, sonnet`), [])
   assert.deepEqual(missingLines(`Role: Programmer · Kit: app · Size: S${FULL}\nFollow best practices for tests.`), [], 'an order to follow best practice is no research ask')
   assert.deepEqual(missingLines(`Role: Researcher · Kit: app · Size: M${FULL}\nFind the SOTA for offline sync.`), [], 'the Researcher itself names none')
   assert.deepEqual(missingLines(`Role: Programmer · Kit: app · Size: S${FULL}\nShortest reply. No extra subagents, research, screenshots or re-reads.`), [], 'the brief block itself is no research ask')
-  assert.deepEqual(missingLines('Done when: <a check>. Stop when: <budget>'), ['Item: (M<n> from PLAN.json, or new)', 'Plan: (the plan file or card this thread builds)', 'Acceptance: (what counts as accepted)', 'Model:', 'Skills:', 'Done when:', 'Stop when:', 'Start: (read MEMORY.md first)', 'Threads: (list_threads checked, none open on this topic)'], 'unfilled placeholders do not count')
+  assert.deepEqual(missingLines('Done when: <a check>. Stop when: <budget>'), ['Item: (#n of its issue, M<n> from PLAN.json, or new)', 'Plan: (the plan file or card this thread builds)', 'Acceptance: (what counts as accepted)', 'Model:', 'Skills:', 'Done when:', 'Stop when:', 'Start: (read MEMORY.md first)', 'Threads: (list_threads checked, none open on this topic)'], 'unfilled placeholders do not count')
 })
 
 // Luna (yskills 2026-10-27): every reply to him carries a kaomoji; nothing else is touched.
@@ -1447,6 +1466,13 @@ test('gate fixes: Sheet: must be a .md path and Look-Lock: a link or card, "late
   const b = (extra) => `Role: Programmer · Kit: game · Size: M${FULL}\nFit the character outfit.\n${extra}`
   assert.equal(missingLines(b('Sheet: later\nLook-Lock: later')).length, 2)
   assert.equal(missingLines(b('Sheet: characters/mira/SHEET.md\nLook-Lock: owner card https://claude.ai/c/1')).length, 0)
+})
+
+test('gate fixes: a Look-Lock card link inside the project (#cmsg_...) counts, a bare # does not (GameDev 2026-11-12: six starts refused)', async () => {
+  const { missingLines } = await import('../global/team-guard.mjs')
+  const b = (extra) => `Role: Programmer · Kit: game · Size: M${FULL}\nFit the character outfit.\n${extra}`
+  assert.equal(missingLines(b('Sheet: characters/mira/SHEET.md\nLook-Lock: [Mira look](#cmsg_01D5edTu)')).length, 0)
+  for (const bad of ['#later', '#cmsg_', '#cmsg']) assert.equal(missingLines(b(`Sheet: characters/mira/SHEET.md\nLook-Lock: ${bad}`)).length, 1, `${bad} is no card link`)
 })
 
 // Gate rounds 1 to 6 of PR 445 chased verbs and body words; the rule is now a plain one: no classifier.

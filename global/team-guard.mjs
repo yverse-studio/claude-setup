@@ -44,9 +44,9 @@ const AGENT = /^(Agent|Task)$/
 
 const text = (file) => { try { return readFileSync(file, 'utf8') } catch { return '' } }
 
-// claude-setup's CLAUDE.md loads on its own: a checkout at cwd or a parent of it, or install.mjs's block in ~/.claude/CLAUDE.md (laptop).
+// claude-setup's CLAUDE.md loads on its own: a checkout at cwd, a parent of it or `<cwd>/claude-setup` (a cloud thread starts in /home/user), or install.mjs's block in ~/.claude/CLAUDE.md (laptop).
 export function rulesLoaded(cwd, home) {
-  const files = [join(home, '.claude', 'CLAUDE.md')]
+  const files = [join(home, '.claude', 'CLAUDE.md'), join(cwd, 'claude-setup', 'CLAUDE.md')]
   for (let d = cwd; ; d = dirname(d)) { files.push(join(d, 'CLAUDE.md')); if (dirname(d) === d) break }
   return files.some((f) => text(f).includes(MARK))
 }
@@ -279,10 +279,15 @@ const gateRolePlain = (plain) => /^[ \t>-]*Role:[ \t]*(Tester|Reviewer|Security|
 // the refusal), `ok` says the line is there, `cls` says who closes a gap: judgment = only the coordinator can decide it (one refusal that lists every such
 // gap), recoverable = the thread fetches or fills it itself, derived = follows from Role, Kit and Size (the hook states it). `fill` is the thread's own
 // answer to a gap. `strict: false` rows are reported by decide() in their own words, not in missingLines().
+// Same source as ITEM_REF in rule-guard.mjs (the first token on the Item line wins); scripts/item-context.test.mjs pins it.
+export const ITEM_REF = /^[ \t>-]*Item:[^<\n]*?(?:\b(M\d+|new)\b|((?:[\w.-]+\/[\w.-]+)?#\d+))/im
+// The one spelling of an Item token (`m3` -> `M3`, `NEW` -> `new`); rule-guard.mjs holds the same function, scripts/item-context.test.mjs pins it.
+export const normItem = (t) => t.replace(/^m(?=\d)/, 'M').replace(/^new$/i, 'new')
+const itemTok = (p) => { const m = p.match(ITEM_REF); return m ? normItem(m[2] ?? m[1]) : null }
 const line = (re) => (plain) => re.test(plain)
 const sizeCls = (plain) => (small(plain) ? 'recoverable' : 'judgment')
 export const BRIEF_FIELDS = [
-  { key: 'Item', name: 'Item: (M<n> from PLAN.json, or new)', tpl: 'Item: <PLAN.json item M<n> or new>', ok: line(/^[ \t>-]*Item:[^<\n]*?\b(M\d+|new)\b/im), clean: /^[ \t>-]*Item:[ \t]*(M\d+|new)[ \t]*$/im, cls: sizeCls, fill: (p) => `Item: ${p.match(/^[ \t>-]*Item:[^\n]*?\b(M\d+)\b/im)?.[1] ?? 'new'}` },
+  { key: 'Item', name: 'Item: (#n of its issue, M<n> from PLAN.json, or new)', tpl: 'Item: <issue #n, PLAN.json item M<n> or new>', ok: line(ITEM_REF), clean: (p) => /^[ \t>-]*Item:[ \t]*(M\d+|new|(?:[\w.-]+\/[\w.-]+)?#\d+)[ \t]*$/m.test(p.replace(/^([ \t>-]*)item:/gim, '$1Item:')), cls: sizeCls, fill: (p) => `Item: ${itemTok(p) ?? 'new'}` },
   { key: 'Plan', name: 'Plan: (the plan file or card this thread builds)', tpl: 'Plan: <plan file or card it builds>', ok: line(/^[ \t>-]*Plan:[ \t]*[^<\s]/im), cls: sizeCls, fill: () => 'Plan: n/a, size S' },
   { key: 'Acceptance', name: 'Acceptance: (what counts as accepted)', tpl: 'Acceptance: <what counts as accepted>', ok: line(/^[ \t>-]*Acceptance:[ \t]*[^<\s]/im), cls: sizeCls, fill: () => 'Acceptance: propose one from the task, say so in your first checklist line' },
   { key: 'Model', name: 'Model:', tpl: 'Model: <model id of the role\'s Roster row>', ok: line(/^[ \t>-]*Model:[ \t]*[^<\s]/im), cls: () => 'derived', fill: () => 'Model: the model this thread runs on' },
@@ -295,7 +300,7 @@ export const BRIEF_FIELDS = [
   { key: 'Prior art', strict: false, tpl: 'Prior art: <sources named: repo, path, URL, #n> -> copy | adapt | reuse | build, because <why>', ok: (p) => !needsPriorArt(p), cls: (p) => (gateRolePlain(p) ? 'derived' : 'recoverable'), fill: (p) => (gateRolePlain(p) ? 'Prior art: .claude/skills/operator/gate.md and the kit\'s checks -> adapt, because the gate rules exist' : 'Prior art: to find: the repo and docs first, sources named before you build') },
   { key: 'Gate', name: 'Gate: <Reviewer thread> before owner, or `Gate: n/a <why no owner-facing result>` (a builder, designer or animator brief at size M or L)', tpl: 'Gate: <Reviewer thread> before owner (M or L)', applies: needsGate, ok: line(GATE_LINE), cls: () => 'recoverable', fill: () => 'Gate: ask the coordinator (message_coordinator) for the Reviewer thread, then write `Gate: Reviewer · <what> before owner`' },
   { key: 'Sheet', name: 'Sheet: (approved cast sheet, docs/preproduction-workflow.md)', tpl: 'Sheet: <approved cast sheet .md, or `n/a <why no body, face or outfit job>`; Programmer or Animator on a game or story kit>', applies: needsSheet, ok: line(/^[ \t>-]*Sheet:[ \t]*[^<\n]*\.md\b/im), cls: () => 'judgment' },
-  { key: 'Look-Lock', name: 'Look-Lock: (owner card of the look)', tpl: 'Look-Lock: <owner card link of the approved look; not needed with `Sheet: n/a`>', applies: needsSheet, ok: line(/^[ \t>-]*Look-Lock:[ \t]*[^<\n]*(https?:\/\/|card)/im), cls: () => 'judgment' },
+  { key: 'Look-Lock', name: 'Look-Lock: (owner card of the look)', tpl: 'Look-Lock: <owner card link of the approved look (https or #cmsg_...); not needed with `Sheet: n/a`>', applies: needsSheet, ok: line(/^[ \t>-]*Look-Lock:[ \t]*[^<\n]*(https?:\/\/|#cmsg_?[A-Za-z0-9]{6,})/im), cls: () => 'judgment' },
   { key: 'Researcher', name: 'Researcher: (the task asks for research)', tpl: 'Researcher: <subagent and model, or the Researcher thread; research tasks only>', applies: (p) => ASKS_RESEARCH.test(p) && !/\bRole:[ \t]*Researcher\b/i.test(p), ok: line(/^[ \t>-]*Researcher:[ \t]*[^<\s]/im), cls: () => 'recoverable', fill: () => 'Researcher: ask the coordinator for a Researcher thread (message_coordinator) and go on meanwhile' },
   { key: 'Tester', strict: false, tpl: 'Tester: <Tester thread; size L Programmer only>', applies: (p) => /^[ \t>-]*Role:[ \t]*Programmer\b/im.test(p), ok: (p) => !needsTester(p), cls: () => 'judgment' },
 ]
@@ -310,7 +315,7 @@ export function classify(text) {
   const has = (k) => BRIEF_FIELDS.find((f) => f.key === k).ok(plain)
   for (const f of BRIEF_FIELDS) {
     // A line that is there but in the wrong format (`Item: PLAN.json item M29`) is a derived repair, never a gap.
-    if (f.clean && f.ok(plain) && !f.clean.test(plain)) out.derived.push({ key: f.key, tpl: f.tpl, fill: f.fill(plain) })
+    if (f.clean && f.ok(plain) && !f.clean(plain)) out.derived.push({ key: f.key, tpl: f.tpl, fill: f.fill(plain) })
     if (!(f.applies?.(plain) ?? true) || f.ok(plain) || (f.key === 'Acceptance' && has('Done when')) || (f.key === 'Done when' && has('Acceptance'))) continue
     const cls = f.cls(plain)
     out[cls].push({ key: f.key, tpl: f.tpl, fill: f.fill?.(plain) })

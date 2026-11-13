@@ -307,3 +307,25 @@ test('the role stamp comes from a spawn brief however it is wrapped, from the tr
   guard('pre', kept, { transcript_path: t2, tool_name: 'Bash', tool_input: { command: 'ls' } })
   assert.equal(stampOf(kept), 'Programmer', 'a stamp is never changed')
 })
+
+// X2 (#541): a thread learns that its rebrief worked: one line, its role card, and the topic playbook when the relay names a Topic.
+test('X2: a relay that lifts the lock is answered with "correction accepted", the role card and a Topic playbook; a relay that does not lift is not', () => {
+  const t = lockedThread(NO_BEFORE_OWNER)
+  const refused = queued('Role: Programmer · Kit: setup · Size: M\nPlan: docs/plans/x.md')
+  appendFileSync(t.transcript, t.line({ type: 'attachment', attachment: { type: 'queued_command', prompt: refused, origin: PROJECTS } }))
+  assert.doesNotMatch(t.run('pre', { tool_name: 'Bash', tool_input: { command: 'ls' } }).stdout, /correction accepted/, 'Acceptance is still missing: no answer yet')
+  const lifting = queued('Role: Programmer · Kit: setup · Size: M\nPlan: docs/plans/x.md\nAcceptance: the test passes')
+  appendFileSync(t.transcript, t.line({ type: 'attachment', attachment: { type: 'queued_command', prompt: lifting, origin: PROJECTS } }))
+  const out = t.run('pre', { tool_name: 'Bash', tool_input: { command: 'ls' } }).stdout
+  assert.match(out, /correction accepted, lock lifted/)
+  assert.match(out, /Programmer/, 'the role card follows the line')
+  const again = queued('FYI nothing new')
+  appendFileSync(t.transcript, t.line({ type: 'attachment', attachment: { type: 'queued_command', prompt: again, origin: PROJECTS } }))
+  assert.doesNotMatch(t.run('pre', { tool_name: 'Bash', tool_input: { command: 'ls' } }).stdout, /correction accepted/, 'only the relay that lifted gets the answer')
+  const r = lockedThread(`Role: Director · Kit: setup · Size: M\n${BLOCKS}`)
+  const topicRelay = queued('Role: Reviewer · Kit: setup · Size: M\nTopic: Garment')
+  appendFileSync(r.transcript, r.line({ type: 'attachment', attachment: { type: 'queued_command', prompt: topicRelay, origin: PROJECTS } }))
+  const topicOut = r.run('pre', { tool_name: 'Bash', tool_input: { command: 'ls' } }).stdout
+  assert.match(topicOut, /correction accepted, lock lifted/)
+  assert.match(topicOut, /Topic: Garment[\s\S]*checklist/i, 'the topic playbook is in the output')
+})

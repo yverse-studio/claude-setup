@@ -34,7 +34,7 @@ change config/ecc.json and re-run the script.
 - agents/a11y-architect
 - agents/performance-optimizer
 - agents/seo-specialist
-- rules/ecc (common, typescript, vue, nuxt, web)
+- rules/ecc (typescript, vue, nuxt, web)
 
 ## Ponytail
 

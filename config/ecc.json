@@ -34,7 +34,6 @@
     "seo-specialist"
   ],
   "rules": [
-    "common",
     "typescript",
     "vue",
     "nuxt",
@@ -50,17 +49,10 @@
     ]
   },
   "ruleExcludes": [
-    "common/agents.md",
-    "common/testing.md",
-    "common/development-workflow.md",
-    "common/code-review.md",
-    "common/performance.md",
-    "common/hooks.md",
-    "common/patterns.md",
     "typescript/hooks.md",
     "vue/hooks.md",
     "nuxt/hooks.md",
     "web/hooks.md"
   ],
-  "$comment_ruleExcludes": "common/agents.md names agents as ecc:<name>, which only exists with the full plugin. The other common rules contradicted CLAUDE.md (80% coverage, mandatory TDD, PRD docs and gh search before every feature, missing agents, stale model advice) and loaded every session; the */hooks.md files only explain how to wire formatter hooks. Cut in the 2026-10-04 audit; anything still useful lives in CLAUDE.md."
+  "$comment_ruleExcludes": "The common rules pack is not vendored (it contradicted CLAUDE.md and loaded every session); the */hooks.md files only explain how to wire formatter hooks."
 }

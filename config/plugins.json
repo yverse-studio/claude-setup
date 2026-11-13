@@ -8,11 +8,6 @@
   ],
   "global": [
     {
-      "id": "superpowers@claude-plugins-official",
-      "why": "brainstorm, plan, TDD, systematic debugging, subagent-driven development",
-      "tokens": 840
-    },
-    {
       "id": "frontend-design@claude-plugins-official",
       "why": "distinctive UI instead of generic 'AI-looking' pages",
       "tokens": 80
@@ -58,6 +53,11 @@
     }
   ],
   "project": [
+    {
+      "id": "superpowers@claude-plugins-official",
+      "when": "a thread asks for brainstorm, TDD or systematic-debugging skills (cut A3: its 840 always-on tokens, setup-freeze-2026-11)",
+      "tokens": 840
+    },
     {
       "id": "cloudflare@claude-plugins-official",
       "when": "wrangler.toml or wrangler.jsonc",

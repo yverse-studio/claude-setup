@@ -26,7 +26,7 @@ plugins). Always-on token costs were measured with `claude plugin details`; see
 `config/plugins.json`. Notable calls:
 
 - **superpowers** is the most broadly endorsed methodology plugin and the only community one in
-  the official marketplace. It covers TDD and planning, so ECC's `tdd-workflow` is left out.
+  the official marketplace. It covers TDD and planning (per project since setup-freeze-2026-11), so ECC's `tdd-workflow` is left out.
 - **pr-review-toolkit** (2k tokens) overlaps `code-review` + ECC reviewers: left out.
 - **mattpocock-skills** (1.6k tokens, 25 skills) overlaps superpowers: left out; easy to add.
 - **posthog** costs ~30k tokens always-on, so it and the other product plugins (Stripe,
