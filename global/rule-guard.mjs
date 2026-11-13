@@ -411,7 +411,7 @@ export function planIssues(cwd) {
     try {
       const list = JSON.parse(execFileSync(cmd, args, { encoding: 'utf8', timeout: t, killSignal: 'SIGKILL', stdio: ['ignore', 'pipe', 'ignore'] }))
       if (!Array.isArray(list)) continue
-      return { repo, issues: list.filter((i) => !i.pull_request).map((i) => ({ number: i.number, title: String(i.title ?? ''), state: i.state, labels: (i.labels ?? []).map((l) => l.name ?? l), updated: i.updated_at, closed: i.closed_at })) }
+      return { repo, truncated: list.length >= 100, issues: list.filter((i) => !i.pull_request).map((i) => ({ number: i.number, title: String(i.title ?? ''), state: i.state, labels: (i.labels ?? []).map((l) => l.name ?? l), updated: i.updated_at, closed: i.closed_at })) }
     } catch { /* try the next route */ }
   }
   return null
