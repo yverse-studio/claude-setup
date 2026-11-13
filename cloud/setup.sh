@@ -748,6 +748,7 @@ dest=$(printf '%s' "$2" | tr 'A-Z' 'a-z')
 case "$dest" in
   *github.com*|*local_proxy*|*127.0.0.1*) # a cloud session's origin is a local proxy to GitHub
     tmp=$(mktemp)
+    export GIT_NO_REPLACE_OBJECTS=1 # a replace ref changes what git log shows, not what the push sends
     while read -r lref lsha rref rsha; do
       case "$lsha" in ""|0000000000000000000000000000000000000000) continue ;; esac
       # A ref that peels to no commit (a tag on a tree) lists nothing in git log, so it blocks instead of passing.
@@ -763,6 +764,7 @@ $refs
 EOF
     verdict=$(tr '\0' '\n' < "$tmp" | node "${CLAUDE_SETUP_HOME:-$HOME}/.claude/claude-setup/rule-guard.mjs" neverpush 2>&1)
     rm -f "$tmp"
+    unset GIT_NO_REPLACE_OBJECTS
     if [ "$verdict" != "neverpush: ok" ]; then echo "pre-push: blocked, ${verdict:-the neverpush check did not run}"; exit 1; fi ;;
 esac
 remote_url=$(git remote get-url origin 2>/dev/null)
