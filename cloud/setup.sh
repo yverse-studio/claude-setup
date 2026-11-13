@@ -2342,10 +2342,10 @@ export async function briefCheck(prompt, cwd, model = null, any = false) {
   // X1a (#539): the item's lines count as part of the brief (one fetch, shared with itemContext), so a field it holds is no gap.
   const item = fetchItem(brief, cwd)
   // The item can only fill a gap the brief has: applies, size and every stamp word come from the brief alone; the item's lines only decide whether a field of the brief's own gap list is there.
-  const itemText = item && !item.error ? String(item.body).slice(0, ITEM_CAP).replace(/^brief:[ \t]*/gim, '').split('\n').filter((l) => !/Role|Kit|Size|Model|Item/i.test(l)).join('\n') : ''
+  const itemText = item && !item.error ? String(item.body).slice(0, ITEM_CAP).replace(/^brief:[ \t]*/gim, '').split('\n').filter((l) => !/^[ \t>*_`-]*(Role|Kit|Size|Model|Item)\b/i.test(l)).join('\n') : ''
   const own = guard.classify(brief)
-  const merged = `${brief}\n${itemText}`.replace(/[*_`]/g, '')
-  const filled = (k) => guard.BRIEF_FIELDS.find((f) => f.key === k)?.ok(merged) || (k === 'Acceptance' && /\bDone when:[ \t]*\n?[ \t]*[^<\s]/i.test(merged)) || (k === 'Done when' && /^[ \t>-]*Acceptance:[ \t]*[^<\s]/im.test(merged))
+  const itemPlain = itemText.replace(/[*_`]/g, '') // the item is tested alone: a field cannot span the join with the brief's last line
+  const filled = (k) => guard.BRIEF_FIELDS.find((f) => f.key === k)?.ok(itemPlain) || (k === 'Acceptance' && /\bDone when:[ \t]*\n?[ \t]*[^<\s]/i.test(itemPlain)) || (k === 'Done when' && /^[ \t>-]*Acceptance:[ \t]*[^<\s]/im.test(itemPlain))
   const sorted = itemText ? { derived: own.derived, judgment: own.judgment.filter((f) => !filled(f.key)), recoverable: own.recoverable.filter((f) => !filled(f.key)) } : own
   found.push(...sorted.judgment.map((f) => `${f.key} is missing or still a <placeholder>`))
   const wrong = model && guard.wrongModel(brief, model, teams)

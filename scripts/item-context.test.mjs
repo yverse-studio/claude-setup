@@ -234,3 +234,13 @@ test('X1a: an item can only take locks away: stamp words in it are ignored and i
     assert.match(run(env3, storyBrief('#7'), `item-t${process.pid}-${n++}`), /Brief check[^\n]*Acceptance/, `${sneaky} does not relax the size`)
   }
 })
+
+test('X1a: a field cannot span the join of the brief and the item: a bare `Done when:` at the end of the brief stays a gap', (t) => {
+  const env = withRoster(setup(t))
+  stub(env, { ...issue, body: 'Some text without fields' })
+  const bare = `<wake reason="spawn"><relay>\nRole: Programmer · Kit: game · Size: M · Model: sonnet\nItem: #7\nDone when:</relay></wake>`
+  assert.match(run(env, bare, `item-u${process.pid}-${n++}`), /Brief check[^\n]*Acceptance/)
+  const env2 = withRoster(setup(t))
+  stub(env2, { ...issue, body: 'Acceptance: the item list renders.\nPlan: p.md\nSheet: s.md\nLook-Lock: https://x.y/z' })
+  assert.doesNotMatch(run(env2, storyBrief('#7'), `item-v${process.pid}-${n++}`), /Brief check/, 'a legitimate line that contains the word item still fills')
+})
