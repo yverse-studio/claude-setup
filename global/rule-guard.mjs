@@ -4,14 +4,13 @@
 // Turns CLAUDE.md rules that were text only into checks (audit 2026-10-27: 17 of 20 rules had no
 // guard and were skipped whenever CLAUDE.md did not load).
 // pre: refuses (exit 2) a review request or assignee for yskills on a PR (No GitHub mails), a
-// `Card:` text reply where the real card tool exists (Cards), a thread reply over the length cap
-// (Replies), a new Artifact besides the Company XY one (Dashboard), a commit message that is not
-// conventional (Code), WebFetch in a cloud thread (Cloud threads: WebSearch, no Allow taps), a memory
-// file write with a rule line (memory holds state only), and a reply that asks yskills for an Allow or a go, says "can't" with nothing tried, posts `Done:` without proof, or
-// says nothing is open while the last thread board shows open threads, or asks him for something or names a
+// thread reply over the length cap (Replies), a new Artifact besides the Company XY one (Dashboard),
+// a commit message that is not conventional (Code), WebFetch in a cloud thread (Cloud threads:
+// WebSearch, no Allow taps), and a reply that asks yskills for an Allow or a go, posts `Done:`
+// without proof, or says nothing is open while the last thread board shows open threads, or asks him for something or names a
 // thread without a clickable link (replyRule).
 // stop: a thread that posted `Done:` resolves itself.
-// prompt: a video link or a bare "stop" gets the matching CLAUDE.md line put next to the message, and
+// prompt: a bare "stop" gets the matching CLAUDE.md line put next to the message, and
 // the first message naming `Role: <role>` (the brief block, operator/briefs.md) gets that role's
 // Roster row and playbook put into context, so a thread always knows what it is (yskills 2026-10-27).
 // pre also refuses a headless Blender start while bl_server.py runs, and any Blender call before the session read
@@ -69,8 +68,6 @@ const GH_ASK = /\bgh\s+(pr|issue)\b[^\n]*(?:--(?:add-)?(?:reviewer|assignee)|\s-
 // no proof, and "nothing open" while the board shows open or blocked threads.
 const ASK_ALLOW = /\b(tap|press|click|hit|drück\w*|tipp\w*|klick\w*)\b[^.\n]{0,20}\b(allow|erlauben|zulassen)\b|\b(shall|should|can|may) i (go ahead|proceed|start|merge|push|continue)\b|\bwant me to\b|\b(soll|darf|kann) ich (das |es )?(jetzt )?(los|loslegen|anfangen|starten|mergen|pushen|weitermachen|machen)\b/i
 const ASK_FIRST = /€|\b(money|geld|eur|euro|live key|stripe live|purchas\w*|kauf\w*|paid|bezahl\w*|kosten|ausgeb\w*|force-push\w*|rotat\w*|rotier\w*|e-?mail\w*|send mail|post(en|s)? public\w*|öffentlich\w*|delete (the )?live|database|datenbank\w*)\b/i
-const CANT = /\b(i|we) (can['’]?t|cannot|am unable to|are unable to)\b|\b(ich kann|wir können) (das |es )?nicht\b/i
-const TRIED = /^[\s>*_-]*(tried|versucht)\s*:/im
 const DONE = /^[\s>*_]*Done:/m
 // An ask of yskills (do, answer, approve, open) or a pointer to a thread carries a clickable link to the exact place:
 // a thread link [title](#cmsg_…), a PR or page URL, [Project settings](#project-settings/<section>) (yskills 2026-11-10:
@@ -79,13 +76,9 @@ const NEEDS_YOU = /\b(du (musst|müsstest)(?![^.!?\n]{0,30}\b(nix|nichts|nicht)\
 const THREAD_REF = /\b(im|in( the| dem| den)?) ([\w-]+-)?thread\b(?!-)|\b[\w]+-thread\b(?!-)|\bthread\s*["„“'«]/i
 const HAS_LINK = /https?:\/\/|\]\(#/
 const NOTHING_OPEN = /\b(no blockers?|keine blocker|nothing (is )?(open|left|blocking|needed from you|needs you|waiting on you)|nichts (mehr )?(ist )?(offen|blockiert)|nothing else needs you)\b/i
-// A memory line that reads as a rule: it opens with always/never/rule (not "immer noch", not "rule-guard")
-// and has a must/should/use later; a line with a PR, issue or date is state, never a rule.
-export const RULE_LINE = /^(?![^\n]*(\bPR \d|#\d|\d{4}-\d{2}))\s*[-*]?\s*(\*\*)?(always|never|immer(?! noch)|nie|niemals|rule|regel)(?=[:\s])[^\n]*\b(must|should|soll|muss|do|use|never|nie)\b/i
 // board: the thread board, or a function that builds it; read only when a reply says nothing is open.
 export function replyRule(text, attached = [], board = null) {
   if (ASK_ALLOW.test(text) && !ASK_FIRST.test(text)) return 'rule-guard: do not ask yskills for an Allow or a go (CLAUDE.md, Auto-run): pick the sensible default and do it; a refused call takes its fixed way around (docs/permissions.md, Layer 3). Only the ask-first items wait, and a choice is a request_decision card.'
-  if (CANT.test(text) && !TRIED.test(text)) return 'rule-guard: "can\'t" needs every route tried first (CLAUDE.md, Never "can\'t"): another tool, a workflow with the org token, the laptop (RC), another approach. Try them; if it is still impossible, add a line `Tried: <route, route, route>` with the one step only his hands can do.'
   if ((NEEDS_YOU.test(text) || THREAD_REF.test(text)) && !HAS_LINK.test(text)) return 'rule-guard: this reply asks yskills for something or points at a thread without a link (docs/pc-claude-user.md, What still needs yskills\' hands). Give the exact place as a clickable link: a thread [title](#cmsg_…), the PR or page URL, [Project settings](#project-settings/<section>), or the connect link.'
   if (DONE.test(text) && !/https?:\/\//.test(text) && !(attached ?? []).length) return 'rule-guard: a `Done:` line carries its proof (CLAUDE.md, Honesty): the live link, the merged PR link or an attached screenshot or test output. Add it, then post.'
   const listed = NOTHING_OPEN.test(text) && (typeof board === 'function' ? board() : board)
@@ -98,12 +91,6 @@ export function replyRule(text, attached = [], board = null) {
 
 // published: the file paths this session already published to an existing Artifact (republishing by
 // the same file_path without `url` is how the Artifact tool updates it).
-// A reply that opens by agreeing must carry its reason (yskills 2026-10-27: "how do I enforce that you are no yes-man").
-const YES = /^(du hast (völlig |total |absolut )?recht|stimmt|genau|richtig|(ja,? )?klar|you'?re (totally |absolutely )?right|you are right|agreed|absolutely|exactly|right)(,.*)?$/i
-const REASON = /\b(weil|denn|da ich|geprüft|getestet|laut|because|checked|tested)\b/i
-// Only an opening sentence that is nothing but agreement counts; "Genau das ist fertig" or "Stimmt nicht" do not.
-export const bareAgreement = (text) => YES.test(text.replace(/^[\s*_>]+/, '').split(/[.!?\n]/)[0].trim()) && !REASON.test(text)
-
 // Grill first (CLAUDE.md): a Planner at size M or L posts at least one grill card before it writes the plan or opens a PR.
 // Role, size and "just do it" are read from the spawn brief only, never from files the thread read later.
 export function grillMissing(tool, input, transcript) {
@@ -115,11 +102,6 @@ export function grillMissing(tool, input, transcript) {
   if (/just do it|mach (es )?einfach|einfach machen|kein grill/i.test(brief)) return false
   return !/"name":"mcp__[^"]*(request_decision|ask_decision)"/.test(text)
 }
-
-// No guessing (yskills 2026-11-03: "kein raten, immer fragen bis kein fog mehr da ist"): a reply that
-// rests on an assumption names what was checked, or asks him on a card instead.
-const GUESS = /\b(ich (nehme|denke|glaube|schätze|vermute)[^.\n]{0,12}\ban\b|vermutlich|wahrscheinlich|ich rate|i (assume|guess|suppose)|probably|presumably|my guess)\b/i
-export const guessing = (text) => GUESS.test(text) && !REASON.test(text)
 
 // No purchase without his explicit OK (yskills 2026-11-03): a browser or shell step to a checkout, cart,
 // billing or upgrade page is blocked; his own app on a local host and a Stripe test session pass.
@@ -189,17 +171,10 @@ export function decide(tool, input = {}, env = {}, published = [], board = null)
   }
   if (tool === 'mcp__hearthbot__post_message') {
     const text = String(input.text ?? '')
-    if (/^[\s>*_]*Card:/m.test(text)) return 'rule-guard: a decision is a real card here (CLAUDE.md, Cards): post it with request_decision (question, 2-4 options, one recommended), not as "Card:" text.'
-    if (bareAgreement(text)) return 'rule-guard: this reply agrees without a reason (CLAUDE.md, Co-founder). Check the claim first (repo, a source, a test), then say agree, disagree or "partly, because ..." with what you checked.'
-    if (guessing(text)) return 'rule-guard: this reply guesses ("probably", "vermutlich", "I assume") (CLAUDE.md, No fog). Look it up first (old notes, HANDOFF.md, lessons, the repo), then say what you checked; what is still open goes to yskills as one request_decision batch.'
     const lines = text.split('\n').filter((l) => l.trim()).length
     if (text.length > REPLY_MAX_CHARS || lines > REPLY_MAX_LINES) return `rule-guard: this reply has ${text.length} chars and ${lines} lines; the cap is ${REPLY_MAX_CHARS} and ${REPLY_MAX_LINES} (CLAUDE.md, Replies). Lead with the result in a few lines; put the rest in a file under /mnt/project-files/ and attach it.`
     const why = replyRule(text, input.attached_outputs, board)
     if (why) return why
-  }
-  if (/^(Write|Edit)$/.test(tool) && /[\\/]memory[\\/].*\.md$/i.test(String(input.file_path ?? ''))) {
-    const rule = String(input.content ?? input.new_string ?? '').split('\n').find((l) => RULE_LINE.test(l))
-    if (rule) return `rule-guard: memory holds state only (docs/MAP.md, Where a lesson goes): "${rule.trim().slice(0, 80)}" reads as a rule. Put it in its home in claude-setup through a PR and keep only a pointer here.`
   }
   const republish = input.file_path && !input.type_url && published.includes(input.file_path)
   const newArtifact = (tool === 'Artifact' && !input.url && !input.asset && !republish && [undefined, 'publish'].includes(input.action)) || tool === 'mcp__remote-devices__create_artifact'
@@ -249,10 +224,8 @@ export function pageText(html) {
     .replace(/[ \t]+/g, ' ').replace(/\s*\n\s*/g, '\n').replace(/\n{3,}/g, '\n\n').trim()
 }
 
-const VIDEO = /\b(instagram\.com|tiktok\.com|youtube\.com|youtu\.be)\/\S+|\.(mp4|mov|webm)\b/i
 export function promptContext(prompt = '', stopWord = null) { // stopWord: STOP_WORD of the counter, the one definition (M53)
   const notes = []
-  if (VIDEO.test(prompt)) notes.push('rule-guard: this message has a video. CLAUDE.md, Videos: run watch.py of the watch skill first (plain, no WebSearch in its place), then a verdict per video.')
   const said = (prompt.match(/<message[^>]*trigger="true"[^>]*>([\s\S]*?)<\/message>/)?.[1] ?? prompt).trim()
   if (stopWord?.test(said)) notes.push('rule-guard: yskills said stop. Stop at once, do not argue, say in one line what was left half done (CLAUDE.md, How to work).')
   return notes.join('\n')

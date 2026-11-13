@@ -205,7 +205,7 @@ settings.hooks ??= {}
 const guard = `node "${join(CLAUDE_DIR, 'claude-setup', 'context-guard.mjs')}"`
 settings.hooks.PostToolUse = (settings.hooks.PostToolUse ?? []).filter((h) => !JSON.stringify(h).includes('context-guard.mjs'))
 settings.hooks.PostToolUse.push({ matcher: '*', hooks: [{ type: 'command', command: guard, timeout: 5 }] })
-// Compact guard (global/compact-guard.mjs): PreCompact, tells the compaction summary what to keep and saves a state note.
+// Compact guard (global/compact-guard.mjs): PreCompact, tells the compaction summary what to keep.
 settings.hooks.PreCompact = (settings.hooks.PreCompact ?? []).filter((h) => !JSON.stringify(h).includes('compact-guard.mjs'))
 settings.hooks.PreCompact.push({ hooks: [{ type: 'command', command: `node "${join(CLAUDE_DIR, 'claude-setup', 'compact-guard.mjs')}"`, timeout: 10 }] })
 // Attempt guard (global/attempt-guard.mjs): stops a loop of failing runs; three entries, replaced on every install.
@@ -219,7 +219,7 @@ const team = (mode) => ({ type: 'command', command: `node "${join(CLAUDE_DIR, 'c
 const teamHooks = [['SessionStart', 'startup|clear|compact', 'start'], ['PreToolUse', 'Agent|Task|mcp__.*start_thread.*|mcp__.*create_session', 'pre']]
 for (const event of new Set(teamHooks.map(([e]) => e))) settings.hooks[event] = (settings.hooks[event] ?? []).filter((h) => !/team-(brief|guard)\.mjs/.test(JSON.stringify(h)))
 for (const [event, matcher, mode] of teamHooks) settings.hooks[event].push({ matcher, hooks: [team(mode)] })
-// Rule guard (global/rule-guard.mjs): CLAUDE.md rules that were text only (no PR mails, real cards, short replies, one Artifact, conventional commits, no WebFetch in the cloud, video and stop notes, the repeats of docs/research/2026-10-27-repeats.md); one entry each, replaced on every install.
+// Rule guard (global/rule-guard.mjs): CLAUDE.md rules that were text only (no PR mails, short replies, one Artifact, conventional commits, no WebFetch in the cloud, stop notes, the repeats of docs/research/2026-10-27-repeats.md); one entry each, replaced on every install.
 const rule = (mode) => ({ type: 'command', command: `node "${join(CLAUDE_DIR, 'claude-setup', 'rule-guard.mjs')}" ${mode}`, timeout: 5 })
 for (const [event, matcher, mode] of [['PreToolUse', 'Bash|PowerShell|Write|Edit|Artifact|WebFetch|mcp__github__.*|mcp__hearthbot__post_message|mcp__remote-devices__create_artifact|mcp__Blender__.*|mcp__.*Claude_Browser__.*|mcp__.*(navigate|browser_batch|tabs_create.*|preview_start)|propose_skills|mcp__.*propose_skills', 'pre'], ['UserPromptSubmit', '', 'prompt'], ['Stop', '', 'stop']]) {
   settings.hooks[event] = (settings.hooks[event] ?? []).filter((h) => !JSON.stringify(h).includes('rule-guard.mjs'))

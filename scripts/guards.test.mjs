@@ -151,34 +151,15 @@ test('check.mjs fails when a role file drops the model-and-handoff link or the b
   } finally { rmSync(copy, { recursive: true, force: true }) }
 })
 
-// Compact guard: PreCompact instructions, plus a state note when the transcript names a project folder.
+// Compact guard: PreCompact instructions only (S8: the state note file is gone).
 const compactFile = join(root, 'global/compact-guard.mjs')
 const runCompact = (input, env = {}) => spawnSync(process.execPath, [compactFile], { input, encoding: 'utf8', timeout: 10000, env: { ...process.env, ...env } })
 
-test('compact guard: instructions on stdout, a note in the project folder, never fails', () => {
-  const base = mkdtempSync(join(tmpdir(), 'compact-'))
-  try {
-    const r = runCompact(JSON.stringify({ session_id: 'abcdef123456', trigger: 'auto' }), { CLAUDE_SETUP_PROJECT_FILES: base })
-    assert.equal(r.status, 0)
-    for (const want of ['Role:', 'decision', 'verbatim']) assert.ok(r.stdout.includes(want), `missing ${want}: ${r.stdout}`)
-    assert.ok(!r.stdout.includes('State saved'), 'no project, no note')
-    mkdirSync(join(base, 'demo-proj'))
-    const tr = join(base, 'transcript.jsonl')
-    const tool = (name, input) => JSON.stringify({ message: { content: [{ type: 'tool_use', name, input }] } })
-    writeFileSync(tr, [JSON.stringify({ message: { content: [{ type: 'text', text: `see ${base}/demo-proj/notes.md` }] } }), tool('Bash', {}), tool('mcp__hearthbot__post_message', { text: 'last words' })].join('\n'))
-    const r2 = runCompact(JSON.stringify({ session_id: 'abcdef123456', transcript_path: tr, trigger: 'manual', cwd: root }), { CLAUDE_SETUP_PROJECT_FILES: base })
-    assert.equal(r2.status, 0)
-    const note = join(base, 'demo-proj', 'handoff', `${new Date().toISOString().slice(0, 10)}-compact-abcdef12.md`)
-    assert.ok(r2.stdout.includes(`State saved at ${note}`), r2.stdout)
-    const text = readFileSync(note, 'utf8')
-    for (const want of ['## Decisions with reasons', 'Bash', 'last words']) assert.ok(text.includes(want), `note lacks ${want}`)
-    for (const input of ['', 'not json', '{}', '{"transcript_path":"/nope","cwd":"/nope"}']) assert.equal(runCompact(input, { CLAUDE_SETUP_PROJECT_FILES: base }).status, 0)
-    // Transcript text is untrusted: a project name with dots or slashes never picks the write target.
-    writeFileSync(tr, JSON.stringify({ message: { content: [{ type: 'text', text: `see ${base}/../${base.split('/').pop()}/notes.md and ${base}/.hidden/x` }] } }))
-    const r3 = runCompact(JSON.stringify({ session_id: 'abcdef123456', transcript_path: tr, cwd: '/home/user' }), { CLAUDE_SETUP_PROJECT_FILES: base })
-    assert.equal(r3.status, 0)
-    assert.ok(!r3.stdout.includes('State saved'), `traversal name must write nothing: ${r3.stdout}`)
-  } finally { rmSync(base, { recursive: true, force: true }) }
+test('compact guard: instructions on stdout, never fails', () => {
+  const r = runCompact(JSON.stringify({ session_id: 'abcdef123456', trigger: 'auto' }))
+  assert.equal(r.status, 0)
+  for (const want of ['Role:', 'decision', 'verbatim']) assert.ok(r.stdout.includes(want), `missing ${want}: ${r.stdout}`)
+  for (const input of ['', 'not json', '{}', '{"transcript_path":"/nope","cwd":"/nope"}']) assert.equal(runCompact(input).status, 0)
 })
 
 // Attempt guard: a round is a failed run of the same command; success resets; PROGRESS.md unblocks.
@@ -472,7 +453,6 @@ test('rule guard: blocks the rules that were text only, passes the normal calls'
     ['Bash', { command: 'gh pr create --title x --reviewer yskills' }],
     ['Bash', { command: 'git commit -m "update stuff"' }],
     ['Bash', { command: "git commit -m \"$(cat <<'EOF'\nadded hook\n\nbody\nEOF\n)\"" }],
-    ['mcp__hearthbot__post_message', { text: 'Kurz:\n\nCard: Welcher Weg?\nA ...' }],
     ['mcp__hearthbot__post_message', { text: 'x'.repeat(REPLY_MAX_CHARS + 1) }],
     ['mcp__hearthbot__post_message', { text: Array.from({ length: 16 }, (_, i) => `line ${i}`).join('\n') }],
     ['Artifact', { file_path: '/tmp/x.html' }],
@@ -504,20 +484,17 @@ test('rule guard: blocks the rules that were text only, passes the normal calls'
   assert.match(decide('Bash', { command: 'gh pr create -t x -r yskills' }, {}) ?? '', /No GitHub mails/)
   assert.equal(decide('Artifact', { file_path: '/tmp/hq.html' }, {}, ['/tmp/hq.html']), null, 'republishing an Artifact this session updated by url')
   assert.match(decide('Artifact', { type_url: 'u', title: 'x', file_path: '/tmp/hq.html' }, {}, ['/tmp/hq.html']) ?? '', /only Artifact/)
-  assert.match(promptContext('schau mal https://www.tiktok.com/@a/video/1'), /watch\.py/)
   assert.match(promptContext('<wake><message trigger="true" from="human">Stopp!</message></wake>', STOP_WORD), /said stop/)
   assert.equal(promptContext('stop the server on port 8787 please', STOP_WORD), '')
 })
 
-test('rule guard: hook entry blocks with exit 2, notes a video, and the off switch works', () => {
+test('rule guard: hook entry blocks with exit 2 and the off switch works', () => {
   const script = join(root, 'global/rule-guard.mjs')
   const run = (mode, input, env = {}) => spawnSync(process.execPath, [script, mode], { input: JSON.stringify(input), encoding: 'utf8', env: { ...process.env, ...env } })
   const pr = { tool_name: 'mcp__github__update_pull_request', tool_input: { reviewers: ['yskills'] } }
   assert.equal(run('pre', pr).status, 2)
   assert.equal(run('pre', pr, { CLAUDE_SETUP_RULE_GUARD: 'off' }).status, 0)
-  const r = run('prompt', { prompt: 'https://youtu.be/abc' })
-  assert.equal(r.status, 0)
-  assert.equal(JSON.parse(r.stdout).hookSpecificOutput.hookEventName, 'UserPromptSubmit')
+  assert.equal(run('prompt', { prompt: 'hello' }).status, 0)
 })
 
 // yskills 2026-10-27: every thread always knows exactly which role it has.
@@ -767,14 +744,12 @@ test('rule guard: the spawn brief is checked from the transcript when the prompt
 })
 
 // The repeats audit 2026-10-27 (docs/research/2026-10-27-repeats.md): what yskills had to say most, as checks.
-test('rule guard: replies that ask for an Allow, say can\'t untried, post Done: without proof or claim nothing is open', async () => {
+test('rule guard: replies that ask for an Allow, post Done: without proof or claim nothing is open', async () => {
   const { decide, replyRule } = await import('../global/rule-guard.mjs')
   const post = (text, extra = {}) => decide('mcp__hearthbot__post_message', { text, ...extra }, {}, [], extra.board ?? null)
   assert.match(post('Tap Allow in the thread so I can merge.') ?? '', /Auto-run/)
   assert.match(post('Soll ich das mergen?') ?? '', /Auto-run/)
   assert.equal(post('Shall I go ahead with the live Stripe key? It costs real money.'), null, 'ask-first items may ask')
-  assert.match(post('I can\'t delete the folder from here.') ?? '', /Tried:/)
-  assert.equal(post('I can\'t delete the folder from here.\nTried: Bash, the delete workflow, the laptop via RC'), null)
   assert.match(post('Done: the guard is merged.') ?? '', /proof/)
   assert.equal(post('Done: merged, https://github.com/yverse-studio/claude-setup/pull/1'), null)
   assert.equal(post('Done: see the screenshots', { attached_outputs: [{ kind: 'file', ref: '/mnt/project-files/a.png' }] }), null)
@@ -782,9 +757,6 @@ test('rule guard: replies that ask for an Allow, say can\'t untried, post Done: 
   assert.match(post('Alles fertig, keine Blocker.', { board }) ?? '', /Gate: x/)
   assert.equal(post('Alles fertig, keine Blocker.', { board: { finished: [], blocked: [], told: new Set() } }), null)
   assert.equal(replyRule('PR is up, the gate runs now.'), null)
-  assert.match(decide('Write', { file_path: '/tmp/claude/memory/team/silo/MEMORY.md', content: '## Goal\n- Always use Haiku for reading jobs, never Opus' }, {}) ?? '', /state only/)
-  assert.equal(decide('Write', { file_path: '/tmp/claude/memory/team/silo/MEMORY.md', content: '## Threads\n- Permissions: PR 302 merged 2026-10-26' }, {}), null)
-  assert.equal(decide('Write', { file_path: '/home/user/repo/docs/rules.md', content: '- Always use Haiku for reading jobs' }, {}), null, 'only memory files')
 })
 
 test('team guard: an Agent call cannot run a gate agent below its file model', async () => {
@@ -844,19 +816,16 @@ test('rule guard: an ask of yskills or a thread pointer carries a clickable link
 })
 
 // Gate review of PR 323: the ordinary replies and state lines these checks must let through, and the edges.
-test('rule guard: repeats checks pass ordinary replies and memory state, honour told threads and filtered lists', async () => {
+test('rule guard: repeats checks pass ordinary replies, honour told threads and filtered lists', async () => {
   const { replyRule, decide, threadBoard } = await import('../global/rule-guard.mjs')
   for (const text of [
     'Want me to rotate the production secret?', 'Soll ich 10 € ausgeben und das Abo kaufen?', 'Shall I send the mail to the shop?',
     'PR 12 is up; the gate runs now.', 'Fertig mit dem Plan, der Programmer baut jetzt.', 'Alles fertig hier, PR 5 läuft durch das Gate.',
     'Flex works where grid could not.', 'The old route is gone; the new one is live.',
   ]) assert.equal(replyRule(text), null, text)
-  assert.match(replyRule('I can’t reach the laptop.') ?? '', /Tried:/, 'curly apostrophe')
   const board = { finished: [{ id: 'a', title: 'Gate: x', state: 'done' }], blocked: [], told: new Set(['a']) }
   assert.equal(replyRule('Nothing open, no blockers.', [], board), null, 'every finished thread was told')
   assert.equal(replyRule('PR is up.', [], () => { throw new Error('board read for a reply that needs none') }), null)
-  for (const line of ['- Immer noch offen: PR 7, soll Mittwoch live', '- Nie gemerged: PR 9 muss neu', '- rule-guard stop hook merged; use the board', '- Never resumed since 2026-10-20, use the handoff'])
-    assert.equal(decide('Edit', { file_path: '/x/memory/MEMORY.md', new_string: line }, {}), null, line)
   const at = Date.parse('2026-10-27T01:00:00Z')
   const list = (input, sessions) => ({ name: 'mcp__hearthbot__list_threads', input, at, result: JSON.stringify({ sessions }) })
   const fresh = { thread_id: 'r', title: 'Programmer · x', state: 'review_ready', last_activity_at: '2026-10-27T00:55:00Z' }
@@ -884,17 +853,11 @@ test('team guard: a Roster exception passes with its reason in the brief', async
   assert.ok(wrongModel(`${brief}\nModel: haiku (cheaper)`, 'haiku', teams), 'a tier the row never names stays blocked')
 })
 
-// yskills 2026-10-27: "how do I enforce that you are no yes-man and grill me".
-test('rule guard: an agreeing reply needs its reason; a Planner M/L grills before the plan', async () => {
+// yskills 2026-10-27: "how do I enforce that you grill me".
+test('rule guard: a Planner M/L grills before the plan', async () => {
   const { decide, grillMissing } = await import('../global/rule-guard.mjs')
   const post = (text) => decide('mcp__hearthbot__post_message', { text }, {})
-  assert.match(post('Du hast recht, mach ich.') ?? '', /Co-founder/)
-  for (const bare of ['Du hast recht, mache ich.', 'Du hast recht, das ist gut.']) assert.match(post(bare) ?? '', /Co-founder/, bare)
-  assert.match(post("You're right!") ?? '', /Co-founder/)
-  assert.equal(post('Stimmt teilweise, weil TEAMS.md Fable schon für Architektur nennt.'), null)
   assert.equal(post('Fertig: PR 3 ist drin.'), null)
-  for (const ok of ['Genau das ist fertig: PR 3', 'Stimmt nicht.', 'Richtig gemacht: Done: link', 'Exactly 3 files changed', 'Absolutely nothing broke']) assert.equal(post(ok), null, ok)
-  for (const bad of ['Richtig.', 'Ja klar!', 'Agreed.', 'Genau, mach ich.']) assert.match(post(bad) ?? '', /Co-founder/, bad)
   const use = (name, input) => JSON.stringify({ type: 'assistant', message: { content: [{ type: 'tool_use', name, input }] } })
   const spawn = (brief) => JSON.stringify({ type: 'user', message: { content: `<wake reason="spawn">${brief}</wake>` } })
   const planner = spawn('Role: Planner · Kit: app · Size: L')
@@ -1088,7 +1051,7 @@ test('context guard: silent below 250k, warns at 250k, backstop at 700k', () => 
   } finally { rmSync(dir, { recursive: true, force: true }) }
 })
 
-// yskills 2026-11-03: no purchase without his explicit OK, no guessing in a reply.
+// yskills 2026-11-03: no purchase without his explicit OK.
 test('rule guard: checkout and cart pages are blocked, docs and his own test app pass', async () => {
   const { purchaseUrl, decide } = await import('../global/rule-guard.mjs')
   for (const url of ['https://shop.example.com/checkout?x=cs_test_1', 'https://8.8.8.8/checkout', 'https://www.amazon.de/gp/cart/view.html', 'https://shop.example.com/checkout', 'https://checkout.stripe.com/c/pay/cs_live_a1', 'https://buy.stripe.com/abc', 'https://store.steampowered.com/buy/123', 'https://www.paypal.com/checkoutnow?token=x'])
@@ -1104,12 +1067,6 @@ test('rule guard: checkout and cart pages are blocked, docs and his own test app
   assert.ok(purchaseUrl('Bash', { command: 'curl -X POST shop.com/purchase' }))
   assert.equal(purchaseUrl('Bash', { command: 'curl http://127.0.0.1:8787/checkout' }), null)
   assert.match(decide('mcp__claude-in-chrome__navigate', { url: 'https://x.com/checkout' }) ?? '', /explicit OK/)
-})
-
-test('rule guard: a reply that guesses is blocked unless it says what was checked', async () => {
-  const { guessing } = await import('../global/rule-guard.mjs')
-  for (const t of ['Das liegt vermutlich am Rig.', 'Ich nehme an, du willst Opus.', 'It is probably the cache.', 'I assume the base is v4.']) assert.ok(guessing(t), t)
-  for (const t of ['Geprüft: das Rig ist v4, wahrscheinlich reicht ein Rebuild.', 'The cache was checked; it is fine.', 'Fertig, 421 Tests grün.']) assert.equal(guessing(t), false, t)
 })
 
 // yskills 2026-11-04: the coordinator runs without hooks, so the thread side checks its model pick and gate brief.

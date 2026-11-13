@@ -81,7 +81,7 @@ effort** medium, and `templates/project-instructions.md` pasted into Project ins
   that card (links, never forwards). Without a card tool (Claude Code): `AskUserQuestion`
   (multi-select when several answers fit) plus the fixed text card (`Card: <question>`, then one line
   per option `A label: consequence`, the recommended one first, starred, with its reason); where
-  `request_decision` exists, `rule-guard` blocks a `Card:` text reply. The card's thread goes on with
+  `request_decision` exists, use it, not `Card:` text. The card's thread goes on with
   the recommendation; a card that waives a gate (`gate-rounds.mjs waive`) puts the option that frees
   the gate FIRST whatever the recommendation, because the hook reads only a tap on option 1 (`gate.md`,
   Rounds); the tap comes back as a wake (or relayed by the coordinator), and a tap against
