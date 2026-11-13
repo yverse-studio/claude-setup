@@ -351,8 +351,10 @@ async function roleContext(prompt, cwd, session) {
 // `M<n>`, `new` or `#n` / `owner/repo#n`. team-guard.mjs holds the same source; scripts/item-context.test.mjs pins that they are equal.
 export const ITEM_REF = /^[ \t>-]*Item:[^<\n]*?(?:\b(M\d+|new)\b|((?:[\w.-]+\/[\w.-]+)?#\d+))/im
 const ITEM_CAP = 3000
-export const itemToken = (brief) => { const m = String(brief).replace(/[*`]/g, '').match(ITEM_REF); return m ? (m[2] ?? m[1]).replace(/^m(?=\d)/, 'M') : null }
-export const itemRef = (brief) => { const t = itemToken(brief); return t && t.toLowerCase() !== 'new' ? t : null }
+// Same function as normItem in team-guard.mjs (`m3` -> `M3`, `NEW` -> `new`); the test pins both.
+export const normItem = (t) => t.replace(/^m(?=\d)/, 'M').replace(/^new$/i, 'new')
+export const itemToken = (brief) => { const m = String(brief).replace(/[*`]/g, '').match(ITEM_REF); return m ? normItem(m[2] ?? m[1]) : null }
+export const itemRef = (brief) => { const t = itemToken(brief); return t && t !== 'new' ? t : null }
 // One shared deadline of 2 s for every route (the prompt hook's own limit is 5 s): each step gets what is left, at most `cap`.
 let deadline = 0
 const left = (cap) => Math.min(cap, deadline - Date.now())

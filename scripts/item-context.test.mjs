@@ -97,8 +97,7 @@ test('the brief fields and the receipt accept #n: no gap, no repair to `new`, re
   assert.ok(!missingLines('Item: #7').some((m) => m.startsWith('Item')))
   assert.ok(!missingLines('Item: other/place#9').some((m) => m.startsWith('Item')))
   const row = BRIEF_FIELDS.find((f) => f.key === 'Item')
-  assert.match(row.clean.source, /#/, 'a clean `Item: #7` is left alone')
-  assert.ok(row.clean.test('Item: #7') && row.clean.test('Item: a/b#7'))
+  assert.ok(row.clean('Item: #7') && row.clean('Item: a/b#7'), 'a clean `Item: #7` is left alone')
   assert.equal(row.fill('Item: #7 (the lamp)'), 'Item: #7')
   assert.match(threadReceipt('Programmer', 'Role: Programmer · Kit: setup · Size: S\nItem: #7', '', ''), /· item #7 ·/)
 })
@@ -169,4 +168,19 @@ test('one rule for the Item line: the first token wins in ok, fill, itemRef and 
     assert.equal(rg.itemRef(line), want === 'new' ? null : want, line)
     assert.match(rg.threadReceipt('Programmer', line, '', ''), new RegExp(`· item ${want.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} ·`), line)
   }
+})
+
+test('one normaliser for the Item token: classify repairs `m3` and `NEW`, the receipt prints the same spelling', async () => {
+  const tg = await import('../global/team-guard.mjs')
+  const rg = await import('../global/rule-guard.mjs')
+  assert.equal(tg.normItem.toString(), rg.normItem.toString())
+  const base = 'Role: Programmer\nKit: setup\nSize: S\n'
+  for (const [line, want] of [['Item: m3', 'M3'], ['Item: NEW', 'new']]) {
+    const c = tg.classify(base + line)
+    const d = c.derived.find((x) => x.key === 'Item')
+    assert.equal(d?.fill, `Item: ${want}`, line)
+    assert.equal(tg.missingLines(base + line).some((m) => m.startsWith('Item')), false, `${line} is no gap`)
+    assert.equal(rg.itemToken(line), want, line)
+  }
+  for (const line of ['Item: M3', 'Item: new', 'Item: #7']) assert.equal(tg.classify(base + line).derived.some((x) => x.key === 'Item'), false, line)
 })
