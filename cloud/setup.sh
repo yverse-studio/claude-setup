@@ -1273,7 +1273,7 @@ function readsOnly(s) {
   if (s.redirs.some((r) => r !== '/dev/null') || s.args.some((a) => EXEC_ARG.test(a))) return false
   if (c === 'git') return GIT_SAFE.has(s.args[0])
   if (c === 'sed') { const plain = s.args.filter((a) => !a.startsWith('-') || a === '-'); return s.args.filter((a) => a.startsWith('-')).every((a) => SED_FLAGS.test(a)) && SED_SCRIPT.test(plain[0] ?? '') }
-  if (c === 'printf') return !s.args.includes('-v') // -v assigns the text to a variable
+  if (c === 'printf') return !printfOption(s) // -v assigns the text to a variable
   if (c === 'less') return !s.args.some((a) => /^-[a-zA-Z]*[oO]/.test(a))
   if (c === 'file') return !s.args.some((a) => /^-[a-zA-Z]*C/.test(a))
   return READ_ONLY.has(c)
@@ -1285,7 +1285,8 @@ const isCounterCall = (s) => s.a0 === 'node' && !s.args.some((a) => /^(-e|-p|--e
 const COUNTER = /gate-rounds\.mjs/
 const TEXT_BODY = new Set(['cat', 'tee', 'echo', 'printf', 'gh', 'git'])
 // echo and printf print their words (printf -v assigns them to a variable, which is no print); an unquoted heredoc runs its $( ) and backticks (review of the B7 change).
-const printsWords = (s) => s.a0 === 'echo' || (s.a0 === 'printf' && !s.args.includes('-v'))
+const printfOption = (s) => s.a0 === 'printf' && s.args.some((a) => a.startsWith('-')) // -v, -vX, -xv ...: any option word fails closed
+const printsWords = (s) => s.a0 === 'echo' || (s.a0 === 'printf' && !printfOption(s))
 const namesCounter = (s) => (printsWords(s) ? s.redirs : [...s.words, ...s.redirs]).some((w) => COUNTER.test(w)) || (!!s.body && COUNTER.test(s.body) && (!TEXT_BODY.has(s.a0) || /\$\(|`/.test(s.body)))
 function bashProblem(cmd, dir, ctx) {
   const { list, bad } = simpleCommands(cmd)
