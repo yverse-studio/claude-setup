@@ -481,7 +481,7 @@ test('rule guard: blocks the rules that were text only, passes the normal calls'
     "cat > a.md <<'EOF'\n# Title\nEOF\ngit add a.md && git commit -m \"docs: add a\""]) assert.equal(decide('Bash', { command: c }, {}), null, c)
   for (const c of ['git commit -am "wip"', 'git commit -m "feat: a" && git commit -m "bad"', 'git commit -m wip', 'cd x; git -C repo commit -m "oops"', 'if x; then git commit -m "bad"; fi']) assert.match(decide('Bash', { command: c }, {}) ?? '', /conventional/, c)
   assert.equal(decide('Bash', { command: 'gh pr create --title x --assignee yskills-claude' }, {}), null, 'the bot account is fine')
-  assert.match(decide('Bash', { command: 'gh pr create -t x -r yskills' }, {}) ?? '', /No GitHub mails/)
+  assert.match(decide('Bash', { command: 'gh pr create -t x -r yskills' }, {}) ?? '', /never request a review from or assign/)
   assert.equal(decide('Artifact', { file_path: '/tmp/hq.html' }, {}, ['/tmp/hq.html']), null, 'republishing an Artifact this session updated by url')
   assert.match(decide('Artifact', { type_url: 'u', title: 'x', file_path: '/tmp/hq.html' }, {}, ['/tmp/hq.html']) ?? '', /only Artifact/)
   assert.match(promptContext('<wake><message trigger="true" from="human">Stopp!</message></wake>', STOP_WORD), /said stop/)
@@ -792,8 +792,8 @@ test('rule guard: the spawn brief is checked from the transcript when the prompt
 test('rule guard: replies that ask for an Allow, post Done: without proof or claim nothing is open', async () => {
   const { decide, replyRule } = await import('../global/rule-guard.mjs')
   const post = (text, extra = {}) => decide('mcp__hearthbot__post_message', { text, ...extra }, {}, [], extra.board ?? null)
-  assert.match(post('Tap Allow in the thread so I can merge.') ?? '', /Auto-run/)
-  assert.match(post('Soll ich das mergen?') ?? '', /Auto-run/)
+  assert.match(post('Tap Allow in the thread so I can merge.') ?? '', /Hard rules/)
+  assert.match(post('Soll ich das mergen?') ?? '', /Hard rules/)
   assert.equal(post('Shall I go ahead with the live Stripe key? It costs real money.'), null, 'ask-first items may ask')
   assert.match(post('Done: the guard is merged.') ?? '', /proof/)
   assert.equal(post('Done: merged, https://github.com/yverse-studio/claude-setup/pull/1'), null)
@@ -1219,7 +1219,7 @@ test('rule-guard: a thread\'s first reply carries the hook-built start receipt',
   assert.match(line0, /^Thread · Programmer · setup · S · item \? · skills: none · rules #[0-9a-f]{7} · missing: none$/, 'no Item line: item ?')
   assert.ok(threadReceipt('Programmer', 'Role: Programmer · Kit: setup · Size: S', t0, rules, undefined, 'abc12345').endsWith(' · card #abc12345'), 'the receipt names the card this start left in the project folder')
   assert.doesNotMatch(line0, /card #/, 'no card folder: no card part')
-  assert.match(receiptMissing('mcp__hearthbot__post_message', { text: 'Luna · hi' }, 'Thread · P · card #abc12345', t0) ?? '', /Teams\): Thread · P · card #abc12345/, 'a reply without the card part is refused')
+  assert.match(receiptMissing('mcp__hearthbot__post_message', { text: 'Luna · hi' }, 'Thread · P · card #abc12345', t0) ?? '', /TEAMS\.md\): Thread · P · card #abc12345/, 'a reply without the card part is refused')
   assert.match(threadReceipt('Planner', 'Role: Planner · Kit: setup · Size: M\nItem: M12', t0, rules), /^Thread · Planner · setup · M · item M12 · skills:/, 'the real brief shape and its Masterplan item')
   assert.match(threadReceipt('Planner', 'Role: Planner · Kit: setup · Size: M\nItem: new', t0, rules), /item new ·/, 'a new item')
   assert.match(threadReceipt('Programmer', 'Role: · Kit: · Size:', t0, rules), /· \? · \? · item \?/, 'template text reads as ?')
@@ -1279,7 +1279,7 @@ test('rule-guard: the hook blocks a first reply until the fallback files are rea
     const spawned = JSON.stringify({ type: 'user', message: { content: '<wake reason="spawn">Role: Designer · Kit: game · Size: M</wake>' } })
     const run = (transcript, text = 'Hi (◕‿◕)') => { writeFileSync(join(dir, 't.jsonl'), transcript); return spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'pre'], { input: JSON.stringify({ cwd: dir, session_id: id, transcript_path: join(dir, 't.jsonl'), tool_name: 'mcp__hearthbot__post_message', tool_input: { text } }), encoding: 'utf8', env: { ...process.env, CLAUDE_SETUP_HOME: dir } }) }
     const blocked = run(spawned)
-    const receipt = blocked.stderr.match(/Teams\): (Thread · .*)/)?.[1] ?? ''
+    const receipt = blocked.stderr.match(/TEAMS\.md\): (Thread · .*)/)?.[1] ?? ''
     assert.match(receipt, /missing: /)
     const unread = run(spawned, `${receipt}\nHi (◕‿◕)`)
     assert.equal(unread.status, 2, 'the right receipt is not enough: the fallback files are read first')

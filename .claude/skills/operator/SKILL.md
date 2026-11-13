@@ -11,12 +11,12 @@ checks the result against fixed criteria and keeps pushing until the goal in `PL
 Shape from Anthropic's long-running-agent harness (planner, generator, evaluator; progress in
 files; a fresh context per job) and the ECC hackathon winner's flow (`docs/RESEARCH.md`).
 
-**Auto-run, the ask rule, pauses and taste calls** have their home in CLAUDE.md (How to work).
+**Auto-run, the ask rule, pauses and taste calls** have their home in CLAUDE.md (Hard rules).
 Operator specifics: a PR still short of 5/5 after the gate's last round reaches yskills with a plain summary
 (`gate.md`, Rounds) and keeps going on the recommended way forward; after every merge the gate runs the
 lessons step (`gate.md`, Rounds); key cards are in `briefs.md`.
 
-**Pauses in practice.** "Stop", "pause", "only burning my money" and rejected assets are final (CLAUDE.md, How to work). A thread
+**Pauses in practice.** "Stop", "pause", "only burning my money" and rejected assets are final (CLAUDE.md, Hard rules). A thread
 that finished before the stop is parked and reported honestly; nothing restarts without yskills' go. Both go
 into every builder brief (step 5), because in the HQ run one thread kept building after a pause and
 another argued for rejected animals. A stop is relayed to every running thread at once (`message_thread`).
@@ -72,7 +72,7 @@ effort** medium, and `templates/project-instructions.md` pasted into Project ins
 
 ## Cards
 
-- The home of the card format (rule: `CLAUDE.md`, Cards). In a claude.ai project every session posts
+- The home of the card format (rule: this file, Cards). In a claude.ai project every session posts
   the real card itself, threads too (yskills 2026-10-26): `request_decision` (the coordinator's may be
   named `ask_decision`), a question of about 12 words, 2-4 options with a short label and a one-line
   consequence, one recommended with its reason. It is single choice (schema checked 2026-10-26), so
@@ -112,7 +112,7 @@ Every extra thread re-reads its context, so take the simplest shape that works.
 
 Name and concept first: settle them with one card, push `new/<name>` after the tap; a changed
 concept later means a second repo, Worker and D1 that only "delete <name>" removes. A thread
-posts the card itself with `request_decision`; only one without a card tool writes `Card:` in its reply and carries on (`CLAUDE.md`, How to work).
+posts the card itself with `request_decision`; only one without a card tool writes `Card:` in its reply and carries on (this file, Cards).
 
 ## 2. The teams
 

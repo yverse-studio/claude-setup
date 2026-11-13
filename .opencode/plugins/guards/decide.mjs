@@ -17,10 +17,10 @@ export function modelIds(teams) {
   }))
 }
 
-// CLAUDE.md, Code: never read real .env files (deny Read(**/.env)); .env.example stays readable.
+// CLAUDE.md, Hard rules: never read real .env files (deny Read(**/.env)); .env.example stays readable.
 const ENV_FILE = /(^|[\\/])(\.env(\.[^\\/]*)?|\.dev\.vars)$/i
 export const isEnvFile = (p) => ENV_FILE.test(p) && !/\.example$/i.test(p)
-const ENV_WHY = 'guards (env rule): real .env files are never read or edited (CLAUDE.md, Code; deny Read(**/.env)). Read .env.example for the names; a value only yskills can set is a step for him.'
+const ENV_WHY = 'guards (env rule): real .env files are never read or edited (CLAUDE.md, Hard rules; deny Read(**/.env)). Read .env.example for the names; a value only yskills can set is a step for him.'
 
 // The other secret-file denies of global/settings.json: Read(~/.ssh/**), ~/.aws, ~/.config/gh, wrangler logins, ~/.npmrc, **/*.pem, **/*.key.
 const HOME_SECRET = /^[\\/](\.ssh|\.aws|\.config[\\/]gh|\.config[\\/]\.wrangler|\.wrangler)([\\/]|$)|^[\\/]\.npmrc$/i
@@ -29,18 +29,18 @@ export function isSecretFile(p, home = homedir()) {
   const full = p.replace(/^~(?=[\\/])/, home)
   return full.toLowerCase().startsWith(home.toLowerCase()) && HOME_SECRET.test(full.slice(home.length))
 }
-const SECRET_WHY = 'guards (secret rule): keys, logins and certificates are never read (CLAUDE.md, Code; deny Read(~/.ssh/**), Read(**/*.pem) and the rest in global/settings.json). Use the tool that holds the login (gh, wrangler) instead of its files.'
+const SECRET_WHY = 'guards (secret rule): keys, logins and certificates are never read (CLAUDE.md, Hard rules; deny Read(~/.ssh/**), Read(**/*.pem) and the rest in global/settings.json). Use the tool that holds the login (gh, wrangler) instead of its files.'
 
 // Plain shell denies of global/settings.json, kept here because a deny in opencode.json shows the model only
 // "Permission denied: shell" (tested live), while a plugin block carries the rule. [test, rule it enforces]
 const AT = '(^|[\\s"\';&|(])'
 const FORCE = /(^|\s)(--force\S*|--mirror|-[a-zA-Z]*f[a-zA-Z]*)(\s|$)|\s\+\S*\b(main|master)\b/
 const SHELL = [
-  [(c) => new RegExp(`${AT}(npm|pnpm|yarn)\\s+run\\s+(deploy|ship)`, 'i').test(c), 'npm run deploy* / npm run ship* (CLAUDE.md, Before calling work done: never a deploy script; the merge is the deploy; deny Bash(npm run deploy *))'],
-  [(c) => new RegExp(`${AT}(wrangler\\s+deploy|firebase\\s+deploy|vercel\\s[^\\n]*--prod)`, 'i').test(c), 'a direct deploy (wrangler, firebase, vercel --prod; CLAUDE.md, the merge is the deploy)'],
+  [(c) => new RegExp(`${AT}(npm|pnpm|yarn)\\s+run\\s+(deploy|ship)`, 'i').test(c), 'npm run deploy* / npm run ship* (CLAUDE.md, Hard rules: never a deploy script; the merge is the deploy; deny Bash(npm run deploy *))'],
+  [(c) => new RegExp(`${AT}(wrangler\\s+deploy|firebase\\s+deploy|vercel\\s[^\\n]*--prod)`, 'i').test(c), 'a direct deploy (wrangler, firebase, vercel --prod; CLAUDE.md, Hard rules: the merge is the deploy)'],
   [(c) => new RegExp(`${AT}(pkill|killall|taskkill|Stop-Process)\\b[^\\n]*wrangler`, 'i').test(c), 'pkill *wrangler* (docs/tech-traps.md, Tools: stop a dev server by port, never pkill it)'],
-  [(c) => /\bgit\b[^\n]*\bpush\b/.test(c) && FORCE.test(c) && /\b(main|master)\b/.test(c), 'git push --force to main (CLAUDE.md, Ask first only before: force-pushing main; deny Bash(git push* --force*main*))'],
-  [(c) => pushesMain(c), 'git push to main (CLAUDE.md, Auto-run: the gate merges every PR, that merge is the deploy; deny Bash(git push* origin main*))'],
+  [(c) => /\bgit\b[^\n]*\bpush\b/.test(c) && FORCE.test(c) && /\b(main|master)\b/.test(c), 'git push --force to main (CLAUDE.md, Hard rules, ask first only before: force-pushing main; deny Bash(git push* --force*main*))'],
+  [(c) => pushesMain(c), 'git push to main (CLAUDE.md, Hard rules: the gate merges every PR, that merge is the deploy; deny Bash(git push* origin main*))'],
 ]
 
 // A push whose refspec is main or master (main, +main, HEAD:main, :main, refs/heads/main); a branch named feat/main is fine.

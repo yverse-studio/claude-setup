@@ -197,7 +197,7 @@ A thread that spots a repeated procedure may show a "Save skill" card. Ignore it
 ## When Claude asks you
 
 Only for real money, a new paid service, force-pushing `main`, rotating a
-production secret, or sending mail or posts publicly. The full list: `CLAUDE.md` (How to work);
+production secret, or sending mail or posts publicly. The full list: `CLAUDE.md` (Hard rules);
 prompts and safety checks: `docs/permissions.md`. Everything else it just does and tells you.
 
 You get a notification only when needed, plus big milestones.

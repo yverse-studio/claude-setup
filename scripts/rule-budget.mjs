@@ -63,6 +63,12 @@ export function compare(m, baseline) {
   return out
 }
 
+// S11b: CLAUDE.md is read at every boot; its byte cap lives in the frozen baseline (`claudeMdMaxBytes`).
+export const capProblems = (claude, baseline) => {
+  const bytes = Buffer.byteLength(claude)
+  return baseline.claudeMdMaxBytes !== undefined && bytes > baseline.claudeMdMaxBytes ? [`CLAUDE.md is ${bytes} bytes, cap ${baseline.claudeMdMaxBytes} (config/rule-budget.json): move the rule to its home (docs/MAP.md)`] : []
+}
+
 const here = dirname(dirname(fileURLToPath(import.meta.url)))
 const walk = (root, d) => readdirSync(join(root, d)).flatMap((n) => {
   const rel = `${d}/${n}`
@@ -80,11 +86,12 @@ export const BASELINE = join(here, 'config/rule-budget.json')
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const m = measureRepo()
   if (process.argv.includes('--freeze')) {
-    writeFileSync(BASELINE, `${JSON.stringify({ perFile: m.perFile, wide: m.wide }, null, 2)}\n`)
+    const was = existsSync(BASELINE) ? JSON.parse(readFileSync(BASELINE, 'utf8')) : {}
+    writeFileSync(BASELINE, `${JSON.stringify({ ...(was.claudeMdMaxBytes === undefined ? {} : { claudeMdMaxBytes: was.claudeMdMaxBytes }), perFile: m.perFile, wide: m.wide }, null, 2)}\n`)
     console.log(`rule budget frozen: ${m.total} unguarded rule lines in ${Object.keys(m.perFile).length} files`)
   } else {
     const baseline = existsSync(BASELINE) ? JSON.parse(readFileSync(BASELINE, 'utf8')) : { perFile: {} }
-    const problems = compare(m, baseline)
+    const problems = [...compare(m, baseline), ...capProblems(readFileSync(join(here, 'CLAUDE.md'), 'utf8'), baseline)]
     console.log(`rule budget: ${m.total} unguarded rule lines (baseline ${Object.values(baseline.perFile).reduce((a, n) => a + n, 0)}) in ${Object.keys(m.perFile).length} files`)
     if (problems.length) { console.error(problems.map((p) => `x ${p}`).join('\n')); process.exit(1) }
   }
