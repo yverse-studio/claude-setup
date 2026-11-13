@@ -28,7 +28,7 @@ export function sheetProblems(text) {
   need('Silhouette numbers', (v) => /\d/.test(v), 'the numbers the gate silhouette row checks')
   need('Hair', (v) => v.length > 3, 'colour by comparison, length, texture')
   need('Palette', (v) => v.split(/[,/]/).filter((x) => x.trim()).length >= 3, '3 to 5 colours')
-  need('Look-Lock', (v) => /\d{4}-\d{2}-\d{2}/.test(v) && /(https?:\/\/|card)/i.test(v), 'owner card link and date (YYYY-MM-DD) of the approval')
+  need('Look-Lock', (v) => /\d{4}-\d{2}-\d{2}/.test(v) && /(https?:\/\/|#cmsg_?[A-Za-z0-9]{6,})/i.test(v), 'owner card link and date (YYYY-MM-DD) of the approval')
   return out
 }
 

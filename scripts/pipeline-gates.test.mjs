@@ -27,6 +27,8 @@ test('point 3: no model without a cast sheet that has measures and a look lock',
   assert.match(sheetProblems(SHEET.replace('Age: 24', 'Age: 17')).join('|'), /Age/)
   assert.match(sheetProblems(SHEET.replace(/- Look-Lock:.*/, '- Look-Lock: <owner card link> · <date>')).join('|'), /Look-Lock/)
   assert.match(sheetProblems(SHEET.replace(/- Look-Lock:.*/, '')).join('|'), /Look-Lock/)
+  assert.match(sheetProblems(SHEET.replace(/- Look-Lock:.*/, '- Look-Lock: owner card, 2026-11-12')).join('|'), /Look-Lock/) // the bare word card is no proof
+  assert.deepEqual(sheetProblems(SHEET.replace(/- Look-Lock:.*/, '- Look-Lock: #cmsg_01ABCDEFG · 2026-11-12')), [])
   assert.match(sheetProblems(SHEET.replace('Height: 168 cm', 'Height: tall')).join('|'), /Height/)
 })
 
