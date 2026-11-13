@@ -1702,3 +1702,21 @@ test('pre-push hook: a new branch is not blocked for history the destination alr
     assert.equal(push(run(repo, 'rev-parse', 'HEAD').stdout.trim()).status, 1, 'a new Private18 commit on that branch still blocks')
   } finally { for (const d of [home, top]) rmSync(d, { recursive: true, force: true }) }
 })
+
+test('pre-push hook: a tag on a tree (no commit to walk) blocks instead of passing with nothing listed', () => {
+  if (process.platform === 'win32') return
+  const home = mkdtempSync(join(tmpdir(), 'np6-home-'))
+  const repo = mkdtempSync(join(tmpdir(), 'np6-repo-'))
+  try {
+    mkdirSync(join(home, '.claude', 'claude-setup'), { recursive: true })
+    cpSync(join(root, 'global/rule-guard.mjs'), join(home, '.claude', 'claude-setup', 'rule-guard.mjs'))
+    const env = { ...process.env, CLAUDE_SETUP_HOME: home }
+    for (const k of Object.keys(env)) if (k.startsWith('GIT_')) delete env[k]
+    const g = (...a) => spawnSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...a], { cwd: repo, env, encoding: 'utf8' })
+    g('init', '-q', '-b', 'main'); mkdirSync(join(repo, 'Private18')); writeFileSync(join(repo, 'Private18', 's.png'), 'x'); g('add', '-A'); g('commit', '-q', '-m', 'x')
+    const tree = g('rev-parse', 'HEAD^{tree}').stdout.trim()
+    const r = spawnSync('sh', [join(root, 'global/git-hooks/pre-push'), 'origin', 'https://github.com/o/x'], { cwd: repo, env, input: `refs/tags/tt ${tree} refs/tags/tt ${'0'.repeat(40)}\n`, encoding: 'utf8' })
+    assert.equal(r.status, 1, r.stdout)
+    assert.match(r.stdout, /does not point at a commit/)
+  } finally { for (const d of [home, repo]) rmSync(d, { recursive: true, force: true }) }
+})

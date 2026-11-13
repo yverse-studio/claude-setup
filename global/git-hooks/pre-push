@@ -13,6 +13,8 @@ case "$dest" in
     tmp=$(mktemp)
     while read -r lref lsha rref rsha; do
       case "$lsha" in ""|0000000000000000000000000000000000000000) continue ;; esac
+      # A ref that peels to no commit (a tag on a tree) lists nothing in git log, so it blocks instead of passing.
+      git cat-file -e "$lsha^{commit}" 2>/dev/null || { echo "pre-push: blocked, $lref does not point at a commit"; rm -f "$tmp"; exit 1; }
       # -z keeps odd paths unquoted, -m lists merge commits too. A new branch or unknown remote sha skips only what the destination
       # itself reports (ls-remote, so no local tracking ref is trusted: it may come from another remote); when ls-remote fails the
       # whole history is listed.
