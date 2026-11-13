@@ -392,8 +392,10 @@ function bashProblem(cmd, dir, ctx) {
   // edges: there the old rule stays, every command of the call is the counter or a plain read (security review of the B7 change).
   // Only a call without them is read command by command.
   const flows = /(?:^|[^|])\|(?!\|)|<\(|(?:^|[^<])<(?!<)/.test(cmd)
-  const open = flows ? COUNTER.test(cmd) && !list.every((s) => isCounterCall(s) || readsOnly(s)) : list.some(namesCounter) && !list.every((s) => !namesCounter(s) || isCounterCall(s) || readsOnly(s))
-  if (open) return 'gate ledger: gate-rounds.mjs is run only as "node ~/.claude/claude-setup/gate-rounds.mjs <verb> <asset> ..." (gate.md, Rounds); copying it, importing it or running it through node -e is refused, because the proofs live in this hook and in the CLI.'
+  // Both readings count: the parsed words (a quoted `gate-""rounds.mjs` is the file there) and the raw text (the dropped `<` words).
+  const wordRule = list.some(namesCounter) && !list.every((s) => !namesCounter(s) || isCounterCall(s) || readsOnly(s))
+  const strictRule = flows && (COUNTER.test(cmd) || list.some(namesCounter)) && !list.every((s) => isCounterCall(s) || readsOnly(s))
+  if (wordRule || strictRule) return 'gate ledger: gate-rounds.mjs is run only as "node ~/.claude/claude-setup/gate-rounds.mjs <verb> <asset> ..." (gate.md, Rounds); copying it, importing it or running it through node -e is refused, because the proofs live in this hook and in the CLI.'
   for (const s of list) {
     if (s.a0 === 'gh') { const r = ghProblem(s); if (r) return r }
     if (s.redirs.some((r) => !/\s/.test(r) && (named(r) || GUARD_FILE.test(r)))) return msg
