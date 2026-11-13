@@ -1,4 +1,5 @@
 {
+  "claudeMdMaxBytes": 3500,
   "perFile": {
     "CLAUDE.md": 1,
     "docs/LESSONS-2026-10-11.md": 3,
@@ -58,7 +59,7 @@
     "docs/LESSONS-2026-10-11.md": 16,
     "docs/LESSONS-2026-11-12.md": 23,
     "docs/LOOP.md": 11,
-    "docs/MAP.md": 49,
+    "docs/MAP.md": 48,
     "docs/RESEARCH.md": 24,
     "docs/TEAMS.md": 35,
     "docs/TEST-PROJECTS.md": 18,
@@ -106,7 +107,7 @@
     ".claude/skills/operator/roles/marketer.md": 5,
     ".claude/skills/operator/roles/planner.md": 5,
     ".claude/skills/operator/roles/playtester.md": 20,
-    ".claude/skills/operator/roles/programmer.md": 9,
+    ".claude/skills/operator/roles/programmer.md": 10,
     ".claude/skills/operator/roles/project-manager.md": 33,
     ".claude/skills/operator/roles/researcher.md": 9,
     ".claude/skills/operator/roles/reviewer.md": 10,

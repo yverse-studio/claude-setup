@@ -23,7 +23,7 @@ Every role reads [`learnings.md`](learnings.md) first. The order of work from id
 | "upload" (all ready, or named) | the Publisher (started by the Lead) schedules it or sends it to the account's drafts (Posting below) | posted |
 
 Also: "show my ideas", "drop X", "change X". Questions and results go to the coordinator, which asks
-yskills in the project chat (CLAUDE.md, Cards); yskills does not read threads.
+yskills in the project chat (operator SKILL.md, Cards); yskills does not read threads.
 
 ## Roles
 

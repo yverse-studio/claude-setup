@@ -41,8 +41,8 @@ Each thread reads only the Read-first files of its own role from its Kits row. A
 
 | Loads | What | Cost (tokens, est.) |
 |---|---|---|
-| Every session | `CLAUDE.md` (~2.4k), one line per skill and agent | ~5k |
-| Every session without a checkout (project chat, product repos) | `CLAUDE.md`, put into context by `team-guard` (`scripts/check.mjs` keeps it under 9,800 characters) | ~4.5k |
+| Every session | `CLAUDE.md` (~0.8k), one line per skill and agent | ~5k |
+| Every session without a checkout (project chat, product repos) | `CLAUDE.md`, put into context by `team-guard` (`scripts/check.mjs` keeps it under 9,800 characters, `config/rule-budget.json` caps the file at 3,500 bytes) | ~1k |
 | When a matching file is opened | `.claude/rules/ecc/{typescript,vue,nuxt,web}/*` (`paths:` frontmatter) | up to ~9k |
 | When a skill is used | its `SKILL.md`, then the files it links | 0.5k to 6k per skill |
 | When an agent is started | its `.claude/agents/<name>.md`, in its own context | 1k to 2k |
@@ -55,7 +55,7 @@ lives outside this repo.
 
 | Part | Path | Owes |
 |---|---|---|
-| Working rules | `CLAUDE.md` | how Claude works for yskills (ask rule, co-founder, auto-run), code. Short; detail lives in the homes below |
+| Working rules | `CLAUDE.md` | how Claude works for yskills (hard rules, how to work, an on-demand table), at most 3,500 bytes (`config/rule-budget.json`). Short; detail lives in the homes below |
 | Front door | `README.md` | Install, what you get, cloud setup, how to change the repo |
 | This map | `docs/MAP.md` | Where things live, one home per rule |
 | Teams | `docs/TEAMS.md` | The Spawn rule, the Models line, sizes S/M/L, the one pipeline, the roster (every role's job, when it is called, thread or subagent, model) and the Kits |
@@ -141,11 +141,11 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 | Live board (who is doing what: one `NOW.md` per project, a line per job, 24 h archive) | `docs/USING.md` (Live board), template `docs/templates/NOW.md` | `operator/briefs.md` (Done when), the laptop's `_claude/_queue/WHO.md` (name `who` in `config/paths.json`) stays a separate lane lock |
 | Masterplan (the plan is `plan` issues, `Fixes #n` in every PR, `ISSUES.md` is the coordinator's view with its "Stand?" answer, pings and Custom view, an offline project keeps `PLAN.json`) | `roles/project-manager.md` (Masterplan), `.github/ISSUE_TEMPLATE/plan.md`; offline: `docs/templates/PLAN.json`, `scripts/plan.mjs` + `scripts/plan.test.mjs` | coordinator card (pre-flight), `docs/research/2026-11-12-masterplan-sota.md` |
 | Close finished threads (resolve or nudge, the daily sweep) | `roles/project-manager.md` (Close threads) | coordinator card, `templates/loop/routine.md` (step 11), `global/rule-guard.mjs` (stop) |
-| Teams, roles, sizes, the pipeline, the Kits (routed per task), the model per role | `docs/TEAMS.md` | `CLAUDE.md` (Teams), `operator/SKILL.md`, `operator/run.md`, `roles/project-manager.md`; `global/team-guard.mjs` enforces `model` |
+| Teams, roles, sizes, the pipeline, the Kits (routed per task), the model per role | `docs/TEAMS.md` | `CLAUDE.md` (How to work, one role per thread), `operator/SKILL.md`, `operator/run.md`, `roles/project-manager.md`; `global/team-guard.mjs` enforces `model` |
 | Deploy or delete a page (the steps) | `docs/USING.md` | operator `run.md`, `briefs.md`; detail in `publish` |
 | Where a lesson goes (the decision tree) | `docs/MAP.md` (Start here) | `docs/WORKFLOW.md` (Learning) |
-| Pre-PR check (the one command that runs what CI runs; git pre-push hook on every machine) | `scripts/pre-pr.mjs` | `CLAUDE.md` (How to work), `global/git-hooks/pre-push`, `install.mjs`, `cloud/setup.sh`, `.github/workflows/ci.yml` |
-| Fixes remove the cause (workaround only on yskills' word, labelled, deleted later) | `docs/WORKFLOW.md` (Fixes) | `CLAUDE.md` (Code), operator `gate.md` (diagnosis after two failed checks), `roles/programmer.md` |
+| Pre-PR check (the one command that runs what CI runs; git pre-push hook on every machine) | `scripts/pre-pr.mjs` | `CLAUDE.md` (Hard rules), `global/git-hooks/pre-push`, `install.mjs`, `cloud/setup.sh`, `.github/workflows/ci.yml` |
+| Fixes remove the cause (workaround only on yskills' word, labelled, deleted later) | `docs/WORKFLOW.md` (Fixes) | `CLAUDE.md` (How to work), operator `gate.md` (diagnosis after two failed checks), `roles/programmer.md` |
 | Project retro (errors and good practice at ship or delete) | `docs/WORKFLOW.md` (Learning, Project retro) | `publish` skill (Delete a project), `templates/lessons.md` |
 | Memory form verdict (why files, not Obsidian, Graphify or graph memory) | `docs/RESEARCH.md` (Memory form) | `docs/WORKFLOW.md` (Learning) |
 | Project memory holds state only (its shape) | `operator/templates/project-memory.md` | `operator/roles/project-manager.md`, `docs/WORKFLOW.md` |
@@ -153,11 +153,11 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 | Long laptop jobs (watchdog, Blender limits, GPU and sleep check, one-line failure report, overnight run) | `docs/pc-claude-user.md` (Long laptop jobs) | `scripts/laptop-job.mjs`, `scripts/ram-ledger.mjs` (RAM claims, owner snapshot), `scripts/laptop-slots.mjs` (Blender limits: one job at a time, 2 instances; progress-file heartbeat), `operator/roles/project-manager.md`, `programmer.md`, `tester.md` |
 | Laptop drops, RC watchdog and broad permissions template | `docs/pc-claude-user.md` (Dropped sessions and permissions) | `scripts/laptop/rc-watchdog.ps1`, `scripts/laptop/install-rc-watchdog.ps1`, `scripts/laptop/claude-settings.template.json`, `scripts/laptop/install-claude-settings.ps1` |
 | Asks ledger (every ask of yskills becomes a thread or a rule in claude-setup; memory only points; blocked-thread sweep) | `docs/WORKFLOW.md` (Learning) | `operator/roles/project-manager.md` |
-| Ask rule (what needs yskills) | `CLAUDE.md` (How to work) | operator `SKILL.md`, `docs/USING.md` |
+| Ask rule (what needs yskills) | `CLAUDE.md` (Hard rules) | operator `SKILL.md`, `docs/USING.md` |
 | Every ask of yskills carries its clickable link (thread, PR, setting, folder) | `docs/pc-claude-user.md` (What still needs yskills' hands) | `CLAUDE.md`, coordinator card, `global/rule-guard.mjs` (replyRule) |
 | Permission prompts, the allow list and autoMode, safety-check refusals and the way around each | `docs/permissions.md` (settings in `global/settings.json`) | `CLAUDE.md`, operator `SKILL.md`, `gate.md`, `README.md`, `docs/pc-claude-user.md` |
 | Workflows with keys run from main only (`environment: production`) | `docs/permissions.md` (Layer 4) | `docs/permissions.md` only |
-| Auto-run, pauses and taste calls | `CLAUDE.md` (How to work) | operator `SKILL.md`, `docs/WORKFLOW.md` |
+| Auto-run, pauses and taste calls | `CLAUDE.md` (Hard rules) | operator `SKILL.md`, `docs/WORKFLOW.md` |
 | How a game build is played before the gate (blind pass, full run, death, ad hooks; the report and its nine verdicts, Controls and World life first) | `operator/roles/playtester.md`, template `operator/templates/playtest-report.md`, checked in game CI by `publish/templates/new-game/scripts/playtest-check.mjs` (+ `scripts/playtest-check.test.mjs`) | `operator/run.md` (step 5), `game-3d` |
 | The words of a site or app (voice, terms, German and English strings, errors, empty states) | `operator/roles/content-designer.md`, template `operator/templates/copy-deck.md`, checked by `ui-review/scripts/copy-check.mjs` | `roles/tester.md`, `ui-review`, `SLOP.md` 9 |
 | What a site, app or game measures (events, money metric, legal basis, tools with prices, the weekly numbers line) | `operator/roles/analytics.md`, template `operator/templates/tracking-plan.md`, checked by `market/scripts/analytics-check.mjs` | `market` §5, `roles/tester.md`, `docs/hq-rows.md` |

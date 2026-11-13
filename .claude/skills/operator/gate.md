@@ -226,7 +226,7 @@ How to undo a merge, by kind of change (write the line into the PR's "undo" line
   3. **Round 7 and later** run only after **one card to yskills** (what it does, why it fails, 2 or 3 ideas, one recommended;
      `request_decision`), recorded with `gate-rounds.mjs card <asset> --ref <cmsg id>`; the hook checks that this session
      posted that card. The card opens 3 more rounds; the thread goes on with the recommended option. Money, secrets, public
-     posts and deleting a live project or database still wait for his tap (`CLAUDE.md`, Cards).
+     posts and deleting a live project or database still wait for his tap (operator `SKILL.md`, Cards).
   4. **A merge needs a counted pass** (fail closed; director ruling, PR #444 round 4): the merge is refused when the asset has no [guard: hook global/gate-rounds.mjs]
      ledger or its last round is not a pass (4.5, 4.8 important), whatever the reason. A verdict posted in another shape is never
      counted, so it can never lead to a merge. Only yskills' answer on a card frees a version under the threshold

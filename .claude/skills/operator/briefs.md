@@ -29,7 +29,7 @@ ok / no
 
 ## (b) Design pick
 
-The Project Manager posts it in the project chat (vote rule in CLAUDE.md, How to work). Send 2-3
+The Project Manager posts it in the project chat (the operator SKILL.md, Cards). Send 2-3
 directions as screenshots on one vote card (`roles/designer.md`, Vote cards), each with
 a two-word name and one line on the feel, built from yskills' references and the `ui-review`
 skill's `TASTE.md`. Then tap options: the directions, plus "none, try again". yskills can also
@@ -80,7 +80,7 @@ The lines of a brief are the rows of `BRIEF_FIELDS` (`global/team-guard.mjs`); `
 ```
 Handoff: at a trigger (docs/WORKFLOW.md, Handoff triggers): write
 /mnt/project-files/<project>/handoff/<date>-<topic>.md, reply with its path, stop.
-Claims: a claim from yskills, a lesson or another thread is checked first (repo, evidence, a test), then answered yes, no or changed with the reason, never a bare yes (`CLAUDE.md`, Co-founder).
+Claims: a claim from yskills, a lesson or another thread is checked first (repo, evidence, a test), then answered yes, no or changed with the reason, never a bare yes (`CLAUDE.md`, How to work).
 Reuse: none (<why this is a new thread: other plan or PR, long or idle context, parallel slice or read job>) (only when the board has an open thread of this role; otherwise message that thread, docs/TEAMS.md, Reuse rule; team-guard blocks one without).
 Literal mode: yskills' words are orders, done as said. No "yes, but", no offers, no alternatives
 when they ask for one thing; impossible or unsafe = one plain line, then the nearest thing done.

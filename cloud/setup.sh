@@ -663,7 +663,7 @@ export function briefProblems(text, { model, title: threadTitle, teams = '', che
   if (title) found.push(`a ${title} thread is titled \`${title} · <what>\` (claude-setup docs/TEAMS.md, Roster "Runs as"), e.g. "${title} · Bienen-Video"; fix the title`)
   const lines = missingLines(text)
   if (lines.length) found.push(`the brief misses ${lines.join(', ')} (claude-setup .claude/skills/operator/briefs.md, Every thread brief starts with)`)
-  if (needsPriorArt(text)) found.push('add a line `Prior art: <the sources checked, named: owner/repo, path, URL, #PR> -> copy | adapt | reuse | build, because <why>` (a gesture like \"looked around\" fails; or `none, because <why nothing could exist>`, or `to find: <where the Researcher looks>`; CLAUDE.md, Work for the future)')
+  if (needsPriorArt(text)) found.push('add a line `Prior art: <the sources checked, named: owner/repo, path, URL, #PR> -> copy | adapt | reuse | build, because <why>` (a gesture like \"looked around\" fails; or `none, because <why nothing could exist>`, or `to find: <where the Researcher looks>`; CLAUDE.md, Hard rules (Prior art))')
   if (needsTester(text)) found.push('a size L Programmer thread starts only after its Tester thread (claude-setup docs/TEAMS.md, Sizes): start `Tester · <app>` first, then put a line `Tester: <its thread id or title>` in this brief')
   const wrong = wrongModel(text, model, teams)
   // The id to pass, from the Models line (CompanyXY 2026-11-13: a tier name left the coordinator guessing the id).
@@ -1696,9 +1696,9 @@ cat > "$HOME/.claude/claude-setup/rule-guard.mjs" <<'RULE'
 // or rule-guard.mjs read <url> [max chars] to read a whole web page as text without an Allow prompt.
 // Turns CLAUDE.md rules that were text only into checks (audit 2026-10-27: 17 of 20 rules had no
 // guard and were skipped whenever CLAUDE.md did not load).
-// pre: refuses (exit 2) a review request or assignee for yskills on a PR (No GitHub mails), a
-// thread reply over the length cap (Replies), a new Artifact besides the Company XY one (docs/USING.md, The world),
-// a commit message that is not conventional (Code), WebFetch in a cloud thread (docs/tech-traps.md, Cloud threads:
+// pre: refuses (exit 2) a review request or assignee for yskills on a PR (CLAUDE.md, Hard rules), a
+// thread reply over the length cap (CLAUDE.md, How to work), a new Artifact besides the Company XY one (docs/USING.md, The world),
+// a commit message that is not conventional (CLAUDE.md, How to work), WebFetch in a cloud thread (docs/tech-traps.md, Cloud threads:
 // WebSearch, no Allow taps), and a reply that asks yskills for an Allow or a go, posts `Done:`
 // without proof, or says nothing is open while the last thread board shows open threads, or asks him for something or names a
 // thread without a clickable link (replyRule).
@@ -1771,9 +1771,9 @@ const HAS_LINK = /https?:\/\/|\]\(#/
 const NOTHING_OPEN = /\b(no blockers?|keine blocker|nothing (is )?(open|left|blocking|needed from you|needs you|waiting on you)|nichts (mehr )?(ist )?(offen|blockiert)|nothing else needs you)\b/i
 // board: the thread board, or a function that builds it; read only when a reply says nothing is open.
 export function replyRule(text, attached = [], board = null) {
-  if (ASK_ALLOW.test(text) && !ASK_FIRST.test(text)) return 'rule-guard: do not ask yskills for an Allow or a go (CLAUDE.md, Auto-run): pick the sensible default and do it; a refused call takes its fixed way around (docs/permissions.md, Layer 3). Only the ask-first items wait, and a choice is a request_decision card.'
+  if (ASK_ALLOW.test(text) && !ASK_FIRST.test(text)) return 'rule-guard: do not ask yskills for an Allow or a go (CLAUDE.md, Hard rules): pick the sensible default and do it; a refused call takes its fixed way around (docs/permissions.md, Layer 3). Only the ask-first items wait, and a choice is a request_decision card.'
   if ((NEEDS_YOU.test(text) || THREAD_REF.test(text)) && !HAS_LINK.test(text)) return 'rule-guard: this reply asks yskills for something or points at a thread without a link (docs/pc-claude-user.md, What still needs yskills\' hands). Give the exact place as a clickable link: a thread [title](#cmsg_…), the PR or page URL, [Project settings](#project-settings/<section>), or the connect link.'
-  if (DONE.test(text) && !/https?:\/\//.test(text) && !(attached ?? []).length) return 'rule-guard: a `Done:` line carries its proof (CLAUDE.md, Honesty): the live link, the merged PR link or an attached screenshot or test output. Add it, then post.'
+  if (DONE.test(text) && !/https?:\/\//.test(text) && !(attached ?? []).length) return 'rule-guard: a `Done:` line carries its proof (CLAUDE.md, How to work): the live link, the merged PR link or an attached screenshot or test output. Add it, then post.'
   const listed = NOTHING_OPEN.test(text) && (typeof board === 'function' ? board() : board)
   if (listed) {
     const open = [...listed.finished.filter((t) => !listed.told.has(t.id)), ...listed.blocked]
@@ -1849,23 +1849,23 @@ export function offLayout(file) {
 // board: the thread board this session last listed (threadBoard), or a function that builds it, for claims that nothing is open.
 export function decide(tool, input = {}, env = {}, published = [], board = null) {
   const buy = purchaseUrl(tool, input)
-  if (buy) return `rule-guard: ${buy.slice(0, 80)} is a checkout or cart page (CLAUDE.md, Ask first): no purchase without yskills' explicit OK. Put item, price and total on a request_decision card; after his yes he places the order himself.`
+  if (buy) return `rule-guard: ${buy.slice(0, 80)} is a checkout or cart page (CLAUDE.md, Hard rules): no purchase without yskills' explicit OK. Put item, price and total on a request_decision card; after his yes he places the order himself.`
   const off = /^(Write|Edit|NotebookEdit)$/.test(tool) && offLayout(String(input.file_path ?? input.notebook_path ?? ''))
   if (off) return `rule-guard: ${off.rel} is outside the agreed folder structure of ${off.root} (its .layout.json: ${off.why}). Put it where the layout says, or ask yskills on a card before a new folder.`
   if (/^mcp__github__/.test(tool) || tool === 'Bash') {
     const ask = tool === 'Bash'
       ? GH_ASK.test(input.command ?? '')
       : [...names(input.reviewers), ...names(input.assignees)].includes(OWNER)
-    if (ask) return `rule-guard: never request a review from or assign ${OWNER} (CLAUDE.md, No GitHub mails): every one sends him a mail. Keep the attribution block, drop reviewers/assignees, and go on.`
+    if (ask) return `rule-guard: never request a review from or assign ${OWNER} (CLAUDE.md, Hard rules): every one sends him a mail. Keep the attribution block, drop reviewers/assignees, and go on.`
   }
   if (tool === 'Bash') {
     const subject = commitSubjects(input.command ?? '').find((t) => !/^(Merge|Revert) /.test(t) && !CONVENTIONAL.test(t))
-    if (subject !== undefined) return `rule-guard: commit subject "${subject.slice(0, 60)}" is not a conventional commit (CLAUDE.md, Code): start with feat|fix|docs|chore|refactor|test|perf|ci: and say what changed for the user.`
+    if (subject !== undefined) return `rule-guard: commit subject "${subject.slice(0, 60)}" is not a conventional commit (CLAUDE.md, How to work): start with feat|fix|docs|chore|refactor|test|perf|ci: and say what changed for the user.`
   }
   if (tool === 'mcp__hearthbot__post_message') {
     const text = String(input.text ?? '')
     const lines = text.split('\n').filter((l) => l.trim()).length
-    if (text.length > REPLY_MAX_CHARS || lines > REPLY_MAX_LINES) return `rule-guard: this reply has ${text.length} chars and ${lines} lines; the cap is ${REPLY_MAX_CHARS} and ${REPLY_MAX_LINES} (CLAUDE.md, Replies). Lead with the result in a few lines; put the rest in a file under /mnt/project-files/ and attach it.`
+    if (text.length > REPLY_MAX_CHARS || lines > REPLY_MAX_LINES) return `rule-guard: this reply has ${text.length} chars and ${lines} lines; the cap is ${REPLY_MAX_CHARS} and ${REPLY_MAX_LINES} (CLAUDE.md, How to work). Lead with the result in a few lines; put the rest in a file under /mnt/project-files/ and attach it.`
     const why = replyRule(text, input.attached_outputs, board)
     if (why) return why
   }
@@ -1920,7 +1920,7 @@ export function pageText(html) {
 export function promptContext(prompt = '', stopWord = null) { // stopWord: STOP_WORD of the counter, the one definition (M53)
   const notes = []
   const said = (prompt.match(/<message[^>]*trigger="true"[^>]*>([\s\S]*?)<\/message>/)?.[1] ?? prompt).trim()
-  if (stopWord?.test(said)) notes.push('rule-guard: yskills said stop. Stop at once, do not argue, say in one line what was left half done (CLAUDE.md, How to work).')
+  if (stopWord?.test(said)) notes.push('rule-guard: yskills said stop. Stop at once, do not argue, say in one line what was left half done (CLAUDE.md, Hard rules).')
   return notes.join('\n')
 }
 
@@ -2235,7 +2235,7 @@ export function unresolved(transcript) {
       }
     } catch { continue } // a line that is not JSON
   }
-  return finished ? 'rule-guard: this thread posted its Done: line or its hand-off, so it is finished: call set_thread_resolved (resolved: true) as the last step (CLAUDE.md, one thread per plan or PR, closed when done). If yskills still owes an answer, say so in one line instead and stop.' : null
+  return finished ? 'rule-guard: this thread posted its Done: line or its hand-off, so it is finished: call set_thread_resolved (resolved: true) as the last step (docs/TEAMS.md, one thread per plan or PR). If yskills still owes an answer, say so in one line instead and stop.' : null
 }
 
 // The transcript's tool calls in order, each with its result text and time: [{ name, input, result, at }].
@@ -2392,7 +2392,7 @@ export function receiptMissing(tool, input, line, transcript) {
   if (tool !== 'mcp__hearthbot__post_message' || !line) return null
   if (String(input.text ?? '').trimStart().startsWith(line)) return null
   if (receiptSent(transcript)) return null
-  return `rule-guard: a thread's first reply opens with its start receipt, verbatim, so yskills sees the role loaded (CLAUDE.md, Teams): ${line}`
+  return `rule-guard: a thread's first reply opens with its start receipt, verbatim, so yskills sees the role loaded (docs/TEAMS.md): ${line}`
 }
 
 export function toolCalls(transcript) {

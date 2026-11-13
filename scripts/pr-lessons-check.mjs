@@ -1,6 +1,6 @@
 // Checks a PR body for the Lessons: line (docs/MAP.md, Where a lesson goes): either the repo paths
 // of the homes that changed, or "none, because <why the next thread would not repeat it>"; and for the
-// Prior art: line (yskills 2026-10-27, CLAUDE.md Work for the future): what already exists was checked
+// Prior art: line (yskills 2026-10-27, CLAUDE.md Hard rules (Prior art)): what already exists was checked
 // (our repos, skills, plugins, public setups) and the decision copy, adapt or build, with its reason.
 // Usage: PR_TITLE=<title> node scripts/pr-lessons-check.mjs [body-file]   (no file: reads stdin)
 import { readFileSync } from 'node:fs'
@@ -16,7 +16,7 @@ const PRIOR_SOURCE = /https?:\/\/\S+|[\w.-]+\/[\w.-]+|#\d+|\b[\w-]+\.(?:md|mjs|j
 const PRIOR_DECISION = /\b(cop(y|ied)|adapt(ed|s)?|reuse[ds]?|buil[dt]|extend(ed|s)?|reverse-engineer\w*)\b/i
 const PRIOR = { test: (l) => /^Prior art: /.test(l) && l.length >= 32 && PRIOR_SOURCE.test(l) && PRIOR_DECISION.test(l) }
 const PRIOR_NONE = /^Prior art: none, because .{10,}$/
-export const PRIOR_MESSAGE = 'PR body needs a line `Prior art: <what exists that was checked: our repos, skills, plugins, public setups> -> copy | adapt | build, because <why>` or `Prior art: none, because <why nothing could exist>` (CLAUDE.md, Work for the future)'
+export const PRIOR_MESSAGE = 'PR body needs a line `Prior art: <what exists that was checked: our repos, skills, plugins, public setups> -> copy | adapt | build, because <why>` or `Prior art: none, because <why nothing could exist>` (CLAUDE.md, Hard rules (Prior art))'
 
 export function checkPriorArt(body) {
   return body.split(/\r?\n/).some((l) => PRIOR.test(l.trimEnd()) || PRIOR_NONE.test(l.trimEnd()))

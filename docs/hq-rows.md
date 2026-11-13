@@ -61,7 +61,7 @@ each, **and `mode: 'live'`; without it the amount is Testgeld and scores nothing
 source, at, link}], sources[{name, ok, note}]}`), filled from live sources by the refresher thread
 (`hq-refresh.md` in company-xy): HQ asks it on open when the list is over 150 minutes old; no routine of its own.
 Rule: `HQ.todayFor`, `HQ.refreshDue`.
-**Decisions at the desk (yskills 2026-10-26):** a thread that needs yskills posts its real card (`request_decision`, `CLAUDE.md`
+**Decisions at the desk (yskills 2026-10-26):** a thread that needs yskills posts its real card (`request_decision`, operator `SKILL.md`
 Cards) and, in the same turn, writes one row `decisions/<id>` with `ArtifactData` `set`: `{thread (its link), session (its own
 `get_session` id), role (Designer, Programmer, ...), question, context?, options [{label, consequence?, image? (https, e.g. a vote
 screenshot)}] (2-4), recommended? (index), status: 'open', at}`. HQ makes that role's desk wave and shows the question, the picture

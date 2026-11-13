@@ -12,7 +12,7 @@ What GitHub forbids that this setup could touch, what we do about it. Sources:
 | Spam and inauthentic activity: automated excessive bulk activity, inauthentic interactions, undue burden through automated means | 300+ PRs in weeks, a 15-minute cron, 3-OS CI per PR, bursts of pushes and API calls from a bot account | One PR per repo and concern, pushes and merges spaced out (10 min between repos in a sync; a merge is a push to main, yskills 2026-11-08), no polling loops against the API (`deploy-watch` keeps one lean cron), CI on one runner and only in public repos (`publish` skill) |
 | Account terms: one free personal account per person; a machine account is allowed but only for running a machine | `yskills` and `yskills-claude` were two free accounts of one person, and the machine account opened PRs and comments like a person | `yskills-claude` stays unused. Claude pushes through yskills' login on the laptop or the GitHub App in the cloud; no second free account |
 | Services usage limits, excessive bandwidth: large binaries, repos used as file hosting | `social-handoff` 579 MB with a 96 MB video; render frames, zips | Media over 50 MB never in git (LFS or the laptop); renders, builds and zips stay out of repos (`docs/laptop-folders.md`) |
-| Private information, secrets | `yland-secrets.txt` once in a code folder | Secrets never in git (`CLAUDE.md`, Code); a push is preceded by a grep for tokens |
+| Private information, secrets | `yland-secrets.txt` once in a code folder | Secrets never in git (`CLAUDE.md`, Hard rules); a push is preceded by a grep for tokens |
 
 A thread that is unsure whether something violates a row above asks yskills with a card before pushing.
 
