@@ -7,7 +7,6 @@ set -u
 
 claude plugin marketplace add anthropics/claude-plugins-official || echo "claude-setup: marketplace anthropics/claude-plugins-official failed"
 for id in \
-  superpowers@claude-plugins-official \
   frontend-design@claude-plugins-official \
   security-guidance@claude-plugins-official \
   playwright@claude-plugins-official \
@@ -29,7 +28,7 @@ claude plugin marketplace add yverse-studio/claude-setup \
   || echo "claude-setup: could not update claude-setup-mods plugins (a stale cache stays)"
 # Retired plugins (config/plugins.json "retired") load their skill listing into every session: remove
 # them when an older copy of this script left them behind.
-for id in code-review chrome-devtools-mcp code-simplifier feature-dev claude-md-management claude-code-setup; do
+for id in superpowers code-review chrome-devtools-mcp code-simplifier feature-dev claude-md-management claude-code-setup; do
   claude plugin uninstall "$id@claude-plugins-official" --scope user >/dev/null 2>&1 || true
 done
 
