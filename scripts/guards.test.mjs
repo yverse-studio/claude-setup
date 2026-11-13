@@ -1468,6 +1468,13 @@ test('gate fixes: Sheet: must be a .md path and Look-Lock: a link or card, "late
   assert.equal(missingLines(b('Sheet: characters/mira/SHEET.md\nLook-Lock: owner card https://claude.ai/c/1')).length, 0)
 })
 
+test('gate fixes: a Look-Lock card link inside the project (#cmsg_...) counts, a bare # does not (GameDev 2026-11-12: six starts refused)', async () => {
+  const { missingLines } = await import('../global/team-guard.mjs')
+  const b = (extra) => `Role: Programmer · Kit: game · Size: M${FULL}\nFit the character outfit.\n${extra}`
+  assert.equal(missingLines(b('Sheet: characters/mira/SHEET.md\nLook-Lock: [Mira look](#cmsg_01D5edTu)')).length, 0)
+  for (const bad of ['#later', '#cmsg_', '#cmsg']) assert.equal(missingLines(b(`Sheet: characters/mira/SHEET.md\nLook-Lock: ${bad}`)).length, 1, `${bad} is no card link`)
+})
+
 // Gate rounds 1 to 6 of PR 445 chased verbs and body words; the rule is now a plain one: no classifier.
 test('team guard: every Programmer or Animator brief on a game or story kit names its cast sheet and look lock, or declares n/a', async () => {
   const { missingLines } = await import('../global/team-guard.mjs')
