@@ -52,6 +52,11 @@ test('refreshIssues: writes once, skips a file younger than 60 s, rewrites an ol
   const empty = folder()
   assert.equal(refreshIssues(() => ({ repo: 'o/r', issues: [] }), empty, NOW), null)
   assert.equal(existsSync(join(empty, 'ISSUES.md')), false)
+  const stale = folder()
+  refreshIssues(ok, stale, NOW)
+  utimesSync(join(stale, 'ISSUES.md'), old, old)
+  assert.ok(refreshIssues(() => ({ repo: 'o/r', issues: [] }), stale, NOW), 'an empty list rewrites the existing file')
+  assert.match(readFileSync(join(stale, 'ISSUES.md'), 'utf8'), /## Open\n\n- none/, 'the last open item closed: nothing is listed as open')
   assert.equal(refreshIssues(() => { throw new Error('boom') }, folder(), NOW), null, 'a throwing fetch never propagates')
 })
 
