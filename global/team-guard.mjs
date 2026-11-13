@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Team guard. Usage: team-guard.mjs start|card|pre (hook entries SessionStart, SessionStart, PreToolUse).
+// Team guard. Usage: team-guard.mjs start|pre (hook entries SessionStart, PreToolUse).
 // Without a claude-setup checkout, start puts CLAUDE.md itself and card the coordinator card (Spawn
 // rule, Models line, Sizes, Roster and Kits, one line each) into context; each counts as read.
 // start: refreshes the boot files (CLAUDE.md, docs/TEAMS.md, docs/MAP.md) from main into
@@ -138,15 +138,6 @@ export function coordinatorCard(teams, pm = '') {
     `## Roster (role: runs as; model)\n\n${roster.join('\n')}`, `## Kits (team at size L)\n\n${kits.join('\n')}`,
     section(pm, 'Text only', 'Session start'),
   ].filter(Boolean).join('\n\n')
-}
-
-// The canary (yskills 2026-10-27: "how do I know it read everything?"): a line only this hook can write,
-// because its hash comes from the rule files it just loaded. The coordinator's first reply opens with it
-// (rule-guard blocks one without); no line in a new project means no guards there (docs/USING.md, step 4).
-export function canary(dir) {
-  const rules = ['CLAUDE.md', 'docs/TEAMS.md'].map((f) => text(join(dir, f))).join('\n')
-  if (!rules.includes(MARK)) return null
-  return `Luna · rules #${createHash('sha256').update(rules.replace(/\r/g, '')).digest('hex').slice(0, 7)} · guards: on`
 }
 
 export function inRepo(cwd) {
@@ -486,34 +477,6 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         const card = claude.includes(MARK) && rulesCard(claude)
         if (card && card.length < BOOT_MAX) { if (session) { mkdirSync(dirname(mark('rules')), { recursive: true }); writeFileSync(mark('rules'), '') } return say(card) }
         return say(`${bootCard(dir)}\n${POINTER}`)
-      }
-      if (mode === 'card') {
-        // 2026-11-08: a spawned project thread runs with CLAUDE_CODE_CHILD_SESSION=1 and gets its role card from rule-guard; the coordinator (channel session) does not set it as far as its init event shows, so only the thread skips.
-        if (process.env.CLAUDE_CODE_CHILD_SESSION === '1') return
-        // The coordinator runs outside any repo (the project chat); a thread sits in a product repo and needs only its role card (rule-guard).
-        if (rulesLoaded(cwd, home) || inRepo(cwd)) return
-        // The project chat resumes its session each turn; it needs the card once, the first time hooks exist.
-        if (source === 'resume' && session && existsSync(mark('teams'))) return
-        // This hook runs beside `start`, so a cached cloud image would build the card with its old guard:
-        // fetch main's team-guard (only it, to stay inside the hook's 5 s), and when the installed copy is
-        // not the code running here, let it build the card; if it prints nothing, this one does.
-        const self = join(dir, 'team-guard.mjs')
-        if (process.env.CLAUDE_SETUP_BOOT_FETCH !== 'off' && existsSync(self)) {
-          refresh(dir, ['team-guard.mjs'])
-          if (text(self) !== text(fileURLToPath(import.meta.url))) {
-            const env = { ...process.env, CLAUDE_SETUP_BOOT_FETCH: 'off' }
-            const out = spawnSync(process.execPath, [self, 'card'], { input: raw, env, encoding: 'utf8', timeout: 2000 }).stdout
-            if (out) return process.stdout.write(out)
-          }
-        }
-        const card = coordinatorCard(text(join(dir, 'docs', 'TEAMS.md')), text(join(dir, PM_FILE)))
-        if (!card || card.length >= BOOT_MAX) return
-        const line = canary(dir)
-        if (session) {
-          mkdirSync(dirname(mark('teams')), { recursive: true }); writeFileSync(mark('teams'), '')
-          if (line) writeFileSync(mark('canary'), line)
-        }
-        return say(line ? `${card}\n\nCanary: open your first reply in this session with this line, verbatim, so yskills sees the rules loaded: ${line}` : card)
       }
       if (process.env.CLAUDE_SETUP_TEAM_GUARD === 'off') return
       const read = transcript && existsSync(transcript) ? readBootFiles(transcript) : null
