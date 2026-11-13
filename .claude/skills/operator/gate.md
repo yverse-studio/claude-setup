@@ -216,7 +216,7 @@ How to undo a merge, by kind of change (write the line into the PR's "undo" line
   2. **Rounds 4 to 6** run only after a **Fable director** (`docs/TEAMS.md`, Models line) re-planned: the coordinator starts a
      Fable thread, it runs `node ~/.claude/claude-setup/gate-rounds.mjs direct <asset> --plan <file>` (the hook records it only
      from a Fable session) and the builders follow its plan. A round 4 without it is refused.
-     The brief is `Role: Designer · Kit: <the project's kit> · Size: S` with the Fable `Model:` (Roster row, Designer; `Models` line), plus
+     The brief is `Role: Designer · Kit: <the project's kit> · Size: S` (on a kit without a Designer, such as `setup`: `Role: Reviewer`) with the Fable `Model:` (Roster row, Designer; `Models` line), plus
      `Round: 4` and `Asset: <name>`; the Designer reads the three gate reports and writes exact instructions: what to change, with
      numbers, and what to stop doing.
   3. **Round 7 and later** run only after **one card to yskills** (what it does, why it fails, 2 or 3 ideas, one recommended;

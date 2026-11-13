@@ -556,7 +556,7 @@ test('rule guard: the spawn brief names a role, the thread gets its Roster row a
   const wake = (reason, body) => `<wake reason="${reason}">\n<relay>\n  <note>\n      ${body}\n  </note>\n</relay>\n</wake>`
   assert.doesNotMatch(run(wake('mention', 'Role: Tester · Kit: app · Size: L')).stdout, /you are the/, 'a later wake quoting a brief is not this thread\'s role')
   const out = JSON.parse(run(wake('spawn', 'Role: Reviewer · Kit: setup · Size: S\nModel: sonnet')).stdout).hookSpecificOutput.additionalContext
-  assert.match(out, /you are the Reviewer[\s\S]*Model: Opus[\s\S]*# Reviewer/)
+  assert.match(out, /you are the Reviewer[\s\S]*Model: Fable[\s\S]*# Reviewer/)
   assert.ok(out.length < 10_000, 'hook output over 10,000 characters is cut to a preview')
   assert.doesNotMatch(run(wake('spawn', 'Role: Reviewer · Kit: setup · Size: S')).stdout, /you are the/, 'once per session')
   const { roleOf } = await import('../global/rule-guard.mjs')
@@ -879,7 +879,7 @@ test('team guard: a thread start runs its role on the tier its Roster row names'
   const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
   const brief = (role, size) => `Role: ${role} · Kit: setup · Size: ${size}${FULL}\nPrior art: claude-setup/global guards checked -> adapt, because they exist`
   assert.ok(wrongModel(brief('Planner', 'M'), 'sonnet', teams))
-  assert.equal(wrongModel(brief('Planner', 'M'), 'opus', teams), null)
+  assert.ok(wrongModel(brief('Planner', 'M'), 'opus', teams), 'S5: the Planner thread is Fable; Opus only when Fable is unavailable')
   assert.equal(wrongModel(brief('Planner', 'M'), 'fable', teams), null, 'the row names Fable')
   assert.ok(wrongModel(brief('Programmer', 'M'), 'opus', teams), 'an Opus checkpoint subagent is no Opus thread')
   // gate.md Rounds 2: the Fable gate director runs as a Designer thread (11-12: that start was refused for lack of a row).
@@ -1579,7 +1579,7 @@ test('team guard (M30): a brief without Item, Plan or Acceptance names each miss
   assert.deepEqual(missingLines(brief.replace(/\nItem:[^\n]*/, '\nItem: new')), [])
 })
 
-test('team guard (M30): a Planner at size L runs on Fable only; M still allows Opus; a stated reason passes', async () => {
+test('team guard (M30): a Planner at size L runs on Fable only; M needs Fable too; a stated reason passes', async () => {
   const { wrongModel } = await import('../global/team-guard.mjs')
   const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
   const id = (tier) => teams.match(new RegExp(`${tier} \\((claude-[\\w.-]+)\\)`, 'i'))[1]
@@ -1587,8 +1587,23 @@ test('team guard (M30): a Planner at size L runs on Fable only; M still allows O
   assert.ok(wrongModel(brief('L'), id('Opus'), teams), 'Opus is refused for a Planner at L')
   assert.equal(wrongModel(brief('L'), id('Fable'), teams), null)
   assert.ok(wrongModel(brief('L'), id('Sonnet'), teams))
-  assert.equal(wrongModel(brief('M'), id('Opus'), teams), null, 'M stays on Opus')
+  assert.ok(wrongModel(brief('M'), id('Opus'), teams), 'S5: M is Fable too')
+  assert.equal(wrongModel(`${brief('M')}\nModel: opus (Fable unavailable)`, id('Opus'), teams), null, 'S5: the way out at M')
   assert.equal(wrongModel(`${brief('L')}\nModel: opus (Fable is out of credits)`, id('Opus'), teams), null, 'the Models line lets Opus take over, said in the brief')
+})
+
+// S5 (#546, yskills 2026-11-13, decision 3): Planner and Reviewer threads run on Fable, a Researcher on Opus, a Programmer on Sonnet; only the Model cells of the Roster changed.
+test('team guard (S5): the Roster model cells, table-driven', async () => {
+  const { wrongModel } = await import('../global/team-guard.mjs')
+  const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
+  const brief = (role, size, extra = '') => `Role: ${role} · Kit: setup · Size: ${size}${extra}`
+  const rows = [
+    ['Planner', 'M', 'opus', '', true], ['Planner', 'M', 'fable', '', false], ['Planner', 'M', 'opus', '\nModel: opus (Fable unavailable)', false],
+    ['Reviewer', 'M', 'opus', '', true], ['Reviewer', 'M', 'fable', '', false], ['Reviewer', 'S', 'opus', '\nModel: opus (Fable unavailable)', false],
+    ['Researcher', 'M', 'sonnet', '', true], ['Researcher', 'M', 'opus', '', false],
+    ['Programmer', 'M', 'sonnet', '', false], ['Programmer', 'M', 'opus', '', true],
+  ]
+  for (const [role, size, model, extra, refused] of rows) assert.equal(!!wrongModel(brief(role, size, extra), model, teams), refused, `${role} ${size} on ${model}${extra ? ' with a reason' : ''}`)
 })
 
 test('team guard (M30): a Reviewer or Researcher thread starts on every kit, a Programmer still not on video', async () => {

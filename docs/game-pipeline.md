@@ -142,13 +142,13 @@ One file per game: a scene table (chapter, beat, slot, type), then one brief per
 
 ## Chapter roles (who does what, per chapter)
 
-A render-based story game is made chapter by chapter, like a VN studio (yskills 2026-11-10: "like a real project, every chapter grows the library and the workflow"). The story text is the only input; two Opus passes extract everything from it before anyone builds. Expensive models plan and gate, cheap models build ([`TEAMS.md`](TEAMS.md), Models).
+A render-based story game is made chapter by chapter, like a VN studio (yskills 2026-11-10: "like a real project, every chapter grows the library and the workflow"). The story text is the only input; a Fable plan pass and an Opus research pass extract everything from it before anyone builds. Expensive models plan and gate, cheap models build ([`TEAMS.md`](TEAMS.md), Models).
 
 | Step | Studio role | Our role, runs as, model | Hands over |
 |---|---|---|---|
 | 0 | Writer, script doctor | Story team (`storyteller` 07), threads | chapter text, Editor 5/5, scene tags and animation blocks in the text |
-| 1 | Producer / line producer: script breakdown | `Planner · CH<n>` thread, Opus (the film `Producer` is no role on this kit) | `needs.md`: per scene set, cast and outfit state, props, clips; each library hit with its path, each miss a job with role and wave |
-| 2 | Director / storyboard, reference researcher | `Designer · CH<n> shots` thread (the Designer as scene director), Opus; Researcher subagent, Sonnet | `shotlist.md` (one row per image or clip: slot, camera, pose, expression, outfit, light, sound cue, ref), `REFS.md` (per shot: ref file, what to copy), animation plan (intro, loop, finish beats) |
+| 1 | Producer / line producer: script breakdown | `Planner · CH<n>` thread, Fable (the film `Producer` is no role on this kit) | `needs.md`: per scene set, cast and outfit state, props, clips; each library hit with its path, each miss a job with role and wave |
+| 2 | Director / storyboard, reference researcher | `Designer · CH<n> shots` thread (the Designer as scene director), Opus; Researcher subagent, Opus | `shotlist.md` (one row per image or clip: slot, camera, pose, expression, outfit, light, sound cue, ref), `REFS.md` (per shot: ref file, what to copy), animation plan (intro, loop, finish beats) |
 | 3 | Modeller, rigger, costume, environment, props | Programmer threads, Sonnet (Fable only for rig weights or topology) | only the misses of `needs.md`, each in the library with its gate passed |
 | 4 | Layout / camera | planned in the shot list, done by the still builder | cameras as data per set, a framing check, a contact sheet with large labels |
 | 5 | Lighting, render, animation | still builder (Sonnet) with an Opus fix list per round; `Animator · <clip>` | previews with the ref beside each shot |
@@ -157,7 +157,7 @@ A render-based story game is made chapter by chapter, like a VN studio (yskills 
 | 10 | Playtest | Tester with a Playtester subagent, Opus | every route played, screenshots |
 | 11 | Pipeline TD (retro) | the chapter's Planner | new assets promoted into the library, one lesson line per surprise, the four planning files copied as the next chapter's start |
 
-**One chapter plan, gated before any build** (yskills 2026-11-10): steps 1 and 2 write one `CHAPTER-PLAN.md` (chapter facts, rooms, shots, clips, asset jobs) on locked text, Opus at high effort. A fresh Opus plan gate passes it only when every beat has a shot, every row has a ref and numbers, every library asset is named by path, continuity holds, and a previz contact sheet (grey proxies in the real set and camera, 10 %) has been looked at beside the refs. Builders then get one brief per job with inputs and sha, exact values copied from the plan, one output path and a clean end; they read nothing else and decide nothing.
+**One chapter plan, gated before any build** (yskills 2026-11-10): steps 1 and 2 write one `CHAPTER-PLAN.md` (chapter facts, rooms, shots, clips, asset jobs) on locked text, Fable (Planner) and Opus (Researcher) at high effort. A fresh Opus plan gate passes it only when every beat has a shot, every row has a ref and numbers, every library asset is named by path, continuity holds, and a previz contact sheet (grey proxies in the real set and camera, 10 %) has been looked at beside the refs. Builders then get one brief per job with inputs and sha, exact values copied from the plan, one output path and a clean end; they read nothing else and decide nothing.
 
 Researcher, Architect (the fix list), Continuity (a column in the shot list) and Playtester are subagents, never threads. Waves: a wave goes from build to integration as soon as its assets pass; the next wave builds meanwhile. Project paths and the current chapter's status live in the project's own copy of this table, never in git when the game is 18+.
 

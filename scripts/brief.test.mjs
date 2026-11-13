@@ -56,7 +56,7 @@ test('for every Roster role x kit x size the generated brief passes team-guard, 
   let refused = 0
   for (const role of rosterNames(teams)) for (const kit of kitNames(teams)) for (const size of ['S', 'M', 'L']) {
     let out
-    try { out = buildBrief({ role, kit, size, ...FIELDS, tester: 'Tester · x', researcher: 'Researcher, sonnet', teams }) } catch (e) {
+    try { out = buildBrief({ role, kit, size, ...FIELDS, tester: 'Tester · x', researcher: 'Researcher, opus', teams }) } catch (e) {
       assert.ok(e instanceof BriefError, `${role}/${kit}/${size}: ${e.message}`)
       // The backstop (decide() after building) is not a reason: a refusal there means the generator built what the guard refuses.
       assert.doesNotMatch(e.message, /fails team-guard/, `${role}/${kit}/${size} built a brief the guard refuses: ${e.message}`)
@@ -165,7 +165,7 @@ test('a builder, designer or animator brief at size M or L needs `Gate: <reviewe
   assert.deepEqual(ask('Programmer', 'setup', 'S'), {}, 'size S needs none')
   assert.deepEqual(ask('Programmer', 'setup', 'M', '\nGate: Reviewer · x before owner'), {}, 'with the line it starts')
   assert.match(ask('Programmer', 'setup', 'M', '\nGate: later').block ?? '', /Gate:/, 'the line says before owner')
-  assert.deepEqual(decide(START, { brief: `Role: Reviewer · Kit: setup · Size: M${FULL.replace(/\nGate:[^\n]*/, '')}`.replace('Prior art: none, because a test brief', 'Prior art: gate.md and the setup checks -> adapt, because they exist'), title: 'Reviewer · x', model: teams.match(/Opus \((claude-[\w.-]+)\)/)[1] }, [], [], teams), {}, 'a gate role is not asked for a Gate line')
+  assert.deepEqual(decide(START, { brief: `Role: Reviewer · Kit: setup · Size: M${FULL.replace(/\nGate:[^\n]*/, '')}`.replace('Prior art: none, because a test brief', 'Prior art: gate.md and the setup checks -> adapt, because they exist'), title: 'Reviewer · x', model: teams.match(/Fable \((claude-[\w.-]+)\)/)[1] }, [], [], teams), {}, 'a gate role is not asked for a Gate line')
 })
 
 test('the generator fills the Gate line for builder, designer and animator briefs at M and L, and only there', () => {
@@ -221,5 +221,5 @@ test('a rendered brief file per role passes team-guard once its <...> are filled
     assert.match(briefFileName(role), /^[a-z0-9-]+\.md$/)
   }
   assert.equal(modelFor('Planner', 'L', teams), teams.match(/Fable \((claude-[\w.-]+)\)/)[1])
-  assert.match(briefFile('Planner', teams), /Model: <claude-opus[\w.-]* at size M \| claude-fable[\w.-]* at size L>/, 'the Planner file offers the model per size')
+  assert.match(briefFile('Planner', teams), /^Model: claude-fable[\w.-]*$/m, 'S5: the Planner file names Fable, one model for every size')
 })
