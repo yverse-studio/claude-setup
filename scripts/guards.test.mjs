@@ -1657,3 +1657,21 @@ test('neverPush: a prefix matches through ./, .. and blanks and without case', a
   const { neverPush } = await import('../global/rule-guard.mjs')
   assert.equal(neverPush(['.//secret/a', 'x/../secret/a', ' secret/a', 'Secret/a', 'secretary/a'], ['secret']).length, 4)
 })
+
+test('pre-push hook: a remote repointed at GitHub does not hide its old tracking refs', () => {
+  if (process.platform === 'win32') return
+  const home = mkdtempSync(join(tmpdir(), 'np4-home-'))
+  const repo = mkdtempSync(join(tmpdir(), 'np4-repo-'))
+  try {
+    mkdirSync(join(home, '.claude', 'claude-setup'), { recursive: true })
+    cpSync(join(root, 'global/rule-guard.mjs'), join(home, '.claude', 'claude-setup', 'rule-guard.mjs'))
+    const env = { ...process.env, CLAUDE_SETUP_HOME: home }
+    for (const k of Object.keys(env)) if (k.startsWith('GIT_')) delete env[k]
+    const g = (...a) => spawnSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...a], { cwd: repo, env, encoding: 'utf8' })
+    g('init', '-q', '-b', 'main'); mkdirSync(join(repo, 'Private18')); writeFileSync(join(repo, 'Private18', 'x.png'), 'x'); g('add', '-A'); g('commit', '-q', '-m', 'x')
+    const head = g('rev-parse', 'HEAD').stdout.trim()
+    g('update-ref', 'refs/remotes/origin/main', head) // fetched from a private repo, then origin was repointed
+    const r = spawnSync('sh', [join(root, 'global/git-hooks/pre-push'), 'origin', 'https://github.com/o/x'], { cwd: repo, env, input: `refs/heads/main ${head} refs/heads/main ${'0'.repeat(40)}\n`, encoding: 'utf8' })
+    assert.equal(r.status, 1, r.stdout)
+  } finally { for (const d of [home, repo]) rmSync(d, { recursive: true, force: true }) }
+})

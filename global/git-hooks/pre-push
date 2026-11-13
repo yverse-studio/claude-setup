@@ -13,9 +13,9 @@ case "$dest" in
     tmp=$(mktemp)
     while read -r lref lsha rref rsha; do
       case "$lsha" in ""|0000000000000000000000000000000000000000) continue ;; esac
-      # -z keeps odd paths unquoted, -m lists merge commits too; an unknown remote sha falls back to "not on the pushed remote yet" (only that remote's refs are excluded, a private second remote does not hide a commit).
-      if git cat-file -e "$rsha^{commit}" 2>/dev/null; then range="$rsha..$lsha"; else range="$lsha --not --remotes=$1"; fi
-      git -c core.quotePath=false -c log.showRoot=true log -z -m --name-only --pretty=format: $range >> "$tmp" || { echo "pre-push: blocked, could not list the pushed paths"; rm -f "$tmp"; exit 1; }
+      # -z keeps odd paths unquoted, -m lists merge commits too; a new branch or unknown remote sha lists the whole history (no tracking ref is trusted, they may come from another remote).
+      if git cat-file -e "$rsha^{commit}" 2>/dev/null; then range="$rsha..$lsha"; else range="$lsha"; fi
+      git -c core.quotePath=false -c log.showRoot=true log -z -m --name-only --pretty=format: "$range" >> "$tmp" || { echo "pre-push: blocked, could not list the pushed paths"; rm -f "$tmp"; exit 1; }
     done <<EOF
 $refs
 EOF
