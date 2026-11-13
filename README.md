@@ -43,8 +43,8 @@ tools that are missing (gh, ffmpeg, docker, python, uv, fnm) with the install co
 |---|---|---|
 | `CLAUDE.md` | How Claude works for you: owns tasks end to end, verifies before pushing, screenshot-reviews UI, your default stack | `CLAUDE.md` |
 | Settings | Auto permission mode, an allow list and autoMode lines so routine work never prompts, asks only before deletes, secret rotation and npm publish, denies local deploys, force-push of `main` and reading `.env` and key files (a deny rule is not a sandbox), high effort, status line with context bar (`docs/permissions.md`) | `global/settings.json` |
-| 9 plugins on | superpowers, frontend-design, security-guidance, TypeScript and Python LSP, Context7, Playwright, commit-commands, skill-creator (`/code-review` and the `claude-api` skill are built into Claude Code now) | Anthropic's official marketplace, `config/plugins.json` |
-| 7 plugins per project | Cloudflare, Firebase, Stripe, Sentry, PostHog, Supabase, Vercel: installed but off; a repo turns one on in its `.claude/settings.json` | same |
+| 8 plugins on | frontend-design, security-guidance, TypeScript and Python LSP, Context7, Playwright, commit-commands, skill-creator (`/code-review` and the `claude-api` skill are built into Claude Code now) | Anthropic's official marketplace, `config/plugins.json` |
+| 8 plugins per project | superpowers (brainstorm, TDD, debugging; add with `claude plugin install superpowers@claude-plugins-official --scope project`), Cloudflare, Firebase, Stripe, Sentry, PostHog, Supabase, Vercel: installed but off; a repo turns one on in its `.claude/settings.json` | same |
 | 17 ECC skills | Vue, Nuxt 4, Vite, API design, security review, e2e, SEO, i18n... | `.claude/skills`, list in `config/ecc.json` |
 | 15 ECC agents | planner, architect, code/TS/Vue/security/database reviewers, build-error-resolver, e2e-runner, a11y, performance, SEO... | `.claude/agents` |
 | ECC rules | TypeScript, Vue, Nuxt, web (language rules load only for matching files) | `.claude/rules/ecc` |
@@ -110,7 +110,7 @@ threads research with WebSearch.
 - **UI work:** `ui-review` takes the screenshots, `design-critic` lists what to fix.
 - **Your own Chrome:** start Claude Code with `claude --chrome` (needs the Claude in Chrome
   extension) when a page needs your login; Playwright covers everything headless.
-- **Bigger features:** superpowers' brainstorm and plan skills, or `/feature-dev`.
+- **Bigger features:** the `operator` plan-first rule, or `/feature-dev`.
 
 ## Changing it
 
