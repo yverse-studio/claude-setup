@@ -1802,3 +1802,12 @@ test('gate.md and the Reviewer role: one reviewer thread runs up to 3 rounds of 
   assert.match(gate, /One reviewer thread, up to 3 rounds[\s\S]*numbered fixes, each with tile and location[\s\S]*fresh reviewer/)
   assert.match(readFileSync(join(root, '.claude/skills/operator/roles/reviewer.md'), 'utf8'), /all gate rounds of one asset \(at most 3\)[^\n]*numbered fixes/)
 })
+
+// #582 (yskills 2026-11-13): every design-type role starts with references from proven examples, 9 options as one sheet, the owner's pick and all matching skills; the design brief names that step.
+test('design-type role files carry the Start step and the design brief names it', () => {
+  for (const r of ['designer', 'game-designer', 'content-designer', 'character-td', 'animator']) {
+    const t = readFileSync(join(root, `.claude/skills/operator/roles/${r}.md`), 'utf8')
+    assert.match(t, /\*\*Start step \(#582\):\*\*[^\n]*proven, working examples[^\n]*9 options[^\n]*one sheet[^\n]*which he likes[^\n]*skills? at start/, `${r}.md`)
+  }
+  assert.match(readFileSync(join(root, '.claude/skills/operator/briefs.md'), 'utf8'), /design-type item[^\n]*`Start:` line[^\n]*Start step \(#582\)/)
+})

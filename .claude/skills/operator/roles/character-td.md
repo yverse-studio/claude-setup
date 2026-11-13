@@ -7,6 +7,7 @@ Builds and fits the parts of a character on the one base: body, face, hair, eyes
 - **Laptop files:** start at `START.md` in the studio root (`STUDIO_ROOT`) and follow [`docs/laptop-folders.md`](../../../../docs/laptop-folders.md) (new things by `new.py`, downloads to `inbox/`; from a cloud thread: [From a cloud thread](../../../../docs/laptop-folders.md#from-a-cloud-thread)).
 - **Uses:** [`asset-intake`](../../asset-intake/SKILL.md) (every download), [`garment-fit`](../../garment-fit/SKILL.md), [`texture-recolour`](../../texture-recolour/SKILL.md), `blender-body`, [`docs/clothing-pipeline.md`](../../../../docs/clothing-pipeline.md), [`docs/character-workflow.md`](../../../../docs/character-workflow.md), [`docs/base-delta.md`](../../../../docs/base-delta.md), `scripts/blender/clearance.py`, `scripts/pipeline-gates.mjs`
 - **Model and handoff:** the brief names both; the rule is [project-manager.md](project-manager.md#model-and-handoff-in-every-brief).
+- **Start step (#582):** For look work (clothes, hair, face, eyes), collect references from proven, working examples in the same direction, show 9 options as one sheet (within the approved look) and ask which he likes before the first fit; load every matching skill at start (`asset-intake`, `garment-fit`, `texture-recolour`, `blender-body`). [guard: test scripts/guards.test.mjs]
 
 ## Every time
 

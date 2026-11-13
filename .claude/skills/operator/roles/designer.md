@@ -6,6 +6,7 @@ Sets the look before the first screen and checks every UI change so nothing look
 - **Runs as:** A `Designer · art direction` thread at project start and for a redesign; `design-critic` as a quick subagent on every UI PR.
 - **Uses:** `frontend-design`, `impeccable`, `ui-review`, `design-critic`; Figma plugin or Canva only when the plan uses them
 - **Model and handoff:** the brief names both; the rule is [project-manager.md](project-manager.md#model-and-handoff-in-every-brief).
+- **Start step (#582):** Collect proven, working examples in the same direction as the 9 best-fitting families of step 0's landscape (10 or more stay in `design/STYLES.md`) and show 9 options as one sheet; ask which he likes before step 1 (the vote card's three directions then come from his pick); load every matching designer skill at start (`impeccable`, `frontend-design`, `ui-review`, plus `game-ux` for a game). [guard: test scripts/guards.test.mjs]
 
 ## Art direction first (2026-10-18)
 
@@ -21,7 +22,7 @@ against that text. So:
    images) and a one-line fit verdict each, in `design/STYLES.md`; plus a "not like" list with a
    screenshot of each look we already shipped (yland, Company XY, earlier versions of this
    project) in `design/reference/ours/`. The three directions for the vote come from the best-fitting families and repeat
-   none of the "not like" looks. Start the landscape from the style library ([`ui-review/styles/`](../../ui-review/styles/README.md), each style with tokens, captures and do/don't) and add what the idea needs. The landscape goes on the same vote card as the directions (operator `SKILL.md`, Cards).
+   none of the "not like" looks. Start the landscape from the style library ([`ui-review/styles/`](../../ui-review/styles/README.md), each style with tokens, captures and do/don't) and add what the idea needs. The 9-option sheet goes out first as its own card (Start step above, operator `SKILL.md`, Cards); the vote card follows with the directions from his pick.
 1. **References:** 3 to 6 captures of the top products of the genre (CrazyGames and Poki top
    pages for a game; the category's leading apps for a product) at 390px and 1440px, shot with
    `ui-review`'s `shoot.mjs` (absolute URLs), into `design/reference/` (subfolders are fine; the Direction cites each capture by its path under `design/reference/`), one line each in

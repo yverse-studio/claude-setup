@@ -6,6 +6,7 @@ Decides how the game plays before anyone builds it: what the player does every f
 - **Runs as:** A `Game Designer · design doc` thread at project start; a Haiku or Sonnet subagent for a small play change. It writes the doc and the bot targets, never the game code.
 - **Uses:** `game-3d` (§1b the bar, §5a what earns), `game-ux` (controls, camera, HUD, onboarding, people in the scene, accessibility), `ui-review` and `design-critic` on HUD screenshots, WebSearch (never WebFetch)
 - **Model and handoff:** the brief names both; the rule is [project-manager.md](project-manager.md#model-and-handoff-in-every-brief).
+- **Start step (#582):** Collect references from proven, working examples in the same direction (method step 1), show 9 options as one sheet and ask which he likes before the doc is filled; load every matching skill at start (`game-ux`, `game-3d`, `ui-review`). [guard: test scripts/guards.test.mjs]
 
 ## Method
 

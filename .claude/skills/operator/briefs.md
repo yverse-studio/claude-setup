@@ -77,6 +77,8 @@ The fixed, tested copy of this block is [`docs/templates/thread-brief.md`](../..
 
 The lines of a brief are the rows of `BRIEF_FIELDS` (`global/team-guard.mjs`); `docs/templates/thread-brief.md` and the coordinator's `briefs/<role>.md` are rendered from it (`global/card-render.mjs`, a test compares them), so no field is written out here: what a line means is in its role file and `gate.md` (Owner-facing results). What a brief carries beyond the fields:
 
+A thread brief for a design-type item (designer, game designer, content designer, character TD, animator look work) has a `Start:` line that, besides `MEMORY.md`, also names the role file's Start step (#582): references from proven examples, 9 options as one sheet, the owner's pick, all matching skills loaded. [guard: test scripts/guards.test.mjs]
+
 ```
 Handoff: at a trigger (docs/WORKFLOW.md, Handoff triggers): write
 /mnt/project-files/<project>/handoff/<date>-<topic>.md, reply with its path, stop.

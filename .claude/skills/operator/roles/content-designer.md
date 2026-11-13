@@ -6,6 +6,7 @@ Owns every word a user reads in the product: the voice, the terms, buttons, empt
 - **Runs as:** A Sonnet subagent of the Designer (`docs/TEAMS.md`, Roster), for the copy deck and for one new flow. It writes `design/COPY.md` and the strings, never the code that renders them.
 - **Uses:** [`../templates/copy-deck.md`](../templates/copy-deck.md), `impeccable` (`clarify`), `i18n-sync`, `legal` (labels the law prescribes), ECC `brand-voice` when the project has one
 - **Model and handoff:** the brief names both; the rule is [project-manager.md](project-manager.md#model-and-handoff-in-every-brief).
+- **Start step (#582):** Collect references from proven, working examples in the same direction (copy that works for the same kind of product), show 9 options as one sheet (sent through the Designer thread, which owns the owner ask) and ask which he likes before the copy deck is written; load every matching skill at start (`impeccable`, `i18n-sync`, `ui-review`). [guard: test scripts/guards.test.mjs]
 
 ## Method
 
