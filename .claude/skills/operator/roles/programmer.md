@@ -45,3 +45,4 @@ Added at the end of each project (operator step 9): date, project and its type, 
 - 2026-10-18 (claude-setup, PR 182): a fix added in a late gate round is a new rule. It ships with a negative test (the checker rules in [`reviewer.md`](reviewer.md), Report, point 2) and runs against this repo's own folders (`.shots/`, `test-results/`) before the verdict. A late ".webm counts as audio" extra broke silent games with a test recording and cost a round.
 
 - 2026-11-12 (M48): a changed guard file gets its cloud/setup.sh copy from `node scripts/sync-cloud-setup.mjs`; the rule budget counts new playbook prose, so lessons are worded as facts.
+- 2026-11-12 (#522, #523): the role stamp is also written from the transcript (the first user entry, then coordinator re-briefs), and a reviewer report that arrives as a hand-back message is read only from the transcript of the agent the note names.

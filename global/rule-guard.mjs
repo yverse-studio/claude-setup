@@ -233,7 +233,8 @@ export function promptContext(prompt = '', stopWord = null) { // stopWord: STOP_
 
 // The role a brief names (`Role: Programmer · Kit: setup · Size: M`) and its Roster row in TEAMS.md.
 export function roleOf(prompt, teams) {
-  const line = prompt.replace(/[*_`]/g, '').match(/^[\s>-]*Role:[ \t]*([^\n]*)/m)?.[1].trim()
+  // One parser: the wrapper tags come off first (stripTags, so `<note>Role: Tester` is a line of its own, #523), then the line is anchored at its start (only the tags, never a literal \\n, which team-guard does not turn into a line either).
+  const line = prompt.replace(/<\/?(wake|message|thread|project|relay|coordinator-relay|cited|note|system-note)\b[^>]*>/g, '\n').replace(/[*_`]/g, '').match(/^[\s>-]*Role:[ \t]*([^\n]*)/m)?.[1].trim()
   if (!line || /^(none|n\/a|tbd|-)\b/i.test(line)) return null
   const rows = teams.split('\n').filter((l) => /^\| [A-Z][\w ]* \(\[`/.test(l))
   const named = (r) => r.slice(2, r.indexOf(' (')).toLowerCase()
@@ -514,7 +515,9 @@ export function spawnPrompt(prompt, transcript) {
       const text = typeof content === 'string' ? content : (content ?? []).map((c) => c?.text ?? '').join('\n')
       // A project thread's first entry starts with a <session-context> block, the spawn wake follows it
       // (2026-11-12: anchored at the entry's start, the lookup found no brief and no role card arrived).
-      const body = text.replace(/^\s*<session-context\b[\s\S]*?<\/session-context[^>]*>\s*/, '')
+      // #522: harness reminders (CLAUDE.md, memory, hook context) may come first, so blocks of both kinds are stripped, however many.
+      let body = text
+      for (let prev = ''; prev !== body;) { prev = body; body = body.replace(/^\s*<(session-context|system-reminder)\b[\s\S]*?<\/\1[^>]*>\s*/, '') }
       if (entry.type === 'user' && /^\s*<(wake|relay)\b[^>]*reason="spawn"/.test(body)) found.push(body)
     } catch { /* not a JSON line */ }
   }
@@ -851,10 +854,24 @@ function agentReport(path, prompt) {
   const want = String(prompt ?? '').trim()
   return want && first !== null && first.includes(want) ? last : ''
 }
-export const withReports = (calls, transcriptPath) => calls.map((c) => {
-  const id = /^(Agent|Task)$/.test(c.name) ? AGENT_ID.exec(c.result)?.[1] : null
+// #522: the harness's newer answer to an Agent call is only "report was delivered to you as a message from ..." (the report comes as a separate
+// SubagentHandback message). The report then still comes from the agent's own transcript, named by the note: the transcript of the
+// agent the note names (agentReport checks it was started with this call's prompt), never a row of the main transcript, which a builder can type.
+const DELIVERED = /^[^\n]{0,80}?\bdelivered to you as a message\b/i
+function deliveredReport(transcriptPath, prompt, note = '') {
+  // The note names the agent ("... from agent-<id>" or "agentId: <id>"): that one transcript only. No id: nothing counts (a scan by prompt could pick
+  // another agent that was started with a prompt that begins with this one, gate r1 of #525).
+  const first = String(note).trim().split('\n')[0] // the harness's note is the opening line; an id mentioned later in a report is nobody's note
+  const id = /\bagent-?Id:\s*([A-Za-z0-9-]+)/i.exec(first)?.[1] ?? /\bfrom\s+agent-([A-Za-z0-9][A-Za-z0-9-]*)/i.exec(first)?.[1]
   const path = id ? agentTranscript(transcriptPath, id) : ''
-  return path ? { ...c, report: agentReport(path, c.input?.prompt) } : c
+  return path ? agentReport(path, prompt) : ''
+}
+export const withReports = (calls, transcriptPath) => calls.map((c) => {
+  if (!/^(Agent|Task)$/.test(c.name)) return c
+  const id = AGENT_ID.exec(c.result)?.[1]
+  const path = id ? agentTranscript(transcriptPath, id) : ''
+  if (path) return { ...c, report: agentReport(path, c.input?.prompt) }
+  return DELIVERED.test(String(c.result).trim()) ? { ...c, report: deliveredReport(transcriptPath, c.input?.prompt, String(c.result)) } : c
 })
 
 // A thread whose brief breaks the team rules does not work (yskills 2026-11-12: threads started without a Role line ran anyway). The prompt hook
@@ -935,6 +952,19 @@ async function relayRebrief(session, prompt, cwd, model, transcript = '') {
   const topic = role.name === 'Reviewer' ? await topicPlaybook(text, root) : null
   const card = topic ? roleCard({ ...role, path: `${'.claude/skills/operator/checklists.md'} (${topic.name}) and gate.md, Scored gates` }, topic.text) : roleCard(role, role.path ? read(join(root, role.path)) || fetchRaw(role.path) : '')
   return [accepted, card].filter(Boolean).join('\n')
+}
+// #522/#523: the role stamp is also written from the transcript, so a spawn or a coordinator re-brief stamps its role whether or not the prompt hook
+// saw it on the turn that carried it (the stamp is only for a thread that holds none and no lock; a stamp is never changed, and a relay counts
+// only on a row the projects server delivered, as in relayRebrief).
+async function stampFromTranscript(session, transcript, cwd) {
+  const stamp = join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)
+  if (!session || read(stamp).trim() || existsSync(lockFile(session))) return
+  const t = transcript()
+  if (!/reason=\\?"spawn/.test(t)) return
+  const firstUser = t.split('\n').find((l) => /"type":"user"/.test(l)) ?? '' // the spawn is the session's own first user entry, never a later row
+  const sources = [...coordinatorRelays(t, await projectsOrigin()).reverse(), spawnPrompt('', firstUser)].filter(Boolean)
+  const role = roleOf(withoutOlderStamps(sources.map(stripTags)).join('\n'), read(join(setupRoot(cwd), 'docs', 'TEAMS.md')))
+  if (role) writeFileSync(stamp, role.name)
 }
 export function lockBlock(tool, session) {
   const f = session ? lockFile(session) : ''
@@ -1097,7 +1127,9 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           const guard = isStart ? await guardLine() : ''
           const card = isStart ? await cardLine() : ''
           if (isStart) await countStart({ session, brief, checkNow, modelNote, guard, card })
-          const context = [checkNow, relayNote, isStart ? await gateBriefContext(brief, model) : '', guard, card, modelNote, await roleContext(brief, cwd, session), await itemContext(brief, cwd, session), await stopNote(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
+          const roleCardText = await roleContext(brief, cwd, session)
+          await stampFromTranscript(session, () => (transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : ''), cwd)
+          const context = [checkNow, relayNote, isStart ? await gateBriefContext(brief, model) : '', guard, card, modelNote, roleCardText, await itemContext(brief, cwd, session), await stopNote(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
           if (context) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: context } }))
           return
         }
@@ -1111,6 +1143,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         const shipped = join(tmpdir(), `claude-setup-artifacts-${String(session).replace(/\W/g, '')}`)
         const transcript = () => (transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : '')
         const sessionTranscript = () => [transcriptPath, agentTranscript(transcriptPath, agentId)].filter((p) => p && existsSync(p)).map(read).join('\n')
+        await stampFromTranscript(session, transcript, cwd)
         const gateRole = session ? read(join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)).trim() : ''
         // M50: a relay that reached the thread mid-turn may never have fired the prompt hook; the transcript has it, so a locked thread re-reads it at its next tool call.
         let rebriefNote = ''
