@@ -126,3 +126,18 @@ test('a brief with a wrong kit, a wrong model and no gate gets ONE refusal that 
   const site = decide('mcp__hearthbot__start_thread', { prompt: brief.replace('references', 'site'), model: sonnetId, title: 'Character TD · Lily' }, [], [], teams, checklists, []).block
   assert.doesNotMatch(site ?? '', /Sheet:/)
 })
+
+// 2026-11-13 (coordinator, yskills 14:02): a brief said "at ~200k context post status and stop"; three needless hand-offs followed. A thread hands off only on a role change,
+// quality loss or a milestone (docs/WORKFLOW.md, Handoff triggers), never at a token count, so a start brief with such a line is refused with that rule in the text.
+test('a brief with a token-count stop or hand-off line is refused with the handoff rule; plain Stop when lines pass', async () => {
+  const { briefProblems } = await import('../global/team-guard.mjs')
+  const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
+  const sonnetId = teams.match(/Sonnet \((claude-[\w.-]+)\)/)[1]
+  const base = ['Role: Programmer · Kit: setup · Size: S', 'Item: new', 'Plan: n/a, size S', 'Acceptance: ok', 'Threads: none open on this topic', 'Prior art: obra/superpowers -> adapt, because it exists', 'Skills: x', 'Done when: x', 'Start: read MEMORY.md first']
+  const problems = (extra) => briefProblems([...base, ...extra, 'Stop when: 3 rounds'].join('\n'), { model: sonnetId, title: 'Programmer · x', teams })
+  for (const bad of ['At ~200k context post status and stop.', 'Stop at 30000 tokens.', 'hand off at 250k', 'Post a status when 80% of context is used, then stop.', 'Übergabe bei 200k Tokens: stop']) {
+    const out = problems([bad]).join('\n')
+    assert.match(out, /token count[\s\S]*role change, quality loss or a milestone/, `refused: ${bad}`)
+  }
+  for (const ok of ['Stop when: 3 gate rounds without 5/5, then report', 'Output: a 4k px render', 'Tools and sources: docs/WORKFLOW.md, Handoff triggers']) assert.doesNotMatch(problems([ok]).join('\n'), /token count/, `passes: ${ok}`)
+})

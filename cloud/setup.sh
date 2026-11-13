@@ -649,6 +649,13 @@ export function reuseBlock(text, teams, board) {
   return `${role.name} thread already open: "${open[0]}". Run list_threads again first (the board goes stale when threads resolve themselves); if it is still open, give the work to it with message_thread (same plan or PR; docs/TEAMS.md, Reuse rule), or add \`Reuse: none (<why: other plan or PR, long context, parallel read job>)\` to the brief and retry`
 }
 
+// A thread hands off only on a role change, quality loss or a milestone, never at a token count (docs/WORKFLOW.md, Handoff triggers; 2026-11-08 decision). A brief line that
+// asks for a stop, hand-off or status report at a token or context amount ("at ~200k context post status and stop", "stop at 30000 tokens") caused three needless hand-offs on 2026-11-13.
+const AMOUNT = String.raw`(?:~?\d+(?:[.,]\d+)?\s*k\b|\b\d[\d.,]*\s*tokens?\b|\b\d+\s*%\s*(?:of\s+)?(?:the\s+)?context)`
+const ACT = String.raw`\b(?:stop|hand[- ]?off|übergabe|status)\b`
+const TOKEN_STOP = new RegExp(`${ACT}[^\\n]*${AMOUNT}|${AMOUNT}[^\\n]*${ACT}`, 'i')
+export const tokenStopLine = (text) => String(text).replace(/[*_`]/g, '').split('\n').find((l) => TOKEN_STOP.test(l))?.trim().slice(0, 100)
+
 // One list of everything wrong with a thread brief, the one validator of the start hook and of `team-guard.mjs check` (CompanyXY 2026-11-13: a coordinator that
 // cannot run the guard before it starts finds the errors one thread at a time).
 export function briefProblems(text, { model, title: threadTitle, teams = '', checklists = '', board = [] } = {}) {
@@ -669,6 +676,8 @@ export function briefProblems(text, { model, title: threadTitle, teams = '', che
   // The id to pass, from the Models line (CompanyXY 2026-11-13: a tier name left the coordinator guessing the id).
   const idOf = (tier) => String(teams).match(new RegExp(`\\b${tier} \\((claude-[\\w.-]+)\\)`, 'i'))?.[1]
   if (wrong) found.push(`the ${wrong.role} runs on ${wrong.allowed.map((t) => (idOf(t) ? `${t} (${idOf(t)})` : t)).join(' or ')} (claude-setup docs/TEAMS.md, Roster), not ${wrong.tier}. Pass that model id. For an exception the row names (e.g. "Opus writes the weekly plan") add \`Model: <tier> (<why>)\` to the brief; if yskills named this model, say "yskills named <model>"`)
+  const tokenStop = tokenStopLine(text)
+  if (tokenStop) found.push(`the brief asks for a stop or hand-off at a token count ("${tokenStop}"): a thread hands off only on a role change, quality loss or a milestone, never at a token count, and works through auto-compact otherwise (docs/WORKFLOW.md, Handoff triggers). Drop the line; \`Stop when:\` names rounds or attempts`)
   const reuse = reuseBlock(text, teams, board)
   if (reuse) found.push(reuse)
   return found
@@ -719,6 +728,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
       process.exit(found.length ? 1 : 0)
     })()
   }
+  if (mode && !['start', 'pre', 'check'].includes(mode)) { console.error(`team-guard: unknown mode "${mode}" (modes: start, pre, check); an old installed copy knows no \`check\`, it refreshes at the next session start`); process.exit(2) }
   let raw = ''
   process.stdin.setEncoding('utf8')
   process.stdin.on('data', (c) => { raw += c })
