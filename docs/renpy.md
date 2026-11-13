@@ -64,6 +64,6 @@ a corner. Reference: companyxy-spiel `game/szene.rpy`. Lessons that cost a round
 
 ## Get it onto yskills' laptop
 
-The folder tools take files up to 30 MB. Split the zip (`split -b 20m`), commit the parts with
+The route and limits for big files are in [laptop-folders.md](laptop-folders.md), rule 5. Above its per-file limit, split the zip (`split -b 20m`), commit the parts with
 `device_commit_files`, then rejoin and unzip them in `device_bash` with `cat` and Python `zipfile`.
 Deleting files on the device is off by default, so move stale files into an `_alt/` folder.
