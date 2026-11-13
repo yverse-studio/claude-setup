@@ -1675,3 +1675,30 @@ test('pre-push hook: a remote repointed at GitHub does not hide its old tracking
     assert.equal(r.status, 1, r.stdout)
   } finally { for (const d of [home, repo]) rmSync(d, { recursive: true, force: true }) }
 })
+
+test('pre-push hook: a new branch is not blocked for history the destination already holds, only for what it lacks', () => {
+  if (process.platform === 'win32') return
+  const home = mkdtempSync(join(tmpdir(), 'np5-home-'))
+  const top = mkdtempSync(join(tmpdir(), 'np5-top-'))
+  try {
+    mkdirSync(join(home, '.claude', 'claude-setup'), { recursive: true })
+    cpSync(join(root, 'global/rule-guard.mjs'), join(home, '.claude', 'claude-setup', 'rule-guard.mjs'))
+    const env = { ...process.env, CLAUDE_SETUP_HOME: home }
+    for (const k of Object.keys(env)) if (k.startsWith('GIT_')) delete env[k]
+    const bare = join(top, 'github.com', 'o', 'x.git') // the destination; its path names github.com
+    mkdirSync(bare, { recursive: true })
+    const run = (cwd, ...a) => spawnSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...a], { cwd, env, encoding: 'utf8' })
+    run(bare, 'init', '-q', '--bare', '-b', 'main')
+    const repo = join(top, 'work'); mkdirSync(repo)
+    run(repo, 'init', '-q', '-b', 'main'); mkdirSync(join(repo, 'Private18')); writeFileSync(join(repo, 'Private18', 'x.png'), 'x'); run(repo, 'add', '-A'); run(repo, 'commit', '-q', '-m', 'old leak')
+    run(repo, 'rm', '-q', '-r', 'Private18'); run(repo, 'commit', '-q', '-m', 'removed')
+    run(repo, 'push', '-q', bare, 'main') // already on the destination (no hook is installed here)
+    run(repo, 'checkout', '-q', '-b', 'feat'); writeFileSync(join(repo, 'a.txt'), 'x'); run(repo, 'add', '-A'); run(repo, 'commit', '-q', '-m', 'neutral')
+    const feat = run(repo, 'rev-parse', 'HEAD').stdout.trim()
+    const hook = join(root, 'global/git-hooks/pre-push')
+    const push = (sha) => spawnSync('sh', [hook, 'origin', bare], { cwd: repo, env, input: `refs/heads/feat ${sha} refs/heads/feat ${'0'.repeat(40)}\n`, encoding: 'utf8' })
+    assert.equal(push(feat).status, 0, 'old history the destination already holds does not block a new branch')
+    run(repo, 'checkout', '-q', 'feat'); mkdirSync(join(repo, 'Private18')); writeFileSync(join(repo, 'Private18', 'y.png'), 'x'); run(repo, 'add', '-A'); run(repo, 'commit', '-q', '-m', 'new leak')
+    assert.equal(push(run(repo, 'rev-parse', 'HEAD').stdout.trim()).status, 1, 'a new Private18 commit on that branch still blocks')
+  } finally { for (const d of [home, top]) rmSync(d, { recursive: true, force: true }) }
+})
