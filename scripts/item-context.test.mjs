@@ -187,31 +187,33 @@ test('one normaliser for the Item token: classify repairs `m3` and `NEW`, the re
 
 // X1a (#539): the item fills the brief, so a short brief that names its item does not lock.
 const storyBrief = (item) => `<wake reason="spawn"><relay>\nRole: Programmer · Kit: game · Size: M · Model: sonnet\nItem: ${item}\n</relay></wake>`
+// The brief check reads the Roster of docs/TEAMS.md from the repo it runs in; CI has no ~/.claude/claude-setup, so the test repo carries a copy.
+const withRoster = (env) => { spawnSync('mkdir', ['-p', join(env.repo, 'docs')]); for (const f of ['CLAUDE.md', 'docs/TEAMS.md']) writeFileSync(join(env.repo, f), readFileSync(join(root, f))); return env }
 const full = 'Scope: the lamp.\nPlan: plan.md\nAcceptance: it is on.\nSheet: sheets/lamp.md\nLook-Lock: https://claude.ai/code/x#cmsg_ABCDEF123'
 
 test('X1a: a blocking field the brief lacks but the item has does not lock; without it the thread is locked as before', (t) => {
-  const env = setup(t)
+  const env = withRoster(setup(t))
   stub(env, { ...issue, body: full })
   const ok = run(env, storyBrief('#7'), `item-m${process.pid}-${n++}`)
   assert.doesNotMatch(ok, /Brief check/, 'the item holds Sheet and Look-Lock')
   assert.match(ok, /Fix the lamp/, 'the issue is still in the context')
-  const env2 = setup(t)
+  const env2 = withRoster(setup(t))
   stub(env2, { ...issue, body: 'Scope: the lamp.' })
   assert.match(run(env2, storyBrief('#7'), `item-n${process.pid}-${n++}`), /Brief check[^\n]*Sheet/, 'without the lines it locks as today')
 })
 
 test('X1a: one fetch per prompt, shared by the brief check and the context', (t) => {
-  const env = setup(t)
+  const env = withRoster(setup(t))
   stub(env, { ...issue, body: full })
   run(env, storyBrief('#7'), `item-o${process.pid}-${n++}`)
   assert.equal(readFileSync(env.log, 'utf8').trim().split('\n').length, 1)
 })
 
 test('X1a: a v6 item without Basis gets one start note, with Basis none', (t) => {
-  const env = setup(t)
+  const env = withRoster(setup(t))
   stub(env, { ...issue, title: 'Build lamp v6', body: full })
   assert.match(run(env, storyBrief('#7'), `item-p${process.pid}-${n++}`), /Basis/)
-  const env2 = setup(t)
+  const env2 = withRoster(setup(t))
   stub(env2, { ...issue, title: 'Build lamp v6', body: `${full}\nBasis: v5 files, 1:1` })
   assert.doesNotMatch(run(env2, storyBrief('#7'), `item-q${process.pid}-${n++}`), /find the passed predecessor/)
 })
