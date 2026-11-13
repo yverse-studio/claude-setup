@@ -1788,3 +1788,10 @@ test('pre-push hook: log.diffMerges, diff.ignoreSubmodules and an insteadOf rewr
     assert.equal(run(d, dest, `refs/heads/feat ${dh} refs/heads/feat ${'0'.repeat(40)}\n`, cfg([[`url.${priv}.insteadOf`, dest]])).status, 1, 'ls-remote against a rewritten URL excludes nothing')
   } finally { for (const x of [home, top]) rmSync(x, { recursive: true, force: true }) }
 })
+
+// #591 (yskills, C1 card 2026-11-13): a plan review is one pass/fail list, once; scores and rounds stay for pictures, looks and code.
+test('gate.md: plan reviews are pass/fail, once; the score-rule pin in check.mjs is gone', () => {
+  const rounds = readFileSync(join(root, '.claude/skills/operator/gate.md'), 'utf8').split(/^## Rounds$/m)[1] ?? ''
+  assert.match(rounds, /\*\*Plan reviews are pass\/fail, once\.\*\*[^\n]*second FAIL[^\n]*card/)
+  assert.doesNotMatch(readFileSync(join(root, 'scripts/check.mjs'), 'utf8'), /Scored gates \(the score rule\)/)
+})
