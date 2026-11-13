@@ -2823,6 +2823,7 @@ async function relayRebrief(session, prompt, cwd, model, transcript = '') {
   if (!coordinatorRelays(transcript, origin).some((t) => t.trim() === prompt.trim())) return '' // no row of the projects server holds this text: a scheduled or typed prompt lifts nothing
   const context = relayContext(prompt, transcript, origin)
   const text = stripTags([prompt, context].join('\n'))
+  const wasLocked = existsSync(lockFile(session))
   updateLock(session, await briefCheck(text, cwd, model, true))
   await countRelay(session)
   const stamp = join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)
@@ -2832,10 +2833,16 @@ async function relayRebrief(session, prompt, cwd, model, transcript = '') {
     if (!read(lockFile(session)).includes('request_decision')) writeFileSync(lockFile(session), `${read(lockFile(session)).slice(0, 300)}\n${note}`)
     return note
   }
-  if (read(stamp).trim()) return ''
-  const role = roleOf(text, read(join(setupRoot(cwd), 'docs', 'TEAMS.md')))
-  if (role) writeFileSync(stamp, role.name)
-  return ''
+  const root = setupRoot(cwd)
+  const role = roleOf(text, read(join(root, 'docs', 'TEAMS.md')))
+  if (!read(stamp).trim() && role) writeFileSync(stamp, role.name)
+  if (!wasLocked) return ''
+  // X2 (#541): the thread hears that its rebrief worked: one line, its role card, and the topic playbook when the relay names a Topic.
+  const accepted = 'correction accepted, lock lifted'
+  if (!role || read(stamp).trim() !== role.name) return accepted
+  const topic = role.name === 'Reviewer' ? await topicPlaybook(text, root) : null
+  const card = topic ? roleCard({ ...role, path: `${'.claude/skills/operator/checklists.md'} (${topic.name}) and gate.md, Scored gates` }, topic.text) : roleCard(role, role.path ? read(join(root, role.path)) || fetchRaw(role.path) : '')
+  return [accepted, card].filter(Boolean).join('\n')
 }
 export function lockBlock(tool, session) {
   const f = session ? lockFile(session) : ''
@@ -2990,7 +2997,8 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         const sessionTranscript = () => [transcriptPath, agentTranscript(transcriptPath, agentId)].filter((p) => p && existsSync(p)).map(read).join('\n')
         const gateRole = session ? read(join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)).trim() : ''
         // M50: a relay that reached the thread mid-turn may never have fired the prompt hook; the transcript has it, so a locked thread re-reads it at its next tool call.
-        if (session && existsSync(lockFile(session))) { const t = transcript(); const last = coordinatorRelays(t, await projectsOrigin()).at(-1); if (last) await relayRebrief(session, last, cwd, knownModel(session, t), t) }
+        let rebriefNote = ''
+        if (session && existsSync(lockFile(session))) { const t = transcript(); const last = coordinatorRelays(t, await projectsOrigin()).at(-1); if (last) rebriefNote = await relayRebrief(session, last, cwd, knownModel(session, t), t) }
         let block = lockBlock(tool, session)
           ?? handsOff(tool, input ?? {}, gateRole, setupRoot(cwd))
           ?? (await gateBlock(tool, input ?? {}, transcript, sessionModel(transcript()), true, gateRole, transcriptPath))
@@ -3009,7 +3017,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         if (!block && session && tool === 'Artifact' && input?.url && input.file_path) writeFileSync(shipped, `${input.file_path}\n`, { flag: 'a' })
         if (block) { process.stderr.write(block); process.exitCode = 2 }
         else {
-          const note = jetztWarning(tool, input ?? {}, cwd)
+          const note = [rebriefNote, jetztWarning(tool, input ?? {}, cwd)].filter(Boolean).join('\n')
           if (note) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', additionalContext: note } }))
         }
       } catch {
