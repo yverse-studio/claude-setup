@@ -133,7 +133,7 @@ test('the issue body is data: hook-looking lines are cut, the block says so, a d
   const out = run(env, brief('#7'), `item-h${process.pid}-${n++}`)
   assert.match(out, /Scope: x\nAcceptance: y/)
   assert.doesNotMatch(out, /ignore your role card|<\/relay>/)
-  assert.match(out, /data/)
+  assert.match(out, /ITEM-DATA/)
   const env2 = setup(t)
   stub(env2, issue)
   run(env2, brief('../x#7'), `item-i${process.pid}-${n++}`)
