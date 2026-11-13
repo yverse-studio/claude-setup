@@ -279,10 +279,15 @@ const gateRolePlain = (plain) => /^[ \t>-]*Role:[ \t]*(Tester|Reviewer|Security|
 // the refusal), `ok` says the line is there, `cls` says who closes a gap: judgment = only the coordinator can decide it (one refusal that lists every such
 // gap), recoverable = the thread fetches or fills it itself, derived = follows from Role, Kit and Size (the hook states it). `fill` is the thread's own
 // answer to a gap. `strict: false` rows are reported by decide() in their own words, not in missingLines().
+// Same source as ITEM_REF in rule-guard.mjs (the first token on the Item line wins); scripts/item-context.test.mjs pins it.
+export const ITEM_REF = /^[ \t>-]*Item:[^<\n]*?(?:\b(M\d+|new)\b|((?:[\w.-]+\/[\w.-]+)?#\d+))/im
+// The one spelling of an Item token (`m3` -> `M3`, `NEW` -> `new`); rule-guard.mjs holds the same function, scripts/item-context.test.mjs pins it.
+export const normItem = (t) => t.replace(/^m(?=\d)/, 'M').replace(/^new$/i, 'new')
+const itemTok = (p) => { const m = p.match(ITEM_REF); return m ? normItem(m[2] ?? m[1]) : null }
 const line = (re) => (plain) => re.test(plain)
 const sizeCls = (plain) => (small(plain) ? 'recoverable' : 'judgment')
 export const BRIEF_FIELDS = [
-  { key: 'Item', name: 'Item: (M<n> from PLAN.json, or new)', tpl: 'Item: <PLAN.json item M<n> or new>', ok: line(/^[ \t>-]*Item:[^<\n]*?\b(M\d+|new)\b/im), clean: /^[ \t>-]*Item:[ \t]*(M\d+|new)[ \t]*$/im, cls: sizeCls, fill: (p) => `Item: ${p.match(/^[ \t>-]*Item:[^\n]*?\b(M\d+)\b/im)?.[1] ?? 'new'}` },
+  { key: 'Item', name: 'Item: (#n of its issue, M<n> from PLAN.json, or new)', tpl: 'Item: <issue #n, PLAN.json item M<n> or new>', ok: line(ITEM_REF), clean: (p) => /^[ \t>-]*Item:[ \t]*(M\d+|new|(?:[\w.-]+\/[\w.-]+)?#\d+)[ \t]*$/m.test(p.replace(/^([ \t>-]*)item:/gim, '$1Item:')), cls: sizeCls, fill: (p) => `Item: ${itemTok(p) ?? 'new'}` },
   { key: 'Plan', name: 'Plan: (the plan file or card this thread builds)', tpl: 'Plan: <plan file or card it builds>', ok: line(/^[ \t>-]*Plan:[ \t]*[^<\s]/im), cls: sizeCls, fill: () => 'Plan: n/a, size S' },
   { key: 'Acceptance', name: 'Acceptance: (what counts as accepted)', tpl: 'Acceptance: <what counts as accepted>', ok: line(/^[ \t>-]*Acceptance:[ \t]*[^<\s]/im), cls: sizeCls, fill: () => 'Acceptance: propose one from the task, say so in your first checklist line' },
   { key: 'Model', name: 'Model:', tpl: 'Model: <model id of the role\'s Roster row>', ok: line(/^[ \t>-]*Model:[ \t]*[^<\s]/im), cls: () => 'derived', fill: () => 'Model: the model this thread runs on' },
@@ -310,7 +315,7 @@ export function classify(text) {
   const has = (k) => BRIEF_FIELDS.find((f) => f.key === k).ok(plain)
   for (const f of BRIEF_FIELDS) {
     // A line that is there but in the wrong format (`Item: PLAN.json item M29`) is a derived repair, never a gap.
-    if (f.clean && f.ok(plain) && !f.clean.test(plain)) out.derived.push({ key: f.key, tpl: f.tpl, fill: f.fill(plain) })
+    if (f.clean && f.ok(plain) && !f.clean(plain)) out.derived.push({ key: f.key, tpl: f.tpl, fill: f.fill(plain) })
     if (!(f.applies?.(plain) ?? true) || f.ok(plain) || (f.key === 'Acceptance' && has('Done when')) || (f.key === 'Done when' && has('Acceptance'))) continue
     const cls = f.cls(plain)
     out[cls].push({ key: f.key, tpl: f.tpl, fill: f.fill?.(plain) })
