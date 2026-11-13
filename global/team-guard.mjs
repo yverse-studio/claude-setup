@@ -419,13 +419,16 @@ export function reuseBlock(text, teams, board) {
 
 // A thread hands off only on a role change, quality loss or a milestone, never at a token count (docs/WORKFLOW.md, Handoff triggers; 2026-11-08 decision). A brief line that
 // asks for a stop, hand-off or status report at a token or context amount ("at ~200k context post status and stop", "stop at 30000 tokens") caused three needless hand-offs on 2026-11-13.
-const NUM = String.raw`~?\d[\d.,]*\s*[kKmM]?`
-// An amount counts only next to a token or context word (a bare "100k users" or "status 200" is no hand-off); a line that states the rule itself (never, not, nie) is skipped, and so is an `Item:` line (it quotes the issue's title).
-const AMOUNT = String.raw`(?:${NUM}\s*(?:of\s+)?(?:the\s+)?(?:tokens?|context|kontext)(?![\p{L}\d])|(?:context|kontext)(?![\p{L}\d])[^\n]{0,12}?${NUM}\s*%?|\d+\s*%\s*(?:of\s+)?(?:the\s+)?(?:context|kontext)(?![\p{L}\d]))`
-const ACT = String.raw`(?<![\p{L}\d])(?:stop|stops|stopp|stoppe|stoppen|hand[- ]?off|hand over|handover|übergabe|übergeben|übergebe|wrap up|status|report|reports|bericht|berichte|berichten)(?![\p{L}\d])`
-const RULE_WORDS = /(?<![\p{L}\d])(?:never|not|no|nie|niemals|nicht|kein|keine)(?![\p{L}\d])/iu
-const TOKEN_STOP = new RegExp(`${ACT}[^\n]*${AMOUNT}|${AMOUNT}[^\n]*${ACT}`, 'iu')
-export const tokenStopLine = (text) => String(text).replace(/[*_`]/g, '').split('\n').find((l) => !/^[ \t>-]*Item:/i.test(l) && !RULE_WORDS.test(l) && TOKEN_STOP.test(l))?.trim().slice(0, 100)
+// Precision over reach: a refused start costs a round, so a line is flagged only when it holds a stop or hand-off word AND a threshold: a trigger word (at, bei, after, once, when,
+// reaches ...) then an amount (200k, 0.2M, 30000, 80 %) right before a token, context or full word, or the word context followed by an amount with a unit. A bare "100k users", "status 200",
+// "after 2k ms", "context 3 of 5" or "under 8k tokens" is none of that. A line that says "never" states the rule itself and is skipped, and so is an `Item:` line (it quotes the issue's title).
+const QTY = String.raw`(?:~?\d[\d.,]*\s?[kKmM](?![\p{L}\d])|\d{2,3}[.,]?\d{3}(?!\d)|\d{1,3}\s?%)`
+const TRIG = String.raw`(?<![\p{L}\d])(?:at|bei|ab|after|nach|past|over|above|once|when|wenn|reach|reaches|hit|hits|exceed|exceeds|pass|passes|über)(?![\p{L}\d])`
+const AMOUNT = String.raw`(?:${TRIG}\W{0,4}${QTY}\s?(?:of\s+)?(?:the\s+)?(?:tokens?|context|kontext|full|voll|used)(?![\p{L}\d])|(?:context|kontext)(?![\p{L}\d])[^\n]{0,25}?${QTY})`
+const ACT = String.raw`(?<![\p{L}\d])(?:stop|stops|stopp|stoppe|stoppen|hand[- ]?off|hand over|handover|übergabe|übergeben|übergebe|übergib|beende|wrap up|pause)(?![\p{L}\d])`
+const TOKEN_STOP = new RegExp(`${ACT}[^\n]{0,120}${AMOUNT}|${AMOUNT}[^\n]{0,120}${ACT}`, 'iu')
+const STATES_RULE = /(?<![\p{L}\d])(?:never|nie|niemals)(?![\p{L}\d])/iu
+export const tokenStopLine = (text) => String(text).replace(/[*_`]/g, '').split('\n').find((l) => l.length < 400 && !/^[ \t>-]*Item:/i.test(l) && !STATES_RULE.test(l) && TOKEN_STOP.test(l))?.trim().slice(0, 100)
 
 // One list of everything wrong with a thread brief, the one validator of the start hook and of `team-guard.mjs check` (CompanyXY 2026-11-13: a coordinator that
 // cannot run the guard before it starts finds the errors one thread at a time).
