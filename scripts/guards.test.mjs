@@ -2,7 +2,7 @@
 // never/always rules honest. Run: node --test scripts/guards.test.mjs
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { cpSync, existsSync, mkdirSync, symlinkSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, statSync, symlinkSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
@@ -659,6 +659,48 @@ test('rule guard: a missing round counter is fetched on first use, a verdict pos
 // M47 follow-up (fresh thread 2026-11-12 15:01: no guard line, no checklists.md, one guard file missing; the test uses attempt-guard.mjs as that guard): the cached image's old
 // team-guard runs the start refresh with its own old lists, so files added later never arrive. The fresh rule-guard on disk
 // fills in what its team-guard lists and the disk lacks, then names the version, on the spawn prompt and on the lookup path.
+// S10 (a): merged means live. A cached image's old team-guard refreshes first, then runs the refreshed copy once, so a merged
+// start-hook change reaches the session (#531 did not, 2026-11-13 00:26).
+test('team guard: start refreshes first and prints what the refreshed copy prints, once', () => {
+  if (process.platform === 'win32') return
+  const home = mkdtempSync(join(tmpdir(), 'start-home-'))
+  const bin = mkdtempSync(join(tmpdir(), 'fakecurl-'))
+  const cwd = mkdtempSync(join(tmpdir(), 'chat-'))
+  try {
+    const dir = join(home, '.claude', 'claude-setup')
+    mkdirSync(dir, { recursive: true })
+    writeFileSync(join(dir, 'team-guard.mjs'), '#!/usr/bin/env node\n// old\n')
+    writeFileSync(join(bin, 'curl'), `#!/bin/sh\nwhile [ $# -gt 0 ]; do\n  if [ "$1" = "-o" ]; then out="$2"; url="$3"; shift 3\n    mkdir -p "$(dirname "$out")"\n    case "$url" in *global/team-guard.mjs) printf '#!/usr/bin/env node\\nimport "node:path"\\nprocess.stdout.write("fresh " + process.argv[2] + " " + (process.env.CLAUDE_SETUP_START_RERUN ?? "") + " " + process.env.CLAUDE_SETUP_BOOT_FETCH)\\n' > "$out" ;; *) echo doc > "$out" ;; esac\n  else shift; fi\ndone\n`, { mode: 0o755 })
+    const env = { CLAUDE_SETUP_HOME: home, PATH: `${bin}:${process.env.PATH}` }
+    assert.equal(runTeam('start', { cwd, session_id: 'r1' }, env).stdout, 'fresh start 1 off', 'the refreshed copy ran once, with the loop flag and no second fetch')
+    assert.doesNotMatch(runTeam('start', { cwd, session_id: 'r2' }, { ...env, CLAUDE_SETUP_START_RERUN: '1' }).stdout, /^fresh/, 'with the flag set this copy answers itself')
+    writeFileSync(join(bin, 'curl'), '#!/bin/sh\nexit 7\n', { mode: 0o755 })
+    writeFileSync(join(dir, 'team-guard.mjs'), '#!/usr/bin/env node\n// prints nothing\n')
+    assert.match(runTeam('start', { cwd, session_id: 'r3' }, env).stdout, /Team rule|Boot \(claude-setup\)/, 'a new copy that prints nothing falls back to this one')
+  } finally { for (const d of [home, bin, cwd]) rmSync(d, { recursive: true, force: true }) }
+})
+
+// S10 (b): git skips a hook without the exec bit and says nothing, so the fetched pre-push must be executable and whole.
+test('team guard: refresh fetches the pre-push hook, executable, and a cut-off download keeps the old one', () => {
+  if (process.platform === 'win32') return
+  const home = mkdtempSync(join(tmpdir(), 'hook-home-'))
+  const bin = mkdtempSync(join(tmpdir(), 'fakecurl-'))
+  const cwd = mkdtempSync(join(tmpdir(), 'chat-'))
+  try {
+    const dir = join(home, '.claude', 'claude-setup')
+    const hook = join(dir, 'git-hooks', 'pre-push')
+    writeFileSync(join(bin, 'curl'), `#!/bin/sh\nwhile [ $# -gt 0 ]; do\n  if [ "$1" = "-o" ]; then out="$2"; url="$3"; shift 3\n    mkdir -p "$(dirname "$out")"\n    case "$url" in *global/git-hooks/pre-push) printf '#!/bin/sh\\necho new\\n' > "$out" ;; *) echo doc > "$out" ;; esac\n  else shift; fi\ndone\n`, { mode: 0o755 })
+    const env = { CLAUDE_SETUP_HOME: home, PATH: `${bin}:${process.env.PATH}` }
+    runTeam('start', { cwd, session_id: 'h1' }, env)
+    assert.ok(existsSync(hook), 'the hook is fetched')
+    assert.ok((statSync(hook).mode & 0o111) !== 0, 'and executable')
+    assert.match(readFileSync(hook, 'utf8'), /^#!\/bin\/sh/)
+    writeFileSync(join(bin, 'curl'), `#!/bin/sh\nwhile [ $# -gt 0 ]; do\n  if [ "$1" = "-o" ]; then out="$2"; shift 3; mkdir -p "$(dirname "$out")"; printf 'cut off' > "$out"; else shift; fi\ndone\nexit 18\n`, { mode: 0o755 })
+    runTeam('start', { cwd, session_id: 'h2' }, env)
+    assert.match(readFileSync(hook, 'utf8'), /^#!\/bin\/sh\necho new/, 'a cut-off download keeps the installed hook')
+  } finally { for (const d of [home, bin, cwd]) rmSync(d, { recursive: true, force: true }) }
+})
+
 test('rule guard: a thread start installs the guards and boot files an old image never listed, and names them', () => {
   if (process.platform === 'win32') return
   const dir = mkdtempSync(join(tmpdir(), 'oldimage-'))

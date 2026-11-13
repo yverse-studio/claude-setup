@@ -432,6 +432,7 @@ test('bypass 1: the CLI proofs do not hang on the filename: a copy, node -e and 
   assert.match(s.hook('Bash', { command: `cp ~/.claude/claude-setup/gate-rounds.mjs /tmp/x.mjs && node /tmp/x.mjs direct ${ASSET} --plan ${plan}` }).stderr, /only as "node/)
   assert.match(s.hook('Bash', { command: `node -e "import('/home/u/.claude/claude-setup/gate-rounds.mjs').then(m=>m.cli(['waive','${ASSET}']))"` }).stderr, /only as "node/)
   assert.match(s.hook('Bash', { command: 'ln -s ~/.claude/claude-setup/gate-rounds.mjs /tmp/g.mjs' }).stderr, /only as "node/)
+  assert.match(s.hook('Bash', { command: 'ln -s ~/.claude/claude-setup/gate-rounds.mjs /tmp/g.mjs' }).stderr, /use the Read or Grep tool/, 'S10(c): the refusal says how to read the file')
   assert.equal(s.hook('Bash', { command: 'grep -n round ~/.claude/claude-setup/gate-rounds.mjs' }).status, 0, 'a plain read still passes')
   for (const verb of ['direct', 'card', 'picture', 'waive']) {
     const r = s.bare(verb, ASSET, '--plan', plan, '--ref', 'cmsg_X1')
