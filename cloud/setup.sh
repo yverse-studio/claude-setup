@@ -448,7 +448,7 @@ export function guardVersion(dir) {
 
 export const modelFile = (session) => join(tmpdir(), `claude-setup-model-${String(session).replace(/[^A-Za-z0-9]/g, '')}`)
 
-export const BOOT_MAX = 9800 // hook context over 10,000 characters is cut to a preview; scripts/check.mjs keeps both cards under this
+export const BOOT_MAX = 9800 // hook context over 10,000 characters is cut to a preview; scripts/check.mjs keeps the CLAUDE.md card under this
 // Cached per document: ROSTER.md and the brief files ask the same few sections thousands of times (M50 slice B: 5 s uncached, a thread start has 5).
 let sections = { t: null, found: new Map() }
 const section = (t, from, to) => {
