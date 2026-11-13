@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url'
 import { BRIEF_FIELDS } from '../global/team-guard.mjs'
 import { briefCheck } from '../global/rule-guard.mjs'
 
+process.env.PLAN_FILE = '/nonexistent/PLAN.json' // X1a: an item's lines count as part of the brief, so the live PLAN.json must not fill these rows
 const root = join(fileURLToPath(import.meta.url), '..', '..')
 const spawn = (brief) => `<wake reason="spawn"><relay>${brief}</relay></wake>`
 const check = (brief, model = null) => briefCheck(spawn(brief), root, model)

@@ -642,7 +642,7 @@ export const BRIEF_FIELDS = [
   { key: 'Prior art', strict: false, tpl: 'Prior art: <sources named: repo, path, URL, #n> -> copy | adapt | reuse | build, because <why>', ok: (p) => !needsPriorArt(p), cls: (p) => (gateRolePlain(p) ? 'derived' : 'recoverable'), fill: (p) => (gateRolePlain(p) ? 'Prior art: .claude/skills/operator/gate.md and the kit\'s checks -> adapt, because the gate rules exist' : 'Prior art: to find: the repo and docs first, sources named before you build') },
   { key: 'Gate', name: 'Gate: <Reviewer thread> before owner, or `Gate: n/a <why no owner-facing result>` (a builder, designer or animator brief at size M or L)', tpl: 'Gate: <Reviewer thread> before owner (M or L)', applies: needsGate, ok: line(GATE_LINE), cls: () => 'recoverable', fill: () => 'Gate: ask the coordinator (message_coordinator) for the Reviewer thread, then write `Gate: Reviewer · <what> before owner`' },
   { key: 'Sheet', name: 'Sheet: (approved cast sheet, docs/preproduction-workflow.md)', tpl: 'Sheet: <approved cast sheet .md, or `n/a <why no body, face or outfit job>`; Programmer or Animator on a game or story kit>', applies: needsSheet, ok: line(/^[ \t>-]*Sheet:[ \t]*[^<\n]*\.md\b/im), cls: () => 'judgment' },
-  { key: 'Look-Lock', name: 'Look-Lock: (owner card of the look)', tpl: 'Look-Lock: <owner card link of the approved look (https or #cmsg_...); not needed with `Sheet: n/a`>', applies: needsSheet, ok: line(/^[ \t>-]*Look-Lock:[ \t]*[^<\n]*(https?:\/\/|card|#cmsg_?[A-Za-z0-9]{6,})/im), cls: () => 'judgment' },
+  { key: 'Look-Lock', name: 'Look-Lock: (owner card of the look)', tpl: 'Look-Lock: <owner card link of the approved look (https or #cmsg_...); not needed with `Sheet: n/a`>', applies: needsSheet, ok: line(/^[ \t>-]*Look-Lock:[ \t]*[^<\n]*(https?:\/\/|#cmsg_?[A-Za-z0-9]{6,})/im), cls: () => 'judgment' },
   { key: 'Researcher', name: 'Researcher: (the task asks for research)', tpl: 'Researcher: <subagent and model, or the Researcher thread; research tasks only>', applies: (p) => ASKS_RESEARCH.test(p) && !/\bRole:[ \t]*Researcher\b/i.test(p), ok: line(/^[ \t>-]*Researcher:[ \t]*[^<\s]/im), cls: () => 'recoverable', fill: () => 'Researcher: ask the coordinator for a Researcher thread (message_coordinator) and go on meanwhile' },
   { key: 'Tester', strict: false, tpl: 'Tester: <Tester thread; size L Programmer only>', applies: (p) => /^[ \t>-]*Role:[ \t]*Programmer\b/im.test(p), ok: (p) => !needsTester(p), cls: () => 'judgment' },
 ]
@@ -2339,7 +2339,13 @@ export async function briefCheck(prompt, cwd, model = null, any = false) {
   if (team) found.push(`${team}${director}`)
   const topic = guard.badTopic(brief, read(join(setupRoot(cwd), guard.CHECKLISTS)))
   if (topic) found.push(topic)
-  const sorted = guard.classify(brief)
+  // X1a (#539): the item's lines count as part of the brief (one fetch, shared with itemContext), so a field it holds is no gap.
+  const item = fetchItem(brief, cwd)
+  // X1a (#539), kept small: the item fills only Sheet and Look-Lock (the two lines a short brief lacked); every other lock, size and stamp word comes from the brief alone.
+  const itemPlain = item && !item.error ? String(item.body).slice(0, ITEM_CAP).replace(/^brief:[ \t]*/gim, '').replace(/[*_`]/g, '') : ''
+  const own = guard.classify(brief)
+  const itemHas = (k) => guard.BRIEF_FIELDS.find((f) => f.key === k)?.ok(itemPlain)
+  const sorted = itemPlain ? { ...own, judgment: own.judgment.filter((f) => !(['Sheet', 'Look-Lock'].includes(f.key) && itemHas(f.key))) } : own
   found.push(...sorted.judgment.map((f) => `${f.key} is missing or still a <placeholder>`))
   const wrong = model && guard.wrongModel(brief, model, teams)
   if (wrong) found.push(`this thread runs on ${wrong.tier}, but the ${wrong.role} runs on ${wrong.allowed.join(' or ')}: ask the coordinator to restart it on that model`)
@@ -2349,6 +2355,7 @@ export async function briefCheck(prompt, cwd, model = null, any = false) {
   const notes = mine.length ? [`Brief repair (no block): the brief lacks ${mine.map((f) => f.key).join(', ')}. Work as if it read: ${mine.map((f) => f.fill).join(' | ')}. Name the repaired lines in your first checklist line.`] : []
   const gate = role?.name
   if (gate && GATE_ROLES.test(gate) && !GATE_PRIOR.test(plain) && !mine.some((f) => f.key === 'Prior art')) notes.push(`Brief repair (no block): a ${gate} brief names gate.md and the kit's checks in its \`Prior art:\` line; read .claude/skills/operator/gate.md first.`)
+  if (item && !item.error && /\bv([2-9]|\d\d+)\b/i.test(`${item.head.replace(/^.*?\): /, '')}\n${itemPlain.match(/^[ \t>-]*Asset:[^\n]*/im)?.[0] ?? ''}`) && !/^[ \t>-]*Basis:[ \t]*[^<\s]/im.test(itemPlain)) notes.push('Item check: this item is a version above 1 and has no `Basis:` line. Find the passed predecessor in LIVE.md, write Basis and Assets into the item, then build from those files.')
   if (role && /\bSize:[ \t]*[ML]\b/i.test(plain)) notes.push(`Title check (docs/TEAMS.md, Roster "Runs as"): this thread's title starts with \`${role.name} · \`; if it does not, rename_thread to \`${role.name} · <what>\` first.`)
   return notes.join('\n')
 }
