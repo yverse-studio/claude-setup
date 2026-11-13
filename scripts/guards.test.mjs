@@ -684,7 +684,7 @@ test('rule guard: a missing round counter is fetched on first use, a verdict pos
   } finally { process.env.PATH = old; for (const d of [dir, bin]) rmSync(d, { recursive: true, force: true }) }
 })
 
-// M47 follow-up (fresh thread 2026-11-12 15:01: no guard line, no checklists.md, no task-ledger.mjs): the cached image's old
+// M47 follow-up (fresh thread 2026-11-12 15:01: no guard line, no checklists.md, no attempt-guard.mjs): the cached image's old
 // team-guard runs the start refresh with its own old lists, so files added later never arrive. The fresh rule-guard on disk
 // fills in what its team-guard lists and the disk lacks, then names the version, on the spawn prompt and on the lookup path.
 test('rule guard: a thread start installs the guards and boot files an old image never listed, and names them', () => {
@@ -692,18 +692,18 @@ test('rule guard: a thread start installs the guards and boot files an old image
   const dir = mkdtempSync(join(tmpdir(), 'oldimage-'))
   const bin = mkdtempSync(join(tmpdir(), 'fakecurl-'))
   try {
-    for (const f of ['rule-guard.mjs', 'team-guard.mjs', 'gate-rounds.mjs', 'context-guard.mjs', 'compact-guard.mjs', 'attempt-guard.mjs', 'card-render.mjs']) cpSync(join(root, 'global', f), join(dir, f))
-    writeFileSync(join(bin, 'curl'), `#!/bin/sh\nwhile [ $# -gt 0 ]; do\n  if [ "$1" = "-o" ]; then out="$2"; url="$3"; shift 3\n    mkdir -p "$(dirname "$out")"\n    case "$url" in *global/task-ledger.mjs) printf '#!/usr/bin/env node\\n' > "$out" ;; *checklists.md) echo '## Garment' > "$out" ;; esac\n  else shift; fi\ndone\n`, { mode: 0o755 })
+    for (const f of ['rule-guard.mjs', 'team-guard.mjs', 'gate-rounds.mjs', 'context-guard.mjs', 'compact-guard.mjs', 'card-render.mjs']) cpSync(join(root, 'global', f), join(dir, f))
+    writeFileSync(join(bin, 'curl'), `#!/bin/sh\nwhile [ $# -gt 0 ]; do\n  if [ "$1" = "-o" ]; then out="$2"; url="$3"; shift 3\n    mkdir -p "$(dirname "$out")"\n    case "$url" in *global/attempt-guard.mjs) printf '#!/usr/bin/env node\\n' > "$out" ;; *checklists.md) echo '## Garment' > "$out" ;; esac\n  else shift; fi\ndone\n`, { mode: 0o755 })
     const env = { ...process.env, PATH: `${bin}:${process.env.PATH}`, CLAUDE_SETUP_RULE_GUARD: '' }
     const brief = `<wake reason="spawn"><relay>\nRole: Programmer · Kit: setup · Size: S${FULL}</relay></wake>`
     const run = (prompt, session, transcript = '') => spawnSync(process.execPath, [join(dir, 'rule-guard.mjs'), 'prompt'], { input: JSON.stringify({ prompt, cwd: root, session_id: session, transcript_path: transcript }), encoding: 'utf8', env }).stdout
-    assert.match(run(brief, `old1${process.pid}`), /Guards in this session: [0-9a-f]{8} \(8\/8 installed\)/, 'the spawn start names all guards')
-    assert.ok(existsSync(join(dir, 'task-ledger.mjs')), 'the guard the old image never listed is installed')
+    assert.match(run(brief, `old1${process.pid}`), /Guards in this session: [0-9a-f]{8} \(7\/7 installed\)/, 'the spawn start names all guards')
+    assert.ok(existsSync(join(dir, 'attempt-guard.mjs')), 'the guard the old image never listed is installed')
     assert.ok(existsSync(join(dir, '.claude/skills/operator/checklists.md')), 'the boot file the old image never listed is installed')
-    rmSync(join(dir, 'task-ledger.mjs'))
+    rmSync(join(dir, 'attempt-guard.mjs'))
     const transcript = join(dir, 't.jsonl')
     writeFileSync(transcript, JSON.stringify({ type: 'user', message: { role: 'user', content: brief } }))
-    assert.match(run('<wake reason="mention"><message>hi</message></wake>', `old2${process.pid}`, transcript), /Guards in this session: [0-9a-f]{8} \(8\/8 installed\)/, 'a thread whose brief is found in the transcript gets the line too')
+    assert.match(run('<wake reason="mention"><message>hi</message></wake>', `old2${process.pid}`, transcript), /Guards in this session: [0-9a-f]{8} \(7\/7 installed\)/, 'a thread whose brief is found in the transcript gets the line too')
     const repo = spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'prompt'], { input: JSON.stringify({ prompt: brief, cwd: root, session_id: `old3${process.pid}` }), encoding: 'utf8', env }).stdout
     assert.match(repo, /Guards in this session/, 'a checkout still names its guards')
     assert.equal(existsSync(join(root, 'global', '.claude')), false, 'run from a git checkout, it writes no boot files into the repo')
