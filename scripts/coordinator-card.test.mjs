@@ -4,6 +4,8 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, 
 import { spawnSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { buildBrief } from './brief.mjs'
 import { buildIndex, buildCard, ruleRows, CARD_MAX } from './coordinator-card.mjs'
 import { BRIEF_FIELDS, rosterNames } from '../global/team-guard.mjs'
 import { compact, projectFolder, renderAll, renderBrief, renderRoster, writeAll } from '../global/card-render.mjs'
@@ -303,4 +305,18 @@ test('a test run never resolves the real project folder, only an explicit temp o
   try {
     assert.equal(projectFolder({ ...inTest, CLAUDE_SETUP_PROJECT_FILES: tmp }), join(tmp, 'claude-setup'), 'an explicit temp folder still works')
   } finally { rmSync(tmp, { recursive: true, force: true }) }
+})
+
+// #602 (GameDev 2026-11-14): the card tells the coordinator to run the brief check; the command works from the rendered folder alone, with no installed home.
+test('#602: the brief check the card prints runs from the rendered folder with an empty home and passes a filled Planner brief', () => {
+  const out = mkdtempSync(join(tmpdir(), 'card-602-'))
+  writeAll(out, renderAll({ base: join(fileURLToPath(import.meta.url), '..', '..') }))
+  assert.ok(existsSync(join(out, 'briefs', 'planner.md')), 'the Planner brief file is there')
+  const card = readFileSync(join(out, 'COORDINATOR-CARD.md'), 'utf8')
+  const line = card.match(/`(cd tools\/brief-check && node team-guard\.mjs check <Role> <file\|->)`/)
+  assert.ok(line, 'the card prints one command that works from this folder')
+  const { brief } = buildBrief({ role: 'Planner', kit: 'setup', size: 'M', what: 'plan the card fix', item: 'new', plan: 'n/a, this is the plan', acceptance: 'the plan passes review', threads: 'list_threads checked, none open on this topic', priorArt: 'obra/superpowers -> adapt, because the skill exists', done: 'the plan file', stop: '3 rounds', skills: '.claude/skills/operator/roles/planner.md' })
+  const r = spawnSync(line[1].replace('<Role>', 'Planner').replace('<file|->', '-'), { cwd: out, input: brief, encoding: 'utf8', shell: true, env: { ...process.env, CLAUDE_SETUP_HOME: mkdtempSync(join(tmpdir(), 'empty-home-')) } })
+  assert.match(r.stdout, /^ok: this brief passes the start check/m, `${r.stdout}${r.stderr}`)
+  assert.doesNotMatch(card, /You have no Bash and no repo/, 'the card no longer contradicts its own brief-check line')
 })
