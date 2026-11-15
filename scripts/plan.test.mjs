@@ -45,6 +45,19 @@ test('stand answers in at most 10 lines: goal, count, doing, waits on him, next 
   for (const want of ['Ship X', '1/4 done', 'M2', 'M3', 'his hands', 'M4']) assert.ok(s.includes(want), want)
 })
 
+test('#605: stand shows the time of the last change and a stale line after 2 h', () => {
+  const p = { ...base(), updated: '2026-11-15T10:00Z' }
+  const at = (t) => stand(p, Date.parse(t))
+  assert.match(at('2026-11-15T10:30Z'), /Stand 2026-11-15T10:00Z/)
+  assert.doesNotMatch(at('2026-11-15T12:00Z'), /stale/, 'exactly 2 h is not older than 2 h')
+  assert.match(at('2026-11-15T12:01Z'), /stale: last change 2 h ago/)
+  assert.match(at('2026-11-15T22:30Z'), /stale: last change 12 h ago/)
+  assert.doesNotMatch(stand({ ...base(), updated: undefined }, Date.parse('2026-11-15T22:30Z')), /stale/, 'no time, no claim')
+  assert.ok(at('2026-11-16T10:00Z').split('\n').length <= 10)
+  const q = setItem(base(), 'M2', { status: 'wartet', waits_on: 'x' })
+  assert.match(q.updated, /^\d{4}-\d\d-\d\dT\d\d:\d\dZ$/, 'a change writes the minute')
+})
+
 test('cli: init starts an empty plan, add and stand work on it, no tmp file stays, a missing file says how to start', () => {
   const dir = mkdtempSync(join(tmpdir(), 'plan-'))
   const f = join(dir, 'PLAN.json')

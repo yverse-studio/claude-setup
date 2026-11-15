@@ -2253,6 +2253,20 @@ export function unresolved(transcript) {
   return finished ? 'rule-guard: this thread posted its Done: line or its hand-off, so it is finished: call set_thread_resolved (resolved: true) as the last step (docs/TEAMS.md, one thread per plan or PR). If yskills still owes an answer, say so in one line instead and stop.' : null
 }
 
+// #605: a `Done:` post of a thread whose brief Item is `M<n>` is refused once while that item of the offline PLAN.json is still open; the thread
+// closes it itself (plan.mjs), so the plan does not wait for someone to remember. A missing plan file or item, or no `Done:`, checks nothing.
+export function planItemOpen(tool, input, session, transcript, env = process.env) {
+  if (tool !== 'mcp__hearthbot__post_message' || !session || !DONE.test(String(input?.text ?? ''))) return null
+  const t = transcript(), ref = itemRef(spawnPrompt('', t.split('\n').find((l) => /"type":"user"/.test(l)) ?? ''))
+  const once = join(tmpdir(), `claude-setup-plan-${String(session).replace(/\W/g, '')}`)
+  if (!ref || existsSync(once)) return null
+  let it
+  try { it = JSON.parse(read(env.PLAN_FILE || '/mnt/project-files/PLAN.json')).items?.find((i) => i.id === ref) } catch { return null }
+  if (!it || ['done', 'drop'].includes(it.status)) return null
+  writeFileSync(once, '')
+  return `rule-guard: ${ref} is still "${it.status}" in the plan, and your Done: line closes it (roles/project-manager.md, Masterplan). Run: node scripts/plan.mjs set ${ref} status=done evidence=<link>, then post again.`
+}
+
 // The transcript's tool calls in order, each with its result text and time: [{ name, input, result, at }].
 // Luna (yskills 2026-10-27: "a cute e-girl with lots of kaomoji, in every chat, project and thread"): the tone of
 // every reply to him, nothing else. The tone is a soft drift signal.
@@ -2909,6 +2923,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           ?? handsOff(tool, input ?? {}, gateRole, setupRoot(cwd))
           ?? (await gateBlock(tool, input ?? {}, transcript, sessionModel(transcript()), true, gateRole, transcriptPath))
           ?? decide(tool, input ?? {}, process.env, session ? read(shipped).split('\n') : [], () => threadBoard(toolCalls(transcript())))
+          ?? planItemOpen(tool, input ?? {}, session, transcript)
           ?? await receiptBlock(tool, input ?? {}, session, cwd, agentId, transcript)
           ?? proposeSkillsBlocked(tool)
           ?? opensWindow(tool, input ?? {})
