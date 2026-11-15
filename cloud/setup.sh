@@ -1715,22 +1715,8 @@ cat > "$HOME/.claude/claude-setup/rule-guard.mjs" <<'RULE'
 #!/usr/bin/env node
 // Rule guard. Usage: rule-guard.mjs pre|prompt|stop (hook entries PreToolUse, UserPromptSubmit, Stop),
 // or rule-guard.mjs read <url> [max chars] to read a whole web page as text without an Allow prompt.
-// Turns CLAUDE.md rules that were text only into checks (audit 2026-10-27: 17 of 20 rules had no
-// guard and were skipped whenever CLAUDE.md did not load).
-// pre: refuses (exit 2) a review request or assignee for yskills on a PR (CLAUDE.md, Hard rules), a
-// thread reply over the length cap (CLAUDE.md, How to work), a new Artifact besides the Company XY one (docs/USING.md, The world),
-// a commit message that is not conventional (CLAUDE.md, How to work), WebFetch in a cloud thread (docs/tech-traps.md, Cloud threads:
-// WebSearch, no Allow taps), and a reply that asks yskills for an Allow or a go, posts `Done:`
-// without proof, or says nothing is open while the last thread board shows open threads, or asks him for something or names a
-// thread without a clickable link (replyRule).
-// stop: a thread that posted `Done:` resolves itself.
-// prompt: a bare "stop" gets the matching CLAUDE.md line put next to the message, and
-// the first message naming `Role: <role>` (the brief block, operator/briefs.md) gets that role's
-// Roster row and playbook put into context, so a thread always knows what it is (yskills 2026-10-27).
-// pre also refuses a headless Blender start while bl_server.py runs, and any Blender call before the session read
-// NACHT-FIX-PLAN.md and the animator Fast loop (blenderServerBusy, blenderDocsMissing).
-// pre also warns, never blocks, when a new PR in a repo with a PROGRESS.md leaves its `## Jetzt` block
-// missing or untouched (docs/hq-rows.md, Jetzt block: HQ shows every project from that block).
+// Turns CLAUDE.md rules that were text only into checks; each check below names its rule. stop: a thread that posted `Done:` resolves itself.
+// prompt: a bare "stop" gets its CLAUDE.md line, a brief gets its checks and its role's card (yskills 2026-10-27). pre also warns, never blocks, on a PR without its `## Jetzt` update.
 // CLAUDE_SETUP_RULE_GUARD=off turns it off. It never breaks a tool call on its own errors.
 
 import { execFileSync } from 'node:child_process'
@@ -2160,13 +2146,12 @@ export async function briefCheck(prompt, cwd, model = null, any = false) {
   const plain = brief.replace(/[*_`]/g, '')
   const found = []
   const role = guard.stamped(brief) ? roleOf(brief, teams) : null
-  const kit = plain.match(/\bKit:[ \t]*([\w-]+)/i)?.[1]?.toLowerCase()
-  if (!guard.stamped(brief)) found.push('no `Role: · Kit: · Size:` stamp line')
-  else if (!role?.row) found.push(`the Role line names no role of the Roster (docs/TEAMS.md); "none" or a role of your own is not allowed in a thread${kit && guard.rolesForKit(teams, kit).length ? `; on the \`${kit}\` kit pick one of ${guard.rolesForKit(teams, kit).join(', ')}` : ''}${/^[ \t>-]*Role:[ \t]*(Fable )?director\b/im.test(plain) ? '; a gate director round is `Role: Reviewer` (or Designer) on Fable (docs/TEAMS.md, Models; gate.md, Rounds)' : ''}`)
-  const team = guard.stamped(brief) && guard.badTeam(brief, teams)
-  // issue #479 part 1: a gate director round is no thread role of its own.
   // issue #479 part 1: a gate director round is no thread role of its own; the hint rides on a refusal that already exists (Director is a valid role on the video kit).
   const director = /^[ \t>-]*Role:[ \t]*(Fable )?director\b/im.test(plain) ? '; a gate director round is `Role: Reviewer` (or Designer) on Fable (docs/TEAMS.md, Models; gate.md, Rounds)' : ''
+  const kit = plain.match(/\bKit:[ \t]*([\w-]+)/i)?.[1]?.toLowerCase()
+  if (!guard.stamped(brief)) found.push('no `Role: · Kit: · Size:` stamp line')
+  else if (!role?.row) found.push(`the Role line names no role of the Roster (docs/TEAMS.md); "none" or a role of your own is not allowed in a thread${kit && guard.rolesForKit(teams, kit).length ? `; on the \`${kit}\` kit pick one of ${guard.rolesForKit(teams, kit).join(', ')}` : ''}${director}`)
+  const team = guard.stamped(brief) && guard.badTeam(brief, teams)
   if (team) found.push(`${team}${director}`)
   const topic = guard.badTopic(brief, read(join(setupRoot(cwd), guard.CHECKLISTS)))
   if (topic) found.push(topic)
@@ -2682,6 +2667,22 @@ async function stampFromTranscript(session, transcript, cwd) {
   const role = roleOf(withoutOlderStamps(sources.map(stripTags)).join('\n'), read(join(setupRoot(cwd), 'docs', 'TEAMS.md')))
   if (role) writeFileSync(stamp, role.name)
 }
+// #608: the prompt hook has a 5 s limit; when it was cancelled before it printed, only the transcript holds the spawn. Until the start mark exists (written
+// once the card was printed, here or by the prompt hook) a thread with no lock and no finished tool call gets its brief check and role card at its first call.
+const startMark = (session) => join(tmpdir(), `claude-setup-start-${String(session).replace(/\W/g, '')}`)
+async function startFromTranscript(session, transcript, cwd) {
+  if (!session || existsSync(startMark(session)) || existsSync(lockFile(session))) return ''
+  const t = transcript(), brief = spawnPrompt('', t.split('\n').find((l) => /"type":"user"/.test(l)) ?? '')
+  if (!brief || toolCalls(t).some((c) => c.result)) return '' // a thread that already worked (new container, no temp files) keeps going
+  writeFileSync(startMark(session), '')
+  const check = await briefCheck(brief, cwd, knownModel(session, t))
+  updateLock(session, check)
+  const stamp = join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`), kept = read(stamp) // roleContext writes it only once
+  if (kept) unlinkSync(stamp)
+  const card = await roleContext(brief, cwd, session)
+  if (kept) writeFileSync(stamp, kept)
+  return [check, card].filter(Boolean).join('\n')
+}
 export function lockBlock(tool, session) {
   const f = session ? lockFile(session) : ''
   if (!f || !existsSync(f) || LOCK_FREE.test(tool)) return null
@@ -2846,6 +2847,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           const roleCardText = await roleContext(brief, cwd, session)
           await stampFromTranscript(session, () => (transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : ''), cwd)
           const context = [checkNow, relayNote, isStart ? await gateBriefContext(brief, model) : '', guard, card, modelNote, roleCardText, await itemContext(brief, cwd, session), await stopNote(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
+          if (isStart && session) writeFileSync(startMark(session), '')
           if (context) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: context } }))
           return
         }
@@ -2859,6 +2861,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         const shipped = join(tmpdir(), `claude-setup-artifacts-${String(session).replace(/\W/g, '')}`)
         const transcript = () => (transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : '')
         const sessionTranscript = () => [transcriptPath, agentTranscript(transcriptPath, agentId)].filter((p) => p && existsSync(p)).map(read).join('\n')
+        const startNote = await startFromTranscript(session, transcript, cwd)
         await stampFromTranscript(session, transcript, cwd)
         const gateRole = session ? read(join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)).trim() : ''
         // M50: a relay that reached the thread mid-turn may never have fired the prompt hook; the transcript has it, so a locked thread re-reads it at its next tool call.
@@ -2883,9 +2886,9 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           ?? (grillMissing(tool, input ?? {}, transcript) ? 'rule-guard: a Planner at size M or L grills first (operator SKILL.md, Grill first): post the real-moment question (when it comes from his life) and up to 2 request_decision cards (goal, taste), each with your recommended answer, then write the plan on the answers (or the recommendations while he is away).' : null)
         if (!block) block = await gateBlock(tool, input ?? {}, transcript, sessionModel(transcript()), false, gateRole, transcriptPath) // commit the round only now: no other guard refused the post
         if (!block && session && tool === 'Artifact' && input?.url && input.file_path) writeFileSync(shipped, `${input.file_path}\n`, { flag: 'a' })
-        if (block) { process.stderr.write([block, rebriefNote].filter(Boolean).join('\n')); process.exitCode = 2 }
+        if (block) { process.stderr.write([block, rebriefNote, startNote].filter(Boolean).join('\n')); process.exitCode = 2 }
         else {
-          const note = [rebriefNote, jetztWarning(tool, input ?? {}, cwd)].filter(Boolean).join('\n')
+          const note = [rebriefNote, startNote, jetztWarning(tool, input ?? {}, cwd)].filter(Boolean).join('\n')
           if (note) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', additionalContext: note } }))
         }
       } catch {

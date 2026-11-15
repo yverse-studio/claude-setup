@@ -409,3 +409,57 @@ test('#573: the wrapper in front of the lead-in form lifts the prompt hook; a wr
   appendFileSync(human.transcript, human.line({ type: 'attachment', attachment: { type: 'queued_command', prompt: wrapped(body), origin: { kind: 'human' } } }))
   assert.equal(human.bash(), 2, 'a wrapped relay with another origin lifts nothing')
 })
+
+// #608: the prompt hook has a 5 s limit and is cancelled when it runs over (live 2026-11-13: hook_cancelled at 5,110 ms); then only the transcript holds the
+// spawn. The first tool call of such a thread runs the brief check and delivers the role card from the transcript, and the receipt waits for that card.
+test('a spawn whose prompt hook never ran is checked and given its card from the transcript at its first tool call (#608)', () => {
+  const startedOnlyInTranscript = (brief) => {
+    const id = `rolelock${process.pid}x${++n}`
+    const transcript = join(mkdtempSync(join(tmpdir(), 'rl-608-')), 't.jsonl')
+    sessionTranscripts.set(id, transcript)
+    appendFileSync(transcript, `${JSON.stringify({ type: 'user', message: { role: 'user', content: spawn(brief) } })}\n`)
+    return id
+  }
+  const stampFile = (id) => join(tmpdir(), `claude-setup-role-${id}`)
+  const bad = startedOnlyInTranscript(`Kit: setup · Size: S\n${BLOCKS}`)
+  const first = tool(bad, 'Bash', { command: 'ls' })
+  assert.equal(first.status, 2, 'a bad brief is locked at its first tool call')
+  assert.match(first.stderr, /brief breaks the team rules/)
+  assert.equal(tool(bad, 'mcp__hearthbot__message_coordinator', { text: 'brief wrong' }).status, 0, 'it may still ask the coordinator')
+
+  const ok = startedOnlyInTranscript(`Role: Programmer · Kit: setup · Size: S\n${BLOCKS}`)
+  assert.equal(existsSync(stampFile(ok)), false, 'no card yet, no stamp')
+  const call = tool(ok, 'Bash', { command: 'ls' })
+  assert.equal(call.status, 0, 'a good brief works')
+  assert.match(JSON.parse(call.stdout).hookSpecificOutput.additionalContext, /you are the Programmer of this task/, 'the role card arrives with the first call')
+  assert.equal(readFileSync(stampFile(ok), 'utf8'), 'Programmer', 'the stamp is written with the card, not before')
+  assert.equal(tool(ok, 'Bash', { command: 'ls' }).stdout, '', 'the card comes once')
+
+  const reply = startedOnlyInTranscript(`Role: Programmer · Kit: setup · Size: S\n${BLOCKS}`)
+  const post = tool(reply, 'mcp__hearthbot__post_message', { text: 'Thread · nothing' })
+  assert.equal(post.status, 2, 'the receipt is demanded')
+  assert.match(post.stderr, /you are the Programmer of this task/, 'and the card it is demanded for arrives in the same call')
+})
+
+// #617 gate round 1: a thread that already worked (new container, no temp files) is never locked on its old start brief, and a stamp the cancelled
+// prompt hook left behind is no proof that its card arrived.
+test('#608: a thread that already worked is left alone, and a stamp without the start mark does not hide the card', () => {
+  const row = (message, type = 'user') => `${JSON.stringify({ type, message })}\n`
+  const make = (brief) => {
+    const id = `rolelock${process.pid}x${++n}`
+    const transcript = join(mkdtempSync(join(tmpdir(), 'rl-608b-')), 't.jsonl')
+    sessionTranscripts.set(id, transcript)
+    appendFileSync(transcript, row({ role: 'user', content: spawn(brief) }))
+    return { id, transcript }
+  }
+  const worked = make(`Kit: setup · Size: S\n${BLOCKS}`) // a start brief that a relay corrected long ago
+  appendFileSync(worked.transcript, row({ role: 'assistant', content: [{ type: 'tool_use', id: 't1', name: 'Bash', input: { command: 'ls' } }] }, 'assistant') + row({ role: 'user', content: [{ type: 'tool_result', tool_use_id: 't1', content: 'ok' }] }))
+  assert.equal(tool(worked.id, 'Bash', { command: 'ls' }).status, 0, 'a thread with a finished tool call is not locked again')
+
+  const killed = make(`Role: Programmer · Kit: setup · Size: S\n${BLOCKS}`)
+  writeFileSync(join(tmpdir(), `claude-setup-role-${killed.id}`), 'Programmer') // what roleContext wrote before the hook was cancelled
+  const call = tool(killed.id, 'Bash', { command: 'ls' })
+  assert.equal(call.status, 0)
+  assert.match(JSON.parse(call.stdout).hookSpecificOutput.additionalContext, /you are the Programmer of this task/, 'the card arrives although the stamp was already on disk')
+  assert.equal(readFileSync(join(tmpdir(), `claude-setup-role-${killed.id}`), 'utf8'), 'Programmer', 'the stamp stays')
+})
