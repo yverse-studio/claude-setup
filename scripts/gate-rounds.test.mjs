@@ -302,7 +302,7 @@ const MUST_BLOCK_AT_ROUND_1 = [
   'timeout --kill-after 5 30 gh pr merge 1', 'sudo --user root gh pr merge 1', 'sudo -Eu root gh pr merge 1', 'sudo -uroot gh pr merge 1', 'env -uS gh pr merge 1', 'env --unset FOO gh pr merge 1',
   'echo ${x:-$(gh pr merge 7)}',
   'gh pr merge 7 -R o/r --squash', 'gh pr merge', 'cd repo && gh pr merge 7', 'env gh pr merge 7', 'GH_REPO=o/r gh pr merge 7', 'gh pr merge "7"',
-  'gh pr merge feature-branch', '/usr/bin/gh pr merge 7', 'gh api -X PUT repos/o/r/pulls/7/merge', 'gh api -X PUT repos/o/r/pulls/7/ccr/auto_merge', 'n=7; gh api -X PUT repos/o/r/pulls/$n/merge',
+  'gh pr merge feature-branch', '/usr/bin/gh pr merge 7', 'gh api -X PUT repos/o/r/pulls/7/merge', 'gh api -X PUT repos/o/r/pulls/7/ccr/auto_merge', 'gh api -X POST repos/o/r/merges -f base=main -f head=x', 'gh api -X PUT repos/o/r/pulls/7//merge', 'curl -X PUT https://api.github.com/repos/o/r/pulls/7/merge', 'wget --method=PUT https://api.github.com/repos/o/r/pulls/7/ccr/auto_merge', 'curl -X POST https://api.github.com/repos/o/r/merges', 'http PUT api.github.com/repos/o/r/pulls/7/merge', 'https PUT api.github.com/repos/o/r/pulls/7/merge', 'xh put api.github.com/repos/o/r/pulls/7/merge', 'curl -X PUT https://api.github.com/repos/o/r/pulls/7/ccr//auto_merge', 'gh api repos/o/r//merges -X POST', 'gh api -X PUT repos/o/r/pulls//7/merge', 'gh api -X PUT repos/o/r/pulls/7/./merge', 'gh api -X PUT repos/o/r/pulls/7%2Fmerge', 'gh api -X PUT repos/o/r/pulls/7/x/../merge', 'gh api -X PUT repos/o/r/pulls/7%2Fmerge%zz', 'GH pr merge 7', 'gh api -X PUT repos/o/r/pulls/7/merge/../x', 'Invoke-RestMethod -Method Put -Uri https://api.github.com/repos/o/r/pulls/7/merge', 'irm -Method Post https://api.github.com/repos/o/r/merges', 'iwr -Method Put https://api.github.com/repos/o/r/pulls/7/ccr/auto_merge', 'Invoke-WebRequest -Method Put -Uri https://api.github.com/repos/o/r/pulls/7/merge', 'n=7; gh api -X PUT repos/o/r/pulls/$n/merge',
   `gh api graphql -f query='mutation { mergePullRequest(input: {pullRequestId: "x"}) { clientMutationId } }'`, `bash -c 'gh pr merge 7'`, 'x=$(gh pr merge 7)',
   'gh pr merge 99 -R o/r', 'bash -lc "gh pr merge 7"', 'sh -euc "gh pr merge 7"', 'sudo -u root gh pr merge 7', 'env -u FOO gh pr merge 7', 'time -p gh pr merge 7', `bash <<'EOF'\ngh pr merge 7\nEOF`, 'gh pr merge https://github.com/o/r/pull/7', 'eval "gh pr merge 7"', 'CLAUDE_SETUP_GATE_DIR=/tmp/x node ~/.claude/claude-setup/gate-rounds.mjs merge o/r#7', 'node --import ./x.mjs ~/.claude/claude-setup/gate-rounds.mjs init o/r#9 --round 0', 'if true; then gh pr merge 7; fi', 'for i in 1; do gh pr merge 7; done', 'while true; do gh pr merge 7; done', '! gh pr merge 7', 'gh \\\npr merge 7', 'timeout 60 gh pr merge 7', 'nice -n 5 gh pr merge 7', 'gh pr -R o/r merge 7', 'gh -R o/r pr merge 7', 'sudo gh pr merge 7 && echo done', 'echo hi | gh pr merge 7', 'echo $(gh pr merge 7)', 'bash -c "echo a" && gh pr merge 7',
 ]
@@ -338,7 +338,7 @@ const MUST_BLOCK_LEDGER = [
   'cat global/gate-rounds.mjs > /tmp/c.mjs', 'git show HEAD:global/gate-rounds.mjs > /tmp/c.mjs', 'rg --pre "cp global/gate-rounds.mjs /tmp/c.mjs" x .', 'less -o /tmp/c.mjs global/gate-rounds.mjs', 'file -C -m global/gate-rounds.mjs',
 ]
 const MUST_PASS = [
-  `git commit -m "$(cat <<'EOF'\nfix: gate (round counter\n\nmore\nEOF\n)"`, `git commit -m "$(cat <<'EOF'\nfix: gate counts rounds\n\n1) the counter\n2) the \`gh pr merge\` door\nIt's done\nEOF\n)"`, 'echo x >&2', 'ls nope >&/dev/null', 'gh api repos/{owner}/{repo}/pulls/1',
+  `git commit -m "$(cat <<'EOF'\nfix: gate (round counter\n\nmore\nEOF\n)"`, `git commit -m "$(cat <<'EOF'\nfix: gate counts rounds\n\n1) the counter\n2) the \`gh pr merge\` door\nIt's done\nEOF\n)"`, 'echo x >&2', 'ls nope >&/dev/null', 'gh api repos/{owner}/{repo}/pulls/1', 'curl -s https://api.github.com/repos/o/r/pulls/7', 'curl -s https://api.github.com/repos/o/r/commits/main', 'gh issue comment 7 --body "see pulls/7/merge"', 'gh api repos/o/r/mergesx', 'irm https://api.github.com/repos/o/r/pulls/7',
   'cp shot.png /mnt/project-files/', 'cd ~/.claude/claude-setup && sed -i s/a/b/ global/rule-guard.mjs', 'rm -rf ~/.claude/claude-setup/tmp', 'rm -r /mnt/project-files/tmp',
   'gh api repos/o/r/commits/$(git rev-parse HEAD)/status', 'cd <D> && ls', 'cd /mnt/project-files/gate && cat a.json', 'rm src/gate/config.json', 'touch app/gate/index.json', 'rm gate/old.json',
   'echo x >> /mnt/project-files/gateway-notes.md', 'rm /mnt/project-files/gate-old.json', 'cp a /mnt/project-files/gate.md', 'rsync -a <D>/ /tmp/backup/', 'find <D> -name "*.json"', 'git diff --stat',
@@ -411,7 +411,7 @@ test('cli merge routes (#466): kind, auto-merge in and out of the cloud, the bra
   const s = session()
   const bin = join(s.dir, 'bin'); mkdirSync(bin)
   const log = join(s.dir, 'gh.log')
-  writeFileSync(join(bin, 'gh'), `#!/bin/sh\necho "$@" >> ${log}\n[ "$3" = DELETE ] && [ -n "$GH_FAIL_DELETE" ] && exit 1\n[ "$2" = repos/yverse-studio/vacation-game/pulls/13 ] && printf "%s\\t%s\\n" "\${GH_HEAD:-Yverse-Studio/vacation-game}" "\${GH_REF:-feature-x}"\nexit 0\n`, { mode: 0o755 })
+  writeFileSync(join(bin, 'gh'), `#!/bin/sh\necho "$@" >> ${log}\n[ "$3" = DELETE ] && [ -n "$GH_FAIL_DELETE" ] && exit 1\n[ "$2" = repos/yverse-studio/vacation-game/pulls/13 ] && [ -n "$GH_FAIL_HEAD" ] && exit 1\n[ "$2" = repos/yverse-studio/vacation-game/pulls/13 ] && printf "%s\\t%s\\n" "\${GH_HEAD:-Yverse-Studio/vacation-game}" "\${GH_REF:-feature-x}"\nexit 0\n`, { mode: 0o755 })
   const f = join(s.dir, 'v.md'); writeFileSync(f, 'Gate 4.60/5 (S, round 1)\n1 CI pass\n')
   const base = { ...s.env, PATH: `${bin}:${process.env.PATH}`, CCR_AGENT_PROXY_ENABLED: '', CLAUDE_CODE_REMOTE_SESSION_ID: '' }
   const cloud = { ...base, CCR_AGENT_PROXY_ENABLED: '1' }
@@ -429,6 +429,10 @@ test('cli merge routes (#466): kind, auto-merge in and out of the cloud, the bra
   const del = run(['--delete-branch'], { ...cloud, GH_REF: 'feat/a b' })
   assert.match(del.log, /DELETE repos\/yverse-studio\/vacation-game\/git\/refs\/heads\/feat\/a%20b\n$/, 'the ref is path-encoded, the head repo compared in lower case')
   assert.equal(run(['--delete-branch'], { ...cloud, GH_HEAD: 'someone/fork' }).log.includes('DELETE'), false, 'a fork head')
+  const noHead = run(['--delete-branch'], { ...cloud, GH_FAIL_HEAD: '1' })
+  assert.equal(noHead.code, 0)
+  assert.match(noHead.text, /merged \(the branch was not deleted: its head could not be read\)/, 'a failed head read says the branch stays')
+  assert.match(noHead.log, /merge -f merge_method=squash/, 'the merge itself still ran')
   const failed = run(['--delete-branch'], { ...cloud, GH_FAIL_DELETE: '1' })
   assert.equal(failed.code, 0, 'the PR is merged, so the call did not fail')
   assert.match(failed.text, /merged \(the branch was not deleted\)/)

@@ -335,14 +335,16 @@ export function simpleCommands(text, depth = 0) {
 
 const GUARD_FILE = /\.claude[\\/]claude-setup[\\/](?:rule-guard|team-guard|gate-rounds|task-ledger|card-render)\.mjs$/
 const CLI_VERBS = ['status', 'check', 'init', 'direct', 'card', 'picture', 'waive', 'merge', 'post', 'record']
-const MERGE_DOOR = /pulls\/[^\s/]*\/(?:ccr\/auto_)?merge|mergePullRequest|enablePullRequestAutoMerge/
+const MERGE_DOOR = /pulls\/[^\s/]*\/(?:ccr\/auto_)?merge|repos\/[^\s/]+\/[^\s/]+\/merges\b|mergePullRequest|enablePullRequestAutoMerge/ // the PR merge, its auto route and the branch merge (POST .../merges)
+const flat = (a) => posix.normalize(a.replace(/%([0-9a-f]{2})/gi, (_, h) => String.fromCharCode(parseInt(h, 16)))) // %-escapes (each on its own), doubled slashes, /./ and /../ read as the route they reach
 
 // gh decided by command position only: a merge goes through the counter. Comments are never read here: a verdict posted through plain gh
 // is not counted, so it can never lead to a merge (the comment tool or `post` counts it).
 function ghProblem(s) {
   const w = [] // the subcommand words: flags and the value of -R/--repo dropped
   for (let j = 0; j < s.args.length; j++) { const x = s.args[j]; if (/^(-R|--repo)$/.test(x)) j++; else if (!x.startsWith('-')) w.push(x) }
-  const merge = (w[0] === 'pr' && w[1] === 'merge') || (w[0] === 'api' && s.args.some((a) => MERGE_DOOR.test(a)))
+  const gh = s.a0.toLowerCase() === 'gh'
+  const merge = (gh && w[0] === 'pr' && w[1] === 'merge') || ((!gh || w[0] === 'api') && s.args.some((a) => MERGE_DOOR.test(a) || MERGE_DOOR.test(flat(a)))) // gh api, curl and wget reach the same routes
   return merge ? 'gate ledger: a merge goes through the counter (gate.md, Rounds): the merge tool mcp__github__merge_pull_request, or "node ~/.claude/claude-setup/gate-rounds.mjs merge <owner/repo#n> [--squash|--merge|--rebase] [--auto] [--delete-branch]". It refuses a PR without a counted pass.' : null
 }
 
@@ -387,7 +389,7 @@ function bashProblem(cmd, dir, ctx) {
   // not a plain read (a copy, node -e, an import, a symlink) is refused, so the proofs cannot be walked around by renaming the script.
   if (/gate-rounds\.mjs/.test(cmd) && !list.every((s) => isCounterCall(s) || readsOnly(s))) return 'gate ledger: gate-rounds.mjs is run only as "node ~/.claude/claude-setup/gate-rounds.mjs <verb> <asset> ..." (gate.md, Rounds); copying it, importing it or running it through node -e is refused, because the proofs live in this hook and in the CLI. To read the file use the Read or Grep tool.'
   for (const s of list) {
-    if (s.a0 === 'gh') { const r = ghProblem(s); if (r) return r }
+    if (/^(gh|curl|wget|http|https|xh|invoke-restmethod|invoke-webrequest|irm|iwr)$/i.test(s.a0)) { const r = ghProblem(s); if (r) return r }
     if (s.redirs.some((r) => !/\s/.test(r) && (named(r) || GUARD_FILE.test(r)))) return msg
     const script = s.a0 === 'node' ? s.args.find((a) => base(a) === 'gate-rounds.mjs') ?? s.args.find((a) => !a.startsWith('-')) : null
     if (script && base(script) === 'gate-rounds.mjs') {
@@ -524,13 +526,14 @@ export function cli(argv, env = process.env) {
         if (flags.some((f) => ![...kinds, '--auto', '--delete-branch'].includes(f)) || flags.filter((f) => kinds.includes(f)).length > 1) return fail('merge: only one of --squash --merge --rebase, plus --auto and --delete-branch')
         const kind = flags.find((f) => kinds.includes(f)) ?? '--squash', cloud = !!(env.CCR_AGENT_PROXY_ENABLED || env.CLAUDE_CODE_REMOTE_SESSION_ID), repo = `repos/${m[1]}/pulls/${m[2]}`
         // #466: in the cloud gh's pr commands (GraphQL) get a 403, so REST; auto-merge has a REST route only at the cloud proxy, elsewhere gh pr merge stays.
-        if (flags.includes('--auto')) { // auto-merge never deletes the branch here
+        if (flags.includes('--auto')) { // in the cloud the route deletes no branch; outside it gh pr merge gets --delete-branch as asked
           execFileSync('gh', cloud ? ['api', '-X', 'PUT', `${repo}/ccr/auto_merge`, '-f', `merge_method=${kind.slice(2)}`] : ['pr', 'merge', m[2], '-R', m[1], kind, ...flags.filter((f) => f !== kind)], { stdio: 'inherit', env })
           return { code: 0, text: 'auto-merge enabled' }
         }
         let head = []
-        if (flags.includes('--delete-branch')) try { head = execFileSync('gh', ['api', repo, '--jq', '[.head.repo.full_name, .head.ref] | @tsv'], { env, encoding: 'utf8' }).trim().split('\t') } catch { /* no branch to delete */ }
+        if (flags.includes('--delete-branch')) try { head = execFileSync('gh', ['api', repo, '--jq', '[.head.repo.full_name, .head.ref] | @tsv'], { env, encoding: 'utf8' }).trim().split('\t') } catch { head = null }
         execFileSync('gh', ['api', '-X', 'PUT', `${repo}/merge`, '-f', `merge_method=${kind.slice(2)}`], { stdio: 'inherit', env })
+        if (!head) return { code: 0, text: 'merged (the branch was not deleted: its head could not be read)' }
         // Only the PR's own branch (a fork's branch of the same name is not this repo's), and a failed delete leaves a merged PR merged.
         if (head[1] && head[0]?.toLowerCase() === m[1].toLowerCase()) try { execFileSync('gh', ['api', '-X', 'DELETE', `repos/${m[1]}/git/refs/heads/${head[1].split('/').map(encodeURIComponent).join('/')}`], { stdio: 'inherit', env }) } catch { return { code: 0, text: 'merged (the branch was not deleted)' } }
         return { code: 0, text: 'merged' }
