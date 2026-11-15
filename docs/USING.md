@@ -13,7 +13,7 @@ no script runs in the project chat (it has no Bash).
    (Programmer, kit setup, size S, Sonnet). It clones claude-setup, runs
    `node scripts/coordinator-card.mjs /mnt/project-files/claude-setup/COORDINATOR-CARD.md` and writes
    the card plus `COORDINATOR-RULES-INDEX.md` into that project's files. The chat's first reply then
-   opens with `Luna · card <hash>`.
+   opens with `Luna · card <hash> · plan <done>/<all> · board <n> open`.
 3. The card's pre-flight makes the chat prepend `operator/templates/project-instructions.md`, filled
    for the project, above the existing instructions (nothing existing is removed).
 4. You, once: Project settings > Cloud environment: pick **Claude Setup**, then restart the project.

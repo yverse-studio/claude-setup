@@ -62,6 +62,6 @@ test('--repo none and --repo new say where lessons go without a product repo', (
 test("the project chat reads the card first, threads add the repo", () => {
   const t = fill("yland", { about: "x" })
   assert.match(t, /^Read \/mnt\/project-files\/claude-setup\/COORDINATOR-CARD\.md first/)
-  assert.match(t, /Luna · card <hash/)
+  assert.match(t, /Luna · card <hash from the card header> · plan <done>\/<all> · board <n> open/, 'the three-part header (#604)')
   assert.match(t, /Threads \(they have Bash\) add github\.com\/yverse-studio\/claude-setup with add_repo/)
 })
