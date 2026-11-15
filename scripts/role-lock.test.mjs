@@ -497,3 +497,22 @@ test('#621: a size corrected by a BRIEF-FIX line reaches the receipt, a stamp qu
   appendFileSync(sessionTranscripts.get(id), `${JSON.stringify({ type: 'attachment', attachment: { type: 'queued_command', prompt: queued('The other thread was started with Role: Programmer · Kit: game · Size: L, not you.'), origin: PROJECTS } })}\n`)
   assert.match(tool(id, 'mcp__hearthbot__post_message', { text: 'hi' }).stderr, /Thread · Reviewer · setup · S · /, 'a quoted foreign stamp changes nothing')
 })
+
+// A5 replays (#618): #516 (gate director on Fable) and #503 part 1 (spawn inside the session-context row, hook cancelled), shapes from the issues.
+test('#516 replay: a Reviewer brief on Fable with Round 4 and an Asset is stamped and not locked; the brief check text reaches the thread', () => {
+  const id = `rolelock${process.pid}x${++n}`
+  const brief = `Role: Reviewer · Kit: setup · Size: M\nRound: 4\nAsset: yverse-studio/claude-setup#512\n${BLOCKS.replace('Model: sonnet', 'Model: fable')}`
+  const out = guard('prompt', id, { prompt: spawn(brief) })
+  assert.doesNotMatch(out.stdout, /this thread runs on fable, but the Reviewer runs on/, 'Fable is a Reviewer model')
+  assert.equal(tool(id, 'Bash', { command: 'ls' }).status, 0, 'not locked')
+  assert.equal(readFileSync(join(tmpdir(), `claude-setup-role-${id}`), 'utf8'), 'Reviewer', 'stamped')
+})
+test('#503 replay: a spawn brief inside the session-context row of a thread whose prompt hook was cancelled is stamped at its first tool call', () => {
+  const id = `rolelock${process.pid}x${++n}`
+  const transcript = join(mkdtempSync(join(tmpdir(), 'rl-503-')), 't.jsonl')
+  sessionTranscripts.set(id, transcript)
+  const text = `<system-reminder>CLAUDE.md</system-reminder>\n<session-context nonce="x">ctx</session-context nonce="x">\n${spawn(`Role: Reviewer · Kit: setup · Size: M\n${GATE_OK.split('\n').slice(2).join('\n')}`)}`
+  writeFileSync(transcript, `${JSON.stringify({ type: 'user', isMeta: true, message: { role: 'user', content: [{ type: 'text', text }] } })}\n${JSON.stringify({ type: 'attachment', attachment: { type: 'hook_cancelled', hookEvent: 'UserPromptSubmit' } })}\n`)
+  assert.equal(tool(id, 'Bash', { command: 'ls' }).status, 0)
+  assert.equal(readFileSync(join(tmpdir(), `claude-setup-role-${id}`), 'utf8'), 'Reviewer')
+})
