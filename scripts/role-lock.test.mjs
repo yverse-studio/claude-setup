@@ -547,6 +547,7 @@ test('#615: the role file names the skills to load; the first reply is refused u
   assert.equal(tool(a.id, POST, { text: `${loaded}\nhi (◕‿◕)` }).status, 0, 'loaded: the reply goes out')
   const gameCard = deliver(`rolelock${process.pid}x${++n}`, spawn(`Role: Programmer · Kit: game · Size: S\n${BLOCKS}`)).stdout
   assert.match(gameCard, /Load before your first reply[^\n]*game-3d, game-ux/, 'a by-kit role card, stamp after the spawn tag, names the kit list')
+  for (const head of ['> Kit: site\nRole: Programmer · Kit: game · Size: S', 'old -> Kit: site was wrong\nRole: Programmer · Kit: game · Size: S', 'Role: Programmer · Kit: Game · Size: S', '- Role: Programmer · Kit: game · Size: S', '> Role: Programmer · Kit: game · Size: S']) assert.deepEqual(wanted(root, role('programmer'), head), ['game-3d', 'game-ux'], `the stamp's kit, in any case: ${head.split('\n')[0]}`)
   const other = start()
   appendFileSync(sessionTranscripts.get(other.id), `${JSON.stringify({ type: 'assistant', message: { content: [{ type: 'tool_use', id: 'u2', name: 'Skill', input: { skill: 'market' } }] } })}\n`)
   const again = tool(other.id, POST, { text: 'hi (◕‿◕)' }).stderr.match(/TEAMS\.md\): (Thread · [^\n]*)/)?.[1]
