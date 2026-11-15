@@ -58,7 +58,7 @@ test('live fixtures: the Researcher start of 16:40 gets one refusal with every e
   const first = await check(`Role: Researcher · Kit: research · Size: M\nItem: PLAN.json item M29\nThreads: none\nPlan: p.md\nAcceptance: ok\nModel: opus\nSkills: s\nStart: read MEMORY.md first\nDone when: x\nStop when: y\nPrior art: .claude/skills/operator/gate.md -> adapt, because it exists`)
   assert.match(first, /^Brief check[\s\S]*Kit: research is no kit/, 'the kit is refused')
   assert.doesNotMatch(first.split('\n')[0], /Item|Threads/, 'Item and Threads are no refusal: the format is repaired, the thread lists threads itself')
-  assert.match(first, /Role: Researcher · Kit: <kit>[\s\S]*Item: <issue #n, PLAN\.json item/, 'the refusal carries the Researcher template')
+  assert.match(first, /Role: Researcher · Kit: <kit>[\s\S]*Item: <issue #n, M<n> or new>/, 'the refusal carries the Researcher template')
   const second = await check(`Role: Researcher · Kit: setup · Size: M\nItem: PLAN.json item M29\nThreads: none\nPlan: p.md\nAcceptance: ok\nModel: opus\nSkills: s\nStart: read MEMORY.md first\nDone when: x\nStop when: y\nPrior art: .claude/skills/operator/gate.md -> adapt, because it exists`)
   assert.doesNotMatch(second, /^Brief check/, 'the restart is not refused')
   assert.match(second, /^Brief repair[^\n]*Item[^\n]*Threads|^Brief repair[^\n]*Threads[^\n]*Item/, 'the repairs are named')
@@ -152,4 +152,18 @@ test('a brief with a token-count stop or hand-off line is refused with the hando
     'Acceptance: the stream stops after 30000 tokens (max_tokens)', 'Acceptance: generation stops at 4k tokens because max_tokens is set',
     'Acceptance: the check refuses "at ~200k context post status and stop"', 'Acceptance: a brief with `stop at 30000 tokens` is refused', 'Plan: the line „Übergabe bei 200k Tokens“ is refused by the check',
     'Acceptance: “hand off at 250k tokens” gets the refusal text; stop after 3 rounds', 'Acceptance: pause menu opens; context menu shows 12 items at 100 % zoom', 'Context: issue #587, stop words list is 14 entries, see PR at 2e4785f']) assert.doesNotMatch(problems([ok]).join('\n'), /token count/, `passes: ${ok}`)
+})
+
+// #616: a line written the way the template's own placeholder words it counts as filled.
+test('#616: `Item: issue #610` gives no "lacks Item" note, and every template placeholder, filled as it is worded, is clean', async () => {
+  const ok = Object.entries(LINES).filter(([k]) => k !== 'Item').map(([, l]) => l)
+  const out = await check(['Role: Programmer · Kit: setup · Size: M', 'Research SOTA of the thing.', 'Item: issue #610', ...ok].join('\n'))
+  assert.doesNotMatch(out, /lacks[^\n]*Item/, 'the template wording counts as filled')
+  for (const f of BRIEF_FIELDS.filter((x) => x.clean)) {
+    const placeholder = f.tpl.match(/<(.*)>/)[1] // e.g. `issue #n, M<n> or new`
+    for (const alt of placeholder.replace(/<n>/g, '3').split(/,\s*|\s+or\s+/)) {
+      const line = f.tpl.replace(/<.*>/, alt.replace(/#n/g, '#610'))
+      assert.ok(f.clean(line), `${f.key}: "${line}" is clean`)
+    }
+  }
 })
