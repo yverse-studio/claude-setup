@@ -388,7 +388,7 @@ test('cli merge and post: a counted pass merges through gh, a verdict through po
   const s = session()
   const bin = join(s.dir, 'bin'); mkdirSync(bin)
   const log = join(s.dir, 'gh.log')
-  writeFileSync(join(bin, 'gh'), `#!/bin/sh\necho "$@" >> ${log}\n`, { mode: 0o755 })
+  writeFileSync(join(bin, 'gh'), `#!/bin/sh\necho "$@" >> ${log}\n[ "$2" = repos/yverse-studio/vacation-game/pulls/13 ] && printf "%s\\t%s\\n" "\${GH_HEAD:-yverse-studio/vacation-game}" feature-x\nexit 0\n`, { mode: 0o755 })
   const env = { ...s.env, PATH: `${bin}:${process.env.PATH}` }
   const f = join(s.dir, 'v.md'); writeFileSync(f, 'Gate 4.60/5 (S, round 1)\n1 CI pass\n')
   assert.equal(cli(['merge', ASSET], env).code, 2, 'no counted round, no merge')
@@ -397,7 +397,11 @@ test('cli merge and post: a counted pass merges through gh, a verdict through po
   assert.equal(cli(['merge', ASSET, '--squash', '--rebase'], env).code, 2, 'one merge kind only')
   assert.equal(cli(['merge', ASSET, '-d'], env).code, 2, 'no unknown flags')
   assert.equal(cli(['merge', ASSET, '--squash', '--delete-branch'], env).code, 0)
-  assert.equal(readFileSync(log, 'utf8'), 'pr comment 13 -R yverse-studio/vacation-game --body-file ' + f + '\npr merge 13 -R yverse-studio/vacation-game --squash --delete-branch\n')
+  // #466: REST only (gh pr comment and gh pr merge use GraphQL, which the cloud proxy refuses with a 403)
+  assert.equal(readFileSync(log, 'utf8'), `api -X POST repos/yverse-studio/vacation-game/issues/13/comments -F body=@${f}\napi repos/yverse-studio/vacation-game/pulls/13 --jq [.head.repo.full_name, .head.ref] | @tsv\napi -X PUT repos/yverse-studio/vacation-game/pulls/13/merge -f merge_method=squash\napi -X DELETE repos/yverse-studio/vacation-game/git/refs/heads/feature-x\n`)
+  writeFileSync(log, '')
+  assert.equal(cli(['merge', ASSET, '--squash', '--delete-branch'], { ...env, GH_HEAD: 'someone/fork' }).code, 0)
+  assert.doesNotMatch(readFileSync(log, 'utf8'), /DELETE/, 'a fork branch of the same name is never deleted here')
 })
 
 test('a verdict through plain gh is not counted, so it never leads to a merge; the asset key ignores leading zeros', () => {

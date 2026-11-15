@@ -1358,7 +1358,12 @@ export function cli(argv, env = process.env) {
         const kinds = ['--squash', '--merge', '--rebase']
         const flags = rest
         if (flags.some((f) => ![...kinds, '--auto', '--delete-branch'].includes(f)) || flags.filter((f) => kinds.includes(f)).length > 1) return fail('merge: only one of --squash --merge --rebase, plus --auto and --delete-branch')
-        execFileSync('gh', ['pr', 'merge', m[2], '-R', m[1], ...(flags.some((f) => kinds.includes(f)) ? [] : ['--squash']), ...flags], { stdio: 'inherit', env })
+        // REST routes only (#466): gh's own pr commands use GraphQL, which the cloud proxy answers with a 403.
+        const method = `merge_method=${(flags.find((f) => kinds.includes(f)) ?? '--squash').slice(2)}`, repo = `repos/${m[1]}/pulls/${m[2]}`
+        const [headRepo, headRef] = flags.includes('--delete-branch') ? execFileSync('gh', ['api', repo, '--jq', '[.head.repo.full_name, .head.ref] | @tsv'], { env, encoding: 'utf8' }).trim().split('\t') : []
+        execFileSync('gh', ['api', '-X', 'PUT', flags.includes('--auto') ? `${repo}/ccr/auto_merge` : `${repo}/merge`, '-f', method], { stdio: 'inherit', env })
+        // Only the PR's own branch: a fork's branch of the same name must not delete this repo's.
+        if (headRef && headRepo?.toLowerCase() === m[1].toLowerCase() && !flags.includes('--auto')) execFileSync('gh', ['api', '-X', 'DELETE', `repos/${m[1]}/git/refs/heads/${headRef.split('/').map(encodeURIComponent).join('/')}`], { stdio: 'inherit', env })
         return { code: 0, text: flags.includes('--auto') ? 'auto-merge enabled' : 'merged' }
       }
       const file = flag(rest, '--body-file')
@@ -1366,7 +1371,7 @@ export function cli(argv, env = process.env) {
       if (!head) return fail('post: --body-file <f> must start with the verdict headline "Gate <score>/5 (<size>, round <n>)"')
       const bad = verdictProblem(dir, asset, head, true)
       if (bad) return fail(bad)
-      execFileSync('gh', ['pr', 'comment', m[2], '-R', m[1], '--body-file', file], { stdio: 'inherit', env })
+      execFileSync('gh', ['api', '-X', 'POST', `repos/${m[1]}/issues/${m[2]}/comments`, '-F', `body=@${file}`], { stdio: 'inherit', env })
       verdictProblem(dir, asset, head, false) // counted only once it is on the PR
       return { code: 0, text: `posted${nextNote(dir, asset)}` }
     } catch (e) { return fail(`${cmd}: gh failed (${String(e.message).slice(0, 120)})`) }
