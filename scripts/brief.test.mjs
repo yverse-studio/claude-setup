@@ -47,7 +47,7 @@ test('rosterNames and kitNames read docs/TEAMS.md, no list of their own', () => 
   assert.deepEqual(rosterNames(''), [])
 })
 
-const FIELDS = { item: 'M1', plan: 'gate.md', acceptance: 'tests pass', threads: 'list_threads checked, none open on this topic', priorArt: 'yverse-studio/claude-setup checked -> adapt, because it exists', done: 'node --test passes', stop: 'two rounds', what: 'x', start: 'CLAUDE.md', sheet: 'n/a no body, face or outfit job' }
+const FIELDS = { item: 'M1', plan: 'gate.md', acceptance: 'tests pass', threads: 'list_threads checked, none open on this topic', priorArt: 'yverse-studio/claude-setup checked -> adapt, because it exists', done: 'node --test passes', stop: 'two rounds', what: 'x', start: 'CLAUDE.md', sheet: 'n/a no body, face or outfit job', sceneDocs: 'the docs the project CLAUDE.md lists, copies the old scene X' }
 
 // The property the owner asked for: a generated brief always passes the guard. Every Roster role x kit x size either
 // yields a brief decide() lets through, or the generator refuses it with the same reason badTeam gives; none is silently wrong.
@@ -222,4 +222,10 @@ test('a rendered brief file per role passes team-guard once its <...> are filled
   }
   assert.equal(modelFor('Planner', 'L', teams), teams.match(/Fable \((claude-[\w.-]+)\)/)[1])
   assert.match(briefFile('Planner', teams), /^Model: claude-fable[\w.-]*$/m, 'S5: the Planner file names Fable, one model for every size')
+})
+
+test('#627: an Animator brief is generated only with --scene-docs, and carries the line', () => {
+  const { sceneDocs, ...noDocs } = FIELDS
+  assert.throws(() => buildBrief({ teams, role: 'Animator', kit: 'game', size: 'M', ...noDocs }), (e) => e instanceof BriefError && /--scene-docs/.test(e.message))
+  assert.match(buildBrief({ teams, role: 'Animator', kit: 'game', size: 'M', ...FIELDS, gate: 'Reviewer · x before owner' }).brief, /^Scene docs: the docs the project CLAUDE\.md lists/m)
 })
