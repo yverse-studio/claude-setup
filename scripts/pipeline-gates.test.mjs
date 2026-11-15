@@ -1,7 +1,7 @@
 // Companyxy report 2026-11-12, points 3 to 8: each gate below was red (missing) before scripts/pipeline-gates.mjs existed.
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { mkdtempSync, mkdirSync, writeFileSync, utimesSync, rmSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, utimesSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -300,4 +300,14 @@ test('#630 cards: a conflict copy or a root copy beside the scene card is RED wi
     assert.match(cli.stdout, /^RED .*scene_card_v3\.md/m)
     assert.equal(spawnSync(process.execPath, [GATE, 'cards', clean], { encoding: 'utf8' }).status, 0)
   } finally { rmSync(clean, { recursive: true, force: true }); rmSync(copies, { recursive: true, force: true }) }
+})
+
+// #631: the scene plan's pass list is the one in game-pipeline.md (a fresh plan gate passes it only when ...); the old-scene row lives there once, and the Animator rule points at it.
+test('#631: the plan gate row names the old scene a plan copies, once, in the pass list; roles/animator.md points to it', () => {
+  const root = join(dirname(fileURLToPath(import.meta.url)), '..')
+  const gate = readFileSync(join(root, 'docs/game-pipeline.md'), 'utf8').split('\n').find((l) => l.startsWith('**One chapter plan, gated before any build**')) ?? ''
+  assert.match(gate, /passes it only when.*every scene names the old scene it copies by path/, 'the pass list has the row')
+  const animator = readFileSync(join(root, '.claude/skills/operator/roles/animator.md'), 'utf8')
+  assert.doesNotMatch(animator, /The plan names the old scene it copies/, 'the rule is not worded a second time')
+  assert.match(animator, /plan gate[^\n]*game-pipeline\.md/, 'the Animator rule points to the pass list')
 })
