@@ -201,8 +201,8 @@ How to undo a merge, by kind of change (write the line into the PR's "undo" line
 - **Last PR before launch:** the operator posts brief (c) with the table; the gate merges at 5/5
   (auto-run, launch included). Live keys yskills has not set yet stay a key card; the site goes
   live without them.
-- **Less:** post the blocking findings as one PR review and stop. The builder fixes them; the next
-  round re-runs the failed checks with fresh agents on the new head.
+- **Less:** post the blocking findings as one PR review and stop; the builder fixes them and the next round re-runs the failed checks with fresh agents on the new head.
+- **A head is frozen while its gate or playtest runs** (yskills 2026-11-10, vacation-game): the request names the head sha, the gate's first line names the sha it judged, and the builder pushes nothing to the PR branch until the verdict; two different shas mean a push in between, which is a new head and a new round. [advisory]
 - **Plan reviews are pass/fail, once.** (yskills 2026-11-13, C1 card.) A plan is reviewed once against one pass/fail list; no score, no rounds, no Director. A second FAIL goes to him as one card. Scores, rounds 1 to 6 and the Director stay for pictures, looks and code.
 - **A PASS needs no OK from yskills** (yskills 2026-11-12 16:43: "Es braucht mein OK nicht wenn gate bestanden, nur wenn 3 mal
   falsch und dann nochmal 3 mal mit Fable-Eingriff"). A passed gate (plan review, asset, scene or PR) is the go: the work goes on,
