@@ -11,7 +11,7 @@
 // Each prints OK or RED lines and exits 1 on any RED.
 import { spawnSync } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
-import { basename, dirname, join, relative } from 'node:path'
+import { basename, dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 // A bold label (`**Adult use:** no`) closes its `**` after the colon: skip it, or the value reads "** no" (gate #483 r2, F1).
@@ -19,7 +19,8 @@ const field = (text, label) => text.match(new RegExp(`^[ \\t>*-]*\\**${label}\\*
 const placeholder = (v) => !v || /<[^>\n]+>/.test(v.replace(/<https?:[^>]*>/g, ''))
 
 // Point 3: stage 1 and 2 of docs/preproduction-workflow.md. No body, face or outfit job starts on a sheet this rejects.
-export function sheetProblems(text) {
+// `dir` (the sheet's character folder, #599) is given by the CLI: a sheet with a look lock needs a DECISIONS.md beside it, the one file of the owner's choices.
+export function sheetProblems(text, dir) {
   const out = []
   const need = (label, ok, hint) => { const v = field(text, label); if (placeholder(v) || !ok(v)) out.push(`${label}: ${hint}`) }
   need('Age', (v) => Number(v.match(/\d+/)?.[0]) >= 18, 'a number, 18 or more')
@@ -30,6 +31,7 @@ export function sheetProblems(text) {
   need('Hair', (v) => v.length > 3, 'colour by comparison, length, texture')
   need('Palette', (v) => v.split(/[,/]/).filter((x) => x.trim()).length >= 3, '3 to 5 colours')
   need('Look-Lock', (v) => /\d{4}-\d{2}-\d{2}/.test(v) && /(https?:\/\/|#cmsg_?[A-Za-z0-9]{6,})/i.test(v), 'owner card link and date (YYYY-MM-DD) of the approval')
+  if (dir && !out.some((p) => p.startsWith('Look-Lock')) && !existsSync(join(dir, 'DECISIONS.md'))) out.push(`DECISIONS.md: none in ${resolve(dir)}; one file beside the sheet holds every owner decision of this character (docs/character-workflow.md, Owner decisions)`)
   return out
 }
 
@@ -184,7 +186,7 @@ export function refreshPreview(finalFile, exec = run) {
 function main([cmd, ...args]) {
   const json = (f) => JSON.parse(readFileSync(f, 'utf8'))
   const jobs = {
-    sheet: () => args.filter((a) => !a.startsWith('--')).flatMap((f) => sheetProblems(readFileSync(f, 'utf8')).map((p) => `${basename(f)}: ${p}`)),
+    sheet: () => args.filter((a) => !a.startsWith('--')).flatMap((f) => sheetProblems(readFileSync(f, 'utf8'), dirname(f)).map((p) => `${basename(f)}: ${p}`)),
     fit: () => fitReportProblems(json(args[0])),
     look: () => lookStateProblems(json(args[0])),
     drivers: () => driverProblems(json(args[0])),

@@ -56,7 +56,7 @@ No scripts inside an asset: data and at most one recipe file; build scripts live
 <STUDIO_ROOT>/        top level = exactly: lib projects repos tools docs inbox _claude .claude
 │                     START.md AGENTS.md catalog.json catalog.json.sha256 deps.json .layout.json
 ├─ lib/               everything reusable, by type
-│  ├─ characters/     CH_<name>/ (Blend/ reference/ export/ gate/ <name>.ychar.json STATUS.md) · CH_Base/female/ (reference/{face,body}/)
+│  ├─ characters/     CH_<name>/ (Blend/ reference/ export/ gate/ <name>.ychar.json STATUS.md SHEET.md DECISIONS.md) · CH_Base/female/ (reference/{face,body}/)
 │  ├─ clothes/        CL_<name>/ (source/ files/ fitted/<figure>.blend reference/ gate/)   accessories as CL_acc-*
 │  ├─ parts/          {hair,eyes,skin}/PT_<name>/ (source/ files/ reference/)
 │  ├─ rooms/          <room>/ (<room>.blend reference/ export/ gate/)

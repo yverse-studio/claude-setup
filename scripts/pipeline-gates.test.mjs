@@ -32,6 +32,23 @@ test('point 3: no model without a cast sheet that has measures and a look lock',
   assert.match(sheetProblems(SHEET.replace('Height: 168 cm', 'Height: tall')).join('|'), /Height/)
 })
 
+test('#599: a sheet with a look lock has DECISIONS.md beside it, through the CLI too', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'decisions-'))
+  try {
+    assert.match(sheetProblems(SHEET, dir).join('|'), /DECISIONS\.md[^|]*decisions-/)
+    writeFileSync(join(dir, 'DECISIONS.md'), '- 2026-11-10 succubus outfit: chosen, https://claude.ai/code/card/x\n')
+    assert.deepEqual(sheetProblems(SHEET, dir), [])
+    assert.match(sheetProblems(SHEET, 'no-such-folder').join('|'), /none in \/[^|]*no-such-folder[^|]*Owner decisions/, 'a relative folder is named in full, and the hint names the paragraph')
+    rmSync(join(dir, 'DECISIONS.md'))
+    assert.deepEqual(sheetProblems(SHEET.replace(/- Look-Lock:.*/, ''), dir).filter((p) => p.startsWith('DECISIONS')), [], 'no second line for a sheet that already lacks its look lock')
+    writeFileSync(join(dir, 'SHEET.md'), SHEET)
+    const cli = (f) => spawnSync('node', [join(dirname(fileURLToPath(import.meta.url)), 'pipeline-gates.mjs'), 'sheet', f], { encoding: 'utf8' })
+    const red = cli(join(dir, 'SHEET.md')); assert.equal(red.status, 1); assert.match(red.stdout + red.stderr, /DECISIONS\.md/)
+    writeFileSync(join(dir, 'DECISIONS.md'), 'x\n')
+    assert.equal(cli(join(dir, 'SHEET.md')).status, 0)
+  } finally { rmSync(dir, { recursive: true, force: true }) }
+})
+
 test('point 4: a fit report must cover every BT preset and every CH key, each inside the limit', () => {
   const state = (mm = 1) => ({ depth_mm: mm, face_deep_pct: 0.1 })
   const piece = { after: { rika: state(), saki: state(), BT_slim: state(), BT_curvy: state(), char_rika: state(), char_yumeka: state(), char_lily: state(), pass: true } }
