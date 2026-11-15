@@ -1,4 +1,4 @@
-import os, shutil, subprocess, sys, tempfile, unittest
+import importlib.util, os, shutil, subprocess, sys, tempfile, unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -6,12 +6,13 @@ from clearance_args import arg_error, piece_name, summary_line
 
 
 def run_script(folder, args, name='clearance.py'):
-    """Runs clearance.py as Blender would (python <file> -- <args>), with empty stand-ins for bpy and mathutils on PYTHONPATH."""
+    """Runs clearance.py as Blender would (python <file> -- <args>), with empty stand-ins for bpy, mathutils (and numpy where absent) on PYTHONPATH."""
     stubs = tempfile.mkdtemp()
     os.makedirs(os.path.join(stubs, 'mathutils'))
-    open(os.path.join(stubs, 'bpy.py'), 'w').close()
-    open(os.path.join(stubs, 'mathutils', '__init__.py'), 'w').write('class Vector:\n    def __init__(self, *a): pass\n    def normalized(self): return self\n')
-    open(os.path.join(stubs, 'mathutils', 'bvhtree.py'), 'w').write('class BVHTree: pass\n')
+    files = {'bpy.py': '', 'mathutils/__init__.py': 'class Vector:\n    def __init__(self, *a): pass\n    def normalized(self): return self\n', 'mathutils/bvhtree.py': 'class BVHTree: pass\n'}
+    if importlib.util.find_spec('numpy') is None: files['numpy.py'] = ''   # CI has no numpy; Blender ships its own
+    for stub, text in files.items():
+        with open(os.path.join(stubs, stub), 'w') as fh: fh.write(text)
     env = dict(os.environ, PYTHONSAFEPATH='1', PYTHONPATH=os.pathsep.join([p for p in (stubs, os.environ.get('PYTHONPATH')) if p]))   # no empty entry: it would put the cwd on the path
     try:
         return subprocess.run([sys.executable, os.path.join(folder, name), '--'] + args, capture_output=True, text=True, env=env, timeout=60)
