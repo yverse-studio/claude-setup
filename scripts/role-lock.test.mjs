@@ -499,13 +499,19 @@ test('#621: a size corrected by a BRIEF-FIX line reaches the receipt, a stamp qu
 })
 
 // A5 replays (#618): #516 (gate director on Fable) and #503 part 1 (spawn inside the session-context row, hook cancelled), shapes from the issues.
-test('#516 replay: a Reviewer brief on Fable with Round 4 and an Asset is stamped and not locked; the brief check text reaches the thread', () => {
-  const id = `rolelock${process.pid}x${++n}`
+const runningOn = (id, model) => { const t = join(mkdtempSync(join(tmpdir(), 'rl-516-')), 't.jsonl'); writeFileSync(t, `${JSON.stringify({ type: 'assistant', message: { model, content: [] } })}\n`); sessionTranscripts.set(id, t) }
+test('#516 replay: a Reviewer brief on a Fable session with Round 4 and an Asset is stamped and not locked; on a Sonnet session the model check refuses it', () => {
   const brief = `Role: Reviewer · Kit: setup · Size: M\nRound: 4\nAsset: yverse-studio/claude-setup#512\n${BLOCKS.replace('Model: sonnet', 'Model: fable')}`
-  const out = guard('prompt', id, { prompt: spawn(brief) })
+  const fable = `rolelock${process.pid}x${++n}`
+  runningOn(fable, 'fable-test')
+  const out = guard('prompt', fable, { prompt: spawn(brief) })
   assert.doesNotMatch(out.stdout, /this thread runs on fable, but the Reviewer runs on/, 'Fable is a Reviewer model')
-  assert.equal(tool(id, 'Bash', { command: 'ls' }).status, 0, 'not locked')
-  assert.equal(readFileSync(join(tmpdir(), `claude-setup-role-${id}`), 'utf8'), 'Reviewer', 'stamped')
+  assert.equal(tool(fable, 'Bash', { command: 'ls' }).status, 0, 'not locked')
+  assert.equal(readFileSync(join(tmpdir(), `claude-setup-role-${fable}`), 'utf8'), 'Reviewer', 'stamped')
+  const sonnet = `rolelock${process.pid}x${++n}`
+  runningOn(sonnet, 'sonnet-test')
+  assert.match(guard('prompt', sonnet, { prompt: spawn(brief) }).stdout, /this thread runs on sonnet, but the Reviewer runs on/, 'the counter case: the check runs')
+  assert.equal(tool(sonnet, 'Bash', { command: 'ls' }).status, 2, 'the next tool call is refused')
 })
 test('#503 replay: a spawn brief inside the session-context row of a thread whose prompt hook was cancelled is stamped at its first tool call', () => {
   const id = `rolelock${process.pid}x${++n}`
