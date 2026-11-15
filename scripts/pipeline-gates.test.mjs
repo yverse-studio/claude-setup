@@ -306,7 +306,7 @@ test('#630 cards: a conflict copy or a root copy beside the scene card is RED wi
 test('#631: the plan gate row names the old scene a plan copies, once, in the pass list; roles/animator.md points to it', () => {
   const root = join(dirname(fileURLToPath(import.meta.url)), '..')
   const gate = readFileSync(join(root, 'docs/game-pipeline.md'), 'utf8').split('\n').find((l) => l.startsWith('**One chapter plan, gated before any build**')) ?? ''
-  assert.match(gate, /passes it only when.*every scene names the old scene it copies by path/, 'the pass list has the row')
+  assert.match(gate, /passes it only when.*every scene names the old scene it copies by path \(or says that none exists and why\)/, 'the pass list has the row, with the answer for a first scene')
   const animator = readFileSync(join(root, '.claude/skills/operator/roles/animator.md'), 'utf8')
   assert.doesNotMatch(animator, /The plan names the old scene it copies/, 'the rule is not worded a second time')
   assert.match(animator, /plan gate[^\n]*game-pipeline\.md/, 'the Animator rule points to the pass list')
