@@ -336,14 +336,15 @@ export function simpleCommands(text, depth = 0) {
 const GUARD_FILE = /\.claude[\\/]claude-setup[\\/](?:rule-guard|team-guard|gate-rounds|task-ledger|card-render)\.mjs$/
 const CLI_VERBS = ['status', 'check', 'init', 'direct', 'card', 'picture', 'waive', 'merge', 'post', 'record']
 const MERGE_DOOR = /pulls\/[^\s/]*\/(?:ccr\/auto_)?merge|repos\/[^\s/]+\/[^\s/]+\/merges\b|mergePullRequest|enablePullRequestAutoMerge/ // the PR merge, its auto route and the branch merge (POST .../merges)
-const flat = (a) => { let t = a; try { t = decodeURIComponent(a) } catch {} return t.replace(/\/(?:\.?\/)+/g, '/') } // doubled slashes, /./ and %-escapes read as the route they reach
+const flat = (a) => posix.normalize(a.replace(/%([0-9a-f]{2})/gi, (_, h) => String.fromCharCode(parseInt(h, 16)))) // %-escapes (each on its own), doubled slashes, /./ and /../ read as the route they reach
 
 // gh decided by command position only: a merge goes through the counter. Comments are never read here: a verdict posted through plain gh
 // is not counted, so it can never lead to a merge (the comment tool or `post` counts it).
 function ghProblem(s) {
   const w = [] // the subcommand words: flags and the value of -R/--repo dropped
   for (let j = 0; j < s.args.length; j++) { const x = s.args[j]; if (/^(-R|--repo)$/.test(x)) j++; else if (!x.startsWith('-')) w.push(x) }
-  const merge = (s.a0 === 'gh' && w[0] === 'pr' && w[1] === 'merge') || ((s.a0 !== 'gh' || w[0] === 'api') && s.args.some((a) => MERGE_DOOR.test(flat(a)))) // gh api, curl and wget reach the same routes
+  const gh = s.a0.toLowerCase() === 'gh'
+  const merge = (gh && w[0] === 'pr' && w[1] === 'merge') || ((!gh || w[0] === 'api') && s.args.some((a) => MERGE_DOOR.test(flat(a)))) // gh api, curl and wget reach the same routes
   return merge ? 'gate ledger: a merge goes through the counter (gate.md, Rounds): the merge tool mcp__github__merge_pull_request, or "node ~/.claude/claude-setup/gate-rounds.mjs merge <owner/repo#n> [--squash|--merge|--rebase] [--auto] [--delete-branch]". It refuses a PR without a counted pass.' : null
 }
 
