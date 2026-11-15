@@ -302,7 +302,7 @@ const MUST_BLOCK_AT_ROUND_1 = [
   'timeout --kill-after 5 30 gh pr merge 1', 'sudo --user root gh pr merge 1', 'sudo -Eu root gh pr merge 1', 'sudo -uroot gh pr merge 1', 'env -uS gh pr merge 1', 'env --unset FOO gh pr merge 1',
   'echo ${x:-$(gh pr merge 7)}',
   'gh pr merge 7 -R o/r --squash', 'gh pr merge', 'cd repo && gh pr merge 7', 'env gh pr merge 7', 'GH_REPO=o/r gh pr merge 7', 'gh pr merge "7"',
-  'gh pr merge feature-branch', '/usr/bin/gh pr merge 7', 'gh api -X PUT repos/o/r/pulls/7/merge', 'n=7; gh api -X PUT repos/o/r/pulls/$n/merge',
+  'gh pr merge feature-branch', '/usr/bin/gh pr merge 7', 'gh api -X PUT repos/o/r/pulls/7/merge', 'gh api -X PUT repos/o/r/pulls/7/ccr/auto_merge', 'n=7; gh api -X PUT repos/o/r/pulls/$n/merge',
   `gh api graphql -f query='mutation { mergePullRequest(input: {pullRequestId: "x"}) { clientMutationId } }'`, `bash -c 'gh pr merge 7'`, 'x=$(gh pr merge 7)',
   'gh pr merge 99 -R o/r', 'bash -lc "gh pr merge 7"', 'sh -euc "gh pr merge 7"', 'sudo -u root gh pr merge 7', 'env -u FOO gh pr merge 7', 'time -p gh pr merge 7', `bash <<'EOF'\ngh pr merge 7\nEOF`, 'gh pr merge https://github.com/o/r/pull/7', 'eval "gh pr merge 7"', 'CLAUDE_SETUP_GATE_DIR=/tmp/x node ~/.claude/claude-setup/gate-rounds.mjs merge o/r#7', 'node --import ./x.mjs ~/.claude/claude-setup/gate-rounds.mjs init o/r#9 --round 0', 'if true; then gh pr merge 7; fi', 'for i in 1; do gh pr merge 7; done', 'while true; do gh pr merge 7; done', '! gh pr merge 7', 'gh \\\npr merge 7', 'timeout 60 gh pr merge 7', 'nice -n 5 gh pr merge 7', 'gh pr -R o/r merge 7', 'gh -R o/r pr merge 7', 'sudo gh pr merge 7 && echo done', 'echo hi | gh pr merge 7', 'echo $(gh pr merge 7)', 'bash -c "echo a" && gh pr merge 7',
 ]
@@ -388,7 +388,7 @@ test('cli merge and post: a counted pass merges through gh, a verdict through po
   const s = session()
   const bin = join(s.dir, 'bin'); mkdirSync(bin)
   const log = join(s.dir, 'gh.log')
-  writeFileSync(join(bin, 'gh'), `#!/bin/sh\necho "$@" >> ${log}\n`, { mode: 0o755 })
+  writeFileSync(join(bin, 'gh'), `#!/bin/sh\necho "$@" >> ${log}\n[ "$2" = repos/yverse-studio/vacation-game/pulls/13 ] && printf "%s\\t%s\\n" "\${GH_HEAD:-yverse-studio/vacation-game}" feature-x\nexit 0\n`, { mode: 0o755 })
   const env = { ...s.env, PATH: `${bin}:${process.env.PATH}` }
   const f = join(s.dir, 'v.md'); writeFileSync(f, 'Gate 4.60/5 (S, round 1)\n1 CI pass\n')
   assert.equal(cli(['merge', ASSET], env).code, 2, 'no counted round, no merge')
@@ -397,7 +397,38 @@ test('cli merge and post: a counted pass merges through gh, a verdict through po
   assert.equal(cli(['merge', ASSET, '--squash', '--rebase'], env).code, 2, 'one merge kind only')
   assert.equal(cli(['merge', ASSET, '-d'], env).code, 2, 'no unknown flags')
   assert.equal(cli(['merge', ASSET, '--squash', '--delete-branch'], env).code, 0)
-  assert.equal(readFileSync(log, 'utf8'), 'pr comment 13 -R yverse-studio/vacation-game --body-file ' + f + '\npr merge 13 -R yverse-studio/vacation-game --squash --delete-branch\n')
+  // #466: REST only (gh pr comment and gh pr merge use GraphQL, which the cloud proxy refuses with a 403)
+  assert.equal(readFileSync(log, 'utf8'), `api -X POST repos/yverse-studio/vacation-game/issues/13/comments -F body=@${f}\napi repos/yverse-studio/vacation-game/pulls/13 --jq [.head.repo.full_name, .head.ref] | @tsv\napi -X PUT repos/yverse-studio/vacation-game/pulls/13/merge -f merge_method=squash\napi -X DELETE repos/yverse-studio/vacation-game/git/refs/heads/feature-x\n`)
+  writeFileSync(log, '')
+  assert.equal(cli(['merge', ASSET, '--squash', '--delete-branch'], { ...env, GH_HEAD: 'someone/fork' }).code, 0)
+  assert.doesNotMatch(readFileSync(log, 'utf8'), /DELETE/, 'a fork branch of the same name is never deleted here')
+})
+
+test('cli merge routes (#466): kind, auto-merge in and out of the cloud, the branch delete, a failed delete', () => {
+  const s = session()
+  const bin = join(s.dir, 'bin'); mkdirSync(bin)
+  const log = join(s.dir, 'gh.log')
+  writeFileSync(join(bin, 'gh'), `#!/bin/sh\necho "$@" >> ${log}\n[ "$3" = DELETE ] && [ -n "$GH_FAIL_DELETE" ] && exit 1\n[ "$2" = repos/yverse-studio/vacation-game/pulls/13 ] && printf "%s\\t%s\\n" "\${GH_HEAD:-Yverse-Studio/vacation-game}" "\${GH_REF:-feature-x}"\nexit 0\n`, { mode: 0o755 })
+  const f = join(s.dir, 'v.md'); writeFileSync(f, 'Gate 4.60/5 (S, round 1)\n1 CI pass\n')
+  const base = { ...s.env, PATH: `${bin}:${process.env.PATH}`, CCR_AGENT_PROXY_ENABLED: '', CLAUDE_CODE_REMOTE_SESSION_ID: '' }
+  const cloud = { ...base, CCR_AGENT_PROXY_ENABLED: '1' }
+  issueGrant(join(s.dir, 'gate'), 'post', ASSET, f, Date.now(), readFileSync(f, 'utf8'))
+  assert.equal(cli(['post', ASSET, '--body-file', f], base).code, 0)
+  const run = (args, env) => { writeFileSync(log, ''); const r = cli(['merge', ASSET, ...args], env); return { ...r, log: readFileSync(log, 'utf8') } }
+  const M = 'api -X PUT repos/yverse-studio/vacation-game/pulls/13/merge -f merge_method='
+  assert.equal(run([], cloud).log, `${M}squash\n`, 'no kind: squash, no delete')
+  assert.equal(run(['--merge'], cloud).log, `${M}merge\n`)
+  assert.equal(run(['--rebase'], cloud).log, `${M}rebase\n`)
+  assert.equal(run(['--auto'], cloud).log, 'api -X PUT repos/yverse-studio/vacation-game/pulls/13/ccr/auto_merge -f merge_method=squash\n', 'auto in the cloud: the proxy route, not the plain merge, no delete')
+  assert.equal(run(['--rebase', '--auto', '--delete-branch'], cloud).log, 'api -X PUT repos/yverse-studio/vacation-game/pulls/13/ccr/auto_merge -f merge_method=rebase\n', 'auto never deletes the branch')
+  assert.equal(run(['--auto'], base).log, 'pr merge 13 -R yverse-studio/vacation-game --squash --auto\n', 'auto outside the cloud: gh pr merge, REST has no auto-merge route')
+  assert.equal(run(['--auto', '--rebase'], { ...base, CLAUDE_CODE_REMOTE_SESSION_ID: 'x' }).log, 'api -X PUT repos/yverse-studio/vacation-game/pulls/13/ccr/auto_merge -f merge_method=rebase\n', 'the second cloud marker')
+  const del = run(['--delete-branch'], { ...cloud, GH_REF: 'feat/a b' })
+  assert.match(del.log, /DELETE repos\/yverse-studio\/vacation-game\/git\/refs\/heads\/feat\/a%20b\n$/, 'the ref is path-encoded, the head repo compared in lower case')
+  assert.equal(run(['--delete-branch'], { ...cloud, GH_HEAD: 'someone/fork' }).log.includes('DELETE'), false, 'a fork head')
+  const failed = run(['--delete-branch'], { ...cloud, GH_FAIL_DELETE: '1' })
+  assert.equal(failed.code, 0, 'the PR is merged, so the call did not fail')
+  assert.match(failed.text, /merged \(the branch was not deleted\)/)
 })
 
 test('a verdict through plain gh is not counted, so it never leads to a merge; the asset key ignores leading zeros', () => {

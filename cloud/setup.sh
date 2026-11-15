@@ -1171,7 +1171,7 @@ export function simpleCommands(text, depth = 0) {
 
 const GUARD_FILE = /\.claude[\\/]claude-setup[\\/](?:rule-guard|team-guard|gate-rounds|task-ledger|card-render)\.mjs$/
 const CLI_VERBS = ['status', 'check', 'init', 'direct', 'card', 'picture', 'waive', 'merge', 'post', 'record']
-const MERGE_DOOR = /pulls\/[^\s/]*\/merge|mergePullRequest|enablePullRequestAutoMerge/
+const MERGE_DOOR = /pulls\/[^\s/]*\/(?:ccr\/auto_)?merge|mergePullRequest|enablePullRequestAutoMerge/
 
 // gh decided by command position only: a merge goes through the counter. Comments are never read here: a verdict posted through plain gh
 // is not counted, so it can never lead to a merge (the comment tool or `post` counts it).
@@ -1358,15 +1358,25 @@ export function cli(argv, env = process.env) {
         const kinds = ['--squash', '--merge', '--rebase']
         const flags = rest
         if (flags.some((f) => ![...kinds, '--auto', '--delete-branch'].includes(f)) || flags.filter((f) => kinds.includes(f)).length > 1) return fail('merge: only one of --squash --merge --rebase, plus --auto and --delete-branch')
-        execFileSync('gh', ['pr', 'merge', m[2], '-R', m[1], ...(flags.some((f) => kinds.includes(f)) ? [] : ['--squash']), ...flags], { stdio: 'inherit', env })
-        return { code: 0, text: flags.includes('--auto') ? 'auto-merge enabled' : 'merged' }
+        const kind = flags.find((f) => kinds.includes(f)) ?? '--squash', cloud = !!(env.CCR_AGENT_PROXY_ENABLED || env.CLAUDE_CODE_REMOTE_SESSION_ID), repo = `repos/${m[1]}/pulls/${m[2]}`
+        // #466: in the cloud gh's pr commands (GraphQL) get a 403, so REST; auto-merge has a REST route only at the cloud proxy, elsewhere gh pr merge stays.
+        if (flags.includes('--auto')) { // auto-merge never deletes the branch here
+          execFileSync('gh', cloud ? ['api', '-X', 'PUT', `${repo}/ccr/auto_merge`, '-f', `merge_method=${kind.slice(2)}`] : ['pr', 'merge', m[2], '-R', m[1], kind, ...flags.filter((f) => f !== kind)], { stdio: 'inherit', env })
+          return { code: 0, text: 'auto-merge enabled' }
+        }
+        let head = []
+        if (flags.includes('--delete-branch')) try { head = execFileSync('gh', ['api', repo, '--jq', '[.head.repo.full_name, .head.ref] | @tsv'], { env, encoding: 'utf8' }).trim().split('\t') } catch { /* no branch to delete */ }
+        execFileSync('gh', ['api', '-X', 'PUT', `${repo}/merge`, '-f', `merge_method=${kind.slice(2)}`], { stdio: 'inherit', env })
+        // Only the PR's own branch (a fork's branch of the same name is not this repo's), and a failed delete leaves a merged PR merged.
+        if (head[1] && head[0]?.toLowerCase() === m[1].toLowerCase()) try { execFileSync('gh', ['api', '-X', 'DELETE', `repos/${m[1]}/git/refs/heads/${head[1].split('/').map(encodeURIComponent).join('/')}`], { stdio: 'inherit', env }) } catch { return { code: 0, text: 'merged (the branch was not deleted)' } }
+        return { code: 0, text: 'merged' }
       }
       const file = flag(rest, '--body-file')
       const head = file ? parseHeadline(read(file)) : null
       if (!head) return fail('post: --body-file <f> must start with the verdict headline "Gate <score>/5 (<size>, round <n>)"')
       const bad = verdictProblem(dir, asset, head, true)
       if (bad) return fail(bad)
-      execFileSync('gh', ['pr', 'comment', m[2], '-R', m[1], '--body-file', file], { stdio: 'inherit', env })
+      execFileSync('gh', ['api', '-X', 'POST', `repos/${m[1]}/issues/${m[2]}/comments`, '-F', `body=@${file}`], { stdio: 'inherit', env })
       verdictProblem(dir, asset, head, false) // counted only once it is on the PR
       return { code: 0, text: `posted${nextNote(dir, asset)}` }
     } catch (e) { return fail(`${cmd}: gh failed (${String(e.message).slice(0, 120)})`) }
