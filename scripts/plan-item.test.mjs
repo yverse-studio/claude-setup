@@ -1,7 +1,7 @@
 // #605: a `Done:` post of a thread whose brief names `Item: M<n>` is refused once while that item of PLAN.json is open. Run: node --test scripts/plan-item.test.mjs
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
@@ -35,13 +35,13 @@ test('a Done: post is refused once while the thread\'s plan item is open, with t
   const { post } = thread(t, 'M3', PLAN('doing'))
   const first = post(DONE)
   assert.equal(first.status, 2, first.stderr)
-  assert.match(first.stderr, /M3 is still "doing"[^\n]*If this Done: finishes it, run: node \/\S*scripts\/plan\.mjs set M3 status=done evidence=<link>, then post again\. If the item goes on after this thread[^\n]*post again as it is/)
+  assert.match(first.stderr, /M3 is still "doing"[^\n]*If this Done: finishes it, run: node "\/[^"\n]*scripts\/plan\.mjs" set M3 status=done evidence=<link>, then post again\. If the item goes on after this thread[^\n]*post again as it is/)
   assert.equal(post(DONE).status, 0, 'refused once, then through')
 })
 
 test('the named command runs from any folder and closes the item', (t) => {
   const { post, planFile, dir } = thread(t, 'M3', PLAN('doing'))
-  const script = post(DONE).stderr.match(/run: node (\S+scripts\/plan\.mjs) set M3/)?.[1]
+  const script = post(DONE).stderr.match(/run: node "([^"]+scripts\/plan\.mjs)" set M3/)?.[1]
   assert.ok(script && script.startsWith('/'), 'an absolute path to the checkout\'s plan.mjs')
   const elsewhere = mkdtempSync(join(tmpdir(), 'plan-cwd-'))
   t.after(() => rmSync(elsewhere, { recursive: true, force: true }))
@@ -51,13 +51,29 @@ test('the named command runs from any folder and closes the item', (t) => {
   assert.ok(dir)
 })
 
+test('#672: a checkout path with a space is quoted, and the printed command runs and closes the item', (t) => {
+  const co = join(mkdtempSync(join(tmpdir(), 'plan space-')), 'my claude-setup')
+  t.after(() => rmSync(join(co, '..'), { recursive: true, force: true }))
+  mkdirSync(join(co, 'docs'), { recursive: true }); mkdirSync(join(co, 'scripts'))
+  writeFileSync(join(co, 'docs', 'TEAMS.md'), '# teams'); writeFileSync(join(co, 'CLAUDE.md'), '# Working for yskills\n')
+  copyFileSync(join(root, 'scripts', 'plan.mjs'), join(co, 'scripts', 'plan.mjs'))
+  const { post, planFile } = thread(t, 'M3', PLAN('doing'), { cwd: co })
+  const first = post(DONE)
+  assert.equal(first.status, 2, first.stderr)
+  const cmd = first.stderr.match(/run: (node "[^"\n]*scripts\/plan\.mjs" set M3 status=done evidence=<link>), then post again/)?.[1]
+  assert.ok(cmd, `the path is quoted: ${first.stderr}`)
+  const r = spawnSync('sh', ['-c', cmd.replace('<link>', 'https://github.com/o/r/pull/1')], { encoding: 'utf8', env: { ...process.env, PLAN_FILE: planFile } })
+  assert.equal(r.status, 0, r.stderr)
+  assert.equal(JSON.parse(readFileSync(planFile, 'utf8')).items[0].status, 'done')
+})
+
 test('without a checkout the refusal says so instead of naming a path that does not exist', (t) => {
   const home = mkdtempSync(join(tmpdir(), 'plan-home-'))
   t.after(() => rmSync(home, { recursive: true, force: true }))
   const r = thread(t, 'M3', PLAN('doing'), { cwd: home, home }).post(DONE)
   assert.equal(r.status, 2, r.stderr)
-  assert.match(r.stderr, /M3 is still "doing"[^\n]*no claude-setup checkout here: ask the coordinator/)
-  assert.doesNotMatch(r.stderr, /node \/\S*plan\.mjs/)
+  assert.match(r.stderr, /M3 is still "doing"[^\n]*no claude-setup checkout here: add_repo claude-setup in this thread, then run plan\.mjs set M3 status=done evidence=<link> from it/)
+  assert.doesNotMatch(r.stderr, /ask the coordinator|node \/\S*plan\.mjs/, 'the coordinator has no Bash and never writes the plan')
 })
 
 test('a post that is no Done: line, a done or dropped item, a missing item or file and a #n item check nothing', (t) => {
