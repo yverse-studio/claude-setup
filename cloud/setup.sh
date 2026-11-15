@@ -961,7 +961,7 @@ export function parseHeadline(text) {
   const m = line?.match(HEADLINE)
   if (!m) return null
   const score = m[1] !== undefined ? Number(m[1].replace(',', '.')) : m[3] ? 5 : null
-  return { round: m[4] === undefined ? null : Number(m[4]), score, important: /\b(important|risky|wichtig)\b/i.test(line) }
+  return { round: m[4] === undefined ? null : Number(m[4]), score, text: m[1] ?? null, important: /\b(important|risky|wichtig)\b/i.test(line) }
 }
 const lastPass = (l) => !!l.rounds.at(-1)?.pass
 // The first round of the passing run that ends the ledger: polish rounds count from there, not from an older pass.
@@ -1041,6 +1041,8 @@ export function cardProof(ref, calls) {
 
 function verdictProblem(dir, asset, head, dry) {
   const l = readLedger(dir, asset)
+  if (head.score > 5) return `gate round counter: a score is out of 5, "${head.text}" is not a verdict`
+  if (head.text && head.score < 5 && head.score >= threshold(l.important || head.important) && !/^\d[.,]\d\d$/.test(head.text)) return `gate round counter: a pass below 5 is written as the exact mean with two decimals, never rounded (4.46 is a fail, 4.50 a pass); "${head.text}" is refused (gate.md, Scored gates).`
   const round = head.round ?? lastRound(l) + 1
   const bad = roundProblem(l, round)
   if (bad) return `gate round counter: ${bad}`
@@ -1307,6 +1309,8 @@ export function gateStep(tool, input = {}, ctx = {}) {
 }
 
 // ---- CLI
+// After a verdict is counted: if the next round may not run, say so now, before any work on it (#598).
+const nextNote = (dir, asset) => { const l = readLedger(dir, asset); const why = roundProblem(l, lastRound(l) + 1); return why ? ` Next: ${why}` : '' }
 const USAGE = `usage: gate-rounds.mjs <cmd> <asset> [...]   asset = owner/repo#pr or a name
   status                      print the ledger
   check <round>               exit 2 with the reason if that round may not run
@@ -1352,7 +1356,7 @@ export function cli(argv, env = process.env) {
     const head = file ? parseHeadline(bodyText) : null
     if (!head) return fail('record: --body-file <f> must start with the verdict headline "Gate <score>/5 (<size>, round <n>)"')
     const bad = verdictProblem(dir, asset, head, false)
-    return bad ? fail(bad) : { code: 0, text: `recorded: ${asset} stands at round ${lastRound(readLedger(dir, asset))}` }
+    return bad ? fail(bad) : { code: 0, text: `recorded: ${asset} stands at round ${lastRound(readLedger(dir, asset))}${nextNote(dir, asset)}` }
   }
   if (cmd === 'merge' || cmd === 'post') {
     const m = String(asset).match(/^([\w.-]+\/[\w.-]+)#(\d+)$/)
@@ -1374,7 +1378,7 @@ export function cli(argv, env = process.env) {
       if (bad) return fail(bad)
       execFileSync('gh', ['pr', 'comment', m[2], '-R', m[1], '--body-file', file], { stdio: 'inherit', env })
       verdictProblem(dir, asset, head, false) // counted only once it is on the PR
-      return { code: 0, text: 'posted' }
+      return { code: 0, text: `posted${nextNote(dir, asset)}` }
     } catch (e) { return fail(`${cmd}: gh failed (${String(e.message).slice(0, 120)})`) }
   }
   const ref = flag(rest, '--ref')
