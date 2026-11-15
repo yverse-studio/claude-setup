@@ -26,6 +26,17 @@ test('renderIssues: repo and UTC time in the header, "do not edit", open issues 
   assert.doesNotMatch(md, /Done last week/)
 })
 
+test('#674: the plan count of unequal numbers, and "not known" when the closed list was not fetched', () => {
+  const at = (n, state, days) => ({ number: n, title: `T${n}`, state, labels: ['plan'], updated: new Date(NOW - days * 86_400_000).toISOString(), closed: state === 'open' ? null : new Date(NOW - days * 86_400_000).toISOString() })
+  const issues = [at(1, 'open', 0.5), at(2, 'open', 1), at(3, 'closed', 0.2), at(4, 'closed', 5)]
+  const md = renderIssues({ repo: 'o/r', issues, now: NOW })
+  assert.match(md, /Plan count \(the header's plan numbers, copy them\): 1\/3 = /, '1 closed in 24 h of 2 open + 1 closed: not open.length, not the closed total')
+  const unknown = renderIssues({ repo: 'o/r', issues: issues.filter((i) => i.state === 'open'), now: NOW, closedMissing: true })
+  assert.match(unknown, /Plan count: not known \(the closed list was not fetched\); write `plan \?\/\?` in the header\./)
+  assert.doesNotMatch(unknown, /copy them/, 'no numbers to copy')
+  assert.doesNotMatch(unknown.split('## Open')[0], /\d+\/\d+ =/, 'no count with numbers above the lists')
+})
+
 const folder = () => mkdtempSync(join(tmpdir(), 'issues-'))
 test('#604: renderIssues writes the plan count the first-reply header copies (closed in 24 h / open + closed in 24 h)', () => {
   const md = renderIssues({ repo: 'yverse-studio/claude-setup', issues: ISSUES, now: NOW })
