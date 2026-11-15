@@ -1030,7 +1030,7 @@ const humanAfter = (transcript, ref, counter) => {
   const WAKE = /^\s*<wake\b[^>]*>\s*(?:<project\b[^>]*>\s*)?(?:<thread\b[^>]*>\s*)?<message\b(?=[^>]*\bfrom="human")(?=[^>]*\btrust="principal")/
   // The app writes one decision_id note and one option_index note per tap, after the wake's closing project tag (#517: nothing typed in the message counts). The notes are counted, not searched for: a label or question that
   // carried a raw note (if the app ever stopped escaping `<`) would add a second one and the row would count for nothing (gate 515, finding 1).
-  const trailer = (r) => { const t = text(r), p = t.lastIndexOf('</project>'), w = t.indexOf('</wake>', p); return p < 0 || w < 0 ? '' : t.slice(p, w) } // between the last closing project tag and the wake's closing tag; none of either, nothing counts
+  const trailer = (r) => { const t = text(r), m = t.lastIndexOf('</message>'), p = t.indexOf('</project>', m), w = t.indexOf('</wake>', p); return p < 0 || w < 0 ? '' : t.slice(p, w) } // the first closing project tag after the last closing message tag up to the wake's closing tag (nothing typed in a message reaches it); without those two, nothing counts
   const notes = (r, key) => [...trailer(r).matchAll(new RegExp(`<system-note>${key}=([^<]*)</system-note>`, 'g'))].map((m) => m[1])
   const answer = (r) => counter.fromHuman(r) && !(Array.isArray(r.message?.content) && r.message.content.some((c) => c?.type === 'tool_result')) && WAKE.test(text(r)) && notes(r, 'decision_id').length === 1 && notes(r, 'decision_id')[0] === id && notes(r, 'option_index').length === 1 && notes(r, 'option_index')[0] === '0'
   return at >= 0 && rows.slice(at + 1).some(answer)
