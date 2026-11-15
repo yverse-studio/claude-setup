@@ -1,0 +1,100 @@
+{
+ "schemaVersion": 1,
+ "claudeVersion": "2.1.325",
+ "startedAt": "2026-11-15T01:13:44.745Z",
+ "durationSeconds": 41,
+ "costUsd": 0.19104140000000003,
+ "partial": false,
+ "suite": {
+  "root": "x",
+  "ablation": "with-without",
+  "modelOverride": "claude-model-0",
+  "judgeModel": "claude-judge-0",
+  "threshold": 1,
+  "concurrency": 1,
+  "plugins": [
+   {
+    "name": "roleeval",
+    "version": "0.0.1",
+    "path": "x"
+   }
+  ]
+ },
+ "cases": [
+  {
+   "name": "seeded",
+   "dir": "evals/seeded",
+   "source": "prose",
+   "runsPerCase": 3,
+   "timeoutSeconds": 300,
+   "maxTurns": 8,
+   "arms": {
+    "with": [
+     {
+      "score": 1,
+      "passed": true,
+      "turns": 4,
+      "costUsd": 0.1151274,
+      "judgeCostUsd": 0,
+      "durationSeconds": 26,
+      "startedAt": "2026-11-15T01:13:44.766Z",
+      "error": null,
+      "skippedPaidGraders": false,
+      "graders": [
+       {
+        "name": "a",
+        "passed": true,
+        "weight": 1,
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "b",
+        "passed": true,
+        "weight": 1,
+        "withOnly": true,
+        "scored": false
+       }
+      ]
+     }
+    ],
+    "without": [
+     {
+      "score": 1,
+      "passed": true,
+      "turns": 1,
+      "costUsd": 0.07591400000000001,
+      "judgeCostUsd": 0,
+      "durationSeconds": 16,
+      "startedAt": "2026-11-15T01:14:10.358Z",
+      "error": null,
+      "skippedPaidGraders": false,
+      "graders": [
+       {
+        "name": "a",
+        "passed": true,
+        "weight": 1,
+        "withOnly": false,
+        "scored": true
+       }
+      ]
+     }
+    ]
+   },
+   "aggregates": {
+    "score": 1,
+    "passRate": 1,
+    "scoreWithout": 1,
+    "passRateWithout": 1,
+    "delta": 0
+   }
+  }
+ ],
+ "aggregates": {
+  "casesTotal": 1,
+  "casesPassed": 1,
+  "overallScore": 1,
+  "overallPassRate": 1,
+  "meanDelta": 0
+ }
+}
