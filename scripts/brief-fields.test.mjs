@@ -210,6 +210,8 @@ test('a game level brief names research, plan and design up to its own step, or 
   assert.deepEqual(lvl('Planner', `Level: the airport, first person\nLevel: ${R}`), [], 'a task line starting with Level: does not hide the real one')
   assert.deepEqual(lvl('Game Designer', 'Level: research [Airport research teardown](#cmsg_012GGqXBFiZN) · plan [Airport level plan](https://github.com/o/r/blob/main/PLAN.md)'), [], 'a thread link titled with spaces counts')
   assert.equal(lvl('Planner', 'Level: research [Airport research](later)').length, 1, 'a titled link still needs a file or a link inside')
+  assert.equal(lvl('Planner', 'Level: research [Airport research](https://)').length, 1, 'the closing bracket is no host')
+  assert.deepEqual(lvl('Game Designer', 'Level: research [Researcher · airport teardown](#cmsg_012GGqXBFiZN) · plan [Planner · airport roadmap](#cmsg_012GGqXBFiZM)'), [], 'a · inside a link title does not split the line')
   for (const task of ['Move the airport to first person.', 'Build the night market in 3D.', 'Build market scene in 3D: the 70 m hero block of Hang Ma.', 'Fix the save menu.'])
     assert.equal(lvl('Programmer', '', 'game', task).length, 1, `every game-kit builder brief carries the line: ${task}`)
   for (const bad of ['research x · plan x · design x', 'research TBD · plan TBD · design TBD', 'research none · plan none · design none'])
