@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
-import { buildArgs, buildRow, modelId, passMark, pluginFiles, roleHash } from './role-eval.mjs'
+import { buildArgs, buildRow, modelId, modelsOf, passMark, pluginFiles, roleHash } from './role-eval.mjs'
 
 const MODELS = 'Models: Fable (claude-aa-1): x. Opus (claude-bb-2): y. Haiku (claude-cc-3) z.'
 const fixture = JSON.parse(readFileSync(new URL('./fixtures/role-eval/with-without-1run.json', import.meta.url), 'utf8'))
@@ -42,16 +42,26 @@ test('j: no row from a partial result, an errored run or a missing baseline arm'
   const none = res(3, 0)
   delete none.cases[0].arms.without
   assert.throws(() => row(none), /no row/)
+  const noWith = res(3, 0)
+  delete noWith.cases[0].arms.with
+  assert.throws(() => row(noWith), /no row/)
+  assert.throws(() => row(res(0, 0, 0)), /no row/)
+  assert.throws(() => row({ costUsd: 0, cases: [] }), /no row/)
+  const emptyB = res(3, 0)
+  emptyB.cases[0].arms.without = []
+  assert.throws(() => row(emptyB), /no row/)
 })
 test('k: the row stores the model id and the Claude Code version', () => {
-  const r = row(res(3, 3), { version: '2.1.325 (Claude Code)' })
-  assert.equal(r.claude, '2.1.325 (Claude Code)')
+  const r = row({ ...res(3, 3), claudeVersion: '2.1.325' })
+  assert.equal(r.claude, '2.1.325')
   assert.equal(r.model, 'm')
+  assert.deepEqual(modelsOf('Fable', MODELS), { id: 'claude-aa-1', model: 'aa-1', judge: 'claude-bb-2' })
 })
 test('f: a real result file becomes the row', () => {
   const r = row(fixture)
   assert.deepEqual(r.cases.seeded, { role: 1, baseline: 1, runs: 1, fired: 1 })
   assert.equal(r.costUsd, fixture.costUsd)
+  assert.equal(r.claude, '2.1.325')
 })
 test('g: pass mark 3 for gate roles, 2 for makers', () => {
   for (const g of ['reviewer', 'tester', 'story-editor', 'playtester']) assert.equal(passMark(g), 3)
