@@ -756,7 +756,7 @@ test('rule guard: a thread checks its spawn brief against TEAMS.md and sends a b
   const bad = await briefCheck(spawn('Role: Designer · Kit: content · Size: M\nFix it.'), root)
   assert.match(bad, /^Brief check[\s\S]*Kit: content is no kit/, 'M50: one refusal lists every judgment gap at once')
   const sizeM = await briefCheck(spawn('Role: Programmer · Kit: setup · Size: M\nFix it.'), root)
-  assert.match(sizeM, /^Brief check[\s\S]*Item is missing[\s\S]*Plan is missing[\s\S]*Acceptance is missing[\s\S]*Role: Programmer · Kit: <kit>[\s\S]*Item: <issue #n, PLAN\.json item/, 'at size M the three decisions and the role template')
+  assert.match(sizeM, /^Brief check[\s\S]*Item is missing[\s\S]*Plan is missing[\s\S]*Acceptance is missing[\s\S]*Role: Programmer · Kit: <kit>[\s\S]*Item: <issue #n, M<n> or new>/, 'at size M the three decisions and the role template')
   assert.doesNotMatch(sizeM.split('\n')[0], /Model|Skills|Start|Threads|Stop when/, 'what follows from the stamp is never in the refusal')
   assert.equal(await briefCheck('Role: Designer · Kit: content · Size: S', root), '', 'only the spawn wake')
   assert.match(await briefCheck(JSON.stringify(spawn(`Role: Programmer (debug) · Kit: setup · Size: M${FULL}`)), root), /^Title check/, 'an escaped wake, a role with a note')
