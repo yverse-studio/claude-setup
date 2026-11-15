@@ -58,6 +58,7 @@ a corner. Reference: companyxy-spiel `game/szene.rpy`. Lessons that cost a round
   `click until label <name>`, `type "Ren"`, `type RETURN` (the keysym is the pygame name without `K_`),
   and `$ renpy.screenshot("/path.png")`. `click until "<plain text>"` hangs: `until` needs a focusable
   button.
+- The test clicker crashes on a rotated button (`transform rotate`), so screens skip rotation under the test flag; a new Ren'Py repo starts with a `.gitattributes` line `* text=auto eol=lf`, because a CRLF `.renpy-version` breaks `check.sh` (CompanyXY 2026-11-13, yskills' report point 14; not re-run here).
 - Build: `./renpy.sh launcher distribute <proj> --package pc --destination <dir>` (about 40 MB zip).
   **Start the built copy once**: unzip it, then run `xvfb-run -a ./<Name>.sh` and check that there is
   no `traceback.txt`. The SDK test alone missed the `gui7` crash.

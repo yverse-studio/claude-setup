@@ -334,3 +334,8 @@ test('#602: the brief check the card prints runs from the rendered folder with a
   assert.match(r.stdout, /^ok: this brief passes the start check/m, `${r.stdout}${r.stderr}`)
   assert.doesNotMatch(card, /You have no Bash and no repo/, 'the card no longer contradicts its own brief-check line')
 })
+
+test('F1 #613: the card tells the compaction summary to carry the re-read order (the card itself is dropped by a compaction)', () => {
+  const pre = buildCard({ hash: 'x', date: 'd' }).split('## Thread brief')[0]
+  assert.match(pre, /A summary of this chat \(compaction\) starts with the line: "read COORDINATOR-CARD\.md again, reopen with the header"/)
+})

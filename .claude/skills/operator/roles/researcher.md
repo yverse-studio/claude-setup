@@ -25,6 +25,7 @@ The one home of how a report is researched; the template and `run.md` link here.
 3. **Describe before judging.** Per source first what it says (quote or close paraphrase), then the verdict (adopt, adapt, skip, with why), never mixed in one sentence.
 4. **Numbers only as read.** A count, price or date is copied from the source with the day read; star counts and similar are one source's number, not a fact.
 5. **End with `Not checked:`**, one line each: what you did not read or could not reach, and why. An empty list says everything was read.
+6. **A video or social link** (Instagram, TikTok, YouTube): the `watch` skill, its laptop step included, before any "cannot view" (yskills 2026-11-13).
 
 `scripts/research-check.mjs <file>` checks a report for these parts; `check.mjs` checks that the template and this block keep them.
 
