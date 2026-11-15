@@ -334,7 +334,7 @@ export function simpleCommands(text, depth = 0) {
 
 const GUARD_FILE = /\.claude[\\/]claude-setup[\\/](?:rule-guard|team-guard|gate-rounds|task-ledger|card-render)\.mjs$/
 const CLI_VERBS = ['status', 'check', 'init', 'direct', 'card', 'picture', 'waive', 'merge', 'post', 'record']
-const MERGE_DOOR = /pulls\/[^\s/]*\/merge|mergePullRequest|enablePullRequestAutoMerge/
+const MERGE_DOOR = /pulls\/[^\s/]*\/(?:ccr\/auto_)?merge|mergePullRequest|enablePullRequestAutoMerge/
 
 // gh decided by command position only: a merge goes through the counter. Comments are never read here: a verdict posted through plain gh
 // is not counted, so it can never lead to a merge (the comment tool or `post` counts it).
