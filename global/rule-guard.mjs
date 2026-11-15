@@ -548,7 +548,7 @@ export function planItemOpen(tool, input, session, transcript, cwd = process.cwd
   if (!it || ['done', 'drop'].includes(it.status)) return null
   writeFileSync(once, '')
   const script = join(setupRoot(cwd), 'scripts', 'plan.mjs')
-  const cmd = existsSync(script) ? `node ${script} set ${ref} status=done evidence=<link>` : `plan.mjs set ${ref} status=done evidence=<link> (no claude-setup checkout here: ask the coordinator to run it from one)`
+  const cmd = existsSync(script) ? `node "${script}" set ${ref} status=done evidence=<link>` : `no claude-setup checkout here: add_repo claude-setup in this thread, then run plan.mjs set ${ref} status=done evidence=<link> from it`
   return `rule-guard: ${ref} is still "${it.status}" in the plan (roles/project-manager.md, Masterplan). If this Done: finishes it, run: ${cmd}, then post again. If the item goes on after this thread (a plan, a verdict, one slice of several), post again as it is; this is said once.`
 }
 
