@@ -898,7 +898,7 @@ test('team guard: a Roster exception passes with its reason in the brief', async
   assert.ok(wrongModel(`${brief}\nModel: haiku (cheaper)`, 'haiku', teams), 'a tier the row never names stays blocked')
 })
 
-// #650 (gate of #647): a generated brief writes the model id (`Model: claude-opus-5-5`), so the row's fallback ("Opus when Fable is unavailable") must pass with its reason on that line too.
+// #650 (gate of #647): a generated brief writes the model id (`Model: <model id>`), so the row's fallback ("Opus when Fable is unavailable") must pass with its reason on that line too.
 test('#650: a Reviewer on Opus passes with its reason on a Model line that holds a model id, not without it, and Sonnet never', async () => {
   const { wrongModel } = await import('../global/team-guard.mjs')
   const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
