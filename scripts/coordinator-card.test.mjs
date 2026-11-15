@@ -62,6 +62,12 @@ test('a flag is never taken as the output path (#439: --help wrote a file named 
   assert.deepEqual(readdirSync(dir), [])
 })
 
+test('#604: the card names the three-part first-reply header, plan and board numbers included', () => {
+  const card = buildCard({ hash: 'x', date: 'd' })
+  assert.ok(card.includes('`Luna · card <hash> · plan <done>/<all> · board <n> open`'), 'the header')
+  assert.match(card, /First reply of a session:[^\n]*list_threads/)
+})
+
 test('the first rule is the one loop (yskills 2026-11-12): role, playbook, Researcher gap, learnings back; its hooks behave', async () => {
   const card = buildCard({ hash: 'x', date: 'd' })
   const first = card.split('## Before every reply\n\n')[1].split('\n')[0]
