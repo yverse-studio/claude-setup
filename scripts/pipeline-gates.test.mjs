@@ -271,3 +271,25 @@ test('intake: a preview older than the asset files fails', () => {
 test('intake: the catalog must list every fitted base and a hash', () => {
   assert.match(problems(report({ catalog: { bases_fitted: ['BT_petite'], md5: {} } })), /bases_fitted lacks char_rika.*md5 is empty/)
 })
+
+// #630 (GameDev 2026-11-15): the scene card lay as v3 and v4 copies and the wrong one was read; one scene folder holds one scene card.
+import { sceneCardProblems } from './pipeline-gates.mjs'
+const sceneFolder = (files) => {
+  const d = mkdtempSync(join(tmpdir(), 'scene-630-'))
+  for (const f of files) { mkdirSync(join(d, f, '..'), { recursive: true }); writeFileSync(join(d, f), 'x') }
+  return d
+}
+test('#630 cards: a conflict copy or a root copy beside the scene card is RED with every path named; one card passes', () => {
+  const clean = sceneFolder(['scene/scene_card.md', 'scene/handoff.md', 'scene/pose.json'])
+  const copies = sceneFolder(['scene/scene_card.md', 'scene/scene_card_v3.md', 'scene/scene-card v4 (conflict copy).md', 'scene_card.md', 'notes/card.md'])
+  try {
+    assert.deepEqual(sceneCardProblems(clean), [])
+    const out = sceneCardProblems(copies).join('|')
+    for (const p of ['scene/scene_card.md', 'scene/scene_card_v3.md', 'scene/scene-card v4 (conflict copy).md', 'scene_card.md']) assert.ok(out.includes(p), `names ${p}: ${out}`)
+    assert.doesNotMatch(out, /notes/, 'an unrelated card file is not a scene card')
+    const cli = spawnSync(process.execPath, [GATE, 'cards', copies], { encoding: 'utf8' })
+    assert.equal(cli.status, 1)
+    assert.match(cli.stdout, /^RED .*scene_card_v3\.md/m)
+    assert.equal(spawnSync(process.execPath, [GATE, 'cards', clean], { encoding: 'utf8' }).status, 0)
+  } finally { rmSync(clean, { recursive: true, force: true }); rmSync(copies, { recursive: true, force: true }) }
+})
