@@ -674,7 +674,8 @@ export function fallbackUnread(status, transcript) {
 }
 
 export function threadReceipt(role, brief, transcript, rules, status = { loaded: [], missing: [] }, card = '') {
-  const tag = (k) => brief.replace(/[*_`]/g, '').match(new RegExp(`${k}:[ \\t]*([A-Za-z0-9-]+)`))?.[1] ?? '?'
+  const lines = brief.replace(/[*_`]/g, '').split('\n').map((l) => l.replace(/^[ \t>-]*/, ''))
+  const tag = (k) => lines.map((l) => l.match(new RegExp(`^(?:Role:.*?\\b)?${k}:[ \\t]*([A-Za-z0-9-]+)`))?.[1]).find(Boolean) ?? '?' // #621: a Kit or Size that opens a line or sits on the Role line, newest first
   const skills = [...new Set(toolCalls(transcript).filter((c) => c.name === 'Skill').map((c) => String(c.input.skill ?? '')).filter(Boolean))]
   const hash = rules.includes(MARK) ? createHash('sha256').update(rules.replace(/\r/g, '')).digest('hex').slice(0, 7) : 'none'
   const item = itemToken(brief) ?? '?' // the Item line's first token (ITEM_REF): `M<n>` of PLAN.json, `new` or `#n` of its issue
