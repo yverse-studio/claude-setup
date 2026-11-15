@@ -2351,7 +2351,7 @@ export function wanted(root, playbook, brief) {
   const uses = (playbook.match(/^[ \t>-]*\**Uses:?\**[^\n]*/m)?.[0] ?? '').replace(/\([^()]*\)/g, '')
   const part = (k) => uses.match(new RegExp(`${k}:([^.]*)`))?.[1] ?? ''
   const lines = brief.replace(/[*_`]/g, '').split('\n'), first = (re) => lines.map((l) => l.match(re)?.[1]).find(Boolean)
-  const kit = (first(/(?:^|<[^<>]*>)[ \t]*Role:.*?\bKit:[ \t]*([A-Za-z0-9-]+)/) ?? first(/^[ \t]*Kit:[ \t]*([A-Za-z0-9-]+)/))?.toLowerCase() // the stamp's own Kit: a quote, an arrow or a note before it does not count
+  const kit = (first(/(?:^|<[^<>]*>)[ \t>-]*Role:.*?\bKit:[ \t]*([A-Za-z0-9-]+)/) ?? first(/^[ \t]*Kit:[ \t]*([A-Za-z0-9-]+)/))?.toLowerCase() // the stamp's own Kit: a quote, an arrow or a note before it does not count
   const byKit = part('By kit').split(';').map((e) => e.split(':')).filter(([k]) => k.trim().toLowerCase() === kit).map(([, v]) => v ?? '')
   return [...new Set([part('Load'), ...byKit].flatMap((v) => v.split(/[^a-z0-9-]+/)))].filter((n) => known.has(n))
 }
