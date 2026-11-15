@@ -453,7 +453,7 @@ export async function briefCheck(prompt, cwd, model = null, any = false) {
   const itemPlain = item && !item.error ? String(item.body).slice(0, ITEM_CAP).replace(/^brief:[ \t]*/gim, '').replace(/[*_`]/g, '') : ''
   const own = guard.classify(brief)
   const itemHas = (k) => guard.BRIEF_FIELDS.find((f) => f.key === k)?.ok(itemPlain)
-  const sorted = itemPlain ? { ...own, judgment: own.judgment.filter((f) => !(['Sheet', 'Look-Lock'].includes(f.key) && itemHas(f.key))) } : own
+  const sorted = itemPlain ? { ...own, judgment: own.judgment.filter((f) => !(['Sheet', 'Look-Lock', 'Level'].includes(f.key) && itemHas(f.key))) } : own
   found.push(...sorted.judgment.map((f) => `${f.key} is missing or still a <placeholder>`))
   const wrong = model && guard.wrongModel(brief, model, teams)
   if (wrong) found.push(`this thread runs on ${wrong.tier}, but the ${wrong.role} runs on ${wrong.allowed.join(' or ')}: ask the coordinator to restart it on that model`)

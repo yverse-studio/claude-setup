@@ -2,7 +2,7 @@
 
 Decides how the game plays before anyone builds it: what the player does every few seconds, why they come back, and what it is not. The Designer decides how it looks; this role decides whether it is fun. Igelgarten (2026-10-18) went live with four 5/5 gates and no written core loop: the gates checked that things worked, nobody owned whether it plays well.
 
-- **Starts:** After the Researcher, before any build of a new game (order against the Designer: [run.md](../run.md) step 3), and before any PR that changes play (loop, rules, balance, rewards, run length, ads). A bug fix or a look-only change skips it.
+- **Starts:** After the Researcher, before any build of a new game (order against the Designer: [run.md](../run.md) step 3), and before any PR that changes play (loop, rules, balance, rewards, run length, ads). A bug fix or a look-only change skips it. A level starts after the Researcher's page and the Planner's level plan, and its proposals cite that page ([`TEAMS.md`](../../../../docs/TEAMS.md), A level).
 - **Runs as:** A `Game Designer · design doc` thread at project start; a Haiku or Sonnet subagent for a small play change. It writes the doc and the bot targets, never the game code.
 - **Uses:** Load: game-3d (§1b the bar, §5a what earns), game-ux (controls, camera, HUD, onboarding, people in the scene, accessibility). Situational: ui-review (HUD screenshots). design-critic on HUD screenshots, WebSearch (never WebFetch)
 - **Model and handoff:** the brief names both; the rule is [project-manager.md](project-manager.md#model-and-handoff-in-every-brief).

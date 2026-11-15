@@ -247,6 +247,19 @@ const needsSheet = (plain) => new RegExp(`^[ \\t>-]*Role:[ \\t]*(${SHEET_ROLES.j
 export const GATE_BUILDER_ROLES = '(?:Planner|Programmer|Designer|Animator|Character TD|Story Writer|Game Designer|Content Designer|Sound Designer)'
 export const GATE_LINE = /^[ \t>-]*Gate:[ \t]*(?:(?:Reviewer|Tester)\b[^\n]*\bbefore owner\b[^\n]*|n\/a[ \t]+\S[^\n]{9,})$/im
 const needsGate = (plain) => new RegExp(`^[ \\t>-]*Role:[ \\t]*${GATE_BUILDER_ROLES}\\b`, 'im').test(plain) && /\bSize:[ \t]*[ML]\b/i.test(plain)
+// A level brief: every game-kit brief of a builder or designer role, like Sheet: the files of the steps before its role, or `n/a <why>`.
+const LEVEL_NEEDS = { Planner: ['research'], 'Game Designer': ['research', 'plan'], Programmer: ['research', 'plan', 'design'], Designer: ['research', 'plan', 'design'], Animator: ['research', 'plan', 'design'] }
+const levelRole = (plain) => plain.match(/^[ \t>-]*Role:[ \t]*(Game Designer|Planner|Programmer|Designer|Animator)\b/im)?.[1]
+export const needsLevelRole = (role) => Object.hasOwn(LEVEL_NEEDS, role)
+const needsLevel = (plain) => /^game$/i.test(plain.match(/\bKit:[ \t]*([\w-]+)/i)?.[1] ?? '') && !!levelRole(plain)
+// Each step is its own `·` segment whose value is a file (.md, .json) or a link (https, #cmsg_<id>), as the Sheet and Look-Lock rows read it.
+// Any `Level:` line of the brief may carry it, so a task line that starts with the word does not hide the real one.
+export const levelOk = (plain) => [...plain.matchAll(/^[ \t>-]*Level:[ \t]*([^\n]*)$/gim)].some(([, l]) => {
+  if (/^n\/a[ \t]+\S.{9,}$/i.test(l.trim())) return true
+  const seg = l.split('·').map((x) => x.trim())
+  // Without a Role (an item body read on its own) all three steps are asked for.
+  return (LEVEL_NEEDS[levelRole(plain)] ?? ['research', 'plan', 'design']).every((k) => seg.some((x) => new RegExp(`^${k}[ \\t]+(\\S+\\.(md|json)\\b|https?:\\/\\/\\S+|\\S*#cmsg_?[A-Za-z0-9]{6,})`, 'i').test(x)))
+})
 const small = (plain) => /\bSize:[ \t]*S\b/i.test(plain)
 const gateRolePlain = (plain) => /^[ \t>-]*Role:[ \t]*(Tester|Reviewer|Security|Legal|Playtester|Hook Checker|Critic|Story Editor|Evaluator)\b/im.test(plain)
 // M50 (plan 2026-11-12-brief-fix-plan, section 4): ONE table row per line of a thread brief. `tpl` is the template line (docs/templates/thread-brief.md and
@@ -277,6 +290,9 @@ export const BRIEF_FIELDS = [
   { key: 'Look-Lock', name: 'Look-Lock: (owner card of the look)', tpl: 'Look-Lock: <owner card link of the approved look (https or #cmsg_...); not needed with `Sheet: n/a`>', applies: needsSheet, ok: line(/^[ \t>-]*Look-Lock:[ \t]*[^<\n]*(https?:\/\/|#cmsg_?[A-Za-z0-9]{6,})/im), cls: () => 'judgment' },
   // GameDev 2026-11-15 (#627): an Animator plan built from cloud docs alone failed the gate. The brief names the scene docs the project lists and the old scene copied.
   { key: 'Scene docs', name: 'Scene docs: (the scene docs the project\'s CLAUDE.md lists, read on the laptop before planning)', tpl: 'Scene docs: <the scene docs the project\'s CLAUDE.md lists, read on the laptop before planning, and the old scene the plan copies; laptop offline means stop and report>', applies: (p) => /^[ \t>-]*Role:[ \t]*Animator\b/im.test(p), ok: line(/^[ \t>-]*Scene docs:[ \t]*[^<\s]/im), cls: () => 'recoverable', fill: () => 'Scene docs: read the scene docs the project\'s CLAUDE.md lists on the laptop before planning, name the old scene the plan copies; laptop offline means stop and report, never plan without them' },
+  // vacation-game 2026-11-15 (yskills): levels went to build without a teardown, a level plan or design proposals. A level brief in the game kit names the
+  // files of the steps before it (docs/TEAMS.md, A level): the Planner the Researcher's page, the Game Designer that page and the plan, a builder all three.
+  { key: 'Level', name: 'Level: research <page> · plan <file> · design <file> (a level brief in the game kit, docs/TEAMS.md A level)', tpl: 'Level: research <page> · plan <file> · design <file>, or `n/a <why no new or reworked level>`; game kit builder and designer briefs', applies: needsLevel, ok: levelOk, cls: () => 'judgment' },
   { key: 'Researcher', name: 'Researcher: (the task asks for research)', tpl: 'Researcher: <subagent and model, or the Researcher thread; research tasks only>', applies: (p) => ASKS_RESEARCH.test(p) && !/\bRole:[ \t]*Researcher\b/i.test(p), ok: line(/^[ \t>-]*Researcher:[ \t]*[^<\s]/im), cls: () => 'recoverable', fill: () => 'Researcher: ask the coordinator for a Researcher thread (message_coordinator) and go on meanwhile' },
   { key: 'Tester', strict: false, tpl: 'Tester: <Tester thread; size L Programmer only>', applies: (p) => /^[ \t>-]*Role:[ \t]*Programmer\b/im.test(p), ok: (p) => !needsTester(p), cls: () => 'judgment' },
 ]

@@ -15,12 +15,13 @@ const check = (brief, model = null) => briefCheck(spawn(brief), root, model)
 const LINES = { Item: 'Item: M50', Plan: 'Plan: p.md', Acceptance: 'Acceptance: tests pass', Model: 'Model: sonnet', Skills: 'Skills: .claude/skills/operator/roles/programmer.md',
   'Done when': 'Done when: tests pass', 'Stop when': 'Stop when: 3 rounds', Start: 'Start: read MEMORY.md first', Threads: 'Threads: list_threads checked, none open on this topic',
   'Prior art': 'Prior art: obra/superpowers -> adapt, because it exists', Gate: 'Gate: Reviewer · x before owner', Sheet: 'Sheet: sheet.md', 'Look-Lock': 'Look-Lock: card https://x.y/z',
-  Researcher: 'Researcher: Opus subagent', Tester: 'Tester: Tester · app', 'Scene docs': 'Scene docs: the docs the project CLAUDE.md lists, copies the old scene X' }
+  Researcher: 'Researcher: Opus subagent', Tester: 'Tester: Tester · app', 'Scene docs': 'Scene docs: the docs the project CLAUDE.md lists, copies the old scene X',
+  Level: 'Level: research research/airport.md · plan plans/airport-PLAN.md · design design/airport.md' }
 
 test('table test: a brief that lacks only one row gets exactly that row\'s class behaviour', async () => {
   for (const f of BRIEF_FIELDS) {
     const stamp = f.key === 'Scene docs' ? 'Animator · Kit: game · Size: M' : ['Sheet', 'Look-Lock'].includes(f.key) ? 'Programmer · Kit: game · Size: M' : f.key === 'Tester' ? 'Programmer · Kit: setup · Size: L' : 'Programmer · Kit: setup · Size: M'
-    const brief = [`Role: ${stamp}`, 'Research SOTA of the thing.', ...Object.entries(LINES).filter(([k]) => k !== f.key).map(([, l]) => l)].join('\n')
+    const brief = [`Role: ${f.key === 'Level' ? 'Programmer · Kit: game · Size: M' : stamp}`, f.key === 'Level' ? 'Research SOTA of the thing for the airport level.' : 'Research SOTA of the thing.', ...Object.entries(LINES).filter(([k]) => k !== f.key).map(([, l]) => l)].join('\n')
     const out = await check(brief)
     if (['Acceptance', 'Done when'].includes(f.key)) { assert.doesNotMatch(out, /^Brief (check|repair)[^\n]*(Acceptance|Done when)/, `${f.key}: the other one satisfies both`); continue }
     const cls = f.cls(brief.replace(/[*_`]/g, ''))
@@ -183,4 +184,43 @@ test('#627: an Animator brief without a Scene docs line is repaired, other roles
   const role = readFileSync(join(root, '.claude/skills/operator/roles/animator.md'), 'utf8')
   for (const rule of [/Scene docs/, /old scene/i, /offline[^\n]*stop and report/i, /one scene card/i]) assert.match(role, rule, `animator.md: ${rule}`)
   assert.doesNotMatch(role, /companyxy|SZENE-REZEPT/i, 'the role file stays generic, product paths live in the project CLAUDE.md')
+})
+
+// vacation-game 2026-11-15 (yskills): a level went to build with no teardown, no level plan, no design proposals. A level brief in the game kit
+// names the files of the steps before its role (docs/TEAMS.md, A level); a start without them is refused, a non-level game brief is untouched.
+test('a game level brief names research, plan and design up to its own step, or is refused', async () => {
+  const { missingLines } = await import('../global/team-guard.mjs')
+  const BASE = FULL_M.replace(/^Level:.*\n?/m, '')
+  const lvl = (role, level = '', kit = 'game', task = 'Move the airport level to first person.') => missingLines([`Role: ${role} · Kit: ${kit} · Size: M`, task, level, BASE].join('\n')).filter((l) => l.startsWith('Level'))
+  const R = 'research research/airport-level.md', P = 'plan plans/airport-PLAN.md', D = 'design design/airport-proposals.md'
+  assert.equal(lvl('Programmer').length, 1, 'a builder without the line')
+  assert.equal(lvl('Programmer', `Level: ${R} · ${P}`).length, 1, 'a builder without the design pick')
+  assert.equal(lvl('Programmer', 'Level: research <page> · plan <file> · design <file>').length, 1, 'placeholders do not count')
+  assert.deepEqual(lvl('Programmer', `Level: ${R} · ${P} · ${D}`), [])
+  assert.equal(lvl('Game Designer', `Level: ${R}`).length, 1, 'the Game Designer needs the level plan')
+  assert.deepEqual(lvl('Game Designer', `Level: ${R} · ${P}`), [])
+  assert.deepEqual(lvl('Planner', `Level: ${R}`), [])
+  assert.equal(lvl('Planner').length, 1, 'the Planner needs the Researcher page')
+  assert.deepEqual(lvl('Programmer', 'Level: n/a bug fix, no play or look change'), [], 'a bug fix says why')
+  assert.deepEqual(lvl('Programmer', 'Level: n/a'), lvl('Programmer'), 'a bare n/a is no reason')
+  assert.deepEqual(lvl('Researcher'), [], 'the Researcher is the first step')
+  assert.deepEqual(lvl('Programmer', '', 'setup'), [], 'only the game kit')
+  assert.deepEqual(lvl('Programmer', '', 'setup', 'Fix the brief check for Kit: game threads.'), [], 'the kit is the stamp\'s, not a quoted one')
+  for (const bad of ['research https://', 'research .md', 'research #cmsg']) assert.equal(lvl('Planner', `Level: ${bad}`).length, 1, `an ending alone is no file: ${bad}`)
+  assert.deepEqual(lvl('Planner', `Level: the airport, first person\nLevel: ${R}`), [], 'a task line starting with Level: does not hide the real one')
+  for (const task of ['Move the airport to first person.', 'Build the night market in 3D.', 'Build market scene in 3D: the 70 m hero block of Hang Ma.', 'Fix the save menu.'])
+    assert.equal(lvl('Programmer', '', 'game', task).length, 1, `every game-kit builder brief carries the line: ${task}`)
+  for (const bad of ['research x · plan x · design x', 'research TBD · plan TBD · design TBD', 'research none · plan none · design none'])
+    assert.equal(lvl('Programmer', `Level: ${bad}`).length, 1, `no file, no pass: ${bad}`)
+  assert.equal(lvl('Game Designer', 'Level: research the plan is not written yet').length, 1, 'a word inside a sentence is no file')
+  assert.deepEqual(lvl('Game Designer', 'Level: research https://x.y/r · plan #cmsg_012abc'), [], 'links count')
+  const { BRIEF_FIELDS: F } = await import('../global/team-guard.mjs')
+  const ok = F.find((f) => f.key === 'Level').ok
+  assert.equal(ok('Scope: the lamp.'), false, 'an item body without the line fills nothing')
+  assert.equal(ok(`Level: ${R} · ${P}`), false, 'an item body without a role needs all three')
+  assert.equal(ok(`Level: ${R} · ${P} · ${D}`), true)
+  const refused = await check([`Role: Programmer · Kit: game · Size: M`, 'Build the airport level.', BASE].join('\n'))
+  assert.match(refused, /^Brief check[\s\S]*Level/, 'the start is refused with the Level line named')
+  assert.doesNotMatch(await check([`Role: Programmer · Kit: game · Size: M`, 'Build the airport level.', `Level: ${R} · ${P} · ${D}`, BASE].join('\n')), /^Brief check/)
+  assert.match(readFileSync(join(root, 'docs/TEAMS.md'), 'utf8'), /\| `game` \|[^\n]*\| Researcher, Planner, Game Designer/, 'the game kit lists the order')
 })

@@ -21,7 +21,7 @@ const PREFLIGHT = `## Before every reply
 - A finished thread (done, failed, stopped, or review_ready idle 2 h with Done:/hand-off) gets set_thread_resolved or a nudge before you stop; relist when your board is 2 h old; "root clean": quote root-check.mjs OK.
 - Every ask or pointer carries its clickable link ([title](#cmsg_…), URL, [Project settings](#project-settings/resources)); every ask of yskills gets a thread, a PR or a \`Done:\` line the same turn; a skill idea is a PR (\`new-skill\`), never a propose_skills card.
 - A PR whose \`Depends on: #n\` is parked or blocked: one chat line the same turn naming both PRs and the fix.
-- Ask yskills only the real moment (a level from his life), goal, taste and the ask-first list; build details, process and order you decide, in one line.
+- Ask yskills only the real moment (a level from his life), goal, taste and the ask-first list; build details, process and order you decide, in one line. Levels: Researcher, Planner, Game Designer, build.
 - Hard round counter (hook): 3 rounds at 4.5 (4.8 important), 4-6 Fable director, 7+ a card; no merge below; you release none; a PASS needs no OK. 3 failed rounds on one asset: re-plan. A gate round's brief has the Round, Asset and Picture card lines (briefs/reviewer.md). Controls and World life first.
 - A new rule is a PR to claude-setup, never only a Project settings edit.
 - A summary of this chat (compaction) starts with the line: "read COORDINATOR-CARD.md again, reopen with the header".
@@ -131,7 +131,7 @@ export function renderRoster({ teams, hash = 'nogit', date = today() }) {
 
 // ---- briefs/<role>.md: the stamp, then one line per row of BRIEF_FIELDS that holds for the role (a new row of the table appears here by itself),
 // then the four parts of the free task text (taught, never checked).
-const ORDER = ['Model', 'Item', 'Plan', 'Acceptance', 'Threads', 'Prior art', 'Skills', 'Sheet', 'Look-Lock', 'Topic', 'Researcher', 'Gate', 'Tester', 'Done when', 'Stop when', 'Start']
+const ORDER = ['Model', 'Item', 'Plan', 'Acceptance', 'Threads', 'Prior art', 'Skills', 'Sheet', 'Look-Lock', 'Level', 'Topic', 'Researcher', 'Gate', 'Tester', 'Done when', 'Stop when', 'Start']
 const GATE_ROUND_LINES = ['Round: <n> (gate rounds only; delete otherwise)', 'Asset: <owner/repo#n> (with Round)', 'Picture card: <link | none, because <why>> (new look only; delete otherwise)']
 const TASK_PARTS = ['Objective: <what finished looks like, one sentence, in the owner\'s words where he gave them>', 'Output: <the files, PR or links the thread hands back, and in what shape>',
   'Tools and sources: <what to read and use first (repo paths, URLs, #n) and what to leave alone>', 'Boundaries: <what the thread must not touch, and the point where it stops and asks>']

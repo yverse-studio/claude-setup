@@ -479,6 +479,19 @@ const needsSheet = (plain) => new RegExp(`^[ \\t>-]*Role:[ \\t]*(${SHEET_ROLES.j
 export const GATE_BUILDER_ROLES = '(?:Planner|Programmer|Designer|Animator|Character TD|Story Writer|Game Designer|Content Designer|Sound Designer)'
 export const GATE_LINE = /^[ \t>-]*Gate:[ \t]*(?:(?:Reviewer|Tester)\b[^\n]*\bbefore owner\b[^\n]*|n\/a[ \t]+\S[^\n]{9,})$/im
 const needsGate = (plain) => new RegExp(`^[ \\t>-]*Role:[ \\t]*${GATE_BUILDER_ROLES}\\b`, 'im').test(plain) && /\bSize:[ \t]*[ML]\b/i.test(plain)
+// A level brief: every game-kit brief of a builder or designer role, like Sheet: the files of the steps before its role, or `n/a <why>`.
+const LEVEL_NEEDS = { Planner: ['research'], 'Game Designer': ['research', 'plan'], Programmer: ['research', 'plan', 'design'], Designer: ['research', 'plan', 'design'], Animator: ['research', 'plan', 'design'] }
+const levelRole = (plain) => plain.match(/^[ \t>-]*Role:[ \t]*(Game Designer|Planner|Programmer|Designer|Animator)\b/im)?.[1]
+export const needsLevelRole = (role) => Object.hasOwn(LEVEL_NEEDS, role)
+const needsLevel = (plain) => /^game$/i.test(plain.match(/\bKit:[ \t]*([\w-]+)/i)?.[1] ?? '') && !!levelRole(plain)
+// Each step is its own `·` segment whose value is a file (.md, .json) or a link (https, #cmsg_<id>), as the Sheet and Look-Lock rows read it.
+// Any `Level:` line of the brief may carry it, so a task line that starts with the word does not hide the real one.
+export const levelOk = (plain) => [...plain.matchAll(/^[ \t>-]*Level:[ \t]*([^\n]*)$/gim)].some(([, l]) => {
+  if (/^n\/a[ \t]+\S.{9,}$/i.test(l.trim())) return true
+  const seg = l.split('·').map((x) => x.trim())
+  // Without a Role (an item body read on its own) all three steps are asked for.
+  return (LEVEL_NEEDS[levelRole(plain)] ?? ['research', 'plan', 'design']).every((k) => seg.some((x) => new RegExp(`^${k}[ \\t]+(\\S+\\.(md|json)\\b|https?:\\/\\/\\S+|\\S*#cmsg_?[A-Za-z0-9]{6,})`, 'i').test(x)))
+})
 const small = (plain) => /\bSize:[ \t]*S\b/i.test(plain)
 const gateRolePlain = (plain) => /^[ \t>-]*Role:[ \t]*(Tester|Reviewer|Security|Legal|Playtester|Hook Checker|Critic|Story Editor|Evaluator)\b/im.test(plain)
 // M50 (plan 2026-11-12-brief-fix-plan, section 4): ONE table row per line of a thread brief. `tpl` is the template line (docs/templates/thread-brief.md and
@@ -509,6 +522,9 @@ export const BRIEF_FIELDS = [
   { key: 'Look-Lock', name: 'Look-Lock: (owner card of the look)', tpl: 'Look-Lock: <owner card link of the approved look (https or #cmsg_...); not needed with `Sheet: n/a`>', applies: needsSheet, ok: line(/^[ \t>-]*Look-Lock:[ \t]*[^<\n]*(https?:\/\/|#cmsg_?[A-Za-z0-9]{6,})/im), cls: () => 'judgment' },
   // GameDev 2026-11-15 (#627): an Animator plan built from cloud docs alone failed the gate. The brief names the scene docs the project lists and the old scene copied.
   { key: 'Scene docs', name: 'Scene docs: (the scene docs the project\'s CLAUDE.md lists, read on the laptop before planning)', tpl: 'Scene docs: <the scene docs the project\'s CLAUDE.md lists, read on the laptop before planning, and the old scene the plan copies; laptop offline means stop and report>', applies: (p) => /^[ \t>-]*Role:[ \t]*Animator\b/im.test(p), ok: line(/^[ \t>-]*Scene docs:[ \t]*[^<\s]/im), cls: () => 'recoverable', fill: () => 'Scene docs: read the scene docs the project\'s CLAUDE.md lists on the laptop before planning, name the old scene the plan copies; laptop offline means stop and report, never plan without them' },
+  // vacation-game 2026-11-15 (yskills): levels went to build without a teardown, a level plan or design proposals. A level brief in the game kit names the
+  // files of the steps before it (docs/TEAMS.md, A level): the Planner the Researcher's page, the Game Designer that page and the plan, a builder all three.
+  { key: 'Level', name: 'Level: research <page> · plan <file> · design <file> (a level brief in the game kit, docs/TEAMS.md A level)', tpl: 'Level: research <page> · plan <file> · design <file>, or `n/a <why no new or reworked level>`; game kit builder and designer briefs', applies: needsLevel, ok: levelOk, cls: () => 'judgment' },
   { key: 'Researcher', name: 'Researcher: (the task asks for research)', tpl: 'Researcher: <subagent and model, or the Researcher thread; research tasks only>', applies: (p) => ASKS_RESEARCH.test(p) && !/\bRole:[ \t]*Researcher\b/i.test(p), ok: line(/^[ \t>-]*Researcher:[ \t]*[^<\s]/im), cls: () => 'recoverable', fill: () => 'Researcher: ask the coordinator for a Researcher thread (message_coordinator) and go on meanwhile' },
   { key: 'Tester', strict: false, tpl: 'Tester: <Tester thread; size L Programmer only>', applies: (p) => /^[ \t>-]*Role:[ \t]*Programmer\b/im.test(p), ok: (p) => !needsTester(p), cls: () => 'judgment' },
 ]
@@ -1428,7 +1444,7 @@ const PREFLIGHT = `## Before every reply
 - A finished thread (done, failed, stopped, or review_ready idle 2 h with Done:/hand-off) gets set_thread_resolved or a nudge before you stop; relist when your board is 2 h old; "root clean": quote root-check.mjs OK.
 - Every ask or pointer carries its clickable link ([title](#cmsg_…), URL, [Project settings](#project-settings/resources)); every ask of yskills gets a thread, a PR or a \`Done:\` line the same turn; a skill idea is a PR (\`new-skill\`), never a propose_skills card.
 - A PR whose \`Depends on: #n\` is parked or blocked: one chat line the same turn naming both PRs and the fix.
-- Ask yskills only the real moment (a level from his life), goal, taste and the ask-first list; build details, process and order you decide, in one line.
+- Ask yskills only the real moment (a level from his life), goal, taste and the ask-first list; build details, process and order you decide, in one line. Levels: Researcher, Planner, Game Designer, build.
 - Hard round counter (hook): 3 rounds at 4.5 (4.8 important), 4-6 Fable director, 7+ a card; no merge below; you release none; a PASS needs no OK. 3 failed rounds on one asset: re-plan. A gate round's brief has the Round, Asset and Picture card lines (briefs/reviewer.md). Controls and World life first.
 - A new rule is a PR to claude-setup, never only a Project settings edit.
 - A summary of this chat (compaction) starts with the line: "read COORDINATOR-CARD.md again, reopen with the header".
@@ -1538,7 +1554,7 @@ export function renderRoster({ teams, hash = 'nogit', date = today() }) {
 
 // ---- briefs/<role>.md: the stamp, then one line per row of BRIEF_FIELDS that holds for the role (a new row of the table appears here by itself),
 // then the four parts of the free task text (taught, never checked).
-const ORDER = ['Model', 'Item', 'Plan', 'Acceptance', 'Threads', 'Prior art', 'Skills', 'Sheet', 'Look-Lock', 'Topic', 'Researcher', 'Gate', 'Tester', 'Done when', 'Stop when', 'Start']
+const ORDER = ['Model', 'Item', 'Plan', 'Acceptance', 'Threads', 'Prior art', 'Skills', 'Sheet', 'Look-Lock', 'Level', 'Topic', 'Researcher', 'Gate', 'Tester', 'Done when', 'Stop when', 'Start']
 const GATE_ROUND_LINES = ['Round: <n> (gate rounds only; delete otherwise)', 'Asset: <owner/repo#n> (with Round)', 'Picture card: <link | none, because <why>> (new look only; delete otherwise)']
 const TASK_PARTS = ['Objective: <what finished looks like, one sentence, in the owner\'s words where he gave them>', 'Output: <the files, PR or links the thread hands back, and in what shape>',
   'Tools and sources: <what to read and use first (repo paths, URLs, #n) and what to leave alone>', 'Boundaries: <what the thread must not touch, and the point where it stops and asks>']
@@ -2171,7 +2187,7 @@ export async function briefCheck(prompt, cwd, model = null, any = false) {
   const itemPlain = item && !item.error ? String(item.body).slice(0, ITEM_CAP).replace(/^brief:[ \t]*/gim, '').replace(/[*_`]/g, '') : ''
   const own = guard.classify(brief)
   const itemHas = (k) => guard.BRIEF_FIELDS.find((f) => f.key === k)?.ok(itemPlain)
-  const sorted = itemPlain ? { ...own, judgment: own.judgment.filter((f) => !(['Sheet', 'Look-Lock'].includes(f.key) && itemHas(f.key))) } : own
+  const sorted = itemPlain ? { ...own, judgment: own.judgment.filter((f) => !(['Sheet', 'Look-Lock', 'Level'].includes(f.key) && itemHas(f.key))) } : own
   found.push(...sorted.judgment.map((f) => `${f.key} is missing or still a <placeholder>`))
   const wrong = model && guard.wrongModel(brief, model, teams)
   if (wrong) found.push(`this thread runs on ${wrong.tier}, but the ${wrong.role} runs on ${wrong.allowed.join(' or ')}: ask the coordinator to restart it on that model`)
