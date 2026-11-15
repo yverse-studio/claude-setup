@@ -14,6 +14,16 @@ check is a hard yes or no from someone who didn't write the code.
 
 A check that doesn't apply passes; say "n/a" in the table. A reviewer verdict in checks 3 to 5 without quoted lines, the test-gap answer and a `Not judged:` list is not a pass ([`roles/reviewer.md`](roles/reviewer.md), Report).
 
+## Before a builder asks for a gate (past errors first)
+
+Mandatory pre-gate step for every builder role (Character TD, Animator, Programmer, Designer, Story Writer and the other build roles; GameDev 2026-11-15, yskills: "diese Fehler hatten wir doch alle schon"):
+
+1. **Read the pitfalls.** Before the plan: every Don't, pitfall, dead-end and Lessons list of the project's own docs (the project's CLAUDE.md names them) and the old gate files of the passed comparable asset (what failed, what passed). The brief's `Start:` line names them; a project without such files says so in the plan.
+2. **One checklist row per past error** in the plan, written as a check that can be ticked (what is measured or looked at, and the limit).
+3. **Tick every row against the build** before the first gate request, with the number or the image that shows it. A row that is not ticked is not done; an error that was fixed once and returns is a round lost on the thread's side.
+
+The gate request names the file of the ticked rows. [advisory until the check of #689 enforces it]
+
 ## Reviewers
 
 Reviewers run after code; `security-reviewer` on auth, payments and user input (moved here from `CLAUDE.md`, S11a).
