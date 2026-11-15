@@ -254,3 +254,15 @@ test('a Look-Lock needs a link or a card id: the bare word `card` is no look loc
   assert.ok(row.ok('Look-Lock: https://claude.ai/x'))
   assert.ok(row.ok('Look-Lock: owner card #cmsg_ABCDEF123'))
 })
+
+// #609: in the cloud a thread starts in /home/user, which is no repo and holds its checkout as the one child folder.
+test('Item: #7 from a folder that is no repo and holds one checkout reads that checkout\'s origin; two checkouts stay "no repo"', (t) => {
+  const env = setup(t)
+  stub(env, issue)
+  const out = run({ ...env, repo: env.dir }, brief('#7'), `item-c${process.pid}-${n++}`)
+  assert.match(out, /#7[^\n]*Fix the lamp/, 'the issue text arrives')
+  assert.match(readFileSync(env.log, 'utf8'), /api repos\/acme\/widgets\/issues\/7/, 'asked the checkout\'s origin')
+  spawnSync('mkdir', ['-p', join(env.dir, 'second')])
+  spawnSync('git', ['-C', join(env.dir, 'second'), 'init', '-q'])
+  assert.match(run({ ...env, repo: env.dir }, brief('#7'), `item-d${process.pid}-${n++}`), /no repo for #7/, 'two checkouts and no owner/repo in the brief: today\'s message')
+})

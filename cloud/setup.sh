@@ -233,23 +233,11 @@ cat > "$HOME/.claude/claude-setup/team-guard.mjs" <<'TEAM'
 #!/usr/bin/env node
 // Team guard. Usage: team-guard.mjs start|pre (hook entries SessionStart, PreToolUse).
 // Without a claude-setup checkout, start puts CLAUDE.md itself into context; it counts as read.
-// start: refreshes the boot files (CLAUDE.md, docs/TEAMS.md, docs/MAP.md) from main into
-// ~/.claude/claude-setup/ and puts the TEAMS.md pointer into every new session; a session without a
-// claude-setup checkout (the project chat has none, so its CLAUDE.md never loaded; 2026-10-26 the
-// coordinator started threads without reading any rule and guessed models) also gets the boot card.
-// pre: refuses (exit 2) an Agent call or a thread start without `model`, because without it a
-// thread gets the project default and a subagent inherits its parent (yskills, 2026-10-26: every
-// thread and subagent ran on Opus). An Agent call whose subagent_type has an agent file with its own
-// `model:` passes. It also refuses a thread start whose brief is a size L Programmer with no
-// `Tester:` line (incident 2026-10-26: an L app ran without a Tester, docs/TEAMS.md Sizes: the
-// Tester thread starts first and the Programmer brief names it), and a thread start before this
-// session has read TEAMS.md (and CLAUDE.md, when it did not load on its own), and one whose brief has
-// no `Role: · Kit: · Size:` stamp line (rule-guard puts the named role's playbook into the thread), and
-// a size M or L one with no `Prior art:` line (look for what exists and works first, yskills 2026-10-27),
-// and one whose `model` is a tier its role's Roster row does not name (wrongModel).
-// Blind test 2026-10-27 ("Kit: content", a video at S, a Game Designer on a story, briefs of one line): a
-// thread start also needs a kit from the Kits table, a size that kit allows, a role on that kit's team
-// (badTeam), and the brief block's Model, Skills, Done when, Stop when and Start lines (missingLines).
+// start: refreshes the boot files (CLAUDE.md, docs/TEAMS.md, docs/MAP.md) from main into ~/.claude/claude-setup/ and puts the TEAMS.md pointer into every
+// new session; a session without a checkout (the project chat) also gets the boot card (2026-10-26: a coordinator started threads without any rule).
+// pre: refuses (exit 2) an Agent call or thread start without `model` (2026-10-26: every thread ran on Opus), and a thread start before TEAMS.md was read
+// or whose brief breaks the team rules: stamp, kit, size, role on the kit's team, model tier, Tester at size L, Prior art at M or L, the brief block's lines
+// (wrongModel, badTeam, missingLines; blind test 2026-10-27).
 // CLAUDE_SETUP_TEAM_GUARD=off turns it off. It never breaks a tool call on its own errors.
 import { execFileSync, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
@@ -2032,12 +2020,15 @@ export const itemRef = (brief) => { const t = itemToken(brief); return t && t !=
 // One shared deadline of 2 s for every route (the prompt hook's own limit is 5 s): each step gets what is left, at most `cap`.
 let deadline = 0
 const left = (cap) => Math.min(cap, deadline - Date.now())
-function originRepo(cwd) {
+function originRepo(cwd, child = true) {
   try {
     const url = execFileSync('git', ['-C', cwd, 'remote', 'get-url', 'origin'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], killSignal: 'SIGKILL', timeout: Math.max(100, left(500)) }).trim()
     if (!/^(https?:\/\/[^/]*github\.com\/|git@github\.com:)/.test(url) && !/^https?:\/\/[^/]*\/git\//.test(url)) return null // the cloud's git proxy URL ends in /git/<owner>/<repo>
     return url.match(/([\w.-]+)\/([\w.-]+?)(?:\.git)?$/)?.slice(1).join('/') ?? null
-  } catch { return null }
+  } catch { // #609: the cloud starts in /home/user, no repo, with its checkout as the one child folder
+    const dirs = child && existsSync(cwd) ? readdirSync(cwd).filter((d) => existsSync(join(cwd, d, '.git'))) : []
+    return dirs.length === 1 ? originRepo(join(cwd, dirs[0]), false) : null
+  }
 }
 // One fetch per process: the brief check and the context share it (X1a).
 const itemCache = new Map()
