@@ -17,7 +17,8 @@ from mathutils.bvhtree import BVHTree
 
 ARGV = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from clearance_args import arg_error, piece_name
+try: from clearance_args import arg_error, summary_line
+except ImportError: sys.exit('clearance.py needs clearance_args.py in the same folder: copy both files')
 if arg_error(ARGV): sys.exit(arg_error(ARGV))
 A = dict(a.split('=', 1) for a in ARGV if '=' in a)
 LOOK = A.get('look', 'king'); ROUNDS = int(A.get("rounds", 2)); REPORT = A.get('report')
@@ -170,7 +171,7 @@ def to_target(sd, co, loc, nrm, lo, to):
 
 def summarize(res, tag, worst=0):
     for nm, (sd, co, *_r) in res.items():
-        print(f'{tag} {piece_name(nm):12s} min {1000 * sd.min():7.1f} mm  inside {(sd < 0).sum():4d} ({100 * (sd < 0).mean():.2f}%)', flush=True)
+        print(summary_line(tag, nm, 1000 * sd.min(), int((sd < 0).sum()), 100 * (sd < 0).mean()), flush=True)
         for i in np.argsort(sd)[:worst]:
             if sd[i] < 0: print('    worst', i, round(1000 * sd[i], 1), np.round(co[i], 3).tolist())
 
