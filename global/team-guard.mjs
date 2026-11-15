@@ -211,14 +211,13 @@ export function needsTester(text) {
 }
 
 // The model tiers a brief's role may run on, from its Roster row: the first tier named, Fable where
-// the row names it, and a tier the row gives "on L" for a size L brief (`Sonnet; Opus on L`). A thread start whose `model` is another tier was a guess (yskills 2026-10-27: "did you
-// pick Opus on purpose?"); a model yskills named passes when the brief says so.
+// the row names it, and a tier the row gives "on L" for a size L brief (`Sonnet; Opus on L`). A thread start whose `model` is another tier was a guess (yskills 2026-10-27); a model yskills named passes when the brief says so.
 const TIERS = ['fable', 'opus', 'sonnet', 'haiku']
 export function wrongModel(text, model, teams) {
   const role = teams && roleOf(text, teams)
   if (!role?.row || !model || /yskills (named|asked|set|chose)/i.test(text)) return null
   // A row's own exception ("Opus writes the weekly plan") passes when the brief says why: `Model: opus (the weekly plan)`.
-  const why = text.replace(/[*_`]/g, '').match(/^[ \t>-]*Model:[ \t]*(\w+)[^\n]*\([^)\n]{5,}\)/im)?.[1]?.toLowerCase()
+  const why = text.replace(/[*_`]/g, '').match(/^[ \t>-]*Model:[ \t]*(?:claude-)?(\w+)[^\n]*\([^)\n]{5,}\)/im)?.[1]?.toLowerCase()
   if (why && String(model).toLowerCase().includes(why) && new RegExp(`\\b${why}\\b`, 'i').test(role.row)) return null
   const parts = (role.row.match(/Model: ([^\n]*?)\.?$/)?.[1] ?? '').split(';').map((p) => p.toLowerCase())
   const sizeL = /\bSize:[ \t]*L\b/i.test(text.replace(/[*_`]/g, ''))
@@ -471,7 +470,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
   const dir = join(home, '.claude', 'claude-setup')
   if (mode === 'check') {
     // `node ~/.claude/claude-setup/team-guard.mjs check <Role> <file|-> [--model <id>] [--title <title>]`: the start check on a brief, before start_thread (CompanyXY 2026-11-13).
-    // The same briefProblems the hook runs, every problem at once, and the exact model id of the role; exit 0 = passes, 1 = problems, 2 = bad call.
+    // The hook's own briefProblems, every problem at once, and the role's exact model id; exit 0 = passes, 1 = problems, 2 = bad call.
     const args = process.argv.slice(3)
     const flag = (name) => { const i = args.indexOf(`--${name}`); return i < 0 ? undefined : args.splice(i, 2)[1] }
     const [model, title] = [flag('model'), flag('title')]
