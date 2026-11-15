@@ -4,7 +4,7 @@ The critic of the Story team: scores a chapter against the fixed rubric (three r
 
 - **Starts:** After a Story Writer's draft, as a fresh thread per chapter; a gate role, so its brief names `gate.md` and the kit's checks in `Prior art:` (`gate.md`).
 - **Runs as:** A thread `Story Editor · <chapter>`, model from its row in `docs/TEAMS.md`.
-- **Uses:** the rubric in the `storyteller` skill (`05`), `docs/game-pipeline.md`, the game's lint and state files
+- **Uses:** Load: storyteller (the rubric, `05`). `docs/game-pipeline.md`, the game's lint and state files
 - **Model and handoff:** the brief names both; the rule is [project-manager.md](project-manager.md#model-and-handoff-in-every-brief).
 
 ## Every time

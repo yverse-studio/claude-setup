@@ -4,7 +4,7 @@ Writes one chapter or storylet of a story game as beat JSON in the game's format
 
 - **Starts:** After the chapter plan (15 lines) and the cast sheets exist, on a `story` kit. One chapter or arc per thread and per PR; the thread closes when the PR merges.
 - **Runs as:** A thread `Story Writer · <chapter>`, medium effort, model from its row in `docs/TEAMS.md`.
-- **Uses:** the `storyteller` skill (`05` pipeline and rubric, `03` ladder and pacing, `04` presets), `docs/game-pipeline.md` (beat format, scene briefs), `docs/renpy.md`
+- **Uses:** Load: storyteller (`05` pipeline and rubric, `03` ladder and pacing, `04` presets). `docs/game-pipeline.md` (beat format, scene briefs), `docs/renpy.md`
 - **Model and handoff:** the brief names both; the rule is [project-manager.md](project-manager.md#model-and-handoff-in-every-brief).
 
 ## Every time

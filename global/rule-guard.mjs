@@ -232,9 +232,9 @@ export function roleOf(prompt, teams) {
   return { name: cells[1].slice(0, cells[1].indexOf(' (')), path: link, row: `Job: ${cells[2]}. Runs as: ${cells[4]}. Model: ${cells[5]}.` }
 }
 
-export function roleCard(role, playbook) {
+export function roleCard(role, playbook, load = []) {
   if (!role.row) return `rule-guard: the brief names Role: ${role.name}, which is not in the Roster of claude-setup docs/TEAMS.md. Ask the coordinator which role you are (message_coordinator) before any work.`
-  const head = `rule-guard: you are the ${role.name} of this task, one role only (docs/TEAMS.md, Coordinator or thread). ${role.row} Write \`Role: ${role.name} · ${role.path ?? 'no playbook'}\` plus the skills you loaded as the first line of your first checklist, so yskills sees it.`
+  const head = `rule-guard: you are the ${role.name} of this task, one role only (docs/TEAMS.md, Coordinator or thread). ${role.row} Write \`Role: ${role.name} · ${role.path ?? 'no playbook'}\` plus the skills you loaded as the first line of your first checklist, so yskills sees it.${load.length ? ` Load before your first reply (Skill tool): ${load.join(', ')}.` : ''}`
   if (playbook && head.length + playbook.length < CARD_MAX) return `${head} Your playbook, ${role.path}, follows; work by it.\n\n${playbook}`
   if (!role.path) return `${head} Your playbook is linked in that Roster row of claude-setup docs/TEAMS.md; Read it before any other work.`
   return `${head} Before any other work, Read your playbook ${role.path} of claude-setup${playbook ? '' : ' (add_repo it if it is not here)'}.`
@@ -274,8 +274,9 @@ async function receiptBlock(tool, input, session, cwd, agentId, transcript) {
   const brief = unfix(stripTags(last ? [last, relayContext(last, t, origin)].join('\n') : spawnPrompt('', t)))
   const path = roleOf(brief, read(join(root, 'docs', 'TEAMS.md')))?.path
   // No checkout (only the boot copy): nothing can be checked, so the receipt says that instead of a false `none`.
-  const status = existsSync(join(root, 'config', 'plugins.json')) ? skillStatus(wanted(root, path ? read(join(root, path)) : '', brief), { root, cwd }) : { loaded: [], missing: [], unknown: true }
-  return receiptMissing(tool, input, threadReceipt(role, brief, t, rules, status, cardOnDisk()), t) ?? (receiptSent(t) ? null : fallbackUnread(status, t))
+  const checkout = existsSync(join(root, 'config', 'plugins.json')), names = checkout ? wanted(root, path ? read(join(root, path)) : '', brief) : []
+  const status = checkout ? skillStatus(names, { root, cwd }) : { loaded: [], missing: [], unknown: true }
+  return receiptMissing(tool, input, threadReceipt(role, brief, t, rules, status, cardOnDisk()), t) ?? (receiptSent(t) ? null : fallbackUnread(status, t) ?? skillsUnloaded(tool, input, names.filter((n) => !status.missing.some((m) => m.name === n && !m.path)), t))
 }
 
 // M48: a Reviewer brief with a valid `Topic:` is given that topic's checklist plus the Scored gates section of gate.md instead of the code playbook.
@@ -302,7 +303,8 @@ async function roleContext(prompt, cwd, session) {
   writeFileSync(once, existsSync(lockFile(session)) ? '' : role.name) // a rejected brief gets its card once but an empty stamp (it could name a gate role); a coordinator re-brief stamps it (relayRebrief)
   const topic = role.name === 'Reviewer' ? await topicPlaybook(prompt, root) : null
   if (topic) return roleCard({ ...role, path: `${'.claude/skills/operator/checklists.md'} (${topic.name}) and gate.md, Scored gates` }, topic.text)
-  return roleCard(role, role.path ? read(join(root, role.path)) || fetchRaw(role.path) : '')
+  const playbook = role.path ? read(join(root, role.path)) || fetchRaw(role.path) : ''
+  return roleCard(role, playbook, wanted(root, playbook, prompt))
 }
 
 // S1 (#538): a thread's task is its issue. The brief's `Item:` line names it (`#7`, `owner/repo#7`, or `M3` of an offline PLAN.json); the hook puts its
@@ -638,14 +640,25 @@ export function kaomojiMissing(tool, input) {
 // the rule files. The model only copies it; a first reply without it is blocked once with the
 // exact line. It proves the role card was injected and which skills were called, not that the model heeds them. Only a post_message
 // is checked: a thread whose first visible act is a decision card shows no receipt there (accepted, documented in docs/MAP.md).
-// The skills and agents a role names (the backticked words of its playbook's `Uses:` line, plus the brief's `Skills:` words),
-// kept to names claude-setup really has: a skill folder, an agent file or a global plugin. A word that is none of those is prose.
-function wanted(root, playbook, brief) {
+// The skills a role must load (#615): the names in the `Load:` and `By kit:` parts of its playbook's `Uses:` line (the brief's Kit picks the kit part),
+// kept to names claude-setup really has: a skill folder, an agent file or a global plugin. The brief's `Skills:` line adds nothing.
+export function wanted(root, playbook, brief) {
   const ls = (d) => { try { return readdirSync(join(root, d)) } catch { return [] } }
   const known = new Set([...ls('.claude/skills'), ...ls('.claude/agents').map((f) => f.replace(/\.md$/, '')), ...[...read(join(root, 'config', 'plugins.json')).matchAll(/"id":\s*"([\w-]+)@/g)].map((m) => m[1])])
-  const uses = playbook.match(/^[ \t>-]*\**Uses:?\**[^\n]*/m)?.[0] ?? ''
-  const said = brief.replace(/[*_`]/g, '').match(/^[ \t>-]*Skills:([^\n]*)/m)?.[1] ?? ''
-  return [...new Set([...[...uses.matchAll(/`([a-z0-9-]+)`/g)].map((m) => m[1]), ...said.split(/[^a-z0-9-]+/)])].filter((n) => known.has(n))
+  const uses = (playbook.match(/^[ \t>-]*\**Uses:?\**[^\n]*/m)?.[0] ?? '').replace(/\([^()]*\)/g, '')
+  const part = (k) => uses.match(new RegExp(`${k}:([^.]*)`))?.[1] ?? ''
+  const kit = brief.replace(/[*_`]/g, '').split('\n').map((l) => l.match(/(?:^|>)[ \t>-]*(?:Role:.*?\b)?Kit:[ \t]*([A-Za-z0-9-]+)/)?.[1]).find(Boolean) // the stamp's own Kit, not a mention in a note
+  const byKit = part('By kit').split(';').map((e) => e.split(':')).filter(([k]) => k.trim() === kit).map(([, v]) => v ?? '')
+  return [...new Set([part('Load'), ...byKit].flatMap((v) => v.split(/[^a-z0-9-]+/)))].filter((n) => known.has(n))
+}
+
+// A first reply comes after each wanted skill was loaded (a Skill call, or a Read of its file where it cannot load) or skipped with a reason.
+export function skillsUnloaded(tool, input, names, transcript) {
+  if (tool !== 'mcp__hearthbot__post_message' || !names.length) return null
+  const calls = toolCalls(transcript)
+  const skipped = String(input.text ?? '').match(/skills skipped:([^\n]*?)\bbecause\s+\S/i)?.[1] ?? ''
+  const todo = names.filter((n) => !skipped.split(/[^a-z0-9-]+/).includes(n) && !calls.some((c) => (c.name === 'Skill' && /^(?:[\w-]+:)?([\w-]+)$/.exec(String(c.input.skill ?? ''))?.[1] === n) || (c.name === 'Read' && new RegExp(`(?:skills/${n}/SKILL|agents/${n})\\.md$`).test(String(c.input.file_path ?? '')))))
+  return todo.length ? `rule-guard: load your role's skills before your first reply (Skill tool): ${todo.join(', ')}. A skill you will not need: say "skills skipped: <name>, because <why>" in the reply.` : null
 }
 
 // Whether each name can really load in this thread (design skills were absent in project threads and nothing said so: the plugin cache

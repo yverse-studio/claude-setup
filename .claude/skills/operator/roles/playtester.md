@@ -4,7 +4,7 @@ Plays a game build like a stranger and writes down what it felt like. The play b
 
 - **Starts:** On every build of a game PR that changes play (`src/` rules, hooks, ads, `design/GDD.md`, `test/game.mjs`), on the preview URL, before the gate. A look-only or server-only PR skips it. `scripts/playtest-check.mjs` fails the PR without a report, a waiver is a commit saying `playtest-ok: <reason>` and the gate judges the reason.
 - **Runs as:** A fresh Opus subagent of the gate per build (`docs/TEAMS.md`, Roster), never the builder's thread: a tester who built the game cannot be a first-time player. It writes the report, never the game code.
-- **Uses:** Playwright with the installed Chromium, `game-3d` (§4 the hooks), `design/GDD.md`, the `## Bar` of `design/DESIGN.md`, `ui-review` (screenshots)
+- **Uses:** Load: game-3d (§4 the hooks), ui-review (screenshots). Playwright with the installed Chromium, `design/GDD.md`, the `## Bar` of `design/DESIGN.md`
 - **Model and handoff:** the brief names both; the rule is [project-manager.md](project-manager.md#model-and-handoff-in-every-brief).
 
 ## Method

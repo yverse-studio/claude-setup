@@ -4,7 +4,7 @@ Turns an idea and its research into a plan someone can build without asking agai
 
 - **Starts:** Steps 1 to 3 of the pipeline ([`docs/TEAMS.md`](../../../../docs/TEAMS.md)) for size M (grill, 5-line plan) and L (full); size S skips it.
 - **Runs as:** A thread `Planner · <topic>` on Fable, on Opus when Fable is unavailable (`docs/TEAMS.md`, Roster); Researcher and Analytics run as its subagents.
-- **Uses:** `operator` SKILL.md (Grill first, Brainstorm first), [`../templates/features.json`](../templates/features.json), the Researcher's `RESEARCH.md` (what exists already comes first)
+- **Uses:** Load: none. Reads the operator SKILL.md as a file (Grill first, Brainstorm first; the skill itself is for the coordinator), [`../templates/features.json`](../templates/features.json), the Researcher's `RESEARCH.md` (what exists already comes first)
 - **Model and handoff:** the brief names both; the rule is [project-manager.md](project-manager.md#model-and-handoff-in-every-brief).
 
 ## Every time

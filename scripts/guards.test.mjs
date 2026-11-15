@@ -151,6 +151,22 @@ test('check.mjs fails when a role file drops the model-and-handoff link or the b
   } finally { rmSync(copy, { recursive: true, force: true }) }
 })
 
+test('check.mjs fails when a role file has no Load: part or names a skill claude-setup does not have (#615)', () => {
+  const copy = mkdtempSync(join(tmpdir(), 'guards-repo-'))
+  try {
+    cpSync(root, copy, { recursive: true, filter: (p) => !p.includes(`${join(root, '.git')}`) })
+    const run = () => spawnSync(process.execPath, [join(copy, 'scripts', 'check.mjs')], { encoding: 'utf8' })
+    assert.equal(run().status, 0)
+    const edit = (f, from, to) => { const p = join(copy, '.claude/skills/operator/roles', f); writeFileSync(p, readFileSync(p, 'utf8').replace(from, to)) }
+    edit('researcher.md', 'Load: toolbox', 'Always: toolbox')
+    edit('analytics.md', 'Load: market', 'Load: marketing-plan')
+    edit('reviewer.md', 'Load: none.', 'Load: none. Uses `toolbox` too.')
+    const r = run()
+    assert.equal(r.status, 1)
+    for (const want of ['roles/researcher.md: the Uses line lacks "Load:"', 'roles/analytics.md: Load names "marketing-plan"', 'roles/reviewer.md: the skill "toolbox" is named outside Load']) assert.ok(r.stderr.includes(want), `missing: ${want}\n${r.stderr}`)
+  } finally { rmSync(copy, { recursive: true, force: true }) }
+})
+
 // Compact guard: PreCompact instructions only (S8: the state note file is gone).
 const compactFile = join(root, 'global/compact-guard.mjs')
 const runCompact = (input, env = {}) => spawnSync(process.execPath, [compactFile], { input, encoding: 'utf8', timeout: 10000, env: { ...process.env, ...env } })
@@ -1321,7 +1337,7 @@ test('rule-guard: the hook blocks a first reply until the fallback files are rea
     const done = [spawned, ...['.claude/skills/impeccable/SKILL.md', '.claude/skills/ui-review/SKILL.md', '.claude/agents/design-critic.md'].map(read)].join('\n')
     assert.equal(run(done, `${receipt}\nHi (◕‿◕)`).status, 0, 'files read, receipt copied: the reply goes out')
     assert.equal(blocked.status, 2)
-    assert.match(blocked.stderr, /missing: frontend-design, impeccable, ui-review, design-critic \(read \.claude\/skills\/impeccable\/SKILL\.md, \.claude\/skills\/ui-review\/SKILL\.md, \.claude\/agents\/design-critic\.md instead; no file for frontend-design\)/, 'an empty home says what is missing, with the file to read')
+    assert.match(blocked.stderr, /missing: frontend-design, impeccable, ui-review \(read \.claude\/skills\/impeccable\/SKILL\.md, \.claude\/skills\/ui-review\/SKILL\.md instead; no file for frontend-design\)/, 'an empty home says what is missing, with the file to read')
     // No checkout at or above the cwd (a project thread that did not add_repo): never a false `none`.
     rmSync(join(dir, 'claude-setup'), { force: true })
     const bare = mkdtempSync(join(tmpdir(), 'no-setup-'))
