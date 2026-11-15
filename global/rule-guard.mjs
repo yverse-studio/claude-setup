@@ -1,15 +1,8 @@
 #!/usr/bin/env node
 // Rule guard. Usage: rule-guard.mjs pre|prompt|stop (hook entries PreToolUse, UserPromptSubmit, Stop),
 // or rule-guard.mjs read <url> [max chars] to read a whole web page as text without an Allow prompt.
-// Turns CLAUDE.md rules that were text only into checks (audit 2026-10-27: 17 of 20 rules had no
-// guard and were skipped whenever CLAUDE.md did not load).
-// pre: refuses (exit 2) what CLAUDE.md, Hard rules and How to work forbid; each check below names its rule (replyRule, neverPushBlock, gateBlock, ...).
-// stop: a thread that posted `Done:` resolves itself.
-// prompt: a bare "stop" gets the matching CLAUDE.md line put next to the message, and
-// the first message naming `Role: <role>` (the brief block, operator/briefs.md) gets that role's
-// Roster row and playbook put into context, so a thread always knows what it is (yskills 2026-10-27).
-// pre also warns, never blocks, when a new PR in a repo with a PROGRESS.md leaves its `## Jetzt` block
-// missing or untouched (docs/hq-rows.md, Jetzt block: HQ shows every project from that block).
+// Turns CLAUDE.md rules that were text only into checks; each check below names its rule. stop: a thread that posted `Done:` resolves itself.
+// prompt: a bare "stop" gets its CLAUDE.md line, a brief gets its checks and its role's card (yskills 2026-10-27). pre also warns, never blocks, on a PR without its `## Jetzt` update.
 // CLAUDE_SETUP_RULE_GUARD=off turns it off. It never breaks a tool call on its own errors.
 
 import { execFileSync } from 'node:child_process'
@@ -960,15 +953,21 @@ async function stampFromTranscript(session, transcript, cwd) {
   const role = roleOf(withoutOlderStamps(sources.map(stripTags)).join('\n'), read(join(setupRoot(cwd), 'docs', 'TEAMS.md')))
   if (role) writeFileSync(stamp, role.name)
 }
-// #608: the prompt hook has a 5 s limit; when it was cancelled before the card, only the transcript holds the spawn. A thread with no stamp and no lock gets
-// its brief check and role card at its first tool call; the stamp comes with the card, so the receipt waits for it.
+// #608: the prompt hook has a 5 s limit; when it was cancelled before it printed, only the transcript holds the spawn. Until the start mark exists (written
+// once the card was printed, here or by the prompt hook) a thread with no lock and no finished tool call gets its brief check and role card at its first call.
+const startMark = (session) => join(tmpdir(), `claude-setup-start-${String(session).replace(/\W/g, '')}`)
 async function startFromTranscript(session, transcript, cwd) {
-  if (!session || existsSync(join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)) || existsSync(lockFile(session))) return ''
+  if (!session || existsSync(startMark(session)) || existsSync(lockFile(session))) return ''
   const t = transcript(), brief = spawnPrompt('', t.split('\n').find((l) => /"type":"user"/.test(l)) ?? '')
-  if (!brief) return ''
+  if (!brief || toolCalls(t).some((c) => c.result)) return '' // a thread that already worked (new container, no temp files) keeps going
+  writeFileSync(startMark(session), '')
   const check = await briefCheck(brief, cwd, knownModel(session, t))
   updateLock(session, check)
-  return [check, await roleContext(brief, cwd, session)].filter(Boolean).join('\n')
+  const stamp = join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`), kept = read(stamp) // roleContext writes it only once
+  if (kept) unlinkSync(stamp)
+  const card = await roleContext(brief, cwd, session)
+  if (kept) writeFileSync(stamp, kept)
+  return [check, card].filter(Boolean).join('\n')
 }
 export function lockBlock(tool, session) {
   const f = session ? lockFile(session) : ''
@@ -1134,6 +1133,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           const roleCardText = await roleContext(brief, cwd, session)
           await stampFromTranscript(session, () => (transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : ''), cwd)
           const context = [checkNow, relayNote, isStart ? await gateBriefContext(brief, model) : '', guard, card, modelNote, roleCardText, await itemContext(brief, cwd, session), await stopNote(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
+          if (isStart && session) writeFileSync(startMark(session), '')
           if (context) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: context } }))
           return
         }

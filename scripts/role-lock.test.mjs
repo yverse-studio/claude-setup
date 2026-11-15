@@ -440,3 +440,26 @@ test('a spawn whose prompt hook never ran is checked and given its card from the
   assert.equal(post.status, 2, 'the receipt is demanded')
   assert.match(post.stderr, /you are the Programmer of this task/, 'and the card it is demanded for arrives in the same call')
 })
+
+// #617 gate round 1: a thread that already worked (new container, no temp files) is never locked on its old start brief, and a stamp the cancelled
+// prompt hook left behind is no proof that its card arrived.
+test('#608: a thread that already worked is left alone, and a stamp without the start mark does not hide the card', () => {
+  const row = (message, type = 'user') => `${JSON.stringify({ type, message })}\n`
+  const make = (brief) => {
+    const id = `rolelock${process.pid}x${++n}`
+    const transcript = join(mkdtempSync(join(tmpdir(), 'rl-608b-')), 't.jsonl')
+    sessionTranscripts.set(id, transcript)
+    appendFileSync(transcript, row({ role: 'user', content: spawn(brief) }))
+    return { id, transcript }
+  }
+  const worked = make(`Kit: setup · Size: S\n${BLOCKS}`) // a start brief that a relay corrected long ago
+  appendFileSync(worked.transcript, row({ role: 'assistant', content: [{ type: 'tool_use', id: 't1', name: 'Bash', input: { command: 'ls' } }] }, 'assistant') + row({ role: 'user', content: [{ type: 'tool_result', tool_use_id: 't1', content: 'ok' }] }))
+  assert.equal(tool(worked.id, 'Bash', { command: 'ls' }).status, 0, 'a thread with a finished tool call is not locked again')
+
+  const killed = make(`Role: Programmer · Kit: setup · Size: S\n${BLOCKS}`)
+  writeFileSync(join(tmpdir(), `claude-setup-role-${killed.id}`), 'Programmer') // what roleContext wrote before the hook was cancelled
+  const call = tool(killed.id, 'Bash', { command: 'ls' })
+  assert.equal(call.status, 0)
+  assert.match(JSON.parse(call.stdout).hookSpecificOutput.additionalContext, /you are the Programmer of this task/, 'the card arrives although the stamp was already on disk')
+  assert.equal(readFileSync(join(tmpdir(), `claude-setup-role-${killed.id}`), 'utf8'), 'Programmer', 'the stamp stays')
+})
