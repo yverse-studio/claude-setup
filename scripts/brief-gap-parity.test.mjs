@@ -8,6 +8,7 @@ import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
 import { BRIEF_FIELDS, briefProblems, classify } from '../global/team-guard.mjs'
 import { briefCheck } from '../global/rule-guard.mjs'
+import { modelFor } from '../global/card-render.mjs'
 
 process.env.PLAN_FILE = '/nonexistent/PLAN.json'
 const root = join(fileURLToPath(import.meta.url), '..', '..')
@@ -16,7 +17,7 @@ const checklists = readFileSync(join(root, '.claude/skills/operator/checklists.m
 const spawn = (brief) => `<wake reason="spawn"><relay>${brief}</relay></wake>`
 const FULL = ['Item: M50', 'Plan: p.md', 'Acceptance: tests pass', 'Model: sonnet', 'Skills: x', 'Done when: tests pass', 'Stop when: 3 rounds', 'Start: read MEMORY.md first',
   'Threads: list_threads checked, none open on this topic', 'Prior art: obra/superpowers -> adapt, because it exists', 'Gate: Reviewer · x before owner', 'Sheet: sheet.md', 'Look-Lock: card https://x.y/z']
-const MODEL = { Programmer: 'claude-sonnet-5-5', Planner: 'claude-fable-5-2' }
+const modelOf = (role, brief) => modelFor(role, brief.match(/\bSize:[ \t]*([SML])\b/i)?.[1] ?? 'M', teams) // the Roster row's id, as the check prints it
 const BRIEFS = [
   ['Programmer', 'Role: Programmer · Kit: game · Size: M\nItem: #5\nBuild the thing.'],
   ['Programmer', 'Role: Programmer · Kit: game · Size: M\nBuild the thing.'],
@@ -30,8 +31,8 @@ const BRIEFS = [
 
 test('every judgment gap the thread names is named by the check, and a brief the check passes is not refused', async () => {
   for (const [role, brief] of BRIEFS) {
-    const found = briefProblems(brief, { model: MODEL[role], title: `${role} · check`, teams, checklists }).join('\n')
-    const refusal = await briefCheck(spawn(brief), root, MODEL[role])
+    const found = briefProblems(brief, { model: modelOf(role, brief), title: `${role} · check`, teams, checklists }).join('\n')
+    const refusal = await briefCheck(spawn(brief), root, modelOf(role, brief))
     for (const f of classify(brief).judgment) {
       const label = BRIEF_FIELDS.find((x) => x.key === f.key)
       assert.ok(found.includes(label.name ?? label.key) || /Tester/.test(f.key), `${f.key} is a judgment gap of the thread; the check names it (${brief.split('\n')[0]})\n${found}`)
@@ -42,8 +43,8 @@ test('every judgment gap the thread names is named by the check, and a brief the
 
 test('the two lists differ by design: the thread names the judgment gaps only, the check also names the lines the thread fills itself', async () => {
   const brief = 'Role: Programmer · Kit: game · Size: M\nItem: #5\nBuild the thing.'
-  const found = briefProblems(brief, { model: MODEL.Programmer, title: 'Programmer · check', teams, checklists }).join('\n')
-  const refusal = await briefCheck(spawn(brief), root, MODEL.Programmer)
+  const found = briefProblems(brief, { model: modelOf('Programmer', brief), title: 'Programmer · check', teams, checklists }).join('\n')
+  const refusal = await briefCheck(spawn(brief), root, modelOf('Programmer', brief))
   assert.match(found, /Sheet:[\s\S]*Look-Lock:/)
   assert.match(refusal, /Sheet is missing[\s\S]*Look-Lock is missing/)
   assert.match(found, /Model:, Skills:/)
