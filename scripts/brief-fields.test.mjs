@@ -154,7 +154,7 @@ test('a brief with a token-count stop or hand-off line is refused with the hando
     'Acceptance: “hand off at 250k tokens” gets the refusal text; stop after 3 rounds', 'Acceptance: pause menu opens; context menu shows 12 items at 100 % zoom', 'Context: issue #587, stop words list is 14 entries, see PR at 2e4785f']) assert.doesNotMatch(problems([ok]).join('\n'), /token count/, `passes: ${ok}`)
 })
 
-// #627 (GameDev cowgirl 14.-15.11.): plan v2 was built from cloud docs only and failed the gate. An Animator brief names the scene docs the project lists
+// #627 (GameDev 2026-11-15, two-figure scene): plan v2 was built from cloud docs only and failed the gate. An Animator brief names the scene docs the project lists
 // and the old scene the plan copies; a missing line is a repair the thread closes itself, and the role file carries the stop rule for an offline laptop.
 test('#627: an Animator brief without a Scene docs line is repaired, other roles are not asked, and the role file holds the four rules', async () => {
   const animator = (extra = []) => ['Role: Animator · Kit: game · Size: M', ...Object.entries(LINES).filter(([k]) => k !== 'Scene docs').map(([, l]) => l), ...extra].join('\n')
