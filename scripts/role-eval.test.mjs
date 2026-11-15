@@ -10,7 +10,7 @@ const row = (counts, extra = {}) => buildRow({ role: 'reviewer', hash: 'h', mode
 const res = (role, base, runs = 3) => ({ costUsd: 1, cases: [{ name: 'c', arms: { with: Array.from({ length: runs }, (_, i) => ({ passed: i < role, graders: [] })), without: Array.from({ length: runs }, (_, i) => ({ passed: i < base })) } }] })
 
 test('a: the command line holds the safety flags', () => {
-  const a = buildArgs({ model: 'M', judge: 'J', out: '/o', json: '/j', dir: '/d' }).join(' ')
+  const a = buildArgs({ dir: '.', model: 'M', judge: 'J', out: '/o', json: '/j', dir: '/d' }).join(' ')
   for (const f of ['--no-publish', '--output-dir /o', '--model M', '--judge-model J', '--max-cost-usd 3', '--runs 3', '--ablation with-without']) assert.ok(a.includes(f), f)
 })
 test('b: model id from the first tier word of the Roster cell', () => {

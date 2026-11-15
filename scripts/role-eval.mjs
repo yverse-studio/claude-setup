@@ -1,7 +1,7 @@
-// node scripts/role-eval.mjs <role> ["open: ..."]: evals/roles/<role>/ with w/wo role file > config/role-evals.json
+// node scripts/role-eval.mjs <role> ["open: ..."]: evals/roles/<role>/ with and without its file
 import { createHash } from 'node:crypto'
 import { spawnSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 
@@ -15,7 +15,7 @@ export function modelId(cell, models) {
   return id
 }
 
-export const buildArgs = ({ dir = '.', model, judge, out, json }) => [
+export const buildArgs = ({ dir, model, judge, out, json }) => [
   'plugin', 'eval', dir, '--runs', '3', '--ablation', 'with-without', '--max-cost-usd', '3', '--no-publish', '--trust-plugin',
   '--model', model, '--judge-model', judge, '--output-dir', out, '--json', json,
 ]
@@ -63,9 +63,8 @@ if (process.argv[1].endsWith('role-eval.mjs')) {
   }
   spawnSync('claude', buildArgs({ dir: tmp, model, judge: modelId('Haiku', teams), out: join(tmp, 'out'), json }), { stdio: ['ignore', 'ignore', 'inherit'] })
   const file = join(root, 'config/role-evals.json')
-  let ledger = {}
-  try { ledger = JSON.parse(readFileSync(file, 'utf8')) } catch {}
-  const r = (ledger[role] = buildRow({ role, hash: roleHash(text), model, date: new Date().toISOString().slice(0, 10), open, result: JSON.parse(readFileSync(json, 'utf8')), prev: ledger[role] }))
+  const ledger = existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : {}
+  const r = (ledger[role] = buildRow({ role, hash: roleHash(text), model: model.split('-')[1], date: new Date().toISOString().slice(0, 10), open, result: JSON.parse(readFileSync(json, 'utf8')), prev: ledger[role] }))
   writeFileSync(file, JSON.stringify(ledger, null, 2) + '\n')
   for (const [c, n] of Object.entries(r.cases)) console.log(`${role} ${c}: role ${n.role}/${n.runs} baseline ${n.baseline}/${n.runs} fired ${n.fired} need ${r.pass}`)
   console.log(`needs role file: ${r.needsRole}; ${r.open}; ${r.costUsd.toFixed(2)} USD`)
