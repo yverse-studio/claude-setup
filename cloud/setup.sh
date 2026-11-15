@@ -1172,14 +1172,15 @@ export function simpleCommands(text, depth = 0) {
 
 const GUARD_FILE = /\.claude[\\/]claude-setup[\\/](?:rule-guard|team-guard|gate-rounds|task-ledger|card-render)\.mjs$/
 const CLI_VERBS = ['status', 'check', 'init', 'direct', 'card', 'picture', 'waive', 'merge', 'post', 'record']
-const MERGE_DOOR = /pulls\/[^\s/]*\/+(?:ccr\/+auto_)?merge|repos\/[^\s/]+\/[^\s/]+\/merges\b|mergePullRequest|enablePullRequestAutoMerge/ // the PR merge, its auto route and the branch merge (POST .../merges)
+const MERGE_DOOR = /pulls\/[^\s/]*\/(?:ccr\/auto_)?merge|repos\/[^\s/]+\/[^\s/]+\/merges\b|mergePullRequest|enablePullRequestAutoMerge/ // the PR merge, its auto route and the branch merge (POST .../merges)
+const flat = (a) => { let t = a; try { t = decodeURIComponent(a) } catch {} return t.replace(/\/(?:\.?\/)+/g, '/') } // doubled slashes, /./ and %-escapes read as the route they reach
 
 // gh decided by command position only: a merge goes through the counter. Comments are never read here: a verdict posted through plain gh
 // is not counted, so it can never lead to a merge (the comment tool or `post` counts it).
 function ghProblem(s) {
   const w = [] // the subcommand words: flags and the value of -R/--repo dropped
   for (let j = 0; j < s.args.length; j++) { const x = s.args[j]; if (/^(-R|--repo)$/.test(x)) j++; else if (!x.startsWith('-')) w.push(x) }
-  const merge = (s.a0 === 'gh' && w[0] === 'pr' && w[1] === 'merge') || ((s.a0 !== 'gh' || w[0] === 'api') && s.args.some((a) => MERGE_DOOR.test(a))) // gh api, curl and wget reach the same routes
+  const merge = (s.a0 === 'gh' && w[0] === 'pr' && w[1] === 'merge') || ((s.a0 !== 'gh' || w[0] === 'api') && s.args.some((a) => MERGE_DOOR.test(flat(a)))) // gh api, curl and wget reach the same routes
   return merge ? 'gate ledger: a merge goes through the counter (gate.md, Rounds): the merge tool mcp__github__merge_pull_request, or "node ~/.claude/claude-setup/gate-rounds.mjs merge <owner/repo#n> [--squash|--merge|--rebase] [--auto] [--delete-branch]". It refuses a PR without a counted pass.' : null
 }
 
@@ -1224,7 +1225,7 @@ function bashProblem(cmd, dir, ctx) {
   // not a plain read (a copy, node -e, an import, a symlink) is refused, so the proofs cannot be walked around by renaming the script.
   if (/gate-rounds\.mjs/.test(cmd) && !list.every((s) => isCounterCall(s) || readsOnly(s))) return 'gate ledger: gate-rounds.mjs is run only as "node ~/.claude/claude-setup/gate-rounds.mjs <verb> <asset> ..." (gate.md, Rounds); copying it, importing it or running it through node -e is refused, because the proofs live in this hook and in the CLI. To read the file use the Read or Grep tool.'
   for (const s of list) {
-    if (/^(gh|curl|wget|http|https|xh)$/.test(s.a0)) { const r = ghProblem(s); if (r) return r }
+    if (/^(gh|curl|wget|http|https|xh|invoke-restmethod|invoke-webrequest|irm|iwr)$/i.test(s.a0)) { const r = ghProblem(s); if (r) return r }
     if (s.redirs.some((r) => !/\s/.test(r) && (named(r) || GUARD_FILE.test(r)))) return msg
     const script = s.a0 === 'node' ? s.args.find((a) => base(a) === 'gate-rounds.mjs') ?? s.args.find((a) => !a.startsWith('-')) : null
     if (script && base(script) === 'gate-rounds.mjs') {
