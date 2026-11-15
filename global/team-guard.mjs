@@ -252,13 +252,14 @@ const LEVEL_NEEDS = { Planner: ['research'], 'Game Designer': ['research', 'plan
 const levelRole = (plain) => plain.match(/^[ \t>-]*Role:[ \t]*(Game Designer|Planner|Programmer|Designer|Animator)\b/im)?.[1]
 export const needsLevelRole = (role) => Object.hasOwn(LEVEL_NEEDS, role)
 const needsLevel = (plain) => /^game$/i.test(plain.match(/\bKit:[ \t]*([\w-]+)/i)?.[1] ?? '') && !!levelRole(plain)
-// Each step is its own `·` segment whose value is a file (.md, .json) or a link (https, #cmsg_<id>), as the Sheet and Look-Lock rows read it.
+// Each step is its own `·` segment whose value is a file (.md, .json) or a link (https, #cmsg_<id>), bare or as a titled Markdown link, as the Sheet and Look-Lock rows read it.
 // Any `Level:` line of the brief may carry it, so a task line that starts with the word does not hide the real one.
 export const levelOk = (plain) => [...plain.matchAll(/^[ \t>-]*Level:[ \t]*([^\n]*)$/gim)].some(([, l]) => {
   if (/^n\/a[ \t]+\S.{9,}$/i.test(l.trim())) return true
-  const seg = l.split('·').map((x) => x.trim())
+  // A `·` inside a link title ([Planner · airport](#cmsg_…)) does not split the line.
+  const seg = l.replace(/\[[^\]]*\]/g, (t) => t.replace(/·/g, '-')).split('·').map((x) => x.trim())
   // Without a Role (an item body read on its own) all three steps are asked for.
-  return (LEVEL_NEEDS[levelRole(plain)] ?? ['research', 'plan', 'design']).every((k) => seg.some((x) => new RegExp(`^${k}[ \\t]+(\\S+\\.(md|json)\\b|https?:\\/\\/\\S+|\\S*#cmsg_?[A-Za-z0-9]{6,})`, 'i').test(x)))
+  return (LEVEL_NEEDS[levelRole(plain)] ?? ['research', 'plan', 'design']).every((k) => seg.some((x) => new RegExp(`^${k}[ \\t]+(\\[[^\\]]*\\]\\()?(\\S+\\.(md|json)\\b|https?:\\/\\/[^\\s)]+|\\S*#cmsg_?[A-Za-z0-9]{6,})`, 'i').test(x)))
 })
 const small = (plain) => /\bSize:[ \t]*S\b/i.test(plain)
 const gateRolePlain = (plain) => /^[ \t>-]*Role:[ \t]*(Tester|Reviewer|Security|Legal|Playtester|Hook Checker|Critic|Story Editor|Evaluator)\b/im.test(plain)
