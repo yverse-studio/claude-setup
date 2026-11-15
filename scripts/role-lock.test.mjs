@@ -522,3 +522,33 @@ test('#503 replay: a spawn brief inside the session-context row of a thread whos
   assert.equal(tool(id, 'Bash', { command: 'ls' }).status, 0)
   assert.equal(readFileSync(join(tmpdir(), `claude-setup-role-${id}`), 'utf8'), 'Reviewer')
 })
+
+// #615 (yskills 2026-11-15, "Ja, hart erzwingen"): the skills a thread must load come from its role file (`Load:`, `By kit:`), never from the brief's `Skills:` line; the first reply is refused until each was loaded or skipped with a reason.
+test('#615: the role file names the skills to load; the first reply is refused until each was loaded or skipped', async () => {
+  const { wanted } = await import('../global/rule-guard.mjs')
+  const role = (name) => readFileSync(join(root, `.claude/skills/operator/roles/${name}.md`), 'utf8')
+  assert.deepEqual(wanted(root, role('programmer'), 'Role: Programmer · Kit: game · Size: S'), ['game-3d', 'game-ux'], 'a game Programmer loads both game skills')
+  assert.deepEqual(wanted(root, role('programmer'), 'Role: Programmer · Kit: setup · Size: S'), [], 'the same role on the setup kit loads nothing')
+  assert.deepEqual(wanted(root, role('programmer'), 'Role: Programmer · Kit: site · Size: S\nSkills: ponytail'), ['publish'], 'the brief Skills line adds nothing')
+  assert.deepEqual(wanted(root, role('researcher'), 'Role: Researcher · Kit: setup · Size: M\nSkills: Planner role file and the skills listed in docs/TEAMS.md'), ['toolbox'], 'a free-text Skills line is not the source')
+  const POST = 'mcp__hearthbot__post_message'
+  const start = () => {
+    const id = `rolelock${process.pid}x${++n}`
+    const card = deliver(id, spawn(`Role: Researcher · Kit: setup · Size: M\n${BLOCKS}`)).stdout
+    return { id, card, line: tool(id, POST, { text: 'hi' }).stderr.match(/TEAMS\.md\): (Thread · [^\n]*)/)?.[1] }
+  }
+  const a = start()
+  assert.match(a.card, /Load before your first reply[^\n]*toolbox/, 'the role card names the list')
+  assert.match(tool(a.id, POST, { text: `${a.line}\nhi (◕‿◕)` }).stderr, /toolbox/, 'no Skill call: refused with the name')
+  assert.equal(tool(a.id, POST, { text: `${a.line}\nhi (◕‿◕)` }).status, 2)
+  appendFileSync(sessionTranscripts.get(a.id), `${JSON.stringify({ type: 'assistant', message: { content: [{ type: 'tool_use', id: 'u1', name: 'Skill', input: { skill: 'toolbox' } }] } })}\n`)
+  const loaded = tool(a.id, POST, { text: 'hi' }).stderr.match(/TEAMS\.md\): (Thread · [^\n]*)/)?.[1]
+  assert.match(loaded, /skills: toolbox /, 'the receipt says what was loaded')
+  assert.equal(tool(a.id, POST, { text: `${loaded}\nhi (◕‿◕)` }).status, 0, 'loaded: the reply goes out')
+  const b = start()
+  assert.equal(tool(b.id, POST, { text: `${b.line}\nskills skipped: toolbox, because this is a one-line lookup (◕‿◕)` }).status, 0, 'a skip with its reason passes')
+  assert.equal(tool(b.id, POST, { text: `${b.line}\nskills skipped: toolbox (◕‿◕)` }).status, 2, 'a skip without a reason does not')
+  const c = start()
+  appendFileSync(sessionTranscripts.get(c.id), `${JSON.stringify({ type: 'assistant', message: { content: [{ type: 'tool_use', id: 'r1', name: 'Read', input: { file_path: '/x/.claude/skills/toolbox/SKILL.md' } }] } })}\n`)
+  assert.equal(tool(c.id, POST, { text: `${c.line}\nhi (◕‿◕)` }).status, 0, 'a Read of its SKILL.md counts where a skill cannot load')
+})

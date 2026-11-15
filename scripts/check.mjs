@@ -348,6 +348,14 @@ for (const f of readdirSync(roleDir).filter((n) => n.endsWith('.md') && n !== 'p
   if (!readFileSync(join(roleDir, f), 'utf8').includes('project-manager.md#model-and-handoff-in-every-brief')) errors.push(`roles/${f}: lacks the link to "Model and handoff in every brief"`)
 }
 if (!readFileSync(join(roleDir, 'project-manager.md'), 'utf8').includes('## Model and handoff in every brief')) errors.push('roles/project-manager.md: lacks "Model and handoff in every brief"')
+// Role skills (#615): the hook forces what a role file's Uses line says under `Load:` and `By kit:`; each name there is a real skill, agent or plugin.
+const loadable = new Set([...dirs('.claude/skills'), ...readdirSync(join(root, '.claude/agents')).map((n) => n.replace(/\.md$/, '')), ...Object.values(json('config/plugins.json')?.global ?? {}).flat().map((p) => String(p.id ?? p).split('@')[0])])
+for (const f of readdirSync(roleDir).filter((n) => n.endsWith('.md') && n !== 'archivist.md')) {
+  const uses = readFileSync(join(roleDir, f), 'utf8').match(/^- \*\*Uses:\*\*[^\n]*/m)?.[0]?.replace(/\([^()]*\)/g, '')
+  if (!uses) continue
+  if (!/\bLoad:/.test(uses)) { errors.push(`roles/${f}: the Uses line lacks "Load:" (the skills the hook forces before the first reply, or "none")`); continue }
+  for (const k of ['Load', 'By kit']) for (const n of (uses.match(new RegExp(`${k}:([^.]*)`))?.[1] ?? '').split(/[^a-z0-9-]+/).filter(Boolean)) if (n !== 'none' && !loadable.has(n) && !/^(game|site|app|setup|video|story|social|store|roblox|shop)$/.test(n)) errors.push(`roles/${f}: ${k} names "${n}", which is no skill, agent or plugin of claude-setup`)
+}
 const briefsText = readFileSync(join(root, '.claude/skills/operator/briefs.md'), 'utf8')
 for (const part of ['Handoff:', '/handoff/<date>-<topic>.md']) {
   if (!briefsText.includes(part)) errors.push(`briefs.md: thread brief block lacks "${part}"`)

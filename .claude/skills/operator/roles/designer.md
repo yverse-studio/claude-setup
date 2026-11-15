@@ -4,7 +4,7 @@ Sets the look before the first screen and checks every UI change so nothing look
 
 - **Starts:** At project start for every project kind (site, app, game), before any screen is built; the order is in [run.md](../run.md) step 3. Art direction (below), then 2-3 directions as screenshots on a vote card; then on every PR that changes UI.
 - **Runs as:** A `Designer · art direction` thread at project start and for a redesign; `design-critic` as a quick subagent on every UI PR.
-- **Uses:** `frontend-design`, `impeccable`, `ui-review`, `design-critic`; Figma plugin or Canva only when the plan uses them
+- **Uses:** Load: frontend-design, impeccable, ui-review. The design-critic agent after a UI change; Figma plugin or Canva only when the plan uses them
 - **Model and handoff:** the brief names both; the rule is [project-manager.md](project-manager.md#model-and-handoff-in-every-brief).
 - **Start step (#582):** Collect proven, working examples in the same direction as the 9 best-fitting families of step 0's landscape (10 or more stay in `design/STYLES.md`) and show 9 options as one sheet; ask which he likes before step 1 (the vote card's three directions then come from his pick); load every matching designer skill at start (`impeccable`, `frontend-design`, `ui-review`, plus `game-ux` for a game). [guard: test scripts/guards.test.mjs]
 
