@@ -8,6 +8,7 @@ import { join } from 'node:path'
 import { test } from 'node:test'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { studioPath } from './paths.mjs'
+import { resolveLink } from './link-target.mjs'
 
 const root = join(fileURLToPath(import.meta.url), '..', '..')
 const read = (p) => JSON.parse(readFileSync(join(root, p), 'utf8'))
@@ -1304,6 +1305,11 @@ test('rule-guard: a skill that cannot load shows in the receipt and its file is 
     assert.match(missingNote({ missing: [{ name: 'nope', path: null }] }), /no file for nope/, 'a name with no file anywhere is still said')
     const full = join(home, 'full')
     cpSync(join(root, 'mods', 'setup-skills'), join(full, 'setup-skills'), { recursive: true, dereference: true })
+    // a Windows clone (core.symlinks=false) holds each skill link as a text file; copy the folder it names (#419)
+    for (const n of readdirSync(join(full, 'setup-skills', 'skills'))) {
+      const at = join(full, 'setup-skills', 'skills', n)
+      if (statSync(at).isFile()) { rmSync(at); cpSync(resolveLink(join(root, 'mods', 'setup-skills', 'skills', n)), at, { recursive: true, dereference: true }) }
+    }
     writeFileSync(join(home, '.claude', 'plugins', 'installed_plugins.json'), JSON.stringify({ plugins: { 'setup-skills@x': [{ installPath: join(full, 'setup-skills') }] } }))
     assert.deepEqual(skillStatus(['impeccable', 'ui-review'], { root, home, cwd: home }).missing, [], 'a fresh plugin copy carries the design skills')
     assert.ok(existsSync(join(full, 'setup-skills', 'skills', 'ui-review', 'scripts', 'design-check.mjs')), 'design-check.mjs resolves from the skill folder')
