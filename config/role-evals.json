@@ -6,12 +6,6 @@
     "date": "2026-11-15",
     "pass": 3,
     "cases": {
-      "clean-diff": {
-        "role": 0,
-        "baseline": 0,
-        "runs": 3,
-        "fired": 3
-      },
       "plan-reuses-code": {
         "role": 3,
         "baseline": 1,
@@ -26,7 +20,7 @@
       }
     },
     "needsRole": "yes",
-    "open": "open: clean-diff fixture is not clean (two-decimal rounding still lets 4.496 pass), case invalid until fixed; A5, A9 no case showed a need",
+    "open": "open: separates from no role on seeded-rounding (3 against 0) and plan-reuses-code (3 against 1), 3 of 3 runs loaded the role text; clean-diff withdrawn (fixture not clean, #662); A5, A9 no case showed a need",
     "costUsd": 3.9125966,
     "before": {
       "hash": "8f4ee22449260b35419f11afb6c9e4f6d0da0facf15d6ff246793822b44b0061",
@@ -46,186 +40,6 @@
       "open": "open: the baseline finds the seeded bug 3/3 on Opus and fails only the Not judged grader; the Fable answers were not kept",
       "costUsd": 1.3744994,
       "before": null
-    }
-  },
-  "researcher": {
-    "hash": "9b23f2938509c5acab66669e87d9d67e4cb47214337f4b2e15be18c030ef6a07",
-    "model": "opus-5-5",
-    "claude": "2.1.325",
-    "date": "2026-11-15",
-    "pass": 2,
-    "cases": {
-      "judge-a-pr": {
-        "role": 0,
-        "baseline": 0,
-        "runs": 3,
-        "fired": 0
-      },
-      "line-as-read": {
-        "role": 0,
-        "baseline": 0,
-        "runs": 3,
-        "fired": 0
-      },
-      "ours-first": {
-        "role": 2,
-        "baseline": 2,
-        "runs": 3,
-        "fired": 0
-      }
-    },
-    "needsRole": "no",
-    "open": "open: line-as-read grader wants path:line but answers say at line 14, grader too strict; Skill not loaded in any run; A7, A9 no case showed a need",
-    "costUsd": 1.188268,
-    "before": {
-      "hash": "9b23f2938509c5acab66669e87d9d67e4cb47214337f4b2e15be18c030ef6a07",
-      "model": "opus-5-5",
-      "claude": "2.1.325",
-      "date": "2026-11-15",
-      "pass": 2,
-      "cases": {
-        "judge-a-pr": {
-          "role": 0,
-          "baseline": 0,
-          "runs": 3,
-          "fired": 0
-        },
-        "line-as-read": {
-          "role": 0,
-          "baseline": 1,
-          "runs": 3,
-          "fired": 0
-        },
-        "ours-first": {
-          "role": 2,
-          "baseline": 1,
-          "runs": 3,
-          "fired": 0
-        }
-      },
-      "needsRole": "unclear",
-      "open": "open: see issue",
-      "costUsd": 1.1844754
-    }
-  },
-  "programmer": {
-    "hash": "6e5ce0f4ec530c9ba26d80345acf769a5772d9ace10052c096db5d083df5ed09",
-    "model": "sonnet-5-5",
-    "claude": "2.1.325",
-    "date": "2026-11-15",
-    "pass": 2,
-    "cases": {
-      "grade-your-own": {
-        "role": 0,
-        "baseline": 0,
-        "runs": 3,
-        "fired": 0
-      },
-      "red-test-first": {
-        "role": 3,
-        "baseline": 3,
-        "runs": 3,
-        "fired": 3
-      },
-      "smallest-change": {
-        "role": 3,
-        "baseline": 3,
-        "runs": 3,
-        "fired": 0
-      }
-    },
-    "needsRole": "no",
-    "open": "open: red-test-first and smallest-change pass without the role file; grade-your-own fails on both arms (declines PASS, never names the gate); A9 no case showed a need",
-    "costUsd": 0.6810317000000001,
-    "before": {
-      "hash": "6e5ce0f4ec530c9ba26d80345acf769a5772d9ace10052c096db5d083df5ed09",
-      "model": "sonnet-5-5",
-      "claude": "2.1.325",
-      "date": "2026-11-15",
-      "pass": 2,
-      "cases": {
-        "grade-your-own": {
-          "role": 0,
-          "baseline": 0,
-          "runs": 3,
-          "fired": 0
-        },
-        "red-test-first": {
-          "role": 3,
-          "baseline": 3,
-          "runs": 3,
-          "fired": 3
-        },
-        "smallest-change": {
-          "role": 3,
-          "baseline": 3,
-          "runs": 3,
-          "fired": 0
-        }
-      },
-      "needsRole": "no",
-      "open": "open: see issue",
-      "costUsd": 0.6708599
-    }
-  },
-  "planner": {
-    "hash": "9c55175efd27c6f823687c6ebadac578fbdce6ffde4f2e1c5ee91a29dfb6c3cb",
-    "model": "fable-5-2",
-    "claude": "2.1.325",
-    "date": "2026-11-15",
-    "pass": 2,
-    "cases": {
-      "command-per-step": {
-        "role": 0,
-        "baseline": 0,
-        "runs": 3,
-        "fired": 1
-      },
-      "false-claim": {
-        "role": 0,
-        "baseline": 0,
-        "runs": 3,
-        "fired": 2
-      },
-      "skip-the-plan": {
-        "role": 0,
-        "baseline": 0,
-        "runs": 3,
-        "fired": 0
-      }
-    },
-    "needsRole": "no",
-    "open": "open: Skill not loaded in 3 of 3 skip-the-plan runs, so the role arm did not see the role text; path-line grader needs a file in the case; A5, A6, A9 no case showed a need",
-    "costUsd": 2.9681878,
-    "before": {
-      "hash": "9c55175efd27c6f823687c6ebadac578fbdce6ffde4f2e1c5ee91a29dfb6c3cb",
-      "model": "fable-5-2",
-      "claude": "2.1.325",
-      "date": "2026-11-15",
-      "pass": 2,
-      "cases": {
-        "command-per-step": {
-          "role": 0,
-          "baseline": 0,
-          "runs": 3,
-          "fired": 1
-        },
-        "false-claim": {
-          "role": 0,
-          "baseline": 0,
-          "runs": 3,
-          "fired": 3
-        },
-        "skip-the-plan": {
-          "role": 0,
-          "baseline": 0,
-          "runs": 3,
-          "fired": 0
-        }
-      },
-      "needsRole": "no",
-      "open": "open: see issue",
-      "costUsd": 3.0266656000000003
     }
   }
 }
