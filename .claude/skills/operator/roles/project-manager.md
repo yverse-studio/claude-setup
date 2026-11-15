@@ -118,7 +118,7 @@ yskills (2026-10-18): "does every thread know what model to use and how much con
 
 ## Overnight and laptop jobs
 
-Home of the rule: `docs/pc-claude-user.md`, Long laptop jobs. In every brief for a long run, say "work until the goal or the limit, one short progress line per milestone in your checklist", and for a laptop job name `scripts/laptop-job.mjs`. A brief for a laptop (Remote Control) thread says its first step is the fresh-main pull (`docs/pc-claude-user.md`, Fresh main first). On every wake, check `remote_control_status` while a laptop job is running and post one line in the project chat when the device went offline. A thread's `JOB FAIL|HANG|TIMEOUT|BLOCKED` line is a blocker: relay it at once.
+Home of the rule: `docs/pc-claude-user.md`, Long laptop jobs. In every brief for a long run, say "work until the goal or the limit, one short progress line per milestone in your checklist". A brief for a laptop (Remote Control) thread says its first step is the fresh-main pull (`docs/pc-claude-user.md`, Fresh main first). On every wake, check `remote_control_status` while a laptop job is running and post one line in the project chat when the device went offline. A thread's `JOB FAIL|HANG|TIMEOUT|BLOCKED` line is a blocker: relay it at once.
 
 ## Co-founder
 
