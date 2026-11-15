@@ -474,3 +474,13 @@ test('#603 B: a thread lifted by a relay with `Item: new` prints `item new` in i
   assert.equal(post.status, 2, 'the receipt is demanded')
   assert.match(post.stderr, /Thread · Programmer · setup · M · item new · /, 'with the item of the relay')
 })
+
+// #621: the receipt's Kit and Size come from the stamp line, not from the first `Kit:` or `Size:` anywhere in the relays and the brief.
+test('#621: a prose relay that names another thread\'s Kit and Size does not change the receipt', () => {
+  const id = `rolelock${process.pid}x${++n}`
+  deliver(id, spawn(`Role: Programmer · Kit: setup · Size: S\n${BLOCKS}`))
+  appendFileSync(sessionTranscripts.get(id), `${JSON.stringify({ type: 'attachment', attachment: { type: 'queued_command', prompt: queued('The other thread runs with Kit: game and Size: L, not you.'), origin: PROJECTS } })}\n`)
+  const post = tool(id, 'mcp__hearthbot__post_message', { text: 'hi' })
+  assert.equal(post.status, 2, 'the receipt is demanded')
+  assert.match(post.stderr, /Thread · Programmer · setup · S · item M30 · /, 'with the Kit and Size of the stamp')
+})

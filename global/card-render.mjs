@@ -1,8 +1,6 @@
 #!/usr/bin/env node
-// M50 slice B: the renderer of everything the project chat reads, in the boot copy (~/.claude/claude-setup/card-render.mjs), so every thread
-// start can refresh a stale rulebook in ITS project with no checkout: COORDINATOR-CARD.md, COORDINATOR-RULES-INDEX.md, ROSTER.md and
-// briefs/<role>.md. All of it is rendered from docs/TEAMS.md, docs/MAP.md and BRIEF_FIELDS (global/team-guard.mjs); nothing in it is written by hand.
-// scripts/coordinator-card.mjs is the CLI over it, rule-guard calls refreshCard() when a thread starts (docs/MAP.md, Coordinator card).
+// M50 slice B: renders the project chat's rulebook (COORDINATOR-CARD.md, COORDINATOR-RULES-INDEX.md, ROSTER.md, briefs/<role>.md) from docs/TEAMS.md, docs/MAP.md and
+// BRIEF_FIELDS, in the boot copy so every thread start can refresh a stale one with no checkout; scripts/coordinator-card.mjs is the CLI, rule-guard calls refreshCard().
 import { createHash, randomBytes } from 'node:crypto'
 import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
