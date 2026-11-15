@@ -83,3 +83,26 @@ in each section.
 - 2026-10-07 (hq-characters HANDOFF): VRoid clothing presets (.vroidcustomitem) only apply inside the VRoid Studio desktop GUI; headless routes are a full VRM whose outfit fits, or a texture repaint of the existing meshes.
 - 2026-10-07 (hq-characters remix REPORT): upload sizes: a VRoid sample is 14.2 MB (textures 5.9 MB, geometry with 41 face blendshapes 3.7 MB); the in-browser shrink rebuilds the GLB with every texture over 1024 px scaled to 1024 (canvas PNG, 4-byte-aligned views) and lands at 9.6 MB.
 - 2026-10-07 (hq-characters HANDOFF): a loader test that waits 14 s is too short for a 14 MB VRM; wait 25 s or load the shrunk file.
+
+## Thread briefs on the game kit
+
+- 2026-11-15 (CompanyXY, six brief restarts in one evening): each start failed on one line the guard checks per kit. A game-kit Programmer or Animator brief needs: `Sheet:` a cast sheet ending `.md`, or `n/a <why, 10+ characters>`; `Look-Lock:` an https or `#cmsg_` link (omitted with `Sheet: n/a`); `Level:` `research <page> · plan <file> · design <file>` or `n/a <why>`; the Animator on Sonnet; no Director on this kit, the Planner plans. A Remote Control session a thread starts gets the full brief again, not a summary. Worked example (placeholders):
+
+```
+Role: Programmer · Kit: game · Size: M
+Model: <id of the Roster row, docs/TEAMS.md>
+Item: new
+Plan: plans/chapter-02.md
+Acceptance: scene 3 renders without clipping, gate 4.5
+Threads: list_threads checked: none open on this topic
+Prior art: lib/characters/CH_x/gate/ -> adapt, because the fit passed there
+Skills: .claude/skills/operator/roles/programmer.md
+Sheet: lib/characters/CH_x/SHEET.md
+Look-Lock: #cmsg_01ABCDEFGH (approved look; decisions in lib/characters/CH_x/DECISIONS.md)
+Level: n/a no level changes in this chapter
+Gate: Reviewer · chapter 2 before owner
+Done when: node scripts/pre-pr.mjs is green
+Stop when: 3 gate rounds
+Start: read MEMORY.md first, then lib/characters/CH_x/DECISIONS.md
+```
+
