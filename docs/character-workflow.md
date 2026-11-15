@@ -20,6 +20,8 @@ and yskills had to say it twice. This page is the fix.
 
 ## Body, then outfits (the fixed order)
 
+**Owner decisions (#599):** one file per character, `lib/characters/CH_<name>/DECISIONS.md`, holds every owner choice as a line: date, the decision, the link of his message. A builder reads it before the first job; the coordinator reads it before a taste card; a new choice is written there in the turn it is made. A look listed there changes only by a new owner decision. `pipeline-gates.mjs sheet` reports a cast sheet with a look lock and no DECISIONS.md beside it.
+
 **Step 0, before any model (companyxy 2026-11-12: about 20 fit rounds):** the character has an approved cast sheet with measures and an owner-card look lock ([`preproduction-workflow.md`](preproduction-workflow.md), template [`templates/character-bible.md`](templates/character-bible.md)); `node scripts/pipeline-gates.mjs sheet <SHEET.md>` must say OK. The brief names `Sheet:` and `Look-Lock:`, or declares `Sheet: n/a <why>` for a job that touches no body, face or outfit (team-guard blocks one without). The gates below (fit against every `BT_` and `CH_` state, look switches per state via `scripts/blender/look_switches.py`, driver dump check, fresh `thumb.jpg`) are listed in [`gate.md`](../.claude/skills/operator/gate.md), Asset PRs, Pipeline gates.
 
 The one order for every character, in every plan and masterplan (yskills 2026-11-12: "erst body perfekt dann
