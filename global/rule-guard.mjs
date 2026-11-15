@@ -647,7 +647,7 @@ export function wanted(root, playbook, brief) {
   const known = new Set([...ls('.claude/skills'), ...ls('.claude/agents').map((f) => f.replace(/\.md$/, '')), ...[...read(join(root, 'config', 'plugins.json')).matchAll(/"id":\s*"([\w-]+)@/g)].map((m) => m[1])])
   const uses = (playbook.match(/^[ \t>-]*\**Uses:?\**[^\n]*/m)?.[0] ?? '').replace(/\([^()]*\)/g, '')
   const part = (k) => uses.match(new RegExp(`${k}:([^.]*)`))?.[1] ?? ''
-  const kit = brief.replace(/[*_`]/g, '').split('\n').map((l) => l.match(/^[ \t>-]*(?:Role:.*?\b)?Kit:[ \t]*([A-Za-z0-9-]+)/)?.[1]).find(Boolean) // the stamp's own Kit, not a mention in a note
+  const kit = brief.replace(/[*_`]/g, '').split('\n').map((l) => l.match(/(?:^|>)[ \t>-]*(?:Role:.*?\b)?Kit:[ \t]*([A-Za-z0-9-]+)/)?.[1]).find(Boolean) // the stamp's own Kit, not a mention in a note
   const byKit = part('By kit').split(';').map((e) => e.split(':')).filter(([k]) => k.trim() === kit).map(([, v]) => v ?? '')
   return [...new Set([part('Load'), ...byKit].flatMap((v) => v.split(/[^a-z0-9-]+/)))].filter((n) => known.has(n))
 }
