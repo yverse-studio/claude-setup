@@ -318,12 +318,15 @@ export const itemRef = (brief) => { const t = itemToken(brief); return t && t !=
 // One shared deadline of 2 s for every route (the prompt hook's own limit is 5 s): each step gets what is left, at most `cap`.
 let deadline = 0
 const left = (cap) => Math.min(cap, deadline - Date.now())
-function originRepo(cwd) {
+function originRepo(cwd, child = true) {
   try {
     const url = execFileSync('git', ['-C', cwd, 'remote', 'get-url', 'origin'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], killSignal: 'SIGKILL', timeout: Math.max(100, left(500)) }).trim()
     if (!/^(https?:\/\/[^/]*github\.com\/|git@github\.com:)/.test(url) && !/^https?:\/\/[^/]*\/git\//.test(url)) return null // the cloud's git proxy URL ends in /git/<owner>/<repo>
     return url.match(/([\w.-]+)\/([\w.-]+?)(?:\.git)?$/)?.slice(1).join('/') ?? null
-  } catch { return null }
+  } catch { // #609: the cloud starts in /home/user, no repo, with its checkout as the one child folder
+    const dirs = child && existsSync(cwd) ? readdirSync(cwd).filter((d) => existsSync(join(cwd, d, '.git'))) : []
+    return dirs.length === 1 ? originRepo(join(cwd, dirs[0]), false) : null
+  }
 }
 // One fetch per process: the brief check and the context share it (X1a).
 const itemCache = new Map()
