@@ -1181,7 +1181,7 @@ function ghProblem(s) {
   const w = [] // the subcommand words: flags and the value of -R/--repo dropped
   for (let j = 0; j < s.args.length; j++) { const x = s.args[j]; if (/^(-R|--repo)$/.test(x)) j++; else if (!x.startsWith('-')) w.push(x) }
   const gh = s.a0.toLowerCase() === 'gh'
-  const merge = (gh && w[0] === 'pr' && w[1] === 'merge') || ((!gh || w[0] === 'api') && s.args.some((a) => MERGE_DOOR.test(flat(a)))) // gh api, curl and wget reach the same routes
+  const merge = (gh && w[0] === 'pr' && w[1] === 'merge') || ((!gh || w[0] === 'api') && s.args.some((a) => MERGE_DOOR.test(a) || MERGE_DOOR.test(flat(a)))) // gh api, curl and wget reach the same routes
   return merge ? 'gate ledger: a merge goes through the counter (gate.md, Rounds): the merge tool mcp__github__merge_pull_request, or "node ~/.claude/claude-setup/gate-rounds.mjs merge <owner/repo#n> [--squash|--merge|--rebase] [--auto] [--delete-branch]". It refuses a PR without a counted pass.' : null
 }
 
