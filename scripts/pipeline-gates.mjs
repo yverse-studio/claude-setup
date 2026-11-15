@@ -11,7 +11,7 @@
 // Each prints OK or RED lines and exits 1 on any RED.
 import { spawnSync } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
-import { basename, dirname, join, relative } from 'node:path'
+import { basename, dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 // A bold label (`**Adult use:** no`) closes its `**` after the colon: skip it, or the value reads "** no" (gate #483 r2, F1).
@@ -31,7 +31,7 @@ export function sheetProblems(text, dir) {
   need('Hair', (v) => v.length > 3, 'colour by comparison, length, texture')
   need('Palette', (v) => v.split(/[,/]/).filter((x) => x.trim()).length >= 3, '3 to 5 colours')
   need('Look-Lock', (v) => /\d{4}-\d{2}-\d{2}/.test(v) && /(https?:\/\/|#cmsg_?[A-Za-z0-9]{6,})/i.test(v), 'owner card link and date (YYYY-MM-DD) of the approval')
-  if (dir && !out.some((p) => p.startsWith('Look-Lock')) && !existsSync(join(dir, 'DECISIONS.md'))) out.push(`DECISIONS.md: none in ${dir}; one file holds every owner decision of this character (docs/character-workflow.md, Step 0)`)
+  if (dir && !out.some((p) => p.startsWith('Look-Lock')) && !existsSync(join(dir, 'DECISIONS.md'))) out.push(`DECISIONS.md: none in ${resolve(dir)}; one file beside the sheet holds every owner decision of this character (docs/character-workflow.md, Owner decisions)`)
   return out
 }
 

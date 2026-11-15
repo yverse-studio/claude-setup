@@ -38,6 +38,7 @@ test('#599: a sheet with a look lock has DECISIONS.md beside it, through the CLI
     assert.match(sheetProblems(SHEET, dir).join('|'), /DECISIONS\.md[^|]*decisions-/)
     writeFileSync(join(dir, 'DECISIONS.md'), '- 2026-11-10 succubus outfit: chosen, https://claude.ai/code/card/x\n')
     assert.deepEqual(sheetProblems(SHEET, dir), [])
+    assert.match(sheetProblems(SHEET, 'no-such-folder').join('|'), /none in \/[^|]*no-such-folder[^|]*Owner decisions/, 'a relative folder is named in full, and the hint names the paragraph')
     rmSync(join(dir, 'DECISIONS.md'))
     assert.deepEqual(sheetProblems(SHEET.replace(/- Look-Lock:.*/, ''), dir).filter((p) => p.startsWith('DECISIONS')), [], 'no second line for a sheet that already lacks its look lock')
     writeFileSync(join(dir, 'SHEET.md'), SHEET)
