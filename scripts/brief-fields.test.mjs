@@ -15,12 +15,12 @@ const check = (brief, model = null) => briefCheck(spawn(brief), root, model)
 const LINES = { Item: 'Item: M50', Plan: 'Plan: p.md', Acceptance: 'Acceptance: tests pass', Model: 'Model: sonnet', Skills: 'Skills: .claude/skills/operator/roles/programmer.md',
   'Done when': 'Done when: tests pass', 'Stop when': 'Stop when: 3 rounds', Start: 'Start: read MEMORY.md first', Threads: 'Threads: list_threads checked, none open on this topic',
   'Prior art': 'Prior art: obra/superpowers -> adapt, because it exists', Gate: 'Gate: Reviewer · x before owner', Sheet: 'Sheet: sheet.md', 'Look-Lock': 'Look-Lock: card https://x.y/z',
-  Researcher: 'Researcher: Opus subagent', Tester: 'Tester: Tester · app', 'Scene docs': 'Scene docs: the docs the project CLAUDE.md lists, copies the old scene X',
+  Researcher: 'Researcher: Opus subagent', Tester: 'Tester: Tester · app', 'Scene docs': 'Scene docs: the docs the project CLAUDE.md lists, copies the old scene X', 'Proven recipe': 'Proven recipe: the project proven list, copies the Saki outfits fit',
   Level: 'Level: research research/airport.md · plan plans/airport-PLAN.md · design design/airport.md' }
 
 test('table test: a brief that lacks only one row gets exactly that row\'s class behaviour', async () => {
   for (const f of BRIEF_FIELDS) {
-    const stamp = f.key === 'Scene docs' ? 'Animator · Kit: game · Size: M' : ['Sheet', 'Look-Lock'].includes(f.key) ? 'Programmer · Kit: game · Size: M' : f.key === 'Tester' ? 'Programmer · Kit: setup · Size: L' : 'Programmer · Kit: setup · Size: M'
+    const stamp = f.key === 'Scene docs' ? 'Animator · Kit: game · Size: M' : f.key === 'Proven recipe' ? 'Character TD · Kit: game · Size: M' : ['Sheet', 'Look-Lock'].includes(f.key) ? 'Programmer · Kit: game · Size: M' : f.key === 'Tester' ? 'Programmer · Kit: setup · Size: L' : 'Programmer · Kit: setup · Size: M'
     const brief = [`Role: ${f.key === 'Level' ? 'Programmer · Kit: game · Size: M' : stamp}`, f.key === 'Level' ? 'Research SOTA of the thing for the airport level.' : 'Research SOTA of the thing.', ...Object.entries(LINES).filter(([k]) => k !== f.key).map(([, l]) => l)].join('\n')
     const out = await check(brief)
     if (['Acceptance', 'Done when'].includes(f.key)) { assert.doesNotMatch(out, /^Brief (check|repair)[^\n]*(Acceptance|Done when)/, `${f.key}: the other one satisfies both`); continue }
@@ -227,4 +227,28 @@ test('a game level brief names research, plan and design up to its own step, or 
   assert.match(refused, /^Brief check[\s\S]*Level/, 'the start is refused with the Level line named')
   assert.doesNotMatch(await check([`Role: Programmer · Kit: game · Size: M`, 'Build the airport level.', `Level: ${R} · ${P} · ${D}`, BASE].join('\n')), /^Brief check/)
   assert.match(readFileSync(join(root, 'docs/TEAMS.md'), 'utf8'), /\| `game` \|[^\n]*\| Researcher, Planner, Game Designer/, 'the game kit lists the order')
+})
+
+test('GameDev 2026-11-15: a Character TD brief needs a Proven recipe line that names a recipe or n/a, other roles are not asked, and the role files stay generic', async () => {
+  const td = (extra = []) => ['Role: Character TD · Kit: game · Size: M', ...Object.entries(LINES).filter(([k]) => k !== 'Proven recipe').map(([, l]) => l), ...extra].join('\n')
+  assert.match(await check(td()), /^Brief repair[^\n]*lacks[^\n]*Proven recipe[\s\S]*proven list[\s\S]*stop and report/, 'a missing line is repaired with the instruction to read the proven list and to stop when none passed')
+  assert.doesNotMatch(await check(td([LINES['Proven recipe']])), /Proven recipe/, 'a named recipe passes')
+  assert.doesNotMatch(await check(td(['Proven recipe: n/a hair job, no garment recipe applies'])), /Proven recipe/, 'n/a with a reason passes (hair, face or body jobs)')
+  assert.match(await check(td(['Proven recipe: the project proven list'])), /Proven recipe/, 'the list alone, with no recipe named and no n/a, is still a gap (audit 2026-11-15, point 3)')
+  assert.doesNotMatch(await check(`Role: Programmer · Kit: setup · Size: M\n${Object.values(LINES).join('\n')}`.replace(/\nProven recipe:[^\n]*/, '')), /Proven recipe/, 'a Programmer brief is not asked for it')
+  const { briefFile } = await import('./brief.mjs')
+  assert.match(briefFile('Character TD'), /^Proven recipe:/m, 'the Character TD brief file carries the line')
+  assert.doesNotMatch(briefFile('Programmer'), /^Proven recipe:/m)
+  const role = readFileSync(join(root, '.claude/skills/operator/roles/character-td.md'), 'utf8')
+  for (const rule of [/proven list/, /Self-loop/, /4\.8 or more/, /front, back, side/, /^## Co-founder$/m]) assert.match(role, rule, `character-td.md: ${rule}`)
+  for (const f of ['global/team-guard.mjs', 'docs/templates/thread-brief.md', '.claude/skills/operator/roles/character-td.md', '.claude/skills/garment-fit/SKILL.md', 'docs/clothing-pipeline.md', '.claude/skills/operator/gate.md']) {
+    const t = readFileSync(join(root, f), 'utf8')
+    assert.doesNotMatch(t.split('\n').filter((l) => /Proven recipe|proven route|proven list/i.test(l)).join('\n'), /PROVEN\.md|outfit\.py|bikini|Yumeka/i, `${f}: the rule stays generic, product paths live in the project's CLAUDE.md`)
+  }
+  assert.match(readFileSync(join(root, '.claude/skills/garment-fit/SKILL.md'), 'utf8'), /Self-loop[\s\S]*4\.8/)
+  const dir = join(root, '.claude/skills/operator')
+  const gate = readFileSync(join(dir, 'gate.md'), 'utf8')
+  assert.match(gate, /Before a builder asks for a gate[\s\S]*Don't[\s\S]*one checklist row per past error[\s\S]*Tick every row/i)
+  assert.doesNotMatch(gate.match(/Before a builder asks for a gate[\s\S]*?\n## /)[0], /\[guard: test/, 'no guard tag until a check enforces the step (#689)')
+  for (const r of ['character-td', 'animator', 'programmer']) assert.match(readFileSync(join(dir, 'roles', `${r}.md`), 'utf8'), /Past errors before the gate[^\n]*checklist row[^\n]*tick/i, r)
 })
