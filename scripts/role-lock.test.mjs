@@ -484,3 +484,16 @@ test('#621: a prose relay that names another thread\'s Kit and Size does not cha
   assert.equal(post.status, 2, 'the receipt is demanded')
   assert.match(post.stderr, /Thread · Programmer · setup · S · item M30 · /, 'with the Kit and Size of the stamp')
 })
+
+// #621 gate round 1: a Kit or Size counts when it opens a line (a relay's own correction line) or sits on a line that opens with `Role:`; newest brief first.
+test('#621: a size corrected by a BRIEF-FIX line reaches the receipt, a stamp quoted mid sentence does not', () => {
+  const a = lockedThread(`Role: Planner · Kit: setup · Size: S\nItem: M50\nModel: sonnet\nSkills: none\nStart: read MEMORY.md first\nGate: Reviewer · Gate brief-fix plan M50 (cmsg_1) before owner`)
+  assert.equal(a.bash(), 2, 'a Planner at size S is locked')
+  appendFileSync(a.transcript, a.line({ type: 'attachment', attachment: { type: 'queued_command', prompt: queued('BRIEF-FIX: Size: M\nPlan: docs/plans/x.md\nAcceptance: the test passes'), origin: PROJECTS } }))
+  assert.equal(a.bash(), 0, 'the relay lifts the lock')
+  assert.match(a.run('pre', { tool_name: 'mcp__hearthbot__post_message', tool_input: { text: 'hi' } }).stderr, /Thread · Planner · setup · M · /, 'the corrected size is printed')
+  const id = `rolelock${process.pid}x${++n}`
+  deliver(id, spawn(`Role: Reviewer · Kit: setup · Size: S\n${BLOCKS}`))
+  appendFileSync(sessionTranscripts.get(id), `${JSON.stringify({ type: 'attachment', attachment: { type: 'queued_command', prompt: queued('The other thread was started with Role: Programmer · Kit: game · Size: L, not you.'), origin: PROJECTS } })}\n`)
+  assert.match(tool(id, 'mcp__hearthbot__post_message', { text: 'hi' }).stderr, /Thread · Reviewer · setup · S · /, 'a quoted foreign stamp changes nothing')
+})
