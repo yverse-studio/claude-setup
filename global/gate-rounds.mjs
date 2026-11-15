@@ -63,10 +63,11 @@ export const STOP_WORD = /^\W*(stop+|stopp+|pause|halt)\W*$/i
 // ---- grants (security review 2026-11-12, finding 1): the proofs for init, direct, card, picture and waive are read by the hook, and the
 // CLI refuses those verbs without the short grant the hook leaves after it checked them. A call that bypasses the hook (a copy of this
 // file, node -e, an import) reaches the CLI without a grant and is refused there too, so the filename in argv is no longer the lock.
-export const GRANTED = ['init', 'direct', 'card', 'picture', 'waive', 'record']
+export const GRANTED = ['init', 'direct', 'card', 'picture', 'waive', 'record', 'post']
+const BODIED = ['record', 'post'] // the grant carries the digest of the body the hook read (#508)
 // A named asset is plain word characters: no slash, space or #, so it cannot spell a PR ledger (owner/repo#n and "owner/repo n" share one file key).
 export const namedProblem = (asset) => /^[\w.-]+$/.test(String(asset)) && !/_\d+$/.test(String(asset)) ? null : 'record: only a plain named asset (letters, digits, - . _; not ending in _<number>, no owner/repo#n); a PR verdict goes through "post" or the comment tool (gate.md, Rounds)'
-const grantRef = (verb, rest, ref) => verb === 'init' ? rest[rest.indexOf('--round') + 1] : verb === 'direct' ? rest[rest.indexOf('--plan') + 1] : verb === 'record' ? rest[rest.indexOf('--body-file') + 1] : ref
+const grantRef = (verb, rest, ref) => verb === 'init' ? rest[rest.indexOf('--round') + 1] : verb === 'direct' ? rest[rest.indexOf('--plan') + 1] : BODIED.includes(verb) ? rest[rest.indexOf('--body-file') + 1] : ref
 export const GRANT_SECONDS = 120
 const grantFile = (dir, verb, asset) => join(dir, 'grants', `${verb}.${basename(fileOf(dir, asset))}`)
 // The hook reads the command before the shell expands it, the CLI after: both sides key the grant on the same form (gate round 1 of the #450 re-land).
@@ -83,7 +84,7 @@ export function takeGrant(dir, verb, asset, ref, now = Date.now(), body = null) 
   let g
   try { g = JSON.parse(readFileSync(f, 'utf8')) } catch { return false }
   try { unlinkSync(f) } catch { /* already taken */ }
-  const sameBody = verb !== 'record' ? true : typeof g.sha === 'string' && body !== null && g.sha === digest(body)
+  const sameBody = !BODIED.includes(verb) ? true : typeof g.sha === 'string' && body !== null && g.sha === digest(body)
   return g.exp > now && g.verb === verb && g.asset === String(asset).toLowerCase() && g.ref === grantKey(ref) && sameBody
 }
 
@@ -409,7 +410,7 @@ function bashProblem(cmd, dir, ctx) {
         const why = authorProblem(body, ctx)
         if (why) return why
       }
-      if (!ctx.dry && GRANTED.includes(verb)) issueGrant(dir, verb, s.args[at + 2], grantRef(verb, s.args, ref), Date.now(), verb === 'record' ? body : null)
+      if (!ctx.dry && GRANTED.includes(verb)) issueGrant(dir, verb, s.args[at + 2], grantRef(verb, s.args, ref), Date.now(), BODIED.includes(verb) ? body : null)
       continue
     }
     const writes = WRITERS.has(s.a0.toLowerCase()) || (s.a0 === 'sort' && s.args.some((x) => /^-[a-zA-Z]*o|^--output/.test(x))) || (s.a0 === 'perl' && s.args.some((x) => /^-[a-zA-Z]*i/.test(x))) || (s.a0 === 'sed' && s.args.some((x) => /^-[a-zA-Z]*i|^--in-place/.test(x)))
@@ -487,10 +488,10 @@ export function cli(argv, env = process.env) {
   const fail = (t) => ({ code: 2, text: t })
   if (cmd === 'status') return { code: 0, text: JSON.stringify(l, null, 2) }
   if (cmd === 'check') return roundProblem(l, Number(rest[0])) ? fail(roundProblem(l, Number(rest[0]))) : { code: 0, text: 'ok' }
-  const bodyText = cmd === 'record' ? read(flag(rest, '--body-file') ?? '') : null // read once: this text is hashed for the grant and then counted
+  const bodyText = BODIED.includes(cmd) ? read(flag(rest, '--body-file') ?? '') : null // read once: this text is hashed for the grant and then counted
   if (GRANTED.includes(cmd)) {
-    const key = cmd === 'init' ? flag(rest, '--round') : cmd === 'direct' ? flag(rest, '--plan') : cmd === 'record' ? flag(rest, '--body-file') : flag(rest, '--ref')
-    if (!takeGrant(dir, cmd, asset, key, Date.now(), bodyText)) return fail(`${cmd}: refused: the hook (global/rule-guard.mjs) checks the proof for this verb and leaves a short grant; none was found for this call (a record body that changed after the hook read it counts as none). Run it as "node ~/.claude/claude-setup/gate-rounds.mjs ${cmd} <asset> ..." in a session where the hook is on (gate.md, Rounds).`)
+    const key = cmd === 'init' ? flag(rest, '--round') : cmd === 'direct' ? flag(rest, '--plan') : BODIED.includes(cmd) ? flag(rest, '--body-file') : flag(rest, '--ref')
+    if (!takeGrant(dir, cmd, asset, key, Date.now(), bodyText)) return fail(`${cmd}: refused: the hook (global/rule-guard.mjs) checks the proof for this verb and leaves a short grant; none was found for this call (a record or post body that changed after the hook read it counts as none). Run it as "node ~/.claude/claude-setup/gate-rounds.mjs ${cmd} <asset> ..." in a session where the hook is on (gate.md, Rounds).`)
   }
   if (cmd === 'init') {
     const n = Number(flag(rest, '--round'))
@@ -535,11 +536,11 @@ export function cli(argv, env = process.env) {
         return { code: 0, text: 'merged' }
       }
       const file = flag(rest, '--body-file')
-      const head = file ? parseHeadline(read(file)) : null
+      const head = file ? parseHeadline(bodyText) : null
       if (!head) return fail('post: --body-file <f> must start with the verdict headline "Gate <score>/5 (<size>, round <n>)"')
       const bad = verdictProblem(dir, asset, head, true)
       if (bad) return fail(bad)
-      execFileSync('gh', ['api', '-X', 'POST', `repos/${m[1]}/issues/${m[2]}/comments`, '-F', `body=@${file}`], { stdio: 'inherit', env })
+      execFileSync('gh', ['api', '-X', 'POST', `repos/${m[1]}/issues/${m[2]}/comments`, '-f', `body=${bodyText}`], { stdio: 'inherit', env })
       verdictProblem(dir, asset, head, false) // counted only once it is on the PR
       return { code: 0, text: `posted${nextNote(dir, asset)}` }
     } catch (e) { return fail(`${cmd}: gh failed (${String(e.message).slice(0, 120)})`) }
