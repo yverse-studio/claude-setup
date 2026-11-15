@@ -1081,12 +1081,34 @@ test('rule guard: no second headless Blender while bl_server.py runs; Blender on
     const unread = run('blender -b f.blend', '')
     assert.equal(unread.status, 2)
     assert.match(unread.stderr, /NACHT-FIX-PLAN/)
-    assert.equal(run('blender -b f.blend', `${plan}\n${animator}`).status, 0)
+    assert.equal(run('node scripts/laptop-job.mjs --no-progress t -- blender -b f.blend', `${plan}\n${animator}`).status, 0)
     assert.equal(run('blender -b f.blend', `${plan}\n${animator}`, server).status, 2, 'bl_server.py runs')
+    assert.match(run('blender -b f.blend', `${plan}\n${animator}`).stderr, /laptop-job\.mjs/, 'plain headless start on the laptop: refused, the runner named (#607)')
     assert.equal(run('git status', '', server).status, 0)
     writeFileSync(join(dir, 's1', 'subagents', 'agent-a1.jsonl'), `${plan}\n${animator}`)
-    assert.equal(run('blender -b f.blend', '', '', 'a1').status, 0, "a subagent's own reads count")
+    assert.equal(run('node scripts/laptop-job.mjs --no-progress t -- blender -b f.blend', '', '', 'a1').status, 0, "a subagent's own reads count")
   } finally { rmSync(dir, { recursive: true, force: true }) }
+})
+
+// #607 (GameDev 2026-11-14): the slot lock and the RAM claim exist in scripts/laptop-job.mjs but nothing refused a headless start beside them. Plan: workflow-fable/2026-11-15-plan-607-blender-runner.md (T1 to T11).
+test('rule guard: on the laptop a headless Blender start outside laptop-job.mjs is refused (#607)', async () => {
+  const { blenderOutsideRunner } = await import('../global/rule-guard.mjs')
+  const L = { STUDIO_ROOT: 'C:/Studio' } // path-lint: fixture
+  const r = (command, env = L, tool = 'Bash') => blenderOutsideRunner(tool, { command }, env)
+  assert.match(r('blender -b x.blend -a') ?? '', /laptop-job\.mjs" --name <job> .* -- blender -b x\.blend -a /)
+  assert.match(r('blender -b x.blend -a') ?? '', /_claude\/_queue\/jobs/)
+  assert.equal(r('node scripts/laptop-job.mjs --name r --progress-file p -- blender -b x.blend -a'), null, 'wrapped')
+  assert.equal(r('blender --version'), null)
+  assert.equal(r('blender -b x.blend -a', {}), null, 'cloud: no STUDIO_ROOT')
+  assert.match(r('& "C:\\Program Files\\Blender Foundation\\Blender 5.2\\blender.exe" --background f.blend --python r.py', L, 'PowerShell') ?? '', /Blender 5\.2.blender\.exe/) // path-lint: fixture
+  const mixed = r('node scripts/laptop-job.mjs --name a --no-progress x -- blender -b a.blend -f 1; blender -b b.blend -a') ?? ''
+  assert.match(mixed, /b\.blend/)
+  assert.doesNotMatch(mixed, /a\.blend/, 'only the unwrapped part is named')
+  assert.equal(r('blender -b --factory-startup --python C:/x/qa/bl_server.py -- C:/x/bl_jobs'), null, 'the persistent server') // path-lint: fixture
+  for (const c of ['blender x.blend', 'blender --command extension list', 'grep -rn "blender -b" docs', 'git commit -m "fix: blender -b render"', 'node scripts/render-queue.mjs C:/Studio/_claude/_queue']) assert.equal(r(c), null, c) // path-lint: fixture
+  assert.equal(r('cat > run.sh <<EOF\nblender -b x.blend -a\nEOF'), null, 'a heredoc body is text')
+  for (const c of ['$BL -b f.blend -P r.py', 'timeout 600 blender -b f.blend -a']) assert.ok(r(c), c)
+  assert.equal(r('blender -b x.blend', L, 'Write'), null, 'not a shell tool')
 })
 
 // yskills 2026-11-03: the Animator handed off every ~30 min at 350k on a 1M model; the guard warns at 250k (work leaner), backstop at 700k (check the handoff triggers).

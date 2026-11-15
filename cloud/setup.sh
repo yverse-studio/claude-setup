@@ -2496,6 +2496,19 @@ export function blenderDocsMissing(tool, input = {}, transcript = '') {
   if (!missing.length) return null
   return `rule-guard: vor dem ersten Blender-Aufruf dieser Session erst lesen (Read): ${missing.map(([name]) => name).join(' und ')}. Dann nochmal.`
 }
+// #607: on the laptop a headless Blender start outside scripts/laptop-job.mjs is refused, so the slot lock and the RAM claim are used.
+export function blenderOutsideRunner(tool, input = {}, env = process.env) {
+  if (!env.STUDIO_ROOT) return null
+  for (const c of commandsOf(shellCommand(tool, input))) {
+    const start = blenderStart(c)
+    if (!start || /bl_server\.py/i.test(c) || /laptop-job\.mjs\b/.test(c.slice(0, start.index + 4))) continue
+    const args = c.slice(start.index + start[0].length)
+    if (!HEADLESS.test(args)) continue
+    const root = env.STUDIO_ROOT.replace(/\\/g, '/')
+    return `rule-guard: on the laptop every headless Blender start goes through the job runner (docs/pc-claude-user.md, Blender limits). Wait for the slot: node "${root}/repos/claude-setup/scripts/laptop-job.mjs" --name <job> --progress-file <file> -- ${new RegExp(`${BLENDER_EXE}$`, 'i').exec(start[0])[0]}${args} (a still or a bake: --no-progress "<why>"; no redirects). Or go on: write that command as "cmd" into ${root}/_claude/_queue/jobs/<NN>-<name>.json (format: scripts/render-queue.mjs).`
+  }
+  return null
+}
 // Companyxy 2026-11-12 (point 8): a garment is downloaded only after `clothes_dupe.py <url or id>` said NEW for that source
 // (docs/clothing-pipeline.md, Reuse first). transcript: the session's transcript text (or a function returning it).
 const GARMENT_SOURCE = /https?:\/\/(?:[^\s"'/]*\.)?(?:sketchfab\.com|booth\.pm|fab\.com|cgtrader\.com|blenderkit\.com|blendkit\.com)[^\s"']*/gi
@@ -2875,6 +2888,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           ?? dupeCheckMissing(tool, input ?? {}, sessionTranscript)
           ?? blenderServerBusy(tool, input ?? {}, listProcs)
           ?? blenderDocsMissing(tool, input ?? {}, sessionTranscript)
+          ?? blenderOutsideRunner(tool, input ?? {})
           ?? (grillMissing(tool, input ?? {}, transcript) ? 'rule-guard: a Planner at size M or L grills first (operator SKILL.md, Grill first): post the real-moment question (when it comes from his life) and up to 2 request_decision cards (goal, taste), each with your recommended answer, then write the plan on the answers (or the recommendations while he is away).' : null)
         if (!block) block = await gateBlock(tool, input ?? {}, transcript, sessionModel(transcript()), false, gateRole, transcriptPath) // commit the round only now: no other guard refused the post
         if (!block && session && tool === 'Artifact' && input?.url && input.file_path) writeFileSync(shipped, `${input.file_path}\n`, { flag: 'a' })
