@@ -720,13 +720,20 @@ test('#508: a post grant belongs to the body the hook read, so a verdict swapped
   const reviewer = session('sonnet-test', [], 'Reviewer')
   const D = join(reviewer.dir, 'gate')
   const body = join(reviewer.dir, 'v.md')
+  const bin = join(reviewer.dir, 'bin'); mkdirSync(bin)
+  writeFileSync(join(bin, 'gh'), '#!/bin/sh\nexit 0\n', { mode: 0o755 })
+  const withGh = { ...reviewer.env, PATH: `${bin}:${process.env.PATH}` }
+  const post = `node ~/.claude/claude-setup/gate-rounds.mjs post ${ASSET} --body-file ${body}`
   writeFileSync(body, 'Gate 3/5 (S, round 1)\nwhat the hook read\n')
-  assert.equal(reviewer.hook('Bash', { command: `node ~/.claude/claude-setup/gate-rounds.mjs post ${ASSET} --body-file ${body}` }).status, 0)
-  writeFileSync(body, 'Gate 5/5 (S, round 1)\nwhat the Reviewer never saw\n') // the swap between the hook and the CLI
-  assert.match(reviewer.bare('post', ASSET, '--body-file', body).text, /refused: the hook/)
-  assert.equal(readLedger(D, ASSET).rounds.length, 0, 'nothing counted')
+  assert.equal(reviewer.hook('Bash', { command: post }).status, 0)
+  assert.equal(cli(['post', ASSET, '--body-file', body], withGh).code, 0, 'the happy path: the hook, then the CLI with the body unchanged, posts and counts')
+  assert.equal(readLedger(D, ASSET).rounds.length, 1)
+  assert.equal(reviewer.hook('Bash', { command: post }).status, 0)
+  writeFileSync(body, 'Gate 5/5 (S, round 2)\nwhat the Reviewer never saw\n') // the swap between the hook and the CLI
+  assert.match(cli(['post', ASSET, '--body-file', body], withGh).text, /refused: the hook/)
+  assert.equal(readLedger(D, ASSET).rounds.length, 1, 'the swapped verdict is not counted')
   issueGrant(D, 'post', ASSET, body) // a grant with no digest opens nothing
-  assert.match(reviewer.bare('post', ASSET, '--body-file', body).text, /refused: the hook/)
+  assert.match(cli(['post', ASSET, '--body-file', body], withGh).text, /refused: the hook/)
 })
 
 test('#508 part 2: an env prefix does not hide a ledger write or a counter call; a plain read stays allowed', () => {
