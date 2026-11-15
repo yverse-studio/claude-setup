@@ -9,7 +9,7 @@ Acceptance) is refused, all of them in one refusal with the role's template; the
 ```
 Role: <Role from docs/TEAMS.md Roster> · Kit: <kit from docs/TEAMS.md Kits> · Size: <S|M|L>
 Model: <model id of the role's Roster row>
-Item: <issue #n, M<n> of an offline PLAN.json, or new>
+Item: <issue #n, M<n> or new>
 Plan: <plan file or card it builds>
 Acceptance: <what counts as accepted>
 Threads: <list_threads checked: none open on this topic | continues <title of the open thread>>
@@ -20,6 +20,7 @@ Look-Lock: <owner card link of the approved look (https or #cmsg_...); not neede
 Round: <n> (gate rounds only)
 Asset: <owner/repo#n> (with Round)
 Picture card: <link | none, because <why>> (new look only)
+Scene docs: <the scene docs the project's CLAUDE.md lists, read on the laptop before planning, and the old scene the plan copies; laptop offline means stop and report> (Animator only)
 Researcher: <subagent and model; research tasks only>
 Tester: <Tester thread; size L Programmer only>
 Gate: <Reviewer thread> before owner (M or L)
