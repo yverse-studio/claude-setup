@@ -463,3 +463,14 @@ test('#608: a thread that already worked is left alone, and a stamp without the 
   assert.match(JSON.parse(call.stdout).hookSpecificOutput.additionalContext, /you are the Programmer of this task/, 'the card arrives although the stamp was already on disk')
   assert.equal(readFileSync(join(tmpdir(), `claude-setup-role-${killed.id}`), 'utf8'), 'Programmer', 'the stamp stays')
 })
+
+// #603 part B: the start receipt takes Item, kit and size from the newest brief (the relay that lifted the lock), not only from the spawn brief.
+test('#603 B: a thread lifted by a relay with `Item: new` prints `item new` in its receipt, not `item ?`', () => {
+  const a = lockedThread(NO_BEFORE_OWNER.replace('Item: M50\n', ''))
+  assert.equal(a.bash(), 2, 'the spawn brief has no Item, Plan or Acceptance')
+  appendFileSync(a.transcript, a.line({ type: 'attachment', attachment: { type: 'queued_command', prompt: queued('Item: new\nPlan: docs/plans/x.md\nAcceptance: the test passes'), origin: PROJECTS } }))
+  assert.equal(a.bash(), 0, 'the relay lifts the lock')
+  const post = a.run('pre', { tool_name: 'mcp__hearthbot__post_message', tool_input: { text: 'hi' } })
+  assert.equal(post.status, 2, 'the receipt is demanded')
+  assert.match(post.stderr, /Thread · Programmer · setup · M · item new · /, 'with the item of the relay')
+})
