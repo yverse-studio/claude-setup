@@ -28,10 +28,25 @@ test('d: the role is the skill, the case prompt is the task alone', () => {
   assert.equal(f['evals/c/graders/g.md'], 'G')
   assert.match(f['evals/c/graders/fired.md'], /type: tool_used\ntool: Skill/)
 })
-test('e: role 3/3 and baseline 3/3 needs no role file', () => {
+test('e: role 3/3 and baseline 3/3 needs no role file; 3 against 2 is unclear', () => {
   assert.equal(row(res(3, 3)).needsRole, 'no')
   assert.equal(row(res(3, 1)).needsRole, 'yes')
-  assert.equal(row(res(3, 2)).needsRole, 'no')
+  assert.equal(row(res(3, 2)).needsRole, 'unclear')
+  assert.equal(row(res(2, 3)).needsRole, 'no')
+})
+test('j: no row from a partial result, an errored run or a missing baseline arm', () => {
+  assert.throws(() => row({ ...res(3, 0), partial: true }), /no row/)
+  const err = res(3, 0)
+  err.cases[0].arms.without[0].error = 'exit 1'
+  assert.throws(() => row(err), /no row/)
+  const none = res(3, 0)
+  delete none.cases[0].arms.without
+  assert.throws(() => row(none), /no row/)
+})
+test('k: the row stores the model id and the Claude Code version', () => {
+  const r = row(res(3, 3), { version: '2.1.325 (Claude Code)' })
+  assert.equal(r.claude, '2.1.325 (Claude Code)')
+  assert.equal(r.model, 'm')
 })
 test('f: a real result file becomes the row', () => {
   const r = row(fixture)

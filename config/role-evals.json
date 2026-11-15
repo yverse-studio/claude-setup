@@ -1,7 +1,8 @@
 {
   "reviewer": {
     "hash": "8f4ee22449260b35419f11afb6c9e4f6d0da0facf15d6ff246793822b44b0061",
-    "model": "fable",
+    "model": "fable-5-2",
+    "claude": "2.1.325 (Claude Code)",
     "date": "2026-11-15",
     "pass": 3,
     "cases": {
