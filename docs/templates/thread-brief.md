@@ -20,6 +20,7 @@ Look-Lock: <owner card link of the approved look (https or #cmsg_...); not neede
 Round: <n> (gate rounds only)
 Asset: <owner/repo#n> (with Round)
 Picture card: <link | none, because <why>> (new look only)
+Scene docs: <the scene docs the project's CLAUDE.md lists, read on the laptop before planning, and the old scene the plan copies; laptop offline means stop and report> (Animator only)
 Researcher: <subagent and model; research tasks only>
 Tester: <Tester thread; size L Programmer only>
 Gate: <Reviewer thread> before owner (M or L)

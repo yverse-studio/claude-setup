@@ -21,7 +21,7 @@ export const modelFor = (role, size, teams = teamsText()) => renderModelFor(role
 export const briefFile = (role, teams = teamsText()) => renderBrief(role, teams)
 export { briefFileName }
 
-export function buildBrief({ role, kit, size, item, plan, acceptance, threads, priorArt, done, stop, what, start, skills, sheet, lookLock, tester, researcher, gate, topic, checklists = readFileSync(join(root, CHECKLISTS), 'utf8'), teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8') }) {
+export function buildBrief({ role, kit, size, item, plan, acceptance, threads, priorArt, done, stop, what, start, skills, sheet, lookLock, tester, researcher, gate, topic, sceneDocs, checklists = readFileSync(join(root, CHECKLISTS), 'utf8'), teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8') }) {
   const roles = rosterNames(teams)
   const kits = kitNames(teams)
   if (!roles.includes(role)) throw new BriefError(`Role: ${role} is no role in docs/TEAMS.md (Roster); valid: ${roles.join(', ')}`)
@@ -41,7 +41,7 @@ export function buildBrief({ role, kit, size, item, plan, acceptance, threads, p
   const named = gate ?? `Reviewer · ${what}`
   const gateLine = builder ? `Gate: ${/^n\/a/i.test(named) || /\bbefore owner\b/.test(named) ? named : `${named} before owner`}` : null
   if (gateLine && !GATE_LINE.test(gateLine)) throw new BriefError('--gate names a Reviewer or Tester thread and ends "before owner" (given as --gate "Reviewer · <what> before owner"), or reads "n/a <why this slice has no owner-facing result>" with 10+ characters')
-  const missing = Object.entries({ item, plan, acceptance, threads, 'prior-art': prior, done, stop, skills: skillsLine, ...(size === 'S' ? {} : { what }), ...(needsSheet ? { sheet } : {}), ...(role === 'Programmer' && size === 'L' ? { tester } : {}) })
+  const missing = Object.entries({ item, plan, acceptance, threads, 'prior-art': prior, done, stop, skills: skillsLine, ...(size === 'S' ? {} : { what }), ...(needsSheet ? { sheet } : {}), ...(role === 'Animator' ? { 'scene-docs': sceneDocs } : {}), ...(role === 'Programmer' && size === 'L' ? { tester } : {}) })
     .filter(([, v]) => !v).map(([k]) => `--${k}`)
   if (needsSheet && sheet && !/^n\/a/i.test(sheet) && !lookLock) missing.push('--look-lock')
   if (needsSheet && /^n\/a/i.test(sheet ?? '') && !/^n\/a[ \t]+\S[^\n]{9,}$/i.test(sheet)) throw new BriefError('--sheet n/a needs a reason of 10+ characters after it (team-guard: Sheet: n/a <why this is no body, face or outfit job>)')
@@ -51,6 +51,7 @@ export function buildBrief({ role, kit, size, item, plan, acceptance, threads, p
   const model = modelFor(role, size, teams)
   const lines = [stub(role, kit, size), `Model: ${model}`, `Item: ${item}`, `Plan: ${plan}`, `Acceptance: ${acceptance}`, `Threads: ${threads}`, `Prior art: ${prior}`, `Skills: ${skillsLine}`,
     ...(needsSheet ? [`Sheet: ${sheet}`, ...(/^n\/a/i.test(sheet) ? [] : [`Look-Lock: ${lookLock}`])] : []),
+    ...(role === 'Animator' ? [`Scene docs: ${sceneDocs}`] : []),
     ...(topic ? [`Topic: ${topic}`] : []), ...(gateLine ? [gateLine] : []), ...(researcher ? [`Researcher: ${researcher}`] : []), ...(role === 'Programmer' && size === 'L' ? [`Tester: ${tester}`] : []),
     `Done when: ${done}`, `Stop when: ${stop}`, `Start: read MEMORY.md first${start ? `, then ${start}` : ''}`]
   const out = { brief: lines.join('\n'), title: `${role} · ${what ?? item}`, model }
@@ -74,7 +75,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   try {
     const out = buildBrief({ role: flag('role'), kit: flag('kit'), size: flag('size'), item: flag('item'), plan: flag('plan'), acceptance: flag('acceptance'), threads: flag('threads'), priorArt: flag('prior-art'),
       done: flag('done'), stop: flag('stop'), what: flag('what'), start: flag('start'), skills: flag('skills'), sheet: flag('sheet'), lookLock: flag('look-lock'),
-      tester: flag('tester'), researcher: flag('researcher'), gate: flag('gate'), topic: flag('topic') })
+      tester: flag('tester'), researcher: flag('researcher'), gate: flag('gate'), topic: flag('topic'), sceneDocs: flag('scene-docs') })
     console.log(args.includes('--json') ? JSON.stringify(out) : out.brief)
   } catch (e) {
     if (!(e instanceof BriefError)) throw e

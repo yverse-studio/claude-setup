@@ -15,11 +15,11 @@ const check = (brief, model = null) => briefCheck(spawn(brief), root, model)
 const LINES = { Item: 'Item: M50', Plan: 'Plan: p.md', Acceptance: 'Acceptance: tests pass', Model: 'Model: sonnet', Skills: 'Skills: .claude/skills/operator/roles/programmer.md',
   'Done when': 'Done when: tests pass', 'Stop when': 'Stop when: 3 rounds', Start: 'Start: read MEMORY.md first', Threads: 'Threads: list_threads checked, none open on this topic',
   'Prior art': 'Prior art: obra/superpowers -> adapt, because it exists', Gate: 'Gate: Reviewer · x before owner', Sheet: 'Sheet: sheet.md', 'Look-Lock': 'Look-Lock: card https://x.y/z',
-  Researcher: 'Researcher: Opus subagent', Tester: 'Tester: Tester · app' }
+  Researcher: 'Researcher: Opus subagent', Tester: 'Tester: Tester · app', 'Scene docs': 'Scene docs: the docs the project CLAUDE.md lists, copies the old scene X' }
 
 test('table test: a brief that lacks only one row gets exactly that row\'s class behaviour', async () => {
   for (const f of BRIEF_FIELDS) {
-    const stamp = ['Sheet', 'Look-Lock'].includes(f.key) ? 'Programmer · Kit: game · Size: M' : f.key === 'Tester' ? 'Programmer · Kit: setup · Size: L' : 'Programmer · Kit: setup · Size: M'
+    const stamp = f.key === 'Scene docs' ? 'Animator · Kit: game · Size: M' : ['Sheet', 'Look-Lock'].includes(f.key) ? 'Programmer · Kit: game · Size: M' : f.key === 'Tester' ? 'Programmer · Kit: setup · Size: L' : 'Programmer · Kit: setup · Size: M'
     const brief = [`Role: ${stamp}`, 'Research SOTA of the thing.', ...Object.entries(LINES).filter(([k]) => k !== f.key).map(([, l]) => l)].join('\n')
     const out = await check(brief)
     if (['Acceptance', 'Done when'].includes(f.key)) { assert.doesNotMatch(out, /^Brief (check|repair)[^\n]*(Acceptance|Done when)/, `${f.key}: the other one satisfies both`); continue }
@@ -152,4 +152,19 @@ test('a brief with a token-count stop or hand-off line is refused with the hando
     'Acceptance: the stream stops after 30000 tokens (max_tokens)', 'Acceptance: generation stops at 4k tokens because max_tokens is set',
     'Acceptance: the check refuses "at ~200k context post status and stop"', 'Acceptance: a brief with `stop at 30000 tokens` is refused', 'Plan: the line „Übergabe bei 200k Tokens“ is refused by the check',
     'Acceptance: “hand off at 250k tokens” gets the refusal text; stop after 3 rounds', 'Acceptance: pause menu opens; context menu shows 12 items at 100 % zoom', 'Context: issue #587, stop words list is 14 entries, see PR at 2e4785f']) assert.doesNotMatch(problems([ok]).join('\n'), /token count/, `passes: ${ok}`)
+})
+
+// #627 (GameDev 2026-11-15, two-figure scene): plan v2 was built from cloud docs only and failed the gate. An Animator brief names the scene docs the project lists
+// and the old scene the plan copies; a missing line is a repair the thread closes itself, and the role file carries the stop rule for an offline laptop.
+test('#627: an Animator brief without a Scene docs line is repaired, other roles are not asked, and the role file holds the four rules', async () => {
+  const animator = (extra = []) => ['Role: Animator · Kit: game · Size: M', ...Object.entries(LINES).filter(([k]) => k !== 'Scene docs').map(([, l]) => l), ...extra].join('\n')
+  assert.match(await check(animator()), /^Brief repair[^\n]*lacks[^\n]*Scene docs[\s\S]*laptop offline means stop and report/, 'the thread is told to read the scene docs and to stop when the laptop is offline')
+  assert.doesNotMatch(await check(animator([LINES['Scene docs']])), /Scene docs/, 'with the line there is nothing to repair')
+  assert.doesNotMatch(await check(`Role: Programmer · Kit: setup · Size: M\n${Object.values(LINES).join('\n')}`.replace(/\nScene docs:[^\n]*/, '')), /Scene docs/, 'a Programmer brief is not asked for it')
+  const { briefFile } = await import('./brief.mjs')
+  assert.match(briefFile('Animator'), /^Scene docs:/m, 'the Animator brief file carries the line')
+  assert.doesNotMatch(briefFile('Programmer'), /^Scene docs:/m)
+  const role = readFileSync(join(root, '.claude/skills/operator/roles/animator.md'), 'utf8')
+  for (const rule of [/Scene docs/, /old scene/i, /offline[^\n]*stop and report/i, /one scene card/i]) assert.match(role, rule, `animator.md: ${rule}`)
+  assert.doesNotMatch(role, /companyxy|SZENE-REZEPT/i, 'the role file stays generic, product paths live in the project CLAUDE.md')
 })
