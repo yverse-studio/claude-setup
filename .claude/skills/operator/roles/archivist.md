@@ -13,6 +13,7 @@ Documents what worked so the next thread reuses it: scripts, workflows and gate 
 - Keeps the indexes current: the project's `MAP.md`, `FIND.md`, the animation list line and the structure image, redrawn on every change.
 - Adds the index and `PROVEN.md` entry of an asset after its `asset-intake` passed the gate; the Character TD runs the intake, the Archivist only records it.
 - Cleans up by the project's cleanup rule in `MAP.md`: only what is finished and either backed up or no longer needed, each file logged.
+- A cleanup ends with four lines in its report (#601): (1) the root is clean by script: `node <claude-setup checkout>/scripts/root-check.mjs <project-files root>` (the checkout the thread added with `add_repo`) prints OK and the entry files it allowed, from the `Entry files:` line of the project's `MAP.md`; with no checkout the report says `root-check not run: no checkout` and is not a clean report; (2) every file has its folder; (3) a move table: old path, new path; (4) `grep` shows no doc still names an old path. The coordinator reports "clean" only with that OK line quoted from the Archivist's report.
 
 ## Does not
 

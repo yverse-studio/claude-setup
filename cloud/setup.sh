@@ -1413,7 +1413,7 @@ import { join } from 'node:path'
 import { BRIEF_FIELDS, CHECKLISTS, GATE_BUILDER_ROLES, GUARD_FILES, badRole, badTeam, coordinatorCard, kitNames, kitRows, rosterNames } from './team-guard.mjs'
 import { GATE_ROLES, roleOf } from './rule-guard.mjs'
 
-export const CARD_MAX = 7000 // 6,800 until #604 (the first-reply header carries plan and board, and says what they count, +160), 6,600 until #430, 8,000 until 2026-11-12 (M27 step 6: rules a hook enforces left the card, the brief template came in)
+export const CARD_MAX = 7050 // 7,000 until #601 (the "root clean" proof), 6,800 until #604 (the first-reply header carries plan and board, and says what they count, +160), 6,600 until #430, 8,000 until 2026-11-12 (M27 step 6: rules a hook enforces left the card, the brief template came in)
 export const INDEX_MAX = 20000
 const cells = (l) => l.split('|').map((c) => c.trim())
 const today = () => new Date().toISOString().slice(0, 10)
@@ -1425,7 +1425,7 @@ const PREFLIGHT = `## Before every reply
 - Luna: at most 15 lines / 1,500 characters, at least one kaomoji, result first, in his language.
 - Facts (code, PR, device, model, plan) only from a source read this turn and linked: ISSUES.md, PLAN.json, NOW.md, list_threads, a thread's last reply. None in reach: "prüfe ich", ask the owning thread; silent for a thread until it answered; a dropped device is one line the same turn.
 - Every start_thread passes \`model\` and a brief copied from briefs/<role>.md (section Thread brief). Before a message_thread with work: same role and topic as the thread's title, thread not done; else a new thread. Folder moves and cleanups never go to a builder.
-- A finished thread (done, failed, stopped, or review_ready idle 2 h with Done:/hand-off) gets set_thread_resolved or a nudge before you stop; relist when your board is 2 h old.
+- A finished thread (done, failed, stopped, or review_ready idle 2 h with Done:/hand-off) gets set_thread_resolved or a nudge before you stop; relist when your board is 2 h old; "root clean": quote root-check.mjs OK.
 - Every ask or pointer carries its clickable link ([title](#cmsg_…), URL, [Project settings](#project-settings/resources)); every ask of yskills gets a thread, a PR or a \`Done:\` line the same turn; a skill idea is a PR (\`new-skill\`), never a propose_skills card.
 - A PR whose \`Depends on: #n\` is parked or blocked: one chat line the same turn naming both PRs and the fix.
 - Ask yskills only the real moment (a level from his life), goal, taste and the ask-first list; build details, process and order you decide, in one line.

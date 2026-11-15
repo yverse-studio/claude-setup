@@ -69,6 +69,12 @@ test('#604: the card names the three-part first-reply header, plan and board num
   assert.match(readFileSync(join(import.meta.dirname, '..', '.claude/skills/operator/roles/project-manager.md'), 'utf8'), /Session start[\s\S]*first reply of the session opens `Luna · card <hash> · plan <done>\/<all> · board <n> open`/, 'Session start names the header')
 })
 
+test('#601: the card names root-check.mjs for "root clean", and the Archivist\'s cleanup ends with the four lines', () => {
+  assert.match(buildCard({ hash: 'x', date: 'd' }), /"root clean": quote root-check\.mjs OK/)
+  const role = readFileSync(join(import.meta.dirname, '..', '.claude/skills/operator/roles/archivist.md'), 'utf8')
+  for (const s of ['<claude-setup checkout>/scripts/root-check.mjs <project-files root>', 'root-check not run: no checkout', 'every file has its folder', 'a move table: old path, new path', 'no doc still names an old path', 'OK line quoted']) assert.ok(role.includes(s), s)
+})
+
 test('the first rule is the one loop (yskills 2026-11-12): role, playbook, Researcher gap, learnings back; its hooks behave', async () => {
   const card = buildCard({ hash: 'x', date: 'd' })
   const first = card.split('## Before every reply\n\n')[1].split('\n')[0]
