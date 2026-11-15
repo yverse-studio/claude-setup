@@ -354,6 +354,8 @@ for (const f of readdirSync(roleDir).filter((n) => n.endsWith('.md') && n !== 'a
   const uses = readFileSync(join(roleDir, f), 'utf8').match(/^- \*\*Uses:\*\*[^\n]*/m)?.[0]?.replace(/\([^()]*\)/g, '')
   if (!uses) continue
   if (!/\bLoad:/.test(uses)) { errors.push(`roles/${f}: the Uses line lacks "Load:" (the skills the hook forces before the first reply, or "none")`); continue }
+  const rest = uses.replace(/\b(?:Load|By kit|Situational):[^.]*\./g, '')
+  for (const n of rest.matchAll(/`([a-z0-9-]+)`/g)) if (dirs('.claude/skills').includes(n[1])) errors.push(`roles/${f}: the skill "${n[1]}" is named outside Load, By kit and Situational (the hook forces only those)`)
   for (const k of ['Load', 'By kit']) for (const n of (uses.match(new RegExp(`${k}:([^.]*)`))?.[1] ?? '').split(/[^a-z0-9-]+/).filter(Boolean)) if (n !== 'none' && !loadable.has(n) && !/^(game|site|app|setup|video|story|social|store|roblox|shop)$/.test(n)) errors.push(`roles/${f}: ${k} names "${n}", which is no skill, agent or plugin of claude-setup`)
 }
 const briefsText = readFileSync(join(root, '.claude/skills/operator/briefs.md'), 'utf8')

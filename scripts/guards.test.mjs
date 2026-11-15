@@ -160,9 +160,10 @@ test('check.mjs fails when a role file has no Load: part or names a skill claude
     const edit = (f, from, to) => { const p = join(copy, '.claude/skills/operator/roles', f); writeFileSync(p, readFileSync(p, 'utf8').replace(from, to)) }
     edit('researcher.md', 'Load: toolbox', 'Always: toolbox')
     edit('analytics.md', 'Load: market', 'Load: marketing-plan')
+    edit('reviewer.md', 'Load: none.', 'Load: none. Uses `toolbox` too.')
     const r = run()
     assert.equal(r.status, 1)
-    for (const want of ['roles/researcher.md: the Uses line lacks "Load:"', 'roles/analytics.md: Load names "marketing-plan"']) assert.ok(r.stderr.includes(want), `missing: ${want}\n${r.stderr}`)
+    for (const want of ['roles/researcher.md: the Uses line lacks "Load:"', 'roles/analytics.md: Load names "marketing-plan"', 'roles/reviewer.md: the skill "toolbox" is named outside Load']) assert.ok(r.stderr.includes(want), `missing: ${want}\n${r.stderr}`)
   } finally { rmSync(copy, { recursive: true, force: true }) }
 })
 
