@@ -2255,7 +2255,7 @@ export function unresolved(transcript) {
 
 // #605: a `Done:` post of a thread whose brief Item is `M<n>` is refused once while that item of the offline PLAN.json is still open; the thread
 // closes it itself (plan.mjs), so the plan does not wait for someone to remember. A missing plan file or item, or no `Done:`, checks nothing.
-export function planItemOpen(tool, input, session, transcript, env = process.env) {
+export function planItemOpen(tool, input, session, transcript, cwd = process.cwd(), env = process.env) {
   if (tool !== 'mcp__hearthbot__post_message' || !session || !DONE.test(String(input?.text ?? ''))) return null
   const t = transcript(), ref = itemRef(spawnPrompt('', t.split('\n').find((l) => /"type":"user"/.test(l)) ?? ''))
   const once = join(tmpdir(), `claude-setup-plan-${String(session).replace(/\W/g, '')}`)
@@ -2264,7 +2264,9 @@ export function planItemOpen(tool, input, session, transcript, env = process.env
   try { it = JSON.parse(read(env.PLAN_FILE || '/mnt/project-files/PLAN.json')).items?.find((i) => i.id === ref) } catch { return null }
   if (!it || ['done', 'drop'].includes(it.status)) return null
   writeFileSync(once, '')
-  return `rule-guard: ${ref} is still "${it.status}" in the plan, and your Done: line closes it (roles/project-manager.md, Masterplan). Run: node scripts/plan.mjs set ${ref} status=done evidence=<link>, then post again.`
+  const script = join(setupRoot(cwd), 'scripts', 'plan.mjs')
+  const cmd = existsSync(script) ? `node ${script} set ${ref} status=done evidence=<link>` : `plan.mjs set ${ref} status=done evidence=<link> (no claude-setup checkout here: ask the coordinator to run it from one)`
+  return `rule-guard: ${ref} is still "${it.status}" in the plan (roles/project-manager.md, Masterplan). If this Done: finishes it, run: ${cmd}, then post again. If the item goes on after this thread (a plan, a verdict, one slice of several), post again as it is; this is said once.`
 }
 
 // The transcript's tool calls in order, each with its result text and time: [{ name, input, result, at }].
@@ -2923,7 +2925,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           ?? handsOff(tool, input ?? {}, gateRole, setupRoot(cwd))
           ?? (await gateBlock(tool, input ?? {}, transcript, sessionModel(transcript()), true, gateRole, transcriptPath))
           ?? decide(tool, input ?? {}, process.env, session ? read(shipped).split('\n') : [], () => threadBoard(toolCalls(transcript())))
-          ?? planItemOpen(tool, input ?? {}, session, transcript)
+          ?? planItemOpen(tool, input ?? {}, session, transcript, cwd)
           ?? await receiptBlock(tool, input ?? {}, session, cwd, agentId, transcript)
           ?? proposeSkillsBlocked(tool)
           ?? opensWindow(tool, input ?? {})
