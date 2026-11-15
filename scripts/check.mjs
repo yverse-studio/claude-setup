@@ -8,6 +8,7 @@ import { dirname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { styleErrors } from './styles-check.mjs'
 import { conflictMarker } from './conflict-marker.mjs'
+import { resolveLink } from './link-target.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const errors = []
@@ -144,7 +145,7 @@ for (const m of mods?.plugins ?? []) {
   }
   const skillsDir = join(root, m.source, 'skills')
   if (existsSync(skillsDir)) for (const n of readdirSync(skillsDir)) {
-    if (!existsSync(join(skillsDir, n, 'SKILL.md'))) errors.push(`${m.source}/skills/${n}: SKILL.md does not resolve`)
+    if (!existsSync(join(resolveLink(join(skillsDir, n)), 'SKILL.md'))) errors.push(`${m.source}/skills/${n}: SKILL.md does not resolve`)
   }
 }
 
