@@ -251,15 +251,15 @@ const needsGate = (plain) => new RegExp(`^[ \\t>-]*Role:[ \\t]*${GATE_BUILDER_RO
 const LEVEL_NEEDS = { Planner: ['research'], 'Game Designer': ['research', 'plan'], Programmer: ['research', 'plan', 'design'], Designer: ['research', 'plan', 'design'], Animator: ['research', 'plan', 'design'] }
 const levelRole = (plain) => plain.match(/^[ \t>-]*Role:[ \t]*(Game Designer|Planner|Programmer|Designer|Animator)\b/im)?.[1]
 export const needsLevelRole = (role) => Object.hasOwn(LEVEL_NEEDS, role)
-const needsLevel = (plain) => /\bKit:[ \t]*game\b/i.test(plain) && !!levelRole(plain)
-export const levelOk = (plain) => {
-  const l = plain.match(/^[ \t>-]*Level:[ \t]*([^\n]*)$/im)?.[1] ?? ''
+const needsLevel = (plain) => /^game$/i.test(plain.match(/\bKit:[ \t]*([\w-]+)/i)?.[1] ?? '') && !!levelRole(plain)
+// Each step is its own `·` segment whose value is a file (.md, .json) or a link (https, #cmsg_<id>), as the Sheet and Look-Lock rows read it.
+// Any `Level:` line of the brief may carry it, so a task line that starts with the word does not hide the real one.
+export const levelOk = (plain) => [...plain.matchAll(/^[ \t>-]*Level:[ \t]*([^\n]*)$/gim)].some(([, l]) => {
   if (/^n\/a[ \t]+\S.{9,}$/i.test(l.trim())) return true
-  // Each step is its own `·` segment whose value is a file (.md, .json) or a link (https, #cmsg), as the Sheet and Look-Lock rows read it.
   const seg = l.split('·').map((x) => x.trim())
   // Without a Role (an item body read on its own) all three steps are asked for.
-  return (LEVEL_NEEDS[levelRole(plain)] ?? ['research', 'plan', 'design']).every((k) => seg.some((x) => new RegExp(`^${k}[ \\t]+\\S*(\\.(md|json)\\b|https?:\\/\\/|#cmsg)`, 'i').test(x)))
-}
+  return (LEVEL_NEEDS[levelRole(plain)] ?? ['research', 'plan', 'design']).every((k) => seg.some((x) => new RegExp(`^${k}[ \\t]+(\\S+\\.(md|json)\\b|https?:\\/\\/\\S+|\\S*#cmsg_?[A-Za-z0-9]{6,})`, 'i').test(x)))
+})
 const small = (plain) => /\bSize:[ \t]*S\b/i.test(plain)
 const gateRolePlain = (plain) => /^[ \t>-]*Role:[ \t]*(Tester|Reviewer|Security|Legal|Playtester|Hook Checker|Critic|Story Editor|Evaluator)\b/im.test(plain)
 // M50 (plan 2026-11-12-brief-fix-plan, section 4): ONE table row per line of a thread brief. `tpl` is the template line (docs/templates/thread-brief.md and

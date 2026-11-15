@@ -83,6 +83,7 @@ test('the lines the guard demands are built or asked for, never dropped: Sheet, 
   assert.match(full.brief, /\nSheet: docs\/cast\.md\nLook-Lock: https:\/\/example\.com\/card\/1\n/)
   assert.deepEqual(decide(START, { brief: full.brief, title: full.title, model: full.model }, [], [], teams), {})
   assert.match(buildBrief({ teams, role: 'Programmer', kit: 'setup', size: 'L', ...FIELDS, tester: 'Tester · x' }).brief, /\nTester: Tester · x\n/)
+  assert.doesNotThrow(() => buildBrief({ teams, role: 'Programmer', kit: 'setup', size: 'M', ...FIELDS, what: 'Fix the brief check for Kit: game threads.' }), 'a setup brief that quotes Kit: game needs no Level line')
 })
 
 test('a role row that names no model tier is refused, not defaulted; the index prints the raw cell', () => {
