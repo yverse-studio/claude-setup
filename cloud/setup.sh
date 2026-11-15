@@ -479,14 +479,18 @@ const needsSheet = (plain) => new RegExp(`^[ \\t>-]*Role:[ \\t]*(${SHEET_ROLES.j
 export const GATE_BUILDER_ROLES = '(?:Planner|Programmer|Designer|Animator|Character TD|Story Writer|Game Designer|Content Designer|Sound Designer)'
 export const GATE_LINE = /^[ \t>-]*Gate:[ \t]*(?:(?:Reviewer|Tester)\b[^\n]*\bbefore owner\b[^\n]*|n\/a[ \t]+\S[^\n]{9,})$/im
 const needsGate = (plain) => new RegExp(`^[ \\t>-]*Role:[ \\t]*${GATE_BUILDER_ROLES}\\b`, 'im').test(plain) && /\bSize:[ \t]*[ML]\b/i.test(plain)
-// A level brief: kit game, a builder or designer role, and the brief speaks of a level or chapter. Each role names the steps before it.
+// A level brief: every game-kit brief of a builder or designer role, like Sheet: the files of the steps before its role, or `n/a <why>`.
 const LEVEL_NEEDS = { Planner: ['research'], 'Game Designer': ['research', 'plan'], Programmer: ['research', 'plan', 'design'], Designer: ['research', 'plan', 'design'], Animator: ['research', 'plan', 'design'] }
 const levelRole = (plain) => plain.match(/^[ \t>-]*Role:[ \t]*(Game Designer|Planner|Programmer|Designer|Animator)\b/im)?.[1]
-const needsLevel = (plain) => /\bKit:[ \t]*game\b/i.test(plain) && !!levelRole(plain) && /\b(level|chapter)s?\b/i.test(plain.replace(/^[ \t>-]*Level:[^\n]*$/gim, ''))
+export const needsLevelRole = (role) => Object.hasOwn(LEVEL_NEEDS, role)
+const needsLevel = (plain) => /\bKit:[ \t]*game\b/i.test(plain) && !!levelRole(plain)
 export const levelOk = (plain) => {
   const l = plain.match(/^[ \t>-]*Level:[ \t]*([^\n]*)$/im)?.[1] ?? ''
   if (/^n\/a[ \t]+\S.{9,}$/i.test(l.trim())) return true
-  return (LEVEL_NEEDS[levelRole(plain)] ?? []).every((k) => new RegExp(`\\b${k}[ \\t]+[^<\\s·]*[\\w./-]+`, 'i').test(l))
+  // Each step is its own `·` segment whose value is a file (.md, .json) or a link (https, #cmsg), as the Sheet and Look-Lock rows read it.
+  const seg = l.split('·').map((x) => x.trim())
+  // Without a Role (an item body read on its own) all three steps are asked for.
+  return (LEVEL_NEEDS[levelRole(plain)] ?? ['research', 'plan', 'design']).every((k) => seg.some((x) => new RegExp(`^${k}[ \\t]+\\S*(\\.(md|json)\\b|https?:\\/\\/|#cmsg)`, 'i').test(x)))
 }
 const small = (plain) => /\bSize:[ \t]*S\b/i.test(plain)
 const gateRolePlain = (plain) => /^[ \t>-]*Role:[ \t]*(Tester|Reviewer|Security|Legal|Playtester|Hook Checker|Critic|Story Editor|Evaluator)\b/im.test(plain)
@@ -520,7 +524,7 @@ export const BRIEF_FIELDS = [
   { key: 'Scene docs', name: 'Scene docs: (the scene docs the project\'s CLAUDE.md lists, read on the laptop before planning)', tpl: 'Scene docs: <the scene docs the project\'s CLAUDE.md lists, read on the laptop before planning, and the old scene the plan copies; laptop offline means stop and report>', applies: (p) => /^[ \t>-]*Role:[ \t]*Animator\b/im.test(p), ok: line(/^[ \t>-]*Scene docs:[ \t]*[^<\s]/im), cls: () => 'recoverable', fill: () => 'Scene docs: read the scene docs the project\'s CLAUDE.md lists on the laptop before planning, name the old scene the plan copies; laptop offline means stop and report, never plan without them' },
   // vacation-game 2026-11-15 (yskills): levels went to build without a teardown, a level plan or design proposals. A level brief in the game kit names the
   // files of the steps before it (docs/TEAMS.md, A level): the Planner the Researcher's page, the Game Designer that page and the plan, a builder all three.
-  { key: 'Level', name: 'Level: research <page> · plan <file> · design <file> (a level brief in the game kit, docs/TEAMS.md A level)', tpl: 'Level: research <page> · plan <file> · design <file>, or `n/a <why no new or reworked level>`; game kit level briefs only', applies: needsLevel, ok: levelOk, cls: () => 'judgment' },
+  { key: 'Level', name: 'Level: research <page> · plan <file> · design <file> (a level brief in the game kit, docs/TEAMS.md A level)', tpl: 'Level: research <page> · plan <file> · design <file>, or `n/a <why no new or reworked level>`; game kit builder and designer briefs', applies: needsLevel, ok: levelOk, cls: () => 'judgment' },
   { key: 'Researcher', name: 'Researcher: (the task asks for research)', tpl: 'Researcher: <subagent and model, or the Researcher thread; research tasks only>', applies: (p) => ASKS_RESEARCH.test(p) && !/\bRole:[ \t]*Researcher\b/i.test(p), ok: line(/^[ \t>-]*Researcher:[ \t]*[^<\s]/im), cls: () => 'recoverable', fill: () => 'Researcher: ask the coordinator for a Researcher thread (message_coordinator) and go on meanwhile' },
   { key: 'Tester', strict: false, tpl: 'Tester: <Tester thread; size L Programmer only>', applies: (p) => /^[ \t>-]*Role:[ \t]*Programmer\b/im.test(p), ok: (p) => !needsTester(p), cls: () => 'judgment' },
 ]
@@ -1550,7 +1554,7 @@ export function renderRoster({ teams, hash = 'nogit', date = today() }) {
 
 // ---- briefs/<role>.md: the stamp, then one line per row of BRIEF_FIELDS that holds for the role (a new row of the table appears here by itself),
 // then the four parts of the free task text (taught, never checked).
-const ORDER = ['Model', 'Item', 'Plan', 'Acceptance', 'Threads', 'Prior art', 'Skills', 'Sheet', 'Look-Lock', 'Topic', 'Researcher', 'Gate', 'Tester', 'Done when', 'Stop when', 'Start']
+const ORDER = ['Model', 'Item', 'Plan', 'Acceptance', 'Threads', 'Prior art', 'Skills', 'Sheet', 'Look-Lock', 'Level', 'Topic', 'Researcher', 'Gate', 'Tester', 'Done when', 'Stop when', 'Start']
 const GATE_ROUND_LINES = ['Round: <n> (gate rounds only; delete otherwise)', 'Asset: <owner/repo#n> (with Round)', 'Picture card: <link | none, because <why>> (new look only; delete otherwise)']
 const TASK_PARTS = ['Objective: <what finished looks like, one sentence, in the owner\'s words where he gave them>', 'Output: <the files, PR or links the thread hands back, and in what shape>',
   'Tools and sources: <what to read and use first (repo paths, URLs, #n) and what to leave alone>', 'Boundaries: <what the thread must not touch, and the point where it stops and asks>']
@@ -2183,7 +2187,7 @@ export async function briefCheck(prompt, cwd, model = null, any = false) {
   const itemPlain = item && !item.error ? String(item.body).slice(0, ITEM_CAP).replace(/^brief:[ \t]*/gim, '').replace(/[*_`]/g, '') : ''
   const own = guard.classify(brief)
   const itemHas = (k) => guard.BRIEF_FIELDS.find((f) => f.key === k)?.ok(itemPlain)
-  const sorted = itemPlain ? { ...own, judgment: own.judgment.filter((f) => !(['Sheet', 'Look-Lock'].includes(f.key) && itemHas(f.key))) } : own
+  const sorted = itemPlain ? { ...own, judgment: own.judgment.filter((f) => !(['Sheet', 'Look-Lock', 'Level'].includes(f.key) && itemHas(f.key))) } : own
   found.push(...sorted.judgment.map((f) => `${f.key} is missing or still a <placeholder>`))
   const wrong = model && guard.wrongModel(brief, model, teams)
   if (wrong) found.push(`this thread runs on ${wrong.tier}, but the ${wrong.role} runs on ${wrong.allowed.join(' or ')}: ask the coordinator to restart it on that model`)

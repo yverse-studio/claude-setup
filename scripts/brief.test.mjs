@@ -47,7 +47,7 @@ test('rosterNames and kitNames read docs/TEAMS.md, no list of their own', () => 
   assert.deepEqual(rosterNames(''), [])
 })
 
-const FIELDS = { item: 'M1', plan: 'gate.md', acceptance: 'tests pass', threads: 'list_threads checked, none open on this topic', priorArt: 'yverse-studio/claude-setup checked -> adapt, because it exists', done: 'node --test passes', stop: 'two rounds', what: 'x', start: 'CLAUDE.md', sheet: 'n/a no body, face or outfit job', sceneDocs: 'the docs the project CLAUDE.md lists, copies the old scene X' }
+const FIELDS = { item: 'M1', plan: 'gate.md', acceptance: 'tests pass', threads: 'list_threads checked, none open on this topic', priorArt: 'yverse-studio/claude-setup checked -> adapt, because it exists', done: 'node --test passes', stop: 'two rounds', what: 'x', start: 'CLAUDE.md', sheet: 'n/a no body, face or outfit job', sceneDocs: 'the docs the project CLAUDE.md lists, copies the old scene X', level: 'research research/x.md · plan plans/x-PLAN.md · design design/x.md' }
 
 // The property the owner asked for: a generated brief always passes the guard. Every Roster role x kit x size either
 // yields a brief decide() lets through, or the generator refuses it with the same reason badTeam gives; none is silently wrong.
@@ -74,6 +74,8 @@ test('the lines the guard demands are built or asked for, never dropped: Sheet, 
   const { sheet, ...noSheet } = FIELDS
   const need = (f, re) => assert.throws(() => buildBrief({ teams, role: 'Programmer', kit: 'game', size: 'M', ...f }), (e) => e instanceof BriefError && re.test(e.message) && !/fails team-guard/.test(e.message))
   need(noSheet, /--sheet/)
+  const { level, ...noLevel } = FIELDS
+  need(noLevel, /--level/)
   need({ ...FIELDS, sheet: 'docs/cast.md' }, /--look-lock/)
   need({ ...FIELDS, sheet: 'n/a' }, /10\+ characters|reason/)
   assert.throws(() => buildBrief({ teams, role: 'Programmer', kit: 'setup', size: 'L', ...FIELDS }), (e) => /--tester/.test(e.message))
@@ -212,7 +214,7 @@ test('a rendered brief file per role passes team-guard once its <...> are filled
       const kit = name
       const model = modelFor(role, size, teams)
       const filled = block.split('\n').filter((l) => !/^(Look-Lock|Topic):/.test(l) && (size === 'L' || !/^Tester:/.test(l)))
-        .map((l) => l.replace(/^Sheet: .*/, 'Sheet: n/a this slice is no body, face or outfit job').replace(/Size: <[^>]+>/, `Size: ${size}`).replace(/Kit: <[^>]+>/, `Kit: ${kit}`)
+        .map((l) => l.replace(/^Sheet: .*/, 'Sheet: n/a this slice is no body, face or outfit job').replace(/^Level: .*/, 'Level: n/a fixture, this slice changes no level').replace(/Size: <[^>]+>/, `Size: ${size}`).replace(/Kit: <[^>]+>/, `Kit: ${kit}`)
           .replace(/^Model: .*/, `Model: ${model}`).replace(/^Gate: .*/, 'Gate: Reviewer · x before owner')
           .replace(/<[^>\n]+>/g, (m) => (/PLAN\.json/.test(m) ? 'M30' : /^<sources/.test(m) ? 'obra/superpowers' : 'something concrete for this task'))).join('\n')
       const out = decide(START, { brief: filled, title: `${role} · x`, model }, [], [], teams)

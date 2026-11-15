@@ -2,7 +2,7 @@
 
 Finds what already exists before anything is built: competitors and prices, how the best similar products are made, the tools, skills, plugins and APIs the idea needs, and three pieces of evidence that people pay.
 
-- **Starts:** With the brainstorm, before brief (a).
+- **Starts:** With the brainstorm, before brief (a). For a game level: one page on the real place plus a teardown of three shipped games with that kind of level ([`TEAMS.md`](../../../../docs/TEAMS.md), A level).
 - **Runs as:** Quick subagents, one page each; a thread when the research is big (several pages or rounds).
 - **Uses:** Load: toolbox (`find.mjs`). Situational: market, product-lens. SearchPlugins / SearchSkills / SearchMcpRegistry
 - **Model and handoff:** the brief names both; the rule is [project-manager.md](project-manager.md#model-and-handoff-in-every-brief).
