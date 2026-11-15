@@ -7,10 +7,11 @@
 //   drivers <drivers.json>     point 5  no driver with a dead or unresolved variable (dump: scripts/blender/dump_drivers.py)
 //   previews <dir> [--fix]     point 7  thumb.jpg older than a final render in its folder
 //   intake <asset dir> --inventory <measure.json>   asset-intake: a downloaded asset is processed, not listed (licence, source, a row and preview per base of the body's _inventory)
+//   cards <scene folder>       #630    one scene card path: a root copy or a v3/v4 conflict copy beside it is RED, every path named
 // Each prints OK or RED lines and exits 1 on any RED.
 import { spawnSync } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
-import { basename, dirname, join } from 'node:path'
+import { basename, dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 // A bold label (`**Adult use:** no`) closes its `**` after the colon: skip it, or the value reads "** no" (gate #483 r2, F1).
@@ -165,6 +166,14 @@ export function intakeProblems(dir, inventory = []) {
   return out
 }
 
+// A scene card is a file named scene_card, scene-card or scene card (any suffix, so v3 and conflict copies count) anywhere under the scene folder.
+export function sceneCardProblems(root) {
+  const found = []
+  const walk = (dir) => { for (const e of readdirSync(dir, { withFileTypes: true })) { if (e.isDirectory()) { if (e.name !== '.git') walk(join(dir, e.name)) } else if (/^scene[-_ ]?card/i.test(e.name)) found.push(relative(root, join(dir, e.name)).replace(/\\/g, '/')) } }
+  walk(root)
+  return found.length > 1 ? [`${found.length} scene cards in one scene, keep one path and merge the rest into it: ${found.sort().join(', ')}`] : []
+}
+
 const run = (cmd, args) => spawnSync(cmd, args, { encoding: 'utf8' })
 export function refreshPreview(finalFile, exec = run) {
   const thumb = join(dirname(finalFile), 'thumb.jpg')
@@ -188,12 +197,13 @@ function main([cmd, ...args]) {
       try { inventory = bodyInventory(json(f)) } catch (e) { return [`--inventory ${f} cannot be read: ${e.message}`] }
       return intakeProblems(args[0], inventory)
     },
+    cards: () => sceneCardProblems(args[0]),
     previews: () => stalePreviews(args[0]).map((s) => {
       if (args.includes('--fix')) { const r = refreshPreview(s.final); return r.ok ? null : `${s.dir}: could not refresh thumb.jpg (${r.why})` }
       return `${s.dir}: thumb.jpg is older than ${s.finals.join(', ')} (run with --fix)`
     }).filter(Boolean),
   }
-  if (!jobs[cmd] || !args.length) { console.error('usage: pipeline-gates.mjs sheet|fit|look|drivers|previews|intake <file or dir> [--fix | --inventory <measure.json>] [--fix]'); return 2 }
+  if (!jobs[cmd] || !args.length) { console.error('usage: pipeline-gates.mjs sheet|fit|look|drivers|previews|intake|cards <file or dir> [--fix | --inventory <measure.json>] [--fix]'); return 2 }
   const problems = jobs[cmd]()
   for (const p of problems) console.log(`RED ${p}`)
   console.log(problems.length ? `RESULT RED ${cmd}: ${problems.length} problem(s)` : `OK ${cmd}`)
