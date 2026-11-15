@@ -262,7 +262,7 @@ function cardOnDisk(env = process.env) {
   return ''
 }
 // Wires the receipt: only a thread whose role card was injected (roleContext wrote the role file) and only its own calls, not a subagent's.
-function receiptBlock(tool, input, session, cwd, agentId, transcript) {
+async function receiptBlock(tool, input, session, cwd, agentId, transcript) {
   if (tool !== 'mcp__hearthbot__post_message' || !session || agentId) return null
   const role = read(join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)).trim()
   if (!role) return null
@@ -270,7 +270,8 @@ function receiptBlock(tool, input, session, cwd, agentId, transcript) {
   if (!/reason=\\?"spawn/.test(t)) return null // a hooked project chat that was handed a brief is no thread
   const root = setupRoot(cwd)
   const rules = ['CLAUDE.md', 'docs/TEAMS.md'].map((f) => read(join(root, f))).join('\n')
-  const brief = spawnPrompt('', t).replace(/<\/?(wake|message|thread|project|relay|coordinator-relay|cited|note|system-note)\b[^>]*>/g, '\n')
+  const origin = await projectsOrigin(), last = coordinatorRelays(t, origin).at(-1) // #603 B: the newest brief's lines come first, as in relayRebrief
+  const brief = unfix(stripTags(last ? [last, relayContext(last, t, origin)].join('\n') : spawnPrompt('', t)))
   const path = roleOf(brief, read(join(root, 'docs', 'TEAMS.md')))?.path
   // No checkout (only the boot copy): nothing can be checked, so the receipt says that instead of a false `none`.
   const status = existsSync(join(root, 'config', 'plugins.json')) ? skillStatus(wanted(root, path ? read(join(root, path)) : '', brief), { root, cwd }) : { loaded: [], missing: [], unknown: true }
@@ -883,9 +884,8 @@ export const COORDINATOR_RELAY = /^\s*(?:<project_claude_message\b[^>]*>\s*)?(?:
 // (an isMeta row with the same text) is no relay.
 const BRIEF_LINE = /^[ \t>*_`-]*(BRIEF-FIX|Role|Kit|Gate|Prior art|Model|Skills|Done when|Stop when|Start|Threads|Item|Plan|Acceptance):/im // a relay that corrects the brief; other relays do not count toward the card
 const BARE_RELAY = /^\s*(?:<project_claude_message\b[^>]*>\s*)?<relay\b[^>]*\bfrom=\\?"coordinator"/
-// The coordinator often sends only the lines the start brief lacked (#479 part 2: VacationGame's Critic, our Director), so the relay is read
-// together with the earlier coordinator relays and the spawn brief from the transcript: the newest relay's lines come first and win,
-// older relays and the spawn brief fill the gaps.
+// The coordinator often sends only the lines the start brief lacked (#479 part 2), so a relay is read together with the earlier relays and
+// the spawn brief: the newest lines win, the older ones fill the gaps.
 // Every coordinator relay of the transcript, oldest first: a user entry, or a queued_command attachment when it reached a working thread.
 // `origin` decides whether the row came from the projects server; without one no row counts (fail closed).
 export function coordinatorRelays(transcript, origin = () => false) {
@@ -940,9 +940,8 @@ async function relayRebrief(session, prompt, cwd, model, transcript = '') {
   const card = topic ? roleCard({ ...role, path: `${'.claude/skills/operator/checklists.md'} (${topic.name}) and gate.md, Scored gates` }, topic.text) : roleCard(role, role.path ? read(join(root, role.path)) || fetchRaw(role.path) : '')
   return [accepted, card].filter(Boolean).join('\n')
 }
-// #522/#523: the role stamp is also written from the transcript, so a spawn or a coordinator re-brief stamps its role whether or not the prompt hook
-// saw it on the turn that carried it (the stamp is only for a thread that holds none and no lock; a stamp is never changed, and a relay counts
-// only on a row the projects server delivered, as in relayRebrief).
+// #522/#523: the role stamp is also written from the transcript (a spawn or a coordinator re-brief the prompt hook never saw), only for a thread that holds
+// no stamp and no lock; a stamp is never changed, and a relay counts only on a row the projects server delivered, as in relayRebrief.
 async function stampFromTranscript(session, transcript, cwd) {
   const stamp = join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)
   if (!session || read(stamp).trim() || existsSync(lockFile(session))) return
@@ -1161,7 +1160,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           ?? handsOff(tool, input ?? {}, gateRole, setupRoot(cwd))
           ?? (await gateBlock(tool, input ?? {}, transcript, sessionModel(transcript()), true, gateRole, transcriptPath))
           ?? decide(tool, input ?? {}, process.env, session ? read(shipped).split('\n') : [], () => threadBoard(toolCalls(transcript())))
-          ?? receiptBlock(tool, input ?? {}, session, cwd, agentId, transcript)
+          ?? await receiptBlock(tool, input ?? {}, session, cwd, agentId, transcript)
           ?? proposeSkillsBlocked(tool)
           ?? opensWindow(tool, input ?? {})
           ?? archivistFiles(tool, input ?? {}, session ? read(join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)) : '')
