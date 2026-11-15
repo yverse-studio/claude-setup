@@ -81,7 +81,7 @@ The one home of the coordinator's start protocol. Every new coordinator session,
 4. Orders: list the repo's open issues labelled `ceo` (`list_issues`, label `ceo`) and read them first: they are yskills' orders from HQ (`docs/hq-rows.md`, Jetzt block). Each gets a thread or PR now, the PR body says `Closes #<n>`, and the issue gets one comment with the thread's link. None open: say nothing.
 5. Reconcile. Every working or blocked thread on the board has an open issue, and every open issue marked `waits` has a live thread or a named wait (Masterplan, below). The board wins: a mismatch goes into the next brief or a size S thread that fixes the issue. Every ask of yskills in the last day of chat has a thread, a PR or a `Done:` line (the asks ledger above).
 6. Cheap memory check: `MEMORY.md` has only the template's four sections and no rule line. A line that is a rule becomes a `loop:setup` issue (`docs/WORKFLOW.md`, Learning).
-7. Post nothing unless something is wrong.
+7. Post nothing unless something is wrong. The first reply of the session opens `Luna · card <hash> · plan <done>/<all> · board <n> open`; what the two numbers count is on the card (Before every reply, Plan).
 
 ## What the coordinator may say (2026-11-12)
 

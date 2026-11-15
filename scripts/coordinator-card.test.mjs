@@ -65,7 +65,8 @@ test('a flag is never taken as the output path (#439: --help wrote a file named 
 test('#604: the card names the three-part first-reply header, plan and board numbers included', () => {
   const card = buildCard({ hash: 'x', date: 'd' })
   assert.ok(card.includes('`Luna · card <hash> · plan <done>/<all> · board <n> open`'), 'the header')
-  assert.match(card, /First reply of a session:[^\n]*list_threads/)
+  assert.match(card, /First reply: [^\n]*plan: the Plan count line of ISSUES\.md, or x\/y of plan\.mjs stand; board: threads of list_threads that are working, blocked or review_ready/, 'what the two numbers count')
+  assert.match(readFileSync(join(import.meta.dirname, '..', '.claude/skills/operator/roles/project-manager.md'), 'utf8'), /Session start[\s\S]*first reply of the session opens `Luna · card <hash> · plan <done>\/<all> · board <n> open`/, 'Session start names the header')
 })
 
 test('the first rule is the one loop (yskills 2026-11-12): role, playbook, Researcher gap, learnings back; its hooks behave', async () => {
