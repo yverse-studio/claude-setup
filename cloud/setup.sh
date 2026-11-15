@@ -640,10 +640,10 @@ export function reuseBlock(text, teams, board) {
 }
 
 // A thread hands off only on a role change, quality loss or a milestone, never at a token count (docs/WORKFLOW.md, Handoff triggers; 2026-11-08 decision). A brief line that
-// asks for a stop, hand-off or status report at a token or context amount ("at ~200k context post status and stop", "stop at 30000 tokens") caused three needless hand-offs on 2026-11-13.
+// asks for a stop, hand-off or status report at a token or context amount ("at ~200k context post status and stop") caused three needless hand-offs on 2026-11-13.
 // Precision over reach: a refused start costs a round, so a line is flagged only when it holds a stop or hand-off word AND a threshold: a trigger word (at, bei, after, once, when,
-// reaches ...) then an amount (200k, 0.2M, 30000, 80 %) right before a token or context word, or the word context (not a label) then a trigger word and an amount. A span in quotes or backticks that holds a space is dropped first (a line quoting the wording is no stop line). A bare "100k users", "status 200",
-// "after 2k ms", "context 3 of 5" or "under 8k tokens" is none of that. A line that says "never" states the rule itself and is skipped, and so is an `Item:` line (it quotes the issue's title).
+// reaches ...) then an amount (200k, 0.2M, 30000, 80 %) right before a token or context word, or the word context (not a label) then a trigger word and an amount. A span in quotes or backticks that holds a space is dropped first. A bare "100k users", "status 200",
+// "after 2k ms", "context 3 of 5" or "under 8k tokens" is none of that. A line that says "never" states the rule itself and is skipped, and so is an `Item:` line.
 const QTY = String.raw`(?:~?\d[\d.,]*\s?[kKmM](?![\p{L}\d])|\d{2,3}[.,]?\d{3}(?!\d)|\d{1,3}\s?%)`
 const TRIG = String.raw`(?<![\p{L}\d])(?:at|bei|ab|after|nach|past|over|above|once|when|wenn|reach|reaches|hit|hits|exceed|exceeds|pass|passes|über|before|vor)(?![\p{L}\d])`
 const AMOUNT = String.raw`(?:${TRIG}\W{0,4}${QTY}\s?(?:of\s+)?(?:the\s+)?(?:tokens?|context|kontext)(?![\p{L}\d])|(?:context|kontext)(?![\p{L}\d:])(?!\s*:)[^\n:;,.()]{0,15}?${TRIG}\W{0,4}${QTY})`
@@ -708,7 +708,8 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
     const flag = (name) => { const i = args.indexOf(`--${name}`); return i < 0 ? undefined : args.splice(i, 2)[1] }
     const [model, title] = [flag('model'), flag('title')]
     const [role, source] = args
-    const teams = text(join(process.cwd(), 'docs', 'TEAMS.md')) || text(join(dir, 'docs', 'TEAMS.md'))
+    const near = dirname(fileURLToPath(import.meta.url))
+    const teams = text(join(process.cwd(), 'docs', 'TEAMS.md')) || text(join(dir, 'docs', 'TEAMS.md')) || text(join(near, 'docs', 'TEAMS.md'))
     const roles = [...teams.split('\n').filter((l) => /^\| [A-Z][\w ]* \(\[`/.test(l)).map((l) => l.slice(2, l.indexOf(' (')))]
     if (!role || !source || !roles.includes(role)) { console.error(`usage: node team-guard.mjs check <Role> <file|-> [--model <id>] [--title <title>]; Role is one of ${roles.join(', ') || '(docs/TEAMS.md not found)'}`); process.exit(2) }
     // not awaited at the top level: card-render imports this file, so awaiting it here would deadlock the module graph
@@ -716,7 +717,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
       const brief = readFileSync(source === '-' ? 0 : source, 'utf8')
       const { modelFor } = await import('./card-render.mjs')
       const id = modelFor(role, brief.match(/\bSize:[ \t]*([SML])\b/i)?.[1]?.toUpperCase() ?? 'M', teams)
-      const found = briefProblems(brief, { model: model ?? id, title: title ?? `${role} · check`, teams, checklists: text(join(process.cwd(), CHECKLISTS)) || text(join(dir, CHECKLISTS)) })
+      const found = briefProblems(brief, { model: model ?? id, title: title ?? `${role} · check`, teams, checklists: text(join(process.cwd(), CHECKLISTS)) || text(join(dir, CHECKLISTS)) || text(join(near, CHECKLISTS)) })
       const named = brief.replace(/[*_`]/g, '').match(/^[ \t>-]*Role:[ \t]*([^·|\n]*?)[ \t]*(?:[·|]|$)/im)?.[1]
       if (named && named !== role) found.unshift(`the brief starts Role: ${named} but you named ${role}: one of them is wrong`)
       if (found.length) found.forEach((f, i) => console.log(`(${i + 1}) ${f}`))
@@ -1452,7 +1453,7 @@ const BRIEF_SECTION = `## Thread brief
 
 Copy briefs/<role>.md of this folder (one per Roster role, its Model line inside; kits and sizes per role in ROSTER.md), fill every <...>, paste it as the brief, pass its Model as \`model\`. Nothing else is added or written from memory.
 A refusal names every gap at once: send those lines to the same thread with message_thread, never a new thread.
-With Bash run \`cd tools/brief-check && node team-guard.mjs check <Role> <file|->\` here before every start_thread (no Bash: the refusal lists the gaps): it lists every gap at once and prints the exact \`model\`.
+With Bash run \`node tools/brief-check/team-guard.mjs check <Role> <file|->\` in this folder before every start_thread (no Bash: the refusal lists the gaps): it lists every gap at once and prints the exact \`model\`.
 A device thread passes \`message_id\` (yskills' message or your own project-chat post), never \`project_post_id\` or \`auto_attach=false\`.`
 
 export function buildCard({ teams, hash = 'nogit', date = today() }) {
