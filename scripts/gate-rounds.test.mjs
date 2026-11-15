@@ -32,7 +32,7 @@ function session(model = 'sonnet-test', extra = [], role = 'Tester') {
   const run = (...args) => {
     const [cmd, asset, ...rest] = args
     if (GRANTED.includes(cmd)) {
-      const body = cmd === 'record' ? rest[rest.indexOf('--body-file') + 1] : null // a record grant carries the digest of the body the hook read
+      const body = cmd === 'record' || cmd === 'post' ? rest[rest.indexOf('--body-file') + 1] : null // a record or post grant carries the digest of the body the hook read
       issueGrant(join(dir, 'gate'), cmd, asset, cmd === 'init' ? rest[rest.indexOf('--round') + 1] : cmd === 'direct' ? rest[rest.indexOf('--plan') + 1] : body ?? rest[rest.indexOf('--ref') + 1], Date.now(), body === null ? null : (existsSync(body) ? readFileSync(body, 'utf8') : ''))
     }
     return cli(args, env)
@@ -392,13 +392,16 @@ test('cli merge and post: a counted pass merges through gh, a verdict through po
   const env = { ...s.env, PATH: `${bin}:${process.env.PATH}` }
   const f = join(s.dir, 'v.md'); writeFileSync(f, 'Gate 4.60/5 (S, round 1)\n1 CI pass\n')
   assert.equal(cli(['merge', ASSET], env).code, 2, 'no counted round, no merge')
+  assert.equal(cli(['post', ASSET, '--body-file', f], env).code, 2, 'no grant, no post (#508)')
+  const grant = () => issueGrant(join(s.dir, 'gate'), 'post', ASSET, f, Date.now(), readFileSync(f, 'utf8'))
+  grant()
   assert.equal(cli(['post', ASSET, '--body-file', f], env).code, 0)
   assert.equal(readLedger(join(s.dir, 'gate'), ASSET).rounds.length, 1)
   assert.equal(cli(['merge', ASSET, '--squash', '--rebase'], env).code, 2, 'one merge kind only')
   assert.equal(cli(['merge', ASSET, '-d'], env).code, 2, 'no unknown flags')
   assert.equal(cli(['merge', ASSET, '--squash', '--delete-branch'], env).code, 0)
   // #466: REST only (gh pr comment and gh pr merge use GraphQL, which the cloud proxy refuses with a 403)
-  assert.equal(readFileSync(log, 'utf8'), `api -X POST repos/yverse-studio/vacation-game/issues/13/comments -F body=@${f}\napi repos/yverse-studio/vacation-game/pulls/13 --jq [.head.repo.full_name, .head.ref] | @tsv\napi -X PUT repos/yverse-studio/vacation-game/pulls/13/merge -f merge_method=squash\napi -X DELETE repos/yverse-studio/vacation-game/git/refs/heads/feature-x\n`)
+  assert.equal(readFileSync(log, 'utf8'), `api -X POST repos/yverse-studio/vacation-game/issues/13/comments -f body=Gate 4.60/5 (S, round 1)\n1 CI pass\n\napi repos/yverse-studio/vacation-game/pulls/13 --jq [.head.repo.full_name, .head.ref] | @tsv\napi -X PUT repos/yverse-studio/vacation-game/pulls/13/merge -f merge_method=squash\napi -X DELETE repos/yverse-studio/vacation-game/git/refs/heads/feature-x\n`)
   writeFileSync(log, '')
   assert.equal(cli(['merge', ASSET, '--squash', '--delete-branch'], { ...env, GH_HEAD: 'someone/fork' }).code, 0)
   assert.doesNotMatch(readFileSync(log, 'utf8'), /DELETE/, 'a fork branch of the same name is never deleted here')
@@ -445,7 +448,7 @@ test('post: a gh that fails leaves the ledger alone', () => {
   const bin = join(s.dir, 'bin'); mkdirSync(bin)
   writeFileSync(join(bin, 'gh'), '#!/bin/sh\nexit 1\n', { mode: 0o755 })
   const f = join(s.dir, 'v.md'); writeFileSync(f, 'Gate 4.90/5 (S, round 1)\n')
-  assert.equal(cli(['post', ASSET, '--body-file', f], { ...s.env, PATH: `${bin}:${process.env.PATH}` }).code, 2)
+  assert.equal((issueGrant(join(s.dir, 'gate'), 'post', ASSET, f, Date.now(), readFileSync(f, 'utf8')), cli(['post', ASSET, '--body-file', f], { ...s.env, PATH: `${bin}:${process.env.PATH}` }).code), 2)
   assert.equal(readLedger(join(s.dir, 'gate'), ASSET).rounds.length, 0)
 })
 
@@ -711,6 +714,26 @@ test('finding 2: a record grant belongs to the content the hook read, so a body 
   writeFileSync(body, 'Gate 5/5 (S, round 2)\nswapped\n')
   assert.equal(critic.bare('record', 'devlog-01', '--body-file', body).code, 2, 'swapped after the real hook')
   assert.equal(readLedger(D, 'devlog-01').rounds.length, 1)
+})
+
+test('#508: a post grant belongs to the body the hook read, so a verdict swapped after the hook is not counted', () => {
+  const reviewer = session('sonnet-test', [], 'Reviewer')
+  const D = join(reviewer.dir, 'gate')
+  const body = join(reviewer.dir, 'v.md')
+  writeFileSync(body, 'Gate 3/5 (S, round 1)\nwhat the hook read\n')
+  assert.equal(reviewer.hook('Bash', { command: `node ~/.claude/claude-setup/gate-rounds.mjs post ${ASSET} --body-file ${body}` }).status, 0)
+  writeFileSync(body, 'Gate 5/5 (S, round 1)\nwhat the Reviewer never saw\n') // the swap between the hook and the CLI
+  assert.match(reviewer.bare('post', ASSET, '--body-file', body).text, /refused: the hook/)
+  assert.equal(readLedger(D, ASSET).rounds.length, 0, 'nothing counted')
+  issueGrant(D, 'post', ASSET, body) // a grant with no digest opens nothing
+  assert.match(reviewer.bare('post', ASSET, '--body-file', body).text, /refused: the hook/)
+})
+
+test('#508 part 2: an env prefix does not hide a ledger write or a counter call; a plain read stays allowed', () => {
+  const s = session('sonnet-test')
+  const ledger = join(s.dir, 'gate', 'o_r_5.json')
+  for (const c of [`FOO=1 rm ${ledger}`, `FOO=1 BAR=2 tee ${ledger}`, `env FOO=1 rm ${ledger}`, `FOO=1 sed -i s/a/b/ ${ledger}`, `FOO=1 node /tmp/x/gate-rounds.mjs merge o/r#5`, `FOO=1 gh pr merge 5`, `FOO=1 gh api -X PUT repos/o/r/pulls/5/merge`, `FOO=1 node ~/.claude/claude-setup/gate-rounds.mjs card o/r#5`]) assert.equal(s.hook('Bash', { command: c }).status, 2, c)
+  for (const c of [`FOO=1 cat ${ledger}`, `FOO=1 ls ${join(s.dir, 'gate')}`]) assert.equal(s.hook('Bash', { command: c }).status, 0, c)
 })
 
 test('finding 4 (review): only the installed copy is the counter; the hook checks a merge itself; HOME cannot move the ledger; more writers', () => {
