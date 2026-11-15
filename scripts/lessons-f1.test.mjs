@@ -18,7 +18,9 @@ test('pc-claude-user.md: the RC allow card is accepted only on the laptop, and a
 test('researcher.md names the watch skill for a video link, and its Uses: line is untouched', () => {
   const t = read('.claude/skills/operator/roles/researcher.md')
   assert.match(t, /^6\. \*\*A video or social link\*\*.*`watch` skill.*before any "cannot view"/m)
-  assert.equal((t.match(/^Uses:.*$/m) ?? [''])[0].includes('watch'), false)
+  const uses = t.match(/^- \*\*Uses:\*\*.*$/m)
+  assert.ok(uses, 'the Uses: line is found as written')
+  assert.equal(uses[0].includes("watch"), false)
 })
 
 test('renpy.md: one line for the rotated button and the eol=lf .gitattributes', () => {
