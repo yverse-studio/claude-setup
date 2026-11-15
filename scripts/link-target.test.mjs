@@ -2,7 +2,7 @@
 // Run: node --test scripts/link-target.test.mjs
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readlinkSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { cpSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, readlinkSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
@@ -20,7 +20,7 @@ function tree(t) {
 
 test('a real symlink and a real folder come back unchanged (the filesystem resolves them)', (t) => {
   const d = tree(t)
-  symlinkSync('../../src/skill', join(d, 'mods/skills/real'))
+  try { symlinkSync('../../src/skill', join(d, 'mods/skills/real')) } catch { return t.skip('this system refuses symlinks (Windows without the right)') }
   assert.equal(resolveLink(join(d, 'mods/skills/real')), join(d, 'mods/skills/real'))
   assert.equal(resolveLink(join(d, 'src/skill')), join(d, 'src/skill'))
   assert.ok(existsSync(join(resolveLink(join(d, 'mods/skills/real')), 'SKILL.md')))
@@ -30,6 +30,12 @@ test('a text file holding the relative target (core.symlinks=false) resolves lik
   const d = tree(t)
   writeFileSync(join(d, 'mods/skills/flat'), '../../src/skill')
   assert.equal(resolveLink(join(d, 'mods/skills/flat')), join(d, 'src/skill'))
+})
+
+test('a big file is no link, even when its trimmed text is an existing path', (t) => {
+  const d = tree(t)
+  writeFileSync(join(d, 'mods/skills/big'), `../../src/skill${' '.repeat(600)}`)
+  assert.equal(resolveLink(join(d, 'mods/skills/big')), join(d, 'mods/skills/big'))
 })
 
 test('a text file that is no path to anything stays itself, so the caller reports it', (t) => {
@@ -47,7 +53,7 @@ test('check.mjs passes on a copy whose mods skill links are text files (core.sym
   cpSync(repo, d, { recursive: true, verbatimSymlinks: true, filter: (s) => !/[\\/](\.git|node_modules)([\\/]|$)/.test(s) })
   const dir = join(d, 'mods/setup-domains/skills')
   const names = readdirSync(dir)
-  for (const n of names) { const target = readlinkSync(join(dir, n)); rmSync(join(dir, n)); writeFileSync(join(dir, n), target) }
+  for (const n of names) { const at = join(dir, n); const target = lstatSync(at).isSymbolicLink() ? readlinkSync(at) : readFileSync(at, 'utf8').trim(); rmSync(at); writeFileSync(at, target) }
   const run = () => spawnSync(process.execPath, [join(d, 'scripts/check.mjs')], { encoding: 'utf8' })
   const ok = run()
   assert.equal(ok.status, 0, ok.stdout + ok.stderr)
