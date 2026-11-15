@@ -8,7 +8,7 @@ import { existsSync, readFileSync, writeFileSync, renameSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
 export const STATUSES = ['todo', 'doing', 'wartet', 'done', 'drop']
-const today = () => new Date().toISOString().slice(0, 10)
+const today = () => `${new Date().toISOString().slice(0, 16)}Z` // `updated` holds the minute (2026-11-15T05:50Z), so the age shows (#605); an old date-only value still reads as midnight UTC
 
 export function problems(plan) {
   const out = []
@@ -82,13 +82,15 @@ export function addItem(plan, fields, date = today()) {
   return valid({ ...plan, updated: date, items: [...plan.items, { id: `M${next}`, status: 'todo', ...fields }] })
 }
 
-export function stand(plan) {
+export function stand(plan, now = Date.now()) {
+  const age = now - Date.parse(plan.updated), hours = Math.floor(age / 3_600_000) // NaN for a missing or odd value: no stale line
   const by = (s) => plan.items.filter((it) => it.status === s)
   const open = plan.items.filter((it) => it.status !== 'drop')
   const line = (it, extra = '') => `${it.id} ${it.title}${it.owner ? ` (${it.owner})` : ''}${extra}`
   const list = (items, fmt) => items.map(fmt).join('; ') || '-'
   return [
     `Ziel: ${plan.goal} (Stand ${plan.updated ?? '?'})`,
+    ...(age > 7_200_000 ? [`stale: last change ${hours} h ago (the thread that finishes an item sets it: plan.mjs set <id> status=done evidence=<link>)`] : []),
     `${by('done').length}/${open.length} done`,
     `Läuft: ${list(by('doing'), (it) => line(it))}`,
     `Wartet: ${list(by('wartet'), (it) => line(it, `: ${it.waits_on}`))}`,
