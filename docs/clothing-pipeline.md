@@ -82,8 +82,8 @@ mm and the share of vertices below 0 in %. Measured on the evaluated mesh at res
 pose, and with each slider at each of its extremes, one at a time. Limit, everywhere: smallest
 clearance 0 mm or more and 0 % of vertices inside (the 2-4 mm fit offset of step 3 is the margin).
 A piece without its row is not done, a row over the limit fails the report. Measure with `node scripts/clipping.mjs <file.vrm|glb> [--body SKIN] [--parts CLOTH] --out rest.json` (rest pose, one JSON and one summary line; exit 1 over the limit; pose or slider extremes: export that state as GLB and run it again with `--label`).  For a `.blend` character and every garment, hair piece or accessory worn on it,
-the **mandatory measuring step** is [`scripts/blender/clearance.py`](../scripts/blender/clearance.py) (library copy: `_tools\clearance.py`,
-the same file): `blender -b <character>.blend --factory-startup -P clearance.py -- look=<look> pieces=<names> faces report=<out.json>` writes the
+the **mandatory measuring step** is [`scripts/blender/clearance.py`](../scripts/blender/clearance.py) (library copy: `_tools\clearance.py` and
+`clearance_args.py` beside it): `blender -b <character>.blend --factory-startup -P clearance.py -- look=<look> pieces=<names> faces report=<out.json>` writes the
 smallest clearance, the vertices inside and the share inside for rest, **every follow key at 1** and 3 frames of each pose in one JSON. `faces`
 also measures triangle centres and edge midpoints, because skin shows between vertices (a vertex-only report passed a shirt whose faces cut the
 chest). Self-collision of the body (arm through torso in the pose) is counted apart as `selfcol` and named in the report as animation, not clothing.
