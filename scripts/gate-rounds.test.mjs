@@ -7,7 +7,7 @@ import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
-import { cli, gateBrief, namesLook, pictureOk, mergeProblem, parseHeadline, readLedger, recordRound, roundProblem, issueGrant, GRANTED, reviewerProof, authorProblem, GATE_ROLE } from '../global/gate-rounds.mjs'
+import { cli, gateStep, gateBrief, namesLook, pictureOk, mergeProblem, parseHeadline, readLedger, recordRound, roundProblem, issueGrant, GRANTED, reviewerProof, authorProblem, GATE_ROLE } from '../global/gate-rounds.mjs'
 
 const root = join(fileURLToPath(import.meta.url), '..', '..')
 // yskills' real tap on a card (M53 slice 2, scripts/fixtures/m53/real-human-rows.jsonl; card id cmsg_CARD123): the origin the waive check reads.
@@ -41,8 +41,8 @@ function session(model = 'sonnet-test', extra = [], role = 'Tester') {
 }
 
 test('headline: round, score and importance are read from the gate post', () => {
-  assert.deepEqual(parseHeadline('Gate 4.2/5 (L, round 3) [important]'), { round: 3, score: 4.2, important: true })
-  assert.deepEqual(parseHeadline('Gate 5/5 (S, round 1), merging'), { round: 1, score: 5, important: false })
+  assert.deepEqual(parseHeadline('Gate 4.2/5 (L, round 3) [important]'), { round: 3, score: 4.2, text: '4.2', important: true })
+  assert.deepEqual(parseHeadline('Gate 5/5 (S, round 1), merging'), { round: 1, score: 5, text: '5', important: false })
   assert.equal(parseHeadline('Gate fail, round 2').score, null)
   assert.equal(parseHeadline('looks good to me'), null)
 })
@@ -107,9 +107,9 @@ test('no merge below the threshold (4.2 never merges), 4.5 merges, 4.8 when impo
   const m = s.hook('mcp__github__merge_pull_request', { owner: 'yverse-studio', repo: 'vacation-game', pullNumber: 13 })
   assert.equal(m.status, 2)
   assert.match(m.stderr, /scored 4\.2, under 4\.5: no merge below the threshold, no exception/)
-  s.gate(2, '4.5')
+  s.gate(2, '4.50')
   assert.equal(s.hook('mcp__github__merge_pull_request', { owner: 'yverse-studio', repo: 'vacation-game', pullNumber: 13 }).status, 0)
-  const imp = session(); imp.gate(1, '4.6', ' [important]')
+  const imp = session(); imp.gate(1, '4.60', ' [important]')
   assert.equal(imp.hook('mcp__github__merge_pull_request', { owner: 'yverse-studio', repo: 'vacation-game', pullNumber: 13 }).status, 2)
   assert.equal(mergeProblem(recordRound(readLedger('/nonexistent', 'x'), { round: 1, score: 4.8, important: true })), null)
 })
@@ -198,15 +198,15 @@ test('only a real verdict line counts: German headline counts, talk about the ga
 })
 
 test('a pass is not sticky: a fall back under the threshold blocks the merge and the free rounds', () => {
-  const s = session(); s.gate(1, '4.6'); s.gate(2, '2.0')
+  const s = session(); s.gate(1, '4.60'); s.gate(2, '2.0')
   assert.equal(s.hook('mcp__github__merge_pull_request', MERGE).status, 2)
   s.gate(3, '2.0')
-  assert.match(s.gate(4, '4.6').stderr, /Fable director/)
+  assert.match(s.gate(4, '4.60').stderr, /Fable director/)
 })
 
 test('after a pass at most 2 polish rounds run without a director', () => {
-  const s = session(); s.gate(1, '4.6'); s.gate(2, '4.7'); s.gate(3, '4.8')
-  assert.match(s.gate(4, '4.9').stderr, /Fable director/)
+  const s = session(); s.gate(1, '4.60'); s.gate(2, '4.70'); s.gate(3, '4.80')
+  assert.match(s.gate(4, '4.90').stderr, /Fable director/)
 })
 
 test('a post that another guard refuses is not counted', () => {
@@ -274,7 +274,7 @@ test('fail closed: a merge needs a counted pass, a PR without any gate round doe
   assert.equal(none.status, 2)
   assert.match(none.stderr, /no gate round|counted pass/i)
   assert.equal(s.hook('mcp__github__enable_pr_auto_merge', MERGE).status, 2)
-  s.gate(1, '4.6')
+  s.gate(1, '4.60')
   assert.equal(s.hook('mcp__github__merge_pull_request', MERGE).status, 0)
 })
 
@@ -290,8 +290,8 @@ test('ordinary work is never blocked, a verdict is read from the opening line on
   assert.equal(v.hook('mcp__github__merge_pull_request', MERGE).status, 2)
   const p = session(); p.hook('mcp__github__add_issue_comment', { ...PR, body: 'Gate pass (S, round 1)' })
   assert.equal(p.hook('mcp__github__merge_pull_request', MERGE).status, 0, '"Gate pass" is a pass')
-  const q = session(); q.gate(1, '4.6'); q.gate(2, '3.0'); q.gate(3, '4.6')
-  assert.equal(q.gate(4, '4.6').status, 0, 'polish counts from the latest passing run')
+  const q = session(); q.gate(1, '4.60'); q.gate(2, '3.0'); q.gate(3, '4.60')
+  assert.equal(q.gate(4, '4.60').status, 0, 'polish counts from the latest passing run')
 })
 
 // ---- The Bash corpus (Fable director, gate round 4): every finding of rounds 1 to 4 is one line here, run through the real hook.
@@ -390,7 +390,7 @@ test('cli merge and post: a counted pass merges through gh, a verdict through po
   const log = join(s.dir, 'gh.log')
   writeFileSync(join(bin, 'gh'), `#!/bin/sh\necho "$@" >> ${log}\n`, { mode: 0o755 })
   const env = { ...s.env, PATH: `${bin}:${process.env.PATH}` }
-  const f = join(s.dir, 'v.md'); writeFileSync(f, 'Gate 4.6/5 (S, round 1)\n1 CI pass\n')
+  const f = join(s.dir, 'v.md'); writeFileSync(f, 'Gate 4.60/5 (S, round 1)\n1 CI pass\n')
   assert.equal(cli(['merge', ASSET], env).code, 2, 'no counted round, no merge')
   assert.equal(cli(['post', ASSET, '--body-file', f], env).code, 0)
   assert.equal(readLedger(join(s.dir, 'gate'), ASSET).rounds.length, 1)
@@ -413,7 +413,7 @@ test('post: a gh that fails leaves the ledger alone', () => {
   const s = session()
   const bin = join(s.dir, 'bin'); mkdirSync(bin)
   writeFileSync(join(bin, 'gh'), '#!/bin/sh\nexit 1\n', { mode: 0o755 })
-  const f = join(s.dir, 'v.md'); writeFileSync(f, 'Gate 4.9/5 (S, round 1)\n')
+  const f = join(s.dir, 'v.md'); writeFileSync(f, 'Gate 4.90/5 (S, round 1)\n')
   assert.equal(cli(['post', ASSET, '--body-file', f], { ...s.env, PATH: `${bin}:${process.env.PATH}` }).code, 2)
   assert.equal(readLedger(join(s.dir, 'gate'), ASSET).rounds.length, 0)
 })
@@ -619,7 +619,7 @@ test('record: a missed round 1, 2 and 3 of a named asset is counted in order, on
   const NAMED = 'masterplan'
   const reviewer = session('sonnet-test', [], 'Reviewer')
   const body = join(reviewer.dir, 'v.md')
-  const rounds = [[1, 'Gate 3.8/5 FAIL (M, round 1)'], [2, 'Gate 4.0/5 FAIL (M, round 2)'], [3, '**Gate 4,6/5 (M, round 3)** PASS']]
+  const rounds = [[1, 'Gate 3.8/5 FAIL (M, round 1)'], [2, 'Gate 4.0/5 FAIL (M, round 2)'], [3, '**Gate 4,60/5 (M, round 3)** PASS']]
   for (const [n, head] of rounds) {
     writeFileSync(body, `${head}\n1 finding\n`)
     assert.equal(reviewer.hook('Bash', { command: `node ~/.claude/claude-setup/gate-rounds.mjs record ${NAMED} --body-file ${body}` }).status, 0, `hook, round ${n}`)
@@ -688,7 +688,7 @@ test('finding 4 (review): only the installed copy is the counter; the hook check
   for (const c of ['node /home/user/claude-setup/global/gate-rounds.mjs merge o/r#5', 'node /tmp/x/gate-rounds.mjs merge o/r#5', 'node global/gate-rounds.mjs merge o/r#5']) assert.match(s.hook('Bash', { command: c }).stderr, /runs only from the installed copy/, c)
   assert.equal(s.hook('Bash', { command: 'node global/gate-rounds.mjs status o/r#5' }).status, 0, 'reading status from a checkout stays fine')
   assert.match(s.hook('Bash', { command: 'node ~/.claude/claude-setup/gate-rounds.mjs merge yverse-studio/vacation-game#13' }).stderr, /scored 3/, 'a merge under the threshold is refused by the hook itself')
-  const ok = session('sonnet-test'); ok.gate(1, '4.8')
+  const ok = session('sonnet-test'); ok.gate(1, '4.80')
   assert.equal(ok.hook('Bash', { command: `node ~/.claude/claude-setup/gate-rounds.mjs merge ${ASSET} --squash` }).status, 0, 'a counted pass lets the CLI merge through the hook')
   assert.match(session('sonnet-test').hook('Bash', { command: `node ~/.claude/claude-setup/gate-rounds.mjs merge ${ASSET}` }).stderr, /no gate round is counted/, 'no round, no merge')
   assert.match(s.hook('Bash', { command: 'HOME=/tmp/fake node ~/.claude/claude-setup/gate-rounds.mjs merge o/r#5' }).stderr, /variables/)
@@ -701,4 +701,39 @@ test('finding 4: MultiEdit and NotebookEdit cannot write a ledger file either', 
   const s = session('sonnet-test')
   const f = `${s.dir}/gate/yverse-studio_vacation-game_13.json`
   for (const tool of ['MultiEdit', 'NotebookEdit']) assert.match(s.hook(tool, { file_path: f }).stderr, /written only by gate-rounds\.mjs/, tool)
+})
+
+// #598: a rounded mean passed as 4.5, a score above 5 counted, and round 4 named only after the work was done.
+const post598 = (dir, body, n = 598) => gateStep('mcp__github__add_issue_comment', { owner: 'o', repo: 'r', issue_number: n, body }, { dir, role: 'Story Editor', calls: [] })
+const record598 = (dir, asset, body) => {
+  const f = join(dir, `${asset}-${Date.now()}-${Math.random()}.md`)
+  writeFileSync(f, body)
+  issueGrant(dir, 'record', asset, f, Date.now(), body)
+  return cli(['record', asset, '--body-file', f], { CLAUDE_SETUP_GATE_DIR: dir })
+}
+
+test('#598: a pass below 5 needs the exact mean with two decimals; a one-decimal 4.5 is not counted', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'gate598-'))
+  assert.match(String(post598(dir, 'Gate 4.5/5 (M, round 1) PASS · mean of three runs 4.46')), /two decimals/, 'a rounded 4.5 is refused')
+  assert.equal(readLedger(dir, 'o/r#598').rounds.length, 0, 'and not counted')
+  assert.equal(post598(dir, 'Gate 4.46/5 (M, round 1) FAIL'), null, 'the exact mean is counted')
+  assert.equal(readLedger(dir, 'o/r#598').rounds[0].pass, false, '4.46 is a fail')
+  assert.equal(post598(dir, 'Gate 4.50/5 (M, round 2) PASS'), null, 'two decimals at the threshold pass')
+  assert.equal(readLedger(dir, 'o/r#598').rounds[1].pass, true)
+  assert.equal(post598(dir, 'Gate 4.3/5 (M, round 1) FAIL', 599), null, 'a one-decimal fail stays allowed: rounding cannot flip it')
+  assert.equal(post598(dir, 'Gate 5/5 (S, round 1)', 600), null, 'the five pass/fail checks keep their whole number')
+})
+
+test('#598: a score above 5 is not a verdict', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'gate598-'))
+  assert.match(String(post598(dir, 'Gate 9/5 (M, round 1)')), /above 5|out of 5/)
+  assert.equal(readLedger(dir, 'o/r#598').rounds.length, 0)
+})
+
+test('#598: counting a failed round 3 says at once that round 4 needs the Fable director', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'gate598-'))
+  for (const n of [1, 2]) assert.equal(record598(dir, 'k1-story', `Gate 4.30/5 (M, round ${n}) FAIL`).code, 0)
+  const r3 = record598(dir, 'k1-story', 'Gate 4.34/5 (M, round 3) FAIL')
+  assert.equal(r3.code, 0)
+  assert.match(r3.text, /round 4 .* needs a Fable director/, 'the wall is named when round 3 is counted, before any round 4 work')
 })

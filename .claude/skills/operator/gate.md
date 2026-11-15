@@ -83,7 +83,7 @@ have no half points and stay at 5/5.
 
 1. **Rubric.** The gate scores a fixed, numbered rubric written before round 1 (for scenes the
    five rows of `two-figure-scenes.md`: contact, body, hands, picture, motion), each row with its
-   measured numbers, scored 0 to 5 in half points. The score is the mean of the rows; a row is never reworded between rounds.
+   measured numbers, scored 0 to 5 in half points. The score is the exact mean of the rows, two decimals in the headline; a row is never reworded between rounds.
 2. **Hard checks (K.O.).** Some checks pass or fail whatever the score: face lines intact (the
    project's face-line check, e.g. `FACE_LINES3`), no interpenetration over the contact limit
    (Contact gate, Asset PRs above), no VRoid face stickers, no missing evidence, and every
