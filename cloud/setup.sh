@@ -2370,14 +2370,15 @@ function filesIntoRefs(command) {
 }
 // The images yskills chose live in CH_<name>/approval/ and a cleanup never touches them (docs/character-workflow.md, Approved references).
 const APPROVAL_DIR = /(^|[\\/])approval([\\/]|$)/i
+const inSuperseded = (t) => /approval[\\/]_superseded([\\/]|$)/i.test(t) && !/\.\./.test(t)
 const GONE_VERBS = /^(rm|rmdir|del|erase|remove-item|unlink|shred|truncate)$/
 function leavesApproval(command) {
   const words = (command.match(/"[^"]*"|'[^']*'|\S+/g) ?? []).map((t) => t.replace(/^["']|["']$/g, ''))
   const at = /^(git|sudo)$/i.test(words[0] ?? '') ? 1 : 0
   const verb = (words[at] ?? '').toLowerCase()
   const args = words.slice(at + 1).filter((t) => !t.startsWith('-'))
-  if (GONE_VERBS.test(verb)) return args.some((t) => APPROVAL_DIR.test(t) && !/_superseded/.test(t))
-  if (/^(mv|move|move-item)$/.test(verb)) return !/_superseded/.test(args.at(-1) ?? '') && args.slice(0, -1).some((t) => APPROVAL_DIR.test(t) && !/_superseded/.test(t))
+  if (GONE_VERBS.test(verb)) return args.some((t) => APPROVAL_DIR.test(t) && !inSuperseded(t))
+  if (/^(mv|move|move-item)$/.test(verb)) return !inSuperseded(args.at(-1) ?? '') && args.slice(0, -1).some((t) => APPROVAL_DIR.test(t) && !inSuperseded(t))
   return false
 }
 function approvalHit(tool, input) {
