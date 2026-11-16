@@ -643,7 +643,13 @@ function leavesApproval(command) {
   const verb = (words[at] ?? '').toLowerCase()
   const args = words.slice(at + 1).filter((t) => !t.startsWith('-'))
   if (GONE_VERBS.test(verb)) return args.some((t) => APPROVAL_DIR.test(t) && !inSuperseded(t))
-  if (/^(mv|move|move-item)$/.test(verb)) return !inSuperseded(args.at(-1) ?? '') && args.slice(0, -1).some((t) => APPROVAL_DIR.test(t) && !inSuperseded(t))
+  if (/^(mv|move|move-item|mi)$/.test(verb)) {
+    const all = words.slice(at + 1)
+    const named = all.findIndex((t) => /^(-t|--target-directory(=.*)?|-destination)$/i.test(t))
+    const dest = named < 0 ? args.at(-1) ?? '' : all[named].includes('=') ? all[named].split('=')[1] : all[named + 1] ?? ''
+    const from = named < 0 ? args.slice(0, -1) : args.filter((t) => t !== dest)
+    return !inSuperseded(dest) && from.some((t) => APPROVAL_DIR.test(t) && !inSuperseded(t))
+  }
   return false
 }
 function approvalHit(tool, input) {
