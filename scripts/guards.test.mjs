@@ -821,6 +821,20 @@ test('rule guard: replies that ask for an Allow, post Done: without proof or cla
   assert.equal(replyRule('PR is up, the gate runs now.'), null)
 })
 
+// #595 complaint 2 (gate-loop incident, row 5): yskills sees a gate PASS plus its report, not every review round.
+test('rule guard: a post whose headline is a review or gate round without a PASS is refused unless it opens with an ask', async () => {
+  const { replyRule } = await import('../global/rule-guard.mjs')
+  for (const text of [
+    'Gate 4.2/5 (M, round 2): fail, three fixes open.', 'Review round 3 done, the Programmer fixes five points.',
+    'Gate-Runde 2: 4.1, noch nicht durch.', 'Reviewer round 1 finished with 6 findings.',
+  ]) assert.match(replyRule(text) ?? '', /gate PASS/, text)
+  for (const text of [
+    'Gate 4.9/5 (M, round 2): PASS, https://github.com/yverse-studio/claude-setup/pull/1', 'Review round 3: PASS, merged https://github.com/x/y/pull/2',
+    'Du musst entscheiden, ob Gate-Runde 7 läuft: [Karte](#cmsg_1)', 'Need your answer on the round 4 fix plan: [card](#cmsg_2)',
+    'PR is up; the gate runs now.', 'The review of the plan is done, nothing for you.',
+  ]) assert.equal(replyRule(text), null, text)
+})
+
 test('team guard: an Agent call cannot run a gate agent below its file model', async () => {
   const { decide, downgraded } = await import('../global/team-guard.mjs')
   const dirs = [join(root, '.claude/agents')]

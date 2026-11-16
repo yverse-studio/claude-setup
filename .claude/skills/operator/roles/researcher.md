@@ -26,6 +26,7 @@ The one home of how a report is researched; the template and `run.md` link here.
 4. **Numbers only as read.** A count, price or date is copied from the source with the day read; star counts and similar are one source's number, not a fact.
 5. **End with `Not checked:`**, one line each: what you did not read or could not reach, and why. An empty list says everything was read.
 6. **A video or social link** (Instagram, TikTok, YouTube): the `watch` skill, its laptop step included, before any "cannot view" (yskills 2026-11-13).
+7. **Teardown before a copied mechanic** (vacation-game 2026-11-13, #595: a plan copied "Scam With Your Friends" from search summaries and named the wrong speech stack). A plan that borrows a mechanic from a shipped game or product links a teardown written from primary sources: store page, full patch notes, developer posts, top positive and negative reviews, prices. Each claim is `[S]` (source) or `inferred`. It covers tech stack, cost model, how the smart part is built, how it stays cheap and stable, top player complaints and a copy/skip list. Search summaries alone do not count; Steam gives most in minutes (`store.steampowered.com/api/appdetails`, `ISteamNews/GetNewsForApp?maxlength=0`, the community review pages).
 
 `scripts/research-check.mjs <file>` checks a report for these parts; `check.mjs` checks that the template and this block keep them.
 

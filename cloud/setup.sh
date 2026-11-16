@@ -1795,6 +1795,9 @@ const DONE = /^[\s>*_]*Done:/m
 // "everything you want me to do or show with a link"). Home: docs/pc-claude-user.md (What still needs yskills' hands).
 const NEEDS_YOU = /\b(du (musst|müsstest)(?![^.!?\n]{0,30}\b(nix|nichts|nicht)\b)|musst du|kannst du (bitte |mal |kurz )*(den |die |das )?\w+ (freigeben|erlauben|bestätigen|beantworten|hochladen|schicken|öffnen|reviewen|prüfen|verbinden)|bitte (tipp|klick|antwort|schau|gib|erlaub|freigeb|bestätig|prüf|check|lad|schick|öffne|verbind|wähl|approve|review)\w*|brauch\w* (ich )?(noch )?(von dir|dein\w*)|wartet? auf dich|waiting (on|for) you|you need to|you have to|can you (please )?(approve|allow|grant|answer|review|upload|send|open|connect|pick)|please (tap|click|answer|review|approve|allow|grant|open|connect|upload|send|pick|check)|needs? your (ok|approval|answer|review|allow|go|input)|siehe (den )?pr(?![\wäöüß])|see the pr\b)/i
 const THREAD_REF = /\b(im|in( the| dem| den)?) ([\w-]+-)?thread\b(?!-)|\b[\w]+-thread\b(?!-)|\bthread\s*["„“'«]/i
+// #595: a post whose first line is a review or gate round shows yskills a step, not a result. Only a PASS or an ask passes.
+const ROUND_HEAD = /^[\s>*_#]*(gate\b[^\n]{0,40}\b(round|runde)\b|(gate|review|reviewer|prüf\w*)[- ]?(round|runde)\b)/i
+const HAS_PASS = /\bPASS(ED)?\b/i
 const HAS_LINK = /https?:\/\/|\]\(#/
 const NOTHING_OPEN = /\b(no blockers?|keine blocker|nothing (is )?(open|left|blocking|needed from you|needs you|waiting on you)|nichts (mehr )?(ist )?(offen|blockiert)|nothing else needs you)\b/i
 // board: the thread board, or a function that builds it; read only when a reply says nothing is open.
@@ -1802,6 +1805,7 @@ export function replyRule(text, attached = [], board = null) {
   if (ASK_ALLOW.test(text) && !ASK_FIRST.test(text)) return 'rule-guard: do not ask yskills for an Allow or a go (CLAUDE.md, Hard rules): pick the sensible default and do it; a refused call takes its fixed way around (docs/permissions.md, Layer 3). Only the ask-first items wait, and a choice is a request_decision card.'
   if ((NEEDS_YOU.test(text) || THREAD_REF.test(text)) && !HAS_LINK.test(text)) return 'rule-guard: this reply asks yskills for something or points at a thread without a link (docs/pc-claude-user.md, What still needs yskills\' hands). Give the exact place as a clickable link: a thread [title](#cmsg_…), the PR or page URL, [Project settings](#project-settings/<section>), or the connect link.'
   if (DONE.test(text) && !/https?:\/\//.test(text) && !(attached ?? []).length) return 'rule-guard: a `Done:` line carries its proof (CLAUDE.md, How to work): the live link, the merged PR link or an attached screenshot or test output. Add it, then post.'
+  if (ROUND_HEAD.test(text.trimStart()) && !HAS_PASS.test(text) && !NEEDS_YOU.test(text)) return 'rule-guard: yskills sees a gate PASS plus its report, no ping per review round (gate-loop incident row 5, #595). Keep the round on the checklist and post at the PASS, or open with the ask he must answer and its link.'
   const listed = NOTHING_OPEN.test(text) && (typeof board === 'function' ? board() : board)
   if (listed) {
     const open = [...listed.finished.filter((t) => !listed.told.has(t.id)), ...listed.blocked]
