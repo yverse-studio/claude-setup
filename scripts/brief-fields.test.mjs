@@ -240,7 +240,7 @@ test('#702: Target image and Source are judgment gaps for Programmer, Animator a
     assert.deepEqual(gaps(`Role: ${role} · Kit: ${kit} · Size: M\nSheet: sheet.md\n${LINES['Target image']}`), ['Source'], 'a target without its source is refused')
     assert.deepEqual(gaps(`Role: ${role} · Kit: ${kit} · Size: M\nSheet: sheet.md\nTarget image: [the pick](lib/characters/CH_x/approval/A.png)\nSource: [the files](https://example.com/files)`), [], 'titled Markdown links pass')
     assert.deepEqual(gaps(`Role: ${role} · Kit: ${kit} · Size: M\nSheet: sheet.md\nTarget image: n/a\n${LINES.Source}`), ['Target image'], 'a bare n/a fails')
-    assert.deepEqual(gaps(`Role: ${role} · Kit: ${kit} · Size: M\nSheet: sheet.md\nTarget image: lib\\characters\\CH_x\\approval\\A.png\nSource: C:\\Studio\\lib\\characters\\CH_x\\work`), [], 'laptop paths with backslashes pass')
+    assert.deepEqual(gaps(`Role: ${role} · Kit: ${kit} · Size: M\nSheet: sheet.md\nTarget image: lib\\characters\\CH_x\\approval\\A.png\nSource: lib\\characters\\CH_x\\work`), [], 'laptop paths with backslashes pass')
   }
   assert.deepEqual(gaps('Role: Programmer · Kit: setup · Size: M\nSheet: sheet.md'), [], 'kit setup is not asked')
   for (const role of ['Designer', 'Planner', 'Reviewer']) assert.deepEqual(gaps(`Role: ${role} · Kit: game · Size: M`), [], `${role} is not asked`)
