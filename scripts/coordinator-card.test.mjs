@@ -69,7 +69,7 @@ test('#604: the card names the three-part first-reply header, plan and board num
   assert.match(readFileSync(join(import.meta.dirname, '..', '.claude/skills/operator/roles/project-manager.md'), 'utf8'), /Session start[\s\S]*first reply of the session opens `Luna · card <hash> · plan <done>\/<all> · board <n> open`/, 'Session start names the header')
 })
 
-test('#601: the card names root-check.mjs for "root clean", and the Archivist\'s cleanup ends with the four lines, five on the laptop (#703)', () => {
+test('#601: the card names root-check.mjs for "root clean", and the Archivist\'s cleanup ends with the four lines', () => {
   assert.match(buildCard({ hash: 'x', date: 'd' }), /"root clean": quote root-check\.mjs OK/)
   const role = readFileSync(join(import.meta.dirname, '..', '.claude/skills/operator/roles/archivist.md'), 'utf8')
   for (const s of ['<claude-setup checkout>/scripts/root-check.mjs <project-files root>', 'root-check not run: no checkout', 'every file has its folder', 'a move table: old path, new path', 'no doc still names an old path', 'OK line quoted', 'five for a laptop cleanup', '<claude-setup checkout>/scripts/approve.mjs check --all <studio root>', '`OK approval:` line', 'approval not run: laptop offline']) assert.ok(role.includes(s), s)
