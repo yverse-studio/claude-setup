@@ -441,7 +441,7 @@ export const templateFor = (guard, role, size = 'M') => {
 // #702: the file a brief's `Target image:` line names, when it is on no place this machine reads (as given, under cwd, under the project files); null when it
 // is there, or the line names no file (n/a, a link). The thread gets a start note, no block: the laptop may hold the file (GameDev 2026-11-15, #697).
 export function targetAbsent(brief, cwd, exists = existsSync) {
-  const path = String(brief).replace(/[*`]/g, '').match(/^[ \t>-]*Target image:[ \t]*[^<\n]*?([^\s<>()[\]]*(?:approval|reference)\/[^\s<>()]*\.(?:png|jpe?g|webp|gif|pdf|mp4|webm))(?=[\s)]|$)/im)?.[1]
+  const path = String(brief).replace(/[*`]/g, '').match(/^[ \t>-]*Target image:[ \t]*[^<\n]*?([^\s<>()[\]]*(?:approval|reference)[\\/][^\s<>()]*\.(?:png|jpe?g|webp|gif|pdf|mp4|webm))(?=[\s)]|$)/im)?.[1]
   if (!path || /^\w+:\/\//.test(path)) return null
   return [path, join(cwd, path), join('/mnt/project-files', path)].some((p) => exists(p)) ? null : path
 }
@@ -479,7 +479,7 @@ export async function briefCheck(prompt, cwd, model = null, any = false) {
   }
   found.push(...sorted.judgment.map(wrongForm))
   // #702 (gate fix 6): an n/a in the brief does not outvote the target its own item names.
-  const itemTarget = guard.TARGET_NA.test(plain) && itemPlain.match(/^[ \t>-]*Target image:[ \t]*([^<\n]*approval\/[^\n]*)$/im)?.[1].trim()
+  const itemTarget = guard.TARGET_NA.test(plain) && itemPlain.match(/^[ \t>-]*Target image:[ \t]*([^<\n]*approval[\\/][^\n]*)$/im)?.[1].trim()
   if (itemTarget) found.push(`the item names a target image (${itemTarget}), so \`Target image: n/a\` is refused: name that path in the brief`)
   const wrong = model && guard.wrongModel(brief, model, teams)
   if (wrong) found.push(`this thread runs on ${wrong.tier}, but the ${wrong.role} runs on ${wrong.allowed.join(' or ')}: ask the coordinator to restart it on that model`)

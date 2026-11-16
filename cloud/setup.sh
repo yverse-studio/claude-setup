@@ -507,7 +507,7 @@ const itemTok = (p) => { const m = p.match(ITEM_REF); return m ? normItem(m[2] ?
 const line = (re) => (plain) => re.test(plain)
 // The target of a look, scene or asset: a file in an approval/ folder (reference/ for motion), bare or inside a Markdown link. Only a Programmer may say
 // `n/a <why>` (10+ characters), which also drops the Source line; an Animator or Character TD with a real sheet has no n/a (owner 2026-11-16).
-export const TARGET_FILE = /^[ \t>-]*Target image:[ \t]*[^<\n]*(?:approval|reference)\/[^\s<>()]*\.(?:png|jpe?g|webp|gif|pdf|mp4|webm)(?=[\s)]|$)/im
+export const TARGET_FILE = /^[ \t>-]*Target image:[ \t]*[^<\n]*(?:approval|reference)[\\/][^\s<>()]*\.(?:png|jpe?g|webp|gif|pdf|mp4|webm)(?=[\s)]|$)/im
 export const TARGET_NA = /^[ \t>-]*Target image:[ \t]*n\/a[ \t]+\S[^\n]{9,}$/im
 const targetNa = (plain) => /^[ \t>-]*Role:[ \t]*Programmer\b/im.test(plain) && TARGET_NA.test(plain)
 const sizeCls = (plain) => (small(plain) ? 'recoverable' : 'judgment')
@@ -528,7 +528,7 @@ export const BRIEF_FIELDS = [
   // GameDev 2026-11-15 (#697, #702): a builder guessed a chosen look because the brief named neither target nor source. The look-lock card link is gone from
   // the brief (the cast sheet keeps its own, scripts/pipeline-gates.mjs); an old brief that still carries a `Look-Lock:` line starts, the line is not read.
   { key: 'Target image', name: 'Target image: (the approved image in an approval/ folder)', tpl: 'Target image: <path of the approved image in an approval/ folder; Programmer only: n/a <why>>', applies: needsSheet, ok: (p) => TARGET_FILE.test(p) || targetNa(p), cls: () => 'judgment' },
-  { key: 'Source', name: 'Source: (original files of the chosen design)', tpl: 'Source: <original files of the chosen design, path or link>', applies: needsSheet, ok: (p) => targetNa(p) || /^[ \t>-]*Source:[ \t]*(?!n\/a\b)[^<\n]*(\/|#cmsg_?[A-Za-z0-9]{6,})/im.test(p), cls: () => 'judgment' },
+  { key: 'Source', name: 'Source: (original files of the chosen design)', tpl: 'Source: <original files of the chosen design, path or link>', applies: needsSheet, ok: (p) => targetNa(p) || /^[ \t>-]*Source:[ \t]*(?!n\/a\b)[^<\n]*([\\/]|#cmsg_?[A-Za-z0-9]{6,})/im.test(p), cls: () => 'judgment' },
   // GameDev 2026-11-15 (#627): an Animator plan built from cloud docs alone failed the gate. The brief names the scene docs the project lists and the old scene copied.
   { key: 'Scene docs', name: 'Scene docs: (the scene docs the project\'s CLAUDE.md lists, read on the laptop before planning)', tpl: 'Scene docs: <the scene docs the project\'s CLAUDE.md lists, read on the laptop before planning, and the old scene the plan copies; laptop offline means stop and report>', applies: (p) => /^[ \t>-]*Role:[ \t]*Animator\b/im.test(p), ok: line(/^[ \t>-]*Scene docs:[ \t]*[^<\s]/im), cls: () => 'recoverable', fill: () => 'Scene docs: read the scene docs the project\'s CLAUDE.md lists on the laptop before planning, name the old scene the plan copies; laptop offline means stop and report, never plan without them' },
   // vacation-game 2026-11-15 (yskills): levels went to build without a teardown, a level plan or design proposals. A level brief in the game kit names the
@@ -2184,7 +2184,7 @@ export const templateFor = (guard, role, size = 'M') => {
 // #702: the file a brief's `Target image:` line names, when it is on no place this machine reads (as given, under cwd, under the project files); null when it
 // is there, or the line names no file (n/a, a link). The thread gets a start note, no block: the laptop may hold the file (GameDev 2026-11-15, #697).
 export function targetAbsent(brief, cwd, exists = existsSync) {
-  const path = String(brief).replace(/[*`]/g, '').match(/^[ \t>-]*Target image:[ \t]*[^<\n]*?([^\s<>()[\]]*(?:approval|reference)\/[^\s<>()]*\.(?:png|jpe?g|webp|gif|pdf|mp4|webm))(?=[\s)]|$)/im)?.[1]
+  const path = String(brief).replace(/[*`]/g, '').match(/^[ \t>-]*Target image:[ \t]*[^<\n]*?([^\s<>()[\]]*(?:approval|reference)[\\/][^\s<>()]*\.(?:png|jpe?g|webp|gif|pdf|mp4|webm))(?=[\s)]|$)/im)?.[1]
   if (!path || /^\w+:\/\//.test(path)) return null
   return [path, join(cwd, path), join('/mnt/project-files', path)].some((p) => exists(p)) ? null : path
 }
@@ -2222,7 +2222,7 @@ export async function briefCheck(prompt, cwd, model = null, any = false) {
   }
   found.push(...sorted.judgment.map(wrongForm))
   // #702 (gate fix 6): an n/a in the brief does not outvote the target its own item names.
-  const itemTarget = guard.TARGET_NA.test(plain) && itemPlain.match(/^[ \t>-]*Target image:[ \t]*([^<\n]*approval\/[^\n]*)$/im)?.[1].trim()
+  const itemTarget = guard.TARGET_NA.test(plain) && itemPlain.match(/^[ \t>-]*Target image:[ \t]*([^<\n]*approval[\\/][^\n]*)$/im)?.[1].trim()
   if (itemTarget) found.push(`the item names a target image (${itemTarget}), so \`Target image: n/a\` is refused: name that path in the brief`)
   const wrong = model && guard.wrongModel(brief, model, teams)
   if (wrong) found.push(`this thread runs on ${wrong.tier}, but the ${wrong.role} runs on ${wrong.allowed.join(' or ')}: ask the coordinator to restart it on that model`)
