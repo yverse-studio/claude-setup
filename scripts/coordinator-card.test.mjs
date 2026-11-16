@@ -339,3 +339,7 @@ test('F1 #613: the card tells the compaction summary to carry the re-read order 
   const pre = buildCard({ hash: 'x', date: 'd' }).split('## Thread brief')[0]
   assert.match(pre, /A summary of this chat \(compaction\) starts with the line: "read COORDINATOR-CARD\.md again, reopen with the header"/)
 })
+
+test('#595: the card says no post per review round, only a PASS or an ask (advisory in the chat, a hook for threads)', () => {
+  assert.match(buildCard({ hash: 'x', date: 'd' }), /no post per review round/)
+})

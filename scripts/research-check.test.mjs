@@ -43,3 +43,15 @@ test('a host:port in backticks is not a source', () => {
 test('a heading that merely mentions sources is not a Sources section', () => {
   assert.match(run('# R\n- c (https://x)\n## No sources found\nNot checked:\n').stderr, /no "Sources"/)
 })
+
+// #595: a report with a "## 4b" teardown needs the six topics and one [S] line with a link per product block.
+const TOPICS = 'tech stack, cost model, smart part, cheap and stable, complaints, copy/skip list'
+const wrap = (sec) => `# R\n- c (https://x)\n${sec}\n## Sources\n- https://x\nNot checked:\n`
+test('4b: a teardown block with the six topics and an [S] link passes', () => {
+  assert.equal(run(wrap(`## 4b. Teardown of a shipped product\n### Game A\n- [S] ${TOPICS} (https://store.example/a)`)).status, 0)
+})
+test('4b: a missing topic, or a product block with no [S] link, fails; a report without 4b is unaffected', () => {
+  assert.match(run(wrap('## 4b. Teardown of a shipped product\n### Game A\n- [S] tech stack, cost model (https://x)')).stderr, /4b.*(smart part|complaints|topic)/)
+  assert.match(run(wrap(`## 4b. Teardown of a shipped product\n### Game A\n- inferred ${TOPICS}`)).stderr, /4b.*\[S\]/)
+  assert.equal(run(wrap('## 4. Built with Claude already\n- c (https://x)')).status, 0)
+})
