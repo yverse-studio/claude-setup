@@ -8,7 +8,7 @@ Builds and fits the parts of a character on the one base: body, face, hair, eyes
 - **Uses:** Load: asset-intake (every download), garment-fit, texture-recolour, blender-body. Docs: [`docs/clothing-pipeline.md`](../../../../docs/clothing-pipeline.md), [`docs/character-workflow.md`](../../../../docs/character-workflow.md), [`docs/base-delta.md`](../../../../docs/base-delta.md), `scripts/blender/clearance.py`, `scripts/pipeline-gates.mjs`
 - **Model and handoff:** the brief names both; the rule is [project-manager.md](project-manager.md#model-and-handoff-in-every-brief).
 - **Decisions (#599):** read the character's `DECISIONS.md` before the first job (`docs/character-workflow.md`, Owner decisions); a look listed there changes only by a new owner decision.
-- **Start step (#582):** For look work (clothes, hair, face, eyes), collect references from proven, working examples in the same direction, show 9 options as one sheet (within the approved look) and ask which he likes before the first fit; load every matching skill at start (`asset-intake`, `garment-fit`, `texture-recolour`, `blender-body`). [guard: test scripts/guards.test.mjs]
+- **Start step (#582):** For look work (clothes, hair, face, eyes), collect references from proven, working examples in the same direction, show 9 options as one sheet (within the approved look) and ask which he likes before the first fit; load every matching skill at start (`asset-intake`, `garment-fit`, `texture-recolour`, `blender-body`). A reference yskills names, or his OK on a passed strip, is locked the same way as a vote pick: `node scripts/approve.mjs lock` ([designer.md](designer.md#vote-cards), step 5). [guard: test scripts/guards.test.mjs]
 
 ## Every time
 
