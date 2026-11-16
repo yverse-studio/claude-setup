@@ -90,7 +90,7 @@ in each section.
 
 ```
 Role: Programmer · Kit: game · Size: M
-Model: <id of the Roster row, docs/TEAMS.md>
+Model: sonnet (full id: Models line, docs/TEAMS.md)
 Item: new
 Plan: plans/chapter-02.md
 Acceptance: scene 3 renders without clipping, gate 4.5
