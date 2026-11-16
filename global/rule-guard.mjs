@@ -633,8 +633,35 @@ function filesIntoRefs(command) {
   const dest = named >= 0 ? args[named + 1] : DEST_FLAG[verb] && !/-item$|^(cp|mv)$/.test(verb) ? '' : last
   return lands(dest) && (named >= 0 || verb === 'robocopy' || plain.length < 2 || plain.slice(0, -1).some((t) => !INDEX_FILE.test(t)))
 }
+// The images yskills chose live in CH_<name>/approval/ and a cleanup never touches them (docs/character-workflow.md, Approved references).
+const APPROVAL_DIR = /(^|[\\/])approval([\\/]|$)/i
+const inSuperseded = (t) => /approval[\\/]_superseded([\\/]|$)/i.test(t) && !/\.\./.test(t)
+const GONE_VERBS = /^(rm|rmdir|del|erase|remove-item|unlink|shred|truncate)$/
+function leavesApproval(command) {
+  const words = (command.match(/"[^"]*"|'[^']*'|\S+/g) ?? []).map((t) => t.replace(/^["']|["']$/g, ''))
+  const at = /^(git|sudo)$/i.test(words[0] ?? '') ? 1 : 0
+  const verb = (words[at] ?? '').toLowerCase()
+  const args = words.slice(at + 1).filter((t) => !t.startsWith('-'))
+  if (GONE_VERBS.test(verb)) return args.some((t) => APPROVAL_DIR.test(t) && !inSuperseded(t))
+  if (/^(mv|move|move-item|mi)$/.test(verb)) {
+    const all = words.slice(at + 1)
+    const named = all.findIndex((t) => /^(-t|--target-directory(=.*)?|-destination)$/i.test(t))
+    const dest = named < 0 ? args.at(-1) ?? '' : all[named].includes('=') ? all[named].split('=')[1] : all[named + 1] ?? ''
+    const from = named < 0 ? args.slice(0, -1) : args.filter((t) => t !== dest)
+    return !inSuperseded(dest) && from.some((t) => APPROVAL_DIR.test(t) && !inSuperseded(t))
+  }
+  return false
+}
+function approvalHit(tool, input) {
+  const path = /^(Write|Edit|NotebookEdit)$/.test(tool) ? String(input.file_path ?? input.notebook_path ?? '') : ''
+  const cmd = tool === 'Bash' ? String(input.command ?? '') : ''
+  const bad = (APPROVAL_DIR.test(path) && !INDEX_FILE.test(path)) || commandsOf(cmd).some(leavesApproval)
+  return bad ? 'rule-guard: approval/ holds the images yskills chose and is off-limits to cleanup (docs/character-workflow.md, Approved references). Reading, copying out and the INDEX file are fine; a replaced choice goes to approval/_superseded/. Say it to the coordinator in one line (message_coordinator).' : null
+}
 export function archivistFiles(tool, input = {}, role = '') {
   if (String(role ?? '').trim() !== 'Archivist') return null
+  const hit = approvalHit(tool, input)
+  if (hit) return hit
   const path = /^(Write|Edit|NotebookEdit)$/.test(tool) ? String(input.file_path ?? input.notebook_path ?? '') : ''
   const cmd = tool === 'Bash' ? String(input.command ?? '') : ''
   const files = (REF_DIR.test(path) && !INDEX_FILE.test(path)) || commandsOf(cmd).some(filesIntoRefs)
