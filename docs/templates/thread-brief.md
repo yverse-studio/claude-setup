@@ -16,7 +16,8 @@ Threads: <list_threads checked: none open on this topic | continues <title of th
 Prior art: <sources named: repo, path, URL, #n> -> copy | adapt | reuse | build, because <why>
 Skills: <role file and skills the thread loads first>
 Sheet: <approved cast sheet .md, or `n/a <why no body, face or outfit job>`; Programmer or Animator on a game or story kit>
-Look-Lock: <owner card link of the approved look (https or #cmsg_...); not needed with `Sheet: n/a`>
+Target image: <path of the approved image in an approval/ folder; Programmer only: n/a <why>>
+Source: <original files of the chosen design, path or link>
 Round: <n> (gate rounds only)
 Asset: <owner/repo#n> (with Round)
 Picture card: <link | none, because <why>> (new look only)
