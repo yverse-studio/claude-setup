@@ -821,6 +821,27 @@ test('rule guard: replies that ask for an Allow, post Done: without proof or cla
   assert.equal(replyRule('PR is up, the gate runs now.'), null)
 })
 
+// #595 complaint 2 (gate-loop incident, row 5): yskills sees a gate PASS plus its report, not every review round.
+// Only the headline (first line) counts: a round headline needs its number; a score of 4.5 or more, or a capital PASS without a fail word, passes.
+test('rule guard: a post whose headline is a review or gate round without a PASS is refused', async () => {
+  const { replyRule } = await import('../global/rule-guard.mjs')
+  for (const text of [
+    'Gate 4.2/5 (M, round 2): fail, three fixes open.', 'Review round 3 done, the Programmer fixes five points.',
+    'Gate-Runde 2: 4.1, noch nicht durch.', 'Reviewer round 1 finished with 6 findings.',
+    'Gate 4.2/5 (M, round 2): fail, two fixes left to pass.', 'Gate round 2: FAIL, no PASS yet.',
+    'Gate 4.2/5 (M, round 2): fail\nSiehe PR https://github.com/x/y/pull/1', 'Gate 4.2/5 (M, round 2): PASS in der nächsten Runde.',
+  ]) assert.match(replyRule(text) ?? '', /gate PASS/, text)
+})
+test('rule guard: a gate headline that passes, or is no round headline, goes through', async () => {
+  const { replyRule } = await import('../global/rule-guard.mjs')
+  for (const text of [
+    'Gate 4.9/5 (M, round 2): PASS, https://github.com/yverse-studio/claude-setup/pull/1', 'Review round 3: PASS, merged https://github.com/x/y/pull/2',
+    'Gate 5/5 (S, Runde 1): bestanden und gemerged https://github.com/x/y/pull/3', 'Gate round counter fix is merged: https://github.com/x/y/pull/4',
+    'Du musst entscheiden, ob Gate-Runde 7 läuft: [Karte](#cmsg_1)', 'Need your answer on the round 4 fix plan: [card](#cmsg_2)',
+    'PR is up; the gate runs now.', 'The review of the plan is done, nothing for you.',
+  ]) assert.equal(replyRule(text), null, text)
+})
+
 test('team guard: an Agent call cannot run a gate agent below its file model', async () => {
   const { decide, downgraded } = await import('../global/team-guard.mjs')
   const dirs = [join(root, '.claude/agents')]

@@ -1445,8 +1445,8 @@ const PREFLIGHT = `## Before every reply
 - A finished thread (done, failed, stopped, or review_ready idle 2 h with Done:/hand-off) gets set_thread_resolved or a nudge before you stop; relist when your board is 2 h old; "root clean": quote root-check.mjs OK.
 - Every ask or pointer carries its clickable link ([title](#cmsg_…), URL, [Project settings](#project-settings/resources)); every ask of yskills gets a thread, a PR or a \`Done:\` line the same turn; a skill idea is a PR (\`new-skill\`), never a propose_skills card.
 - A PR whose \`Depends on: #n\` is parked or blocked: one chat line the same turn naming both PRs and the fix.
-- Ask yskills only the real moment (a level from his life), goal, taste and the ask-first list; build details, process and order you decide, in one line. Levels: Researcher, Planner, Game Designer, build.
-- Hard round counter (hook): 3 rounds at 4.5 (4.8 important), 4-6 Fable director, 7+ a card; no merge below; you release none; a PASS needs no OK. 3 failed rounds on one asset: re-plan. A gate round's brief has the Round, Asset and Picture card lines (briefs/reviewer.md). Controls and World life first.
+- Ask yskills only the real moment (a level from his life), goal, taste and the ask-first list; build details, process and order you decide. Levels: Researcher, Planner, Game Designer, build.
+- Hard round counter: 3 rounds at 4.5 (4.8 important), 4-6 Fable director, 7+ a card; no merge below, you release none; no post per review round; a PASS needs no OK. 3 failed rounds on one asset: re-plan. A gate round's brief has the Round, Asset and Picture card lines (briefs/reviewer.md). Controls and World life first.
 - A new rule is a PR to claude-setup, never only a Project settings edit.
 - A summary of this chat (compaction) starts with the line: "read COORDINATOR-CARD.md again, reopen with the header".
 - A second fresh thread for one asset is a quality-loss trigger: send the handoff files to the Planner for a diagnosis first, the handoff carries the round and every approach tried, and the restart is not posted (docs/WORKFLOW.md, Handoff triggers).
@@ -1795,6 +1795,15 @@ const DONE = /^[\s>*_]*Done:/m
 // "everything you want me to do or show with a link"). Home: docs/pc-claude-user.md (What still needs yskills' hands).
 const NEEDS_YOU = /\b(du (musst|müsstest)(?![^.!?\n]{0,30}\b(nix|nichts|nicht)\b)|musst du|kannst du (bitte |mal |kurz )*(den |die |das )?\w+ (freigeben|erlauben|bestätigen|beantworten|hochladen|schicken|öffnen|reviewen|prüfen|verbinden)|bitte (tipp|klick|antwort|schau|gib|erlaub|freigeb|bestätig|prüf|check|lad|schick|öffne|verbind|wähl|approve|review)\w*|brauch\w* (ich )?(noch )?(von dir|dein\w*)|wartet? auf dich|waiting (on|for) you|you need to|you have to|can you (please )?(approve|allow|grant|answer|review|upload|send|open|connect|pick)|please (tap|click|answer|review|approve|allow|grant|open|connect|upload|send|pick|check)|needs? your (ok|approval|answer|review|allow|go|input)|siehe (den )?pr(?![\wäöüß])|see the pr\b)/i
 const THREAD_REF = /\b(im|in( the| dem| den)?) ([\w-]+-)?thread\b(?!-)|\b[\w]+-thread\b(?!-)|\bthread\s*["„“'«]/i
+// #595: a post whose headline (first line) is a review or gate round, with its number, shows yskills a step, not a result.
+// Only a pass passes: a headline score of 4.5 or more, or a capital PASS with no score and no fail word; or the headline itself is the ask.
+const ROUND_HEAD = /^[\s>*_#]*(gate\b[^\n]{0,40}\b(round|runde)\s*\d|(gate|review|reviewer|prüf\w*)[- ]?(round|runde)\s*\d)/i
+const HEAD_SCORE = /(\d+(?:[.,]\d+)?)\s*\/\s*5\b/
+const headlinePasses = (h) => {
+  const sc = h.match(HEAD_SCORE)
+  if (sc) return Number(sc[1].replace(',', '.')) >= 4.5
+  return /\bPASS(ED)?\b/.test(h) && !/\b(no PASS|FAIL(ED)?|not passed)\b/i.test(h)
+}
 const HAS_LINK = /https?:\/\/|\]\(#/
 const NOTHING_OPEN = /\b(no blockers?|keine blocker|nothing (is )?(open|left|blocking|needed from you|needs you|waiting on you)|nichts (mehr )?(ist )?(offen|blockiert)|nothing else needs you)\b/i
 // board: the thread board, or a function that builds it; read only when a reply says nothing is open.
@@ -1802,6 +1811,8 @@ export function replyRule(text, attached = [], board = null) {
   if (ASK_ALLOW.test(text) && !ASK_FIRST.test(text)) return 'rule-guard: do not ask yskills for an Allow or a go (CLAUDE.md, Hard rules): pick the sensible default and do it; a refused call takes its fixed way around (docs/permissions.md, Layer 3). Only the ask-first items wait, and a choice is a request_decision card.'
   if ((NEEDS_YOU.test(text) || THREAD_REF.test(text)) && !HAS_LINK.test(text)) return 'rule-guard: this reply asks yskills for something or points at a thread without a link (docs/pc-claude-user.md, What still needs yskills\' hands). Give the exact place as a clickable link: a thread [title](#cmsg_…), the PR or page URL, [Project settings](#project-settings/<section>), or the connect link.'
   if (DONE.test(text) && !/https?:\/\//.test(text) && !(attached ?? []).length) return 'rule-guard: a `Done:` line carries its proof (CLAUDE.md, How to work): the live link, the merged PR link or an attached screenshot or test output. Add it, then post.'
+  const head = text.trimStart().split('\n')[0]
+  if (ROUND_HEAD.test(head) && !headlinePasses(head) && !NEEDS_YOU.test(head)) return 'rule-guard: yskills sees a gate PASS plus its report, no ping per review round (gate-loop incident row 5, #595). Keep the round on the checklist and post at the PASS, or open with the ask he must answer and its link.'
   const listed = NOTHING_OPEN.test(text) && (typeof board === 'function' ? board() : board)
   if (listed) {
     const open = [...listed.finished.filter((t) => !listed.told.has(t.id)), ...listed.blocked]
