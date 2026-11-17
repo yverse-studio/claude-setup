@@ -81,12 +81,13 @@ test('#623: --show prints the lines beside the claim', () => {
 })
 
 // Gate round 1 of PR 716: header and own-file links are not outside sources, any cwd, last line, line 0 and reversed ranges.
-test('#622: a Method header link, a link to our own file and an issue link before the first claim do not count as outside', () => {
+test('#622: a Method header link, a relative link to our own file before the first claim do not count as outside; an issue link in the first claim does', () => {
   const page = (intro, a, b) => `# R\n${intro}\n## 1. What we have\n- ${a}\n- ${b}\n## Sources\n- https://x\nNot checked:\n`
   const mine = 'the script (`scripts/research-check.mjs:1`)'
   assert.equal(run(page('Method: [`roles/researcher.md`](../roles/researcher.md). Item: [#606](https://github.com/yverse-studio/claude-setup/issues/606)', mine, 'push (https://docs.ntfy.sh/)')).status, 0)
   assert.equal(run(page('x (https://x)', 'see [the plan](../plan.md)', 'push (https://docs.ntfy.sh/)')).status, 0)
   assert.match(run(page('x (https://x)', 'push (https://docs.ntfy.sh/)', mine)).stderr, /ours first/)
+  assert.match(run(page('x (https://x)', 'item [#606](https://github.com/yverse-studio/claude-setup/issues/606)', mine)).stderr, /ours first/)
 })
 test('#623: the checks read the checkout whatever the cwd; last line passes, one past fails; line 0 and a reversed range fail', () => {
   const f = join(mkdtempSync(join(tmpdir(), 'rc-')), 'r.md')

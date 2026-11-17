@@ -32,9 +32,9 @@ for (const f of process.argv.slice(2).filter((a) => a !== '--show')) {
     if (!SOURCE.test(l)) errors.push(`line ${i + 1} has no source: ${l.trim().slice(0, 60)}`)
   })
   // #622: when the page cites our own files, its first claim line is one of them (ours first, then outside sources).
-  // Headers before the first "##", headings, fences, the Not checked list and a link to our own file (relative or this repo) are not outside sources.
+  // Headers before the first "##", headings, fences, the Not checked list and a relative link to our own file are not outside sources.
   const cites = (l) => [...l.matchAll(CITE)]
-  const ours = (l) => cites(l).some((m) => existsSync(own(m[1]))) || /\]\(\.{1,2}\/|github\.com\/yverse-studio\//.test(l)
+  const ours = (l) => cites(l).some((m) => existsSync(own(m[1]))) || /\]\(\.{1,2}\//.test(l)
   const first = lines.findIndex((l) => /^##/.test(l) && !/^#+\s*(\d+\.\s*)?Sources\b/i.test(l))
   let fenced = false
   let skip = false
