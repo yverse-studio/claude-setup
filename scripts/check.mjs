@@ -376,7 +376,7 @@ for (const part of ['## 6. Sources', 'Not checked:', '## 4b. Teardown of a shipp
 
 // Plan shape (#624, #625): the Planner's plan opens with an issue-claims table and lists its steps with a command and expected output each.
 const plannerRole = readFileSync(join(root, '.claude/skills/operator/roles/planner.md'), 'utf8')
-for (const part of ['Issue claims', 'Step, Change, Command, Expected']) {
+for (const part of ['Issue claims', 'a recipe line the plan does not follow', 'Step, Change, Command, Expected', 'none (covered by step']) {
   if (!plannerRole.includes(part)) errors.push(`roles/planner.md: Plan shape lacks "${part}"`)
 }
 
