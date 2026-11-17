@@ -374,6 +374,12 @@ for (const part of ['## 6. Sources', 'Not checked:', '## 4b. Teardown of a shipp
   if (!researchTemplate.includes(part)) errors.push(`templates/research.md: lacks "${part}"`)
 }
 
+// Plan shape (#624, #625): the Planner's plan opens with an issue-claims table and lists its steps with a command and expected output each.
+const plannerRole = readFileSync(join(root, '.claude/skills/operator/roles/planner.md'), 'utf8')
+for (const part of ['Issue claims', 'Step, Change, Command, Expected']) {
+  if (!plannerRole.includes(part)) errors.push(`roles/planner.md: Plan shape lacks "${part}"`)
+}
+
 // Game design doc: one home (roles/game-designer.md); the template must carry every heading gdd-check.mjs requires.
 const { REQUIRED_HEADINGS } = await import('../.claude/skills/game-3d/scripts/gdd-check.mjs')
 const designerRole = readFileSync(join(root, '.claude/skills/operator/roles/game-designer.md'), 'utf8')
