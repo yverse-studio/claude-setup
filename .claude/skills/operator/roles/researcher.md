@@ -21,14 +21,14 @@ Finds what already exists before anything is built: competitors and prices, how 
 The one home of how a report is researched; the template and `run.md` link here. Ideas from the Pocock `research` skill and HumanLayer `research_codebase` (credit: [`THIRD_PARTY.md`](../../../../THIRD_PARTY.md), Research method).
 
 1. **Primary sources only.** The owner of the fact: official docs, source code, specs, first-party APIs, the actual file. A README, blog post or video is a lead, not a source; when the file is reachable (shallow `git clone` into the scratchpad, read-only), read the file, not the summary of it.
-2. **Every claim carries its source** (link or `path:line`) in the same line. No source, no claim; mark a guess `inferred`.
+2. **Every claim carries its source** (link or `path:line`) in the same line, our own files first. No source, no claim; mark a guess `inferred`.
 3. **Describe before judging.** Per source first what it says (quote or close paraphrase), then the verdict (adopt, adapt, skip, with why), never mixed in one sentence.
-4. **Numbers only as read.** A count, price or date is copied from the source with the day read; star counts and similar are one source's number, not a fact.
+4. **Numbers only as read.** A count, price or date is copied from the source with the day read (a live test: its command and raw output, the service's own timestamp); star counts and similar are one source's number, not a fact.
 5. **End with `Not checked:`**, one line each: what you did not read or could not reach, and why. An empty list says everything was read.
 6. **A video or social link** (Instagram, TikTok, YouTube): the `watch` skill, its laptop step included, before any "cannot view" (yskills 2026-11-13).
 7. **Teardown before a copied mechanic** (vacation-game 2026-11-13, #595: a plan copied "Scam With Your Friends" from search summaries and named the wrong speech stack). A plan that borrows a mechanic from a shipped game or product links a teardown written from primary sources: store page, full patch notes, developer posts, top positive and negative reviews, prices. Each claim is `[S]` (source) or `inferred`. It covers tech stack, cost model, how the smart part is built, how it stays cheap and stable, top player complaints and a copy/skip list. Search summaries alone do not count; Steam gives most in minutes (`store.steampowered.com/api/appdetails`, `ISteamNews/GetNewsForApp?maxlength=0`, the community review pages).
 
-`scripts/research-check.mjs <file>` checks a report for these parts; `check.mjs` checks that the template and this block keep them.
+`scripts/research-check.mjs [--show] <file>` checks a report for these parts, ours first and that each `path:line` exists; `check.mjs` checks that the template and this block keep them.
 
 ## Co-founder
 

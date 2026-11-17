@@ -55,3 +55,27 @@ test('4b: a missing topic, or a product block with no [S] link, fails; a report 
   assert.match(run(wrap(`## 4b. Teardown of a shipped product\n### Game A\n- inferred ${TOPICS}`)).stderr, /4b.*\[S\]/)
   assert.equal(run(wrap('## 4. Built with Claude already\n- c (https://x)')).status, 0)
 })
+
+// #622: a page that cites our own files opens with one of them (path:line) before any outside source.
+test('#622: a page with a repo path:line whose first source is outside fails; ours first passes', () => {
+  const page = (a, b) => `# R\n- ${a}\n- ${b}\n## Sources\n- https://x\nNot checked:\n`
+  assert.match(run(page('push channel (https://docs.ntfy.sh/publish/)', 'the script (`scripts/research-check.mjs:1`)')).stderr, /ours first/)
+  assert.equal(run(page('the script (`scripts/research-check.mjs:1`)', 'push channel (https://docs.ntfy.sh/publish/)')).status, 0)
+  assert.equal(run(page('push channel (https://docs.ntfy.sh/publish/)', 'price (https://x/y)')).status, 0) // no repo path at all: unaffected
+})
+
+// #623: a cited path:line must exist in the checkout; --show prints the cited lines.
+test('#623: a line number past the end of an existing file fails, in range or single', () => {
+  const page = (cite) => `# R\n- the check (\`${cite}\`)\n## Sources\n- https://x\nNot checked:\n`
+  assert.equal(run(page('scripts/research-check.mjs:1-2')).status, 0)
+  assert.match(run(page('scripts/research-check.mjs:99999')).stderr, /past the end/)
+  assert.match(run(page('scripts/research-check.mjs:1-99999')).stderr, /past the end/)
+  assert.equal(run(page('no/such/file.md:72-73')).status, 0) // not in this checkout: cannot be checked
+})
+test('#623: --show prints the lines beside the claim', () => {
+  const f = join(mkdtempSync(join(tmpdir(), 'rc-')), 'r.md')
+  writeFileSync(f, '# R\n- the check (`scripts/research-check.mjs:1`)\n## Sources\n- https://x\nNot checked:\n')
+  const r = spawnSync('node', ['scripts/research-check.mjs', '--show', f], { encoding: 'utf8' })
+  assert.equal(r.status, 0)
+  assert.match(r.stdout, /scripts\/research-check\.mjs:1\b.*Checks a research report/)
+})
