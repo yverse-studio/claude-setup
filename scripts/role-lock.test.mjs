@@ -560,3 +560,60 @@ test('#615: the role file names the skills to load; the first reply is refused u
   appendFileSync(sessionTranscripts.get(c.id), `${JSON.stringify({ type: 'assistant', message: { content: [{ type: 'tool_use', id: 'r1', name: 'Read', input: { file_path: '/x/.claude/skills/toolbox/SKILL.md' } }] } })}\n`)
   assert.equal(tool(c.id, POST, { text: `${c.line}\nhi (◕‿◕)` }).status, 0, 'a Read of its SKILL.md counts where a skill cannot load')
 })
+
+// #712 (failed-starts plan, slice 1; CompanyXY incident 2026-11-16): a correction that is still incomplete says what is open, in which form, and that the same thread is reused.
+const GAME_M = (...extra) => ['Role: Programmer · Kit: game · Size: M', BLOCKS, 'Gate: Reviewer · x before owner', 'Sheet: n/a no body, face or outfit job', ...extra].join('\n')
+const projectsRelay = (t, body) => {
+  const text = relay('coordinator', body)
+  appendFileSync(t.transcript, t.line({ type: 'user', isMeta: true, origin: PROJECTS, promptSource: 'system', message: { content: text } }))
+  return t.run('prompt', { prompt: text })
+}
+const hookText = (out) => (out.stdout ? JSON.parse(out.stdout).hookSpecificOutput.additionalContext : '')
+const LEVEL_FORM = 'Level: research <page> · plan <file> · design <file>'
+
+test('#712 G1.1 and G1.2: a relay that leaves Level in a wrong form is answered with the found line, the asked form and "same thread"; a complete Level lifts', () => {
+  const wrongLevel = 'Level: research r.md · plan p.md'
+  const t = lockedThread(GAME_M(wrongLevel))
+  assert.equal(t.bash(), 2, 'the start brief locks on Level')
+  const refused = projectsRelay(t, `BRIEF-FIX: ${wrongLevel}`)
+  const note = hookText(refused)
+  for (const re of [/Level/, new RegExp(`found "${wrongLevel}"`), /asked: Level: research <page> · plan <file> · design <file>/, /same thread/]) assert.match(note, re, `prompt-mode note: ${re}`)
+  const pre = t.run('pre', { tool_name: 'Bash', tool_input: { command: 'ls' } })
+  assert.equal(pre.status, 2)
+  for (const re of [/Level/, new RegExp(`found "${wrongLevel}"`), /asked: Level: research <page> · plan <file> · design <file>/, /same thread/]) assert.match(pre.stderr, re, `lock block: ${re}`)
+  assert.doesNotMatch(pre.stderr, /wait for a new brief/)
+  const lifted = projectsRelay(t, 'BRIEF-FIX: Level: research r.md · plan p.md · design d.md')
+  assert.match(hookText(lifted), /correction accepted, lock lifted/)
+  assert.equal(t.bash(), 0)
+})
+
+test('#712 G1.4: a lock with three wrong-form gaps shows all three in the lock block', () => {
+  const t = lockedThread(['Role: Programmer · Kit: game · Size: M', BLOCKS, 'Gate: Reviewer · x before owner', 'Sheet: approval/luna', 'Look-Lock: approved/APPROVED-LOOKS.md', 'Level: research r.md · plan p.md'].join('\n'))
+  const pre = t.run('pre', { tool_name: 'Bash', tool_input: { command: 'ls' } })
+  assert.equal(pre.status, 2)
+  for (const key of ['Sheet', 'Look-Lock', 'Level']) assert.match(pre.stderr, new RegExp(`${key} is there but not in the asked form \\(found "${key}: `), `${key} with its found line`)
+  assert.match(pre.stderr, /same thread/)
+})
+
+test('#712: an absent line stays "missing or still a <placeholder>", a placeholder line too', () => {
+  const t = lockedThread(GAME_M())
+  assert.match(t.run('pre', { tool_name: 'Bash', tool_input: { command: 'ls' } }).stderr, /Level is missing or still a <placeholder>/)
+  const u = lockedThread(GAME_M(LEVEL_FORM))
+  assert.match(u.run('pre', { tool_name: 'Bash', tool_input: { command: 'ls' } }).stderr, /Level is missing or still a <placeholder>/)
+})
+
+test('#712 G1.3: a brief that lost 3 or more template lines says it was not copied; 2 lines do not', async () => {
+  const { briefCheck } = await import('../global/rule-guard.mjs')
+  const full = ['Role: Programmer · Kit: setup · Size: M', 'Item: M30', 'Plan: x.md', 'Acceptance: the test passes', 'Model: sonnet', 'Skills: none', 'Prior art: obra/superpowers checked -> adapt, because ours reads hearthbot tools', 'Start: read MEMORY.md first', 'Threads: list_threads checked, none open on this topic', 'Done when: the test passes', 'Stop when: 3 attempts', 'Gate: Reviewer · x before owner']
+  const without = (...keys) => full.filter((l) => !keys.some((k) => l.startsWith(`${k}:`))).join('\n')
+  const NOT_COPIED = /of this role's template lines are missing: this brief was not copied from briefs\/programmer\.md\./
+  const two = await briefCheck(without('Stop when', 'Gate'), root, null, true)
+  assert.match(two, /Brief repair/)
+  assert.doesNotMatch(two, /not copied/, '2 missing: no sentence')
+  const five = await briefCheck(without('Stop when', 'Gate', 'Threads', 'Skills', 'Start'), root, null, true)
+  assert.match(five, /Brief repair \(no block\)[^\n]*first checklist line\. 5 of this role's template lines are missing: this brief was not copied from briefs\/programmer\.md\./, '5 missing: the sentence follows the repair note')
+  const refusal = await briefCheck(without('Plan', 'Stop when', 'Gate', 'Threads'), root, null, true)
+  assert.match(refusal, /^Brief check/)
+  assert.match(refusal, NOT_COPIED)
+  assert.match(refusal.trimEnd(), /not copied from briefs\/programmer\.md\.$/, 'the sentence is the very end, after the template')
+})

@@ -256,7 +256,7 @@ export const FALSE_STARTS = ['refused', 'wrong-model', 'duplicate']
 export function startOutcome(check = '', modelCheckText = '') {
   if (/^Model check\b/.test(modelCheckText)) return { outcome: 'wrong-model', reasons: ['model'] }
   const full = [...String(check).matchAll(/\((\d+)\) (.*?)(?= \(\d+\) |\. Do no work)/g)].map((m) => m[2].trim())
-  if (/^Brief check\b/.test(check)) return { outcome: full.some((i) => /ask the coordinator to restart it on that model/.test(i)) ? 'wrong-model' : 'refused', reasons: full.map((i) => i.slice(0, 80)) }
+  if (/^Brief check\b/.test(check)) return { outcome: full.some((i) => /ask the coordinator to restart it on that model/.test(i)) ? 'wrong-model' : 'refused', reasons: full.map((i) => i.split(' (found')[0].slice(0, 80)) }
   // Any repair text counts, whatever it repairs: both notes start with `Brief repair (no block):`.
   const repair = String(check).match(/Brief repair \(no block\): ([^\n]*)/)
   if (!repair) return { outcome: 'clean', reasons: [] }
