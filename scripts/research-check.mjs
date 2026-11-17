@@ -4,6 +4,11 @@
 // `path:line` that exists in the checkout is within the file (#623, --show prints the cited lines).
 // Usage: node scripts/research-check.mjs [--show] <file>...
 import { existsSync, readFileSync, statSync } from 'node:fs'
+import { dirname, isAbsolute, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..') // cited paths are read from this checkout, whatever the cwd
+const own = (p) => (isAbsolute(p) ? p : join(ROOT, p))
 
 const SOURCE = /https?:\/\/|\]\(|`[^`\s]+\.[a-z]{1,5}:\d+[^`]*`|\binferred\b/
 const DIVIDER = /^\s*\|?[\s:|-]+\|[\s:|-]*$/
@@ -26,19 +31,32 @@ for (const f of process.argv.slice(2).filter((a) => a !== '--show')) {
     if (gaps || !l.trim() || /^#/.test(l) || DIVIDER.test(l) || isHeader) return
     if (!SOURCE.test(l)) errors.push(`line ${i + 1} has no source: ${l.trim().slice(0, 60)}`)
   })
-  // #622: when the page cites our own files, its first sourced line is one of them (ours first, then outside sources).
+  // #622: when the page cites our own files, its first claim line is one of them (ours first, then outside sources).
+  // Headers before the first "##", headings, fences, the Not checked list and a link to our own file (relative or this repo) are not outside sources.
   const cites = (l) => [...l.matchAll(CITE)]
-  const firstSourced = lines.findIndex((l) => /https?:\/\/|\]\(|`[^`\s]+\.[a-z]{1,5}:\d+[^`]*`/.test(l) && !/^#+\s*(\d+\.\s*)?Sources\b/i.test(l))
-  if (lines.some((l) => cites(l).some((m) => existsSync(m[1]))) && firstSourced >= 0 && !cites(lines[firstSourced]).some((m) => existsSync(m[1])))
-    errors.push(`line ${firstSourced + 1}: ours first: the first source is outside, but the page cites our own files (\`path:line\`)`)
+  const ours = (l) => cites(l).some((m) => existsSync(own(m[1]))) || /\]\(\.{1,2}\/|github\.com\/yverse-studio\//.test(l)
+  const first = lines.findIndex((l) => /^##/.test(l) && !/^#+\s*(\d+\.\s*)?Sources\b/i.test(l))
+  let fenced = false
+  let skip = false
+  const firstClaim = lines.findIndex((l, i) => {
+    if (/^\s*```/.test(l)) fenced = !fenced
+    if (/^Not checked:/.test(l)) skip = true
+    else if (skip && !/^\s*[-*]\s/.test(l)) skip = false
+    return i > first && !fenced && !skip && !/^#/.test(l) && !/^\s*```/.test(l) && /https?:\/\/|\]\(|`[^`\s]+\.[a-z]{1,5}:\d+[^`]*`/.test(l)
+  })
+  if (lines.some((l) => cites(l).some((m) => existsSync(own(m[1])))) && firstClaim >= 0 && !ours(lines[firstClaim]))
+    errors.push(`line ${firstClaim + 1}: ours first: the first source is outside, but the page cites our own files (\`path:line\`)`)
   // #623: a cited line that is past the end of an existing file is wrong; a path outside this checkout cannot be checked.
   lines.forEach((l, i) => cites(l).forEach((m) => {
-    if (!existsSync(m[1]) || !statSync(m[1]).isFile()) return
-    const src = readFileSync(m[1], 'utf8').split('\n')
+    const file = own(m[1])
+    if (!existsSync(file) || !statSync(file).isFile()) return
+    const src = readFileSync(file, 'utf8').split('\n')
     const n = src.length - (src[src.length - 1] === '' ? 1 : 0)
     const [a, b] = [Number(m[2]), Number(m[3] ?? m[2])]
-    if (Math.max(a, b) > n) errors.push(`line ${i + 1}: ${m[1]}:${m[2]}${m[3] ? '-' + m[3] : ''} is past the end (${n} lines)`)
-    else if (show) console.log(`${m[1]}:${m[2]}${m[3] ? '-' + m[3] : ''}  ${src.slice(a - 1, b).join(' | ').trim().slice(0, 160)}`)
+    const cite = `${m[1]}:${m[2]}${m[3] ? '-' + m[3] : ''}`
+    if (a < 1 || b < a) errors.push(`line ${i + 1}: ${cite} is not a line or a forward range`)
+    else if (b > n) errors.push(`line ${i + 1}: ${cite} is past the end (${n} lines)`)
+    else if (show) console.log(`${cite}  ${src.slice(a - 1, b).join(' | ').trim().slice(0, 160)}`)
   }))
   // #595: a "## 4b" teardown needs the six topics, and each product block (### heading, or the section itself) one [S] line with a link.
   const i4 = lines.findIndex((l) => /^##\s+4b\b/i.test(l))

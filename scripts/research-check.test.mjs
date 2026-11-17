@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { mkdtempSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -78,4 +78,23 @@ test('#623: --show prints the lines beside the claim', () => {
   const r = spawnSync('node', ['scripts/research-check.mjs', '--show', f], { encoding: 'utf8' })
   assert.equal(r.status, 0)
   assert.match(r.stdout, /scripts\/research-check\.mjs:1\b.*Checks a research report/)
+})
+
+// Gate round 1 of PR 716: header and own-file links are not outside sources, any cwd, last line, line 0 and reversed ranges.
+test('#622: a Method header link, a link to our own file and an issue link before the first claim do not count as outside', () => {
+  const page = (intro, a, b) => `# R\n${intro}\n## 1. What we have\n- ${a}\n- ${b}\n## Sources\n- https://x\nNot checked:\n`
+  const mine = 'the script (`scripts/research-check.mjs:1`)'
+  assert.equal(run(page('Method: [`roles/researcher.md`](../roles/researcher.md). Item: [#606](https://github.com/yverse-studio/claude-setup/issues/606)', mine, 'push (https://docs.ntfy.sh/)')).status, 0)
+  assert.equal(run(page('x (https://x)', 'see [the plan](../plan.md)', 'push (https://docs.ntfy.sh/)')).status, 0)
+  assert.match(run(page('x (https://x)', 'push (https://docs.ntfy.sh/)', mine)).stderr, /ours first/)
+})
+test('#623: the checks read the checkout whatever the cwd; last line passes, one past fails; line 0 and a reversed range fail', () => {
+  const f = join(mkdtempSync(join(tmpdir(), 'rc-')), 'r.md')
+  const at = (cite, cwd) => { writeFileSync(f, `# R\n- c (\`${cite}\`)\n## Sources\n- https://x\nNot checked:\n`); return spawnSync('node', [join(process.cwd(), 'scripts/research-check.mjs'), f], { encoding: 'utf8', cwd }) }
+  assert.match(at('scripts/research-check.mjs:99999', tmpdir()).stderr, /past the end/)
+  const n = readFileSync('scripts/research-check.mjs', 'utf8').split('\n').length - 1
+  assert.equal(at(`scripts/research-check.mjs:${n}`).status, 0)
+  assert.match(at(`scripts/research-check.mjs:${n + 1}`).stderr, /past the end/)
+  assert.match(at('scripts/research-check.mjs:0').stderr, /not a line/)
+  assert.match(at('scripts/research-check.mjs:9-3').stderr, /not a line/)
 })
