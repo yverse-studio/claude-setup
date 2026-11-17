@@ -468,7 +468,7 @@ export async function briefCheck(prompt, cwd, model = null, any = false) {
   // #712: a line that is there but in the wrong form says what was found and which form is asked; an absent or placeholder line stays "missing".
   const wrongForm = (f) => {
     const got = plain.match(new RegExp(`^[ \\t>-]*${f.key.replace(/\W/g, '\\$&')}:[ \\t]*([^\\n]*)`, 'im'))
-    return got && got[1].trim() && !/<[^>\n]+>/.test(got[1]) ? `${f.key} is there but not in the asked form (found "${got[0].replace(/^[ \t>-]+/, '').trim().slice(0, 80)}"; asked: ${f.tpl})` : `${f.key} is missing or still a <placeholder>`
+    return got && got[1].trim() && !/<[^>\n]+>/.test(got[1]) ? `${f.key} is there but not in the asked form (found "${got[0].replace(/^[ \t>-]+/, '').trim().replace(/\((\d+)\)/g, '[$1]').replace(/\. Do no work/g, '; Do no work').slice(0, 80)}"; asked: ${f.tpl})` : `${f.key} is missing or still a <placeholder>`
   }
   found.push(...sorted.judgment.map(wrongForm))
   const wrong = model && guard.wrongModel(brief, model, teams)
@@ -991,7 +991,7 @@ async function relayRebrief(session, prompt, cwd, model, transcript = '') {
   const stamp = join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)
   if (existsSync(lockFile(session))) {
     // #712: the thread hears what is still open and in which form, and that the coordinator's answer reaches this same thread.
-    const open = lockReasons(read(lockFile(session)))
+    const open = sameThread(read(lockFile(session))) ? lockReasons(read(lockFile(session))) : []
     const still = open.length ? `Correction read, lock stays: ${open.length} open: ${open.map((g, i) => `(${i + 1}) ${g}`).join(' ')}. ${LOCK_CLOSING}` : ''
     if (coordinatorRelays(transcript, origin).filter((t) => t.trim() !== prompt.trim() && BRIEF_LINE.test(t)).length < 2) return still
     const note = 'Three relays did not lift the lock: post one card to yskills with request_decision that names the lines still missing, then stay idle; a complete relay lifts the lock at any time.'
@@ -1039,13 +1039,18 @@ async function startFromTranscript(session, transcript, cwd) {
 }
 // #712: the lock text runs up to the refusal's own closing words (every gap with its found line fits, no character cap); a lock the third relay rewrote has no such mark and shows whole.
 const LOCK_CLOSING = 'Send exactly these lines to the coordinator (message_coordinator), one field per line; its answer reaches this same thread by message_thread and lifts the lock. No new thread.'
-const lockText = (t) => { const i = String(t).indexOf('. Do no work'); return i > 0 ? t.slice(0, i) : String(t).slice(0, 2000) }
+// A Model check, a Gate check and a wrong-model gap carry their own instruction (only a restart frees a model lock): they keep the first 700 characters and the old closing words.
+const sameThread = (t) => /^Brief check\b/.test(t) && !/ask the coordinator to restart it on that model/.test(t)
+const lockText = (t) => { if (!sameThread(t)) return String(t).slice(0, 700); const i = String(t).indexOf('. Do no work'); return i > 0 ? t.slice(0, i) : String(t).slice(0, 2000) }
+const LOCK_OLD_CLOSING = 'Send the reason and the corrected Role, Kit and Size to the coordinator (message_coordinator) and wait for a new brief.'
 // The gaps of a brief check text, one text each (the (n) numbering of briefCheck).
 const lockReasons = (check) => /^Brief check\b/.test(check) ? [...String(check).matchAll(/\((\d+)\) (.*?)(?= \(\d+\) |\. Do no work)/g)].map((m) => m[2].trim()) : []
+// After the third relay the lock holds the card note, which is the one instruction (#712 gate, O2).
+const closingFor = (t) => (!sameThread(t) ? LOCK_OLD_CLOSING : t.includes('request_decision') ? '' : LOCK_CLOSING)
 export function lockBlock(tool, session) {
   const f = session ? lockFile(session) : ''
   if (!f || !existsSync(f) || LOCK_FREE.test(tool)) return null
-  return `rule-guard: this thread's brief breaks the team rules, so it does no work (docs/TEAMS.md, Coordinator or thread): ${lockText(read(f))}\n${LOCK_CLOSING}`
+  return `rule-guard: this thread's brief breaks the team rules, so it does no work (docs/TEAMS.md, Coordinator or thread): ${lockText(read(f))}${closingFor(read(f)) ? `\n${closingFor(read(f))}` : ''}`
 }
 // docs/hands-off.md: a role never writes the files another role owns.
 export function handsOff(tool, input = {}, role = '', root = '') {

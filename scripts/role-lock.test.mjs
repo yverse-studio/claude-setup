@@ -588,11 +588,39 @@ test('#712 G1.1 and G1.2: a relay that leaves Level in a wrong form is answered 
 })
 
 test('#712 G1.4: a lock with three wrong-form gaps shows all three in the lock block', () => {
-  const t = lockedThread(['Role: Programmer · Kit: game · Size: M', BLOCKS, 'Gate: Reviewer · x before owner', 'Sheet: approval/luna', 'Look-Lock: approved/APPROVED-LOOKS.md', 'Level: research r.md · plan p.md'].join('\n'))
+  const t = lockedThread(['Role: Programmer · Kit: game · Size: L', BLOCKS, 'Gate: Reviewer · x before owner', 'Sheet: approval/luna', 'Tester: none', 'Level: research r.md · plan p.md'].join('\n'))
   const pre = t.run('pre', { tool_name: 'Bash', tool_input: { command: 'ls' } })
   assert.equal(pre.status, 2)
-  for (const key of ['Sheet', 'Look-Lock', 'Level']) assert.match(pre.stderr, new RegExp(`${key} is there but not in the asked form \\(found "${key}: `), `${key} with its found line`)
+  for (const key of ['Sheet', 'Tester', 'Level']) assert.match(pre.stderr, new RegExp(`${key} is there but not in the asked form \\(found "${key}: `), `${key} with its found line`)
   assert.match(pre.stderr, /same thread/)
+})
+
+test('#712 gate fix 1: a Model check lock, a Gate check lock and a wrong-model gap keep their own instruction, not "same thread"', () => {
+  const lockOf = (text) => {
+    const id = `rolelock${process.pid}x${++n}`
+    writeFileSync(join(tmpdir(), `claude-setup-badbrief-${id}`), text)
+    return guard('pre', id, { tool_name: 'Bash', tool_input: { command: 'ls' } })
+  }
+  const model = lockOf('Model check (docs/TEAMS.md, Spawn rule 4): the brief or yskills asks for fable, this thread runs on sonnet. Do no work: message_coordinator with Role, Kit, Size and `model: fable` for a restart, then stop.')
+  const gate = lockOf('Gate check (docs/TEAMS.md): this is a gate role. Do no work: send this reason to the coordinator, then stop.')
+  const gap = lockOf('Brief check (docs/TEAMS.md): this start breaks the team rules in 1 place: (1) this thread runs on sonnet, but the Planner runs on fable: ask the coordinator to restart it on that model. Do no work: send ALL of this to the coordinator')
+  for (const [label, out, own] of [['model', model, /for a restart, then stop/], ['gate', gate, /send this reason to the coordinator/], ['wrong-model gap', gap, /ask the coordinator to restart it on that model/]]) {
+    assert.equal(out.status, 2, label)
+    assert.match(out.stderr, own, `${label}: its own instruction survives`)
+    assert.doesNotMatch(out.stderr, /same thread|No new thread/, `${label}: no false promise`)
+  }
+})
+
+test('#712 gate fix 3: a found line with " (1) ... (2) " or ". Do no work" stays one gap and one reason', async () => {
+  const { briefCheck } = await import('../global/rule-guard.mjs')
+  const { startOutcome } = await import('../global/card-render.mjs')
+  for (const line of ['Level: research (1) r.md (2) plan p.md', 'Level: research r.md. Do no work plan p.md']) {
+    const check = await briefCheck(GAME_M(line), root, null, true)
+    assert.match(check, /in 1 place:/)
+    assert.deepEqual(startOutcome(check), { outcome: 'refused', reasons: ['Level is there but not in the asked form'] }, line)
+  }
+  const t = lockedThread(GAME_M('Level: research (1) r.md (2) plan p.md'))
+  assert.match(hookText(projectsRelay(t, 'BRIEF-FIX: Level: research (1) r.md (2) plan p.md')), /1 open:/)
 })
 
 test('#712: an absent line stays "missing or still a <placeholder>", a placeholder line too', () => {
