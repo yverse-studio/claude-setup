@@ -2730,7 +2730,7 @@ async function relayRebrief(session, prompt, cwd, model, transcript = '') {
     const still = open.length ? `Correction read, lock stays: ${open.length} open: ${open.map((g, i) => `(${i + 1}) ${g}`).join(' ')}. ${LOCK_CLOSING}` : ''
     if (coordinatorRelays(transcript, origin).filter((t) => t.trim() !== prompt.trim() && BRIEF_LINE.test(t)).length < 2) return still
     const note = 'Three relays did not lift the lock: post one card to yskills with request_decision that names the lines still missing, then stay idle; a complete relay lifts the lock at any time.'
-    if (!read(lockFile(session)).includes('request_decision')) writeFileSync(lockFile(session), `${lockText(read(lockFile(session)))}\n${note}`)
+    if (!read(lockFile(session)).includes('request_decision')) writeFileSync(lockFile(session), `${sameThread(read(lockFile(session))) ? lockText(read(lockFile(session))) : read(lockFile(session)).slice(0, 300)}\n${note}`) // a model lock keeps the old 300 characters: lockBlock shows 700, so the card note is not cut
     return note
   }
   const root = setupRoot(cwd)

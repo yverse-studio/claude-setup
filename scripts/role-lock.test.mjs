@@ -645,3 +645,22 @@ test('#712 G1.3: a brief that lost 3 or more template lines says it was not copi
   assert.match(refusal, NOT_COPIED)
   assert.match(refusal.trimEnd(), /not copied from briefs\/programmer\.md\.$/, 'the sentence is the very end, after the template')
 })
+
+test('#712 gate round 2: a wrong-model lock still carries the card note after the third relay', () => {
+  const id = `rolelock${process.pid}x${++n}`
+  runningOn(id, 'sonnet-test')
+  const transcript = sessionTranscripts.get(id)
+  const brief = spawn(`Role: Planner · Kit: setup · Size: M\n${BLOCKS.replace('Model: sonnet', 'Model: fable')}\nGate: Reviewer · x before owner`)
+  appendFileSync(transcript, `${JSON.stringify({ type: 'user', message: { content: brief } })}\n`)
+  guard('prompt', id, { prompt: brief })
+  const pre = () => tool(id, 'Bash', { command: 'ls' })
+  assert.match(pre().stderr, /restart it on that model/, 'locked on the wrong model')
+  for (let i = 0; i < 3; i++) {
+    appendFileSync(transcript, `${JSON.stringify({ type: 'attachment', attachment: { type: 'queued_command', prompt: queued(`BRIEF-FIX: Skills: none (try ${i})`), origin: PROJECTS } })}\n`)
+    pre()
+  }
+  const out = pre()
+  assert.equal(out.status, 2)
+  assert.match(out.stderr, /request_decision/, 'the card note is not cut off')
+  assert.match(out.stderr, /restart it on that model/, 'the restart instruction stays')
+})
