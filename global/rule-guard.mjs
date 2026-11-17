@@ -465,13 +465,21 @@ export async function briefCheck(prompt, cwd, model = null, any = false) {
   const own = guard.classify(brief)
   const itemHas = (k) => guard.BRIEF_FIELDS.find((f) => f.key === k)?.ok(itemPlain)
   const sorted = itemPlain ? { ...own, judgment: own.judgment.filter((f) => !(['Sheet', 'Look-Lock', 'Level'].includes(f.key) && itemHas(f.key))) } : own
-  found.push(...sorted.judgment.map((f) => `${f.key} is missing or still a <placeholder>`))
+  // #712: a line that is there but in the wrong form says what was found and which form is asked; an absent or placeholder line stays "missing".
+  const wrongForm = (f) => {
+    const got = plain.match(new RegExp(`^[ \\t>-]*${f.key.replace(/\W/g, '\\$&')}:[ \\t]*([^\\n]*)`, 'im'))
+    return got && got[1].trim() && !/<[^>\n]+>/.test(got[1]) ? `${f.key} is there but not in the asked form (found "${got[0].replace(/^[ \t>-]+/, '').trim().replace(/\((\d+)\)/g, '[$1]').replace(/\. Do no work/g, '; Do no work').slice(0, 80)}"; asked: ${f.tpl})` : `${f.key} is missing or still a <placeholder>`
+  }
+  found.push(...sorted.judgment.map(wrongForm))
   const wrong = model && guard.wrongModel(brief, model, teams)
   if (wrong) found.push(`this thread runs on ${wrong.tier}, but the ${wrong.role} runs on ${wrong.allowed.join(' or ')}: ask the coordinator to restart it on that model`)
-  if (found.length) return `Brief check (docs/TEAMS.md): this start breaks the team rules in ${found.length} place${found.length === 1 ? '' : 's'}: ${found.map((f, i) => `(${i + 1}) ${f}`).join(' ')}. Do no work: send ALL of this to the coordinator in one message (message_coordinator) together with this template for a ${role?.name ?? '<Role>'}, then stop:\n${templateFor(guard, role?.name ?? '<Role>', plain.match(/\bSize:[ \t]*([SML])\b/i)?.[1])}`
+  // #712: three or more template lines gone means the brief was not copied from briefs/<role>.md; the sentence goes last so startOutcome's reasons stay one text per field.
+  const gone = sorted.judgment.length + sorted.recoverable.length + sorted.derived.length
+  const notCopied = gone >= 3 && role?.name ? ` ${gone} of this role's template lines are missing: this brief was not copied from briefs/${role.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.md.` : ''
+  if (found.length) return `Brief check (docs/TEAMS.md): this start breaks the team rules in ${found.length} place${found.length === 1 ? '' : 's'}: ${found.map((f, i) => `(${i + 1}) ${f}`).join(' ')}. Do no work: send ALL of this to the coordinator in one message (message_coordinator) together with this template for a ${role?.name ?? '<Role>'}, then stop:\n${templateFor(guard, role?.name ?? '<Role>', plain.match(/\bSize:[ \t]*([SML])\b/i)?.[1])}${notCopied ? `\n${notCopied.trim()}` : ''}`
   // Nothing the coordinator must decide is missing: the thread closes the rest itself and says so in its first checklist line.
   const mine = [...sorted.derived, ...sorted.recoverable]
-  const notes = mine.length ? [`Brief repair (no block): the brief lacks ${mine.map((f) => f.key).join(', ')}. Work as if it read: ${mine.map((f) => f.fill).join(' | ')}. Name the repaired lines in your first checklist line.`] : []
+  const notes = mine.length ? [`Brief repair (no block): the brief lacks ${mine.map((f) => f.key).join(', ')}. Work as if it read: ${mine.map((f) => f.fill).join(' | ')}. Name the repaired lines in your first checklist line.${notCopied}`] : []
   const gate = role?.name
   if (gate && GATE_ROLES.test(gate) && !GATE_PRIOR.test(plain) && !mine.some((f) => f.key === 'Prior art')) notes.push(`Brief repair (no block): a ${gate} brief names gate.md and the kit's checks in its \`Prior art:\` line; read .claude/skills/operator/gate.md first.`)
   if (item && !item.error && /\bv([2-9]|\d\d+)\b/i.test(`${item.head.replace(/^.*?\): /, '')}\n${itemPlain.match(/^[ \t>-]*Asset:[^\n]*/im)?.[0] ?? ''}`) && !/^[ \t>-]*Basis:[ \t]*[^<\s]/im.test(itemPlain)) notes.push('Item check: this item is a version above 1 and has no `Basis:` line. Find the passed predecessor in LIVE.md, write Basis and Assets into the item, then build from those files.')
@@ -982,9 +990,12 @@ async function relayRebrief(session, prompt, cwd, model, transcript = '') {
   await countRelay(session)
   const stamp = join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)
   if (existsSync(lockFile(session))) {
-    if (coordinatorRelays(transcript, origin).filter((t) => t.trim() !== prompt.trim() && BRIEF_LINE.test(t)).length < 2) return ''
+    // #712: the thread hears what is still open and in which form, and that the coordinator's answer reaches this same thread.
+    const open = sameThread(read(lockFile(session))) ? lockReasons(read(lockFile(session))) : []
+    const still = open.length ? `Correction read, lock stays: ${open.length} open: ${open.map((g, i) => `(${i + 1}) ${g}`).join(' ')}. ${LOCK_CLOSING}` : ''
+    if (coordinatorRelays(transcript, origin).filter((t) => t.trim() !== prompt.trim() && BRIEF_LINE.test(t)).length < 2) return still
     const note = 'Three relays did not lift the lock: post one card to yskills with request_decision that names the lines still missing, then stay idle; a complete relay lifts the lock at any time.'
-    if (!read(lockFile(session)).includes('request_decision')) writeFileSync(lockFile(session), `${read(lockFile(session)).slice(0, 300)}\n${note}`)
+    if (!read(lockFile(session)).includes('request_decision')) writeFileSync(lockFile(session), `${lockText(read(lockFile(session)))}\n${note}`)
     return note
   }
   const root = setupRoot(cwd)
@@ -1026,10 +1037,20 @@ async function startFromTranscript(session, transcript, cwd) {
   if (kept) writeFileSync(stamp, kept)
   return [check, card].filter(Boolean).join('\n')
 }
+// #712: the lock text runs up to the refusal's own closing words (every gap with its found line fits, no character cap); a lock the third relay rewrote has no such mark and shows whole.
+const LOCK_CLOSING = 'Send exactly these lines to the coordinator (message_coordinator), one field per line; its answer reaches this same thread by message_thread and lifts the lock. No new thread.'
+// A Brief check lock is cut at its own closing words (every gap with its found line, a wrong-model gap and its restart instruction included); a Model check and a Gate check carry their own instruction and keep the first 700 characters. Only a lock without a restart gap says "same thread".
+const sameThread = (t) => /^Brief check\b/.test(t) && !/ask the coordinator to restart it on that model/.test(t)
+const lockText = (t) => { if (!/^Brief check\b/.test(t)) return String(t).slice(0, 700); const i = String(t).indexOf('. Do no work'); return i > 0 ? t.slice(0, i) : String(t).slice(0, 2000) }
+const LOCK_OLD_CLOSING = 'Send the reason and the corrected Role, Kit and Size to the coordinator (message_coordinator) and wait for a new brief.'
+// The gaps of a brief check text, one text each (the (n) numbering of briefCheck).
+const lockReasons = (check) => /^Brief check\b/.test(check) ? [...String(check).matchAll(/\((\d+)\) (.*?)(?= \(\d+\) |\. Do no work)/g)].map((m) => m[2].trim()) : []
+// After the third relay the lock holds the card note, which is the one instruction (#712 gate, O2).
+const closingFor = (t) => (!sameThread(t) ? LOCK_OLD_CLOSING : t.includes('request_decision') ? '' : LOCK_CLOSING)
 export function lockBlock(tool, session) {
   const f = session ? lockFile(session) : ''
   if (!f || !existsSync(f) || LOCK_FREE.test(tool)) return null
-  return `rule-guard: this thread's brief breaks the team rules, so it does no work (docs/TEAMS.md, Coordinator or thread): ${read(f).slice(0, 700)}\nSend the reason and the corrected Role, Kit and Size to the coordinator (message_coordinator) and wait for a new brief.`
+  return `rule-guard: this thread's brief breaks the team rules, so it does no work (docs/TEAMS.md, Coordinator or thread): ${lockText(read(f))}${closingFor(read(f)) ? `\n${closingFor(read(f))}` : ''}`
 }
 // docs/hands-off.md: a role never writes the files another role owns.
 export function handsOff(tool, input = {}, role = '', root = '') {
