@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -110,4 +110,16 @@ test('#622: sibling, repo-path and own-repo links are ours; an own issue link is
   assert.equal(run(page('intro [#1](https://example.com/a)', `see [verdict](../v.md) ${mine}`)).status, 0) // header before the first "##" is not a claim
   assert.match(run(`# R\n## 1. Claims\n\`\`\`\npush (https://example.com)\n\`\`\`\n- ${out}\n- ${mine}\n## Sources\n- https://x\nNot checked:\n`).stderr, /line 6.*ours first/) // fenced line skipped, line 6 is the first claim
   assert.equal(run(`# R\n## 1. Gaps\nNot checked:\n- ${out}\n\n## 2. Claims\n- ${mine}\n## Sources\n- https://x\n`).status, 0) // gap bullets are not claims
+})
+
+// Gate round 3 of PR 716 (Reviewer thread): an extension with a digit (.ps1, .mp3) is a path:line too.
+test('#623: a .ps1 cite is range-checked, printed by --show and counts as ours first', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'rc-'))
+  const f = join(dir, 'r.md')
+  const at = (cite, args = []) => { writeFileSync(f, `# R\n## 1. What we have\n- the watchdog (\`${cite}\`)\n- push (https://docs.ntfy.sh/)\n## Sources\n- https://x\nNot checked:\n`); return spawnSync('node', ['scripts/research-check.mjs', ...args, f], { encoding: 'utf8' }) }
+  const ps1 = readdirSync('scripts/laptop').find((n) => n.endsWith('.ps1'))
+  assert.ok(ps1, 'scripts/laptop holds a .ps1 file')
+  assert.match(at(`scripts/laptop/${ps1}:99999`).stderr, /past the end/)
+  assert.match(at(`scripts/laptop/${ps1}:1`, ['--show']).stdout, new RegExp(`${ps1.replace('.', '\\.')}:1\\b`))
+  assert.equal(at(`scripts/laptop/${ps1}:1`).status, 0, 'a .ps1 cite first is ours first')
 })

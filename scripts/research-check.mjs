@@ -10,9 +10,9 @@ import { fileURLToPath } from 'node:url'
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..') // cited paths are read from this checkout, whatever the cwd
 const own = (p) => (isAbsolute(p) ? p : join(ROOT, p))
 
-const SOURCE = /https?:\/\/|\]\(|`[^`\s]+\.[a-z]{1,5}:\d+[^`]*`|\binferred\b/
+const SOURCE = /https?:\/\/|\]\(|`[^`\s]+\.[a-z][a-z0-9]{0,4}:\d+[^`]*`|\binferred\b/
 const DIVIDER = /^\s*\|?[\s:|-]+\|[\s:|-]*$/
-const CITE = /`([^`\s:]+\.[a-z]{1,5}):(\d+)(?:-(\d+))?[^`]*`/g
+const CITE = /`([^`\s:]+\.[a-z][a-z0-9]{0,4}):(\d+)(?:-(\d+))?[^`]*`/g
 const show = process.argv.includes('--show')
 let failed = false
 for (const f of process.argv.slice(2).filter((a) => a !== '--show')) {
@@ -44,7 +44,7 @@ for (const f of process.argv.slice(2).filter((a) => a !== '--show')) {
     if (/^\s*```/.test(l)) fenced = !fenced
     if (/^Not checked:/.test(l)) skip = true
     else if (skip && !/^\s*[-*]\s/.test(l)) skip = false
-    return i > first && !fenced && !skip && !/^#/.test(l) && !/^\s*```/.test(l) && /https?:\/\/|\]\(|`[^`\s]+\.[a-z]{1,5}:\d+[^`]*`/.test(l) && !neutral(l)
+    return i > first && !fenced && !skip && !/^#/.test(l) && !/^\s*```/.test(l) && /https?:\/\/|\]\(|`[^`\s]+\.[a-z][a-z0-9]{0,4}:\d+[^`]*`/.test(l) && !neutral(l)
   })
   if (lines.some((l) => cites(l).some((m) => existsSync(own(m[1])))) && firstClaim >= 0 && !ours(lines[firstClaim]))
     errors.push(`line ${firstClaim + 1}: ours first: the first source is outside, but the page cites our own files (\`path:line\`)`)
