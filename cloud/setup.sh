@@ -2730,7 +2730,7 @@ async function relayRebrief(session, prompt, cwd, model, transcript = '') {
     const still = open.length ? `Correction read, lock stays: ${open.length} open: ${open.map((g, i) => `(${i + 1}) ${g}`).join(' ')}. ${LOCK_CLOSING}` : ''
     if (coordinatorRelays(transcript, origin).filter((t) => t.trim() !== prompt.trim() && BRIEF_LINE.test(t)).length < 2) return still
     const note = 'Three relays did not lift the lock: post one card to yskills with request_decision that names the lines still missing, then stay idle; a complete relay lifts the lock at any time.'
-    if (!read(lockFile(session)).includes('request_decision')) writeFileSync(lockFile(session), `${sameThread(read(lockFile(session))) ? lockText(read(lockFile(session))) : read(lockFile(session)).slice(0, 300)}\n${note}`) // a model lock keeps the old 300 characters: lockBlock shows 700, so the card note is not cut
+    if (!read(lockFile(session)).includes('request_decision')) writeFileSync(lockFile(session), `${lockText(read(lockFile(session)))}\n${note}`)
     return note
   }
   const root = setupRoot(cwd)
@@ -2774,9 +2774,9 @@ async function startFromTranscript(session, transcript, cwd) {
 }
 // #712: the lock text runs up to the refusal's own closing words (every gap with its found line fits, no character cap); a lock the third relay rewrote has no such mark and shows whole.
 const LOCK_CLOSING = 'Send exactly these lines to the coordinator (message_coordinator), one field per line; its answer reaches this same thread by message_thread and lifts the lock. No new thread.'
-// A Model check, a Gate check and a wrong-model gap carry their own instruction (only a restart frees a model lock): they keep the first 700 characters and the old closing words.
+// A Brief check lock is cut at its own closing words (every gap with its found line, a wrong-model gap and its restart instruction included); a Model check and a Gate check carry their own instruction and keep the first 700 characters. Only a lock without a restart gap says "same thread".
 const sameThread = (t) => /^Brief check\b/.test(t) && !/ask the coordinator to restart it on that model/.test(t)
-const lockText = (t) => { if (!sameThread(t)) return String(t).slice(0, 700); const i = String(t).indexOf('. Do no work'); return i > 0 ? t.slice(0, i) : String(t).slice(0, 2000) }
+const lockText = (t) => { if (!/^Brief check\b/.test(t)) return String(t).slice(0, 700); const i = String(t).indexOf('. Do no work'); return i > 0 ? t.slice(0, i) : String(t).slice(0, 2000) }
 const LOCK_OLD_CLOSING = 'Send the reason and the corrected Role, Kit and Size to the coordinator (message_coordinator) and wait for a new brief.'
 // The gaps of a brief check text, one text each (the (n) numbering of briefCheck).
 const lockReasons = (check) => /^Brief check\b/.test(check) ? [...String(check).matchAll(/\((\d+)\) (.*?)(?= \(\d+\) |\. Do no work)/g)].map((m) => m[2].trim()) : []

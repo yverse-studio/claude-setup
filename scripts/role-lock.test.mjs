@@ -664,3 +664,30 @@ test('#712 gate round 2: a wrong-model lock still carries the card note after th
   assert.match(out.stderr, /request_decision/, 'the card note is not cut off')
   assert.match(out.stderr, /restart it on that model/, 'the restart instruction stays')
 })
+
+// #712 gate round 3: a wrong-form line plus a wrong model keeps the restart instruction (the gaps are 150 to 200 characters each, so a character cut ended before the model gap).
+const modelLocked = (brief, model) => {
+  const id = `rolelock${process.pid}x${++n}`
+  runningOn(id, model)
+  const transcript = sessionTranscripts.get(id)
+  const spawned = spawn(brief)
+  appendFileSync(transcript, `${JSON.stringify({ type: 'user', message: { content: spawned } })}\n`)
+  guard('prompt', id, { prompt: spawned })
+  return { transcript, pre: () => tool(id, 'Bash', { command: 'ls' }) }
+}
+test('#712 gate round 3: a wrong-form Level plus a wrong model, three relays: the lock block keeps the restart instruction and the card note', () => {
+  const t = modelLocked(GAME_M('Level: research r.md · plan p.md'), 'haiku-test')
+  assert.match(t.pre().stderr, /Level is there but not in the asked form[\s\S]*restart it on that model/, 'at the start')
+  for (let i = 0; i < 3; i++) { appendFileSync(t.transcript, `${JSON.stringify({ type: 'attachment', attachment: { type: 'queued_command', prompt: queued(`BRIEF-FIX: Level: research r.md · plan p${i}.md`), origin: PROJECTS } })}\n`); t.pre() }
+  const out = t.pre()
+  assert.equal(out.status, 2)
+  assert.match(out.stderr, /restart it on that model/, 'the restart instruction stays')
+  assert.match(out.stderr, /request_decision/, 'the card note is there')
+})
+test('#712 gate round 3: three wrong-form gaps plus a wrong model at the start: the lock block ends with the restart gap', () => {
+  const t = modelLocked(['Role: Programmer · Kit: game · Size: L', BLOCKS, 'Gate: Reviewer · x before owner', 'Sheet: approval/luna', 'Tester: none', 'Level: research r.md · plan p.md'].join('\n'), 'haiku-test')
+  const out = t.pre()
+  assert.equal(out.status, 2)
+  for (const key of ['Sheet', 'Tester', 'Level']) assert.match(out.stderr, new RegExp(`${key} is there but not in the asked form`))
+  assert.match(out.stderr, /restart it on that model/)
+})
