@@ -81,13 +81,12 @@ test('#623: --show prints the lines beside the claim', () => {
 })
 
 // Gate round 1 of PR 716: header and own-file links are not outside sources, any cwd, last line, line 0 and reversed ranges.
-test('#622: a Method header link, a relative link to our own file before the first claim do not count as outside; an issue link in the first claim does', () => {
+test('#622: a Method header link, a relative link to our own file before the first claim do not count as outside', () => {
   const page = (intro, a, b) => `# R\n${intro}\n## 1. What we have\n- ${a}\n- ${b}\n## Sources\n- https://x\nNot checked:\n`
   const mine = 'the script (`scripts/research-check.mjs:1`)'
   assert.equal(run(page('Method: [`roles/researcher.md`](../roles/researcher.md). Item: [#606](https://github.com/yverse-studio/claude-setup/issues/606)', mine, 'push (https://docs.ntfy.sh/)')).status, 0)
   assert.equal(run(page('x (https://x)', 'see [the plan](../plan.md)', 'push (https://docs.ntfy.sh/)')).status, 0)
   assert.match(run(page('x (https://x)', 'push (https://docs.ntfy.sh/)', mine)).stderr, /ours first/)
-  assert.match(run(page('x (https://x)', 'item [#606](https://github.com/yverse-studio/claude-setup/issues/606)', mine)).stderr, /ours first/)
 })
 test('#623: the checks read the checkout whatever the cwd; last line passes, one past fails; line 0 and a reversed range fail', () => {
   const f = join(mkdtempSync(join(tmpdir(), 'rc-')), 'r.md')
@@ -98,4 +97,17 @@ test('#623: the checks read the checkout whatever the cwd; last line passes, one
   assert.match(at(`scripts/research-check.mjs:${n + 1}`).stderr, /past the end/)
   assert.match(at('scripts/research-check.mjs:0').stderr, /not a line/)
   assert.match(at('scripts/research-check.mjs:9-3').stderr, /not a line/)
+})
+
+// Gate round 2 of PR 716: every form of a link to our own file is ours, an own issue link is neutral, headers and skips are pinned.
+test('#622: sibling, repo-path and own-repo links are ours; an own issue link is skipped; headers, fences and Not checked do not count', () => {
+  const mine = 'the script (`scripts/research-check.mjs:1`)'
+  const out = 'push (https://docs.ntfy.sh/)'
+  const page = (intro, a) => `# R\n${intro}\n## 1. What we have\n- ${a}\n- ${mine}\n- ${out}\n## Sources\n- https://x\nNot checked:\n`
+  for (const a of ['see [verdict](2026-11-08-skills-plugins-verdict.md)', 'see [gate](docs/TEAMS.md)', 'see (https://github.com/yverse-studio/claude-setup/blob/main/scripts/research-check.mjs)'])
+    assert.equal(run(page('x (https://x)', a)).status, 0, a)
+  assert.equal(run(page('x (https://x)', 'goal ([#606](https://github.com/yverse-studio/claude-setup/issues/606))')).status, 0) // neutral, then ours
+  assert.equal(run(page('intro [#1](https://example.com/a)', `see [verdict](../v.md) ${mine}`)).status, 0) // header before the first "##" is not a claim
+  assert.match(run(`# R\n## 1. Claims\n\`\`\`\npush (https://example.com)\n\`\`\`\n- ${out}\n- ${mine}\n## Sources\n- https://x\nNot checked:\n`).stderr, /line 6.*ours first/) // fenced line skipped, line 6 is the first claim
+  assert.equal(run(`# R\n## 1. Gaps\nNot checked:\n- ${out}\n\n## 2. Claims\n- ${mine}\n## Sources\n- https://x\n`).status, 0) // gap bullets are not claims
 })

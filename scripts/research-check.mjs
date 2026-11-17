@@ -32,9 +32,11 @@ for (const f of process.argv.slice(2).filter((a) => a !== '--show')) {
     if (!SOURCE.test(l)) errors.push(`line ${i + 1} has no source: ${l.trim().slice(0, 60)}`)
   })
   // #622: when the page cites our own files, its first claim line is one of them (ours first, then outside sources).
-  // Headers before the first "##", headings, fences, the Not checked list and a relative link to our own file are not outside sources.
+  // Headers before the first "##", headings, fences, the Not checked list and a relative link and an issue or PR link of our repo are skipped, a link into our repo's files is ours.
   const cites = (l) => [...l.matchAll(CITE)]
-  const ours = (l) => cites(l).some((m) => existsSync(own(m[1]))) || /\]\(\.{1,2}\//.test(l)
+  const outsideLink = /https?:\/\/(?!github\.com\/yverse-studio\/[\w.-]+\/(issues|pull)\/)/
+  const ours = (l) => cites(l).some((m) => existsSync(own(m[1]))) || /github\.com\/yverse-studio\/claude-setup\/(blob|tree)\//.test(l)
+  const neutral = (l) => !ours(l) && !outsideLink.test(l) // an issue or PR link of our own repo neither satisfies nor breaks the rule
   const first = lines.findIndex((l) => /^##/.test(l) && !/^#+\s*(\d+\.\s*)?Sources\b/i.test(l))
   let fenced = false
   let skip = false
@@ -42,7 +44,7 @@ for (const f of process.argv.slice(2).filter((a) => a !== '--show')) {
     if (/^\s*```/.test(l)) fenced = !fenced
     if (/^Not checked:/.test(l)) skip = true
     else if (skip && !/^\s*[-*]\s/.test(l)) skip = false
-    return i > first && !fenced && !skip && !/^#/.test(l) && !/^\s*```/.test(l) && /https?:\/\/|\]\(|`[^`\s]+\.[a-z]{1,5}:\d+[^`]*`/.test(l)
+    return i > first && !fenced && !skip && !/^#/.test(l) && !/^\s*```/.test(l) && /https?:\/\/|\]\(|`[^`\s]+\.[a-z]{1,5}:\d+[^`]*`/.test(l) && !neutral(l)
   })
   if (lines.some((l) => cites(l).some((m) => existsSync(own(m[1])))) && firstClaim >= 0 && !ours(lines[firstClaim]))
     errors.push(`line ${firstClaim + 1}: ours first: the first source is outside, but the page cites our own files (\`path:line\`)`)
