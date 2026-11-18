@@ -231,7 +231,7 @@ export function wrongModel(text, model, teams) {
 // a Planner did the SOTA research itself). The brief block's own "No extra ... research" does not trigger it.
 const ASKS_RESEARCH = /\b(SOTA|state of the art|research (on|about|into|what)|recherch\w*)\b/i
 // Gate rounds 1 to 6 chased verbs and body words and every round found more. So there is no classifier: every Programmer or Animator brief
-// on a game or story kit names its approved cast sheet and look lock, or declares in one line that it is no body, face or outfit job:
+// on a game or story kit names its approved cast sheet, target image and source, or declares in one line that it is no body, face or outfit job:
 // `Sheet: n/a <why>` (10+ characters). A false "n/a" on a real modelling job is visible in the brief; a missing line is refused.
 // The one list of roles whose game and story brief names a cast sheet (scripts/brief.mjs imports it: a third copy of this list let the generator drop Character TD).
 export const SHEET_ROLES = ['Programmer', 'Animator', 'Character TD']
@@ -252,7 +252,7 @@ const LEVEL_NEEDS = { Planner: ['research'], 'Game Designer': ['research', 'plan
 const levelRole = (plain) => plain.match(/^[ \t>-]*Role:[ \t]*(Game Designer|Planner|Programmer|Designer|Animator)\b/im)?.[1]
 export const needsLevelRole = (role) => Object.hasOwn(LEVEL_NEEDS, role)
 const needsLevel = (plain) => /^game$/i.test(plain.match(/\bKit:[ \t]*([\w-]+)/i)?.[1] ?? '') && !!levelRole(plain)
-// Each step is its own `·` segment whose value is a file (.md, .json) or a link (https, #cmsg_<id>), bare or as a titled Markdown link, as the Sheet and Look-Lock rows read it.
+// Each step is its own `·` segment whose value is a file (.md, .json) or a link (https, #cmsg_<id>), bare or as a titled Markdown link, as the Sheet and Source rows read it.
 // Any `Level:` line of the brief may carry it, so a task line that starts with the word does not hide the real one.
 export const levelOk = (plain) => [...plain.matchAll(/^[ \t>-]*Level:[ \t]*([^\n]*)$/gim)].some(([, l]) => {
   if (/^n\/a[ \t]+\S.{9,}$/i.test(l.trim())) return true
@@ -273,6 +273,11 @@ export const ITEM_REF = /^[ \t>-]*Item:[^<\n]*?(?:\b(M\d+|new)\b|((?:[\w.-]+\/[\
 export const normItem = (t) => t.replace(/^m(?=\d)/, 'M').replace(/^new$/i, 'new')
 const itemTok = (p) => { const m = p.match(ITEM_REF); return m ? normItem(m[2] ?? m[1]) : null }
 const line = (re) => (plain) => re.test(plain)
+// The target of a look, scene or asset: a file in an approval/ folder (reference/ for motion), bare or inside a Markdown link. Only a Programmer may say
+// `n/a <why>` (10+ characters), which also drops the Source line; an Animator or Character TD with a real sheet has no n/a (owner 2026-11-16).
+export const TARGET_FILE = /^[ \t>-]*Target image:[ \t]*[^<\n]*(?:approval|reference)[\\/][^\s<>()]*\.(?:png|jpe?g|webp|gif|pdf|mp4|webm)(?=[\s)]|$)/im
+export const TARGET_NA = /^[ \t>-]*Target image:[ \t]*n\/a[ \t]+\S[^\n]{9,}$/im
+const targetNa = (plain) => /^[ \t>-]*Role:[ \t]*Programmer\b/im.test(plain) && TARGET_NA.test(plain)
 const sizeCls = (plain) => (small(plain) ? 'recoverable' : 'judgment')
 export const BRIEF_FIELDS = [
   { key: 'Item', name: 'Item: (#n of its issue, M<n> from PLAN.json, or new)', tpl: 'Item: <issue #n, M<n> or new>', ok: line(ITEM_REF), clean: (p) => /^[ \t>-]*Item:[ \t]*(?:issue )?(M\d+|new|(?:[\w.-]+\/[\w.-]+)?#\d+)[ \t]*$/m.test(p.replace(/^([ \t>-]*)item:/gim, '$1Item:')), cls: sizeCls, fill: (p) => `Item: ${itemTok(p) ?? 'new'}` },
@@ -288,7 +293,10 @@ export const BRIEF_FIELDS = [
   { key: 'Prior art', strict: false, tpl: 'Prior art: <sources named: repo, path, URL, #n> -> copy | adapt | reuse | build, because <why>', ok: (p) => !needsPriorArt(p), cls: (p) => (gateRolePlain(p) ? 'derived' : 'recoverable'), fill: (p) => (gateRolePlain(p) ? 'Prior art: .claude/skills/operator/gate.md and the kit\'s checks -> adapt, because the gate rules exist' : 'Prior art: to find: the repo and docs first, sources named before you build') },
   { key: 'Gate', name: 'Gate: <Reviewer thread> before owner, or `Gate: n/a <why no owner-facing result>` (a builder, designer or animator brief at size M or L)', tpl: 'Gate: <Reviewer thread> before owner (M or L)', applies: needsGate, ok: line(GATE_LINE), cls: () => 'recoverable', fill: () => 'Gate: ask the coordinator (message_coordinator) for the Reviewer thread, then write `Gate: Reviewer · <what> before owner`' },
   { key: 'Sheet', name: 'Sheet: (approved cast sheet, docs/preproduction-workflow.md)', tpl: 'Sheet: <approved cast sheet .md, or `n/a <why no body, face or outfit job>`; Programmer or Animator on a game or story kit>', applies: needsSheet, ok: line(/^[ \t>-]*Sheet:[ \t]*[^<\n]*\.md\b/im), cls: () => 'judgment' },
-  { key: 'Look-Lock', name: 'Look-Lock: (owner card of the look)', tpl: 'Look-Lock: <owner card link of the approved look (https or #cmsg_...); not needed with `Sheet: n/a`>', applies: needsSheet, ok: line(/^[ \t>-]*Look-Lock:[ \t]*[^<\n]*(https?:\/\/|#cmsg_?[A-Za-z0-9]{6,})/im), cls: () => 'judgment' },
+  // GameDev 2026-11-15 (#697, #702): a builder guessed a chosen look because the brief named neither target nor source. The look-lock card link is gone from
+  // the brief (the cast sheet keeps its own, scripts/pipeline-gates.mjs); an old brief that still carries a `Look-Lock:` line starts, the line is not read.
+  { key: 'Target image', name: 'Target image: (the approved image in an approval/ folder)', tpl: 'Target image: <path of the approved image in an approval/ folder; Programmer only: n/a <why>>', applies: needsSheet, ok: (p) => TARGET_FILE.test(p) || targetNa(p), cls: () => 'judgment' },
+  { key: 'Source', name: 'Source: (original files of the chosen design)', tpl: 'Source: <original files of the chosen design, path or link>', applies: needsSheet, ok: (p) => targetNa(p) || /^[ \t>-]*Source:[ \t]*(?!n\/a\b)[^<\n]*([\\/]|#cmsg_?[A-Za-z0-9]{6,})/im.test(p), cls: () => 'judgment' },
   // GameDev 2026-11-15 (#627): an Animator plan built from cloud docs alone failed the gate. The brief names the scene docs the project lists and the old scene copied.
   { key: 'Scene docs', name: 'Scene docs: (the scene docs the project\'s CLAUDE.md lists, read on the laptop before planning)', tpl: 'Scene docs: <the scene docs the project\'s CLAUDE.md lists, read on the laptop before planning, and the old scene the plan copies; laptop offline means stop and report>', applies: (p) => /^[ \t>-]*Role:[ \t]*Animator\b/im.test(p), ok: line(/^[ \t>-]*Scene docs:[ \t]*[^<\s]/im), cls: () => 'recoverable', fill: () => 'Scene docs: read the scene docs the project\'s CLAUDE.md lists on the laptop before planning, name the old scene the plan copies; laptop offline means stop and report, never plan without them' },
   // vacation-game 2026-11-15 (yskills): levels went to build without a teardown, a level plan or design proposals. A level brief in the game kit names the

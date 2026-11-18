@@ -1450,7 +1450,7 @@ test('rule guard: a garment download needs clothes_dupe.py on the same source ea
 test('gate fixes: no sheet demand for HUD or camera work, every app browser tool reaches the hook, dupe ids and hosts', async () => {
   const { missingLines } = await import('../global/team-guard.mjs')
   const { dupeCheckMissing } = await import('../global/rule-guard.mjs')
-  assert.equal(missingLines(`Role: Programmer · Kit: game · Size: M${FULL}\nFit the new character outfit`).length, 2)
+  assert.equal(missingLines(`Role: Programmer · Kit: game · Size: M${FULL}\nFit the new character outfit`).length, 3)
   for (const f of ['install.mjs', 'cloud/setup.sh']) assert.match(readFileSync(join(root, f), 'utf8'), /mcp__\.\*Claude_Browser__\.\*\|/, `${f} routes every Claude_Browser tool to rule-guard`)
   const seen = (command) => JSON.stringify({ message: { content: [{ type: 'tool_use', id: 't1', name: 'Bash', input: { command } }] } })
   const uid = '0123456789abcdef0123456789abcdef'
@@ -1469,32 +1469,32 @@ test('team guard: Programmer, Animator and Character TD briefs need the Sheet li
   assert.ok(!missingLines(`Role: Programmer / Kit: setup / Size: M${FULL}`).some((l) => /Sheet/.test(l)), 'other kits need no sheet')
 })
 
-test('gate fixes: Sheet: must be a .md path and Look-Lock: a link or card, "later" does not count', async () => {
+test('gate fixes: Sheet: must be a .md path, Target image: an approval/ file and Source: a path or link, "later" does not count', async () => {
   const { missingLines } = await import('../global/team-guard.mjs')
   const b = (extra) => `Role: Programmer · Kit: game · Size: M${FULL}\nFit the character outfit.\n${extra}`
-  assert.equal(missingLines(b('Sheet: later\nLook-Lock: later')).length, 2)
-  assert.equal(missingLines(b('Sheet: characters/mira/SHEET.md\nLook-Lock: owner card https://claude.ai/c/1')).length, 0)
+  assert.equal(missingLines(b('Sheet: later\nTarget image: later\nSource: later')).length, 3)
+  assert.equal(missingLines(b('Sheet: characters/mira/SHEET.md\nTarget image: lib/characters/CH_x/approval/A.png\nSource: lib/characters/CH_x/source/A.blend')).length, 0)
 })
 
-test('gate fixes: a Look-Lock card link inside the project (#cmsg_...) counts, a bare # does not (GameDev 2026-11-12: six starts refused)', async () => {
+test('gate fixes: a Target image as a titled Markdown link counts, and a Source card link inside the project (#cmsg_...) too; a bare # does not', async () => {
   const { missingLines } = await import('../global/team-guard.mjs')
   const b = (extra) => `Role: Programmer · Kit: game · Size: M${FULL}\nFit the character outfit.\n${extra}`
-  assert.equal(missingLines(b('Sheet: characters/mira/SHEET.md\nLook-Lock: [Mira look](#cmsg_01D5edTu)')).length, 0)
-  for (const bad of ['#later', '#cmsg_', '#cmsg']) assert.equal(missingLines(b(`Sheet: characters/mira/SHEET.md\nLook-Lock: ${bad}`)).length, 1, `${bad} is no card link`)
+  assert.equal(missingLines(b('Sheet: characters/mira/SHEET.md\nTarget image: [Mira look](lib/characters/CH_x/approval/A.png)\nSource: [Mira files](#cmsg_01D5edTu)')).length, 0)
+  for (const bad of ['#later', '#cmsg_', '#cmsg']) assert.equal(missingLines(b(`Sheet: characters/mira/SHEET.md\nTarget image: lib/characters/CH_x/approval/A.png\nSource: ${bad}`)).length, 1, `${bad} is no card link`)
 })
 
 // Gate rounds 1 to 6 of PR 445 chased verbs and body words; the rule is now a plain one: no classifier.
-test('team guard: every Programmer or Animator brief on a game or story kit names its cast sheet and look lock, or declares n/a', async () => {
+test('team guard: every Programmer or Animator brief on a game or story kit names its cast sheet, target image and source, or declares n/a', async () => {
   const { missingLines } = await import('../global/team-guard.mjs')
   const brief = (more, role = 'Programmer', kit = 'game') => `Role: ${role} · Kit: ${kit} · Size: L${FULL}\n${more}`
-  const both = ['Sheet: (approved cast sheet, docs/preproduction-workflow.md)', 'Look-Lock: (owner card of the look)']
+  const both = ['Sheet: (approved cast sheet, docs/preproduction-workflow.md)', 'Target image: (the approved image in an approval/ folder)', 'Source: (original files of the chosen design)']
   for (const task of ['Fit the school outfit to Mira.', "Make Nova's legs longer", 'Put a hoodie on Kai', 'Make the HUD fit on 390px', 'Rig the camera dolly']) assert.deepEqual(missingLines(brief(task)), both, task)
-  assert.deepEqual(missingLines(brief('Fit the school outfit to Mira.\nSheet: characters/mira/SHEET.md\nLook-Lock: https://claude.ai/card/1 2026-11-12')), [])
-  assert.equal(missingLines(brief('Fit the outfit.\nSheet: <path>\nLook-Lock: <card>')).length, 2, 'placeholders do not count')
+  assert.deepEqual(missingLines(brief('Fit the school outfit to Mira.\nSheet: characters/mira/SHEET.md\nTarget image: lib/characters/CH_x/approval/A.png\nSource: lib/characters/CH_x/source/A.blend')), [])
+  assert.equal(missingLines(brief('Fit the outfit.\nSheet: <path>\nTarget image: <path>\nSource: <files>')).length, 3, 'placeholders do not count')
   assert.equal(missingLines(brief('Make the HUD fit on 390px.\nSheet: n/a this is a HUD layout job, no model changes')).length, 0, 'a declared exception passes')
-  assert.equal(missingLines(brief('Make the HUD.\nSheet: n/a no')).length, 2, 'a one-word reason does not')
-  assert.equal(missingLines(brief('Make the HUD.\nSheet: n/a\nModel: sonnet because the role says so')).length, 2, 'a bare n/a does not borrow the next line as its reason')
-  assert.equal(missingLines(brief('Make the HUD.\nScene docs: the project docs, copies the old scene X', 'Animator', 'story')).length, 2, 'Animator on the story kit too')
+  assert.equal(missingLines(brief('Make the HUD.\nSheet: n/a no')).length, 3, 'a one-word reason does not')
+  assert.equal(missingLines(brief('Make the HUD.\nSheet: n/a\nModel: sonnet because the role says so')).length, 3, 'a bare n/a does not borrow the next line as its reason')
+  assert.equal(missingLines(brief('Make the HUD.\nScene docs: the project docs, copies the old scene X', 'Animator', 'story')).length, 3, 'Animator on the story kit too')
   assert.deepEqual(missingLines(brief('Fix the login page copy.', 'Programmer', 'app')), [], 'only game and story kits')
   assert.deepEqual(missingLines(brief('Write the cast sheet and body plan for Mira.', 'Planner', 'game')), [], 'the cast stage itself writes the sheet')
 })

@@ -438,6 +438,13 @@ export const templateFor = (guard, role, size = 'M') => {
   const plain = `Role: ${role} · Kit: <kit> · Size: ${size}`
   return [`Role: ${role} · Kit: <kit> · Size: <S|M|L>`, ...guard.BRIEF_FIELDS.filter((f) => f.applies?.(plain) ?? true).map((f) => f.tpl)].join('\n')
 }
+// #702: the file a brief's `Target image:` line names, when it is on no place this machine reads (as given, under cwd, under the project files); null when it
+// is there, or the line names no file (n/a, a link). The thread gets a start note, no block: the laptop may hold the file (GameDev 2026-11-15, #697).
+export function targetAbsent(brief, cwd, exists = existsSync) {
+  const path = String(brief).replace(/[*`]/g, '').match(/^[ \t>-]*Target image:[ \t]*[^<\n]*?([^\s<>()[\]]*(?:approval|reference)[\\/][^\s<>()]*\.(?:png|jpe?g|webp|gif|pdf|mp4|webm))(?=[\s)]|$)/im)?.[1]
+  if (!path || /^\w+:\/\//.test(path)) return null
+  return [path, join(cwd, path), join('/mnt/project-files', path)].some((p) => exists(p)) ? null : path
+}
 // M50: ONE refusal lists every judgment gap (role, kit, size, topic, model, and at size M or L Item, Plan, Acceptance; Sheet; Tester at size L) with the role's
 // template; what follows from Role, Kit and Size or what the thread can fetch itself is no block: the thread is told how it fills each line (`Brief repair`).
 export async function briefCheck(prompt, cwd, model = null, any = false) {
@@ -460,17 +467,20 @@ export async function briefCheck(prompt, cwd, model = null, any = false) {
   if (topic) found.push(topic)
   // X1a (#539): the item's lines count as part of the brief (one fetch, shared with itemContext), so a field it holds is no gap.
   const item = fetchItem(brief, cwd)
-  // X1a (#539), kept small: the item fills only Sheet and Look-Lock (the two lines a short brief lacked); every other lock, size and stamp word comes from the brief alone.
-  const itemPlain = item && !item.error ? String(item.body).slice(0, ITEM_CAP).replace(/^brief:[ \t]*/gim, '').replace(/[*_`]/g, '') : ''
+  // X1a (#539), kept small: the item fills only Sheet, Target image, Source and Level (the lines a short brief lacked); every other lock, size and stamp word comes from the brief alone.
+  const itemPlain = item && !item.error ? String(item.body).slice(0, ITEM_CAP).replace(/^brief:[ \t]*/gim, '').replace(/^([ \t>-]*)target_image:/gim, '$1Target image:').replace(/[*_`]/g, '') : '' // #702: the PLAN.json field target_image is the item's Target image line
   const own = guard.classify(brief)
   const itemHas = (k) => guard.BRIEF_FIELDS.find((f) => f.key === k)?.ok(itemPlain)
-  const sorted = itemPlain ? { ...own, judgment: own.judgment.filter((f) => !(['Sheet', 'Look-Lock', 'Level'].includes(f.key) && itemHas(f.key))) } : own
+  const sorted = itemPlain ? { ...own, judgment: own.judgment.filter((f) => !(['Sheet', 'Target image', 'Source', 'Level'].includes(f.key) && itemHas(f.key))) } : own
   // #712: a line that is there but in the wrong form says what was found and which form is asked; an absent or placeholder line stays "missing".
   const wrongForm = (f) => {
     const got = plain.match(new RegExp(`^[ \\t>-]*${f.key.replace(/\W/g, '\\$&')}:[ \\t]*([^\\n]*)`, 'im'))
     return got && got[1].trim() && !/<[^>\n]+>/.test(got[1]) ? `${f.key} is there but not in the asked form (found "${got[0].replace(/^[ \t>-]+/, '').trim().replace(/\((\d+)\)/g, '[$1]').replace(/\. Do no work/g, '; Do no work').slice(0, 80)}"; asked: ${f.tpl})` : `${f.key} is missing or still a <placeholder>`
   }
   found.push(...sorted.judgment.map(wrongForm))
+  // #702 (gate fix 6): an n/a in the brief does not outvote the target its own item names.
+  const itemTarget = guard.TARGET_NA.test(plain) && itemPlain.match(/^[ \t>-]*Target image:[ \t]*([^<\n]*approval[\\/][^\n]*)$/im)?.[1].trim()
+  if (itemTarget) found.push(`the item names a target image (${itemTarget}), so \`Target image: n/a\` is refused: name that path in the brief`)
   const wrong = model && guard.wrongModel(brief, model, teams)
   if (wrong) found.push(`this thread runs on ${wrong.tier}, but the ${wrong.role} runs on ${wrong.allowed.join(' or ')}: ask the coordinator to restart it on that model`)
   // #712: three or more template lines gone means the brief was not copied from briefs/<role>.md; the sentence goes last so startOutcome's reasons stay one text per field.
@@ -483,6 +493,8 @@ export async function briefCheck(prompt, cwd, model = null, any = false) {
   const gate = role?.name
   if (gate && GATE_ROLES.test(gate) && !GATE_PRIOR.test(plain) && !mine.some((f) => f.key === 'Prior art')) notes.push(`Brief repair (no block): a ${gate} brief names gate.md and the kit's checks in its \`Prior art:\` line; read .claude/skills/operator/gate.md first.`)
   if (item && !item.error && /\bv([2-9]|\d\d+)\b/i.test(`${item.head.replace(/^.*?\): /, '')}\n${itemPlain.match(/^[ \t>-]*Asset:[^\n]*/im)?.[0] ?? ''}`) && !/^[ \t>-]*Basis:[ \t]*[^<\s]/im.test(itemPlain)) notes.push('Item check: this item is a version above 1 and has no `Basis:` line. Find the passed predecessor in LIVE.md, write Basis and Assets into the item, then build from those files.')
+  const absent = targetAbsent(brief, cwd)
+  if (absent) notes.push(`Target check: ${absent} is not on this machine. Open the target first (read it from the project files or the device) or ask the coordinator one line; do no work before you have seen it.`)
   if (role && /\bSize:[ \t]*[ML]\b/i.test(plain)) notes.push(`Title check (docs/TEAMS.md, Roster "Runs as"): this thread's title starts with \`${role.name} · \`; if it does not, rename_thread to \`${role.name} · <what>\` first.`)
   return notes.join('\n')
 }
