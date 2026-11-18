@@ -17,6 +17,7 @@ Prior art: <sources named: repo, path, URL, #n> -> copy | adapt | reuse | build,
 Skills: <role file and skills the thread loads first>
 Sheet: <approved cast sheet .md, or `n/a <why no body, face or outfit job>`; Programmer or Animator on a game or story kit>
 Look-Lock: <owner card link of the approved look (https or #cmsg_...); not needed with `Sheet: n/a`>
+Refs: <gate/adult-refs + BlobCG refs + approved sheet, built by scripts/ref_sheet.py; or `n/a <why no look or scene>`; gate roles on a game or story kit>
 Round: <n> (gate rounds only)
 Asset: <owner/repo#n> (with Round)
 Picture card: <link | none, because <why>> (new look only)

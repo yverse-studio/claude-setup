@@ -14,18 +14,18 @@ const spawn = (brief) => `<wake reason="spawn"><relay>${brief}</relay></wake>`
 const check = (brief, model = null) => briefCheck(spawn(brief), root, model)
 const LINES = { Item: 'Item: M50', Plan: 'Plan: p.md', Acceptance: 'Acceptance: tests pass', Model: 'Model: sonnet', Skills: 'Skills: .claude/skills/operator/roles/programmer.md',
   'Done when': 'Done when: tests pass', 'Stop when': 'Stop when: 3 rounds', Start: 'Start: read MEMORY.md first', Threads: 'Threads: list_threads checked, none open on this topic',
-  'Prior art': 'Prior art: obra/superpowers -> adapt, because it exists', Gate: 'Gate: Reviewer · x before owner', Sheet: 'Sheet: sheet.md', 'Look-Lock': 'Look-Lock: card https://x.y/z',
+  'Prior art': 'Prior art: obra/superpowers -> adapt, because it exists', Gate: 'Gate: Reviewer · x before owner', Sheet: 'Sheet: sheet.md', Refs: 'Refs: gate/adult-refs + BlobCG + approved sheet', 'Look-Lock': 'Look-Lock: card https://x.y/z',
   Researcher: 'Researcher: Opus subagent', Tester: 'Tester: Tester · app', 'Scene docs': 'Scene docs: the docs the project CLAUDE.md lists, copies the old scene X',
   Level: 'Level: research research/airport.md · plan plans/airport-PLAN.md · design design/airport.md' }
 
 test('table test: a brief that lacks only one row gets exactly that row\'s class behaviour', async () => {
   for (const f of BRIEF_FIELDS) {
-    const stamp = f.key === 'Scene docs' ? 'Animator · Kit: game · Size: M' : ['Sheet', 'Look-Lock'].includes(f.key) ? 'Programmer · Kit: game · Size: M' : f.key === 'Tester' ? 'Programmer · Kit: setup · Size: L' : 'Programmer · Kit: setup · Size: M'
+    const stamp = f.key === 'Scene docs' ? 'Animator · Kit: game · Size: M' : ['Sheet', 'Look-Lock'].includes(f.key) ? 'Programmer · Kit: game · Size: M' : f.key === 'Refs' ? 'Reviewer · Kit: game · Size: M' : f.key === 'Tester' ? 'Programmer · Kit: setup · Size: L' : 'Programmer · Kit: setup · Size: M'
     const brief = [`Role: ${f.key === 'Level' ? 'Programmer · Kit: game · Size: M' : stamp}`, f.key === 'Level' ? 'Research SOTA of the thing for the airport level.' : 'Research SOTA of the thing.', ...Object.entries(LINES).filter(([k]) => k !== f.key).map(([, l]) => l)].join('\n')
     const out = await check(brief)
     if (['Acceptance', 'Done when'].includes(f.key)) { assert.doesNotMatch(out, /^Brief (check|repair)[^\n]*(Acceptance|Done when)/, `${f.key}: the other one satisfies both`); continue }
     const cls = f.cls(brief.replace(/[*_`]/g, ''))
-    if (cls === 'judgment') { assert.match(out, new RegExp(`^Brief check[\\s\\S]*${f.key}`), `${f.key}: one refusal names it`); assert.match(out, /Role: Programmer · Kit: <kit>/, `${f.key}: the refusal carries the role's template`) }
+    if (cls === 'judgment') { assert.match(out, new RegExp(`^Brief check[\\s\\S]*${f.key}`), `${f.key}: one refusal names it`); assert.match(out, /Role: (Programmer|Reviewer) · Kit: <kit>/, `${f.key}: the refusal carries the role's template`) }
     else { assert.doesNotMatch(out, /^Brief check/, `${f.key} (${cls}) never blocks`); assert.match(out, new RegExp(`^Brief repair[^\\n]*lacks[^\\n]*${f.key}`), `${f.key}: the thread is told how it closes the gap`) }
   }
   // Acceptance and Done when are one datum: either satisfies both, both missing at size M is a judgment gap.

@@ -21,7 +21,7 @@ export const modelFor = (role, size, teams = teamsText()) => renderModelFor(role
 export const briefFile = (role, teams = teamsText()) => renderBrief(role, teams)
 export { briefFileName }
 
-export function buildBrief({ role, kit, size, item, plan, acceptance, threads, priorArt, done, stop, what, start, skills, sheet, lookLock, tester, researcher, gate, topic, sceneDocs, level, checklists = readFileSync(join(root, CHECKLISTS), 'utf8'), teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8') }) {
+export function buildBrief({ role, kit, size, item, plan, acceptance, threads, priorArt, done, stop, what, start, skills, sheet, lookLock, refs, tester, researcher, gate, topic, sceneDocs, level, checklists = readFileSync(join(root, CHECKLISTS), 'utf8'), teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8') }) {
   const roles = rosterNames(teams)
   const kits = kitNames(teams)
   if (!roles.includes(role)) throw new BriefError(`Role: ${role} is no role in docs/TEAMS.md (Roster); valid: ${roles.join(', ')}`)
@@ -38,6 +38,9 @@ export function buildBrief({ role, kit, size, item, plan, acceptance, threads, p
   // A gate role's Prior art names the gate rules and the kit's checks (rule-guard briefCheck, GATE_PRIOR): written here, never by hand (CompanyXY 2026-11-12: two Reviewer threads blocked).
   const gateRole = GATE_ROLES.test(role)
   const prior = gateRole ? `.claude/skills/operator/gate.md and the ${kit} kit's checks (docs/TEAMS.md, Kits)${topic ? `; ${CHECKLISTS} (Topic: ${topic})` : ''}${priorArt ? `; ${priorArt}` : ' -> adapt, because the gate rules and checks already exist'}` : priorArt
+  // GameDev 2026-11-18: a gate on a game or story kit scores beside the owner's refs, built by scripts/ref_sheet.py; `--refs "n/a <why>"` for a gate that judges no look or scene.
+  const refsLine = gateRole && /^(game|story)$/.test(kit) ? `Refs: ${refs ?? 'gate/adult-refs + BlobCG refs + approved sheet, built by scripts/ref_sheet.py'}` : null
+  if (refs && !/^n\/a[ \t]+\S.{9,}$/i.test(refs) && !(/adult-refs/i.test(refs) && /BlobCG/i.test(refs) && /sheet/i.test(refs))) throw new BriefError('--refs names gate/adult-refs, BlobCG and the approved sheet, or reads "n/a <why this gate judges no look or scene>" with 10+ characters')
   const builder = new RegExp(`^${GATE_BUILDER_ROLES}$`).test(role) && size !== 'S'
   const named = gate ?? `Reviewer · ${what}`
   const gateLine = builder ? `Gate: ${/^n\/a/i.test(named) || /\bbefore owner\b/.test(named) ? named : `${named} before owner`}` : null
@@ -54,7 +57,7 @@ export function buildBrief({ role, kit, size, item, plan, acceptance, threads, p
     ...(needsSheet ? [`Sheet: ${sheet}`, ...(/^n\/a/i.test(sheet) ? [] : [`Look-Lock: ${lookLock}`])] : []),
     ...(needsLevel ? [`Level: ${level}`] : []),
     ...(role === 'Animator' ? [`Scene docs: ${sceneDocs}`] : []),
-    ...(topic ? [`Topic: ${topic}`] : []), ...(gateLine ? [gateLine] : []), ...(researcher ? [`Researcher: ${researcher}`] : []), ...(role === 'Programmer' && size === 'L' ? [`Tester: ${tester}`] : []),
+    ...(refsLine ? [refsLine] : []), ...(topic ? [`Topic: ${topic}`] : []), ...(gateLine ? [gateLine] : []), ...(researcher ? [`Researcher: ${researcher}`] : []), ...(role === 'Programmer' && size === 'L' ? [`Tester: ${tester}`] : []),
     `Done when: ${done}`, `Stop when: ${stop}`, `Start: read MEMORY.md first${start ? `, then ${start}` : ''}`]
   const out = { brief: lines.join('\n'), title: `${role} · ${what ?? item}`, model }
   // Belt and braces: what leaves here passes the guard, or it does not leave.

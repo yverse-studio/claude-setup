@@ -47,7 +47,7 @@ test('every rendered briefs/<role>.md template, filled in, passes the start chec
   const { renderBrief } = await import('../global/card-render.mjs')
   const { rosterNames } = await import('../global/team-guard.mjs')
   const FILL = { Model: null, Skills: null, Item: 'Item: M50', Plan: 'Plan: p.md', Acceptance: 'Acceptance: the test passes', Threads: 'Threads: list_threads checked, none open on this topic',
-    'Prior art': 'Prior art: obra/superpowers -> adapt, because the skill exists', Sheet: 'Sheet: n/a no body, face or outfit job here, a script only', Gate: 'Gate: Reviewer · x before owner',
+    'Prior art': 'Prior art: obra/superpowers -> adapt, because the skill exists', Sheet: 'Sheet: n/a no body, face or outfit job here, a script only', Refs: 'Refs: n/a this fixture judges no look or scene', Gate: 'Gate: Reviewer · x before owner',
     Researcher: 'Researcher: Opus subagent', 'Scene docs': 'Scene docs: the docs the project CLAUDE.md lists, copies the old scene X', Tester: 'Tester: Tester · app', Level: 'Level: research research/x.md · plan plans/x-PLAN.md · design design/x.md', 'Done when': 'Done when: node --test', 'Stop when': 'Stop when: 3 rounds', Start: 'Start: read MEMORY.md first' }
   let checked = 0
   for (const role of rosterNames(teams)) {

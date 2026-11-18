@@ -16,7 +16,7 @@ const checklists = readFileSync(join(root, CHECKLISTS), 'utf8')
 const SONNET = teams.match(/Sonnet \((claude-[\w.-]+)\)/)[1]
 const FABLE = teams.match(/Fable \((claude-[\w.-]+)\)/)[1] // S5: the Reviewer row is Fable (the name stays: it is the gate thread's model)
 const TOPICS = ['Garment', 'Hair', 'Character', 'HUD/UI', 'Animation', 'Scene render', 'Asset-Intake']
-const REVIEWER = (topic) => `Role: Reviewer · Kit: game · Size: M\nModel: ${FABLE}\nItem: M48\nPlan: gate.md\nAcceptance: verdict\nThreads: list_threads checked, none open\nPrior art: .claude/skills/operator/gate.md and the game kit's checks -> adapt, because they exist\nSkills: x\n${topic ? `Topic: ${topic}\n` : ''}Done when: verdict\nStop when: two rounds\nStart: read MEMORY.md first`
+const REVIEWER = (topic) => `Role: Reviewer · Kit: game · Size: M\nModel: ${FABLE}\nItem: M48\nPlan: gate.md\nAcceptance: verdict\nThreads: list_threads checked, none open\nPrior art: .claude/skills/operator/gate.md and the game kit's checks -> adapt, because they exist\nSkills: x\nRefs: n/a this fixture judges a garment fit, no look or scene\n${topic ? `Topic: ${topic}\n` : ''}Done when: verdict\nStop when: two rounds\nStart: read MEMORY.md first`
 
 test('the checklist file has the seven topics, each with a body', () => {
   assert.deepEqual(topicNames(checklists), TOPICS)

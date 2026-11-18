@@ -265,7 +265,7 @@ test('the third refused relay asks for one card, a fourth complete relay lifts',
 // #522 / #523: a gate role is stamped whether the prompt hook saw the brief or not, wherever the Role line sits, and never over an existing stamp.
 test('the role stamp comes from a spawn brief however it is wrapped, from the transcript, and from a re-brief of an unlocked thread', () => {
   const stampOf = (id) => (existsSync(join(tmpdir(), `claude-setup-role-${id}`)) ? readFileSync(join(tmpdir(), `claude-setup-role-${id}`), 'utf8') : null)
-  const rest = `Prior art: .claude/skills/operator/gate.md\n${BLOCKS}`
+  const rest = `Prior art: .claude/skills/operator/gate.md\nRefs: n/a this fixture judges no look or scene\n${BLOCKS}`
   // the Role line right behind the note tag (#523: "as wrapped in the spawn wake")
   const inline = `rolelock${process.pid}x${++n}`
   guard('prompt', inline, { prompt: `<wake reason="spawn"><relay from="coordinator"><note>Role: Tester · Kit: game · Size: M\n${rest}</note></relay></wake>` })

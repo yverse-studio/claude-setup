@@ -1887,3 +1887,16 @@ test('design-type role files carry the Start step and the design brief names it'
   }
   assert.match(readFileSync(join(root, '.claude/skills/operator/briefs.md'), 'utf8'), /design-type item[^\n]*`Start:` line[^\n]*Start step \(#582\)/)
 })
+
+test('GameDev 2026-11-18: a gate brief on a game or story kit names its refs (adult-refs, BlobCG, sheet) or says n/a with a reason', async () => {
+  const { missingLines } = await import('../global/team-guard.mjs')
+  const b = (stamp, extra = '') => `Role: ${stamp}\n${extra}`
+  const refsGap = (stamp, extra) => missingLines(b(stamp, extra)).some((n) => /^Refs:/.test(n))
+  assert.equal(refsGap('Reviewer · Kit: game · Size: M'), true, 'no Refs line on a game gate')
+  assert.equal(refsGap('Reviewer · Kit: game · Size: M', 'Refs: gate/adult-refs'), true, 'one source is not three')
+  assert.equal(refsGap('Reviewer · Kit: game · Size: M', 'Refs: gate/adult-refs + BlobCG + approved sheet'), false)
+  assert.equal(refsGap('Critic · Kit: story · Size: M', 'Refs: n/a this gate judges a script, no look or scene'), false)
+  assert.equal(refsGap('Critic · Kit: story · Size: M', 'Refs: n/a later'), true, 'n/a needs a reason')
+  assert.equal(refsGap('Reviewer · Kit: setup · Size: M'), false, 'a setup gate judges no look')
+  assert.equal(refsGap('Programmer · Kit: game · Size: M'), false, 'a builder is not a gate')
+})

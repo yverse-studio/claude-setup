@@ -216,7 +216,7 @@ test('a rendered brief file per role passes team-guard once its <...> are filled
       const model = modelFor(role, size, teams)
       const filled = block.split('\n').filter((l) => !/^(Look-Lock|Topic):/.test(l) && (size === 'L' || !/^Tester:/.test(l)))
         .map((l) => l.replace(/^Sheet: .*/, 'Sheet: n/a this slice is no body, face or outfit job').replace(/^Level: .*/, 'Level: n/a fixture, this slice changes no level').replace(/Size: <[^>]+>/, `Size: ${size}`).replace(/Kit: <[^>]+>/, `Kit: ${kit}`)
-          .replace(/^Model: .*/, `Model: ${model}`).replace(/^Gate: .*/, 'Gate: Reviewer · x before owner')
+          .replace(/^Model: .*/, `Model: ${model}`).replace(/^Gate: .*/, 'Gate: Reviewer · x before owner').replace(/^Refs: .*/, 'Refs: gate/adult-refs + BlobCG + approved sheet')
           .replace(/<[^>\n]+>/g, (m) => (/PLAN\.json/.test(m) ? 'M30' : /^<sources/.test(m) ? 'obra/superpowers' : 'something concrete for this task'))).join('\n')
       const out = decide(START, { brief: filled, title: `${role} · x`, model }, [], [], teams)
       assert.equal(out.block, undefined, `${role} at ${size}: ${out.block}`)
