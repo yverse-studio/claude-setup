@@ -9,7 +9,7 @@ Crowd tiers, LOD and budgets stay in [`crowds-and-lod.md`](crowds-and-lod.md); i
 ## What made the world read as alive
 
 - Reaction beats graphics: reviews praise NPCs that react to the player and to each other, with the dialogue
-  lines per NPC roughly tripled to quadrupled (V, Vice review). Mood differs by district: poorer areas more aggressive (V).
+  lines per NPC roughly tripled to quadrupled (C, a developer quoted in the Vice review). Mood differs by district: poorer areas more aggressive (V).
 - Reactivity has a cost: one review says it takes some of the arcade feel away; the most repeated complaints are a
   slow opening and missions that fence the player in (V, Destructoid, review roundups).
 - Simulation, not pixels, set the frame-rate ceiling: 30 fps on every console because the CPU is the limit (C, Digital
@@ -51,3 +51,15 @@ Crowd tiers, LOD and budgets stay in [`crowds-and-lod.md`](crowds-and-lod.md); i
 
 Not checked: the Digital Foundry video itself (secondary reports only); cloth-simulation claims conflict; the soft-tissue
 method is an informed guess, not a studio statement.
+
+## Sources (read 2026-11-19)
+
+- Vice review: https://www.vice.com/en/article/gta-6-review/
+- Destructoid review: https://www.destructoid.com/reviews/grand-theft-auto-6-review/
+- Kotaku review (phone): https://kotaku.com/grand-theft-auto-6-the-kotaku-review-2000757842
+- Review roundup (complaints): https://www.thenationalnews.com/arts-culture/pop-culture/2026/11/18/gta-6-reviews-metacritic/
+- Digital Foundry via PureXbox (30 fps, CPU limit): https://www.purexbox.com/news/2026/11/three-big-takeaways-from-digital-foundrys-gta-6-analysis-for-xbox-series-xs
+- Audio lead interview via mezha: https://mezha.net/eng/news/mezha-0cff8db9d208b3fee1b165ca_gta_6_refrigerators
+- Ex-studio animator on soft-tissue bones (Dexerto): https://www.dexerto.com/gta/former-rockstar-animator-reveals-how-gta-6s-jiggle-physics-work-3300686/
+- Still far group in a trailer (Sportskeeda): https://www.sportskeeda.com/gta/15-unfinished-details-gta-6-trailers-screenshots-probably-didn-t-notice
+- Spring-bone parameters and scale: https://vrm.dev/en/api/spring/spring_and_scaling
