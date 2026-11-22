@@ -58,18 +58,29 @@ export function compact(full) {
   ].join('\n\n')
 }
 
-const BRIEF_SECTION = `## Thread brief
+// #761: rendered from BRIEF_FIELDS. The short form holds the stamp, Model and the rows only the coordinator can decide at size M; the kit's own lines live in briefs/<role>.md.
+const SAMPLE_M = 'Role: Programmer · Kit: web · Size: M'
+export function briefSection(fields = BRIEF_FIELDS) {
+  const own = (f) => !f.applies && f.strict !== false
+  const short = fields.filter((f) => f.key === 'Model' || (own(f) && f.cls(SAMPLE_M) === 'judgment')).sort((x, y) => (x.key === 'Model' ? -1 : y.key === 'Model' ? 1 : 0)).map((f) => f.tpl)
+  const kit = fields.filter((f) => (f.applies || f.strict === false) && f.cls(SAMPLE_M) === 'judgment').map((f) => f.key)
+  return `## Thread brief
 
-Copy briefs/<role>.md of this folder (one per Roster role, its Model line inside; kits and sizes per role in ROSTER.md), fill every <...>, paste it as the brief, pass its Model as \`model\`. Nothing else is added or written from memory.
+Short form (the thread fills the rest, or its lock names it):
+\`\`\`
+Role: <role> · Kit: <kit> · Size: <S|M|L>
+${[...short, 'Prior art: <source> -> copy|adapt|reuse|build, because <why>', '<the task: goal, done when, stop when>'].join('\n')}
+\`\`\`
+Long form (kit lines: ${kit.join(', ')}): briefs/<role>.md of this folder; pass its Model as \`model\`.
 A refusal names every gap at once: send those lines to the same thread with message_thread, never a new thread.
-With Bash run \`node tools/brief-check/team-guard.mjs check <Role> <file|->\` in this folder before every start_thread (no Bash: the refusal lists the gaps): it lists every gap at once and prints the exact \`model\`.
 A device thread passes \`message_id\` (yskills' message or your own project-chat post), never \`project_post_id\` or \`auto_attach=false\`.`
+}
 
 export function buildCard({ teams, hash = 'nogit', date = today(), startsLine = '' }) {
   const head = `Coordinator card (claude-setup ${hash}, ${date}).\nYou are the project chat. Without Bash, this card and MEMORY.md are your rules.\nA rule not on this card: Read COORDINATOR-RULES-INDEX.md in this folder; still unclear: ask a setup thread (size S); never guess.${startsLine ? `\n${startsLine}` : ''}`
   const full = coordinatorCard(teams)
   if (!full) throw new Error('coordinator card: docs/TEAMS.md has no Roster or Kits rows')
-  const card = [head, PREFLIGHT, BRIEF_SECTION, compact(full)].join('\n\n') + '\n'
+  const card = [head, PREFLIGHT, briefSection(), compact(full)].join('\n\n') + '\n'
   if (card.length >= CARD_MAX) throw new Error(`coordinator card is ${card.length} characters, limit ${CARD_MAX}: trim a pre-flight line or a Roster cell`)
   return card
 }

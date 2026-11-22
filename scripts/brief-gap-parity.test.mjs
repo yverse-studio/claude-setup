@@ -2,6 +2,7 @@
 // but two things must hold for every brief: every judgment gap the thread refuses for is named by the check, and a brief the check passes is never refused.
 // Run: node --test scripts/brief-gap-parity.test.mjs
 import assert from 'node:assert/strict'
+import { spawnSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { test } from 'node:test'
@@ -41,12 +42,14 @@ test('every judgment gap the thread names is named by the check, and a brief the
   }
 })
 
-test('the two lists differ by design: the thread names the judgment gaps only, the check also names the lines the thread fills itself', async () => {
+test('the two lists agree on what blocks (judgment gaps); the check CLI adds one line naming what the thread fills itself (#761)', async () => {
   const brief = 'Role: Programmer · Kit: game · Size: M\nItem: #5\nBuild the thing.'
   const found = briefProblems(brief, { model: modelOf('Programmer', brief), title: 'Programmer · check', teams, checklists }).join('\n')
   const refusal = await briefCheck(spawn(brief), root, modelOf('Programmer', brief))
   assert.match(found, /Sheet:[\s\S]*Target image:[\s\S]*Source:/)
   assert.match(refusal, /Sheet is missing[\s\S]*Target image is missing[\s\S]*Source is missing/)
-  assert.match(found, /Model:, Skills:/)
+  assert.doesNotMatch(found, /Model:|Skills:/, 'a derived line is no problem for the check either since #761')
+  const cli = spawnSync(process.execPath, [join(root, 'global', 'team-guard.mjs'), 'check', 'Programmer', '-'], { input: brief, encoding: 'utf8', cwd: root })
+  assert.match(cli.stdout, /^the thread fills itself: .*Model.*Skills/m, 'the CLI names the lines the thread fills itself')
   assert.doesNotMatch(refusal.split('Do no work')[0], /Skills/, 'a derived line is no refusal reason')
 })
