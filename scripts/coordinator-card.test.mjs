@@ -433,12 +433,12 @@ test('#730: an upper-case UUID is a real session and its file is counted', () =>
 })
 
 // ---- #743: the card is cut by use; CARD_MAX stays 7,400 (raising it again is the pattern the audit names).
-test('#743: the card with the 7-day line is at most 6,600 characters, CARD_MAX is still 7,400, 800 stay free', () => {
+test('#743: the card with the 7-day line is at most 7,050 characters (the who-builds paragraph of TEAMS.md rides on the card, 2026-11-22), CARD_MAX is still 7,400, 350 stay free', () => {
   assert.equal(CARD_MAX, 7400)
   const line = 'Thread starts, last 7 days (as of 2026-11-22): 7, clean 0, repaired 6, refused 1, wrong-model 0 (false starts 14%).'
   const card = buildCard({ teams, hash: 'abc12345', date: '2026-11-22', startsLine: line })
-  assert.ok(card.length <= 6600, String(card.length))
-  assert.ok(CARD_MAX - card.length >= 800, `free: ${CARD_MAX - card.length}`)
+  assert.ok(card.length <= 7050, String(card.length))
+  assert.ok(CARD_MAX - card.length >= 350, `free: ${CARD_MAX - card.length}`)
 })
 
 test('#743: the kept lines stay (spawn, models, sizes, roster, brief copy) and the cut lines are gone', () => {
@@ -459,7 +459,7 @@ test('#743: Kits is one line of names, not nine clipped rows; the full team text
 test('#743 (moved from #689): the card leaves a builder between plan gate and build gate alone, one post per gate verdict', () => {
   const card = buildCard({ hash: 'x', date: 'd' })
   assert.ok(card.includes('- A builder between plan gate and build gate is left alone: no relay, no resolve, no status post; one post per gate verdict.'))
-  assert.ok(card.length < CARD_MAX - 700, String(card.length))
+  assert.ok(card.length < CARD_MAX - 350, String(card.length))
 })
 
 test('#743 gate round 1: the download rule left the card for the index, which carries it with its homes', () => {

@@ -39,7 +39,7 @@ Security never drops: any PR touching user input, auth, money or secrets runs ch
 | M | code without UI; a garment move or refit with no new look (Asset PRs) | 1, 2, 3; 4 when user input, auth, money or secrets are touched |
 | L | UI, auth, payments, data, migrations, launch | the full table |
 
-Who runs it (yskills, 2026-10-18: a gate thread starts at ~114k tokens and every call re-reads it, `docs/WORKFLOW.md` Token budget): S and M run in the author thread: CI, one fresh `code-reviewer` subagent (never the author's own pass) and the merge, with the table headline in the PR. The author does not pick the size: the table does, and anything touching user input, auth, money, data or UI is L. The reviewer gets the diff itself (`git diff <base>...<head>`), never the author's summary of it, and the author posts its report unedited; a finding the author disputes goes to the coordinator, not to a second reviewer. L keeps a fresh gate thread, because it runs the preview, security and design checks. A reviewer subagent still sees only the diff, the criteria and the previous round's table.
+Who runs it (yskills, 2026-10-18: a gate thread starts at ~114k tokens and every call re-reads it, `docs/WORKFLOW.md` Token budget): S and M run in the author thread: CI, one fresh Reviewer subagent (tier: Models line, `docs/TEAMS.md`; never the author's own pass) and the merge (Merge policy below), with the table headline in the PR. The author does not pick the size: the table does, and anything touching user input, auth, money, data or UI is L. The reviewer gets the diff itself (`git diff <base>...<head>`), never the author's summary of it, plus the acceptance goals and the earlier findings, and the author posts its verdict in full and unedited as a PR comment; a finding the author disputes goes to the coordinator, not to a second reviewer. L keeps a fresh gate thread, because it runs the preview, security and design checks. A reviewer subagent still sees only the diff, the criteria and the previous round's table.
 
 ## Owner-facing results
 
@@ -172,7 +172,7 @@ gate runs the PR's build locally (`wrangler dev`) for checks 2, 4 and 5.
 Under auto-run the gate merges (squash) every PR at 5/5: launch, live money and
 claude-setup PRs included (yskills, "merge everything", 2026-10-06). That merge is the approved
 production deploy. `global/settings.json` allows the merge and tells auto mode the gate review is
-the review (`docs/permissions.md`). If a merge is still refused, the gate reports it once in the
+the review (`docs/permissions.md`). The thread that ran the gate merges right after the PASS; yskills is asked to merge nothing (yskills 2026-11-22). If a merge is still refused, the gate reports it once in the
 thread and to the coordinator and goes on with the next PR; it tries no other way. Other files say
 this in one line and point here. A scene, figure or other asset PR judged by a scored gate
 merges once Scored gates has picked its version (after the fix rounds end); that pick counts as

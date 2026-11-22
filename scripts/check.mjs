@@ -281,12 +281,12 @@ for (const f of anyText('.')) {
 }
 
 // Token budget (docs/WORKFLOW.md, Token budget; yskills, 2026-10-18): the Budget line exists and no
-// gate or role file runs a gate below Opus (yskills 2026-11-03: gates always Opus, at every size).
+// gate or role file runs a gate below Opus (yskills 2026-11-03: gates at Opus or above; the tier itself lives in the Models line of docs/TEAMS.md).
 const budgetLine = readFileSync(join(root, 'docs/WORKFLOW.md'), 'utf8').match(/^Budget: .*$/m)?.[0]
 if (!budgetLine) errors.push('docs/WORKFLOW.md: the Budget line (Token budget) is missing')
-else if (!/includes every gate at every size/.test(budgetLine)) errors.push('docs/WORKFLOW.md: the Budget line must say Opus includes every gate at every size (yskills 2026-11-03)')
+else if (!/gate verdict tier/.test(budgetLine)) errors.push('docs/WORKFLOW.md: the Budget line must point to the Models line for the gate verdict tier (yskills 2026-11-22)')
 for (const f of ['.claude/skills/operator/gate.md', '.claude/skills/operator/roles/tester.md', '.claude/skills/operator/roles/reviewer.md', '.claude/skills/operator/roles/playtester.md', 'docs/WORKFLOW.md']) {
-  if (/\b(Sonnet|Haiku) (review|subagent of the gate|gate|verdict)|never for an S or M gate|Opus only on size L/i.test(readFileSync(join(root, f), 'utf8'))) errors.push(`${f}: runs a gate below Opus; gates are Opus at every size (docs/TEAMS.md, Models line)`)
+  if (/\b(Sonnet|Haiku) (review|subagent of the gate|gate|verdict)|never for an S or M gate|Opus only on size L/i.test(readFileSync(join(root, f), 'utf8'))) errors.push(`${f}: runs a gate below Opus; gates are Opus or Fable (docs/TEAMS.md, Models line)`)
 }
 
 // Rule enforcement: a "never" or "always" rule that only lives in prose is advisory. Each such

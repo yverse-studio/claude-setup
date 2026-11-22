@@ -146,6 +146,7 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 | A download or asset in the inbox goes to a Character TD thread that runs `asset-intake`; the Archivist indexes after the gate | `.claude/skills/asset-intake/SKILL.md`, `.claude/skills/operator/roles/character-td.md` | coordinator card (pointer only), `.claude/skills/operator/roles/archivist.md` |
 | Close finished threads (resolve or nudge, the daily sweep) | `roles/project-manager.md` (Close threads) | coordinator card, `templates/loop/routine.md` (step 11), `global/rule-guard.mjs` (stop) |
 | Teams, roles, sizes, the pipeline, the Kits (routed per task), the model per role | `docs/TEAMS.md` | `CLAUDE.md` (How to work, one role per thread), `operator/SKILL.md`, `operator/run.md`, `roles/project-manager.md`; `global/team-guard.mjs` enforces `model` |
+| Gate and merge at S and M (fresh Fable Reviewer subagent in the builder thread, the builder merges after PASS, M and L lead on Opus or Fable with Sonnet subagents) | `gate.md` (Who runs it, Merge policy), `docs/TEAMS.md` (Spawn rule) | `CLAUDE.md`, coordinator card |
 | Deploy or delete a page (the steps) | `docs/USING.md` | operator `run.md`, `briefs.md`; detail in `publish` |
 | Where a lesson goes (the decision tree) | `docs/MAP.md` (Start here) | `docs/WORKFLOW.md` (Learning) |
 | Pre-PR check (the one command that runs what CI runs; git pre-push hook on every machine) | `scripts/pre-pr.mjs` | `CLAUDE.md` (Hard rules), `global/git-hooks/pre-push`, `install.mjs`, `cloud/setup.sh`, `.github/workflows/ci.yml` |

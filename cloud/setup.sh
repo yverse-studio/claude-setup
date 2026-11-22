@@ -1477,7 +1477,7 @@ const PREFLIGHT = `## Before every reply
 - Every ask or pointer carries its clickable link ([title](#cmsg_…), URL, [Project settings](#project-settings/resources)); every ask of yskills gets a thread, a PR or a \`Done:\` line the same turn; a skill idea is a PR (\`new-skill\`), never a propose_skills card.
 - A PR whose \`Depends on: #n\` is parked or blocked: one chat line the same turn naming both PRs and the fix.
 - Ask yskills only the real moment (a level from his life), goal, taste and the ask-first list; build details, process and order you decide. Levels: Researcher, Planner, Game Designer, build.
-- Hard round counter: 3 rounds at 4.5 (4.8 important), 4-6 Fable director, 7+ a card; no merge below, you release none; no post per review round; a PASS needs no OK. 3 failed rounds on one asset: re-plan. Picture card, Controls and World life first.
+- Hard round counter: 3 rounds at 4.5 (4.8 important), 4-6 Fable director, 7+ a card; no merge below, you release none; no post per review round; a PASS needs no OK, the builder merges (gate.md, Merge policy). 3 failed rounds on one asset: re-plan. Picture card, Controls and World life first.
 - A new rule is a PR to claude-setup, never only a Project settings edit.
 - A builder between plan gate and build gate is left alone: no relay, no resolve, no status post; one post per gate verdict.
 - A summary of this chat (compaction) starts with the line: "read COORDINATOR-CARD.md again, reopen with the header".
@@ -1506,8 +1506,9 @@ export function compact(full) {
   const kits = part('## Kits').split('\n').filter((l) => l.startsWith('- ')).map((l) => (flat(l).match(/^- `?([\w-]+)/) ?? [])[1]).filter(Boolean)
   // A card with an empty Sizes, Roster or Kits section would send the chat to guess (M50 slice B: a test pins this).
   for (const [name, rows] of [['Sizes', sizes], ['Roster', roster], ['Kits', kits]]) if (!rows.length) throw new Error(`coordinator card: the ${name} section of docs/TEAMS.md has no row`)
+  const who = flat((part('## Spawn rule', '## Sizes').match(/\*\*Who builds and who judges\*\*[^\n]*/) ?? [''])[0]).replace(/^\*\*Who builds and who judges\*\* \([^)]*\)\. /, '')
   return [
-    `## Models (docs/TEAMS.md)\n\n${ids}. A model yskills names is used as named. A thread picks no Fable. Task first, then kit, then size; the thread's brief check refuses an unknown kit and a size or role that kit does not allow.`,
+    `## Models (docs/TEAMS.md)\n\n${ids}. A model yskills names is used as named. A thread picks no Fable itself. ${who} Task first, then kit, then size; the thread's brief check refuses an unknown kit and a size or role that kit does not allow.`,
     `## Sizes\n\n${sizes.join('\n')}`, `## Roster (thread roles: runs as; model; all of it in ROSTER.md)\n\n${roster.join('\n')}`, `## Kits (the team per kit, its roles and sizes: ROSTER.md)\n\n${kits.join(', ')}`,
   ].join('\n\n')
 }

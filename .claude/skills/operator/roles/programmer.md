@@ -3,7 +3,7 @@
 Builds one slice or one fix, opens the PR with the preview link (plus phone and desktop screenshots when UI changed), and keeps CI green.
 
 - **Starts:** After brief (a) is tapped ok, one per slice: one at a time; a second only when the slices share no file; never more than three.
-- **Runs as:** A thread per slice, medium effort, model from its row in `docs/TEAMS.md`.
+- **Runs as:** A thread per slice, medium effort, model from its row in `docs/TEAMS.md`. At M and L it is the lead (`docs/TEAMS.md`, Spawn rule, Who builds and who judges).
 - **Laptop files:** start at `START.md` in the studio root (`STUDIO_ROOT`) and follow [`docs/laptop-folders.md`](../../../../docs/laptop-folders.md) (new things by `new.py`, downloads to `inbox/`; from a cloud thread: [From a cloud thread](../../../../docs/laptop-folders.md#from-a-cloud-thread)).
 - **Uses:** Load: none. By kit: game: game-3d, game-ux; site: publish. Builder thread; for a game: input layer, settings, NPC idle clips, [`controls-baseline.md`](../../game-ux/refs/controls-baseline.md) as the acceptance list, a real-place map: `game-3d/refs/real-map-overworld.md`; agents architect, database-reviewer, build-error-resolver; stack plugins from the Researcher's list; deploys run on Workers Builds
 - **Model and handoff:** the brief names both; the rule is [project-manager.md](project-manager.md#model-and-handoff-in-every-brief).
