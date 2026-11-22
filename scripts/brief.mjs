@@ -21,7 +21,7 @@ export const modelFor = (role, size, teams = teamsText()) => renderModelFor(role
 export const briefFile = (role, teams = teamsText()) => renderBrief(role, teams)
 export { briefFileName }
 
-export function buildBrief({ role, kit, size, item, plan, acceptance, threads, priorArt, done, stop, what, start, skills, sheet, targetImage, source, tester, researcher, gate, topic, sceneDocs, level, provenRecipe, checklists = readFileSync(join(root, CHECKLISTS), 'utf8'), teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8') }) {
+export function buildBrief({ role, kit, size, item, plan, acceptance, threads, priorArt, done, stop, what, start, skills, sheet, targetImage, source, tester, researcher, gate, topic, preGate, level, checklists = readFileSync(join(root, CHECKLISTS), 'utf8'), teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8') }) {
   const roles = rosterNames(teams)
   const kits = kitNames(teams)
   if (!roles.includes(role)) throw new BriefError(`Role: ${role} is no role in docs/TEAMS.md (Roster); valid: ${roles.join(', ')}`)
@@ -42,7 +42,7 @@ export function buildBrief({ role, kit, size, item, plan, acceptance, threads, p
   const named = gate ?? `Reviewer · ${what}`
   const gateLine = builder ? `Gate: ${/^n\/a/i.test(named) || /\bbefore owner\b/.test(named) ? named : `${named} before owner`}` : null
   if (gateLine && !GATE_LINE.test(gateLine)) throw new BriefError('--gate names a Reviewer or Tester thread and ends "before owner" (given as --gate "Reviewer · <what> before owner"), or reads "n/a <why this slice has no owner-facing result>" with 10+ characters')
-  const missing = Object.entries({ item, plan, acceptance, threads, 'prior-art': prior, done, stop, skills: skillsLine, ...(size === 'S' ? {} : { what }), ...(needsSheet ? { sheet } : {}), ...(needsLevel ? { level } : {}), ...(role === 'Animator' ? { 'scene-docs': sceneDocs } : {}), ...(role === 'Character TD' ? { 'proven-recipe': provenRecipe } : {}), ...(role === 'Programmer' && size === 'L' ? { tester } : {}) })
+  const missing = Object.entries({ item, plan, acceptance, threads, 'prior-art': prior, done, stop, skills: skillsLine, ...(size === 'S' ? {} : { what }), ...(needsSheet ? { sheet } : {}), ...(needsLevel ? { level } : {}), ...(/^(Animator|Character TD)$/.test(role) ? { 'pre-gate': preGate } : {}), ...(role === 'Programmer' && size === 'L' ? { tester } : {}) })
     .filter(([, v]) => !v).map(([k]) => `--${k}`)
   // #702: a real sheet brings the target image and its source; a Programmer's `n/a <why>` target drops the source (the row of BRIEF_FIELDS decides what a target is).
   const look = needsSheet && sheet && !/^n\/a/i.test(sheet)
@@ -59,8 +59,7 @@ export function buildBrief({ role, kit, size, item, plan, acceptance, threads, p
   const lines = [stub(role, kit, size), `Model: ${model}`, `Item: ${item}`, `Plan: ${plan}`, `Acceptance: ${acceptance}`, `Threads: ${threads}`, `Prior art: ${prior}`, `Skills: ${skillsLine}`,
     ...(needsSheet ? [`Sheet: ${sheet}`, ...(look ? [`Target image: ${targetImage}`, ...(noTarget ? [] : [`Source: ${source}`])] : [])] : []),
     ...(needsLevel ? [`Level: ${level}`] : []),
-    ...(role === 'Animator' ? [`Scene docs: ${sceneDocs}`] : []),
-    ...(role === 'Character TD' ? [`Proven recipe: ${provenRecipe}`] : []),
+    ...(/^(Animator|Character TD)$/.test(role) ? [`Pre-gate: ${preGate}`] : []),
     ...(topic ? [`Topic: ${topic}`] : []), ...(gateLine ? [gateLine] : []), ...(researcher ? [`Researcher: ${researcher}`] : []), ...(role === 'Programmer' && size === 'L' ? [`Tester: ${tester}`] : []),
     `Done when: ${done}`, `Stop when: ${stop}`, `Start: read MEMORY.md first${start ? `, then ${start}` : ''}`]
   const out = { brief: lines.join('\n'), title: `${role} · ${what ?? item}`, model }
@@ -84,7 +83,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   try {
     const out = buildBrief({ role: flag('role'), kit: flag('kit'), size: flag('size'), item: flag('item'), plan: flag('plan'), acceptance: flag('acceptance'), threads: flag('threads'), priorArt: flag('prior-art'),
       done: flag('done'), stop: flag('stop'), what: flag('what'), start: flag('start'), skills: flag('skills'), sheet: flag('sheet'), targetImage: flag('target-image'), source: flag('source'),
-      tester: flag('tester'), researcher: flag('researcher'), gate: flag('gate'), topic: flag('topic'), sceneDocs: flag('scene-docs'), provenRecipe: flag('proven-recipe'), level: flag('level') })
+      tester: flag('tester'), researcher: flag('researcher'), gate: flag('gate'), topic: flag('topic'), preGate: flag('pre-gate'), level: flag('level') })
     console.log(args.includes('--json') ? JSON.stringify(out) : out.brief)
   } catch (e) {
     if (!(e instanceof BriefError)) throw e

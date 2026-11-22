@@ -227,8 +227,7 @@ thread as long memory) and "waiting costs no tokens" (unproven; an idle thread r
 
 Only the gate and yskills look at work and judge it (yskills 2026-11-11: "ich und gate gaten der rest
 macht einfach"). The gate works from fixed analysis scripts and their numbers, then looks. Every other
-role executes its brief and runs the fixed script its playbook names; it does not open, review or grade
-images, content or quality, its own or another thread's, and adds no check of its own.
+role executes its brief and runs the fixed script its playbook names; it gives no verdict on images, content or quality, its own or another thread's, and adds no check of its own. A builder of an asset or a scene looks at its own previews to iterate (change, look, change) and scores itself against the gate's rubric; that self-score, at 4.8 or more, is its ticket to the gate and not a verdict (yskills 2026-11-15; replaces "does not open" of 2026-11-11). [guard: hook global/rule-guard.mjs]
 
 - Project Manager: routes and relays; checks that a file or link exists, never what it shows.
 - Planner: thinks the plan through (grill, stress test); judges no built work.
@@ -236,9 +235,9 @@ images, content or quality, its own or another thread's, and adds no check of it
 - Archivist: documents what passed the gate; reviews nothing.
 - Designer: makes the direction and drafts for yskills' vote; a UI PR is judged by the gate's `design-critic`.
 - Content Designer, Game Designer, Audio, Sound Designer, Analytics, Marketer: write or build their part; the gate checks it.
-- Animator: builds, runs the fixed check script, hands strip and numbers to the gate.
+- Animator: builds, loops on its own previews to a self-score of 4.8, runs the fixed check script, hands the pre-gate file, strip and numbers to the gate.
 - Story Writer: writes and runs the lint; the Story Editor is its gate.
-- Character TD: fits, runs the check scripts, hands numbers and sheets to the gate.
+- Character TD: fits, loops on its own previews to a self-score of 4.8, runs the check scripts, hands the pre-gate file, numbers and sheets to the gate.
 - Programmer: builds and runs the tests (numbers); the look is the gate's.
 - Tester, Reviewer, Security, Playtester, Legal (its pass or fail on the preview), Evaluator, Story Editor: these are the gate.
 - Film and Social teams: makers make; only the Critic and the Hook Checker grade.

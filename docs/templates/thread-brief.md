@@ -21,9 +21,8 @@ Source: <original files of the chosen design, path or link>
 Round: <n> (gate rounds only)
 Asset: <owner/repo#n> (with Round)
 Picture card: <link | none, because <why>> (new look only)
-Scene docs: <the scene docs the project's CLAUDE.md lists, read on the laptop before planning, and the old scene the plan copies; laptop offline means stop and report> (Animator only)
 Level: research <page> · plan <file> · design <file>, or `n/a <why no new or reworked level>`; game kit builder and designer briefs
-Proven recipe: <the project's proven list (its CLAUDE.md names it) read first, and the passed recipe this job copies (write "copies" and its name), or "n/a" and why none applies; none passed for this kind of piece means stop and report> (Character TD only)
+Pre-gate: <path of the asset's PREGATE.md in the project files; written before the plan, it quotes the project's recipe and pitfall docs; laptop offline means stop and report> (Animator and Character TD)
 Researcher: <subagent and model; research tasks only>
 Tester: <Tester thread; size L Programmer only>
 Gate: <Reviewer thread> before owner (M or L)

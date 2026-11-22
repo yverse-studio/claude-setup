@@ -47,7 +47,7 @@ test('rosterNames and kitNames read docs/TEAMS.md, no list of their own', () => 
   assert.deepEqual(rosterNames(''), [])
 })
 
-const FIELDS = { item: 'M1', plan: 'gate.md', acceptance: 'tests pass', threads: 'list_threads checked, none open on this topic', priorArt: 'yverse-studio/claude-setup checked -> adapt, because it exists', done: 'node --test passes', stop: 'two rounds', what: 'x', start: 'CLAUDE.md', sheet: 'n/a no body, face or outfit job', sceneDocs: 'the docs the project CLAUDE.md lists, copies the old scene X', level: 'research research/x.md · plan plans/x-PLAN.md · design design/x.md' }
+const FIELDS = { item: 'M1', plan: 'gate.md', acceptance: 'tests pass', threads: 'list_threads checked, none open on this topic', priorArt: 'yverse-studio/claude-setup checked -> adapt, because it exists', done: 'node --test passes', stop: 'two rounds', what: 'x', start: 'CLAUDE.md', sheet: 'n/a no body, face or outfit job', preGate: 'gate/x/PREGATE.md', level: 'research research/x.md · plan plans/x-PLAN.md · design design/x.md' }
 
 // The property the owner asked for: a generated brief always passes the guard. Every Roster role x kit x size either
 // yields a brief decide() lets through, or the generator refuses it with the same reason badTeam gives; none is silently wrong.
@@ -152,8 +152,8 @@ test('a generated gate-role brief names gate.md and the kit checks in Prior art 
 
 test('Character TD is a sheet role and a gate builder: the generated game brief asks for Sheet, Target image, Source and Gate, and passes once filled (gate #483 r2, F5)', () => {
   const { sheet, ...noSheet } = FIELDS
-  assert.throws(() => buildBrief({ teams, role: 'Character TD', kit: 'game', size: 'M', ...noSheet, provenRecipe: 'the project proven list, copies the Saki outfits fit' }), (e) => e instanceof BriefError && /--sheet/.test(e.message))
-  const full = buildBrief({ teams, role: 'Character TD', kit: 'game', size: 'M', ...FIELDS, provenRecipe: 'the project proven list, copies the Saki outfits fit', sheet: 'docs/cast.md', targetImage: 'lib/characters/CH_x/approval/A.png', source: 'lib/characters/CH_x/source/A.blend', gate: 'Reviewer · fit round 1 before owner' })
+  assert.throws(() => buildBrief({ teams, role: 'Character TD', kit: 'game', size: 'M', ...noSheet, preGate: 'gate/x/PREGATE.md' }), (e) => e instanceof BriefError && /--sheet/.test(e.message))
+  const full = buildBrief({ teams, role: 'Character TD', kit: 'game', size: 'M', ...FIELDS, preGate: 'gate/x/PREGATE.md', sheet: 'docs/cast.md', targetImage: 'lib/characters/CH_x/approval/A.png', source: 'lib/characters/CH_x/source/A.blend', gate: 'Reviewer · fit round 1 before owner' })
   assert.match(full.brief, /\nSheet: docs\/cast\.md\nTarget image: lib\/characters\/CH_x\/approval\/A\.png\nSource: lib\/characters\/CH_x\/source\/A\.blend\n/)
   assert.match(full.brief, /\nGate: Reviewer · fit round 1 before owner\n/)
   assert.deepEqual(decide(START, { brief: full.brief, title: full.title, model: full.model }, [], [], teams), {})
@@ -228,17 +228,20 @@ test('a rendered brief file per role passes team-guard once its <...> are filled
   assert.match(briefFile('Planner', teams), /^Model: claude-fable[\w.-]*$/m, 'S5: the Planner file names Fable, one model for every size')
 })
 
-test('#627: an Animator brief is generated only with --scene-docs, and carries the line', () => {
-  const { sceneDocs, ...noDocs } = FIELDS
-  assert.throws(() => buildBrief({ teams, role: 'Animator', kit: 'game', size: 'M', ...noDocs }), (e) => e instanceof BriefError && /--scene-docs/.test(e.message))
-  assert.match(buildBrief({ teams, role: 'Animator', kit: 'game', size: 'M', ...FIELDS, gate: 'Reviewer · x before owner' }).brief, /^Scene docs: the docs the project CLAUDE\.md lists/m)
+test('#689: an Animator or Character TD brief is generated only with --pre-gate, and carries the line', () => {
+  const { preGate, ...noPreGate } = FIELDS
+  for (const role of ['Animator', 'Character TD']) {
+    assert.throws(() => buildBrief({ teams, role, kit: 'game', size: 'M', ...noPreGate }), (e) => e instanceof BriefError && /--pre-gate/.test(e.message), role)
+    assert.match(buildBrief({ teams, role, kit: 'game', size: 'M', ...FIELDS, sheet: 'n/a no body, face or outfit job', gate: 'Reviewer · x before owner' }).brief, /^Pre-gate: gate\/x\/PREGATE\.md$/m, role)
+  }
+  assert.doesNotMatch(buildBrief({ teams, role: 'Programmer', kit: 'game', size: 'M', ...FIELDS, sheet: 'n/a no body, face or outfit job', targetImage: 'n/a this slice changes no look at all' }).brief, /Pre-gate/)
 })
 
 // #702: the CLI names the missing flag and exits 2; with both flags its output is a brief the guard starts.
 test('#702: brief.mjs exits 2 naming --target-image when a real sheet has no target, and passes decide() with both flags', async () => {
   const { spawnSync } = await import('node:child_process')
   const args = ['--role', 'Character TD', '--kit', 'game', '--size', 'M', '--item', 'M1', '--plan', 'gate.md', '--acceptance', 'tests pass', '--threads', 'list_threads checked, none open on this topic',
-    '--prior-art', 'yverse-studio/claude-setup checked -> adapt, because it exists', '--done', 'node --test passes', '--stop', 'two rounds', '--what', 'x', '--proven-recipe', 'the project proven list, copies the Saki outfits fit', '--json']
+    '--prior-art', 'yverse-studio/claude-setup checked -> adapt, because it exists', '--done', 'node --test passes', '--stop', 'two rounds', '--what', 'x', '--pre-gate', 'gate/x/PREGATE.md', '--json']
   const cli = (more, sheet = 'docs/cast.md') => spawnSync(process.execPath, [join(root, 'scripts', 'brief.mjs'), ...args, '--sheet', sheet, ...more], { encoding: 'utf8' })
   const none = cli([])
   assert.equal(none.status, 2)

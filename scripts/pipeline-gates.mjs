@@ -7,12 +7,14 @@
 //   drivers <drivers.json>     point 5  no driver with a dead or unresolved variable (dump: scripts/blender/dump_drivers.py)
 //   previews <dir> [--fix]     point 7  thumb.jpg older than a final render in its folder
 //   intake <asset dir> --inventory <measure.json>   asset-intake: a downloaded asset is processed, not listed (licence, source, a row and preview per base of the body's _inventory)
+//   pregate <PREGATE.md> --stage plan|gate --root <project files folder> [--root <dir>]   #689  a builder's file that quotes the recipe and the old errors it read
 //   cards <scene folder>       #630    one scene card path: a root copy or a v3/v4 conflict copy beside it is RED, every path named
 // Each prints OK or RED lines and exits 1 on any RED.
 import { spawnSync } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { basename, dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { pregateCheck } from '../global/rule-guard.mjs'
 
 // A bold label (`**Adult use:** no`) closes its `**` after the colon: skip it, or the value reads "** no" (gate #483 r2, F1).
 const field = (text, label) => text.match(new RegExp(`^[ \\t>*-]*\\**${label}\\**:\\**[ \\t]*(.*)$`, 'im'))?.[1]?.trim() ?? null
@@ -200,15 +202,25 @@ function main([cmd, ...args]) {
       return intakeProblems(args[0], inventory)
     },
     cards: () => sceneCardProblems(args[0]),
+    pregate: () => {
+      const at = (flag) => args.flatMap((a, i) => (a === flag ? [args[i + 1]] : []))
+      const stage = at('--stage')[0], roots = at('--root').map((r) => resolve(r))
+      if (!['plan', 'gate'].includes(stage)) return ['--stage plan|gate is needed']
+      if (!roots.length) return ['--root <project files folder> is needed (the first root holds PREGATE-DOCS.md)']
+      const { problems, noList } = pregateCheck(resolve(args[0]), stage, roots)
+      if (!problems.length && noList) note = ' (no PREGATE-DOCS.md: the doc set was the builder\'s choice)'
+      return problems
+    },
     previews: () => stalePreviews(args[0]).map((s) => {
       if (args.includes('--fix')) { const r = refreshPreview(s.final); return r.ok ? null : `${s.dir}: could not refresh thumb.jpg (${r.why})` }
       return `${s.dir}: thumb.jpg is older than ${s.finals.join(', ')} (run with --fix)`
     }).filter(Boolean),
   }
-  if (!jobs[cmd] || !args.length) { console.error('usage: pipeline-gates.mjs sheet|fit|look|drivers|previews|intake|cards <file or dir> [--fix | --inventory <measure.json>] [--fix]'); return 2 }
+  if (!jobs[cmd] || !args.length) { console.error('usage: pipeline-gates.mjs sheet|fit|look|drivers|previews|intake|cards|pregate <file or dir> [--fix | --inventory <measure.json>] [--fix]'); return 2 }
+  let note = ''
   const problems = jobs[cmd]()
   for (const p of problems) console.log(`RED ${p}`)
-  console.log(problems.length ? `RESULT RED ${cmd}: ${problems.length} problem(s)` : `OK ${cmd}`)
+  console.log(problems.length ? `RESULT RED ${cmd}: ${problems.length} problem(s)` : `OK ${cmd}${cmd === 'pregate' ? ` ${args[args.indexOf('--stage') + 1]}` : ''}${note}`)
   return problems.length ? 1 : 0
 }
 if (process.argv[1] === fileURLToPath(import.meta.url)) process.exitCode = main(process.argv.slice(2))

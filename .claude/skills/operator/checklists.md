@@ -21,6 +21,7 @@ others come from the home linked in the row.
 6. **Reuse proof:** a downloaded piece shows its `clothes_dupe.py` line (HAVE or NEW); a built one names the library search that found nothing that fits.
 7. **Fabric and colour:** contact sheet with 4 angles at 390 and 1440 px, office lights, mid-tone background: no washed-out fabric, white blotches, gaps or tears at hems; a recoloured texture keeps a luminance range of at least 80 % of its source *(set here)*.
 8. **Previews:** `pipeline-gates.mjs previews <folder>` finds no `thumb.jpg` older than the final render.
+9. **Pre-gate file (K.O.):** `node scripts/pipeline-gates.mjs pregate <file> --stage gate` prints OK (`gate.md`, Before a builder asks for a gate).
 
 ## Hair
 
@@ -67,6 +68,7 @@ others come from the home linked in the row.
 8. **Floor and limbs:** planted feet within 5 mm of the floor in `_check.json` *(set here)*; elbow and knee poles checked from a second camera.
 9. **Face and hands:** one blink every 3 to 5 s and none on the seam frame; finger curl differs by 10 to 15 degrees between loop halves.
 10. **Captured game clips:** 0 repeated frames by per-frame mean difference ([`video-studio/learnings.md`](../video-studio/learnings.md), 2026-11-12).
+11. **Pre-gate file (K.O.):** `node scripts/pipeline-gates.mjs pregate <file> --stage gate` prints OK (`gate.md`, Before a builder asks for a gate).
 
 ## Scene render
 
@@ -78,6 +80,7 @@ others come from the home linked in the row.
 6. **Light:** test frames use the final render's light at 960x540; a night room reads dark and warm beside the reference board (named view).
 7. **Completeness and opacity:** as Animation row 7.
 8. **Previews and order:** `pipeline-gates.mjs previews <folder>` OK; 1080p starts only from the version the score rule picked after a PASS.
+9. **Pre-gate file (K.O.):** `node scripts/pipeline-gates.mjs pregate <file> --stage gate` prints OK (`gate.md`, Before a builder asks for a gate).
 
 ## Asset-Intake
 

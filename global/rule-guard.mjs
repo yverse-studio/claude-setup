@@ -7,7 +7,7 @@
 
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { existsSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'node:fs'
 import { isIP } from 'node:net'
 import { homedir, tmpdir } from 'node:os'
 import { dirname, join, relative } from 'node:path'
@@ -924,6 +924,124 @@ export function dupeCheckMissing(tool, input = {}, transcript = '') {
   if (!unchecked.length) return null
   return `rule-guard: before a garment download run \`python tools/laptop/clothes_dupe.py ${unchecked[0].slice(0, 90)}\` and read HAVE or NEW (docs/clothing-pipeline.md, Reuse first; companyxy 2026-11-12: garments came twice). HAVE: refit the item you have. NEW: run this command again after it.`
 }
+// #689 (gate.md, Before a builder asks for a gate): a builder of an asset or a scene writes one PREGATE.md that quotes the recipe it copies and the old errors it read,
+// and hands in with a `Pre-gate: plan|gate <path>` line. pregateProblems is pure (the CLI scripts/pipeline-gates.mjs pregate and the hook below read the files and pass
+// readDoc(path) and isImage(path) in; global/ cannot import from scripts/). A doc is read by its path below a root, never found by a walk (/mnt/project-files is a slow mount).
+export const PREGATE_TYPES = ['scene', 'garment', 'body', 'hair', 'face']
+const PG_MIN_QUOTE = 25
+const PG_SCORE = 4.8
+const pgNorm = (s) => String(s ?? '').replace(/\s+/g, ' ').trim()
+const pgPath = (s) => String(s ?? '').trim().replace(/^[`"'“]+|[`"'”]+$/g, '').replace(/\\/g, '/').replace(/^\.\//, '')
+const pgQuote = (s) => pgNorm(s).replace(/^[`"'“„]+|[`"'”]+$/g, '').trim()
+const pgField = (text, label) => text.match(new RegExp(`^[ \\t>*-]*\\**${label}\\**:\\**[ \\t]*(.*)$`, 'im'))?.[1]?.trim() ?? null
+const pgNone = (s) => /^none,\s*searched\s+\S/i.test(pgNorm(s))
+// The lines of a `## <heading>` section as table rows (cells) or plain lines; the header and the |---| rule are dropped.
+function pgSection(text, heading) {
+  const lines = text.split('\n')
+  const at = lines.findIndex((l) => new RegExp(`^#{1,6}\\s*${heading}\\b`, 'i').test(l))
+  if (at < 0) return []
+  const out = []
+  for (const l of lines.slice(at + 1)) {
+    if (/^#{1,6}\s/.test(l)) break
+    if (/^\s*\|[\s:|-]+\|?\s*$/.test(l)) continue
+    if (/^\s*\|/.test(l)) out.push({ cells: l.trim().replace(/^\||\|$/g, '').split('|').map((c) => c.trim()), line: l })
+    else if (pgNone(l.replace(/^[\s>*-]+/, ''))) out.push({ cells: [l.replace(/^[\s>*-]+/, '').trim()], line: l, plain: true }) // a plain line counts only as a none row; Self-score: and the like stay fields
+  }
+  return out.filter((r, i) => !(i === 0 && !r.plain && /^(source|#|view)$/i.test(r.cells[0])))
+}
+function pgDocs(text) {
+  const lines = text.split('\n')
+  const at = lines.findIndex((l) => /^[ \t>*-]*\**Docs\**:/i.test(l))
+  if (at < 0) return []
+  const items = [lines[at].replace(/^[^:]*:\**/, '')]
+  for (const l of lines.slice(at + 1)) { if (/^\s*[-*]\s+\S/.test(l)) items.push(l.replace(/^\s*[-*]\s+/, '')); else break }
+  return items.flatMap((i) => i.split(/[,\n]/)).map(pgPath).filter(Boolean)
+}
+// The project's own list, `| Type | Doc | Laptop path |`, from the project-files root only (a list beside a PREGATE.md must not shadow it).
+export function parseDocsList(text) {
+  return String(text ?? '').split('\n').filter((l) => /^\s*\|/.test(l) && !/^\s*\|[\s:|-]+\|?\s*$/.test(l))
+    .map((l) => l.trim().replace(/^\||\|$/g, '').split('|').map((c) => c.trim())).filter((c) => c.length >= 2 && !/^type$/i.test(c[0]))
+    .map((c) => ({ type: c[0].toLowerCase(), doc: pgPath(c[1]), laptop: c[2] ?? '' }))
+}
+export function pregateProblems(text, { stage = 'plan', readDoc = () => null, isImage = () => false, docsList = null } = {}) {
+  const out = []
+  text = String(text ?? '')
+  const type = (pgField(text, 'Type') ?? '').toLowerCase()
+  if (!PREGATE_TYPES.includes(type)) out.push(`Type: none of ${PREGATE_TYPES.join(', ')}`)
+  const docs = pgDocs(text)
+  if (!docs.length) out.push('Docs: name the docs you read, one path below the project files per entry')
+  const held = new Map(docs.map((d) => [d, readDoc(d)]))
+  for (const [d, body] of held) if (body === null || body === undefined) out.push(`Docs: ${d}: no root holds it (a path below the project files; a laptop doc is read from its copy there)`)
+  if (type && docsList) for (const r of docsList.filter((x) => x.type === type)) if (!docs.includes(r.doc)) out.push(`Docs: ${r.doc}: the project's PREGATE-DOCS.md lists it for ${type} and Docs: leaves it out`)
+  const recipe = pgSection(text, 'Recipe'), pitfalls = pgSection(text, 'Pitfalls')
+  if (!recipe.length) out.push('no Recipe row: copy a passed recipe word for word, or write `none, searched <docs>`')
+  const seen = new Map(), quoted = new Set()
+  const row = (kind, n, cells) => {
+    if (cells.slice(0, 2).some(pgNone)) return 'none'
+    const [src, q] = kind === 'recipe' ? [cells[0], cells[1]] : [cells[1], cells[2]]
+    const where = `${kind} row ${n}`
+    const source = pgPath(src), quote = pgQuote(q)
+    if (!docs.includes(source)) { out.push(`${where}: Source ${source || '(none)'} is not in Docs:`); return 'quoted' }
+    quoted.add(source)
+    if (quote.length < PG_MIN_QUOTE) out.push(`${where}: quote under ${PG_MIN_QUOTE} characters, copy the whole line`)
+    else if (held.get(source) !== null && held.get(source) !== undefined && !pgNorm(held.get(source)).includes(quote)) out.push(`${where}: quote not found in ${source} (word for word, that doc only)`)
+    if (quote) { if (seen.has(quote)) out.push(`${where}: quote used in two rows (${seen.get(quote)} too); each quote counts once`); else seen.set(quote, where) }
+    return 'quoted'
+  }
+  recipe.forEach((r, i) => row('recipe', i + 1, r.cells))
+  const pitRows = pitfalls.map((r, i) => ({ r, kind: row('pitfall', i + 1, r.cells), n: i + 1 }))
+  if (pitRows.length < 5) out.push(`5 pitfall rows needed, got ${pitRows.length} (fill up with \`none, searched <docs>\` rows)`)
+  for (const { r, kind, n } of pitRows) if (kind === 'quoted' && !pgNorm(r.cells[3])) out.push(`pitfall row ${n}: no "Checked by" (the number or the picture that checks it)`)
+  for (const d of docs) if (held.get(d) !== null && held.get(d) !== undefined && !quoted.has(d)) out.push(`Docs: ${d}: no row quotes it`)
+  if (stage !== 'gate') return out
+  for (const { r, kind, n } of pitRows) if (kind === 'quoted' && !/\[x\]/i.test(r.line)) out.push(`pitfall row ${n}: not ticked [x]`)
+  const score = pgField(text, 'Self-score') ?? ''
+  const mean = Number(score.match(/\d+(\.\d+)?/)?.[0])
+  if (!(mean >= PG_SCORE)) out.push(`Self-score: ${score || '(none)'}; ${PG_SCORE} or more, with its rubric rows, is the ticket to the gate`)
+  else if ((score.replace(/^\s*\d+(\.\d+)?/, '').match(/\d+(\.\d+)?/g) ?? []).length < 2) out.push('Self-score has no rubric rows: write the mean and the rubric rows behind it (silhouette 5, contact 4.8 ...)')
+  const views = pgSection(text, 'Views').map((r) => ({ name: r.cells[0].toLowerCase(), file: pgPath(r.cells[1]) }))
+  for (const v of views) if (!v.file || !isImage(v.file)) out.push(`view "${v.name}": file ${v.file || '(none)'} is missing or empty`)
+  const has = (re) => views.some((v) => re.test(v.name))
+  const need = type === 'scene' ? [['non-pov', /^non-pov/], ['close', /^close/]] : PREGATE_TYPES.includes(type) ? [['front', /^front$/], ['back', /^back$/], ['left', /^left$/], ['right', /^right$/], ['close', /^close/]] : []
+  for (const [name, re] of need) if (!has(re)) out.push(`no "${name}" view in the Views table`)
+  return out
+}
+// The file side shared by the CLI and the hook: roots are tried in order for every doc and view, the docs list comes from roots[0] only.
+export function pregateCheck(file, stage, roots, { exists = existsSync, readText = read, size = (p) => { try { return statSync(p).isFile() ? statSync(p).size : 0 } catch { return 0 } } } = {}) {
+  const text = exists(file) ? readText(file) : null
+  if (text === null) return { problems: [`${file}: no such file`], noList: false }
+  const dirs = [...roots, dirname(file)]
+  const below = (p) => { p = pgPath(p); for (const r of roots) { const rr = r.replace(/\\/g, '/').replace(/\/$/, ''); if (p.startsWith(`${rr}/`)) return p.slice(rr.length + 1) } return p }
+  const safe = (p) => { p = below(p); return !/^([a-z]:)?\//i.test(p) && !p.split('/').includes('..') ? p : null }
+  const readDoc = (p) => { const rel = safe(p); if (!rel) return null; for (const d of dirs) { const f = join(d, rel); if (exists(f) && size(f) > 0) return readText(f) } return null }
+  const isImage = (p) => { const rel = safe(p); return !!rel && dirs.some((d) => size(join(d, rel)) > 0) }
+  const listFile = roots[0] && join(roots[0], 'PREGATE-DOCS.md')
+  const docsList = listFile && exists(listFile) ? parseDocsList(readText(listFile)) : null
+  return { problems: pregateProblems(text, { stage, readDoc, isImage, docsList }), noList: !docsList }
+}
+// The hook: a hand-in of an Animator or a Character TD needs `Pre-gate: <stage> <path>` and a file with no problems at that stage.
+// Hand-in marks: a `Done:` post, a `Gate request:` line, a picture or video path, or an attachment. Only a message whose one mark is a Gate request may carry stage plan.
+const PREGATE_ROLES = /^(animator|character td)$/i
+const PREGATE_TOOLS = /^mcp__hearthbot__(message_thread|message_coordinator|post_message)$/
+export function pregateMissing(tool, input = {}, role = '', env = process.env) {
+  if (!PREGATE_TOOLS.test(tool) || !PREGATE_ROLES.test(String(role).trim())) return null
+  const text = String(input.text ?? '')
+  const gateRequest = /^\s*Gate request:/im.test(text)
+  const other = /^\s*Done:/.test(text) || /\.(png|jpe?g|webp|webm|mp4|gif)\b/i.test(text) || (tool.endsWith('post_message') && Array.isArray(input.attached_outputs) && input.attached_outputs.length > 0)
+  if (!gateRequest && !other) return null
+  const needs = other ? 'gate' : 'plan'
+  const line = text.match(/^\s*Pre-gate:[ \t]*(.*)$/im)?.[1]?.trim() ?? ''
+  const m = line.match(/^(plan|gate)\s+(\S.*)$/i)
+  const how = 'Write the asset\'s PREGATE.md (operator/gate.md, Before a builder asks for a gate) and add the line `Pre-gate: gate <path>`'
+  if (!m) return `rule-guard: this is a hand-in (a Done: post, a Gate request: line, a picture or an attachment) and it has no pre-gate file. ${how} (a plan goes to its gate with a Gate request: line and \`Pre-gate: plan <path>\`). Check it first: node scripts/pipeline-gates.mjs pregate <file> --stage ${needs} --root <project files folder>.`
+  const stage = m[1].toLowerCase(), path = m[2].trim().split(/\s+/)[0]
+  if (needs === 'gate' && stage !== 'gate') return `rule-guard: a Done: post, a picture or an attachment needs the gate stage; a plan-stage file only goes with a Gate request: line. Run node scripts/pipeline-gates.mjs pregate ${path} --stage gate --root <project files folder> and write \`Pre-gate: gate ${path}\`.`
+  const roots = [env.CLAUDE_SETUP_PROJECT_FILES, '/mnt/project-files', '/mnt/attach/project-files'].filter((d) => d && existsSync(d))
+  const file = roots.map((r) => join(r, path.replace(/\\/g, '/').replace(/^\.\//, ''))).find((f) => existsSync(f)) ?? (existsSync(path) ? path : '')
+  const { problems } = file ? pregateCheck(file, stage, roots) : { problems: [`${path}: no such file below the project files`] }
+  if (!problems.length) return null
+  return `rule-guard: the pre-gate file is red at stage ${stage}. Run node scripts/pipeline-gates.mjs pregate ${path} --stage ${stage} --root <project files folder> and fix it first; the first problems:\n${problems.slice(0, 3).map((p) => `  - ${p}`).join('\n')}`
+}
 const listProcs = () => {
   if (process.env.CLAUDE_SETUP_PROCS !== undefined) return process.env.CLAUDE_SETUP_PROCS // tests: a fake process list
   try {
@@ -1305,6 +1423,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           ?? archivistFiles(tool, input ?? {}, session ? read(join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)) : '')
           ?? kaomojiMissing(tool, input ?? {})
           ?? dupeCheckMissing(tool, input ?? {}, sessionTranscript)
+          ?? pregateMissing(tool, input ?? {}, gateRole)
           ?? blenderServerBusy(tool, input ?? {}, listProcs)
           ?? blenderDocsMissing(tool, input ?? {}, sessionTranscript)
           ?? blenderOutsideRunner(tool, input ?? {})
