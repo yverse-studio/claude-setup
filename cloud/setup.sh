@@ -249,7 +249,8 @@ import { fileURLToPath } from 'node:url'
 let roleOf = () => null
 let openThreads = () => []
 let toolCalls = () => []
-try { ({ roleOf, openThreads, toolCalls } = await import('./rule-guard.mjs')) } catch { /* no rule-guard here */ }
+let roleAgain
+try { ({ roleOf, openThreads, toolCalls, roleAgain } = await import('./rule-guard.mjs')) } catch { /* no rule-guard here */ }
 
 export const POINTER = 'Team rule (claude-setup docs/TEAMS.md): route every task on its own (task picks the kit, not the project; then size S/M/L), call only the roles it needs, as thread or subagent as the roster says, and pass `model` from the role\'s row on every thread start and Agent call.'
 export const PM_FILE = '.claude/skills/operator/roles/project-manager.md'
@@ -534,6 +535,8 @@ export const BRIEF_FIELDS = [
   // vacation-game 2026-11-15 (yskills): levels went to build without a teardown, a level plan or design proposals. A level brief in the game kit names the
   // files of the steps before it (docs/TEAMS.md, A level): the Planner the Researcher's page, the Game Designer that page and the plan, a builder all three.
   { key: 'Level', name: 'Level: research <page> · plan <file> · design <file> (a level brief in the game kit, docs/TEAMS.md A level)', tpl: 'Level: research <page> · plan <file> · design <file>, or `n/a <why no new or reworked level>`; game kit builder and designer briefs', applies: needsLevel, ok: levelOk, cls: () => 'judgment' },
+  // GameDev 2026-11-15: a garment took ~18 rounds of material tinkering and failed a gate while the project's proven list held a route that had passed three times. The brief names the passed recipe the job copies (or n/a); the route itself lives in the project's CLAUDE.md and proven list, not here.
+  { key: 'Proven recipe', name: 'Proven recipe: (the passed recipe from the project\'s proven list this job copies, or n/a and why)', tpl: 'Proven recipe: <the project\'s proven list (its CLAUDE.md names it) read first, and the passed recipe this job copies (write "copies" and its name), or "n/a" and why none applies; none passed for this kind of piece means stop and report>', applies: (p) => /^[ \t>-]*Role:[ \t]*Character TD\b/im.test(p), ok: line(/^[ \t>-]*Proven recipe:[^\n<]*\b(?:copies|n\/a)[ \t]+[^<\s][^\n]{4,}/im), cls: () => 'recoverable', fill: () => 'Proven recipe: read the project\'s proven list first and name the passed recipe this job copies ("copies <name>"), or "n/a <why none applies>"; none passed for this kind of piece means stop and report, never invent a route' },
   { key: 'Researcher', name: 'Researcher: (the task asks for research)', tpl: 'Researcher: <subagent and model, or the Researcher thread; research tasks only>', applies: (p) => ASKS_RESEARCH.test(p) && !/\bRole:[ \t]*Researcher\b/i.test(p), ok: line(/^[ \t>-]*Researcher:[ \t]*[^<\s]/im), cls: () => 'recoverable', fill: () => 'Researcher: ask the coordinator for a Researcher thread (message_coordinator) and go on meanwhile' },
   { key: 'Tester', strict: false, tpl: 'Tester: <Tester thread; size L Programmer only>', applies: (p) => /^[ \t>-]*Role:[ \t]*Programmer\b/im.test(p), ok: (p) => !needsTester(p), cls: () => 'judgment' },
 ]
@@ -756,9 +759,9 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
   process.stdin.on('data', (c) => { raw += c })
   process.stdin.on('end', () => {
     try {
-      const { tool_name: tool = '', tool_input: input, cwd = process.cwd(), transcript_path: transcript, session_id: session, model } = JSON.parse(raw || '{}')
+      const { tool_name: tool = '', tool_input: input, cwd = process.cwd(), transcript_path: transcript, session_id: session, model, source } = JSON.parse(raw || '{}')
       const mark = (kind) => join(dir, 'booted', `${String(session).replace(/\W/g, '')}.${kind}`)
-      const say = (context) => process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: context } }))
+      const say = (context) => process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: [context, source === 'compact' ? roleAgain?.(session, cwd) : ''].filter(Boolean).join('\n') } })) // #728: a compaction drops the role card, so it comes back
       if (mode === 'start') {
         // SessionStart names the session's model; rule-guard's brief check reads it before the first reply.
         if (session && typeof model === 'string' && model) writeFileSync(modelFile(session), model)
@@ -1438,7 +1441,7 @@ import { join } from 'node:path'
 import { BRIEF_FIELDS, CHECKLISTS, GATE_BUILDER_ROLES, GUARD_FILES, badRole, badTeam, coordinatorCard, kitNames, kitRows, rosterNames } from './team-guard.mjs'
 import { GATE_ROLES, roleOf } from './rule-guard.mjs'
 
-export const CARD_MAX = 7200 // 7,050 until F1 #613 (the compaction line, +116: the summary must carry the re-read order, the card itself is dropped by a compaction), 7,000 until #601 (the "root clean" proof), 6,800 until #604 (the first-reply header carries plan and board, and says what they count, +160), 6,600 until #430, 8,000 until 2026-11-12 (M27 step 6: rules a hook enforces left the card, the brief template came in)
+export const CARD_MAX = 7400 // 7,200 until B3 #730 (the 7-day start line, +130), 7,050 until F1 #613 (the compaction line, +116: the summary must carry the re-read order, the card itself is dropped by a compaction), 7,000 until #601 (the "root clean" proof), 6,800 until #604 (the first-reply header carries plan and board, and says what they count, +160), 6,600 until #430, 8,000 until 2026-11-12 (M27 step 6: rules a hook enforces left the card, the brief template came in)
 export const INDEX_MAX = 20000
 const cells = (l) => l.split('|').map((c) => c.trim())
 const today = () => new Date().toISOString().slice(0, 10)
@@ -1495,8 +1498,8 @@ A refusal names every gap at once: send those lines to the same thread with mess
 With Bash run \`node tools/brief-check/team-guard.mjs check <Role> <file|->\` in this folder before every start_thread (no Bash: the refusal lists the gaps): it lists every gap at once and prints the exact \`model\`.
 A device thread passes \`message_id\` (yskills' message or your own project-chat post), never \`project_post_id\` or \`auto_attach=false\`.`
 
-export function buildCard({ teams, hash = 'nogit', date = today() }) {
-  const head = `Coordinator card (claude-setup ${hash}, ${date}).\nYou are the project chat. Without Bash, this card and MEMORY.md are your rules.\nA rule not on this card: Read COORDINATOR-RULES-INDEX.md in this folder; still unclear: ask a setup thread (size S); never guess.`
+export function buildCard({ teams, hash = 'nogit', date = today(), startsLine = '' }) {
+  const head = `Coordinator card (claude-setup ${hash}, ${date}).\nYou are the project chat. Without Bash, this card and MEMORY.md are your rules.\nA rule not on this card: Read COORDINATOR-RULES-INDEX.md in this folder; still unclear: ask a setup thread (size S); never guess.${startsLine ? `\n${startsLine}` : ''}`
   const full = coordinatorCard(teams)
   if (!full) throw new Error('coordinator card: docs/TEAMS.md has no Roster or Kits rows')
   const card = [head, PREFLIGHT, BRIEF_SECTION, compact(full)].join('\n\n') + '\n'
@@ -1606,9 +1609,9 @@ export function cardHash(base) {
   for (const f of [...GUARD_FILES.map((g) => join(guardDir(base), g)), join(base, 'docs', 'TEAMS.md'), join(base, 'docs', 'MAP.md')]) h.update(`${f.split(/[\\/]/).pop()}\0${read(f)}`)
   return h.digest('hex').slice(0, 8)
 }
-export function renderAll({ base, hash = cardHash(base), date = today() }) {
+export function renderAll({ base, hash = cardHash(base), date = today(), startsLine = '' }) {
   const teams = read(join(base, 'docs', 'TEAMS.md'))
-  const files = new Map([['COORDINATOR-CARD.md', buildCard({ teams, hash, date })], ['COORDINATOR-RULES-INDEX.md', buildIndex({ teams, map: read(join(base, 'docs', 'MAP.md')), hash, date })], ['ROSTER.md', renderRoster({ teams, hash, date })]])
+  const files = new Map([['COORDINATOR-CARD.md', buildCard({ teams, hash, date, startsLine })], ['COORDINATOR-RULES-INDEX.md', buildIndex({ teams, map: read(join(base, 'docs', 'MAP.md')), hash, date })], ['ROSTER.md', renderRoster({ teams, hash, date })]])
   for (const g of ['team-guard.mjs', 'card-render.mjs', 'rule-guard.mjs']) files.set(`tools/brief-check/${g}`, read(join(guardDir(base), g)))
   for (const [from, to] of [['docs/TEAMS.md', 'docs/TEAMS.md'], [CHECKLISTS, CHECKLISTS]]) files.set(`tools/brief-check/${to}`, read(join(base, from)))
   for (const role of rosterNames(teams)) { const text = renderBrief(role, teams); if (text) files.set(`briefs/${briefFileName(role)}`, text) }
@@ -1649,7 +1652,7 @@ export function refreshCard(base, out = projectFolder()) {
     const hash = cardHash(base)
     const have = read(join(out, 'COORDINATOR-CARD.md')).match(/^Coordinator card \(claude-setup (\w+),/)?.[1]
     if (have === hash && existsSync(join(out, 'ROSTER.md'))) return null
-    writeAll(out, renderAll({ base, hash }))
+    writeAll(out, renderAll({ base, hash, startsLine: startsWeek(out) }))
     return hash
   } catch { return null }
 }
@@ -1695,18 +1698,26 @@ export function startOutcome(check = '', modelCheckText = '') {
   const lacks = repair[1].match(/^the brief lacks ([^.]*?)\. Work as if/)?.[1]
   return { outcome: 'repaired', reasons: lacks ? lacks.split(', ') : [repair[1].slice(0, 60)] }
 }
+// A real session id is a UUID. A hand-run hook, a probe or a test names its session anything else; those never reach the log or its count (B3 #730).
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+export const isRealSession = (s) => typeof s === 'string' && UUID.test(s)
+const REAL_LOG = /^\d{4}-\d{2}-\d{2}-[0-9a-f]{32}\.json$/i
 const logName = (session, date) => `${date}-${String(session).replace(/\W/g, '').slice(0, 40)}.json`
 const writeLog = (file, entry) => safeWrite(file, `${JSON.stringify(entry)}\n`)
 // Writes the start's file. `info`: { session, project, role, kit, size, guard, card, outcome, reasons }. A failure never stops the start.
 export function logStart(info, out = projectFolder(), now = new Date()) {
+  if (!out || !isRealSession(info?.session)) return null
   try {
-    if (!out || !info?.session) return null
     const date = now.toISOString().slice(0, 10)
     const file = join(out, 'brief-log', logName(info.session, date))
     if (existsSync(file)) return file // the hook may fire twice for one start: the first entry stands
     writeLog(file, { at: now.toISOString(), project: '', role: '', kit: '', size: '', guard: '', card: '', outcome: 'clean', reasons: [], relays: 0, lifted: false, ...info })
     return file
-  } catch { return null }
+  } catch (e) {
+    // B3 #730: the start goes on, but a log that cannot be written is said once (the hook's stderr), never swallowed (a start log dead since 17.11.).
+    console.error(`card-render: start log not written (${e?.code ?? 'error'}): ${String(e?.message ?? e).split('\n')[0].slice(0, 160)}`)
+    return null
+  }
 }
 // A later relay on a refused start is added to the same file (`lifted` once a relay brings the thread to work).
 export function noteRelay(session, lifted, out = projectFolder()) {
@@ -1725,7 +1736,7 @@ export function noteRelay(session, lifted, out = projectFolder()) {
 export function statsLine(out = projectFolder(), since = null) {
   const dir = out ? join(out, 'brief-log') : ''
   const entries = []
-  for (const f of dir && existsSync(dir) ? readdirSync(dir) : []) {
+  for (const f of (dir && existsSync(dir) ? readdirSync(dir) : []).filter((n) => REAL_LOG.test(n))) {
     try { const e = JSON.parse(readFileSync(join(dir, f), 'utf8')); if (!since || new Date(e.at) >= since) entries.push(e) } catch { /* a cut file counts as nothing */ }
   }
   const count = Object.fromEntries(OUTCOMES.map((o) => [o, entries.filter((e) => e.outcome === o).length]))
@@ -1735,6 +1746,12 @@ export function statsLine(out = projectFolder(), since = null) {
   const top = [...reasons].sort((a, b) => b[1] - a[1])[0]
   const pct = entries.length ? Math.round((100 * bad) / entries.length) : 0
   return `starts ${entries.length}: ${OUTCOMES.map((o) => `${o} ${count[o]}`).join(', ')} (false starts ${bad}, ${pct}%); top reason: ${top ? `${top[0]} (${top[1]}x)` : 'none'}`
+}
+// The line the coordinator card carries: the last 7 days of real starts in this folder, rendered when the card is. '' without a folder.
+export function startsWeek(out = projectFolder(), now = new Date()) {
+  if (!out) return ''
+  const m = statsLine(out, new Date(now - 7 * 864e5)).match(/^starts (\d+): clean (\d+), repaired (\d+), refused (\d+), wrong-model (\d+), duplicate \d+ \(false starts \d+, (\d+)%\)/)
+  return m ? `Thread starts, last 7 days (as of ${now.toISOString().slice(0, 10)}): ${m[1]}, clean ${m[2]}, repaired ${m[3]}, refused ${m[4]}, wrong-model ${m[5]} (false starts ${m[6]}%).` : ''
 }
 CARD
 
@@ -2026,11 +2043,11 @@ async function receiptBlock(tool, input, session, cwd, agentId, transcript) {
   const rules = ['CLAUDE.md', 'docs/TEAMS.md'].map((f) => read(join(root, f))).join('\n')
   const origin = await projectsOrigin(), last = coordinatorRelays(t, origin).at(-1) // #603 B: the newest brief's lines come first, as in relayRebrief
   const brief = unfix(stripTags(last ? [last, relayContext(last, t, origin)].join('\n') : spawnPrompt('', t)))
-  const path = roleOf(brief, read(join(root, 'docs', 'TEAMS.md')))?.path
+  const found = roleOf(brief, read(join(root, 'docs', 'TEAMS.md'))), path = found?.path
   // No checkout (only the boot copy): nothing can be checked, so the receipt says that instead of a false `none`.
   const checkout = existsSync(join(root, 'config', 'plugins.json')), names = checkout ? wanted(root, path ? read(join(root, path)) : '', brief) : []
   const status = checkout ? skillStatus(names, { root, cwd }) : { loaded: [], missing: [], unknown: true }
-  return receiptMissing(tool, input, threadReceipt(role, brief, t, rules, status, cardOnDisk()), t) ?? (receiptSent(t) ? null : fallbackUnread(status, t) ?? skillsUnloaded(tool, input, names.filter((n) => !status.missing.some((m) => m.name === n && !m.path)), t))
+  return receiptMissing(tool, input, threadReceipt(role, brief, t, rules, status, cardOnDisk()), t) ?? (receiptSent(t) ? null : fallbackUnread(status, t) ?? playbookUnread(checkout && found, path ? read(join(root, path)) : '', t) ?? skillsUnloaded(tool, input, names.filter((n) => !status.missing.some((m) => m.name === n && !m.path)), t))
 }
 
 // M48: a Reviewer brief with a valid `Topic:` is given that topic's checklist plus the Scored gates section of gate.md instead of the code playbook.
@@ -2045,6 +2062,13 @@ export async function topicPlaybook(brief, root) {
   const name = guard.topicNames(checklists).find((n) => n.toLowerCase() === topic.toLowerCase())
   const scored = mdSection(read(join(root, '.claude/skills/operator/gate.md')) || fetchRaw('.claude/skills/operator/gate.md'), 'Scored gates', true)
   return { name, text: `Topic: ${name}. Your whole job is this checklist, scored by the rule below; judge only these rows.\n\n${mdSection(checklists, name)}\n\n${scored}` }
+}
+
+// #728: after a compaction the card is gone from the context; SessionStart (source compact) prints the stamped role's card again from the local file, no fetch.
+export function roleAgain(session, cwd) {
+  const name = session ? read(join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)).trim() : ''
+  const root = setupRoot(cwd), role = name && roleOf(`Role: ${name}`, read(join(root, 'docs', 'TEAMS.md')))
+  return role ? roleCard(role, role.path ? read(join(root, role.path)) : '') : ''
 }
 
 async function roleContext(prompt, cwd, session) {
@@ -2504,6 +2528,12 @@ export function fallbackUnread(status, transcript) {
   return todo.length ? `rule-guard: a skill your role names cannot load here, so read what stands in for it before your first reply, then say so in it (receipt line: missing): ${todo.join(', ')} of claude-setup (docs/permissions.md, The "can't" rule).` : null
 }
 
+// #728: a playbook too long for the start card arrives only as "Read your playbook <path>"; the first reply waits for that Read (same shape as fallbackUnread).
+export function playbookUnread(role, playbook, transcript) {
+  if (!role?.path || !playbook || roleCard(role, playbook).includes('follows; work by it')) return null
+  return toolCalls(transcript).some((c) => String(c.input.file_path ?? c.input.command ?? '').includes(role.path)) ? null : `rule-guard: your playbook is too long for the start card, so read it before your first reply: ${role.path} of claude-setup.`
+}
+
 export function threadReceipt(role, brief, transcript, rules, status = { loaded: [], missing: [] }, card = '') {
   const lines = brief.replace(/[*_`]/g, '').split('\n').map((l) => l.replace(/^[ \t>-]*/, ''))
   const tag = (k) => lines.map((l) => l.match(new RegExp(`^(?:Role:.*?\\b)?${k}:[ \\t]*([A-Za-z0-9-]+)`))?.[1]).find(Boolean) ?? '?' // #621: a Kit or Size that opens a line or sits on the Role line, newest first
@@ -2807,12 +2837,16 @@ async function stampFromTranscript(session, transcript, cwd) {
 // once the card was printed, here or by the prompt hook) a thread with no lock and no finished tool call gets its brief check and role card at its first call.
 const startMark = (session) => join(tmpdir(), `claude-setup-start-${String(session).replace(/\W/g, '')}`)
 async function startFromTranscript(session, transcript, cwd) {
-  if (!session || existsSync(startMark(session)) || existsSync(lockFile(session))) return ''
+  const again = join(tmpdir(), `claude-setup-card-${String(session).replace(/\W/g, '')}`)
+  if (!session || existsSync(lockFile(session)) || existsSync(again)) return ''
   const t = transcript(), brief = spawnPrompt('', t.split('\n').find((l) => /"type":"user"/.test(l)) ?? '')
-  if (!brief || toolCalls(t).some((c) => c.result)) return '' // a thread that already worked (new container, no temp files) keeps going
-  writeFileSync(startMark(session), '')
-  const check = await briefCheck(brief, cwd, knownModel(session, t))
-  updateLock(session, check)
+  // #728: a cancelled prompt hook may have left the start mark and the role stamp without the card (live 2026-11-22: 2 of 2 starts hit the 5 s limit). The card is
+  // sent at the next matching tool call, once, unless the transcript shows it arrived; a thread that already worked still gets it, the brief check only before work.
+  if (!brief || t.split('\n').some((l) => l.includes('"attachment"') && l.includes('rule-guard: you are the '))) return '' // only a hook's attachment row counts: a Read result quoting the sentence is no card
+  const fresh = !existsSync(startMark(session)) && !toolCalls(t).some((c) => c.result) // a thread that already worked (new container, no temp files) keeps going
+  writeFileSync(again, ''); writeFileSync(startMark(session), '')
+  const check = fresh ? await briefCheck(brief, cwd, knownModel(session, t)) : ''
+  if (fresh) updateLock(session, check)
   const stamp = join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`), kept = read(stamp) // roleContext writes it only once
   if (kept) unlinkSync(stamp)
   const card = await roleContext(brief, cwd, session)
@@ -2914,14 +2948,14 @@ async function cardLine() {
   } catch { return '' }
 }
 // M50 slice C: every checked start writes one count file in its project's folder (card-render.mjs, logStart); never stops the start.
-export async function countStart({ session, brief, checkNow, modelNote, guard, card }) {
+export async function countStart({ session, brief, checkNow, modelNote, guard, card, ms }) {
   try {
     const { logStart, startOutcome, cardHash } = await import(new URL('./card-render.mjs', import.meta.url))
     const base = dirname(fileURLToPath(import.meta.url))
     const plain = brief.replace(/[*_`]/g, '')
     const field = (re) => plain.match(re)?.[1]?.trim() ?? ''
     const project = brief.match(/<project\b[^>]*\bname=\\?"([^"\\]+)/)?.[1] ?? brief.match(/<project\b[^>]*\bid=\\?"([^"\\]+)/)?.[1] ?? ''
-    logStart({ session, project, role: field(/\bRole:[ \t]*([^·|\n]+)/i), kit: field(/\bKit:[ \t]*([\w-]+)/i), size: field(/\bSize:[ \t]*([SML])\b/i), guard: guard.match(/Guards in this session: (\w+)/)?.[1] ?? '', card: card.match(/Card refreshed (\w+)/)?.[1] ?? (existsSync(join(base, 'docs', 'TEAMS.md')) ? cardHash(base) : ''), ...startOutcome(checkNow, modelNote) })
+    logStart({ session, project, role: field(/\bRole:[ \t]*([^·|\n]+)/i), kit: field(/\bKit:[ \t]*([\w-]+)/i), size: field(/\bSize:[ \t]*([SML])\b/i), guard: guard.match(/Guards in this session: (\w+)/)?.[1] ?? '', card: card.match(/Card refreshed (\w+)/)?.[1] ?? (existsSync(join(base, 'docs', 'TEAMS.md')) ? cardHash(base) : ''), ...(ms ? { ms } : {}), ...startOutcome(checkNow, modelNote) })
   } catch { /* counting is never a reason to stop a start */ }
 }
 async function countRelay(session) {
@@ -2989,8 +3023,10 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           const isStart = spawned || (lookup && brief !== prompt)
           const modelNote = modelOnce(brief, transcriptPath, session)
           const guard = isStart ? await guardLine() : ''
+          // B3 #730: the count goes first. The card refresh writes ~35 files to the project mount (1.4 s warm) and the hook is killed at 5 s,
+          // after which no start was logged (hook_cancelled, timedOut, 5087 ms, 2026-11-22). `ms` is the hook's age when the line was written.
+          if (isStart) await countStart({ session, brief, checkNow, modelNote, guard, card: '', ms: Math.round(performance.now()) })
           const card = isStart ? await cardLine() : ''
-          if (isStart) await countStart({ session, brief, checkNow, modelNote, guard, card })
           const roleCardText = await roleContext(brief, cwd, session)
           await stampFromTranscript(session, () => (transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : ''), cwd)
           const context = [checkNow, relayNote, isStart ? await gateBriefContext(brief, model) : '', guard, card, modelNote, roleCardText, await itemContext(brief, cwd, session), await stopNote(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
@@ -3008,7 +3044,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         const shipped = join(tmpdir(), `claude-setup-artifacts-${String(session).replace(/\W/g, '')}`)
         const transcript = () => (transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : '')
         const sessionTranscript = () => [transcriptPath, agentTranscript(transcriptPath, agentId)].filter((p) => p && existsSync(p)).map(read).join('\n')
-        const startNote = await startFromTranscript(session, transcript, cwd)
+        const startNote = agentId ? '' : await startFromTranscript(session, transcript, cwd) // a subagent's call must not spend the thread's once-mark
         await stampFromTranscript(session, transcript, cwd)
         const gateRole = session ? read(join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)).trim() : ''
         // M50: a relay that reached the thread mid-turn may never have fired the prompt hook; the transcript has it, so a locked thread re-reads it at its next tool call.

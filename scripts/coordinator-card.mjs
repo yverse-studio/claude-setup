@@ -6,7 +6,7 @@
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { CARD_MAX, INDEX_MAX, buildCard as card, buildIndex as index, cardHash, renderAll, ruleRows, writeAll } from '../global/card-render.mjs'
+import { CARD_MAX, INDEX_MAX, buildCard as card, buildIndex as index, cardHash, renderAll, ruleRows, startsWeek, writeAll } from '../global/card-render.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const read = (f) => readFileSync(join(root, f), 'utf8').replace(/\r/g, '')
@@ -18,7 +18,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const out = process.argv[2] ?? './COORDINATOR-CARD.md'
   if (out.startsWith('-')) { console.error(`coordinator-card: "${out}" is a flag, not an output path (usage: node scripts/coordinator-card.mjs [out-path])`); process.exit(2) }
   const dir = dirname(out)
-  const files = renderAll({ base: root })
+  const files = renderAll({ base: root, startsLine: startsWeek(dir) })
   const name = out.split(/[\\/]/).pop()
   if (name !== 'COORDINATOR-CARD.md') { files.set(name, files.get('COORDINATOR-CARD.md')); files.delete('COORDINATOR-CARD.md') }
   const written = writeAll(dir, files)

@@ -17,7 +17,8 @@ import { fileURLToPath } from 'node:url'
 let roleOf = () => null
 let openThreads = () => []
 let toolCalls = () => []
-try { ({ roleOf, openThreads, toolCalls } = await import('./rule-guard.mjs')) } catch { /* no rule-guard here */ }
+let roleAgain
+try { ({ roleOf, openThreads, toolCalls, roleAgain } = await import('./rule-guard.mjs')) } catch { /* no rule-guard here */ }
 
 export const POINTER = 'Team rule (claude-setup docs/TEAMS.md): route every task on its own (task picks the kit, not the project; then size S/M/L), call only the roles it needs, as thread or subagent as the roster says, and pass `model` from the role\'s row on every thread start and Agent call.'
 export const PM_FILE = '.claude/skills/operator/roles/project-manager.md'
@@ -302,6 +303,8 @@ export const BRIEF_FIELDS = [
   // vacation-game 2026-11-15 (yskills): levels went to build without a teardown, a level plan or design proposals. A level brief in the game kit names the
   // files of the steps before it (docs/TEAMS.md, A level): the Planner the Researcher's page, the Game Designer that page and the plan, a builder all three.
   { key: 'Level', name: 'Level: research <page> · plan <file> · design <file> (a level brief in the game kit, docs/TEAMS.md A level)', tpl: 'Level: research <page> · plan <file> · design <file>, or `n/a <why no new or reworked level>`; game kit builder and designer briefs', applies: needsLevel, ok: levelOk, cls: () => 'judgment' },
+  // GameDev 2026-11-15: a garment took ~18 rounds of material tinkering and failed a gate while the project's proven list held a route that had passed three times. The brief names the passed recipe the job copies (or n/a); the route itself lives in the project's CLAUDE.md and proven list, not here.
+  { key: 'Proven recipe', name: 'Proven recipe: (the passed recipe from the project\'s proven list this job copies, or n/a and why)', tpl: 'Proven recipe: <the project\'s proven list (its CLAUDE.md names it) read first, and the passed recipe this job copies (write "copies" and its name), or "n/a" and why none applies; none passed for this kind of piece means stop and report>', applies: (p) => /^[ \t>-]*Role:[ \t]*Character TD\b/im.test(p), ok: line(/^[ \t>-]*Proven recipe:[^\n<]*\b(?:copies|n\/a)[ \t]+[^<\s][^\n]{4,}/im), cls: () => 'recoverable', fill: () => 'Proven recipe: read the project\'s proven list first and name the passed recipe this job copies ("copies <name>"), or "n/a <why none applies>"; none passed for this kind of piece means stop and report, never invent a route' },
   { key: 'Researcher', name: 'Researcher: (the task asks for research)', tpl: 'Researcher: <subagent and model, or the Researcher thread; research tasks only>', applies: (p) => ASKS_RESEARCH.test(p) && !/\bRole:[ \t]*Researcher\b/i.test(p), ok: line(/^[ \t>-]*Researcher:[ \t]*[^<\s]/im), cls: () => 'recoverable', fill: () => 'Researcher: ask the coordinator for a Researcher thread (message_coordinator) and go on meanwhile' },
   { key: 'Tester', strict: false, tpl: 'Tester: <Tester thread; size L Programmer only>', applies: (p) => /^[ \t>-]*Role:[ \t]*Programmer\b/im.test(p), ok: (p) => !needsTester(p), cls: () => 'judgment' },
 ]
@@ -524,9 +527,9 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
   process.stdin.on('data', (c) => { raw += c })
   process.stdin.on('end', () => {
     try {
-      const { tool_name: tool = '', tool_input: input, cwd = process.cwd(), transcript_path: transcript, session_id: session, model } = JSON.parse(raw || '{}')
+      const { tool_name: tool = '', tool_input: input, cwd = process.cwd(), transcript_path: transcript, session_id: session, model, source } = JSON.parse(raw || '{}')
       const mark = (kind) => join(dir, 'booted', `${String(session).replace(/\W/g, '')}.${kind}`)
-      const say = (context) => process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: context } }))
+      const say = (context) => process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: [context, source === 'compact' ? roleAgain?.(session, cwd) : ''].filter(Boolean).join('\n') } })) // #728: a compaction drops the role card, so it comes back
       if (mode === 'start') {
         // SessionStart names the session's model; rule-guard's brief check reads it before the first reply.
         if (session && typeof model === 'string' && model) writeFileSync(modelFile(session), model)

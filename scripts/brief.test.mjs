@@ -152,8 +152,8 @@ test('a generated gate-role brief names gate.md and the kit checks in Prior art 
 
 test('Character TD is a sheet role and a gate builder: the generated game brief asks for Sheet, Target image, Source and Gate, and passes once filled (gate #483 r2, F5)', () => {
   const { sheet, ...noSheet } = FIELDS
-  assert.throws(() => buildBrief({ teams, role: 'Character TD', kit: 'game', size: 'M', ...noSheet }), (e) => e instanceof BriefError && /--sheet/.test(e.message))
-  const full = buildBrief({ teams, role: 'Character TD', kit: 'game', size: 'M', ...FIELDS, sheet: 'docs/cast.md', targetImage: 'lib/characters/CH_x/approval/A.png', source: 'lib/characters/CH_x/source/A.blend', gate: 'Reviewer · fit round 1 before owner' })
+  assert.throws(() => buildBrief({ teams, role: 'Character TD', kit: 'game', size: 'M', ...noSheet, provenRecipe: 'the project proven list, copies the Saki outfits fit' }), (e) => e instanceof BriefError && /--sheet/.test(e.message))
+  const full = buildBrief({ teams, role: 'Character TD', kit: 'game', size: 'M', ...FIELDS, provenRecipe: 'the project proven list, copies the Saki outfits fit', sheet: 'docs/cast.md', targetImage: 'lib/characters/CH_x/approval/A.png', source: 'lib/characters/CH_x/source/A.blend', gate: 'Reviewer · fit round 1 before owner' })
   assert.match(full.brief, /\nSheet: docs\/cast\.md\nTarget image: lib\/characters\/CH_x\/approval\/A\.png\nSource: lib\/characters\/CH_x\/source\/A\.blend\n/)
   assert.match(full.brief, /\nGate: Reviewer · fit round 1 before owner\n/)
   assert.deepEqual(decide(START, { brief: full.brief, title: full.title, model: full.model }, [], [], teams), {})
@@ -218,7 +218,7 @@ test('a rendered brief file per role passes team-guard once its <...> are filled
       const filled = block.split('\n').filter((l) => !/^(Target image|Source|Topic):/.test(l) && (size === 'L' || !/^Tester:/.test(l)))
         .map((l) => l.replace(/^Sheet: .*/, 'Sheet: n/a this slice is no body, face or outfit job').replace(/^Level: .*/, 'Level: n/a fixture, this slice changes no level').replace(/Size: <[^>]+>/, `Size: ${size}`).replace(/Kit: <[^>]+>/, `Kit: ${kit}`)
           .replace(/^Model: .*/, `Model: ${model}`).replace(/^Gate: .*/, 'Gate: Reviewer · x before owner')
-          .replace(/<[^>\n]+>/g, (m) => (/PLAN\.json/.test(m) ? 'M30' : /^<sources/.test(m) ? 'obra/superpowers' : 'something concrete for this task'))).join('\n')
+          .replace(/<[^>\n]+>/g, (m) => (/PLAN\.json/.test(m) ? 'M30' : /^<sources/.test(m) ? 'obra/superpowers' : /^<the project's proven list/.test(m) ? 'the project proven list, copies the Saki outfits fit' : 'something concrete for this task'))).join('\n')
       const out = decide(START, { brief: filled, title: `${role} · x`, model }, [], [], teams)
       assert.equal(out.block, undefined, `${role} at ${size}: ${out.block}`)
     }
@@ -238,7 +238,7 @@ test('#627: an Animator brief is generated only with --scene-docs, and carries t
 test('#702: brief.mjs exits 2 naming --target-image when a real sheet has no target, and passes decide() with both flags', async () => {
   const { spawnSync } = await import('node:child_process')
   const args = ['--role', 'Character TD', '--kit', 'game', '--size', 'M', '--item', 'M1', '--plan', 'gate.md', '--acceptance', 'tests pass', '--threads', 'list_threads checked, none open on this topic',
-    '--prior-art', 'yverse-studio/claude-setup checked -> adapt, because it exists', '--done', 'node --test passes', '--stop', 'two rounds', '--what', 'x', '--json']
+    '--prior-art', 'yverse-studio/claude-setup checked -> adapt, because it exists', '--done', 'node --test passes', '--stop', 'two rounds', '--what', 'x', '--proven-recipe', 'the project proven list, copies the Saki outfits fit', '--json']
   const cli = (more, sheet = 'docs/cast.md') => spawnSync(process.execPath, [join(root, 'scripts', 'brief.mjs'), ...args, '--sheet', sheet, ...more], { encoding: 'utf8' })
   const none = cli([])
   assert.equal(none.status, 2)
