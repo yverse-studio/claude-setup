@@ -459,3 +459,8 @@ test('#743 (moved from #689): the card leaves a builder between plan gate and bu
   assert.ok(card.includes('- A builder between plan gate and build gate is left alone: no relay, no resolve, no status post; one post per gate verdict.'))
   assert.ok(card.length < CARD_MAX - 700, String(card.length))
 })
+
+test('#743 gate round 1: the download rule left the card for the index, which carries it with its homes', () => {
+  const idx = buildIndex({ hash: 'x', date: 'd' })
+  assert.match(idx, /- A download or asset in the inbox goes to a Character TD thread[^\n]*asset-intake[^\n]*Archivist indexes after the gate → [^\n]*asset-intake\/SKILL\.md[^\n]*character-td\.md/)
+})
