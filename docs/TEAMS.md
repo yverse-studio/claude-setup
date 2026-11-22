@@ -90,14 +90,14 @@ Programmer start without it. The `setup` kit has no app to walk: its line says
 One loop for every project; each line links the home of its rule and repeats none of it.
 
 1. yskills starts a project and states a task ([`USING.md`](USING.md#start-a-project), Start a project).
-2. The coordinator routes it: the task picks the kit ([Kits](#kits)), then the size ([Sizes](#sizes)), and starts one thread with the short brief of its card ([Spawn rule](#spawn-rule)).
+2. The coordinator routes it: the task picks the kit ([Kits](#kits)), then the size ([Sizes](#sizes)), and starts the threads that size names, each with the short brief of its card ([Spawn rule](#spawn-rule)).
 3. Size S: one builder thread builds it ([Who builds and who judges](#spawn-rule)).
 4. Sizes M and L: a lead thread plans and hands the parts to builder subagents; the coordinator names the lead's tier in the brief's `Model:` line ([Models line](#spawn-rule)).
 5. Someone who did not build it gives the verdict ([`gate.md`](../.claude/skills/operator/gate.md), Gate size).
 6. On a pass the PR merges without yskills, and the merge is the deploy ([`gate.md`](../.claude/skills/operator/gate.md), Merge policy).
-7. A second builder thread runs only for a parallel slice on other files ([Reuse rule](#reuse-rule), the cap on parallel Programmers).
-8. What a thread learned goes back to claude-setup as a PR ([`MAP.md`](MAP.md), Where a lesson goes).
-9. yskills is asked only the ask-first list, a goal or a taste call, each as a card with its link ([`permissions.md`](permissions.md)).
+7. When a thread is reused and when a second one starts: [Reuse rule](#reuse-rule) (the cap on parallel Programmers).
+8. What a thread learned goes to the home of its kind ([`MAP.md`](MAP.md), Where a lesson goes).
+9. yskills is asked as a card with its link, and only what the ask rule names ([`CLAUDE.md`](../CLAUDE.md), Hard rules; the list: [`permissions.md`](permissions.md)).
 
 ## Pipeline
 
@@ -137,7 +137,7 @@ The company. Runs as: where the role lives. Model: the tier (the id is in the Mo
 | Analytics ([`analytics.md`](../.claude/skills/operator/roles/analytics.md)) | what is measured and why, the weekly numbers line | step 4 of a site, app or game; a PR with a new user action | subagent of the Planner | Sonnet |
 | Animator ([`animator.md`](../.claude/skills/operator/roles/animator.md)) | poses and animates frozen rigged figures: key poses, loops, scene clips, contact; runs the fixed check script and hands strip and numbers to the gate | size M or L of a `game` or `story` scene or clip, after the models are frozen | a thread `Animator · <scene>`; `animator` agent file | Sonnet for given numbers; Opus for posing, IK, scene systems |
 | Programmer ([`programmer.md`](../.claude/skills/operator/roles/programmer.md)) | one slice or fix as one PR, tests first, green CI; runs the S and M gate ([`gate.md`](../.claude/skills/operator/gate.md)) | every size, step 5 | a fresh thread per slice or PR (follow-ups on its PR go to it), max three at once; at M and L the lead of Sonnet subagents | Sonnet at S; the lead at M is Opus, on L or when hard Fable (Sonnet only as its subagent, or with a why in the brief) |
-| Tester ([`tester.md`](../.claude/skills/operator/roles/tester.md)) | QA: the gate, grades the preview against the criteria; never built it | step 6 | per `gate.md` (Gate size) | Opus |
+| Tester ([`tester.md`](../.claude/skills/operator/roles/tester.md)) | QA: the gate, grades the preview against the criteria; never built it | step 6 | a thread per `gate.md` (Gate size) | Opus |
 | Reviewer ([`reviewer.md`](../.claude/skills/operator/roles/reviewer.md)) | reads the diff for bugs, mess, missing tests | every gate | subagent of the gate, or a thread (any kit) | Fable; Opus when Fable is unavailable |
 | Security ([`security.md`](../.claude/skills/operator/roles/security.md)) | the diff and the preview attacked like an outsider | user input, auth, money, secrets; before launch | subagent of the gate | Opus, effort high on money, auth, secrets |
 | Playtester ([`playtester.md`](../.claude/skills/operator/roles/playtester.md)) | plays a game build like a stranger | every build that changes play | a fresh subagent of the gate | Opus |

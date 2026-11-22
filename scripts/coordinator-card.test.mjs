@@ -461,7 +461,7 @@ test('#743: the card with the 7-day line is at most 7,050 characters (the who-bu
 
 test('#743: the kept lines stay (spawn, models, sizes, roster, brief copy) and the cut lines are gone', () => {
   const card = buildCard({ hash: 'x', date: 'd' })
-  for (const kept of ['Short form (the thread fills the rest', 'briefs/<role>.md of this folder', '## Models', 'A thread picks no Fable', 'the Programmer is the lead', 'merge gate', '## Sizes', '- S:', '- M:', '- L:', '## Roster', '- Programmer:', '- Reviewer:', 'Controls and World life', 'no post per review round']) assert.ok(card.includes(kept), kept)
+  for (const kept of ['Short form (the thread fills the rest', 'briefs/<role>.md of this folder', '## Models', 'A thread picks no Fable', 'the Programmer is the lead', 'merge gate', '## Sizes', '- S:', '- M:', '- L:', '## Roster', '- Programmer:', '- Reviewer:', '- Tester:', '- Planner:', 'Controls and World life', 'no post per review round']) assert.ok(card.includes(kept), kept)
   for (const gone of ['Downloads/assets', "A gate round's brief has the Round, Asset and Picture card lines"]) assert.ok(!card.includes(gone), gone)
 })
 
