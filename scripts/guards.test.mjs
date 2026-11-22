@@ -953,7 +953,7 @@ test('team guard: a thread start runs its role on the tier its Roster row names'
   assert.equal(wrongModel(brief('Designer', 'S'), 'fable', teams), null, 'the Designer row names Fable for the gate director')
   assert.ok(wrongModel(brief('Designer', 'S'), 'sonnet', teams), 'a Designer is never Sonnet')
   assert.match(teams, /\| Designer .*Fable: art direction, gate director/, 'the Designer row names the gate director')
-  // yskills 2026-11-03: gates always Opus, at every size.
+  // yskills 2026-11-03: the Tester gate is Opus at every size.
   for (const size of ['S', 'M', 'L']) {
     assert.equal(wrongModel(brief('Tester', size), 'opus', teams), null, `Tester ${size} on Opus`)
     assert.ok(wrongModel(brief('Tester', size), 'sonnet', teams), `Tester ${size} never on Sonnet`)
@@ -1701,7 +1701,7 @@ test('team guard (S5): the Roster model cells, table-driven', async () => {
     ['Planner', 'M', 'opus', '', true], ['Planner', 'M', 'fable', '', false], ['Planner', 'M', 'opus', '\nModel: opus (Fable unavailable)', false],
     ['Reviewer', 'M', 'opus', '', true], ['Reviewer', 'M', 'fable', '', false], ['Reviewer', 'S', 'opus', '\nModel: opus (Fable unavailable)', false],
     ['Researcher', 'M', 'sonnet', '', true], ['Researcher', 'M', 'opus', '', false],
-    ['Programmer', 'M', 'sonnet', '', false], ['Programmer', 'M', 'opus', '', true],
+    ['Programmer', 'M', 'sonnet', '', false], ['Programmer', 'M', 'opus', '', true], ['Programmer', 'L', 'fable', '', false], ['Programmer', 'M', 'opus', '\nModel: opus (M lead, not hard)', false],
   ]
   for (const [role, size, model, extra, refused] of rows) assert.equal(!!wrongModel(brief(role, size, extra), model, teams), refused, `${role} ${size} on ${model}${extra ? ' with a reason' : ''}`)
 })

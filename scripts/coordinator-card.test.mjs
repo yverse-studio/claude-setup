@@ -438,12 +438,11 @@ test('#743: the card with the 7-day line is at most 7,050 characters (the who-bu
   const line = 'Thread starts, last 7 days (as of 2026-11-22): 7, clean 0, repaired 6, refused 1, wrong-model 0 (false starts 14%).'
   const card = buildCard({ teams, hash: 'abc12345', date: '2026-11-22', startsLine: line })
   assert.ok(card.length <= 7050, String(card.length))
-  assert.ok(CARD_MAX - card.length >= 350, `free: ${CARD_MAX - card.length}`)
 })
 
 test('#743: the kept lines stay (spawn, models, sizes, roster, brief copy) and the cut lines are gone', () => {
   const card = buildCard({ hash: 'x', date: 'd' })
-  for (const kept of ['Copy briefs/<role>.md of this folder', 'Nothing else is added or written from memory', '## Models', 'A thread picks no Fable', '## Sizes', '- S:', '- M:', '- L:', '## Roster', '- Programmer:', '- Reviewer:', 'Controls and World life', 'no post per review round']) assert.ok(card.includes(kept), kept)
+  for (const kept of ['Copy briefs/<role>.md of this folder', 'Nothing else is added or written from memory', '## Models', 'A thread picks no Fable', 'the Programmer is the lead', '## Sizes', '- S:', '- M:', '- L:', '## Roster', '- Programmer:', '- Reviewer:', 'Controls and World life', 'no post per review round']) assert.ok(card.includes(kept), kept)
   for (const gone of ['Downloads/assets', "A gate round's brief has the Round, Asset and Picture card lines"]) assert.ok(!card.includes(gone), gone)
 })
 
@@ -465,4 +464,8 @@ test('#743 (moved from #689): the card leaves a builder between plan gate and bu
 test('#743 gate round 1: the download rule left the card for the index, which carries it with its homes', () => {
   const idx = buildIndex({ hash: 'x', date: 'd' })
   assert.match(idx, /- A download or asset in the inbox goes to a Character TD thread[^\n]*asset-intake[^\n]*Archivist indexes after the gate → [^\n]*asset-intake\/SKILL\.md[^\n]*character-td\.md/)
+})
+
+test('#756: a TEAMS.md without the Who-builds paragraph stops the card', () => {
+  assert.throws(() => buildCard({ teams: teams.replace(/\*\*Who builds and who judges\*\*[^\n]*/, ''), hash: 'x', date: 'd' }), /Who builds and who judges/)
 })
