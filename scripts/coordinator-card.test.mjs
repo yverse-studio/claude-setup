@@ -384,11 +384,13 @@ test('#730: a failing write reaches stderr as one line, and the start still goes
   rmSync(out, { recursive: true, force: true })
 })
 
-test('#730: the hook writes the count before the slow card refresh, so a hook killed at its 5 s timeout still leaves the start', () => {
+test('#730/#742: the start count and the card refresh are never awaited in the prompt path; the count runs before the refresh in the deferred step', () => {
   const src = readFileSync(join(ROOT, 'global/rule-guard.mjs'), 'utf8')
   const at = (needle) => src.indexOf(needle)
-  assert.ok(at('await countStart(') > 0 && at('await cardLine()') > 0)
-  assert.ok(at('await countStart(') < at('await cardLine()'), 'countStart runs before cardLine (the card refresh writes ~35 files to the mount)')
+  const prompt = src.slice(at("if (mode === 'prompt') {"), at("if (mode === 'stop') {"))
+  assert.doesNotMatch(prompt, /await [^\n]*(countStart|cardLine)/, 'the prompt path waits for neither')
+  const step = src.slice(at('async function deferredStart'))
+  assert.ok(step.indexOf('countStart(') > 0 && step.indexOf('cardLine(') > step.indexOf('countStart('), 'countStart runs before cardLine (the card refresh writes ~35 files to the mount)')
 })
 
 test('#730: the card carries the 7-day start line, rendered from the folder, and nothing else changes when there is no log', () => {

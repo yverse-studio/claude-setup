@@ -3,6 +3,7 @@
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
 import { cpSync, existsSync, mkdirSync, statSync, symlinkSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { randomUUID } from 'node:crypto'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
@@ -734,14 +735,49 @@ test('rule guard: a thread start refreshes a stale coordinator card in its proje
     writeFileSync(join(bin, 'curl'), '#!/bin/sh\nexit 0\n', { mode: 0o755 })
     const env = { ...process.env, PATH: `${bin}:${process.env.PATH}`, CLAUDE_SETUP_RULE_GUARD: '', CLAUDE_SETUP_PROJECT_FILES: out }
     const brief = `<wake reason="spawn"><relay>\nRole: Programmer · Kit: setup · Size: S${FULL}</relay></wake>`
-    const run = (session) => spawnSync(process.execPath, [join(dir, 'rule-guard.mjs'), 'prompt'], { input: JSON.stringify({ prompt: brief, cwd: root, session_id: session }), encoding: 'utf8', env }).stdout
-    assert.match(run(`card1${process.pid}`), /Card refreshed [0-9a-f]{8}: /, 'the start receipt names the refresh')
+    // #742: the prompt hook only starts the refresh (a detached child), it never waits for the mount; CLAUDE_SETUP_DEFER=wait runs the child's work inline so the test can see it.
+    const run = (session, e = {}) => spawnSync(process.execPath, [join(dir, 'rule-guard.mjs'), 'prompt'], { input: JSON.stringify({ prompt: brief, cwd: root, session_id: session }), encoding: 'utf8', env: { ...env, CLAUDE_SETUP_DEFER: 'wait', ...e } }).stdout
+    run(`card1${process.pid}`)
     for (const f of ['COORDINATOR-CARD.md', 'ROSTER.md', 'briefs/programmer.md']) assert.ok(existsSync(join(out, 'claude-setup', f)), f)
-    assert.doesNotMatch(run(`card2${process.pid}`), /Card refreshed/, 'a current card is left alone and the start says nothing')
+    const had = readFileSync(join(out, 'claude-setup', 'COORDINATOR-CARD.md'), 'utf8')
+    run(`card2${process.pid}`)
+    assert.equal(readFileSync(join(out, 'claude-setup', 'COORDINATOR-CARD.md'), 'utf8'), had, 'a current card is left alone')
     writeFileSync(join(out, 'claude-setup', 'COORDINATOR-CARD.md'), 'Coordinator card (claude-setup 00000000, 2026-11-01).\nold')
-    assert.match(run(`card3${process.pid}`), /Card refreshed/, 'a stale card is refreshed')
-    const checkout = spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'prompt'], { input: JSON.stringify({ prompt: brief, cwd: root, session_id: `card4${process.pid}` }), encoding: 'utf8', env: { ...env, CLAUDE_SETUP_PROJECT_FILES: mkdtempSync(join(tmpdir(), 'projfiles2-')) } }).stdout
-    assert.doesNotMatch(checkout, /Card refreshed/, 'run from a checkout (no docs beside the guards) it renders nothing')
+    run(`card3${process.pid}`)
+    assert.match(readFileSync(join(out, 'claude-setup', 'COORDINATOR-CARD.md'), 'utf8'), /^Coordinator card \(claude-setup [0-9a-f]{8},/, 'a stale card is refreshed')
+    assert.doesNotMatch(run(`card5${process.pid}`), /Card refreshed/, 'the start text no longer waits on or reports the refresh')
+    const empty = mkdtempSync(join(tmpdir(), 'projfiles2-'))
+    spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'prompt'], { input: JSON.stringify({ prompt: brief, cwd: root, session_id: `card4${process.pid}` }), encoding: 'utf8', env: { ...env, CLAUDE_SETUP_PROJECT_FILES: empty } })
+    assert.equal(existsSync(join(empty, 'claude-setup', 'COORDINATOR-CARD.md')), false, 'run from a checkout (no docs beside the guards) it renders nothing')
+    rmSync(empty, { recursive: true, force: true })
+  } finally { for (const d of [dir, bin, out]) rmSync(d, { recursive: true, force: true }) }
+})
+
+// #742: the prompt hook (5 s limit) printed nothing on 3 of 3 live starts because the card refresh and the start log wrote ~35 files to the project mount
+// (2.1 s to 2.4 s measured) and a missing playbook was fetched with curl (up to 4 s) before the context was printed.
+test('#742: the prompt path makes no network call and no write to the project folder before it prints; the deferred step does the writes', () => {
+  if (process.platform === 'win32') return
+  const dir = mkdtempSync(join(tmpdir(), 'p742-'))
+  const bin = mkdtempSync(join(tmpdir(), 'p742bin-'))
+  const out = mkdtempSync(join(tmpdir(), 'p742out-'))
+  try {
+    for (const f of readdirSync(join(root, 'global')).filter((x) => x.endsWith('.mjs'))) cpSync(join(root, 'global', f), join(dir, f))
+    for (const f of ['CLAUDE.md', 'docs/TEAMS.md', 'docs/MAP.md', 'config/persona.json', '.claude/skills/operator/checklists.md', '.claude/skills/operator/roles/project-manager.md']) { mkdirSync(join(dir, f, '..'), { recursive: true }); cpSync(join(root, f), join(dir, f)) } // a complete install (no guard or boot file missing, so fillMissing fetches nothing), but no playbook beside it: the old path fetched that
+    const curlLog = join(bin, 'curl.log')
+    writeFileSync(join(bin, 'curl'), `#!/bin/sh\necho "$@" >> ${curlLog}\nexit 0\n`, { mode: 0o755 })
+    const env = { ...process.env, PATH: `${bin}:${process.env.PATH}`, CLAUDE_SETUP_RULE_GUARD: '', CLAUDE_SETUP_PROJECT_FILES: out, CLAUDE_SETUP_DEFER: 'skip' }
+    const brief = `<wake reason="spawn"><relay>\nRole: Programmer · Kit: setup · Size: S${FULL}</relay></wake>`
+    const session = randomUUID() // a real session id (the start log refuses others), new per run (the hook leaves marks in tmpdir)
+    const first = spawnSync(process.execPath, [join(dir, 'rule-guard.mjs'), 'prompt'], { input: JSON.stringify({ prompt: brief, cwd: root, session_id: session }), encoding: 'utf8', env })
+    assert.match(first.stdout, /you are the Programmer/, 'the context is printed')
+    assert.equal(existsSync(curlLog), false, `no curl before the context is printed: ${existsSync(curlLog) ? readFileSync(curlLog, 'utf8') : ''}`)
+    assert.deepEqual(existsSync(join(out, 'claude-setup')) ? readdirSync(join(out, 'claude-setup')) : [], [], 'nothing was written to the project folder')
+    const later = spawnSync(process.execPath, [join(dir, 'rule-guard.mjs'), 'deferred'], { input: JSON.stringify({ session, brief, checkNow: '', modelNote: '', guard: '', ms: 321 }), encoding: 'utf8', env })
+    assert.equal(later.status, 0, later.stderr)
+    assert.ok(existsSync(join(out, 'claude-setup', 'COORDINATOR-CARD.md')), 'the deferred step renders the card')
+    const log = readdirSync(join(out, 'claude-setup', 'brief-log'))
+    assert.equal(log.length, 1, 'and writes the start log')
+    assert.equal(JSON.parse(readFileSync(join(out, 'claude-setup', 'brief-log', log[0]), 'utf8')).ms, 321)
   } finally { for (const d of [dir, bin, out]) rmSync(d, { recursive: true, force: true }) }
 })
 
