@@ -1,10 +1,10 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtempSync, writeFileSync, readFileSync, readdirSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { execFileSync } from 'node:child_process'
-import { problems, setItem, addItem, stand } from './plan.mjs'
+import { problems, setItem, addItem, stand, hasApproval } from './plan.mjs'
 
 const base = () => ({ goal: 'Ship X', updated: '2026-11-12', items: [
   { id: 'M1', title: 'Checkout', status: 'done', owner: 'Programmer · checkout', evidence: 'https://github.com/o/r/pull/14' },
@@ -102,4 +102,23 @@ test('deps: once a plan uses deps, an id or a range named in waits_on/next must 
   assert.match(out, /M1: names M4 in waits_on\/next but not in deps/)
   assert.doesNotMatch(out, /names M3/)
   assert.deepEqual(problems({ goal: 'g', items: [{ id: 'M1', title: 't', status: 'todo', next: 'after M2' }, { id: 'M2', title: 't', status: 'todo' }] }), [])
+})
+
+test('#703: with an approval/INDEX.md in the plan\'s folder tree a doing item needs target_image; without one nothing changes', () => {
+  const p = base()
+  assert.deepEqual(problems(p, { approval: false }), [])
+  assert.match(problems(p, { approval: true }).join('\n'), /^M2: doing needs target_image[^\n]*approve\.mjs lock --item M2[^\n]*plan\.mjs set M2 target_image=/)
+  assert.equal(problems(p, { approval: true }).length, 1, 'done, wartet and todo items need none')
+  p.items[1].target_image = 'n/a short'
+  assert.match(problems(p, { approval: true }).join('\n'), /M2: doing needs target_image/, 'n/a needs a why of 10+ characters')
+  for (const ok of ['n/a store listing, text only', 'lib/characters/CH_x/approval/A.png']) { p.items[1].target_image = ok; assert.deepEqual(problems(p, { approval: true }), [], ok) }
+  const dir = mkdtempSync(join(tmpdir(), 'plan-approval-'))
+  const file = join(dir, 'PLAN.json')
+  writeFileSync(file, JSON.stringify(base()))
+  const run = () => { try { return execFileSync('node', [new URL('./plan.mjs', import.meta.url).pathname, 'check', '--file', file], { encoding: 'utf8', stdio: 'pipe' }) } catch (e) { return `exit ${e.status} ${e.stderr}` } }
+  assert.match(run(), /ok, 4 items/)
+  mkdirSync(join(dir, 'lib', 'characters', 'CH_x', 'approval'), { recursive: true }); writeFileSync(join(dir, 'lib', 'characters', 'CH_x', 'approval', 'INDEX.md'), '')
+  assert.match(run(), /^exit 1 plan: M2: doing needs target_image/)
+  assert.equal(hasApproval(dir), true); assert.equal(hasApproval(join(dir, 'lib')), false)
+  execFileSync('node', [new URL('./plan.mjs', import.meta.url).pathname, 'set', 'M4', 'status=doing', '--file', file], { stdio: 'pipe' }) // a write is never blocked by it: one open item must not lock the plan
 })
