@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kofferlauf</title>
+<link rel="icon" href="data:,">
+<style>
+  :root { --ink: #1f2937; --paper: #fffdf7; --edge: #e8c9a8; --hot: #c4301c; --gold: #f5c542; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #8fa3b5; touch-action: none; user-select: none; -webkit-user-select: none; font: 600 16px/1.35 system-ui, sans-serif; color: var(--ink); }
+  canvas { display: block; width: 100%; height: 100%; }
+  #hud { position: fixed; z-index: 2; inset: 16px 16px auto 16px; display: flex; justify-content: space-between; align-items: flex-start; pointer-events: none; }
+  #timer, #count { font-size: 40px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; color: #fff; text-shadow: 0 2px 0 rgb(0 0 0 / .45), 0 0 8px rgb(0 0 0 / .35); }
+  #count { text-align: right; transform-origin: right top; }
+  #count small { display: block; font-size: 14px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+  #timer.hot { color: #ff6b57; animation: pulse 1s infinite; }
+  #count.bump { animation: bump .2s; }
+  .reduced #timer.hot, .reduced #count.bump { animation: none; }
+  @keyframes pulse { 50% { transform: scale(1.12); } }
+  @keyframes bump { 50% { transform: scale(1.2); } }
+  button { font: inherit; font-weight: 800; color: var(--ink); background: var(--paper); border: 0; border-radius: 12px; padding: 12px 20px; min-height: 44px; min-width: 44px; box-shadow: 0 3px 0 var(--edge); cursor: pointer; pointer-events: auto; }
+  button:focus-visible, input:focus-visible { outline: 3px solid #1d4ed8; outline-offset: 2px; }
+  #pause { position: fixed; z-index: 2; top: 76px; right: 16px; width: 56px; height: 56px; padding: 0; font-size: 20px; }
+  #hint { position: fixed; z-index: 2; left: 0; right: 0; bottom: 18px; text-align: center; color: #fff; text-shadow: 0 1px 0 rgb(0 0 0 / .6), 0 0 6px rgb(0 0 0 / .5); pointer-events: none; transition: opacity .4s; }
+  #hint.off { opacity: 0; }
+  #stick { position: fixed; z-index: 2; width: 120px; height: 120px; border-radius: 50%; border: 3px solid rgb(255 255 255 / .7); background: rgb(255 255 255 / .15); display: none; pointer-events: none; }
+  .touch #stick { display: block; }
+  #knob { position: absolute; left: 38px; top: 38px; width: 44px; height: 44px; border-radius: 50%; background: rgb(255 255 255 / .85); }
+  .panel { position: fixed; z-index: 3; left: 50%; top: 14vh; transform: translateX(-50%); display: none; width: min(340px, calc(100vw - 32px)); box-sizing: border-box; background: var(--paper); border-radius: 16px; padding: 20px 24px; text-align: center; box-shadow: 0 4px 0 var(--edge); }
+  .panel.show { display: block; }
+  .panel h1 { margin: 0 0 6px; font-size: 26px; }
+  .panel p { margin: 4px 0 14px; font-size: 18px; }
+  .panel .row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .panel label { display: flex; align-items: center; justify-content: space-between; gap: 12px; text-align: left; margin: 10px 0; }
+  .panel input[type=range] { width: 150px; }
+  @media (max-width: 480px) { #timer, #count { font-size: 32px; } }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="hud">
+  <div id="timer" data-testid="timer" aria-label="Time left">60.0</div>
+  <div id="count" data-testid="count" aria-live="polite"><small>Suitcases</small><span id="n">0</span>/5</div>
+</div>
+<button id="pause" data-testid="pause" aria-label="Pause">II</button>
+<div id="hint"></div>
+<div id="stick" data-testid="stick"><div id="knob"></div></div>
+
+<div id="win" class="panel" data-testid="win" role="dialog" aria-label="You won">
+  <h1 id="win-title">5/5</h1><p id="win-best"></p>
+  <div class="row"><button data-testid="restart" data-act="restart">Restart (R)</button></div>
+</div>
+<div id="lose" class="panel" data-testid="lose" role="dialog" aria-label="Time is up">
+  <h1 id="lose-title">Time's up</h1><p id="lose-more"></p>
+  <div class="row"><button data-testid="restart" data-act="restart">Restart (R)</button></div>
+</div>
+<div id="paused" class="panel" data-testid="paused" role="dialog" aria-label="Paused">
+  <h1>Paused</h1>
+  <div class="row"><button data-act="resume">Resume</button><button data-testid="restart" data-act="restart">Restart</button><button data-act="options">Options</button></div>
+</div>
+<div id="options" class="panel" data-testid="options" role="dialog" aria-label="Options">
+  <h1>Options</h1>
+  <label>Look sensitivity <input id="opt-sens" type="range" min="0.05" max="0.6" step="0.01"></label>
+  <label>Invert look Y <input id="opt-invert" type="checkbox"></label>
+  <label>Auto camera <input id="opt-auto" type="checkbox"></label>
+  <label>Reduced motion <input id="opt-reduced" type="checkbox"></label>
+  <div class="row"><button data-act="back">Back</button></div>
+</div>
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>

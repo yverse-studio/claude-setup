@@ -1,0 +1,27 @@
+{
+  "name": "role-test-game",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "test": "vitest run",
+    "check": "tsc && node --test test/*.test.mjs && vitest run",
+    "build": "vite build",
+    "verify": "npm run check && npm run build",
+    "play": "node scripts/play.mjs",
+    "shots": "node scripts/shots.mjs",
+    "bot": "node scripts/bot.mjs",
+    "journey": "node scripts/journey.mjs"
+  },
+  "dependencies": {
+    "three": "^0.186.1"
+  },
+  "devDependencies": {
+    "playwright": "^1.64.1",
+    "@types/three": "^0.186.0",
+    "playwright-core": "^1.64.1",
+    "typescript": "^5.9.3",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.5"
+  }
+}
