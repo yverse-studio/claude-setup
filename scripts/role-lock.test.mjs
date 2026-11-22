@@ -2,7 +2,7 @@
 // and a role does not write the files another role owns. Run: node --test scripts/role-lock.test.mjs
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { appendFileSync, existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { appendFileSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
@@ -540,6 +540,7 @@ test('#615: the role file names the skills to load; the first reply is refused u
   const a = start()
   assert.match(a.card, /Load before your first reply[^\n]*toolbox/, 'the role card names the list')
   assert.match(tool(a.id, POST, { text: `${a.line}\nhi (◕‿◕)` }).stderr, /toolbox/, 'no Skill call: refused with the name')
+  rmSync(join(tmpdir(), `claude-setup-guardlog-${a.id}.jsonl`), { force: true }) // #729: the receipt is a form check and passes its third hit; this test is about the skill list, so it starts the count over
   assert.equal(tool(a.id, POST, { text: `${a.line}\nhi (◕‿◕)` }).status, 2)
   appendFileSync(sessionTranscripts.get(a.id), `${JSON.stringify({ type: 'assistant', message: { content: [{ type: 'tool_use', id: 'u1', name: 'Skill', input: { skill: 'toolbox' } }] } })}\n`)
   const loaded = tool(a.id, POST, { text: 'hi' }).stderr.match(/TEAMS\.md\): (Thread · [^\n]*)/)?.[1]
