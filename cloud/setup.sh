@@ -506,9 +506,11 @@ export const ITEM_REF = /^[ \t>-]*Item:[^<\n]*?(?:\b(M\d+|new)\b|((?:[\w.-]+\/[\
 export const normItem = (t) => t.replace(/^m(?=\d)/, 'M').replace(/^new$/i, 'new')
 const itemTok = (p) => { const m = p.match(ITEM_REF); return m ? normItem(m[2] ?? m[1]) : null }
 const line = (re) => (plain) => re.test(plain)
+// A number that reads as a reference with its sign missing (`729`, `issue 729`, `PR 744`, `PLAN.json 29`, `Milestone 29`, `m 29`, `PLAN.json item 29`) stays a fault.
+const HALF_REF = /^\s*\d+\s*$|\b(?:issue|pr|plan(?:\.json)?|milestone|item|m)[\s#:.-]*\d+\b/i
 // #729 (a): an Item line with text but no `#n`, `M<n>` or `new` and no `<` placeholder is plain words (`Item: Setup vs SOTA audit`): the thread works as `Item: new` and says so,
 // no coordinator round. `PLAN.json item 29` is a half-written `M29` and stays a fault that names the form, so the #605 open-item check keeps its token.
-const itemFreeText = (p) => /^[ \t>-]*Item:[ \t]*[^<\s][^<\n]*$/im.test(p) && !ITEM_REF.test(p) && !/^[ \t>-]*Item:[^\n]*\bitem[ \t]*\d/im.test(p)
+const itemFreeText = (p) => /^[ \t>-]*Item:[ \t]*[^<\s][^<\n]*$/im.test(p) && !ITEM_REF.test(p) && !HALF_REF.test(p.match(/^[ \t>-]*Item:[ \t]*([^\n]*)$/im)?.[1] ?? '')
 // The target of a look, scene or asset: a file in an approval/ folder (reference/ for motion), bare or inside a Markdown link. Only a Programmer may say
 // `n/a <why>` (10+ characters), which also drops the Source line; an Animator or Character TD with a real sheet has no n/a (owner 2026-11-16).
 export const TARGET_FILE = /^[ \t>-]*Target image:[ \t]*[^<\n]*(?<![\w-])(?:approval|reference)[\\/][^\s<>()]*\.(?:png|jpe?g|webp|gif|pdf|mp4|webm)(?=[\s),;]|\.?\s|\.?$)/im
@@ -538,6 +540,8 @@ export const BRIEF_FIELDS = [
   // vacation-game 2026-11-15 (yskills): levels went to build without a teardown, a level plan or design proposals. A level brief in the game kit names the
   // files of the steps before it (docs/TEAMS.md, A level): the Planner the Researcher's page, the Game Designer that page and the plan, a builder all three.
   { key: 'Level', name: 'Level: research <page> · plan <file> · design <file> (a level brief in the game kit, docs/TEAMS.md A level)', tpl: 'Level: research <page> · plan <file> · design <file>, or `n/a <why no new or reworked level>` (n/a only as the whole line, never inside one step); game kit builder and designer briefs', applies: needsLevel, ok: levelOk, cls: () => 'judgment' },
+  // GameDev 2026-11-15: a garment took ~18 rounds of material tinkering and failed a gate while the project's proven list held a route that had passed three times. The brief names the passed recipe the job copies (or n/a); the route itself lives in the project's CLAUDE.md and proven list, not here.
+  { key: 'Proven recipe', name: 'Proven recipe: (the passed recipe from the project\'s proven list this job copies, or n/a and why)', tpl: 'Proven recipe: <the project\'s proven list (its CLAUDE.md names it) read first, and the passed recipe this job copies (write "copies" and its name), or "n/a" and why none applies; none passed for this kind of piece means stop and report>', applies: (p) => /^[ \t>-]*Role:[ \t]*Character TD\b/im.test(p), ok: line(/^[ \t>-]*Proven recipe:[^\n<]*\b(?:copies|n\/a)[ \t]+[^<\s][^\n]{4,}/im), cls: () => 'recoverable', fill: () => 'Proven recipe: read the project\'s proven list first and name the passed recipe this job copies ("copies <name>"), or "n/a <why none applies>"; none passed for this kind of piece means stop and report, never invent a route' },
   { key: 'Researcher', name: 'Researcher: (the task asks for research)', tpl: 'Researcher: <subagent and model, or the Researcher thread; research tasks only>', applies: (p) => ASKS_RESEARCH.test(p) && !/\bRole:[ \t]*Researcher\b/i.test(p), ok: line(/^[ \t>-]*Researcher:[ \t]*[^<\s]/im), cls: () => 'recoverable', fill: () => 'Researcher: ask the coordinator for a Researcher thread (message_coordinator) and go on meanwhile' },
   { key: 'Tester', strict: false, tpl: 'Tester: <Tester thread; size L Programmer only>', applies: (p) => /^[ \t>-]*Role:[ \t]*Programmer\b/im.test(p), ok: (p) => !needsTester(p), cls: () => 'judgment' },
 ]

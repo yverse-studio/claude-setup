@@ -4,13 +4,22 @@
 // waits on, drop says why, ids are unique. The coordinator only reads the file.
 // Usage: node scripts/plan.mjs init goal=<text> | goal <text> | check | stand | set <id> key=value... | add key=value... [--file <path>]
 // Default file: $PLAN_FILE, else /mnt/project-files/PLAN.json.
-import { existsSync, readFileSync, writeFileSync, renameSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, writeFileSync, renameSync } from 'node:fs'
+import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 export const STATUSES = ['todo', 'doing', 'wartet', 'done', 'drop']
 const today = () => `${new Date().toISOString().slice(0, 16)}Z` // `updated` holds the minute (2026-11-15T05:50Z), so the age shows (#605); an old date-only value still reads as midnight UTC
 
-export function problems(plan) {
+// #703: a project that locks owner picks (an approval/INDEX.md, scripts/approve.mjs) builds a doing item against its locked picture.
+// Bounded look, no deep walk: beside the plan file, or in a thing folder two levels under its lib/ (lib/characters/CH_x/approval/).
+export function hasApproval(dir) {
+  const has = (d) => existsSync(join(d, 'approval', 'INDEX.md'))
+  const sub = (d) => (existsSync(d) ? readdirSync(d, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => join(d, e.name)) : [])
+  return has(dir) || sub(join(dir, 'lib')).some((kind) => sub(kind).some(has))
+}
+
+export function problems(plan, { approval = false } = {}) {
   const out = []
   if (!plan?.goal) out.push('plan: goal is missing')
   if (!Array.isArray(plan?.items)) return [...out, 'plan: items is not a list']
@@ -25,6 +34,8 @@ export function problems(plan) {
     if (it.status === 'done' && !it.evidence) out.push(`${id}: done needs evidence (PR, live URL or screenshot link)`)
     if (it.status === 'wartet' && !it.waits_on) out.push(`${id}: wartet needs waits_on (a card, his hands, another item)`)
     if (it.status === 'drop' && !it.why) out.push(`${id}: drop needs why`)
+    const target = String(it.target_image ?? '').trim()
+    if (approval && it.status === 'doing' && (!target || (/^n\/a\b/i.test(target) && target.replace(/^n\/a\W*/i, '').length < 10))) out.push(`${id}: doing needs target_image, the locked picture or "n/a <why, 10+ characters>" (approve.mjs lock --item ${id} --plan <this file>, or plan.mjs set ${id} target_image=<path | n/a why>)`)
   }
   return [...out, ...depProblems(plan.items)]
 }
@@ -117,7 +128,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     const plan = JSON.parse(readFileSync(file, 'utf8')) // read right before the write: other threads write too
     if (cmd === 'set' && !rest[0]) throw new Error('set needs an item id, e.g. set M3 status=doing')
     if (cmd === 'goal') write(valid({ ...plan, goal: rest.join(' '), updated: today() }))
-    else if (cmd === 'check') { valid(plan); console.log(`${file}: ok, ${plan.items.length} items`) }
+    else if (cmd === 'check') { const p = problems(plan, { approval: hasApproval(dirname(resolve(file))) }); if (p.length) throw new Error(p.join('\n')); console.log(`${file}: ok, ${plan.items.length} items`) }
     else if (cmd === 'stand') console.log(stand(plan))
     else if (cmd === 'set') write(setItem(plan, rest[0], fieldsOf(rest.slice(1))))
     else if (cmd === 'add') write(addItem(plan, fieldsOf(rest)))

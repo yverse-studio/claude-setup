@@ -324,7 +324,7 @@ test('team guard: an unknown or wrong role is refused with the roles that kit ac
 test('team guard: a Character TD thread starts on game and story, needs the Gate and Sheet lines, a typo in the role blocks', async () => {
   const { decide } = await import('../global/team-guard.mjs')
   const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
-  const brief = (kit, { role = 'Character TD', size = 'M', gate = true, sheet = true } = {}) => ({ brief: `Role: ${role} · Kit: ${kit} · Size: ${size}\nPrior art: docs/clothing-pipeline.md and .claude/skills/asset-intake checked; adapt, because the fit rules exist${FULL.replace(/\nGate:[^\n]*/, '')}${gate ? '\nGate: Reviewer · gate asset intake before owner' : ''}${sheet ? '\nSheet: n/a intake of a download, no new body or look' : ''}`, title: `${role} · hoodie`, model: 'claude-x-1' })
+  const brief = (kit, { role = 'Character TD', size = 'M', gate = true, sheet = true } = {}) => ({ brief: `Role: ${role} · Kit: ${kit} · Size: ${size}\nPrior art: docs/clothing-pipeline.md and .claude/skills/asset-intake checked; adapt, because the fit rules exist${FULL.replace(/\nGate:[^\n]*/, '')}${gate ? '\nGate: Reviewer · gate asset intake before owner' : ''}${sheet ? '\nSheet: n/a intake of a download, no new body or look' : ''}\nProven recipe: n/a intake of a download, no garment recipe applies`, title: `${role} · hoodie`, model: 'claude-x-1' })
   for (const kit of ['game', 'story']) assert.deepEqual(decide('mcp__hearthbot__start_thread', brief(kit), [], [], teams), {}, `Character TD passes on ${kit}`)
   for (const kit of ['site', 'app', 'setup']) assert.match(decide('mcp__hearthbot__start_thread', brief(kit), [], [], teams).block ?? '', /not on the `\w+` kit's team/, `Character TD is skipped on ${kit}`)
   assert.match(decide('mcp__hearthbot__start_thread', brief('game', { gate: false }), [], [], teams).block ?? '', /Gate:/, 'size M without the Gate line is refused')
@@ -1074,7 +1074,7 @@ test('rule guard: a PR in a repo with a PROGRESS.md warns when ## Jetzt is missi
 })
 
 // yskills 2026-11-03: the Blender workflow tips are enforced so no progress is lost (one Blender slot, bl_server.py).
-test('rule guard: no second headless Blender while bl_server.py runs; Blender only after the night plan and Fast loop were read', async () => {
+test('rule guard: no second headless Blender while bl_server.py runs; Blender only after the animator Fast loop was read', async () => {
   const { blenderStart, blenderServerBusy, blenderDocsMissing } = await import('../global/rule-guard.mjs')
   const starts = ['blender -b x.blend', '"/c/Program Files/Blender Foundation/Blender 5.1/blender.exe" -b --python a.py', '& "C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe" --background f.blend', 'cd /x && blender.exe -b f.blend', '$BL -b f.blend', '%BL% -b --python j.py', 'Start-Process -FilePath "C:\\B\\blender.exe" -ArgumentList \'-b f.blend\'', 'nohup blender -b f.blend > log 2>&1 &'] // path-lint: fixture
   for (const c of starts) assert.ok(blenderStart(c), c)
@@ -1981,23 +1981,24 @@ test('rule-guard: the late role card is for the thread, and only a hook row show
 // #729 (c): every refusing check of the pre hook has an id and a kind; each refusal writes one log line; a FORM check that refused twice in a session passes the third time (logged `cap`), a SAFETY check never does.
 test('rule guard: refusing checks have an id and a kind, log one line per refusal, and a form check passes its third hit', async () => {
   const { GUARD_CHECKS, runChecks, readGuardLog } = await import('../global/rule-guard.mjs')
-  for (const [id, kind] of Object.entries(GUARD_CHECKS)) assert.match(kind, /^(form|safety)$/, `${id} has a kind`)
-  for (const id of ['lock', 'neverpush', 'hands-off', 'gate', 'decide', 'plan-item-open', 'receipt', 'propose-skills', 'opens-window', 'archivist-files', 'kaomoji', 'dupe-check', 'blender-busy', 'blender-docs', 'blender-runner', 'grill']) assert.ok(GUARD_CHECKS[id], `${id} is in the table`)
-  for (const id of ['neverpush', 'decide', 'gate', 'lock', 'hands-off']) assert.equal(GUARD_CHECKS[id], 'safety', `${id} is a safety check`)
-  for (const id of ['kaomoji', 'blender-docs', 'grill', 'dupe-check', 'plan-item-open']) assert.equal(GUARD_CHECKS[id], 'form', `${id} is a form check`)
+  assert.deepEqual(GUARD_CHECKS, {
+    lock: 'safety', neverpush: 'safety', 'hands-off': 'safety', gate: 'safety', decide: 'safety',
+    'plan-item-open': 'form', receipt: 'form', 'propose-skills': 'safety', 'opens-window': 'safety', 'archivist-files': 'safety',
+    kaomoji: 'form', 'dupe-check': 'form', 'blender-busy': 'safety', 'blender-docs': 'form', 'blender-runner': 'safety', grill: 'form',
+  }, 'the whole table: a flipped kind is a test failure')
   const session = `cap-test-${process.pid}-${Date.now()}`
   const form = [['kaomoji', () => 'add a kaomoji']]
   assert.equal(await runChecks(form, { session }), 'add a kaomoji')
   assert.equal(await runChecks(form, { session }), 'add a kaomoji')
   assert.equal(await runChecks(form, { session }), null, 'the third hit of the same form check passes')
   assert.equal(await runChecks(form, { session: `${session}-other` }), 'add a kaomoji', 'the count is per session')
-  const safety = [['neverpush', () => 'never goes to GitHub']]
-  for (let i = 0; i < 5; i++) assert.equal(await runChecks(safety, { session }), 'never goes to GitHub', `safety refusal ${i + 1}`)
+  const safetyIds = Object.keys(GUARD_CHECKS).filter((id) => GUARD_CHECKS[id] === 'safety')
+  for (const id of safetyIds) for (let i = 0; i < 5; i++) assert.equal(await runChecks([[id, () => `refused ${id}`]], { session }), `refused ${id}`, `${id}: safety refusal ${i + 1} is never capped`)
   const log = readGuardLog(session)
   assert.deepEqual(log.filter((l) => l.id === 'kaomoji').map((l) => l.outcome), ['block', 'block', 'cap'])
-  assert.equal(log.filter((l) => l.id === 'neverpush' && l.outcome === 'block').length, 5)
+  for (const id of safetyIds) assert.equal(log.filter((l) => l.id === id && l.outcome === 'block').length, 5, `${id} logged five blocks`)
   assert.ok(log.every((l) => l.id && l.kind && l.outcome && l.at), 'each line has id, kind, outcome and time')
-  assert.equal(log.some((l) => l.id === 'neverpush' && l.outcome === 'cap'), false, 'a safety check is never capped')
+  assert.equal(log.some((l) => GUARD_CHECKS[l.id] === 'safety' && l.outcome === 'cap'), false, 'a safety check is never capped')
   assert.equal(await runChecks([['kaomoji', () => null], ['grill', () => 'second']], { session: `${session}-two` }), 'second', 'a check that passes writes nothing and the chain goes on')
 })
 test('rule guard: the pre hook logs a refusal with its check id and passes the third identical form refusal (live process)', () => {
@@ -2006,4 +2007,23 @@ test('rule guard: the pre hook logs a refusal with its check id and passes the t
   assert.equal(run().status, 2)
   assert.equal(run().status, 2)
   assert.equal(run().status, 0, 'third time passes')
+})
+
+// #729 (c), gate round 1 fix 4: the project-folder copy of a decision line.
+test('card-render logDecision: a real session appends one JSON line per call to guard-log/<date>-<session>.jsonl, a non-UUID session writes nothing', async () => {
+  const { logDecision } = await import('../global/card-render.mjs')
+  const out = mkdtempSync(join(tmpdir(), 'guard-log-'))
+  try {
+    const session = '0b1983f6-151b-5d6c-95f2-604da6c6cf48'
+    const now = new Date('2026-11-22T16:00:00Z')
+    const entry = { at: now.toISOString(), session, id: 'kaomoji', kind: 'form', outcome: 'block' }
+    const file = logDecision(entry, out, now)
+    assert.equal(file, join(out, 'guard-log', `2026-11-22-${session.replace(/\W/g, '')}.jsonl`))
+    logDecision({ ...entry, outcome: 'cap' }, out, now)
+    const lines = readFileSync(file, 'utf8').trim().split('\n').map((l) => JSON.parse(l))
+    assert.deepEqual(lines.map((l) => l.outcome), ['block', 'cap'], 'a second call appends a second line')
+    assert.equal(logDecision({ ...entry, session: 's1' }, out, now), null)
+    assert.equal(logDecision(entry, '', now), null, 'no folder, no line')
+    assert.equal(readdirSync(join(out, 'guard-log')).length, 1, 'the non-UUID session wrote nothing')
+  } finally { rmSync(out, { recursive: true, force: true }) }
 })
