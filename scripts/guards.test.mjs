@@ -948,7 +948,8 @@ test('team guard: a thread start runs its role on the tier its Roster row names'
   assert.ok(wrongModel(brief('Planner', 'M'), 'sonnet', teams))
   assert.ok(wrongModel(brief('Planner', 'M'), 'opus', teams), 'S5: the Planner thread is Fable; Opus only when Fable is unavailable')
   assert.equal(wrongModel(brief('Planner', 'M'), 'fable', teams), null, 'the row names Fable')
-  assert.ok(wrongModel(brief('Programmer', 'M'), 'opus', teams), 'an Opus checkpoint subagent is no Opus thread')
+  assert.ok(wrongModel(brief('Programmer', 'M'), 'sonnet', teams), 'an M lead is not a Sonnet thread (yskills 2026-11-22)')
+  assert.equal(wrongModel(brief('Programmer', 'M'), 'opus', teams), null, 'the M lead is Opus')
   // gate.md Rounds 2: the Fable gate director runs as a Designer thread (11-12: that start was refused for lack of a row).
   assert.equal(wrongModel(brief('Designer', 'S'), 'fable', teams), null, 'the Designer row names Fable for the gate director')
   assert.ok(wrongModel(brief('Designer', 'S'), 'sonnet', teams), 'a Designer is never Sonnet')
@@ -960,8 +961,8 @@ test('team guard: a thread start runs its role on the tier its Roster row names'
   }
   assert.equal(wrongModel(`${brief('Programmer', 'M')}\nModel: opus, yskills named it`, 'opus', teams), null)
   assert.equal(wrongModel('Role: none · Kit: setup · Size: S', 'opus', teams), null)
-  assert.match(decide('mcp__hearthbot__start_thread_session', { brief: brief('Programmer', 'M'), model: 'opus' }, [], [], teams).block ?? '', /Roster/)
-  assert.equal(decide('mcp__hearthbot__start_thread_session', { brief: brief('Programmer', 'M'), model: 'sonnet' }, [], [], teams).block, undefined)
+  assert.match(decide('mcp__hearthbot__start_thread_session', { brief: brief('Programmer', 'M'), model: 'haiku' }, [], [], teams).block ?? '', /Roster/)
+  assert.equal(decide('mcp__hearthbot__start_thread_session', { brief: brief('Programmer', 'M'), model: 'opus' }, [], [], teams).block, undefined)
 })
 
 // yskills 2026-11-10: "everything you want me to do or show with a link". An ask of him or a thread pointer needs a clickable link.
@@ -1079,7 +1080,7 @@ test('team guard: kit, size, role and brief lines are checked against TEAMS.md',
   assert.equal(start('Role: Producer · Kit: video · Size: M'), '')
   assert.equal(start('Role: Editor · Kit: social · Size: M'), '', 'the Film team works for the Social team')
   assert.equal(start('Role: Designer · Kit: story (Ren\'Py) · Size: L', 'opus'), '', 'Designer for renders; "Game Designer" in Skipped is another role')
-  assert.equal(start('Role: Programmer (debug) · Kit: setup · Size: M'), '')
+  assert.equal(start('Role: Programmer (debug) · Kit: setup · Size: M', 'opus'), '')
   // Test project 2026-10-27: the bee video thread was not titled `Producer · <video>`.
   const titled = (title) => decide('mcp__hearthbot__start_thread', { title, instructions: `Role: Producer · Kit: video · Size: M${FULL}\nPrior art: video-studio/SKILL.md -> adapt, because it is ours`, model: 'sonnet' }, [], [], teams).block ?? ''
   assert.match(titled('Bienen-Video'), /Producer thread is titled `Producer · <what>`/)
@@ -1701,7 +1702,7 @@ test('team guard (S5): the Roster model cells, table-driven', async () => {
     ['Planner', 'M', 'opus', '', true], ['Planner', 'M', 'fable', '', false], ['Planner', 'M', 'opus', '\nModel: opus (Fable unavailable)', false],
     ['Reviewer', 'M', 'opus', '', true], ['Reviewer', 'M', 'fable', '', false], ['Reviewer', 'S', 'opus', '\nModel: opus (Fable unavailable)', false],
     ['Researcher', 'M', 'sonnet', '', true], ['Researcher', 'M', 'opus', '', false],
-    ['Programmer', 'M', 'sonnet', '', false], ['Programmer', 'M', 'opus', '', true], ['Programmer', 'L', 'fable', '', false], ['Programmer', 'M', 'opus', '\nModel: opus (M lead, not hard)', false],
+    ['Programmer', 'M', 'sonnet', '', true], ['Programmer', 'M', 'sonnet', '\nModel: sonnet (a small mechanical slice)', false], ['Programmer', 'M', 'opus', '', false], ['Programmer', 'L', 'sonnet', '', true], ['Programmer', 'L', 'opus', '', false], ['Programmer', 'S', 'sonnet', '', false], ['Programmer', 'S', 'opus', '', true], ['Programmer', 'L', 'fable', '', false], ['Programmer', 'M', 'opus', '\nModel: opus (M lead, not hard)', false],
   ]
   for (const [role, size, model, extra, refused] of rows) assert.equal(!!wrongModel(brief(role, size, extra), model, teams), refused, `${role} ${size} on ${model}${extra ? ' with a reason' : ''}`)
 })

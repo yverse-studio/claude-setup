@@ -11,6 +11,7 @@ import { briefCheck } from '../global/rule-guard.mjs'
 const root = join(fileURLToPath(import.meta.url), '..', '..')
 const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
 const SONNET = teams.match(/Sonnet \((claude-[\w.-]+)\)/)[1]
+const OPUS = teams.match(/Opus \((claude-[\w.-]+)\)/)[1]
 const START = 'mcp__hearthbot__start_thread'
 const FULL = '\nGate: Reviewer thread before owner\nItem: M30\nPlan: docs/plans/x.md\nAcceptance: node --test passes\nModel: claude-x-1\nThreads: list_threads checked, none open on this topic\nPrior art: none, because a test brief\nSkills: x\nDone when: node --test passes\nStop when: two rounds\nStart: read MEMORY.md first, then CLAUDE.md'
 
@@ -25,7 +26,7 @@ test('team-guard blocks a Role that is neither none nor a Roster name, and says 
 })
 
 test('team-guard still blocks an unknown Kit (the half #453 had), so a brief with a bad Role or Kit never starts', () => {
-  const bad = decide(START, { brief: `Role: Programmer · Kit: content · Size: M${FULL}`, title: 'Programmer · x', model: SONNET }, [], [], teams)
+  const bad = decide(START, { brief: `Role: Programmer · Kit: content · Size: M${FULL}`, title: 'Programmer · x', model: OPUS }, [], [], teams)
   assert.match(bad.block ?? '', /Kit: content is no kit[\s\S]*setup/)
 })
 
@@ -100,7 +101,7 @@ test('the generator refuses an unknown role or kit and lists the valid ones; a m
 
 test('the brief carries the role\'s Model and playbook from the Roster, and the title of a size M thread', () => {
   const p = buildBrief({ role: 'Programmer', kit: 'setup', size: 'M', ...FIELDS, teams })
-  assert.equal(p.model, teams.match(/Sonnet \((claude-[\w.-]+)\)/)[1], 'the id comes from the Models line')
+  assert.equal(p.model, teams.match(/Opus \((claude-[\w.-]+)\)/)[1], 'the id comes from the Models line: the M lead is Opus (yskills 2026-11-22)')
   assert.match(p.brief, /^Role: Programmer · Kit: setup · Size: M\nModel: claude-[\w.-]+\n/)
   assert.match(p.brief, /Skills: .claude\/skills\/operator\/roles\/programmer\.md/)
   assert.match(p.title, /^Programmer · /)
@@ -162,7 +163,7 @@ test('Character TD is a sheet role and a gate builder: the generated game brief 
 })
 
 test('a builder, designer or animator brief at size M or L needs `Gate: <reviewer thread> before owner`; gate roles and size S do not', () => {
-  const ask = (role, kit, size, extra = '') => decide(START, { brief: `Role: ${role} · Kit: ${kit} · Size: ${size}${FULL.replace(/\nGate:[^\n]*/, '')}${extra}`, title: `${role} · x`, model: SONNET }, [], [], teams)
+  const ask = (role, kit, size, extra = '') => decide(START, { brief: `Role: ${role} · Kit: ${kit} · Size: ${size}${FULL.replace(/\nGate:[^\n]*/, '')}${extra}`, title: `${role} · x`, model: role === 'Programmer' && size !== 'S' ? OPUS : SONNET }, [], [], teams)
   for (const [role, kit] of [['Programmer', 'setup'], ['Designer', 'site'], ['Animator', 'game']]) {
     assert.match(ask(role, kit, 'M', role === 'Animator' ? '\nSheet: n/a scene animation, no body model' : '').block ?? '', /Gate:/, `${role} M without the line is refused`)
   }
@@ -183,7 +184,7 @@ test('the generator fills the Gate line for builder, designer and animator brief
 // Gate round 2: extra words after the role must not skip the demand; a Gate line must name a reviewer or say why no owner-facing result exists.
 test('the Gate demand cannot be skipped with words after the role, and a Gate line names a reviewer or says why none is needed', () => {
   const noGate = FULL.replace(/\nGate:[^\n]*/, '')
-  const ask = (roleLine, gate) => decide(START, { brief: `${roleLine} · Kit: setup · Size: M${noGate}${gate ? `\nGate: ${gate}` : ''}`, title: 'Programmer · x', model: SONNET }, [], [], teams)
+  const ask = (roleLine, gate) => decide(START, { brief: `${roleLine} · Kit: setup · Size: M${noGate}${gate ? `\nGate: ${gate}` : ''}`, title: 'Programmer · x', model: OPUS }, [], [], teams)
   assert.match(ask('Role: Programmer for slice 2').block ?? '', /Gate:/)
   assert.match(ask('Role: Programmer - slice 2').block ?? '', /Gate:/)
   for (const bad of ['none before owner', 'skipped, not before owner', 'later', 'n/a', 'n/a no']) assert.match(ask('Role: Programmer', bad).block ?? '', /Gate:/, bad)

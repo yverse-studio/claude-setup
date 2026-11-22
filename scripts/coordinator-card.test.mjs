@@ -105,7 +105,7 @@ test('M30: the CLI writes one rendered brief file per role next to the card, and
   assert.equal(r.status, 0, r.stderr)
   const files = readdirSync(join(dir, 'briefs'))
   assert.ok(files.includes('programmer.md') && files.includes('reviewer.md') && !files.includes('project-manager.md'), files.join(', '))
-  assert.match(readFileSync(join(dir, 'briefs/programmer.md'), 'utf8'), /^# Brief file: Programmer[\s\S]*Model: claude-sonnet[\s\S]*Acceptance:/)
+  assert.match(readFileSync(join(dir, 'briefs/programmer.md'), 'utf8'), /^# Brief file: Programmer[\s\S]*size S claude-sonnet[\s\S]*Model: claude-opus[\s\S]*Acceptance:/)
   assert.ok(existsSync(join(dir, 'COORDINATOR-RULES-INDEX.md')))
   assert.match(readFileSync(join(dir, 'COORDINATOR-RULES-INDEX.md'), 'utf8'), /briefs\/<role>\.md/)
 })

@@ -18,8 +18,8 @@ test('a subagent with no model is blocked, naming the rule', () => {
 
 test('the role in the prompt decides the allowed tier (Roster)', () => {
   const brief = (role) => ({ agent: 'x', prompt: `Role: ${role} · Kit: setup · Size: M\nDo it.` })
-  assert.equal(subagentBlock(brief('Programmer'), model('sonnet'), teams), null)
-  assert.match(subagentBlock(brief('Programmer'), model('opus'), teams), /Programmer runs on (fable or )?sonnet.*not opus/, 'an M lead on Opus needs a why')
+  assert.equal(subagentBlock({ agent: 'x', prompt: 'Role: Programmer · Kit: setup · Size: S\nDo it.' }, model('sonnet'), teams), null)
+  assert.match(subagentBlock(brief('Programmer'), model('sonnet'), teams), /Programmer runs on (opus or fable|fable or opus).*not sonnet/, 'an M lead is not a Sonnet thread')
   assert.equal(subagentBlock({ agent: 'x', prompt: 'Role: Programmer · Kit: setup · Size: M\nModel: opus (M lead, not hard)' }, model('opus'), teams), null, 'yskills 2026-11-22: M and L lead on Opus with a why')
   assert.equal(subagentBlock(brief('Programmer'), model('fable'), teams), null, 'a Fable lead for important or hard work')
   assert.match(subagentBlock(brief('Reviewer'), { providerID: 'anthropic', id: model('haiku').split('/')[1] }, teams), /Reviewer runs on fable.*not haiku/)

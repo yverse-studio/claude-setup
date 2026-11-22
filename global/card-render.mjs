@@ -3,7 +3,7 @@
 import { createHash, randomBytes } from 'node:crypto'
 import { appendFileSync, existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import { BRIEF_FIELDS, CHECKLISTS, GATE_BUILDER_ROLES, GUARD_FILES, badRole, badTeam, coordinatorCard, kitNames, kitRows, rosterNames } from './team-guard.mjs'
+import { BRIEF_FIELDS, CHECKLISTS, GATE_BUILDER_ROLES, GUARD_FILES, LEAD_TIER, badRole, badTeam, coordinatorCard, kitNames, kitRows, rosterNames } from './team-guard.mjs'
 import { GATE_ROLES, roleOf } from './rule-guard.mjs'
 
 export const CARD_MAX = 7400 // 7,200 until B3 #730 (the 7-day start line, +130), 7,050 until F1 #613 (the compaction line, +116: the summary must carry the re-read order, the card itself is dropped by a compaction), 7,000 until #601 (the "root clean" proof), 6,800 until #604 (the first-reply header carries plan and board, and says what they count, +160), 6,600 until #430, 8,000 until 2026-11-12 (M27 step 6: rules a hook enforces left the card, the brief template came in)
@@ -92,7 +92,7 @@ const runsAs = (row) => row.match(/Runs as: (.*?)\. Model:/)?.[1] ?? ''
 export const stub = (role, kit, size) => `Role: ${role} · Kit: ${kit} · Size: ${size}`
 // The model a thread of this role starts on at this size: the first tier its Roster row names (team-guard wrongModel).
 export const modelFor = (role, size, teams) => {
-  const tier = tierOf(roleOf(stub(role, 'setup', size), teams).row)
+  const tier = LEAD_TIER[role]?.[size] ?? tierOf(roleOf(stub(role, 'setup', size), teams).row)
   return tier ? modelIds(teams)[tier] : undefined
 }
 // The sizes a role may start on a kit: the sizes the guard accepts (a Planner never at S).
@@ -162,7 +162,7 @@ export function renderBrief(role, teams, fields = BRIEF_FIELDS) {
     else if (key === 'Gate' && !new RegExp(`^${GATE_BUILDER_ROLES}$`).test(role)) continue
     else lines.push(f.tpl)
   }
-  return `# Brief file: ${role}\n\nCopy the block, fill every <...>, delete the lines marked delete, start the thread with it as the brief, title \`${role} · <what>\` and \`model\` = the Model line (${modelFor(role, 'M', teams)} at size M). Scope, Basis and Assets live in the item (the Item: line), the thread reads them there. Sizes and kits are checked by team-guard; the block is rendered from BRIEF_FIELDS and docs/TEAMS.md (claude-setup global/card-render.mjs), never edited by hand.\n\n\`\`\`\n${lines.join('\n')}\n\`\`\`\n\nThen write the task itself under the block, in four short parts (taught, not checked):\n\n\`\`\`\n${TASK_PARTS.join('\n')}\n\`\`\`\n`
+  return `# Brief file: ${role}\n\nCopy the block, fill every <...>, delete the lines marked delete, start the thread with it as the brief, title \`${role} · <what>\` and \`model\` = the Model line (${modelFor(role, 'M', teams)} at size M${LEAD_TIER[role] ? `; size S ${modelFor(role, 'S', teams)}; size L or a hard task ${modelFor(role, 'L', teams)}, said as \`Model: <tier> (<why>)\`` : ''}). Scope, Basis and Assets live in the item (the Item: line), the thread reads them there. Sizes and kits are checked by team-guard; the block is rendered from BRIEF_FIELDS and docs/TEAMS.md (claude-setup global/card-render.mjs), never edited by hand.\n\n\`\`\`\n${lines.join('\n')}\n\`\`\`\n\nThen write the task itself under the block, in four short parts (taught, not checked):\n\n\`\`\`\n${TASK_PARTS.join('\n')}\n\`\`\`\n`
 }
 export const briefFileName = (role) => `${role.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.md`
 
