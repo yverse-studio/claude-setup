@@ -6,6 +6,12 @@
     "date": "2026-11-15",
     "pass": 3,
     "cases": {
+      "plan-reuses-code": {
+        "role": 3,
+        "baseline": 1,
+        "runs": 3,
+        "fired": 3
+      },
       "seeded-rounding": {
         "role": 3,
         "baseline": 0,
@@ -14,8 +20,26 @@
       }
     },
     "needsRole": "yes",
-    "open": "open: the baseline finds the seeded bug 3/3 on Opus and fails only the Not judged grader; the Fable answers were not kept",
-    "costUsd": 1.3744994,
-    "before": null
+    "open": "open: separates from no role on seeded-rounding (3 against 0) and plan-reuses-code (3 against 1), 3 of 3 runs loaded the role text; clean-diff withdrawn (fixture not clean, #662); A5, A9 no case showed a need",
+    "costUsd": 3.9125966,
+    "before": {
+      "hash": "8f4ee22449260b35419f11afb6c9e4f6d0da0facf15d6ff246793822b44b0061",
+      "model": "fable-5-2",
+      "claude": "2.1.325",
+      "date": "2026-11-15",
+      "pass": 3,
+      "cases": {
+        "seeded-rounding": {
+          "role": 3,
+          "baseline": 0,
+          "runs": 3,
+          "fired": 3
+        }
+      },
+      "needsRole": "yes",
+      "open": "open: the baseline finds the seeded bug 3/3 on Opus and fails only the Not judged grader; the Fable answers were not kept",
+      "costUsd": 1.3744994,
+      "before": null
+    }
   }
 }
