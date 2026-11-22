@@ -267,3 +267,48 @@ test('gate fix 5: a superseded row with no DECISIONS.md mention is no RED', () =
     assert.deepEqual(approvalProblems(s.dir, s.root).red, [])
   } finally { s.done() }
 })
+
+// Gate round 2 of PR 708 (fresh Reviewer, head 3f2b405): the DECISIONS.md cite is matched with one boundary everywhere.
+test('gate round 2, fix 1a: check demands the own pick\'s DECISIONS line although another folder cites a same-named pick', () => {
+  const s = studio()
+  try {
+    s.put('approval/A.png', 'x'); s.put('approval/INDEX.md', `${HEAD}| A.png | option A | 2026-11-15 | votes/round-1; card |\n`)
+    s.put('DECISIONS.md', '- see lib/characters/CH_y/approval/A.png\n')
+    assert.ok(approvalProblems(s.dir, s.root).red.some((l) => /approval\/A\.png is named by no DECISIONS\.md line/.test(l)))
+  } finally { s.done() }
+})
+
+test('gate round 2, fix 1b: lock writes its own DECISIONS line although another folder cites a same-named pick', () => {
+  const s = studio()
+  try {
+    s.put('DECISIONS.md', '- see lib/characters/CH_y/approval/A.png\n')
+    lock(s.pick())
+    assert.match(s.read('DECISIONS.md'), /^- 2026-11-16 option A, the calm one: `approval\/A\.png`/m)
+  } finally { s.done() }
+})
+
+test('gate round 2, fix 1c: supersede leaves another folder\'s cite alone and rewrites its own', () => {
+  const s = studio()
+  try {
+    lock(s.pick())
+    s.put('DECISIONS.md', `${s.read('DECISIONS.md')}- see lib/characters/CH_y/approval/A.png\n`)
+    supersede({ dir: s.dir, file: 'A.png' })
+    const t = s.read('DECISIONS.md')
+    assert.match(t, /`approval\/_superseded\/A\.png`/)
+    assert.match(t, /lib\/characters\/CH_y\/approval\/A\.png/)
+    assert.doesNotMatch(t, /CH_y\/approval\/_superseded/)
+  } finally { s.done() }
+})
+
+test('gate round 2, fix 2: a backticked prefixed approval path is resolved, not skipped (the ^ anchor)', () => {
+  const s = studio()
+  try {
+    clean(s)
+    const other = join(s.root, 'lib', 'a', 'b', 'c', 'CH1')
+    mkdirSync(join(other, 'approval'), { recursive: true }); writeFileSync(join(other, 'approval', 'A.PNG'), 'x')
+    s.put('DECISIONS.md', '- 2026-11-15 option A: `approval/A.png`, card\n- ok `lib/a/b/c/CH1/approval/A.PNG`\n')
+    assert.deepEqual(approvalProblems(s.dir, s.root).warn, [])
+    s.put('DECISIONS.md', '- 2026-11-15 option A: `approval/A.png`, card\n- dead `lib/a/b/c/CH1/approval/Z.png`\n')
+    assert.equal(approvalProblems(s.dir, s.root).warn.length, 1)
+  } finally { s.done() }
+})

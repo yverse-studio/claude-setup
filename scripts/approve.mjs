@@ -22,6 +22,8 @@ const OLD = '_superseded'
 const usage = (m) => Object.assign(new Error(m), { usage: true }) // exit 2: the call is wrong, nothing was written
 const isDir = (p) => existsSync(p) && statSync(p).isDirectory()
 const slash = (p) => p.replace(/\\/g, '/')
+// One boundary for every `approval/<file>` cite of a DECISIONS.md: another folder's `lib/x/approval/A.png` is not this folder's A.png.
+const citeRe = (file) => new RegExp(`(?<![\\w./-])approval/${file.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w])`, 'g')
 const one = (s) => String(s ?? '').replace(/\s+/g, ' ').trim()
 
 // The INDEX is the first table whose header has File or Image, Decision, Date and Source, in any order, extra columns allowed.
@@ -67,7 +69,7 @@ export function approvalProblems(dir, root) {
   const text = readFileSync(df, 'utf8')
   const named = new Set([...text.matchAll(/(?<![\w./-])approval\/([\w.\-/]*\.(?:png|jpe?g|webp|gif|pdf))(?!\w)/gi)].map((m) => m[1]))
   for (const n of named) if (!existsSync(join(ap, n))) red.push(`DECISIONS.md names approval/${n}, which is not there`)
-  for (const r of live) if (r.file && !text.includes(`approval/${r.file}`)) red.push(`approval/${r.file} is named by no DECISIONS.md line`)
+  for (const r of live) if (r.file && !citeRe(r.file).test(text)) red.push(`approval/${r.file} is named by no DECISIONS.md line`)
   // WARN, not RED, in v1: the files of 2026-11-15 cite a dead sheet path and three dead gate folders and would all be red.
   for (const [, p] of text.matchAll(/`([^`\n]+)`/g)) {
     if (!p.includes('/') || p.includes('://') || /^approval\/[\w.\-/]*\.(?:png|jpe?g|webp|gif|pdf)$/i.test(p)) continue
@@ -141,7 +143,7 @@ export function lock({ dir, image, decision, source, msg, on, name, item, plan: 
   writeFileSync(indexFile, next)
   // DECISIONS.md is the owner's list of choices; the pick gets its line there unless a line already names the picture (an import).
   const df = join(dir, 'DECISIONS.md'), old = existsSync(df) ? readFileSync(df, 'utf8') : ''
-  if (!old.includes(`approval/${file}`)) writeFileSync(df, `${old && `${old.replace(/\n*$/, '')}\n`}- ${date} ${one(decision)}: \`approval/${file}\`, ${proof}\n`)
+  if (!citeRe(file).test(old)) writeFileSync(df, `${old && `${old.replace(/\n*$/, '')}\n`}- ${date} ${one(decision)}: \`approval/${file}\`, ${proof}\n`)
   if (nextPlan) { const tmp = `${planFile}.${process.pid}.tmp`; writeFileSync(tmp, `${JSON.stringify(nextPlan, null, 2)}\n`); renameSync(tmp, planFile) }
   return { dest, row: value, target_image: nextPlan?.items.find((it) => it.id === item).target_image }
 }
@@ -158,7 +160,7 @@ export function supersede({ dir, file }) {
   for (const r of t?.rows ?? []) if (r.file === file) { r.cells[t.col.file] = `${OLD}/${file}`; t.lines[r.line] = rowLine(r.cells) }
   if (t) writeFileSync(join(ap, 'INDEX.md'), t.lines.join('\n'))
   const df = join(dir, 'DECISIONS.md')
-  if (existsSync(df)) writeFileSync(df, readFileSync(df, 'utf8').split(`approval/${file}`).join(`approval/${OLD}/${file}`))
+  if (existsSync(df)) writeFileSync(df, readFileSync(df, 'utf8').replace(citeRe(file), `approval/${OLD}/${file}`))
   return to
 }
 
