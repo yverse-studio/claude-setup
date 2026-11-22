@@ -17,7 +17,8 @@ import { fileURLToPath } from 'node:url'
 let roleOf = () => null
 let openThreads = () => []
 let toolCalls = () => []
-try { ({ roleOf, openThreads, toolCalls } = await import('./rule-guard.mjs')) } catch { /* no rule-guard here */ }
+let roleAgain
+try { ({ roleOf, openThreads, toolCalls, roleAgain } = await import('./rule-guard.mjs')) } catch { /* no rule-guard here */ }
 
 export const POINTER = 'Team rule (claude-setup docs/TEAMS.md): route every task on its own (task picks the kit, not the project; then size S/M/L), call only the roles it needs, as thread or subagent as the roster says, and pass `model` from the role\'s row on every thread start and Agent call.'
 export const PM_FILE = '.claude/skills/operator/roles/project-manager.md'
@@ -516,9 +517,9 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
   process.stdin.on('data', (c) => { raw += c })
   process.stdin.on('end', () => {
     try {
-      const { tool_name: tool = '', tool_input: input, cwd = process.cwd(), transcript_path: transcript, session_id: session, model } = JSON.parse(raw || '{}')
+      const { tool_name: tool = '', tool_input: input, cwd = process.cwd(), transcript_path: transcript, session_id: session, model, source } = JSON.parse(raw || '{}')
       const mark = (kind) => join(dir, 'booted', `${String(session).replace(/\W/g, '')}.${kind}`)
-      const say = (context) => process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: context } }))
+      const say = (context) => process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: [context, source === 'compact' ? roleAgain?.(session, cwd) : ''].filter(Boolean).join('\n') } })) // #728: a compaction drops the role card, so it comes back
       if (mode === 'start') {
         // SessionStart names the session's model; rule-guard's brief check reads it before the first reply.
         if (session && typeof model === 'string' && model) writeFileSync(modelFile(session), model)

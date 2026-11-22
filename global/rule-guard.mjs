@@ -283,11 +283,11 @@ async function receiptBlock(tool, input, session, cwd, agentId, transcript) {
   const rules = ['CLAUDE.md', 'docs/TEAMS.md'].map((f) => read(join(root, f))).join('\n')
   const origin = await projectsOrigin(), last = coordinatorRelays(t, origin).at(-1) // #603 B: the newest brief's lines come first, as in relayRebrief
   const brief = unfix(stripTags(last ? [last, relayContext(last, t, origin)].join('\n') : spawnPrompt('', t)))
-  const path = roleOf(brief, read(join(root, 'docs', 'TEAMS.md')))?.path
+  const found = roleOf(brief, read(join(root, 'docs', 'TEAMS.md'))), path = found?.path
   // No checkout (only the boot copy): nothing can be checked, so the receipt says that instead of a false `none`.
   const checkout = existsSync(join(root, 'config', 'plugins.json')), names = checkout ? wanted(root, path ? read(join(root, path)) : '', brief) : []
   const status = checkout ? skillStatus(names, { root, cwd }) : { loaded: [], missing: [], unknown: true }
-  return receiptMissing(tool, input, threadReceipt(role, brief, t, rules, status, cardOnDisk()), t) ?? (receiptSent(t) ? null : fallbackUnread(status, t) ?? skillsUnloaded(tool, input, names.filter((n) => !status.missing.some((m) => m.name === n && !m.path)), t))
+  return receiptMissing(tool, input, threadReceipt(role, brief, t, rules, status, cardOnDisk()), t) ?? (receiptSent(t) ? null : fallbackUnread(status, t) ?? playbookUnread(checkout && found, path ? read(join(root, path)) : '', t) ?? skillsUnloaded(tool, input, names.filter((n) => !status.missing.some((m) => m.name === n && !m.path)), t))
 }
 
 // M48: a Reviewer brief with a valid `Topic:` is given that topic's checklist plus the Scored gates section of gate.md instead of the code playbook.
@@ -302,6 +302,13 @@ export async function topicPlaybook(brief, root) {
   const name = guard.topicNames(checklists).find((n) => n.toLowerCase() === topic.toLowerCase())
   const scored = mdSection(read(join(root, '.claude/skills/operator/gate.md')) || fetchRaw('.claude/skills/operator/gate.md'), 'Scored gates', true)
   return { name, text: `Topic: ${name}. Your whole job is this checklist, scored by the rule below; judge only these rows.\n\n${mdSection(checklists, name)}\n\n${scored}` }
+}
+
+// #728: after a compaction the card is gone from the context; SessionStart (source compact) prints the stamped role's card again from the local file, no fetch.
+export function roleAgain(session, cwd) {
+  const name = session ? read(join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)).trim() : ''
+  const root = setupRoot(cwd), role = name && roleOf(`Role: ${name}`, read(join(root, 'docs', 'TEAMS.md')))
+  return role ? roleCard(role, role.path ? read(join(root, role.path)) : '') : ''
 }
 
 async function roleContext(prompt, cwd, session) {
@@ -722,6 +729,12 @@ export function fallbackUnread(status, transcript) {
   return todo.length ? `rule-guard: a skill your role names cannot load here, so read what stands in for it before your first reply, then say so in it (receipt line: missing): ${todo.join(', ')} of claude-setup (docs/permissions.md, The "can't" rule).` : null
 }
 
+// #728: a playbook too long for the start card arrives only as "Read your playbook <path>"; the first reply waits for that Read (same shape as fallbackUnread).
+export function playbookUnread(role, playbook, transcript) {
+  if (!role?.path || !playbook || roleCard(role, playbook).includes('follows; work by it')) return null
+  return toolCalls(transcript).some((c) => String(c.input.file_path ?? c.input.command ?? '').includes(role.path)) ? null : `rule-guard: your playbook is too long for the start card, so read it before your first reply: ${role.path} of claude-setup.`
+}
+
 export function threadReceipt(role, brief, transcript, rules, status = { loaded: [], missing: [] }, card = '') {
   const lines = brief.replace(/[*_`]/g, '').split('\n').map((l) => l.replace(/^[ \t>-]*/, ''))
   const tag = (k) => lines.map((l) => l.match(new RegExp(`^(?:Role:.*?\\b)?${k}:[ \\t]*([A-Za-z0-9-]+)`))?.[1]).find(Boolean) ?? '?' // #621: a Kit or Size that opens a line or sits on the Role line, newest first
@@ -1025,12 +1038,16 @@ async function stampFromTranscript(session, transcript, cwd) {
 // once the card was printed, here or by the prompt hook) a thread with no lock and no finished tool call gets its brief check and role card at its first call.
 const startMark = (session) => join(tmpdir(), `claude-setup-start-${String(session).replace(/\W/g, '')}`)
 async function startFromTranscript(session, transcript, cwd) {
-  if (!session || existsSync(startMark(session)) || existsSync(lockFile(session))) return ''
+  const again = join(tmpdir(), `claude-setup-card-${String(session).replace(/\W/g, '')}`)
+  if (!session || existsSync(lockFile(session)) || existsSync(again)) return ''
   const t = transcript(), brief = spawnPrompt('', t.split('\n').find((l) => /"type":"user"/.test(l)) ?? '')
-  if (!brief || toolCalls(t).some((c) => c.result)) return '' // a thread that already worked (new container, no temp files) keeps going
-  writeFileSync(startMark(session), '')
-  const check = await briefCheck(brief, cwd, knownModel(session, t))
-  updateLock(session, check)
+  // #728: a cancelled prompt hook may have left the start mark and the role stamp without the card (live 2026-11-22: 2 of 2 starts hit the 5 s limit). The card is
+  // sent at the next matching tool call, once, unless the transcript shows it arrived; a thread that already worked still gets it, the brief check only before work.
+  if (!brief || /rule-guard: you are the /.test(t)) return ''
+  const fresh = !existsSync(startMark(session)) && !toolCalls(t).some((c) => c.result) // a thread that already worked (new container, no temp files) keeps going
+  writeFileSync(again, ''); writeFileSync(startMark(session), '')
+  const check = fresh ? await briefCheck(brief, cwd, knownModel(session, t)) : ''
+  if (fresh) updateLock(session, check)
   const stamp = join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`), kept = read(stamp) // roleContext writes it only once
   if (kept) unlinkSync(stamp)
   const card = await roleContext(brief, cwd, session)
