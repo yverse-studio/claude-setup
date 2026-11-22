@@ -3,6 +3,7 @@
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
 import { cpSync, existsSync, mkdirSync, statSync, symlinkSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { randomUUID } from 'node:crypto'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
@@ -734,15 +735,96 @@ test('rule guard: a thread start refreshes a stale coordinator card in its proje
     writeFileSync(join(bin, 'curl'), '#!/bin/sh\nexit 0\n', { mode: 0o755 })
     const env = { ...process.env, PATH: `${bin}:${process.env.PATH}`, CLAUDE_SETUP_RULE_GUARD: '', CLAUDE_SETUP_PROJECT_FILES: out }
     const brief = `<wake reason="spawn"><relay>\nRole: Programmer · Kit: setup · Size: S${FULL}</relay></wake>`
-    const run = (session) => spawnSync(process.execPath, [join(dir, 'rule-guard.mjs'), 'prompt'], { input: JSON.stringify({ prompt: brief, cwd: root, session_id: session }), encoding: 'utf8', env }).stdout
-    assert.match(run(`card1${process.pid}`), /Card refreshed [0-9a-f]{8}: /, 'the start receipt names the refresh')
+    // #742: the prompt hook only starts the refresh (a detached child), it never waits for the mount; CLAUDE_SETUP_DEFER=wait runs the child's work inline so the test can see it.
+    const run = (session, e = {}) => spawnSync(process.execPath, [join(dir, 'rule-guard.mjs'), 'prompt'], { input: JSON.stringify({ prompt: brief, cwd: root, session_id: session }), encoding: 'utf8', env: { ...env, CLAUDE_SETUP_DEFER: 'wait', ...e } }).stdout
+    run(`card1${process.pid}`)
     for (const f of ['COORDINATOR-CARD.md', 'ROSTER.md', 'briefs/programmer.md']) assert.ok(existsSync(join(out, 'claude-setup', f)), f)
-    assert.doesNotMatch(run(`card2${process.pid}`), /Card refreshed/, 'a current card is left alone and the start says nothing')
+    const had = readFileSync(join(out, 'claude-setup', 'COORDINATOR-CARD.md'), 'utf8')
+    run(`card2${process.pid}`)
+    assert.equal(readFileSync(join(out, 'claude-setup', 'COORDINATOR-CARD.md'), 'utf8'), had, 'a current card is left alone')
     writeFileSync(join(out, 'claude-setup', 'COORDINATOR-CARD.md'), 'Coordinator card (claude-setup 00000000, 2026-11-01).\nold')
-    assert.match(run(`card3${process.pid}`), /Card refreshed/, 'a stale card is refreshed')
-    const checkout = spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'prompt'], { input: JSON.stringify({ prompt: brief, cwd: root, session_id: `card4${process.pid}` }), encoding: 'utf8', env: { ...env, CLAUDE_SETUP_PROJECT_FILES: mkdtempSync(join(tmpdir(), 'projfiles2-')) } }).stdout
-    assert.doesNotMatch(checkout, /Card refreshed/, 'run from a checkout (no docs beside the guards) it renders nothing')
+    run(`card3${process.pid}`)
+    assert.match(readFileSync(join(out, 'claude-setup', 'COORDINATOR-CARD.md'), 'utf8'), /^Coordinator card \(claude-setup [0-9a-f]{8},/, 'a stale card is refreshed')
+    assert.doesNotMatch(run(`card5${process.pid}`), /Card refreshed/, 'the start text no longer waits on or reports the refresh')
+    const empty = mkdtempSync(join(tmpdir(), 'projfiles2-'))
+    spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'prompt'], { input: JSON.stringify({ prompt: brief, cwd: root, session_id: `card4${process.pid}` }), encoding: 'utf8', env: { ...env, CLAUDE_SETUP_PROJECT_FILES: empty } })
+    assert.equal(existsSync(join(empty, 'claude-setup', 'COORDINATOR-CARD.md')), false, 'run from a checkout (no docs beside the guards) it renders nothing')
+    rmSync(empty, { recursive: true, force: true })
   } finally { for (const d of [dir, bin, out]) rmSync(d, { recursive: true, force: true }) }
+})
+
+// #742: the prompt hook (5 s limit) printed nothing on 3 of 3 live starts because the card refresh and the start log wrote ~35 files to the project mount
+// (2.1 s to 2.4 s measured) and a missing playbook was fetched with curl (up to 4 s) before the context was printed.
+test('#742: the prompt path makes no network call and no write to the project folder before it prints; the deferred step does the writes', () => {
+  if (process.platform === 'win32') return
+  const home = mkdtempSync(join(tmpdir(), 'p742home-'))
+  const dir = join(home, '.claude', 'claude-setup') // the boot copy a cloud session has: no checkout at cwd, so setupRoot lands here
+  const cwd = mkdtempSync(join(tmpdir(), 'p742cwd-'))
+  const bin = mkdtempSync(join(tmpdir(), 'p742bin-'))
+  const out = mkdtempSync(join(tmpdir(), 'p742out-'))
+  try {
+    mkdirSync(dir, { recursive: true })
+    for (const f of readdirSync(join(root, 'global')).filter((x) => x.endsWith('.mjs'))) cpSync(join(root, 'global', f), join(dir, f))
+    const roles = readdirSync(join(root, '.claude/skills/operator/roles')).map((f) => `.claude/skills/operator/roles/${f}`)
+    for (const f of ['CLAUDE.md', 'docs/TEAMS.md', 'docs/MAP.md', 'config/persona.json', '.claude/skills/operator/checklists.md', '.claude/skills/operator/gate.md', ...roles]) { mkdirSync(join(dir, f, '..'), { recursive: true }); cpSync(join(root, f), join(dir, f)) }
+    const curlLog = join(bin, 'curl.log')
+    writeFileSync(join(bin, 'curl'), `#!/bin/sh\necho "$@" >> ${curlLog}\nexit 0\n`, { mode: 0o755 })
+    const env = { ...process.env, HOME: home, USERPROFILE: home, PATH: `${bin}:${process.env.PATH}`, CLAUDE_SETUP_RULE_GUARD: '', CLAUDE_SETUP_PROJECT_FILES: out, CLAUDE_SETUP_DEFER: 'skip' }
+    const brief = `<wake reason="spawn"><relay>\nRole: Programmer · Kit: setup · Size: S${FULL}</relay></wake>`
+    const start = (session) => spawnSync(process.execPath, [join(dir, 'rule-guard.mjs'), 'prompt'], { input: JSON.stringify({ prompt: brief, cwd, session_id: session }), encoding: 'utf8', env })
+    const session = randomUUID() // a real session id (the start log refuses others), new per run (the hook leaves marks in tmpdir)
+    const first = start(session)
+    assert.match(first.stdout, /Your playbook, \.claude\/skills\/operator\/roles\/programmer\.md, follows/, 'outside a checkout the boot copy gives the playbook itself')
+    // a missing playbook is the pointer line, and a curl fallback put back into the prompt path fails here
+    rmSync(join(dir, '.claude/skills/operator/roles/programmer.md'))
+    assert.match(start(randomUUID()).stdout, /Read your playbook \.claude\/skills\/operator\/roles\/programmer\.md of claude-setup/, 'a missing playbook is a pointer line')
+    assert.equal(existsSync(curlLog), false, `no curl before the context is printed: ${existsSync(curlLog) ? readFileSync(curlLog, 'utf8') : ''}`)
+    assert.deepEqual(existsSync(join(out, 'claude-setup')) ? readdirSync(join(out, 'claude-setup')) : [], [], 'nothing was written to the project folder')
+    const later = spawnSync(process.execPath, [join(dir, 'rule-guard.mjs'), 'deferred'], { input: JSON.stringify({ session, brief, checkNow: '', modelNote: '', guard: '', ms: 321 }), encoding: 'utf8', env })
+    assert.equal(later.status, 0, later.stderr)
+    assert.ok(existsSync(join(out, 'claude-setup', 'COORDINATOR-CARD.md')), 'the deferred step renders the card')
+    const log = readdirSync(join(out, 'claude-setup', 'brief-log'))
+    assert.equal(log.length, 1, 'and writes the start log')
+    assert.equal(JSON.parse(readFileSync(join(out, 'claude-setup', 'brief-log', log[0]), 'utf8')).ms, 321)
+  } finally { for (const d of [home, cwd, bin, out]) rmSync(d, { recursive: true, force: true }) }
+})
+
+// #742: the session start's fetch brings every Roster playbook and gate.md into the boot copy (TEAMS.md first, it names them), so the prompt hook reads them from disk.
+test('#742: team-guard refresh downloads the Roster playbooks and gate.md named by the fetched TEAMS.md', async () => {
+  if (process.platform === 'win32') return
+  const dir = mkdtempSync(join(tmpdir(), 'p742boot-'))
+  const bin = mkdtempSync(join(tmpdir(), 'p742serve-'))
+  const old = process.env.PATH
+  try {
+    writeFileSync(join(bin, 'curl'), `#!/bin/sh\nwhile [ $# -gt 0 ]; do\n  if [ "$1" = "-o" ]; then out="$2"; url="$3"; shift 3\n    f="\${url#https://raw.githubusercontent.com/yverse-studio/claude-setup/main/}"; f="\${f#global/}"\n    for src in "${root}/$f" "${root}/global/$f"; do [ -f "$src" ] && mkdir -p "$(dirname "$out")" && cp "$src" "$out" && break; done\n  else shift; fi\ndone\nexit 0\n`, { mode: 0o755 })
+    process.env.PATH = `${bin}:${old}`
+    const { refresh, roleFiles, GATE_FILE } = await import(`${pathToFileURL(join(root, 'global/team-guard.mjs')).href}?p742`)
+    refresh(dir)
+    const want = roleFiles(dir)
+    assert.ok(want.length > 5 && want.includes(GATE_FILE), `the Roster names its playbooks (${want.length})`)
+    for (const f of want) assert.ok(existsSync(join(dir, f)), `${f} is in the boot copy`)
+  } finally { process.env.PATH = old; for (const d of [dir, bin]) rmSync(d, { recursive: true, force: true }) }
+})
+
+// #742 gate round 2: three downloads with 2.5 + 1.5 + 1.5 s max times (plus curl's 0.5 s grace each) did not fit the 5 s SessionStart hook; they share one budget.
+test('#742: team-guard refresh stays under the 5 s hook limit when every download hangs until its max time', async () => {
+  if (process.platform === 'win32') return
+  const dir = mkdtempSync(join(tmpdir(), 'p742slow-'))
+  const bin = mkdtempSync(join(tmpdir(), 'p742sleep-'))
+  const old = process.env.PATH
+  try {
+    mkdirSync(join(dir, 'docs'), { recursive: true })
+    cpSync(join(root, 'docs/TEAMS.md'), join(dir, 'docs/TEAMS.md')) // the role download has a list to ask for
+    // every call sleeps to its --max-time, then fails like a curl that ran out of time (exit 28)
+    writeFileSync(join(bin, 'curl'), '#!/bin/sh\nwhile [ $# -gt 0 ]; do [ "$1" = "--max-time" ] && t="$2"; shift; done\nsleep "${t:-5}"\nexit 28\n', { mode: 0o755 })
+    process.env.PATH = `${bin}:${old}`
+    const { refresh, REFRESH_BUDGET_MS } = await import(`${pathToFileURL(join(root, 'global/team-guard.mjs')).href}?p742slow`)
+    const t0 = Date.now()
+    refresh(dir)
+    const took = Date.now() - t0
+    assert.ok(REFRESH_BUDGET_MS <= 4500, 'the budget leaves room inside 5 s')
+    assert.ok(took < 4700, `refresh took ${took} ms with every download hanging; the hook limit is 5000`)
+  } finally { process.env.PATH = old; for (const d of [dir, bin]) rmSync(d, { recursive: true, force: true }) }
 })
 
 // Plan M47: a thread's start proof names the guard version and any missing guard file.
