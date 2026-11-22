@@ -725,7 +725,7 @@ export function longNeedsTimeout(tool, input = {}, env = process.env, platform =
   if (!(Number(input.timeout) > 120000)) return null
   const command = String(input.command ?? '')
   const real = commandsOf(command).map((c) => c.replace(/^(\w+=\S*\s+)+/, '')).find((c) => !LONG_OK.test(c)) ?? ''
-  if ((tool === 'Bash' && GNU_TIMEOUT.test(real)) || /laptop-job\.mjs\b/.test(real) || (tool === 'PowerShell' && /-Timeout(Sec)?\b/.test(command))) return null
+  if ((tool === 'Bash' && GNU_TIMEOUT.test(real)) || /^node(\.exe)?\s+("[^"]*"|\S*)laptop-job\.mjs\b/.test(real) || (tool === 'PowerShell' && /-Timeout(Sec)?\b/.test(command))) return null
   return 'rule-guard: on Windows a long command (tool timeout above 2 min) needs its own timeout, because the tool\'s timeout kills the shell but leaves the child running, orphaned and hidden. Start it as `timeout <seconds> <command>` (GNU, Git Bash), or through `node scripts/laptop-job.mjs --timeout-min <N> -- <command>`, or in PowerShell with `-Timeout` on Wait-Process or Wait-Job (docs/pc-claude-user.md, Find hangs and timeouts).'
 }
 // The Archivist documents scripts and workflows; yskills' references are filed by the laptop lane, never by it
