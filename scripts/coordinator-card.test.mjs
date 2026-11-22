@@ -216,7 +216,10 @@ test('ROSTER.md lists no role without a brief file as a thread role (the Project
 })
 
 // ---- M50 slice C: every thread start is counted (card-render.mjs: logStart, noteRelay, statsLine)
-import { logStart, noteRelay, startOutcome, statsLine } from '../global/card-render.mjs'
+import { logStart, noteRelay, startOutcome, statsLine, isRealSession, startsWeek } from '../global/card-render.mjs'
+// A real session id is a UUID (B3 #730): the log writes and counts only those, so a probe or a hand-run hook never reaches the number.
+const sid = (n) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`
+const fileOf = (n, date) => `${date}-${sid(n).replace(/-/g, '')}.json`
 const REFUSED = 'Brief check (docs/TEAMS.md): this start breaks the team rules in 2 places: (1) Item is missing or still a <placeholder> (2) Plan is missing or still a <placeholder>. Do no work: send ALL of this to the coordinator'
 const REPAIRED = 'Brief repair (no block): the brief lacks Skills, Start. Work as if it read: x. Name the repaired lines in your first checklist line.'
 const WRONG = 'Brief check (docs/TEAMS.md): this start breaks the team rules in 1 place: (1) this thread runs on sonnet, but the Planner runs on fable: ask the coordinator to restart it on that model. Do no work: send ALL'
@@ -239,25 +242,25 @@ test('#712 G1.3: startOutcome cuts the found part, so a logged reason is one fix
 test('one count line per start type: --stats over a folder with every outcome', () => {
   const out = mkdtempSync(join(tmpdir(), 'brief-log-'))
   const t = new Date('2026-11-12T10:00:00Z')
-  const starts = [['s1', REFUSED], ['s2', ''], ['s3', ''], ['s4', REPAIRED], ['s5', WRONG]]
+  const starts = [[sid(1), REFUSED], [sid(2), ''], [sid(3), ''], [sid(4), REPAIRED], [sid(5), WRONG]]
   for (const [session, check] of starts) logStart({ session, project: 'P', role: 'Programmer', kit: 'setup', size: 'S', guard: 'abcd1234', card: 'b6a9c717', ...startOutcome(check) }, out, t)
   assert.equal(readdirSync(join(out, 'brief-log')).length, 5, 'one file per start')
   assert.equal(statsLine(out), 'starts 5: clean 2, repaired 1, refused 1, wrong-model 1, duplicate 0 (false starts 2, 40%); top reason: Item is missing or still a <placeholder> (1x)')
   assert.equal(statsLine(out, new Date('2026-11-13T00:00:00Z')).startsWith('starts 0:'), true, 'since drops older starts')
-  const file = JSON.parse(readFileSync(join(out, 'brief-log', '2026-11-12-s1.json'), 'utf8'))
+  const file = JSON.parse(readFileSync(join(out, 'brief-log', fileOf(1, '2026-11-12')), 'utf8'))
   assert.deepEqual([file.project, file.role, file.kit, file.size, file.guard, file.card, file.outcome], ['P', 'Programmer', 'setup', 'S', 'abcd1234', 'b6a9c717', 'refused'])
   rmSync(out, { recursive: true, force: true })
 })
 
 test('a relay on a refused start lands in the same file; a clean start is left alone; a second hook for one start writes once', () => {
   const out = mkdtempSync(join(tmpdir(), 'brief-log-'))
-  logStart({ session: 'r1', ...startOutcome(REFUSED) }, out)
-  logStart({ session: 'r1', outcome: 'clean' }, out)
-  logStart({ session: 'c1', ...startOutcome('') }, out)
-  assert.equal(noteRelay('r1', false, out), true)
-  assert.equal(noteRelay('r1', true, out), true)
-  assert.equal(noteRelay('c1', true, out), false)
-  const [f] = readdirSync(join(out, 'brief-log')).filter((n) => n.endsWith('-r1.json'))
+  logStart({ session: sid(11), ...startOutcome(REFUSED) }, out)
+  logStart({ session: sid(11), outcome: 'clean' }, out)
+  logStart({ session: sid(12), ...startOutcome('') }, out)
+  assert.equal(noteRelay(sid(11), false, out), true)
+  assert.equal(noteRelay(sid(11), true, out), true)
+  assert.equal(noteRelay(sid(12), true, out), false)
+  const [f] = readdirSync(join(out, 'brief-log')).filter((n) => n.endsWith(`-${sid(11).replace(/-/g, '')}.json`))
   const e = JSON.parse(readFileSync(join(out, 'brief-log', f), 'utf8'))
   assert.deepEqual([e.outcome, e.relays, e.lifted], ['refused', 2, true])
   rmSync(out, { recursive: true, force: true })
@@ -265,11 +268,11 @@ test('a relay on a refused start lands in the same file; a clean start is left a
 
 test('twenty processes logging at once lose no start, and no folder or session means no log and no crash', () => {
   const out = mkdtempSync(join(tmpdir(), 'brief-log-'))
-  const code = (i) => `const { logStart } = await import(${JSON.stringify(join(process.cwd(), 'global/card-render.mjs'))}); logStart({ session: 'p${i}', outcome: 'repaired', reasons: ['Skills'] }, ${JSON.stringify(out)})`
+  const code = (i) => `const { logStart } = await import(${JSON.stringify(join(process.cwd(), 'global/card-render.mjs'))}); logStart({ session: '00000000-0000-4000-8000-0000000001${String(i).padStart(2, '0')}', outcome: 'repaired', reasons: ['Skills'] }, ${JSON.stringify(out)})`
   const kids = Array.from({ length: 20 }, (_, i) => spawnSync(process.execPath, ['--input-type=module', '-e', code(i)], { encoding: 'utf8' }))
   assert.ok(kids.every((k) => k.status === 0))
   assert.match(statsLine(out), /^starts 20: clean 0, repaired 20,/)
-  assert.equal(logStart({ session: 'x', outcome: 'clean' }, null), null)
+  assert.equal(logStart({ session: sid(13), outcome: 'clean' }, null), null)
   assert.equal(logStart({ outcome: 'clean' }, out), null)
   assert.match(statsLine(null), /^starts 0:/)
   rmSync(out, { recursive: true, force: true })
@@ -281,11 +284,11 @@ test('the hook writes the count: a spawn prompt with a refused brief logs refuse
   process.env.CLAUDE_SETUP_PROJECT_FILES = out
   try {
     const brief = (role) => `<wake reason="spawn"><project id="chan_1" name="Demo Project" type="project">Role: ${role} · Kit: setup · Size: S\n</project></wake>`
-    await countStart({ session: 'h1', brief: brief('Programmer'), checkNow: REFUSED, modelNote: '', guard: 'Guards in this session: deadbeef (7/7 installed).', card: 'Card refreshed cafe1234: x' })
-    await countStart({ session: 'h2', brief: brief('Programmer'), checkNow: '', modelNote: '', guard: '', card: '' })
-    const read1 = (s) => JSON.parse(readFileSync(join(out, 'claude-setup', 'brief-log', readdirSync(join(out, 'claude-setup', 'brief-log')).find((n) => n.endsWith(`-${s}.json`))), 'utf8'))
-    assert.deepEqual([read1('h1').outcome, read1('h1').project, read1('h1').role, read1('h1').guard, read1('h1').card], ['refused', 'Demo Project', 'Programmer', 'deadbeef', 'cafe1234'])
-    assert.equal(read1('h2').outcome, 'clean')
+    await countStart({ session: sid(21), brief: brief('Programmer'), checkNow: REFUSED, modelNote: '', guard: 'Guards in this session: deadbeef (7/7 installed).', card: 'Card refreshed cafe1234: x' })
+    await countStart({ session: sid(22), brief: brief('Programmer'), checkNow: '', modelNote: '', guard: '', card: '' })
+    const read1 = (s) => JSON.parse(readFileSync(join(out, 'claude-setup', 'brief-log', readdirSync(join(out, 'claude-setup', 'brief-log')).find((n) => n.endsWith(`-${sid(s).replace(/-/g, '')}.json`))), 'utf8'))
+    assert.deepEqual([read1(21).outcome, read1(21).project, read1(21).role, read1(21).guard, read1(21).card], ['refused', 'Demo Project', 'Programmer', 'deadbeef', 'cafe1234'])
+    assert.equal(read1(22).outcome, 'clean')
   } finally { delete process.env.CLAUDE_SETUP_PROJECT_FILES; rmSync(out, { recursive: true, force: true }) }
 })
 
@@ -312,9 +315,9 @@ test('a linked brief-log folder writes nothing and the start goes on', () => {
   const out = mkdtempSync(join(tmpdir(), 'brief-log-'))
   const target = mkdtempSync(join(tmpdir(), 'elsewhere-'))
   symlinkSync(target, join(out, 'brief-log'))
-  assert.equal(logStart({ session: 'l1', outcome: 'clean' }, out), null)
+  assert.equal(logStart({ session: sid(31), outcome: 'clean' }, out), null)
   assert.deepEqual(readdirSync(target), [], 'nothing went through the link')
-  assert.equal(noteRelay('l1', true, out), false)
+  assert.equal(noteRelay(sid(31), true, out), false)
   rmSync(out, { recursive: true, force: true }); rmSync(target, { recursive: true, force: true })
 })
 
@@ -349,4 +352,80 @@ test('F1 #613: the card tells the compaction summary to carry the re-read order 
 
 test('#595: the card says no post per review round, only a PASS or an ask (advisory in the chat, a hook for threads)', () => {
   assert.match(buildCard({ hash: 'x', date: 'd' }), /no post per review round/)
+})
+
+// ---- B3 #730: the start log tells the truth.
+test('#730: only a UUID session is written and counted; a probe, rolelock or dbg session is not, and old stray files do not count', () => {
+  const out = mkdtempSync(join(tmpdir(), 'brief-log-'))
+  assert.equal(isRealSession(sid(1)), true)
+  for (const bad of ['rolelock14998x2', 'dbg2', 'revinj5', 'probeD18958x1794914785001', 'h1', '', undefined]) assert.equal(isRealSession(bad), false, String(bad))
+  assert.equal(logStart({ session: 'rolelock14998x2', outcome: 'clean' }, out), null)
+  assert.equal(logStart({ session: 'dbg2', outcome: 'clean' }, out), null)
+  assert.equal(existsSync(join(out, 'brief-log')), false, 'a refused session writes no folder either')
+  // the files already on disk: they are filtered when counted, never moved
+  mkdirSync(join(out, 'brief-log'))
+  const stray = JSON.stringify({ at: '2026-11-17T10:00:00Z', outcome: 'refused', reasons: ['x'] })
+  for (const n of ['2026-11-17-rolelock14998x2.json', '2026-11-17-dbg2.json', '2026-11-13-0a27810483b65cb19043f586b308460d.json.bak']) writeFileSync(join(out, 'brief-log', n), stray)
+  logStart({ session: sid(1), outcome: 'clean' }, out)
+  assert.match(statsLine(out), /^starts 1: clean 1,/)
+  assert.equal(readdirSync(join(out, 'brief-log')).length, 4, 'nothing was moved or deleted')
+  rmSync(out, { recursive: true, force: true })
+})
+
+test('#730: a failing write reaches stderr as one line, and the start still goes on', () => {
+  const out = mkdtempSync(join(tmpdir(), 'brief-log-'))
+  writeFileSync(join(out, 'brief-log'), 'a file where the folder should be')
+  const code = `const { logStart } = await import(${JSON.stringify(join(ROOT, 'global/card-render.mjs'))}); console.log(String(logStart({ session: ${JSON.stringify(sid(41))}, outcome: 'clean' }, ${JSON.stringify(out)})))`
+  const kid = spawnSync(process.execPath, ['--input-type=module', '-e', code], { encoding: 'utf8' })
+  assert.equal(kid.status, 0)
+  assert.equal(kid.stdout.trim(), 'null')
+  assert.match(kid.stderr.trim(), /^card-render: start log not written \(\w+\): .+/, kid.stderr)
+  assert.equal(kid.stderr.trim().split('\n').length, 1, 'one line')
+  rmSync(out, { recursive: true, force: true })
+})
+
+test('#730: the hook writes the count before the slow card refresh, so a hook killed at its 5 s timeout still leaves the start', () => {
+  const src = readFileSync(join(ROOT, 'global/rule-guard.mjs'), 'utf8')
+  const at = (needle) => src.indexOf(needle)
+  assert.ok(at('await countStart(') > 0 && at('await cardLine()') > 0)
+  assert.ok(at('await countStart(') < at('await cardLine()'), 'countStart runs before cardLine (the card refresh writes ~35 files to the mount)')
+})
+
+test('#730: the card carries the 7-day start line, rendered from the folder, and nothing else changes when there is no log', () => {
+  const out = mkdtempSync(join(tmpdir(), 'brief-log-'))
+  const now = new Date('2026-11-22T12:00:00Z')
+  logStart({ session: sid(1), ...startOutcome('') }, out, new Date('2026-11-21T10:00:00Z'))
+  logStart({ session: sid(2), ...startOutcome(REFUSED) }, out, new Date('2026-11-20T10:00:00Z'))
+  logStart({ session: sid(3), ...startOutcome('') }, out, new Date('2026-11-10T10:00:00Z'))
+  const line = startsWeek(out, now)
+  assert.equal(line, 'Thread starts, last 7 days (as of 2026-11-22): 2, clean 1, repaired 0, refused 1, wrong-model 0 (false starts 50%).')
+  assert.ok(line.length <= 130, String(line.length))
+  const card = buildCard({ teams, hash: 'abc12345', date: '2026-11-22', startsLine: line })
+  assert.ok(card.includes(line))
+  assert.ok(card.length < CARD_MAX, `${card.length} < ${CARD_MAX}`)
+  assert.equal(startsWeek(null, now), '', 'no folder, no line')
+  assert.equal(buildCard({ teams, hash: 'abc12345', date: '2026-11-22' }).includes('Thread starts, last 7 days'), false)
+  const files = renderAll({ base: ROOT, hash: 'abc12345', date: '2026-11-22', startsLine: line })
+  assert.ok(files.get('COORDINATOR-CARD.md').includes(line))
+  rmSync(out, { recursive: true, force: true })
+})
+
+test('#730: the CLI writes the 7-day line into the card it renders, from the brief-log beside it', () => {
+  const out = mkdtempSync(join(tmpdir(), 'brief-log-'))
+  logStart({ session: sid(1), ...startOutcome('') }, out)
+  logStart({ session: sid(2), ...startOutcome(REFUSED) }, out)
+  const run = spawnSync(process.execPath, [join(ROOT, 'scripts/coordinator-card.mjs'), join(out, 'COORDINATOR-CARD.md')], { encoding: 'utf8' })
+  assert.equal(run.status, 0, run.stderr)
+  const card = readFileSync(join(out, 'COORDINATOR-CARD.md'), 'utf8')
+  assert.match(card, /Thread starts, last 7 days \(as of \d{4}-\d{2}-\d{2}\): 2, clean 1, repaired 0, refused 1, wrong-model 0 \(false starts 50%\)\./)
+  rmSync(out, { recursive: true, force: true })
+})
+
+test('#730: an upper-case UUID is a real session and its file is counted', () => {
+  const out = mkdtempSync(join(tmpdir(), 'brief-log-'))
+  const upper = sid(7).replace(/0000$/, 'ABCD').replace(/-4000-/, '-4A00-')
+  assert.equal(isRealSession(upper), true)
+  logStart({ session: upper, outcome: 'clean' }, out)
+  assert.match(statsLine(out), /^starts 1:/)
+  rmSync(out, { recursive: true, force: true })
 })
