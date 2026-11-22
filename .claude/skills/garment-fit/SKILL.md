@@ -9,6 +9,11 @@ The pipeline (fit once per base, follow keys, hide mask, dress script, the Done 
 `claude-setup/docs/clothing-pipeline.md`; this skill adds only what it lacks. Run by the Character TD
 (`claude-setup/.claude/skills/operator/roles/character-td.md`), also as step 5 of [`asset-intake`](../asset-intake/SKILL.md).
 
+## The loop (GameDev 2026-11-15)
+
+- **Proven route, not tinkering.** The route is the one in the project's proven list (its CLAUDE.md names it): a real garment fitted per `docs/clothing-pipeline.md` and measured with `clearance.py`. A body-cut shell garment fails the gate, and material changes (alpha, emission, mm offsets) do not fix skin showing through; if the piece shows skin, the geometry or the fit is wrong.
+- **Self-loop:** change, render front, back, side and close-ups, score yourself against the table below, change again, without closing or reporting each step. Call a fresh gate only at a self-score of 4.8 or more with every hard check green, and hand it side and close-up views, not one front and one back image.
+
 ## Before the fit
 
 - **Search first:** library, catalog, `clothes_dupe.py`; refit a gate-passed piece before building one (`docs/clothing-pipeline.md`, Reuse first).
