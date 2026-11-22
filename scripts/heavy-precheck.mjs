@@ -19,7 +19,7 @@ export const PROBE_PS = [
   "$p = (Get-CimInstance Win32_PerfRawData_PerfOS_Memory).PoolPagedBytes",
   "$all = @(Get-CimInstance Win32_Process)",
   "$f = @($all | Where-Object { $_.Name -eq 'find.exe' } | ForEach-Object { [pscustomobject]@{ pid = $_.ProcessId; ppid = $_.ParentProcessId; startedMs = ([DateTimeOffset]$_.CreationDate).ToUnixTimeMilliseconds(); cmd = $_.CommandLine } })",
-  "[pscustomobject]@{ pagedPoolBytes = [double]$p; finds = $f; pids = @($all | ForEach-Object { $_.ProcessId }) } | ConvertTo-Json -Compress -Depth 4",
+  "[pscustomobject]@{ pagedPoolBytes = $(if ($null -eq $p) { $null } else { [double]$p }); finds = $f; pids = @($all | ForEach-Object { $_.ProcessId }) } | ConvertTo-Json -Compress -Depth 4",
 ].join('; ')
 
 // The default probe: null when it cannot run (not Windows, no powershell, bad output).
@@ -29,7 +29,7 @@ export function readProbe(run = (cmd, args) => spawnSync(cmd, args, { encoding: 
   if (r.error || r.status !== 0) return null
   try {
     const j = JSON.parse(r.stdout)
-    return { pagedPoolBytes: Number(j.pagedPoolBytes), finds: [j.finds ?? []].flat(), pids: [j.pids ?? []].flat() }
+    return { pagedPoolBytes: j.pagedPoolBytes == null ? NaN : Number(j.pagedPoolBytes), finds: [j.finds ?? []].flat(), pids: [j.pids ?? []].flat() }
   } catch { return null }
 }
 
@@ -58,6 +58,7 @@ export function precheck({ maxPoolGb = Number(process.env.HEAVY_PAGED_POOL_MAX_G
   if (Number.isFinite(poolGb) && poolGb > maxPoolGb) problems.push(`kernel Paged Pool is ${poolGb.toFixed(1)} GB (limit ${maxPoolGb} GB)`)
   const finds = badFinds(data, now)
   if (finds.length) problems.push(`${finds.length} stuck find.exe: ${finds.slice(0, 5).map((f) => `pid ${f.pid} ${f.why}`).join('; ')}`)
+  if (!problems.length && !Number.isFinite(poolGb)) return { state: 'SKIP', why: 'the Paged Pool could not be read (perf counters unavailable); no stuck find.exe', problems }
   if (!problems.length) return { state: 'OK', why: `Paged Pool ${Number.isFinite(poolGb) ? poolGb.toFixed(1) : '?'} GB, no stuck find.exe`, problems }
   const fix = finds.length ? ` Stop it and report to yskills; his fix: taskkill /F /IM find.exe, and a restart if the Paged Pool stays high.` : ' Stop and report to yskills; a restart frees the pool.'
   return { state: 'BLOCKED', why: `${problems.join('; ')}.${fix}`, problems }

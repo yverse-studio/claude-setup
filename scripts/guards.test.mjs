@@ -2134,11 +2134,17 @@ test('rule guard: on Windows find / and find with no path are refused, find with
   assert.equal(f('find / -name x', W, 'PowerShell'), null, 'PowerShell find is the Windows string filter')
   assert.equal(f('tasklist | find /i "node"', W, 'PowerShell'), null)
   assert.ok(f('bash -c "find / -name x"', W, 'PowerShell'), 'PowerShell starting Git Bash find is GNU find')
-  assert.ok(f('& "C:\\Program Files\\Git\\usr\\bin\\find.exe" / -name x', W, 'PowerShell'), 'a path to find.exe is GNU find') // path-lint: fixture
+  assert.ok(f('& "C:\\Program Files\\Git\\usr\\bin\\find.exe" / -name x', W, 'PowerShell'), 'Git usr/bin/find.exe is GNU find') // path-lint: fixture
   // gate round 1 (review of #758): the shapes that got past the first version
   for (const c of ['echo "$(find / -name x)"', 'echo `find / -name x`', 'x=$(find / -name x)', 'if true; then find / -name x; fi', 'while true; do find / -name x; done', '! find / -name x', 'cd / && find . -name x', 'cd ~ && find . -name x', "bash -c 'cd / && find . -name x'",
     'find ${HOME}/ -name x', 'find $USERPROFILE -name x', 'find /. -name x', 'find /c/. -name x', 'find \\/ -name x', 'xargs find / -name x', 'sudo -u x find / -name x', 'eval "find / -name x"', 'winpty find /', '2>/dev/null find / -name x',
     'bash -c "bash -c \\"find / -name x\\""', 'find >out.txt', 'find > out.txt -name x']) assert.ok(f(c), `refused: ${c}`)
+  // gate round 2: allowed shapes and the small fixes
+  for (const c of ["git commit -m 'fix: block `find /` on Windows'", 'git commit -m "$(cat <<\'EOF\'\nfix: guard\n\nThreads ran `find /` in Git Bash.\nEOF\n)"', 'gh pr create --title x --body "$(cat <<\'EOF\'\nBlocks `find /` and `find` with no path.\nEOF\n)"', "cat > notes.md <<'EOF'\nDo not run `find /` here\nEOF", "node scripts/pre-pr.mjs --title 'fix: no `find /` on Windows'", "rg -n '`find /`' docs", "echo 'never $(find / -name x)'",
+    'ls | xargs -I{} find {} -name y', 'find . -type f | xargs -I{} find {} -newer x', 'cd / ; cd /c/Studio/repos && find . -name x']) assert.equal(f(c), null, `allowed: ${c}`)
+  for (const c of ['env FOO=1 find / -name x', 'env -i A=b find / -name x', 'echo "`find / -name x`"', 'echo "$(find / -name x)"', 'ls | xargs -I{} find / -name y']) assert.ok(f(c), `refused: ${c}`)
+  assert.equal(f('C:\\Windows\\System32\\find.exe /i "node" log.txt', W, 'PowerShell'), null, 'the Windows find by path') // path-lint: fixture
+  assert.equal(f('tasklist | C:\\Windows\\System32\\find.exe /c "node"', W, 'PowerShell'), null) // path-lint: fixture
   for (const c of ['find --version', 'find --help', 'command -v find', 'git commit -m "docs: find / hangs\n\nmore text"', 'git commit -m "$(cat <<\'EOF\'\nfix: find / on Windows\nEOF\n)"', 'cd src && find . -name x', 'echo $(date)', 'find ./src > out.txt', 'xargs -n1 echo', 'cd /c/Studio/repos && find . -name x']) assert.equal(f(c), null, `allowed: ${c}`)
 })
 test('rule guard: on Windows a long foreground command needs its own timeout (tool timeout kills the shell, not the child)', async () => {
@@ -2147,8 +2153,9 @@ test('rule guard: on Windows a long foreground command needs its own timeout (to
   const t = (command, timeout, env = W, tool = 'Bash') => longNeedsTimeout(tool, { command, timeout }, env, 'linux')
   assert.match(t('ffmpeg -i a.mp4 b.mp4', 600000) ?? '', /timeout <seconds>.*laptop-job\.mjs/s)
   assert.match(t('npm ci', 300000, W, 'PowerShell') ?? '', /Wait-Process/)
-  for (const c of ['timeout 500 ffmpeg -i a.mp4 b.mp4', 'timeout -k 5 500 ffmpeg x', 'cd x && timeout 90 npm ci', 'timeout -s KILL 30 ffmpeg x', 'timeout -k 5 -s TERM 30 x', 'timeout --signal=KILL 30 x', 'cd /x && export A=1 && timeout 60 ffmpeg x', 'node scripts/laptop-job.mjs --timeout-min 20 -- ffmpeg x']) assert.equal(t(c, 600000), null, c)
+  for (const c of ['timeout 500 ffmpeg -i a.mp4 b.mp4', 'timeout -k 5 500 ffmpeg x', 'cd x && timeout 90 npm ci', 'timeout -s KILL 30 ffmpeg x', 'timeout -k 5 -s TERM 30 x', 'timeout --signal=KILL 30 x', 'cd /x && export A=1 && timeout 60 ffmpeg x', 'mkdir -p out && timeout 60 npm ci', 'node scripts/laptop-job.mjs --timeout-min 20 -- ffmpeg x']) assert.equal(t(c, 600000), null, c)
   assert.equal(t('Wait-Process -Id 4 -Timeout 300', 600000, W, 'PowerShell'), null, 'PowerShell -Timeout')
+  assert.ok(t('Invoke-WebRequest u -TimeoutSec 5; ffmeg x', 600000, W, 'PowerShell'), '-TimeoutSec of another cmdlet is no wrapper')
   assert.match(t('timeout /t 500 && ffmpeg x', 600000) ?? '', /timeout/, 'the cmd.exe sleep is no timeout wrapper')
   for (const c of ['ffmpeg x # timeout 5', 'echo "no timeout 5 here"', 'cat docs/laptop-job.mjs.md; ffmpeg x', 'npm run build | timeout 5 cat']) assert.ok(t(c, 600000), `refused: ${c}`)
   assert.ok(t('timeout 300 npm ci', 600000, W, 'PowerShell'), 'PowerShell: timeout is the cmd sleep')

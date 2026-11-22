@@ -52,6 +52,13 @@ test('an unreadable probe skips (fails open), it never blocks a job on a guess',
   assert.equal(readProbe(() => ({ status: 0, stdout: 'garbage' }), 'win32'), null, 'bad output')
   assert.deepEqual(readProbe(() => ({ status: 0, stdout: JSON.stringify({ pagedPoolBytes: 1, finds: { pid: 1, ppid: 2, startedMs: 3 }, pids: 5 }) }), 'win32'), { pagedPoolBytes: 1, finds: [{ pid: 1, ppid: 2, startedMs: 3 }], pids: [5] }, 'PowerShell turns a one-element array into a scalar')
 })
+test('an unreadable Paged Pool value skips, but a stuck find.exe still blocks', () => {
+  const r = precheck({ probe: () => ({ pagedPoolBytes: NaN, finds: [], pids: [1] }), now: NOW })
+  assert.equal(r.state, 'SKIP')
+  assert.match(r.why, /Paged Pool could not be read/)
+  assert.equal(readProbe(() => ({ status: 0, stdout: '{"pagedPoolBytes":null,"finds":[],"pids":[1]}' }), 'win32').pagedPoolBytes, NaN)
+  assert.equal(precheck({ probe: () => ({ pagedPoolBytes: NaN, finds: [find({ ppid: 9999, startedMs: NOW - 120000 })], pids: [1] }), now: NOW }).state, 'BLOCKED')
+})
 test('the CLI exits 2 with one BLOCKED line when the pool is over the limit, 0 when fine', () => {
   const env = (j) => ({ ...process.env, HEAVY_PRECHECK_PROBE_JSON: JSON.stringify(j) })
   const bad = spawnSync('node', [script], { encoding: 'utf8', env: env({ pagedPoolBytes: 6.5 * GB, finds: [], pids: [] }) })
