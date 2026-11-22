@@ -6,7 +6,7 @@ import { join } from 'node:path'
 import { BRIEF_FIELDS, CHECKLISTS, GATE_BUILDER_ROLES, GUARD_FILES, badRole, badTeam, coordinatorCard, kitNames, kitRows, rosterNames } from './team-guard.mjs'
 import { GATE_ROLES, roleOf } from './rule-guard.mjs'
 
-export const CARD_MAX = 7200 // 7,050 until F1 #613 (the compaction line, +116: the summary must carry the re-read order, the card itself is dropped by a compaction), 7,000 until #601 (the "root clean" proof), 6,800 until #604 (the first-reply header carries plan and board, and says what they count, +160), 6,600 until #430, 8,000 until 2026-11-12 (M27 step 6: rules a hook enforces left the card, the brief template came in)
+export const CARD_MAX = 7400 // 7,200 until B3 #730 (the 7-day start line, +130), 7,050 until F1 #613 (the compaction line, +116: the summary must carry the re-read order, the card itself is dropped by a compaction), 7,000 until #601 (the "root clean" proof), 6,800 until #604 (the first-reply header carries plan and board, and says what they count, +160), 6,600 until #430, 8,000 until 2026-11-12 (M27 step 6: rules a hook enforces left the card, the brief template came in)
 export const INDEX_MAX = 20000
 const cells = (l) => l.split('|').map((c) => c.trim())
 const today = () => new Date().toISOString().slice(0, 10)
@@ -63,8 +63,8 @@ A refusal names every gap at once: send those lines to the same thread with mess
 With Bash run \`node tools/brief-check/team-guard.mjs check <Role> <file|->\` in this folder before every start_thread (no Bash: the refusal lists the gaps): it lists every gap at once and prints the exact \`model\`.
 A device thread passes \`message_id\` (yskills' message or your own project-chat post), never \`project_post_id\` or \`auto_attach=false\`.`
 
-export function buildCard({ teams, hash = 'nogit', date = today() }) {
-  const head = `Coordinator card (claude-setup ${hash}, ${date}).\nYou are the project chat. Without Bash, this card and MEMORY.md are your rules.\nA rule not on this card: Read COORDINATOR-RULES-INDEX.md in this folder; still unclear: ask a setup thread (size S); never guess.`
+export function buildCard({ teams, hash = 'nogit', date = today(), startsLine = '' }) {
+  const head = `Coordinator card (claude-setup ${hash}, ${date}).\nYou are the project chat. Without Bash, this card and MEMORY.md are your rules.\nA rule not on this card: Read COORDINATOR-RULES-INDEX.md in this folder; still unclear: ask a setup thread (size S); never guess.${startsLine ? `\n${startsLine}` : ''}`
   const full = coordinatorCard(teams)
   if (!full) throw new Error('coordinator card: docs/TEAMS.md has no Roster or Kits rows')
   const card = [head, PREFLIGHT, BRIEF_SECTION, compact(full)].join('\n\n') + '\n'
@@ -174,9 +174,9 @@ export function cardHash(base) {
   for (const f of [...GUARD_FILES.map((g) => join(guardDir(base), g)), join(base, 'docs', 'TEAMS.md'), join(base, 'docs', 'MAP.md')]) h.update(`${f.split(/[\\/]/).pop()}\0${read(f)}`)
   return h.digest('hex').slice(0, 8)
 }
-export function renderAll({ base, hash = cardHash(base), date = today() }) {
+export function renderAll({ base, hash = cardHash(base), date = today(), startsLine = '' }) {
   const teams = read(join(base, 'docs', 'TEAMS.md'))
-  const files = new Map([['COORDINATOR-CARD.md', buildCard({ teams, hash, date })], ['COORDINATOR-RULES-INDEX.md', buildIndex({ teams, map: read(join(base, 'docs', 'MAP.md')), hash, date })], ['ROSTER.md', renderRoster({ teams, hash, date })]])
+  const files = new Map([['COORDINATOR-CARD.md', buildCard({ teams, hash, date, startsLine })], ['COORDINATOR-RULES-INDEX.md', buildIndex({ teams, map: read(join(base, 'docs', 'MAP.md')), hash, date })], ['ROSTER.md', renderRoster({ teams, hash, date })]])
   for (const g of ['team-guard.mjs', 'card-render.mjs', 'rule-guard.mjs']) files.set(`tools/brief-check/${g}`, read(join(guardDir(base), g)))
   for (const [from, to] of [['docs/TEAMS.md', 'docs/TEAMS.md'], [CHECKLISTS, CHECKLISTS]]) files.set(`tools/brief-check/${to}`, read(join(base, from)))
   for (const role of rosterNames(teams)) { const text = renderBrief(role, teams); if (text) files.set(`briefs/${briefFileName(role)}`, text) }
@@ -217,7 +217,7 @@ export function refreshCard(base, out = projectFolder()) {
     const hash = cardHash(base)
     const have = read(join(out, 'COORDINATOR-CARD.md')).match(/^Coordinator card \(claude-setup (\w+),/)?.[1]
     if (have === hash && existsSync(join(out, 'ROSTER.md'))) return null
-    writeAll(out, renderAll({ base, hash }))
+    writeAll(out, renderAll({ base, hash, startsLine: startsWeek(out) }))
     return hash
   } catch { return null }
 }
@@ -263,18 +263,26 @@ export function startOutcome(check = '', modelCheckText = '') {
   const lacks = repair[1].match(/^the brief lacks ([^.]*?)\. Work as if/)?.[1]
   return { outcome: 'repaired', reasons: lacks ? lacks.split(', ') : [repair[1].slice(0, 60)] }
 }
+// A real session id is a UUID. A hand-run hook, a probe or a test names its session anything else; those never reach the log or its count (B3 #730).
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+export const isRealSession = (s) => typeof s === 'string' && UUID.test(s)
+const REAL_LOG = /^\d{4}-\d{2}-\d{2}-[0-9a-f]{32}\.json$/
 const logName = (session, date) => `${date}-${String(session).replace(/\W/g, '').slice(0, 40)}.json`
 const writeLog = (file, entry) => safeWrite(file, `${JSON.stringify(entry)}\n`)
 // Writes the start's file. `info`: { session, project, role, kit, size, guard, card, outcome, reasons }. A failure never stops the start.
 export function logStart(info, out = projectFolder(), now = new Date()) {
+  if (!out || !isRealSession(info?.session)) return null
   try {
-    if (!out || !info?.session) return null
     const date = now.toISOString().slice(0, 10)
     const file = join(out, 'brief-log', logName(info.session, date))
     if (existsSync(file)) return file // the hook may fire twice for one start: the first entry stands
     writeLog(file, { at: now.toISOString(), project: '', role: '', kit: '', size: '', guard: '', card: '', outcome: 'clean', reasons: [], relays: 0, lifted: false, ...info })
     return file
-  } catch { return null }
+  } catch (e) {
+    // B3 #730: the start goes on, but a log that cannot be written is said once (the hook's stderr), never swallowed (a start log dead since 17.11.).
+    console.error(`card-render: start log not written (${e?.code ?? 'error'}): ${String(e?.message ?? e).split('\n')[0].slice(0, 160)}`)
+    return null
+  }
 }
 // A later relay on a refused start is added to the same file (`lifted` once a relay brings the thread to work).
 export function noteRelay(session, lifted, out = projectFolder()) {
@@ -293,7 +301,7 @@ export function noteRelay(session, lifted, out = projectFolder()) {
 export function statsLine(out = projectFolder(), since = null) {
   const dir = out ? join(out, 'brief-log') : ''
   const entries = []
-  for (const f of dir && existsSync(dir) ? readdirSync(dir) : []) {
+  for (const f of (dir && existsSync(dir) ? readdirSync(dir) : []).filter((n) => REAL_LOG.test(n))) {
     try { const e = JSON.parse(readFileSync(join(dir, f), 'utf8')); if (!since || new Date(e.at) >= since) entries.push(e) } catch { /* a cut file counts as nothing */ }
   }
   const count = Object.fromEntries(OUTCOMES.map((o) => [o, entries.filter((e) => e.outcome === o).length]))
@@ -303,4 +311,10 @@ export function statsLine(out = projectFolder(), since = null) {
   const top = [...reasons].sort((a, b) => b[1] - a[1])[0]
   const pct = entries.length ? Math.round((100 * bad) / entries.length) : 0
   return `starts ${entries.length}: ${OUTCOMES.map((o) => `${o} ${count[o]}`).join(', ')} (false starts ${bad}, ${pct}%); top reason: ${top ? `${top[0]} (${top[1]}x)` : 'none'}`
+}
+// The line the coordinator card carries: the last 7 days of real starts in this folder, rendered when the card is. '' without a folder.
+export function startsWeek(out = projectFolder(), now = new Date()) {
+  if (!out) return ''
+  const m = statsLine(out, new Date(now - 7 * 864e5)).match(/^starts (\d+): clean (\d+), repaired (\d+), refused (\d+), wrong-model (\d+), duplicate \d+ \(false starts \d+, (\d+)%\)/)
+  return m ? `Thread starts, last 7 days (as of ${now.toISOString().slice(0, 10)}): ${m[1]}, clean ${m[2]}, repaired ${m[3]}, refused ${m[4]}, wrong-model ${m[5]} (false starts ${m[6]}%).` : ''
 }

@@ -1132,14 +1132,14 @@ async function cardLine() {
   } catch { return '' }
 }
 // M50 slice C: every checked start writes one count file in its project's folder (card-render.mjs, logStart); never stops the start.
-export async function countStart({ session, brief, checkNow, modelNote, guard, card }) {
+export async function countStart({ session, brief, checkNow, modelNote, guard, card, ms }) {
   try {
     const { logStart, startOutcome, cardHash } = await import(new URL('./card-render.mjs', import.meta.url))
     const base = dirname(fileURLToPath(import.meta.url))
     const plain = brief.replace(/[*_`]/g, '')
     const field = (re) => plain.match(re)?.[1]?.trim() ?? ''
     const project = brief.match(/<project\b[^>]*\bname=\\?"([^"\\]+)/)?.[1] ?? brief.match(/<project\b[^>]*\bid=\\?"([^"\\]+)/)?.[1] ?? ''
-    logStart({ session, project, role: field(/\bRole:[ \t]*([^·|\n]+)/i), kit: field(/\bKit:[ \t]*([\w-]+)/i), size: field(/\bSize:[ \t]*([SML])\b/i), guard: guard.match(/Guards in this session: (\w+)/)?.[1] ?? '', card: card.match(/Card refreshed (\w+)/)?.[1] ?? (existsSync(join(base, 'docs', 'TEAMS.md')) ? cardHash(base) : ''), ...startOutcome(checkNow, modelNote) })
+    logStart({ session, project, role: field(/\bRole:[ \t]*([^·|\n]+)/i), kit: field(/\bKit:[ \t]*([\w-]+)/i), size: field(/\bSize:[ \t]*([SML])\b/i), guard: guard.match(/Guards in this session: (\w+)/)?.[1] ?? '', card: card.match(/Card refreshed (\w+)/)?.[1] ?? (existsSync(join(base, 'docs', 'TEAMS.md')) ? cardHash(base) : ''), ...(ms ? { ms } : {}), ...startOutcome(checkNow, modelNote) })
   } catch { /* counting is never a reason to stop a start */ }
 }
 async function countRelay(session) {
@@ -1207,8 +1207,10 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           const isStart = spawned || (lookup && brief !== prompt)
           const modelNote = modelOnce(brief, transcriptPath, session)
           const guard = isStart ? await guardLine() : ''
+          // B3 #730: the count goes first. The card refresh writes ~35 files to the project mount (1.4 s warm) and the hook is killed at 5 s,
+          // after which no start was logged (hook_cancelled, timedOut, 5087 ms, 2026-11-22). `ms` is the hook's age when the line was written.
+          if (isStart) await countStart({ session, brief, checkNow, modelNote, guard, card: '', ms: Math.round(performance.now()) })
           const card = isStart ? await cardLine() : ''
-          if (isStart) await countStart({ session, brief, checkNow, modelNote, guard, card })
           const roleCardText = await roleContext(brief, cwd, session)
           await stampFromTranscript(session, () => (transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : ''), cwd)
           const context = [checkNow, relayNote, isStart ? await gateBriefContext(brief, model) : '', guard, card, modelNote, roleCardText, await itemContext(brief, cwd, session), await stopNote(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
