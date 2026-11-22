@@ -26,6 +26,11 @@ The floor every game ships with, plus its playtest checks: [`refs/controls-basel
   `allow-pointer-lock`. Where the lock is refused, drag-to-look with its own sensitivity is the fallback.
 - **Move feel:** speed in baseline row 12, velocity eased and collision as in `walkable-room.md`, no head bob by
   default (an option, off; if on, at most 1 cm sway at 2 Hz [judgement]), no camera smoothing on the look.
+  Seen once, vacation-game round 2 (2026-11-22): the blind playtest read a walk with no bob and no footsteps as gliding, so that game
+  turned a small bob on by default (1.2 cm peak to peak, one bump per footstep from the distance walked, no roll, "less motion" and the
+  panel turn it off) and added a footstep per 0.7 m. This overrides "off by default" only for a walking game with a test that shows the
+  glide; a saved settings object needs a version marker, or the old explicit `false` the panel wrote for everyone beats the new default.
+  Start and stop take about the same time (0.36 s there); a stop much quicker than the start feels like a wall.
 - **Third person:** follow camera with a spring arm that shortens on the first hit
   (`game-3d/refs/gamedev-skills/camera-systems`); a hard cut resets the smoothing.
 - **Game feel:** `game-3d/refs/gamedev-skills/game-feel` and the GDD's Feel lines; feedback inside 100 ms [judgement].
