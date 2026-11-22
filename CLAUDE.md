@@ -34,6 +34,7 @@ Everything else loads on demand: `docs/MAP.md` names the one home of each rule, 
 
 | Need | Read |
 |---|---|
+| the workflow, task to merge | `docs/TEAMS.md#the-workflow` |
 | roles, sizes, models, kits | `docs/TEAMS.md` |
 | accounts, hosting, a new project, deploys | `docs/USING.md`, the `publish` skill |
 | UI work | the project's `DESIGN.md`, the `ui-review` skill |

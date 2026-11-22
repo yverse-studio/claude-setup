@@ -1,11 +1,6 @@
 # Roadmap: from idea to money
 
-Every new project follows this. You send the idea in a Claude Project (or a plain chat); the
-project conversation becomes the **operator** (`operator` skill) and starts a thread per job. It
-holds the goals, staffs the teams and pushes them until the goal is live. You answer one
-brainstorm batch and three ok/no briefs; every PR merges at 5/5 on its own (`gate.md`, Merge policy).
-Each thread lives for one job, hands off through files and closes: long threads re-read their
-whole history every turn.
+Every new project follows one loop: [The workflow](TEAMS.md#the-workflow). This page holds the phases behind it, the token budget and the handoff rules.
 
 ## The phases
 
@@ -33,7 +28,7 @@ and every subagent names its model from there; the project's default is never re
 
 yskills hit most of a weekly limit in under a day (2026-10-18) and wants at least 4 days from it. One rule for every thread, project and chat, and the global setup:
 
-Budget: Haiku (effort low) reads, lists, checks files, polls CI and does simple edits; Sonnet builds; Opus for the roles the Models line (`docs/TEAMS.md`) names; the gate verdict tier is in the Models line; Fable for the Planner and Reviewer threads and a hard task (definition: Models line), and it is the escalation step for a thread stuck twice or a critical task (launch, money, data loss, a decision with no default); only when the coordinator names it in the brief. An S or M gate round is one Reviewer subagent plus CI, a new round only for a real bug; the round limit and the summary to yskills: `gate.md` (Rounds). The thread cap: [`TEAMS.md`](TEAMS.md) (Reuse rule). Nothing beyond the ask: no extra research or screenshots. Reuse before research: first read the existing report, role or skill for that kind of work (`research/`, `roles/`) and research only what is new; a thread that solves a new kind of task leaves a short playbook or template in its one home so the next one follows it. The coordinator keeps briefs short and rewrites memory only at milestones.
+Budget: Haiku (effort low) reads, lists, checks files, polls CI and does simple edits; Sonnet builds; Opus for the roles the Models line (`docs/TEAMS.md`) names; the gate verdict tier is in the Models line; Fable for the Planner and Reviewer threads and a hard task (definition: Models line), and it is the escalation step for a thread stuck twice or a critical task (launch, money, data loss, a decision with no default); only when the coordinator names it in the brief. An S or M gate round is one Reviewer subagent plus CI, a new round only for a real bug; the round limit and the summary to yskills: `gate.md` (Rounds). The cap on parallel Programmers: [`TEAMS.md`](TEAMS.md) (Reuse rule). Nothing beyond the ask: no extra research or screenshots. Reuse before research: first read the existing report, role or skill for that kind of work (`research/`, `roles/`) and research only what is new; a thread that solves a new kind of task leaves a short playbook or template in its one home so the next one follows it. The coordinator keeps briefs short and rewrites memory only at milestones.
 
 Why calls, not threads, cost the most (measured 2026-10-18; the breakdown is `claude-setup/audit/2026-10-18-token-start-cost.md` in the claude.ai project's shared files, not in this repo): a fresh project thread starts at about 114k tokens, only about 10k of it from this repo, and every call re-reads all of it. So batch independent calls in one turn, read several files with one command or one Haiku reader, name in the brief the one file a role must read, and use an Agent subagent (it starts small) instead of a new project thread for a bounded check.
 

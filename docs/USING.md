@@ -48,15 +48,14 @@ files, tools or models.
 
 ## What happens next
 
+The order of the work, from your task to the merge, is one loop: [`TEAMS.md`](TEAMS.md#the-workflow).
+
 1. **Brainstorm.** Claude says what it would build instead, pushes back with reasons, then asks
    the real moment (when it comes from your life) and 1-2 tap cards. The rest it decides.
-2. **Research, plan.** Market, prices, law, tools. Result: `PLAN.md` and the acceptance criteria.
-3. **Brief (a): ok or no.** The first thing you get. Nothing to set up: Claude makes the repo,
+2. **Brief (a): ok or no.** The first thing you get, with `PLAN.md` and the acceptance criteria. Nothing to set up: Claude makes the repo,
    the Worker and the first deploy itself (below).
-4. **Build.** One thread per slice. Every change is a PR that a gate checks (who runs it: operator `gate.md`, Gate size)
-   (CI, a live test of the preview, a fresh review, security, design and law). At 5/5 it **merges
-   itself**, and the thread says `Done: <what changed>`.
-5. **Launch and after.** The loop reads errors and feedback every day (`docs/LOOP.md`).
+3. **Merges.** Every change is a PR that merges itself at 5/5, and the thread says `Done: <what changed>`.
+4. **Launch and after.** The loop reads errors and feedback every day (`docs/LOOP.md`).
 
 You read only the project chat: the coordinator posts every result, `Done:` line and card there
 (rule: `roles/project-manager.md`); PR links and gate talk stay in the threads, and you open a
@@ -226,5 +225,5 @@ Say "stop" or "pause" and everything stops; a look you reject stays rejected.
 | Example of waste | fanning out several threads before anything was visible cost about 10 € of tokens in test run 1 | operator `SKILL.md` |
 | Cost per finished app | not measured yet | |
 
-Keep it cheap: one app at a time, the thread cap of `docs/TEAMS.md` (Reuse rule), ask for a first visible result
+Keep it cheap: one app at a time, the cap on parallel Programmers (`docs/TEAMS.md`, Reuse rule), ask for a first visible result
 before more.

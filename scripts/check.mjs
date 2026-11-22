@@ -246,6 +246,23 @@ for (const f of anyText('.')) {
   }
 }
 
+// The workflow (#763): one loop, one section of docs/TEAMS.md above the Pipeline; every other entry point links it and none retells it.
+{
+  const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
+  const at = teams.search(/^## The workflow\s*$/m)
+  if (at < 0 || at > teams.search(/^## Pipeline\s*$/m)) errors.push('docs/TEAMS.md: the "## The workflow" section is missing or not above "## Pipeline"')
+  else {
+    const lines = teams.slice(at).split(/^## /m)[1].split('\n').slice(1).filter((l) => l.trim())
+    if (lines.length > 12) errors.push(`docs/TEAMS.md (The workflow): ${lines.length} non-empty lines, the cap is 12`)
+    for (const l of lines.filter((l) => /^\d+\. /.test(l))) if (!l.includes('](')) errors.push(`docs/TEAMS.md (The workflow): a line without a link to its home: ${l.slice(0, 70)}`)
+  }
+  const { buildCard } = await import('./coordinator-card.mjs')
+  for (const [name, text] of [['CLAUDE.md', readFileSync(join(root, 'CLAUDE.md'), 'utf8')], ['the coordinator card', buildCard({ hash: 'check', date: 'check' })],
+    ['.claude/skills/operator/templates/project-instructions.md', readFileSync(join(root, '.claude/skills/operator/templates/project-instructions.md'), 'utf8')], ['docs/WORKFLOW.md', readFileSync(join(root, 'docs/WORKFLOW.md'), 'utf8')]]) {
+    if (!text.includes('TEAMS.md#the-workflow')) errors.push(`${name}: does not link docs/TEAMS.md#the-workflow`)
+  }
+}
+
 // Section refs to TEAMS.md (yskills 2026-10-26 gate: links to a renamed "The teams" survived the
 // rewrite). "TEAMS.md (A, B)" must name headings TEAMS.md has, and the Kits live in TEAMS.md, not MAP.md.
 {
@@ -486,6 +503,7 @@ const { measureTopics, compareTopics } = await import('./topic-claims.mjs')
 const frozen = json('config/rule-budget.json') ?? {}
 const topicNow = measureTopics(root, frozen.topicAllow ?? [])
 errors.push(...compareTopics(topicNow, frozen.topics ?? {}))
+for (const a of topicNow.unusedAllow) errors.push(`stale topicAllow entry: ${a.file}: ${a.starts}`)
 if (process.argv.includes('--topics')) {
   for (const [f, n] of Object.entries(topicNow.perFile).sort((a, b) => b[1] - a[1])) console.log(`${n} ${f}`)
   for (const h of topicNow.hits) console.log(`${h.file} [${h.topic}] ${h.sentence.slice(0, 140)}`)

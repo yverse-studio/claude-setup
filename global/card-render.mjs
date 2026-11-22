@@ -77,7 +77,7 @@ A device thread passes \`message_id\` (yskills' message or your own project-chat
 }
 
 export function buildCard({ teams, hash = 'nogit', date = today(), startsLine = '' }) {
-  const head = `Coordinator card (claude-setup ${hash}, ${date}).\nYou are the project chat. Without Bash, this card and MEMORY.md are your rules.\nA rule not on this card: Read COORDINATOR-RULES-INDEX.md in this folder; still unclear: ask a setup thread (size S); never guess.${startsLine ? `\n${startsLine}` : ''}`
+  const head = `Coordinator card (claude-setup ${hash}, ${date}).\nYou are the project chat. Without Bash, this card and MEMORY.md are your rules.\nA rule not on this card: Read COORDINATOR-RULES-INDEX.md in this folder; still unclear: ask a setup thread (size S); never guess. Workflow: claude-setup docs/TEAMS.md#the-workflow.${startsLine ? `\n${startsLine}` : ''}`
   const full = coordinatorCard(teams)
   if (!full) throw new Error('coordinator card: docs/TEAMS.md has no Roster or Kits rows')
   const card = [head, PREFLIGHT, briefSection(), compact(full)].join('\n\n') + '\n'

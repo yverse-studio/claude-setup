@@ -30,16 +30,18 @@ export function topicHits(text) {
 export function countTopics(files, allow = []) {
   const perFile = {}
   const hits = []
+  const used = new Set()
   for (const [file, text] of files) {
     for (const h of topicHits(text)) {
       if (TOPICS[h.topic].home === file) continue
       const t = stripMarker(h.sentence)
-      if (allow.some((a) => a.file === file && t.startsWith(a.starts))) continue
+      const a = allow.find((a) => a.file === file && t.startsWith(a.starts))
+      if (a) { used.add(a); continue }
       perFile[file] = (perFile[file] ?? 0) + 1
       hits.push({ file, topic: h.topic, sentence: h.sentence })
     }
   }
-  return { perFile, hits }
+  return { perFile, hits, unusedAllow: allow.filter((a) => !used.has(a)) }
 }
 
 export function compareTopics(now, baseline = {}) {
