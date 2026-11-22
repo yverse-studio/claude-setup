@@ -384,7 +384,7 @@ test('#730: a failing write reaches stderr as one line, and the start still goes
   rmSync(out, { recursive: true, force: true })
 })
 
-test('#730/#742: the start count and the card refresh are never awaited in the prompt path; the count runs before the refresh in the deferred step', () => {
+test('#730: the hook writes the count before the slow card refresh, so a hook killed at its 5 s timeout still leaves the start', () => { // #742: both now run in the deferred child, never awaited in the prompt path
   const src = readFileSync(join(ROOT, 'global/rule-guard.mjs'), 'utf8')
   const at = (needle) => src.indexOf(needle)
   const prompt = src.slice(at("if (mode === 'prompt') {"), at("if (mode === 'stop') {"))
