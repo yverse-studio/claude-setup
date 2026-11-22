@@ -10,6 +10,7 @@ import { appendFileSync, existsSync, readFileSync, statSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { freemem } from 'node:os'
 import { releaseOwner, setClaimPid, tryClaim } from './ram-ledger.mjs'
+import { precheck, precheckLine } from './heavy-precheck.mjs'
 import { MAX_BLENDER, MAX_RENDERS, acquireSlot, blenderCount, ledgerList, ledgerSignIn, ledgerSignOut, releaseSlot, slotsHeld } from './laptop-slots.mjs'
 
 const KILL_GRACE_MS = 5000
@@ -171,6 +172,11 @@ async function main() {
   const noProgress = progressProblem(cmd, opt)
   if (noProgress) finish(statusLine('FAIL', opt.name, noProgress), 2)
   const win = process.platform === 'win32'
+  if (heavyApp(cmd)) { // 2026-11-22: a hung find.exe pool leak must stop a Blender or Ren'Py start, not meet it half way
+    const pre = precheck()
+    console.log(precheckLine(pre))
+    if (pre.state === 'BLOCKED') finish(statusLine('BLOCKED', opt.name, pre.why), 3)
+  }
   if (win) {
     const power = powerProblems()
     if (power.length) console.log(`WARN ${opt.name}: ${power.join('; ')}; run once as admin: powercfg /change standby-timeout-ac 0 and powercfg /change hibernate-timeout-ac 0`)
