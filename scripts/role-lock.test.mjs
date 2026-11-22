@@ -552,6 +552,7 @@ test('#615: the role file names the skills to load; the first reply is refused u
   const other = start()
   appendFileSync(sessionTranscripts.get(other.id), `${JSON.stringify({ type: 'assistant', message: { content: [{ type: 'tool_use', id: 'u2', name: 'Skill', input: { skill: 'market' } }] } })}\n`)
   const again = tool(other.id, POST, { text: 'hi (◕‿◕)' }).stderr.match(/TEAMS\.md\): (Thread · [^\n]*)/)?.[1]
+  rmSync(join(tmpdir(), `claude-setup-guardlog-${other.id}.jsonl`), { force: true }) // #729: start over the form-check count, as above
   assert.match(tool(other.id, POST, { text: `${again}\nhi (◕‿◕)` }).stderr, /toolbox/, 'a Skill call for another skill does not count')
   assert.deepEqual(wanted(root, role('programmer'), 'Note: the earlier thread ran with Kit: site.\nRole: Programmer · Kit: game · Size: S'), ['game-3d', 'game-ux'], 'the kit comes from the stamp, not from a mention')
   const b = start()
