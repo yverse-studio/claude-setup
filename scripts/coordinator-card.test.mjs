@@ -438,6 +438,7 @@ test('#743: the card with the 7-day line is at most 7,050 characters (the who-bu
   const line = 'Thread starts, last 7 days (as of 2026-11-22): 7, clean 0, repaired 6, refused 1, wrong-model 0 (false starts 14%).'
   const card = buildCard({ teams, hash: 'abc12345', date: '2026-11-22', startsLine: line })
   assert.ok(card.length <= 7050, String(card.length))
+  assert.ok(CARD_MAX - card.length >= 350, `free: ${CARD_MAX - card.length}`)
 })
 
 test('#743: the kept lines stay (spawn, models, sizes, roster, brief copy) and the cut lines are gone', () => {
