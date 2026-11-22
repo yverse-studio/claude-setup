@@ -274,6 +274,11 @@ export const ITEM_REF = /^[ \t>-]*Item:[^<\n]*?(?:\b(M\d+|new)\b|((?:[\w.-]+\/[\
 export const normItem = (t) => t.replace(/^m(?=\d)/, 'M').replace(/^new$/i, 'new')
 const itemTok = (p) => { const m = p.match(ITEM_REF); return m ? normItem(m[2] ?? m[1]) : null }
 const line = (re) => (plain) => re.test(plain)
+// A number that reads as a reference with its sign missing (`729`, `issue 729`, `PR 744`, `PLAN.json 29`, `Milestone 29`, `m 29`, `PLAN.json item 29`) stays a fault.
+const HALF_REF = /^\s*\d+\s*$|\b(?:issue|pr|plan(?:\.json)?|milestone|item|m)[\s#:.-]*\d+\b/i
+// #729 (a): an Item line with text but no `#n`, `M<n>` or `new` and no `<` placeholder is plain words (`Item: Setup vs SOTA audit`): the thread works as `Item: new` and says so,
+// no coordinator round. `PLAN.json item 29` is a half-written `M29` and stays a fault that names the form, so the #605 open-item check keeps its token.
+const itemFreeText = (p) => /^[ \t>-]*Item:[ \t]*[^<\s][^<\n]*$/im.test(p) && !ITEM_REF.test(p) && !HALF_REF.test(p.match(/^[ \t>-]*Item:[ \t]*([^\n]*)$/im)?.[1] ?? '')
 // The target of a look, scene or asset: a file in an approval/ folder (reference/ for motion), bare or inside a Markdown link. Only a Programmer may say
 // `n/a <why>` (10+ characters), which also drops the Source line; an Animator or Character TD with a real sheet has no n/a (owner 2026-11-16).
 export const TARGET_FILE = /^[ \t>-]*Target image:[ \t]*[^<\n]*(?<![\w-])(?:approval|reference)[\\/][^\s<>()]*\.(?:png|jpe?g|webp|gif|pdf|mp4|webm)(?=[\s),;]|\.?\s|\.?$)/im
@@ -281,7 +286,7 @@ export const TARGET_NA = /^[ \t>-]*Target image:[ \t]*n\/a[ \t]+\S[^\n]{9,}$/im
 const targetNa = (plain) => /^[ \t>-]*Role:[ \t]*Programmer\b/im.test(plain) && TARGET_NA.test(plain)
 const sizeCls = (plain) => (small(plain) ? 'recoverable' : 'judgment')
 export const BRIEF_FIELDS = [
-  { key: 'Item', name: 'Item: (#n of its issue, M<n> from PLAN.json, or new)', tpl: 'Item: <issue #n, M<n> or new>', ok: line(ITEM_REF), clean: (p) => /^[ \t>-]*Item:[ \t]*(?:issue )?(M\d+|new|(?:[\w.-]+\/[\w.-]+)?#\d+)[ \t]*$/m.test(p.replace(/^([ \t>-]*)item:/gim, '$1Item:')), cls: sizeCls, fill: (p) => `Item: ${itemTok(p) ?? 'new'}` },
+  { key: 'Item', name: 'Item: (#n of its issue, M<n> from PLAN.json, or new)', tpl: 'Item: <issue #n, M<n> or new>', ok: line(ITEM_REF), clean: (p) => /^[ \t>-]*Item:[ \t]*(?:issue )?(M\d+|new|(?:[\w.-]+\/[\w.-]+)?#\d+)[ \t]*$/m.test(p.replace(/^([ \t>-]*)item:/gim, '$1Item:')), cls: (p) => (itemFreeText(p) ? 'derived' : sizeCls(p)), fill: (p) => `Item: ${itemTok(p) ?? 'new'}` },
   { key: 'Plan', name: 'Plan: (the plan file or card this thread builds)', tpl: 'Plan: <plan file or card it builds>', ok: line(/^[ \t>-]*Plan:[ \t]*[^<\s]/im), cls: sizeCls, fill: () => 'Plan: n/a, size S' },
   { key: 'Acceptance', name: 'Acceptance: (what counts as accepted)', tpl: 'Acceptance: <what counts as accepted>', ok: line(/^[ \t>-]*Acceptance:[ \t]*[^<\s]/im), cls: sizeCls, fill: () => 'Acceptance: propose one from the task, say so in your first checklist line' },
   { key: 'Model', name: 'Model:', tpl: 'Model: <model id of the role\'s Roster row>', ok: line(/^[ \t>-]*Model:[ \t]*[^<\s]/im), cls: () => 'derived', fill: () => 'Model: the model this thread runs on' },
@@ -300,7 +305,7 @@ export const BRIEF_FIELDS = [
   { key: 'Source', name: 'Source: (original files of the chosen design)', tpl: 'Source: <original files of the chosen design, path or link>', applies: needsSheet, ok: (p) => targetNa(p) || /^[ \t>-]*Source:(?![ \t]*n\/a\b)[ \t]*[^<\n]*([\\/]|#cmsg_?[A-Za-z0-9]{6,})/im.test(p), cls: () => 'judgment' },
   // vacation-game 2026-11-15 (yskills): levels went to build without a teardown, a level plan or design proposals. A level brief in the game kit names the
   // files of the steps before it (docs/TEAMS.md, A level): the Planner the Researcher's page, the Game Designer that page and the plan, a builder all three.
-  { key: 'Level', name: 'Level: research <page> · plan <file> · design <file> (a level brief in the game kit, docs/TEAMS.md A level)', tpl: 'Level: research <page> · plan <file> · design <file>, or `n/a <why no new or reworked level>`; game kit builder and designer briefs', applies: needsLevel, ok: levelOk, cls: () => 'judgment' },
+  { key: 'Level', name: 'Level: research <page> · plan <file> · design <file> (a level brief in the game kit, docs/TEAMS.md A level)', tpl: 'Level: research <page> · plan <file> · design <file>, or `n/a <why no new or reworked level>` (n/a only as the whole line, never inside one step); game kit builder and designer briefs', applies: needsLevel, ok: levelOk, cls: () => 'judgment' },
   // GameDev 2026-11-15 (#627, #688, #689): a plan built from cloud docs alone failed a gate and a garment took ~18 rounds of material tinkering while a passed route existed. One line names the
   // asset's pre-gate file, which quotes the project's recipe and pitfall docs (operator/gate.md, Before a builder asks for a gate; scripts/pipeline-gates.mjs pregate checks it).
   { key: 'Pre-gate', name: 'Pre-gate: (the asset\'s pre-gate file, operator/gate.md)', tpl: 'Pre-gate: <path of the asset\'s PREGATE.md in the project files; written before the plan, it quotes the project\'s recipe and pitfall docs; laptop offline means stop and report> (Animator and Character TD)', applies: (p) => /^[ \t>-]*Role:[ \t]*(Animator|Character TD)\b/im.test(p), ok: line(/^[ \t>-]*Pre-gate:[ \t]*[^<\s]/im), cls: () => 'recoverable', fill: () => 'Pre-gate: write <project files>/gate/<asset>/PREGATE.md before the plan (operator/gate.md, Before a builder asks for a gate): recipe and pitfall rows quoted from the docs the project lists, read on the laptop where they live; laptop offline means stop and report' },

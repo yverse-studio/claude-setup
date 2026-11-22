@@ -330,7 +330,8 @@ test('#631: the plan gate row names the old scene a plan copies, once, in the pa
 })
 
 // #689: the pre-gate file check. Fixtures live in a temp project-files folder; every red case feeds one violation to a green file.
-import { pregateProblems, pregateCheck, pregateMissing } from '../global/rule-guard.mjs'
+import { pregateProblems, pregateCheck, pregateMissing, PREGATE_TOOL_NAMES } from '../global/rule-guard.mjs'
+import { tmpdir as osTmp } from 'node:os'
 
 const PG_DOCS = {
   'docs/recipe.md': 'Passed recipe: the real garment route with a fitted shell, scored 4.9 on Mira bikini.\nSecond line about fitting.',
@@ -409,6 +410,9 @@ test('#689 test 3: none-rows and a project with no list file pass the plan, and 
     const r = pg(p, text.replace('Docs: docs/recipe.md, docs/pitfalls.md', 'Docs: docs/pitfalls.md'))
     assert.deepEqual(r.problems, [])
     assert.equal(r.noList, true)
+    const cli = spawnSync(process.execPath, [join(dirname(fileURLToPath(import.meta.url)), 'pipeline-gates.mjs'), 'pregate', join(p.root, 'gate/bikini/PREGATE.md'), '--stage', 'plan', '--root', p.root], { encoding: 'utf8' })
+    assert.equal(cli.status, 0, cli.stdout)
+    assert.match(cli.stdout, /^OK pregate plan \(no PREGATE-DOCS\.md: the doc set was the builder's choice\)$/m, 'the OK line says the builder chose the docs')
   } finally { p.done() }
 })
 
@@ -477,4 +481,45 @@ test('#689 test 7: the CLI exits 1 with the problem lines on a red file and prin
     assert.equal(bad.status, 1)
     assert.match(bad.stdout, /^RED .*not ticked/m)
   } finally { p.done() }
+})
+
+test('#689 gate round 1: Docs: reads a comma list, bullets and plain path lines, each form on its own', () => {
+  const p = pgProject({ list: LIST })
+  try {
+    const base = pgFile()
+    const forms = {
+      comma: base,
+      bullets: base.replace('Docs: docs/recipe.md, docs/pitfalls.md', 'Docs:\n- docs/recipe.md\n- docs/pitfalls.md'),
+      plain: base.replace('Docs: docs/recipe.md, docs/pitfalls.md', 'Docs:\ndocs/recipe.md\ndocs/pitfalls.md'),
+      'plain after text': base.replace('Docs: docs/recipe.md, docs/pitfalls.md', 'Docs: docs/recipe.md\ndocs/pitfalls.md'),
+    }
+    for (const [name, text] of Object.entries(forms)) assert.deepEqual(pg(p, text).problems, [], name)
+    // a plain list stops at the next field line: the path-less Self-score line is no doc
+    assert.deepEqual(pg(p, forms.plain, 'gate').problems, [], 'plain lines end at the first heading or field line')
+  } finally { p.done() }
+})
+
+test('#689 gate round 1: every tool the hook checks is in the installed PreToolUse matcher, and the process refuses a Character TD hand-in', () => {
+  const root = join(dirname(fileURLToPath(import.meta.url)), '..')
+  for (const f of ['install.mjs', 'cloud/setup.sh']) {
+    const m = readFileSync(join(root, f), 'utf8').match(/['"]PreToolUse['"], ['"]([^'"]*propose_skills)['"]/)?.[1] ?? '' // the rule-guard entry
+    for (const t of PREGATE_TOOL_NAMES) assert.ok(m.split('|').includes(t), `${f}: matcher lacks ${t}`)
+  }
+  const p = pgProject({ list: LIST })
+  const script = join(root, 'global/rule-guard.mjs')
+  const stamp = (id, role) => writeFileSync(join(osTmp(), `claude-setup-role-${id}`), role)
+  const run = (id, tool, text) => spawnSync(process.execPath, [script, 'pre'], { input: JSON.stringify({ tool_name: tool, tool_input: { text }, session_id: id, cwd: root }), encoding: 'utf8', env: { ...process.env, CLAUDE_SETUP_PROJECT_FILES: p.root } })
+  const td = `pg${process.pid}td`, prog = `pg${process.pid}prog`
+  try {
+    p.put('gate/bikini/PREGATE.md', pgFile({ tick: '' }))
+    stamp(td, 'Character TD'); stamp(prog, 'Programmer')
+    for (const tool of ['mcp__hearthbot__message_coordinator', 'mcp__hearthbot__message_thread']) {
+      const r = run(td, tool, 'Gate request: plan v1\nPre-gate: n/a, no file')
+      assert.equal(r.status, 2, `${tool}: ${r.stderr}`)
+      assert.match(r.stderr, /pipeline-gates\.mjs pregate/)
+      const ok = run(td, tool, 'Gate request: plan v1\nPre-gate: plan gate/bikini/PREGATE.md')
+      assert.equal(ok.status, 0, `${tool} with a passing plan file: ${ok.stderr}`)
+      assert.equal(run(prog, tool, 'Gate request: build\nfront.png\nPre-gate: n/a, a code PR').status, 0, `${tool}: a Programmer passes the whole chain untouched`)
+    }
+  } finally { p.done(); for (const id of [td, prog]) rmSync(join(osTmp(), `claude-setup-role-${id}`), { force: true }) }
 })

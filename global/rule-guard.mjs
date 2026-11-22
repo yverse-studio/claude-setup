@@ -7,7 +7,7 @@
 
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { existsSync, readdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'node:fs'
+import { appendFileSync, existsSync, readdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'node:fs'
 import { isIP } from 'node:net'
 import { homedir, tmpdir } from 'node:os'
 import { dirname, join, relative } from 'node:path'
@@ -871,7 +871,7 @@ const BLENDER_EXE = String.raw`(?:"[^"\n]*[\\/]blender(?:\.exe)?"|'[^'\n]*[\\/]b
 const BLENDER_RUN = new RegExp(String.raw`(?:^|[;&|(\n\x60]|\s--\s|\b(?:then|do|else|exec|nohup|start|time|xargs|Start-Process(?:\s+-FilePath)?|timeout\s+\S+)\s)\s*(?:&\s*)?${BLENDER_EXE}(?=\s|$)`, 'i')
 const HEADLESS = /(?:^|[\s'",])(?:-b|--background)(?=[\s'",]|$)/
 const BL_SERVER_PROC = /blender(?:\.exe)?["']?\s.*bl_server\.py/i
-export const BLENDER_DOCS = [['projects/games/companyxy/ch01/NACHT-FIX-PLAN.md (cloud: /mnt/project-files/NACHT-FIX-PLAN.md)', /NACHT-FIX-PLAN\.md$/i], ['claude-setup/.claude/skills/operator/roles/animator.md (Fast loop)', /operator[\\/]roles[\\/]animator\.md$/i]]
+export const BLENDER_DOCS = [['claude-setup/.claude/skills/operator/roles/animator.md (Fast loop)', /operator[\\/]roles[\\/]animator\.md$/i]]
 const shellCommand = (tool, input) => (/^(Bash|PowerShell)$/.test(tool) ? String(input.command ?? '') : '')
 export const blenderStart = (command) => BLENDER_RUN.exec(command)
 export function blenderCall(tool, input = {}) {
@@ -954,7 +954,8 @@ function pgDocs(text) {
   const at = lines.findIndex((l) => /^[ \t>*-]*\**Docs\**:/i.test(l))
   if (at < 0) return []
   const items = [lines[at].replace(/^[^:]*:\**/, '')]
-  for (const l of lines.slice(at + 1)) { if (/^\s*[-*]\s+\S/.test(l)) items.push(l.replace(/^\s*[-*]\s+/, '')); else break }
+  // bullets or plain path lines, up to the first blank line, heading, table row or other field line
+  for (const l of lines.slice(at + 1)) { if (!l.trim() || /^\s*(#|\|)/.test(l) || /^[ \t>*-]*\**[A-Za-z][\w -]*\**:(\s|$)/.test(l)) break; items.push(l.replace(/^\s*[-*]\s+/, '')) }
   return items.flatMap((i) => i.split(/[,\n]/)).map(pgPath).filter(Boolean)
 }
 // The project's own list, `| Type | Doc | Laptop path |`, from the project-files root only (a list beside a PREGATE.md must not shadow it).
@@ -1022,7 +1023,8 @@ export function pregateCheck(file, stage, roots, { exists = existsSync, readText
 // The hook: a hand-in of an Animator or a Character TD needs `Pre-gate: <stage> <path>` and a file with no problems at that stage.
 // Hand-in marks: a `Done:` post, a `Gate request:` line, a picture or video path, or an attachment. Only a message whose one mark is a Gate request may carry stage plan.
 const PREGATE_ROLES = /^(animator|character td)$/i
-const PREGATE_TOOLS = /^mcp__hearthbot__(message_thread|message_coordinator|post_message)$/
+export const PREGATE_TOOL_NAMES = ['post_message', 'message_thread', 'message_coordinator'].map((n) => `mcp__hearthbot__${n}`) // each one must be in the PreToolUse matcher of install.mjs
+const PREGATE_TOOLS = new RegExp(`^(${PREGATE_TOOL_NAMES.join('|')})$`)
 export function pregateMissing(tool, input = {}, role = '', env = process.env) {
   if (!PREGATE_TOOLS.test(tool) || !PREGATE_ROLES.test(String(role).trim())) return null
   const text = String(input.text ?? '')
@@ -1341,6 +1343,35 @@ function neverPushBlock(tool, input, cwd) {
   return hit.length ? `rule-guard: neverPush: ${hit.join(', ')} never goes to GitHub (a Private18 folder, nacht-*.rpy, kontakt_sex* or a .neverpush prefix); leave it out of the push.` : null
 }
 
+// #729 (c): every refusing check of the pre hook has an id and a kind. FORM = a rule about how a call or text is shaped (it heals or caps: the same form check that refused
+// twice in a session passes the third time, logged `cap`, so a form fault never costs more than two rounds). SAFETY = secrets, 18+ push, ask-first, the brief lock (judgment gaps and model tier),
+// the role hands-off, the gate round ledger, Blender slot and runner: unlimited, never capped. Each refusal and each cap writes one line (id, kind, outcome) to the session's own log.
+export const GUARD_CHECKS = {
+  lock: 'safety', neverpush: 'safety', 'hands-off': 'safety', gate: 'safety', decide: 'safety',
+  'plan-item-open': 'form', receipt: 'form', 'propose-skills': 'safety', 'opens-window': 'safety', 'archivist-files': 'safety',
+  kaomoji: 'form', 'dupe-check': 'form', pregate: 'safety', 'blender-busy': 'safety', 'blender-docs': 'form', 'blender-runner': 'safety', grill: 'form',
+}
+const GUARD_CAP = 2
+const guardLogFile = (session) => join(tmpdir(), `claude-setup-guardlog-${String(session).replace(/\W/g, '')}.jsonl`)
+export const readGuardLog = (session) => read(guardLogFile(session)).split('\n').filter(Boolean).flatMap((l) => { try { return [JSON.parse(l)] } catch { return [] } })
+async function logGuard(session, id, outcome) {
+  const entry = { at: new Date().toISOString(), session: String(session), id, kind: GUARD_CHECKS[id], outcome }
+  try { appendFileSync(guardLogFile(session), `${JSON.stringify(entry)}\n`) } catch { /* a log must never stop a call */ }
+  try { (await import(new URL('./card-render.mjs', import.meta.url))).logDecision(entry) } catch { /* same */ }
+}
+// steps: [[id, () => block text | null]...], run in order, lazily; the first refusal wins. A form check past its cap passes and the chain goes on.
+export async function runChecks(steps, { session } = {}) {
+  for (const [id, fn] of steps) {
+    const text = await fn()
+    if (!text) continue
+    if (!session) return text
+    if (GUARD_CHECKS[id] === 'form' && readGuardLog(session).filter((l) => l.id === id && l.outcome === 'block').length >= GUARD_CAP) { await logGuard(session, id, 'cap'); continue }
+    await logGuard(session, id, 'block')
+    return text
+  }
+  return null
+}
+
 if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/').split('/').pop())) {
   const mode = process.argv[2]
   if (mode === 'neverpush') {
@@ -1411,23 +1442,26 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         if (session && existsSync(lockFile(session))) rebriefNote = '' // the lock note is in the lock block's own text; only a lifted lock is news
         // S2 (#543): a thread's post_message renders the open plan issues for the coordinator, who has no hooks and no GitHub tool. Never blocks.
         if (tool === 'mcp__hearthbot__post_message') { try { (await import(new URL('./card-render.mjs', import.meta.url))).refreshIssues(() => planIssues(cwd)) } catch { /* same */ } }
-        let block = lockBlock(tool, session)
-          ?? neverPushBlock(tool, input ?? {}, cwd)
-          ?? handsOff(tool, input ?? {}, gateRole, setupRoot(cwd))
-          ?? (await gateBlock(tool, input ?? {}, transcript, sessionModel(transcript()), true, gateRole, transcriptPath))
-          ?? decide(tool, input ?? {}, process.env, session ? read(shipped).split('\n') : [], () => threadBoard(toolCalls(transcript())))
-          ?? planItemOpen(tool, input ?? {}, session, transcript, cwd)
-          ?? await receiptBlock(tool, input ?? {}, session, cwd, agentId, transcript)
-          ?? proposeSkillsBlocked(tool)
-          ?? opensWindow(tool, input ?? {})
-          ?? archivistFiles(tool, input ?? {}, session ? read(join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)) : '')
-          ?? kaomojiMissing(tool, input ?? {})
-          ?? dupeCheckMissing(tool, input ?? {}, sessionTranscript)
-          ?? pregateMissing(tool, input ?? {}, gateRole)
-          ?? blenderServerBusy(tool, input ?? {}, listProcs)
-          ?? blenderDocsMissing(tool, input ?? {}, sessionTranscript)
-          ?? blenderOutsideRunner(tool, input ?? {})
-          ?? (grillMissing(tool, input ?? {}, transcript) ? 'rule-guard: a Planner at size M or L grills first (operator SKILL.md, Grill first): post the real-moment question (when it comes from his life) and up to 2 request_decision cards (goal, taste), each with your recommended answer, then write the plan on the answers (or the recommendations while he is away).' : null)
+        const grill = () => (grillMissing(tool, input ?? {}, transcript) ? 'rule-guard: a Planner at size M or L grills first (operator SKILL.md, Grill first): post the real-moment question (when it comes from his life) and up to 2 request_decision cards (goal, taste), each with your recommended answer, then write the plan on the answers (or the recommendations while he is away).' : null)
+        let block = await runChecks([
+          ['lock', () => lockBlock(tool, session)],
+          ['neverpush', () => neverPushBlock(tool, input ?? {}, cwd)],
+          ['hands-off', () => handsOff(tool, input ?? {}, gateRole, setupRoot(cwd))],
+          ['gate', () => gateBlock(tool, input ?? {}, transcript, sessionModel(transcript()), true, gateRole, transcriptPath)],
+          ['decide', () => decide(tool, input ?? {}, process.env, session ? read(shipped).split('\n') : [], () => threadBoard(toolCalls(transcript())))],
+          ['plan-item-open', () => planItemOpen(tool, input ?? {}, session, transcript, cwd)],
+          ['receipt', () => receiptBlock(tool, input ?? {}, session, cwd, agentId, transcript)],
+          ['propose-skills', () => proposeSkillsBlocked(tool)],
+          ['opens-window', () => opensWindow(tool, input ?? {})],
+          ['archivist-files', () => archivistFiles(tool, input ?? {}, session ? read(join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)) : '')],
+          ['kaomoji', () => kaomojiMissing(tool, input ?? {})],
+          ['dupe-check', () => dupeCheckMissing(tool, input ?? {}, sessionTranscript)],
+          ['pregate', () => pregateMissing(tool, input ?? {}, gateRole)],
+          ['blender-busy', () => blenderServerBusy(tool, input ?? {}, listProcs)],
+          ['blender-docs', () => blenderDocsMissing(tool, input ?? {}, sessionTranscript)],
+          ['blender-runner', () => blenderOutsideRunner(tool, input ?? {})],
+          ['grill', grill],
+        ], { session })
         if (!block) block = await gateBlock(tool, input ?? {}, transcript, sessionModel(transcript()), false, gateRole, transcriptPath) // commit the round only now: no other guard refused the post
         if (!block && session && tool === 'Artifact' && input?.url && input.file_path) writeFileSync(shipped, `${input.file_path}\n`, { flag: 'a' })
         if (block) { process.stderr.write([block, rebriefNote, startNote].filter(Boolean).join('\n')); process.exitCode = 2 }
