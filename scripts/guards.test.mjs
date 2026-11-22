@@ -2067,6 +2067,7 @@ test('rule guard: refusing checks have an id and a kind, log one line per refusa
     lock: 'safety', neverpush: 'safety', 'hands-off': 'safety', gate: 'safety', decide: 'safety',
     'plan-item-open': 'form', receipt: 'form', 'propose-skills': 'safety', 'opens-window': 'safety', 'archivist-files': 'safety',
     kaomoji: 'form', 'dupe-check': 'form', pregate: 'safety', 'blender-busy': 'safety', 'blender-docs': 'form', 'blender-runner': 'safety', grill: 'form',
+    'find-hang': 'safety', 'long-timeout': 'form',
   }, 'the whole table: a flipped kind is a test failure')
   const session = `cap-test-${process.pid}-${Date.now()}`
   const form = [['kaomoji', () => 'add a kaomoji']]
@@ -2108,4 +2109,50 @@ test('card-render logDecision: a real session appends one JSON line per call to 
     assert.equal(logDecision(entry, '', now), null, 'no folder, no line')
     assert.equal(readdirSync(join(out, 'guard-log')).length, 1, 'the non-UUID session wrote nothing')
   } finally { rmSync(out, { recursive: true, force: true }) }
+})
+
+// yskills 2026-11-22: `find /` in Git Bash on Windows hung, pinned a core each and grew the kernel Paged Pool past 6 GB. A find with no path or a drive root is refused on Windows.
+test('rule guard: on Windows find / and find with no path are refused, find with a project folder passes', async () => {
+  const { findHang } = await import('../global/rule-guard.mjs')
+  const W = { OS: 'Windows_NT' }
+  const f = (command, env = W, tool = 'Bash', platform = 'linux') => findHang(tool, { command }, env, platform)
+  for (const c of ['find /', 'find / -name x', 'find / -name "*.blend" -type f', 'find /c -name x', 'find /mnt/c/ -name x', 'find C:\\ -name x', 'find C:/ -name x', 'find ~ -name x', 'find $HOME -name x',
+    'find', 'find -name x', 'find -type f -name "*.py"', 'find . /  -name x', 'find -L / -name x', 'cd /x && find / -name y | head', 'timeout 60 find / -name x', 'sudo find / -name x', 'bash -c "find / -name x"', 'FOO=1 find / -name x', '/usr/bin/find / -name x', '"C:/Program Files/Git/usr/bin/find.exe" / -name x']) { // path-lint: fixture
+    assert.match(f(c) ?? '', /Glob.*Grep|Grep.*Glob/, `refused: ${c}`)
+  }
+  assert.match(f('find / -name x') ?? '', /Paged Pool/)
+  assert.match(f('find') ?? '', /no path/)
+  for (const c of ['find ./src -name x', 'find src -name x', 'find /c/Studio/repos/claude-setup -name x', 'find C:/Studio/_claude -maxdepth 2', 'find "$PWD/src" -type f', 'find . -name x', 'find ./a ./b -name x', // path-lint: fixture
+    'git commit -m "fix: no find / on Windows"', 'grep -rn "find /" docs', 'echo find /', 'ls /', 'cat > f.sh <<EOF\nfind / -name x\nEOF', 'node scripts/find-owner.mjs /', 'findstr /s x *.txt', 'rg --files /c/Studio']) {
+    assert.equal(f(c), null, `allowed: ${c}`)
+  }
+  assert.equal(f('find / -name x', {}, 'Bash', 'linux'), null, 'cloud (Linux): not a Windows host')
+  assert.ok(f('find / -name x', {}, 'Bash', 'win32'), 'the node platform counts')
+  assert.ok(f('find / -name x', { STUDIO_ROOT: 'C:/Studio' }), 'STUDIO_ROOT marks the laptop') // path-lint: fixture
+  assert.ok(f('find / -name x', { OSTYPE: 'msys' }), 'Git Bash sets OSTYPE')
+  assert.equal(f('find / -name x', W, 'Write'), null, 'not a shell tool')
+  assert.equal(f('find / -name x', W, 'PowerShell'), null, 'PowerShell find is the Windows string filter')
+  assert.ok(f('bash -c "find / -name x"', W, 'PowerShell') === null, 'PowerShell is not checked')
+})
+test('rule guard: on Windows a long foreground command needs its own timeout (tool timeout kills the shell, not the child)', async () => {
+  const { longNeedsTimeout } = await import('../global/rule-guard.mjs')
+  const W = { OS: 'Windows_NT' }
+  const t = (command, timeout, env = W, tool = 'Bash') => longNeedsTimeout(tool, { command, timeout }, env, 'linux')
+  assert.match(t('ffmpeg -i a.mp4 b.mp4', 600000) ?? '', /timeout <seconds>.*laptop-job\.mjs/s)
+  assert.match(t('npm ci', 300000, W, 'PowerShell') ?? '', /Wait-Process/)
+  for (const c of ['timeout 500 ffmpeg -i a.mp4 b.mp4', 'timeout -k 5 500 ffmpeg x', 'cd x && timeout 90 npm ci', 'node scripts/laptop-job.mjs --timeout-min 20 -- ffmpeg x', 'Wait-Process -Id 4 -Timeout 300']) assert.equal(t(c, 600000), null, c)
+  assert.match(t('timeout /t 500 && ffmpeg x', 600000) ?? '', /timeout/, 'the cmd.exe sleep is no timeout wrapper')
+  assert.equal(t('ffmpeg x', 120000), null, 'the default 2 min is short')
+  assert.equal(t('ffmpeg x', undefined), null, 'no tool timeout given')
+  assert.equal(t('ffmpeg x', 600000, {}), null, 'cloud: not a Windows host')
+  assert.equal(t('ffmpeg x', 600000, W, 'Write'), null)
+})
+test('rule guard: the pre hook refuses find / on a Windows host (live process) and lets find ./src pass', () => {
+  const session = `find-live-${process.pid}-${Date.now()}`
+  const run = (command) => spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'pre'], { input: JSON.stringify({ session_id: session, tool_name: 'Bash', tool_input: { command } }), env: { ...process.env, OS: 'Windows_NT', CLAUDE_SETUP_RULE_GUARD: '' }, encoding: 'utf8' })
+  const bad = run('find / -name x')
+  assert.equal(bad.status, 2)
+  assert.match(bad.stderr, /Paged Pool/)
+  assert.equal(run('find / -name x').status, 2, 'a safety check is never capped')
+  assert.equal(run('find ./src -name x').status, 0)
 })

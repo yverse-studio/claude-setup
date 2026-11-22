@@ -648,6 +648,52 @@ export function opensWindow(tool, input = {}) {
   if (!cmd || /#\s*yskills asked/i.test(cmd) || !commandsOf(cmd).some((c) => opensOne(c))) return null
   return "rule-guard: this opens a window on yskills' screen (docs/pc-claude-user.md, No windows): nothing pops up while Claude works unless he asked. Run it headless (Playwright or `--headless`, `blender -b`, `Start-Process -WindowStyle Hidden`), or, when he asked to see it, end the command with `# yskills asked`."
 }
+// yskills 2026-11-22: threads started `find /` in Git Bash on Windows; it hung, pinned one CPU core each and grew the kernel Paged Pool past 6 GB,
+// invisible in the process list. Home of the rule: docs/pc-claude-user.md (Find hangs and timeouts). Windows only (the host check below).
+const winHost = (env = process.env, platform = process.platform) => platform === 'win32' || env.OS === 'Windows_NT' || /^(msys|cygwin)/i.test(env.OSTYPE ?? '') || Boolean(env.STUDIO_ROOT)
+const unquote = (t) => t.replace(/^["']|["']$/g, '')
+// A search root that walks a whole drive or the whole profile: `/`, `/c`, `/mnt/c`, `C:`, `C:\`, `~`, `$HOME`, `%USERPROFILE%`.
+const SEARCH_ROOT = /^(\/+\*?|\/[a-z]\/?\*?|\/mnt\/[a-z]\/?\*?|[a-z]:[\\/]*\*?|~\/?|\$\{?HOME\}?\/?|%USERPROFILE%[\\/]?|\$\{?env:USERPROFILE\}?[\\/]?)$/i
+const FIND_WRAP = /^(sudo|env|time|nohup|timeout|nice|stdbuf|command|exec)$/
+// The paths a GNU find call names (up to the first expression), or null when this command is no find. `[]` = find with no path at all.
+function findPaths(command, depth = 0) {
+  const m = command.replace(/^(\w+=\S*\s+)+/, '').match(/^(?:"([^"]*)"|'([^']*)'|(\S+))\s*([\s\S]*)$/)
+  if (!m || depth > 3) return null
+  const exe = (m[1] ?? m[2] ?? m[3]).split(/[\\/]/).pop().replace(/\.exe$/i, '').toLowerCase()
+  const args = m[4]
+  if (FIND_WRAP.test(exe)) return findPaths(args.replace(/^((-\S*|\d+\w?)\s+)+/, ''), depth + 1)
+  if (/^(bash|sh|zsh)$/.test(exe) && /(^|\s)-\w*c\s/.test(args)) {
+    for (const c of commandsOf(args.replace(/^[\s\S]*?-\w*c\s+/, '').trim().replace(/^(["'])([\s\S]*)\1$/, '$2'))) { const p = findPaths(c, depth + 1); if (p) return p }
+    return null
+  }
+  if (exe !== 'find') return null
+  const words = (args.match(/"[^"]*"|'[^']*'|\S+/g) ?? []).map(unquote)
+  let i = 0
+  while (i < words.length && /^-(H|L|P|D\S*|O\d?)$/.test(words[i])) i += words[i] === '-D' ? 2 : 1 // find's global options come before the paths
+  const paths = []
+  for (; i < words.length && !/^(-|!$|\(|\)|,)/.test(words[i]); i++) paths.push(words[i])
+  return paths
+}
+export function findHang(tool, input = {}, env = process.env, platform = process.platform) {
+  if (tool !== 'Bash' || !winHost(env, platform)) return null
+  for (const c of commandsOf(String(input.command ?? ''))) {
+    const paths = findPaths(c)
+    if (!paths) continue
+    const bad = paths.length ? paths.find((p) => SEARCH_ROOT.test(p)) : ''
+    if (bad === undefined) continue
+    return `rule-guard: ${paths.length ? `\`find ${bad}\` walks a whole drive` : '`find` with no path searches wherever the shell happens to be'} and hangs on Windows: it pins a CPU core and grows the kernel Paged Pool past 6 GB, invisible in the process list (yskills 2026-11-22). Use the Glob tool (file names) or the Grep tool (contents), or give find one fixed project folder: \`find ./src -name "x"\` (docs/pc-claude-user.md, Find hangs and timeouts).`
+  }
+  return null
+}
+// A long foreground command (the tool timeout is raised above its 2 min default) must carry its own `timeout N` or run through laptop-job.mjs:
+// on Windows the tool's timeout kills bash but leaves the child (find.exe, ffmpeg) running as an orphan; GNU `timeout` kills the child itself.
+const OWN_TIMEOUT = /(^|[\s;&|(])timeout(\.exe)?\s+(-\S+\s+)*\d|laptop-job\.mjs\b|-Timeout(Sec)?\b/
+export function longNeedsTimeout(tool, input = {}, env = process.env, platform = process.platform) {
+  if (!/^(Bash|PowerShell)$/.test(tool) || !winHost(env, platform)) return null
+  const command = String(input.command ?? '')
+  if (!(Number(input.timeout) > 120000) || OWN_TIMEOUT.test(command)) return null
+  return 'rule-guard: on Windows a long command (tool timeout above 2 min) needs its own timeout, because the tool\'s timeout kills the shell but leaves the child running, orphaned and hidden. Start it as `timeout <seconds> <command>` (GNU, Git Bash), or through `node scripts/laptop-job.mjs --timeout-min <N> -- <command>`, or in PowerShell with `-Timeout` on Wait-Process or Wait-Job (docs/pc-claude-user.md, Find hangs and timeouts).'
+}
 // The Archivist documents scripts and workflows; yskills' references are filed by the laptop lane, never by it
 // (roles/archivist.md; yskills 2026-11-11). role: the session's role, as roleContext stored it. Only where a file
 // lands counts: reading or backing up a reference folder is fine, and so is an index file (.md, .tsv, .json).
@@ -1367,6 +1413,7 @@ export const GUARD_CHECKS = {
   lock: 'safety', neverpush: 'safety', 'hands-off': 'safety', gate: 'safety', decide: 'safety',
   'plan-item-open': 'form', receipt: 'form', 'propose-skills': 'safety', 'opens-window': 'safety', 'archivist-files': 'safety',
   kaomoji: 'form', 'dupe-check': 'form', pregate: 'safety', 'blender-busy': 'safety', 'blender-docs': 'form', 'blender-runner': 'safety', grill: 'form',
+  'find-hang': 'safety', 'long-timeout': 'form',
 }
 const GUARD_CAP = 2
 const guardLogFile = (session) => join(tmpdir(), `claude-setup-guardlog-${String(session).replace(/\W/g, '')}.jsonl`)
@@ -1487,6 +1534,8 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           ['blender-busy', () => blenderServerBusy(tool, input ?? {}, listProcs)],
           ['blender-docs', () => blenderDocsMissing(tool, input ?? {}, sessionTranscript)],
           ['blender-runner', () => blenderOutsideRunner(tool, input ?? {})],
+          ['find-hang', () => findHang(tool, input ?? {})],
+          ['long-timeout', () => longNeedsTimeout(tool, input ?? {})],
           ['grill', grill],
         ], { session })
         if (!block) block = await gateBlock(tool, input ?? {}, transcript, sessionModel(transcript()), false, gateRole, transcriptPath) // commit the round only now: no other guard refused the post
