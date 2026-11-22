@@ -52,6 +52,7 @@ A figure in a T-pose or one loop reads as a prop. Minimum per NPC [judgement, tu
   0.6 m personal space [judgement], give way instead of overlapping (`game-3d/starter/learnings.md`);
 - a vendor or companion reacts within 1 s when the player arrives, stops or leaves;
 - the Playtester's 30 s watch: every NPC visibly does something (clip names from the hook).
+- reaction ladder, zone mood, scenario points, sound from sources, spring layer and diegetic UI: `game-3d/refs/living-world.md`.
 
 Test: the play hook exports each NPC's clip name and time; a unit test fails when two NPCs within 3 m share a clip and
 a start time, or a clip plays longer than 12 s without a switch.
