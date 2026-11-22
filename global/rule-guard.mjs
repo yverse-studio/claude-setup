@@ -1085,7 +1085,10 @@ function deliveredReport(transcriptPath, prompt, note = '') {
   // The note names the agent ("... from agent-<id>", "agentId: <id>" or, in a foreground call, from "<id>" (#766, live 2026-11-22)): that one transcript only.
   // No id: nothing counts (a scan by prompt could pick another agent that was started with a prompt that begins with this one, gate r1 of #525).
   const first = String(note).trim().split('\n')[0] // the harness's note is the opening line; an id mentioned later in a report is nobody's note
-  const id = /\bagent-?Id:\s*([A-Za-z0-9-]+)/i.exec(first)?.[1] ?? /\bfrom\s+agent-([A-Za-z0-9][A-Za-z0-9-]*)/i.exec(first)?.[1] ?? /\bfrom\s+"([A-Za-z0-9][A-Za-z0-9-]*)"/i.exec(first)?.[1]
+  // The quoted token could be a name the builder gave the call, so it counts only when the harness's own `agentId:` line of the same note carries the same value.
+  const quoted = /\bfrom\s+"([A-Za-z0-9][A-Za-z0-9-]*)"/i.exec(first)?.[1]
+  const sameId = quoted && new RegExp(`^agentId:\\s*${quoted}(?![A-Za-z0-9-])`, 'm').test(String(note)) ? quoted : undefined
+  const id = /\bagent-?Id:\s*([A-Za-z0-9-]+)/i.exec(first)?.[1] ?? /\bfrom\s+agent-([A-Za-z0-9][A-Za-z0-9-]*)/i.exec(first)?.[1] ?? sameId
   const path = id ? agentTranscript(transcriptPath, id) : ''
   return path ? agentReport(path, prompt) : ''
 }
