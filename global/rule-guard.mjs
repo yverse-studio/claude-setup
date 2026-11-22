@@ -227,10 +227,26 @@ export function promptContext(prompt = '', stopWord = null) { // stopWord: STOP_
   return notes.join('\n')
 }
 
+// #761: same function as `normStamp` in team-guard.mjs (a loose stamp line `Role · Kit · Size: Reviewer · setup · M` becomes the canonical one); scripts/guards.test.mjs pins that both agree.
+const hasStamp = (text) => {
+  const plain = text.replace(/[*_`]/g, '')
+  return /^[ \t>-]*Role:[ \t]*\S/im.test(plain) && /\bKit:[ \t]*\S/i.test(plain) && /\bSize:[ \t]*[SML]\b/i.test(plain)
+}
+const SEP = '[ \\t]*[·|/,][ \\t]*'
+const LOOSE_STAMP = new RegExp(`^([ \\t>-]*)Role${SEP}Kit${SEP}Size[ \\t]*:[ \\t]*([^·|/,\\n]+?)${SEP}([\\w-]+)${SEP}([SML])\\b`, 'im')
+export function normStamp(text) {
+  const t = String(text)
+  if (hasStamp(t)) return t
+  return t.replace(LOOSE_STAMP, (_m, lead, role, kit, size) => `${lead}Role: ${role.trim()} · Kit: ${kit} · Size: ${size.toUpperCase()}`)
+}
+// The wrapper tags roleOf takes off; the text a reader sees with a loose stamp rewritten (the text itself when it holds none, so a canonical brief reads as before).
+const TAGS = /<\/?(wake|message|thread|project|relay|coordinator-relay|cited|note|system-note)\b[^>]*>/g
+const stampView = (text) => { const bare = text.replace(TAGS, '\n').replace(/[*_`]/g, ''); const n = normStamp(bare); return n === bare ? text : n }
+
 // The role a brief names (`Role: Programmer · Kit: setup · Size: M`) and its Roster row in TEAMS.md.
 export function roleOf(prompt, teams) {
   // One parser: the wrapper tags come off first (stripTags, so `<note>Role: Tester` is a line of its own, #523), then the line is anchored at its start (only the tags, never a literal \\n, which team-guard does not turn into a line either).
-  const line = prompt.replace(/<\/?(wake|message|thread|project|relay|coordinator-relay|cited|note|system-note)\b[^>]*>/g, '\n').replace(/[*_`]/g, '').match(/^[\s>-]*Role:[ \t]*([^\n]*)/m)?.[1].trim()
+  const line = normStamp(prompt.replace(TAGS, '\n').replace(/[*_`]/g, '')).match(/^[\s>-]*Role:[ \t]*([^\n]*)/m)?.[1].trim()
   if (!line || /^(none|n\/a|tbd|-)\b/i.test(line)) return null
   const rows = teams.split('\n').filter((l) => /^\| [A-Z][\w ]* \(\[`/.test(l))
   const named = (r) => r.slice(2, r.indexOf(' (')).toLowerCase()
@@ -310,7 +326,7 @@ export function roleAgain(session, cwd) {
   return role ? roleCard(role, role.path ? read(join(root, role.path)) : '') : ''
 }
 
-async function roleContext(prompt, cwd, session) {
+export async function roleContext(prompt, cwd, session) {
   const once = join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)
   // Only a session's brief: a project wake that is not the spawn one quotes other threads' briefs.
   if (!session || existsSync(once) || (/<(wake|relay|coordinator-relay)\b/.test(prompt) && !/<(wake|relay)\b[^>]*reason="spawn"/.test(prompt))) return ''
@@ -458,7 +474,7 @@ export async function briefCheck(prompt, cwd, model = null, any = false) {
   let guard
   try { guard = await import(new URL('./team-guard.mjs', import.meta.url)) } catch { return '' }
   const teams = read(join(setupRoot(cwd), 'docs', 'TEAMS.md'))
-  const brief = stripTags(prompt)
+  const brief = normStamp(stripTags(prompt))
   const plain = brief.replace(/[*_`]/g, '')
   const found = []
   const role = guard.stamped(brief) ? roleOf(brief, teams) : null
@@ -953,7 +969,7 @@ export function wanted(root, playbook, brief) {
   const known = new Set([...ls('.claude/skills'), ...ls('.claude/agents').map((f) => f.replace(/\.md$/, '')), ...[...read(join(root, 'config', 'plugins.json')).matchAll(/"id":\s*"([\w-]+)@/g)].map((m) => m[1])])
   const uses = (playbook.match(/^[ \t>-]*\**Uses:?\**[^\n]*/m)?.[0] ?? '').replace(/\([^()]*\)/g, '')
   const part = (k) => uses.match(new RegExp(`${k}:([^.]*)`))?.[1] ?? ''
-  const lines = brief.replace(/[*_`]/g, '').split('\n'), first = (re) => lines.map((l) => l.match(re)?.[1]).find(Boolean)
+  const lines = stampView(brief).replace(/[*_`]/g, '').split('\n'), first = (re) => lines.map((l) => l.match(re)?.[1]).find(Boolean)
   const kit = (first(/(?:^|<[^<>]*>)[ \t>-]*Role:.*?\bKit:[ \t]*([A-Za-z0-9-]+)/) ?? first(/^[ \t]*Kit:[ \t]*([A-Za-z0-9-]+)/))?.toLowerCase() // the stamp's own Kit: a quote, an arrow or a note before it does not count
   const byKit = part('By kit').split(';').map((e) => e.split(':')).filter(([k]) => k.trim().toLowerCase() === kit).map(([, v]) => v ?? '')
   return [...new Set([part('Load'), ...byKit].flatMap((v) => v.split(/[^a-z0-9-]+/)))].filter((n) => known.has(n))
@@ -1558,7 +1574,7 @@ export async function countStart({ session, brief, checkNow, modelNote, guard, c
   try {
     const { logStart, startOutcome, cardHash } = await import(new URL('./card-render.mjs', import.meta.url))
     const base = dirname(fileURLToPath(import.meta.url))
-    const plain = brief.replace(/[*_`]/g, '')
+    const plain = stampView(brief).replace(/[*_`]/g, '')
     const field = (re) => plain.match(re)?.[1]?.trim() ?? ''
     const project = brief.match(/<project\b[^>]*\bname=\\?"([^"\\]+)/)?.[1] ?? brief.match(/<project\b[^>]*\bid=\\?"([^"\\]+)/)?.[1] ?? ''
     logStart({ session, project, role: field(/\bRole:[ \t]*([^·|\n]+)/i), kit: field(/\bKit:[ \t]*([\w-]+)/i), size: field(/\bSize:[ \t]*([SML])\b/i), guard: guard.match(/Guards in this session: (\w+)/)?.[1] ?? '', card: card.match(/Card refreshed (\w+)/)?.[1] ?? (existsSync(join(base, 'docs', 'TEAMS.md')) ? cardHash(base) : ''), ...(ms ? { ms } : {}), ...startOutcome(checkNow, modelNote) })

@@ -55,6 +55,17 @@ test('the template file, the generated brief files and the refusal carry exactly
 
 // The live false starts of 2026-11-12 (plan section 1 and the coordinator's two Researcher starts of 16:40).
 const FULL_M = Object.values(LINES).join('\n')
+// #761: a loose stamp line is read as the canonical one; a game-kit Game Designer without Level stays locked.
+test('#761: `Role · Kit · Size: Reviewer · setup · M` passes the brief check, an unknown kit in it does not, the Level lock stays', async () => {
+  const refusal = /Brief check[^\n]*breaks the team rules|no `Role: · Kit: · Size:` stamp line/
+  assert.doesNotMatch(await check(`Role · Kit · Size: Reviewer · setup · M\n${FULL_M}`), refusal)
+  assert.doesNotMatch(await check(`Role | Kit | Size: Reviewer | setup | M\n${FULL_M}`), refusal)
+  assert.match(await check(`Role · Kit · Size: Reviewer · nonsense · M\n${FULL_M}`), /Brief check[\s\S]*Kit: nonsense is no kit/)
+  const noLevel = FULL_M.split('\n').filter((l) => !l.startsWith('Level:')).join('\n')
+  assert.match(await check(`Role: Game Designer · Kit: game · Size: M\n${noLevel}`), /^Brief check[\s\S]*Level/)
+  assert.match(await check(`Role: Game Designer · Kit: game · Size: M\nItem: M50\n${noLevel}`), /^Brief check[\s\S]*Level/)
+})
+
 test('live fixtures: the Researcher start of 16:40 gets one refusal with every error and the template, and its restart passes', async () => {
   const first = await check(`Role: Researcher · Kit: research · Size: M\nItem: PLAN.json item M29\nThreads: none\nPlan: p.md\nAcceptance: ok\nModel: opus\nSkills: s\nStart: read MEMORY.md first\nDone when: x\nStop when: y\nPrior art: .claude/skills/operator/gate.md -> adapt, because it exists`)
   assert.match(first, /^Brief check[\s\S]*Kit: research is no kit/, 'the kit is refused')
@@ -83,12 +94,13 @@ test('live fixtures: gaps in three categories come in one refusal, the wrong mod
   assert.match(out, /^Brief check[^\n]*in (3|4|5|6) places[\s\S]*Kit: content is no kit[\s\S]*Plan is missing[\s\S]*runs on haiku/)
 })
 
-test('a Planner is a gate-builder role: an M brief without a Gate line is named by missingLines, and its brief file carries the line', async () => {
-  const { missingLines } = await import('../global/team-guard.mjs')
+test('a Planner is a gate-builder role: an M brief without a Gate line is a recoverable gap (classify, not missingLines), and its brief file carries the line', async () => {
+  const { classify } = await import('../global/team-guard.mjs')
+  const gaps = (b) => classify(b).recoverable.map((f) => f.key).join('\n')
   const { briefFile } = await import('./brief.mjs')
   const planner = (gate) => ['Role: Planner · Kit: setup · Size: M', ...(gate ? ['Gate: Reviewer · plan round 1 before owner'] : [])].join('\n')
-  assert.match(missingLines(planner(false)).join('\n'), /Gate:/)
-  assert.doesNotMatch(missingLines(planner(true)).join('\n'), /Gate:/)
+  assert.match(gaps(planner(false)), /Gate/)
+  assert.doesNotMatch(gaps(planner(true)), /Gate/)
   assert.match(briefFile('Planner'), /^Gate:/m)
 })
 
@@ -119,10 +131,11 @@ test('a brief with a wrong kit, a wrong model and no gate gets ONE refusal that 
   const [opusId, sonnetId] = [id('Opus'), id('Sonnet')]
   const brief = ['Role: Character TD · Kit: references · Size: M', 'Item: new', 'Plan: p.md', 'Acceptance: ok', 'Model: opus', 'Skills: blender-body', 'Done when: x', 'Stop when: 3', 'Start: read MEMORY.md first', 'Threads: none open on this topic'].join('\n')
   const out = decide('mcp__hearthbot__start_thread', { prompt: brief, model: opusId, title: 'Character TD · Lily' }, [], [], teams, checklists, []).block
-  for (const part of [/Kit: references is no kit/, /Gate:/, /Sheet:/, /Target image:/, /Source:/, /Prior art/, new RegExp(`runs on sonnet \\(${sonnetId}\\)`)]) assert.match(out, part)
+  for (const part of [/Kit: references is no kit/, /Sheet:/, /Target image:/, /Source:/, /Prior art/, new RegExp(`runs on sonnet \\(${sonnetId}\\)`)]) assert.match(out, part)
+  assert.doesNotMatch(out, /Gate:/, 'Gate is a recoverable gap the thread closes (#761)')
   // The same brief on a real kit lists the same gaps minus the kit: nothing new appears after the kit is fixed.
   const fixed = decide('mcp__hearthbot__start_thread', { prompt: brief.replace('references', 'game'), model: opusId, title: 'Character TD · Lily' }, [], [], teams, checklists, []).block
-  for (const part of [/Gate:/, /Sheet:/, /Target image:/, /Source:/, /Prior art/, new RegExp(`runs on sonnet \\(${sonnetId}\\)`)]) assert.match(fixed, part)
+  for (const part of [/Sheet:/, /Target image:/, /Source:/, /Prior art/, new RegExp(`runs on sonnet \\(${sonnetId}\\)`)]) assert.match(fixed, part)
   // A kit that is none of the game or story kits keeps the Sheet lines away.
   const site = decide('mcp__hearthbot__start_thread', { prompt: brief.replace('references', 'site'), model: sonnetId, title: 'Character TD · Lily' }, [], [], teams, checklists, []).block
   assert.doesNotMatch(site ?? '', /Sheet:/)

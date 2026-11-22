@@ -25,7 +25,9 @@ test('the pre-flight carries the masterplan duty (roles/project-manager.md, Mast
 
 test('the card carries a pointer to the rendered brief files, not a template, and the two refusal and device lines (M50 slice B)', () => {
   const card = buildCard({ hash: 'x', date: 'd' })
-  assert.ok(!card.includes('```'), 'no template block on the card: the brief files hold it')
+  assert.equal(card.split('```').length, 3, 'one short fenced block on the card: the brief files hold the long form (#761)')
+  assert.match(card, /^Item: <issue #n, M<n> or new>$/m, 'the short block holds the Item line')
+  assert.ok(!card.includes('tools/brief-check/team-guard.mjs check'), 'the coordinator has no Bash: no command line on the card')
   assert.doesNotMatch(card, /^Threads: <list_threads checked/m)
   for (const s of ['briefs/<role>.md', 'ROSTER.md', 'send those lines to the same thread with message_thread, never a new thread', '`message_id`', 'never `project_post_id` or `auto_attach=false`']) assert.ok(card.includes(s), s)
 })
@@ -331,16 +333,16 @@ test('a test run never resolves the real project folder, only an explicit temp o
 })
 
 // #602 (GameDev 2026-11-14): the card tells the coordinator to run the brief check; the command works from the rendered folder alone, with no installed home.
-test('#602: the brief check the card prints runs from the rendered folder with an empty home and passes a filled Planner brief', () => {
+test('#602: the brief check tool of the folder runs from the rendered folder with an empty home and passes a filled Planner brief', () => {
   const out = mkdtempSync(join(tmpdir(), 'card-602-'))
   writeAll(out, renderAll({ base: join(fileURLToPath(import.meta.url), '..', '..') }))
   assert.ok(existsSync(join(out, 'briefs', 'planner.md')), 'the Planner brief file is there')
   const card = readFileSync(join(out, 'COORDINATOR-CARD.md'), 'utf8')
-  const line = card.match(/`(node tools\/brief-check\/team-guard\.mjs check <Role> <file\|->)`/)
-  assert.ok(line, 'the card prints one command that works from this folder')
+  const line = ['node tools/brief-check/team-guard.mjs check <Role> <file|->'] // no longer printed on the card (#761, the coordinator has no Bash); the folder still holds the tool
+  assert.ok(existsSync(join(out, 'tools', 'brief-check', 'team-guard.mjs')), 'the rendered folder holds the tool')
   const { brief } = buildBrief({ role: 'Planner', kit: 'setup', size: 'M', what: 'plan the card fix', item: 'new', plan: 'n/a, this is the plan', acceptance: 'the plan passes review', threads: 'list_threads checked, none open on this topic', priorArt: 'obra/superpowers -> adapt, because the skill exists', done: 'the plan file', stop: '3 rounds', skills: '.claude/skills/operator/roles/planner.md' })
   writeFileSync(join(out, 'filled.md'), brief)
-  const r = spawnSync(line[1].replace('<Role>', 'Planner').replace('<file|->', 'filled.md'), { cwd: out, encoding: 'utf8', shell: true, env: { ...process.env, CLAUDE_SETUP_HOME: mkdtempSync(join(tmpdir(), 'empty-home-')) } })
+  const r = spawnSync(line[0].replace('<Role>', 'Planner').replace('<file|->', 'filled.md'), { cwd: out, encoding: 'utf8', shell: true, env: { ...process.env, CLAUDE_SETUP_HOME: mkdtempSync(join(tmpdir(), 'empty-home-')) } })
   assert.match(r.stdout, /^ok: this brief passes the start check/m, `${r.stdout}${r.stderr}`)
   assert.doesNotMatch(card, /You have no Bash and no repo/, 'the card no longer contradicts its own brief-check line')
 })
@@ -443,7 +445,7 @@ test('#743: the card with the 7-day line is at most 7,050 characters (the who-bu
 
 test('#743: the kept lines stay (spawn, models, sizes, roster, brief copy) and the cut lines are gone', () => {
   const card = buildCard({ hash: 'x', date: 'd' })
-  for (const kept of ['Copy briefs/<role>.md of this folder', 'Nothing else is added or written from memory', '## Models', 'A thread picks no Fable', 'the Programmer is the lead', 'merge gate', '## Sizes', '- S:', '- M:', '- L:', '## Roster', '- Programmer:', '- Reviewer:', 'Controls and World life', 'no post per review round']) assert.ok(card.includes(kept), kept)
+  for (const kept of ['Short form, enough to start', 'briefs/<role>.md of this folder', '## Models', 'A thread picks no Fable', 'the Programmer is the lead', 'merge gate', '## Sizes', '- S:', '- M:', '- L:', '## Roster', '- Programmer:', '- Reviewer:', 'Controls and World life', 'no post per review round']) assert.ok(card.includes(kept), kept)
   for (const gone of ['Downloads/assets', "A gate round's brief has the Round, Asset and Picture card lines"]) assert.ok(!card.includes(gone), gone)
 })
 

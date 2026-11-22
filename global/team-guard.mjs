@@ -199,10 +199,19 @@ export function downgraded(input, dirs) {
 }
 
 // The brief block's first line (operator/briefs.md): Role, Kit and Size, so the thread knows what it is (yskills 2026-10-27).
-export function stamped(text) {
+const hasStamp = (text) => {
   const plain = text.replace(/[*_`]/g, '')
   return /^[ \t>-]*Role:[ \t]*\S/im.test(plain) && /\bKit:[ \t]*\S/i.test(plain) && /\bSize:[ \t]*[SML]\b/i.test(plain)
 }
+// #761: a stamp written `Role · Kit · Size: Reviewer · setup · M` (separators · | / ,) is the same stamp; the one line is rewritten to the canonical form.
+const SEP = '[ \\t]*[·|/,][ \\t]*'
+const LOOSE_STAMP = new RegExp(`^([ \\t>-]*)Role${SEP}Kit${SEP}Size[ \\t]*:[ \\t]*([^·|/,\\n]+?)${SEP}([\\w-]+)${SEP}([SML])\\b`, 'im')
+export function normStamp(text) {
+  const t = String(text)
+  if (hasStamp(t)) return t
+  return t.replace(LOOSE_STAMP, (_m, lead, role, kit, size) => `${lead}Role: ${role.trim()} · Kit: ${kit} · Size: ${size.toUpperCase()}`)
+}
+export const stamped = (text) => hasStamp(normStamp(text))
 
 // Every size (yskills 2026-11-03: research before guessing, a small task too).
 // Prior art (yskills 2026-11-12: "erst schauen was gut funktioniert, dann klauen oder reverse engineeren, dann selber bauen"): the line records real
@@ -220,7 +229,7 @@ export function needsPriorArt(text) {
   return /\bSize:[ \t]*[SML]\b/i.test(String(text).replace(/[*_`]/g, '')) && !(line && priorArtOk(line.slice(1)))
 }
 
-const briefText = (input) => Object.values(input).filter((v) => typeof v === 'string').join('\n')
+const briefText = (input) => normStamp(Object.values(input).filter((v) => typeof v === 'string').join('\n'))
 export function needsTester(text) {
   const plain = text.replace(/[*_`]/g, '')
   const isL = /^[ \t]*role:[^\n]*\bprogrammer\b/im.test(plain) && /\bsize:[ \t]*L\b/i.test(plain)
@@ -336,9 +345,10 @@ export const BRIEF_FIELDS = [
   { key: 'Researcher', name: 'Researcher: (the task asks for research)', tpl: 'Researcher: <subagent and model, or the Researcher thread; research tasks only>', applies: (p) => ASKS_RESEARCH.test(p) && !/\bRole:[ \t]*Researcher\b/i.test(p), ok: line(/^[ \t>-]*Researcher:[ \t]*[^<\s]/im), cls: () => 'recoverable', fill: () => 'Researcher: ask the coordinator for a Researcher thread (message_coordinator) and go on meanwhile' },
   { key: 'Tester', strict: false, tpl: 'Tester: <Tester thread; size L Programmer only>', applies: (p) => /^[ \t>-]*Role:[ \t]*Programmer\b/im.test(p), ok: (p) => !needsTester(p), cls: () => 'judgment' },
 ]
+// #761: only the gaps the coordinator must decide (class judgment); what follows from Role, Kit and Size or what the thread fetches itself is no refusal.
 export function missingLines(text) {
-  const plain = text.replace(/[*_`]/g, '')
-  return BRIEF_FIELDS.filter((f) => f.strict !== false && (f.applies?.(plain) ?? true) && !f.ok(plain)).map((f) => f.name)
+  const keys = classify(text).judgment.map((f) => f.key)
+  return BRIEF_FIELDS.filter((f) => f.strict !== false && keys.includes(f.key)).map((f) => f.name)
 }
 // The same table sorted by who closes the gap. Acceptance and Done when are one datum: either satisfies both.
 export function classify(text) {
@@ -478,7 +488,8 @@ export const tokenStopLine = (text) => String(text).split('\n').map((l) => unquo
 
 // One list of everything wrong with a thread brief, the one validator of the start hook and of `team-guard.mjs check` (CompanyXY 2026-11-13: a coordinator that
 // cannot run the guard before it starts finds the errors one thread at a time).
-export function briefProblems(text, { model, title: threadTitle, teams = '', checklists = '', board = [] } = {}) {
+export function briefProblems(raw, { model, title: threadTitle, teams = '', checklists = '', board = [] } = {}) {
+  const text = normStamp(raw)
   const found = []
   const unknown = badRole(text, teams)
   if (unknown) found.push(`${unknown}. Start the role the Roster names for this task (claude-setup docs/TEAMS.md, Roster)`)
@@ -537,7 +548,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
     if (!role || !source || !roles.includes(role)) { console.error(`usage: node team-guard.mjs check <Role> <file|-> [--model <id>] [--title <title>]; Role is one of ${roles.join(', ') || '(docs/TEAMS.md not found)'}`); process.exit(2) }
     // not awaited at the top level: card-render imports this file, so awaiting it here would deadlock the module graph
     void (async () => {
-      const brief = readFileSync(source === '-' ? 0 : source, 'utf8')
+      const brief = normStamp(readFileSync(source === '-' ? 0 : source, 'utf8'))
       const { modelFor } = await import('./card-render.mjs')
       const id = modelFor(role, brief.match(/\bSize:[ \t]*([SML])\b/i)?.[1]?.toUpperCase() ?? 'M', teams)
       const found = briefProblems(brief, { model: model ?? id, title: title ?? `${role} · check`, teams, checklists: text(join(process.cwd(), CHECKLISTS)) || text(join(dir, CHECKLISTS)) || text(join(near, CHECKLISTS)) })
@@ -545,6 +556,9 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
       if (named && named !== role) found.unshift(`the brief starts Role: ${named} but you named ${role}: one of them is wrong`)
       if (found.length) found.forEach((f, i) => console.log(`(${i + 1}) ${f}`))
       else console.log('ok: this brief passes the start check (the board of open threads is checked at the start itself: run list_threads first)')
+      const mine = classify(brief)
+      const fills = [...mine.derived, ...mine.recoverable].map((f) => f.key)
+      if (fills.length) console.log(`the thread fills itself: ${fills.join(', ')}`)
       if (id) console.log(`model: ${id} (pass this as \`model\`)`)
       process.exit(found.length ? 1 : 0)
     })()

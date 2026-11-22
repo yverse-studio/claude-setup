@@ -431,10 +431,19 @@ export function downgraded(input, dirs) {
 }
 
 // The brief block's first line (operator/briefs.md): Role, Kit and Size, so the thread knows what it is (yskills 2026-10-27).
-export function stamped(text) {
+const hasStamp = (text) => {
   const plain = text.replace(/[*_`]/g, '')
   return /^[ \t>-]*Role:[ \t]*\S/im.test(plain) && /\bKit:[ \t]*\S/i.test(plain) && /\bSize:[ \t]*[SML]\b/i.test(plain)
 }
+// #761: a stamp written `Role · Kit · Size: Reviewer · setup · M` (separators · | / ,) is the same stamp; the one line is rewritten to the canonical form.
+const SEP = '[ \\t]*[·|/,][ \\t]*'
+const LOOSE_STAMP = new RegExp(`^([ \\t>-]*)Role${SEP}Kit${SEP}Size[ \\t]*:[ \\t]*([^·|/,\\n]+?)${SEP}([\\w-]+)${SEP}([SML])\\b`, 'im')
+export function normStamp(text) {
+  const t = String(text)
+  if (hasStamp(t)) return t
+  return t.replace(LOOSE_STAMP, (_m, lead, role, kit, size) => `${lead}Role: ${role.trim()} · Kit: ${kit} · Size: ${size.toUpperCase()}`)
+}
+export const stamped = (text) => hasStamp(normStamp(text))
 
 // Every size (yskills 2026-11-03: research before guessing, a small task too).
 // Prior art (yskills 2026-11-12: "erst schauen was gut funktioniert, dann klauen oder reverse engineeren, dann selber bauen"): the line records real
@@ -452,7 +461,7 @@ export function needsPriorArt(text) {
   return /\bSize:[ \t]*[SML]\b/i.test(String(text).replace(/[*_`]/g, '')) && !(line && priorArtOk(line.slice(1)))
 }
 
-const briefText = (input) => Object.values(input).filter((v) => typeof v === 'string').join('\n')
+const briefText = (input) => normStamp(Object.values(input).filter((v) => typeof v === 'string').join('\n'))
 export function needsTester(text) {
   const plain = text.replace(/[*_`]/g, '')
   const isL = /^[ \t]*role:[^\n]*\bprogrammer\b/im.test(plain) && /\bsize:[ \t]*L\b/i.test(plain)
@@ -568,9 +577,10 @@ export const BRIEF_FIELDS = [
   { key: 'Researcher', name: 'Researcher: (the task asks for research)', tpl: 'Researcher: <subagent and model, or the Researcher thread; research tasks only>', applies: (p) => ASKS_RESEARCH.test(p) && !/\bRole:[ \t]*Researcher\b/i.test(p), ok: line(/^[ \t>-]*Researcher:[ \t]*[^<\s]/im), cls: () => 'recoverable', fill: () => 'Researcher: ask the coordinator for a Researcher thread (message_coordinator) and go on meanwhile' },
   { key: 'Tester', strict: false, tpl: 'Tester: <Tester thread; size L Programmer only>', applies: (p) => /^[ \t>-]*Role:[ \t]*Programmer\b/im.test(p), ok: (p) => !needsTester(p), cls: () => 'judgment' },
 ]
+// #761: only the gaps the coordinator must decide (class judgment); what follows from Role, Kit and Size or what the thread fetches itself is no refusal.
 export function missingLines(text) {
-  const plain = text.replace(/[*_`]/g, '')
-  return BRIEF_FIELDS.filter((f) => f.strict !== false && (f.applies?.(plain) ?? true) && !f.ok(plain)).map((f) => f.name)
+  const keys = classify(text).judgment.map((f) => f.key)
+  return BRIEF_FIELDS.filter((f) => f.strict !== false && keys.includes(f.key)).map((f) => f.name)
 }
 // The same table sorted by who closes the gap. Acceptance and Done when are one datum: either satisfies both.
 export function classify(text) {
@@ -710,7 +720,8 @@ export const tokenStopLine = (text) => String(text).split('\n').map((l) => unquo
 
 // One list of everything wrong with a thread brief, the one validator of the start hook and of `team-guard.mjs check` (CompanyXY 2026-11-13: a coordinator that
 // cannot run the guard before it starts finds the errors one thread at a time).
-export function briefProblems(text, { model, title: threadTitle, teams = '', checklists = '', board = [] } = {}) {
+export function briefProblems(raw, { model, title: threadTitle, teams = '', checklists = '', board = [] } = {}) {
+  const text = normStamp(raw)
   const found = []
   const unknown = badRole(text, teams)
   if (unknown) found.push(`${unknown}. Start the role the Roster names for this task (claude-setup docs/TEAMS.md, Roster)`)
@@ -769,7 +780,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
     if (!role || !source || !roles.includes(role)) { console.error(`usage: node team-guard.mjs check <Role> <file|-> [--model <id>] [--title <title>]; Role is one of ${roles.join(', ') || '(docs/TEAMS.md not found)'}`); process.exit(2) }
     // not awaited at the top level: card-render imports this file, so awaiting it here would deadlock the module graph
     void (async () => {
-      const brief = readFileSync(source === '-' ? 0 : source, 'utf8')
+      const brief = normStamp(readFileSync(source === '-' ? 0 : source, 'utf8'))
       const { modelFor } = await import('./card-render.mjs')
       const id = modelFor(role, brief.match(/\bSize:[ \t]*([SML])\b/i)?.[1]?.toUpperCase() ?? 'M', teams)
       const found = briefProblems(brief, { model: model ?? id, title: title ?? `${role} · check`, teams, checklists: text(join(process.cwd(), CHECKLISTS)) || text(join(dir, CHECKLISTS)) || text(join(near, CHECKLISTS)) })
@@ -777,6 +788,9 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
       if (named && named !== role) found.unshift(`the brief starts Role: ${named} but you named ${role}: one of them is wrong`)
       if (found.length) found.forEach((f, i) => console.log(`(${i + 1}) ${f}`))
       else console.log('ok: this brief passes the start check (the board of open threads is checked at the start itself: run list_threads first)')
+      const mine = classify(brief)
+      const fills = [...mine.derived, ...mine.recoverable].map((f) => f.key)
+      if (fills.length) console.log(`the thread fills itself: ${fills.join(', ')}`)
       if (id) console.log(`model: ${id} (pass this as \`model\`)`)
       process.exit(found.length ? 1 : 0)
     })()
@@ -1523,18 +1537,29 @@ export function compact(full) {
   ].join('\n\n')
 }
 
-const BRIEF_SECTION = `## Thread brief
+// #761: rendered from BRIEF_FIELDS. The short form holds the stamp, Model and the rows only the coordinator can decide at size M; the kit's own lines live in briefs/<role>.md.
+const SAMPLE_M = 'Role: Programmer · Kit: web · Size: M'
+export function briefSection(fields = BRIEF_FIELDS) {
+  const own = (f) => !f.applies && f.strict !== false
+  const short = fields.filter((f) => f.key === 'Model' || (own(f) && f.cls(SAMPLE_M) === 'judgment')).sort((x, y) => (x.key === 'Model' ? -1 : y.key === 'Model' ? 1 : 0)).map((f) => f.tpl)
+  const kit = fields.filter((f) => (f.applies || f.strict === false) && (f.cls(SAMPLE_M) === 'judgment' || f.key === 'Gate')).map((f) => f.key)
+  return `## Thread brief
 
-Copy briefs/<role>.md of this folder (one per Roster role, its Model line inside; kits and sizes per role in ROSTER.md), fill every <...>, paste it as the brief, pass its Model as \`model\`. Nothing else is added or written from memory.
+Short form, enough to start (every other line the thread fills itself or its lock names):
+\`\`\`
+Role: <role> · Kit: <kit> · Size: <S|M|L>
+${[...short, '<the task: goal, done when, stop when>'].join('\n')}
+\`\`\`
+Long form with the kit's own lines (${kit.join(', ')}): briefs/<role>.md of this folder; pass its Model as \`model\`.
 A refusal names every gap at once: send those lines to the same thread with message_thread, never a new thread.
-With Bash run \`node tools/brief-check/team-guard.mjs check <Role> <file|->\` in this folder before every start_thread (no Bash: the refusal lists the gaps): it lists every gap at once and prints the exact \`model\`.
 A device thread passes \`message_id\` (yskills' message or your own project-chat post), never \`project_post_id\` or \`auto_attach=false\`.`
+}
 
 export function buildCard({ teams, hash = 'nogit', date = today(), startsLine = '' }) {
   const head = `Coordinator card (claude-setup ${hash}, ${date}).\nYou are the project chat. Without Bash, this card and MEMORY.md are your rules.\nA rule not on this card: Read COORDINATOR-RULES-INDEX.md in this folder; still unclear: ask a setup thread (size S); never guess.${startsLine ? `\n${startsLine}` : ''}`
   const full = coordinatorCard(teams)
   if (!full) throw new Error('coordinator card: docs/TEAMS.md has no Roster or Kits rows')
-  const card = [head, PREFLIGHT, BRIEF_SECTION, compact(full)].join('\n\n') + '\n'
+  const card = [head, PREFLIGHT, briefSection(), compact(full)].join('\n\n') + '\n'
   if (card.length >= CARD_MAX) throw new Error(`coordinator card is ${card.length} characters, limit ${CARD_MAX}: trim a pre-flight line or a Roster cell`)
   return card
 }
@@ -2029,10 +2054,26 @@ export function promptContext(prompt = '', stopWord = null) { // stopWord: STOP_
   return notes.join('\n')
 }
 
+// #761: same function as `normStamp` in team-guard.mjs (a loose stamp line `Role · Kit · Size: Reviewer · setup · M` becomes the canonical one); scripts/guards.test.mjs pins that both agree.
+const hasStamp = (text) => {
+  const plain = text.replace(/[*_`]/g, '')
+  return /^[ \t>-]*Role:[ \t]*\S/im.test(plain) && /\bKit:[ \t]*\S/i.test(plain) && /\bSize:[ \t]*[SML]\b/i.test(plain)
+}
+const SEP = '[ \\t]*[·|/,][ \\t]*'
+const LOOSE_STAMP = new RegExp(`^([ \\t>-]*)Role${SEP}Kit${SEP}Size[ \\t]*:[ \\t]*([^·|/,\\n]+?)${SEP}([\\w-]+)${SEP}([SML])\\b`, 'im')
+export function normStamp(text) {
+  const t = String(text)
+  if (hasStamp(t)) return t
+  return t.replace(LOOSE_STAMP, (_m, lead, role, kit, size) => `${lead}Role: ${role.trim()} · Kit: ${kit} · Size: ${size.toUpperCase()}`)
+}
+// The wrapper tags roleOf takes off; the text a reader sees with a loose stamp rewritten (the text itself when it holds none, so a canonical brief reads as before).
+const TAGS = /<\/?(wake|message|thread|project|relay|coordinator-relay|cited|note|system-note)\b[^>]*>/g
+const stampView = (text) => { const bare = text.replace(TAGS, '\n').replace(/[*_`]/g, ''); const n = normStamp(bare); return n === bare ? text : n }
+
 // The role a brief names (`Role: Programmer · Kit: setup · Size: M`) and its Roster row in TEAMS.md.
 export function roleOf(prompt, teams) {
   // One parser: the wrapper tags come off first (stripTags, so `<note>Role: Tester` is a line of its own, #523), then the line is anchored at its start (only the tags, never a literal \\n, which team-guard does not turn into a line either).
-  const line = prompt.replace(/<\/?(wake|message|thread|project|relay|coordinator-relay|cited|note|system-note)\b[^>]*>/g, '\n').replace(/[*_`]/g, '').match(/^[\s>-]*Role:[ \t]*([^\n]*)/m)?.[1].trim()
+  const line = normStamp(prompt.replace(TAGS, '\n').replace(/[*_`]/g, '')).match(/^[\s>-]*Role:[ \t]*([^\n]*)/m)?.[1].trim()
   if (!line || /^(none|n\/a|tbd|-)\b/i.test(line)) return null
   const rows = teams.split('\n').filter((l) => /^\| [A-Z][\w ]* \(\[`/.test(l))
   const named = (r) => r.slice(2, r.indexOf(' (')).toLowerCase()
@@ -2112,7 +2153,7 @@ export function roleAgain(session, cwd) {
   return role ? roleCard(role, role.path ? read(join(root, role.path)) : '') : ''
 }
 
-async function roleContext(prompt, cwd, session) {
+export async function roleContext(prompt, cwd, session) {
   const once = join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)
   // Only a session's brief: a project wake that is not the spawn one quotes other threads' briefs.
   if (!session || existsSync(once) || (/<(wake|relay|coordinator-relay)\b/.test(prompt) && !/<(wake|relay)\b[^>]*reason="spawn"/.test(prompt))) return ''
@@ -2260,7 +2301,7 @@ export async function briefCheck(prompt, cwd, model = null, any = false) {
   let guard
   try { guard = await import(new URL('./team-guard.mjs', import.meta.url)) } catch { return '' }
   const teams = read(join(setupRoot(cwd), 'docs', 'TEAMS.md'))
-  const brief = stripTags(prompt)
+  const brief = normStamp(stripTags(prompt))
   const plain = brief.replace(/[*_`]/g, '')
   const found = []
   const role = guard.stamped(brief) ? roleOf(brief, teams) : null
@@ -2755,7 +2796,7 @@ export function wanted(root, playbook, brief) {
   const known = new Set([...ls('.claude/skills'), ...ls('.claude/agents').map((f) => f.replace(/\.md$/, '')), ...[...read(join(root, 'config', 'plugins.json')).matchAll(/"id":\s*"([\w-]+)@/g)].map((m) => m[1])])
   const uses = (playbook.match(/^[ \t>-]*\**Uses:?\**[^\n]*/m)?.[0] ?? '').replace(/\([^()]*\)/g, '')
   const part = (k) => uses.match(new RegExp(`${k}:([^.]*)`))?.[1] ?? ''
-  const lines = brief.replace(/[*_`]/g, '').split('\n'), first = (re) => lines.map((l) => l.match(re)?.[1]).find(Boolean)
+  const lines = stampView(brief).replace(/[*_`]/g, '').split('\n'), first = (re) => lines.map((l) => l.match(re)?.[1]).find(Boolean)
   const kit = (first(/(?:^|<[^<>]*>)[ \t>-]*Role:.*?\bKit:[ \t]*([A-Za-z0-9-]+)/) ?? first(/^[ \t]*Kit:[ \t]*([A-Za-z0-9-]+)/))?.toLowerCase() // the stamp's own Kit: a quote, an arrow or a note before it does not count
   const byKit = part('By kit').split(';').map((e) => e.split(':')).filter(([k]) => k.trim().toLowerCase() === kit).map(([, v]) => v ?? '')
   return [...new Set([part('Load'), ...byKit].flatMap((v) => v.split(/[^a-z0-9-]+/)))].filter((n) => known.has(n))
@@ -3360,7 +3401,7 @@ export async function countStart({ session, brief, checkNow, modelNote, guard, c
   try {
     const { logStart, startOutcome, cardHash } = await import(new URL('./card-render.mjs', import.meta.url))
     const base = dirname(fileURLToPath(import.meta.url))
-    const plain = brief.replace(/[*_`]/g, '')
+    const plain = stampView(brief).replace(/[*_`]/g, '')
     const field = (re) => plain.match(re)?.[1]?.trim() ?? ''
     const project = brief.match(/<project\b[^>]*\bname=\\?"([^"\\]+)/)?.[1] ?? brief.match(/<project\b[^>]*\bid=\\?"([^"\\]+)/)?.[1] ?? ''
     logStart({ session, project, role: field(/\bRole:[ \t]*([^·|\n]+)/i), kit: field(/\bKit:[ \t]*([\w-]+)/i), size: field(/\bSize:[ \t]*([SML])\b/i), guard: guard.match(/Guards in this session: (\w+)/)?.[1] ?? '', card: card.match(/Card refreshed (\w+)/)?.[1] ?? (existsSync(join(base, 'docs', 'TEAMS.md')) ? cardHash(base) : ''), ...(ms ? { ms } : {}), ...startOutcome(checkNow, modelNote) })
