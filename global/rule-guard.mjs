@@ -652,46 +652,80 @@ export function opensWindow(tool, input = {}) {
 // invisible in the process list. Home of the rule: docs/pc-claude-user.md (Find hangs and timeouts). Windows only (the host check below).
 const winHost = (env = process.env, platform = process.platform) => platform === 'win32' || env.OS === 'Windows_NT' || /^(msys|cygwin)/i.test(env.OSTYPE ?? '') || Boolean(env.STUDIO_ROOT)
 const unquote = (t) => t.replace(/^["']|["']$/g, '')
-// A search root that walks a whole drive or the whole profile: `/`, `/c`, `/mnt/c`, `C:`, `C:\`, `~`, `$HOME`, `%USERPROFILE%`.
-const SEARCH_ROOT = /^(\/+\*?|\/[a-z]\/?\*?|\/mnt\/[a-z]\/?\*?|[a-z]:[\\/]*\*?|~\/?|\$\{?HOME\}?\/?|%USERPROFILE%[\\/]?|\$\{?env:USERPROFILE\}?[\\/]?)$/i
-const FIND_WRAP = /^(sudo|env|time|nohup|timeout|nice|stdbuf|command|exec)$/
-// The paths a GNU find call names (up to the first expression), or null when this command is no find. `[]` = find with no path at all.
-function findPaths(command, depth = 0) {
-  const m = command.replace(/^(\w+=\S*\s+)+/, '').match(/^(?:"([^"]*)"|'([^']*)'|(\S+))\s*([\s\S]*)$/)
-  if (!m || depth > 3) return null
-  const exe = (m[1] ?? m[2] ?? m[3]).split(/[\\/]/).pop().replace(/\.exe$/i, '').toLowerCase()
-  const args = m[4]
-  if (FIND_WRAP.test(exe)) return findPaths(args.replace(/^((-\S*|\d+\w?)\s+)+/, ''), depth + 1)
-  if (/^(bash|sh|zsh)$/.test(exe) && /(^|\s)-\w*c\s/.test(args)) {
-    for (const c of commandsOf(args.replace(/^[\s\S]*?-\w*c\s+/, '').trim().replace(/^(["'])([\s\S]*)\1$/, '$2'))) { const p = findPaths(c, depth + 1); if (p) return p }
-    return null
-  }
-  if (exe !== 'find') return null
-  const words = (args.match(/"[^"]*"|'[^']*'|\S+/g) ?? []).map(unquote)
-  let i = 0
-  while (i < words.length && /^-(H|L|P|D\S*|O\d?)$/.test(words[i])) i += words[i] === '-D' ? 2 : 1 // find's global options come before the paths
-  const paths = []
-  for (; i < words.length && !/^(-|!$|\(|\)|,)/.test(words[i]); i++) paths.push(words[i])
-  return paths
-}
-export function findHang(tool, input = {}, env = process.env, platform = process.platform) {
-  if (tool !== 'Bash' || !winHost(env, platform)) return null
-  for (const c of commandsOf(String(input.command ?? ''))) {
-    const paths = findPaths(c)
-    if (!paths) continue
-    const bad = paths.length ? paths.find((p) => SEARCH_ROOT.test(p)) : ''
-    if (bad === undefined) continue
-    return `rule-guard: ${paths.length ? `\`find ${bad}\` walks a whole drive` : '`find` with no path searches wherever the shell happens to be'} and hangs on Windows: it pins a CPU core and grows the kernel Paged Pool past 6 GB, invisible in the process list (yskills 2026-11-22). Use the Glob tool (file names) or the Grep tool (contents), or give find one fixed project folder: \`find ./src -name "x"\` (docs/pc-claude-user.md, Find hangs and timeouts).`
+// A search root that walks a whole drive or the whole profile: `/`, `/c`, `/mnt/c`, `C:`, `C:\`, `~`, `$HOME`, `$USERPROFILE`, `%USERPROFILE%` (a trailing `/.` is the same root).
+const SEARCH_ROOT = /^(\/+\*?|\/[a-z]\/?\*?|\/mnt\/[a-z]\/?\*?|[a-z]:[\\/]*\*?|~\/?|\$HOME\/?|\$USERPROFILE\/?|%USERPROFILE%[\\/]?|\$env:USERPROFILE[\\/]?)$/i
+const rootPath = (p) => SEARCH_ROOT.test(p.replace(/\\\//g, '/').replace(/(\/\.)+$/, '/'))
+const FIND_WRAP = /^(sudo|env|time|nohup|timeout|nice|stdbuf|command|exec|xargs|winpty)$/
+const KEYWORDS = /^((then|do|else|elif|if|while|until|!)\s+)+/
+const REDIRECT = /^\d*[<>]+&?\S*$/
+// What a command line runs, as commands: each one split by commandsOf, plus the bodies of $(...) and backticks and the text of `bash -c`, `sh -c` and `eval`.
+// Returns the first `find` that walks a search root or has no path, as { paths, root, noPath }; viaShell marks GNU find (the Bash tool, or a nested bash -c).
+function findVerdict(text, gnu, depth = 0) {
+  if (depth > 3) return null
+  const flat = text.replace(/\$\{(HOME|USERPROFILE)\}/g, '$$$1')
+  const bodies = [...flat.matchAll(/\$\(([^()]*)\)/g), ...flat.matchAll(/`([^`]*)`/g)].map((m) => m[1])
+  for (const b of bodies) { const v = findVerdict(b, gnu, depth + 1); if (v) return v }
+  let cwdRoot = false
+  for (const raw of commandsOf(flat)) {
+    let c = raw.replace(/^(\w+=\S*\s+)+/, '').replace(KEYWORDS, '').replace(/^(\d*[<>]+\s*\S+\s+)+/, '')
+    let viaXargs = false
+    for (let hops = 0; hops < 4; hops++) {
+      const m = c.match(/^(?:"([^"]*)"|'([^']*)'|(\S+))\s*([\s\S]*)$/)
+      if (!m) { c = ''; break }
+      const exe = (m[1] ?? m[2] ?? m[3]).split(/[\\/]/).pop().replace(/\.exe$/i, '').toLowerCase()
+      if (!FIND_WRAP.test(exe)) break
+      if (exe === 'command' && /^-[vV]\b/.test(m[4])) { c = ''; break }
+      if (exe === 'xargs') viaXargs = true
+      c = m[4].replace(/^((-[ugsknUCDEhp]\s+\S+|-\S*|\d+\w?)\s+)+/, '')
+    }
+    const m = c.match(/^(?:"([^"]*)"|'([^']*)'|(\S+))\s*([\s\S]*)$/)
+    if (!m) continue
+    const word = m[1] ?? m[2] ?? m[3]
+    const exe = word.split(/[\\/]/).pop().replace(/\.exe$/i, '').toLowerCase()
+    const args = m[4]
+    if (exe === 'cd' || exe === 'pushd') { const to = unquote(args.trim().split(/\s+/)[0] ?? ''); if (!to || rootPath(to)) cwdRoot = true; continue }
+    if (/^(bash|sh|zsh)$/.test(exe) && /(^|\s)-\w*c\s/.test(args)) {
+      const inner = args.replace(/^[\s\S]*?-\w*c\s+/, '').trim().replace(/^(["'])([\s\S]*)\1$/, '$2').replace(/\\"/g, '"')
+      const v = findVerdict(`${cwdRoot ? 'cd / && ' : ''}${inner}`, true, depth + 1)
+      if (v) return v
+      continue
+    }
+    if (exe === 'eval') { const v = findVerdict(args.trim().replace(/^(["'])([\s\S]*)\1$/, '$2'), gnu, depth + 1); if (v) return v; continue }
+    if (exe !== 'find') continue
+    if (!gnu && !/[\\/]/.test(word)) continue // PowerShell's bare `find` is the Windows string filter; only a path to Git's find.exe is GNU there
+    const words = (args.match(/"[^"]*"|'[^']*'|\S+/g) ?? []).map(unquote)
+    if (words.length === 1 && /^-{1,2}(version|help)$/.test(words[0])) continue
+    let i = 0
+    while (i < words.length && /^-(H|L|P|D\S*|O\d?)$/.test(words[i])) i += words[i] === '-D' ? 2 : 1 // find's global options come before the paths
+    const paths = []
+    for (; i < words.length && !/^(-|!$|\(|\)|,)/.test(words[i]); i++) {
+      if (REDIRECT.test(words[i])) { if (/^\d*[<>]+&?$/.test(words[i])) i++; continue }
+      paths.push(words[i])
+    }
+    const root = paths.find(rootPath)
+    if (root !== undefined) return { root }
+    if (!paths.length && !viaXargs) return { noPath: true }
+    if (cwdRoot && paths.every((p) => /^\.\/?$/.test(p))) return { root: 'after cd to a drive root' }
   }
   return null
 }
+export function findHang(tool, input = {}, env = process.env, platform = process.platform) {
+  if (!/^(Bash|PowerShell)$/.test(tool) || !winHost(env, platform)) return null
+  const v = findVerdict(String(input.command ?? ''), tool === 'Bash')
+  if (!v) return null
+  return `rule-guard: ${v.noPath ? '`find` with no path searches wherever the shell happens to be' : `\`find\` on ${v.root} walks a whole drive`} and hangs on Windows: it pins a CPU core and grows the kernel Paged Pool past 6 GB, invisible in the process list (yskills 2026-11-22). Use the Glob tool (file names) or the Grep tool (contents), or give find one fixed project folder: \`find ./src -name "x"\` (docs/pc-claude-user.md, Find hangs and timeouts).`
+}
 // A long foreground command (the tool timeout is raised above its 2 min default) must carry its own `timeout N` or run through laptop-job.mjs:
 // on Windows the tool's timeout kills bash but leaves the child (find.exe, ffmpeg) running as an orphan; GNU `timeout` kills the child itself.
-const OWN_TIMEOUT = /(^|[\s;&|(])timeout(\.exe)?\s+(-\S+\s+)*\d|laptop-job\.mjs\b|-Timeout(Sec)?\b/
+// The first real command of the line (past cd, export, env assignments) must be the wrapped one; a background start is a service, not a foreground wait.
+const GNU_TIMEOUT = /^timeout(\.exe)?\s+((-[ks]|--signal|--kill-after)(=\S+|\s+\S+)\s+|-\S+\s+)*\d/
+const LONG_OK = /^(cd|pushd|export|set|source|echo|true)\b/
 export function longNeedsTimeout(tool, input = {}, env = process.env, platform = process.platform) {
-  if (!/^(Bash|PowerShell)$/.test(tool) || !winHost(env, platform)) return null
+  if (!/^(Bash|PowerShell)$/.test(tool) || !winHost(env, platform) || input.run_in_background) return null
+  if (!(Number(input.timeout) > 120000)) return null
   const command = String(input.command ?? '')
-  if (!(Number(input.timeout) > 120000) || OWN_TIMEOUT.test(command)) return null
+  const real = commandsOf(command).map((c) => c.replace(/^(\w+=\S*\s+)+/, '')).find((c) => !LONG_OK.test(c)) ?? ''
+  if ((tool === 'Bash' && GNU_TIMEOUT.test(real)) || /laptop-job\.mjs\b/.test(real) || (tool === 'PowerShell' && /-Timeout(Sec)?\b/.test(command))) return null
   return 'rule-guard: on Windows a long command (tool timeout above 2 min) needs its own timeout, because the tool\'s timeout kills the shell but leaves the child running, orphaned and hidden. Start it as `timeout <seconds> <command>` (GNU, Git Bash), or through `node scripts/laptop-job.mjs --timeout-min <N> -- <command>`, or in PowerShell with `-Timeout` on Wait-Process or Wait-Job (docs/pc-claude-user.md, Find hangs and timeouts).'
 }
 // The Archivist documents scripts and workflows; yskills' references are filed by the laptop lane, never by it

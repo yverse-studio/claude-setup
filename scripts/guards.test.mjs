@@ -2132,7 +2132,14 @@ test('rule guard: on Windows find / and find with no path are refused, find with
   assert.ok(f('find / -name x', { OSTYPE: 'msys' }), 'Git Bash sets OSTYPE')
   assert.equal(f('find / -name x', W, 'Write'), null, 'not a shell tool')
   assert.equal(f('find / -name x', W, 'PowerShell'), null, 'PowerShell find is the Windows string filter')
-  assert.ok(f('bash -c "find / -name x"', W, 'PowerShell') === null, 'PowerShell is not checked')
+  assert.equal(f('tasklist | find /i "node"', W, 'PowerShell'), null)
+  assert.ok(f('bash -c "find / -name x"', W, 'PowerShell'), 'PowerShell starting Git Bash find is GNU find')
+  assert.ok(f('& "C:\\Program Files\\Git\\usr\\bin\\find.exe" / -name x', W, 'PowerShell'), 'a path to find.exe is GNU find') // path-lint: fixture
+  // gate round 1 (review of #758): the shapes that got past the first version
+  for (const c of ['echo "$(find / -name x)"', 'echo `find / -name x`', 'x=$(find / -name x)', 'if true; then find / -name x; fi', 'while true; do find / -name x; done', '! find / -name x', 'cd / && find . -name x', 'cd ~ && find . -name x', "bash -c 'cd / && find . -name x'",
+    'find ${HOME}/ -name x', 'find $USERPROFILE -name x', 'find /. -name x', 'find /c/. -name x', 'find \\/ -name x', 'xargs find / -name x', 'sudo -u x find / -name x', 'eval "find / -name x"', 'winpty find /', '2>/dev/null find / -name x',
+    'bash -c "bash -c \\"find / -name x\\""', 'find >out.txt', 'find > out.txt -name x']) assert.ok(f(c), `refused: ${c}`)
+  for (const c of ['find --version', 'find --help', 'command -v find', 'git commit -m "docs: find / hangs\n\nmore text"', 'git commit -m "$(cat <<\'EOF\'\nfix: find / on Windows\nEOF\n)"', 'cd src && find . -name x', 'echo $(date)', 'find ./src > out.txt', 'xargs -n1 echo', 'cd /c/Studio/repos && find . -name x']) assert.equal(f(c), null, `allowed: ${c}`)
 })
 test('rule guard: on Windows a long foreground command needs its own timeout (tool timeout kills the shell, not the child)', async () => {
   const { longNeedsTimeout } = await import('../global/rule-guard.mjs')
@@ -2140,8 +2147,12 @@ test('rule guard: on Windows a long foreground command needs its own timeout (to
   const t = (command, timeout, env = W, tool = 'Bash') => longNeedsTimeout(tool, { command, timeout }, env, 'linux')
   assert.match(t('ffmpeg -i a.mp4 b.mp4', 600000) ?? '', /timeout <seconds>.*laptop-job\.mjs/s)
   assert.match(t('npm ci', 300000, W, 'PowerShell') ?? '', /Wait-Process/)
-  for (const c of ['timeout 500 ffmpeg -i a.mp4 b.mp4', 'timeout -k 5 500 ffmpeg x', 'cd x && timeout 90 npm ci', 'node scripts/laptop-job.mjs --timeout-min 20 -- ffmpeg x', 'Wait-Process -Id 4 -Timeout 300']) assert.equal(t(c, 600000), null, c)
+  for (const c of ['timeout 500 ffmpeg -i a.mp4 b.mp4', 'timeout -k 5 500 ffmpeg x', 'cd x && timeout 90 npm ci', 'timeout -s KILL 30 ffmpeg x', 'timeout -k 5 -s TERM 30 x', 'timeout --signal=KILL 30 x', 'cd /x && export A=1 && timeout 60 ffmpeg x', 'node scripts/laptop-job.mjs --timeout-min 20 -- ffmpeg x']) assert.equal(t(c, 600000), null, c)
+  assert.equal(t('Wait-Process -Id 4 -Timeout 300', 600000, W, 'PowerShell'), null, 'PowerShell -Timeout')
   assert.match(t('timeout /t 500 && ffmpeg x', 600000) ?? '', /timeout/, 'the cmd.exe sleep is no timeout wrapper')
+  for (const c of ['ffmpeg x # timeout 5', 'echo "no timeout 5 here"', 'cat docs/laptop-job.mjs.md; ffmpeg x', 'npm run build | timeout 5 cat']) assert.ok(t(c, 600000), `refused: ${c}`)
+  assert.ok(t('timeout 300 npm ci', 600000, W, 'PowerShell'), 'PowerShell: timeout is the cmd sleep')
+  assert.equal(longNeedsTimeout('Bash', { command: 'npm run dev', timeout: 600000, run_in_background: true }, W, 'linux'), null, 'a background start is a service')
   assert.equal(t('ffmpeg x', 120000), null, 'the default 2 min is short')
   assert.equal(t('ffmpeg x', undefined), null, 'no tool timeout given')
   assert.equal(t('ffmpeg x', 600000, {}), null, 'cloud: not a Windows host')
@@ -2153,6 +2164,17 @@ test('rule guard: the pre hook refuses find / on a Windows host (live process) a
   const bad = run('find / -name x')
   assert.equal(bad.status, 2)
   assert.match(bad.stderr, /Paged Pool/)
-  assert.equal(run('find / -name x').status, 2, 'a safety check is never capped')
+  assert.equal(run('find / -name x').status, 2, 'second refusal')
+  assert.equal(run('find / -name x').status, 2, 'a safety check is never capped (the third call: a form check would pass here)')
   assert.equal(run('find ./src -name x').status, 0)
+})
+
+test('rule guard: the pre hook refuses a long command without its own timeout, and heals on the third identical refusal (live process)', () => {
+  const session = `long-live-${process.pid}-${Date.now()}`
+  const run = (command, timeout) => spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'pre'], { input: JSON.stringify({ session_id: session, tool_name: 'Bash', tool_input: { command, timeout } }), env: { ...process.env, OS: 'Windows_NT', CLAUDE_SETUP_RULE_GUARD: '' }, encoding: 'utf8' })
+  assert.equal(run('timeout 600 ffmpeg x', 600000).status, 0)
+  assert.equal(run('ffmpeg x', 600000).status, 2)
+  assert.match(run('ffmpeg x', 600000).stderr, /timeout <seconds>/)
+  assert.equal(run('ffmpeg x', 600000).status, 0, 'a form check passes its third hit')
+  assert.equal(run('ffmpeg x', 60000).status, 0)
 })
