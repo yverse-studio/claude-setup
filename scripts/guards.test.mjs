@@ -1702,7 +1702,7 @@ test('team guard (S5): the Roster model cells, table-driven', async () => {
     ['Planner', 'M', 'opus', '', true], ['Planner', 'M', 'fable', '', false], ['Planner', 'M', 'opus', '\nModel: opus (Fable unavailable)', false],
     ['Reviewer', 'M', 'opus', '', true], ['Reviewer', 'M', 'fable', '', false], ['Reviewer', 'S', 'opus', '\nModel: opus (Fable unavailable)', false],
     ['Researcher', 'M', 'sonnet', '', true], ['Researcher', 'M', 'opus', '', false],
-    ['Programmer', 'M', 'sonnet', '', true], ['Programmer', 'M', 'sonnet', '\nModel: sonnet (a small mechanical slice)', false], ['Programmer', 'M', 'opus', '', false], ['Programmer', 'L', 'sonnet', '', true], ['Programmer', 'L', 'opus', '', false], ['Programmer', 'S', 'sonnet', '', false], ['Programmer', 'S', 'opus', '', true], ['Programmer', 'L', 'fable', '', false], ['Programmer', 'M', 'opus', '\nModel: opus (M lead, not hard)', false],
+    ['Programmer', 'M', 'sonnet', '', true], ['Programmer', 'M', 'sonnet', '\nModel: sonnet (a small mechanical slice)', false], ['Programmer', 'M', 'opus', '', false], ['Programmer', 'L', 'sonnet', '', true], ['Programmer', 'L', 'opus', '', false], ['Programmer', 'S', 'sonnet', '', false], ['Programmer', 'S', 'opus', '', true], ['Programmer', 'S', 'fable', '', true], ['Programmer', 'S', 'fable', '\nModel: fable (a hook change, hard)', false], ['Programmer', 'L', 'fable', '', false], ['Programmer', 'M', 'opus', '\nModel: opus (M lead, not hard)', false],
   ]
   for (const [role, size, model, extra, refused] of rows) assert.equal(!!wrongModel(brief(role, size, extra), model, teams), refused, `${role} ${size} on ${model}${extra ? ' with a reason' : ''}`)
 })

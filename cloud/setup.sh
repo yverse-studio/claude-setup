@@ -479,6 +479,7 @@ export function wrongModel(text, model, teams) {
   const size = text.replace(/[*_`]/g, '').match(/\bSize:[ \t]*([SML])\b/i)?.[1]?.toUpperCase()
   // A lead at M or L is not a Sonnet thread: Sonnet there needs the written why above; Opus and Fable pass.
   if (LEAD_TIER[role.name] && LEAD_TIER[role.name][size]) allowed.splice(0, allowed.length, 'opus', 'fable')
+  else if (LEAD_TIER[role.name] && size) allowed.splice(0, allowed.length, 'sonnet') // size S: Fable or Opus needs `Model: <tier> (<why>)`
   const tier = TIERS.find((t) => String(model).toLowerCase().includes(t))
   return allowed.length && tier && !allowed.includes(tier) ? { role: role.name, allowed, tier } : null
 }
