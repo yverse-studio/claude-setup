@@ -409,3 +409,23 @@ test('#730: the card carries the 7-day start line, rendered from the folder, and
   assert.ok(files.get('COORDINATOR-CARD.md').includes(line))
   rmSync(out, { recursive: true, force: true })
 })
+
+test('#730: the CLI writes the 7-day line into the card it renders, from the brief-log beside it', () => {
+  const out = mkdtempSync(join(tmpdir(), 'brief-log-'))
+  logStart({ session: sid(1), ...startOutcome('') }, out)
+  logStart({ session: sid(2), ...startOutcome(REFUSED) }, out)
+  const run = spawnSync(process.execPath, [join(ROOT, 'scripts/coordinator-card.mjs'), join(out, 'COORDINATOR-CARD.md')], { encoding: 'utf8' })
+  assert.equal(run.status, 0, run.stderr)
+  const card = readFileSync(join(out, 'COORDINATOR-CARD.md'), 'utf8')
+  assert.match(card, /Thread starts, last 7 days \(as of \d{4}-\d{2}-\d{2}\): 2, clean 1, repaired 0, refused 1, wrong-model 0 \(false starts 50%\)\./)
+  rmSync(out, { recursive: true, force: true })
+})
+
+test('#730: an upper-case UUID is a real session and its file is counted', () => {
+  const out = mkdtempSync(join(tmpdir(), 'brief-log-'))
+  const upper = sid(7).replace(/0000$/, 'ABCD').replace(/-4000-/, '-4A00-')
+  assert.equal(isRealSession(upper), true)
+  logStart({ session: upper, outcome: 'clean' }, out)
+  assert.match(statsLine(out), /^starts 1:/)
+  rmSync(out, { recursive: true, force: true })
+})

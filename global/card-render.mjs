@@ -266,7 +266,7 @@ export function startOutcome(check = '', modelCheckText = '') {
 // A real session id is a UUID. A hand-run hook, a probe or a test names its session anything else; those never reach the log or its count (B3 #730).
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 export const isRealSession = (s) => typeof s === 'string' && UUID.test(s)
-const REAL_LOG = /^\d{4}-\d{2}-\d{2}-[0-9a-f]{32}\.json$/
+const REAL_LOG = /^\d{4}-\d{2}-\d{2}-[0-9a-f]{32}\.json$/i
 const logName = (session, date) => `${date}-${String(session).replace(/\W/g, '').slice(0, 40)}.json`
 const writeLog = (file, entry) => safeWrite(file, `${JSON.stringify(entry)}\n`)
 // Writes the start's file. `info`: { session, project, role, kit, size, guard, card, outcome, reasons }. A failure never stops the start.
