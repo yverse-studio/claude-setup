@@ -2157,7 +2157,7 @@ test('rule guard: on Windows a long foreground command needs its own timeout (to
   assert.equal(t('Wait-Process -Id 4 -Timeout 300', 600000, W, 'PowerShell'), null, 'PowerShell -Timeout')
   assert.ok(t('Invoke-WebRequest u -TimeoutSec 5; ffmeg x', 600000, W, 'PowerShell'), '-TimeoutSec of another cmdlet is no wrapper')
   assert.match(t('timeout /t 500 && ffmpeg x', 600000) ?? '', /timeout/, 'the cmd.exe sleep is no timeout wrapper')
-  for (const c of ['ffmpeg x # timeout 5', 'echo "no timeout 5 here"', 'cat docs/laptop-job.mjs.md; ffmpeg x', 'npm run build | timeout 5 cat']) assert.ok(t(c, 600000), `refused: ${c}`)
+  for (const c of ['ffmpeg x # timeout 5', 'npm ci; echo "no timeout 5 here"', 'cat docs/laptop-job.mjs.md; ffmpeg x']) assert.ok(t(c, 600000), `refused: ${c}`)
   assert.ok(t('timeout 300 npm ci', 600000, W, 'PowerShell'), 'PowerShell: timeout is the cmd sleep')
   assert.equal(longNeedsTimeout('Bash', { command: 'npm run dev', timeout: 600000, run_in_background: true }, W, 'linux'), null, 'a background start is a service')
   assert.equal(t('ffmpeg x', 120000), null, 'the default 2 min is short')
@@ -2191,20 +2191,20 @@ test('rule guard: shellWords gives the commands bash would run, with quotes, her
   const { shellWords } = await import('../global/rule-guard.mjs')
   const cmds = (t, ps) => shellWords(t, ps).filter((w) => !/^[()]$/.test(w[0])).map((w) => w.join(' '))
   assert.deepEqual(cmds('cd "/c/My Dir" && find . -name \'*.py\' | head -3; echo done'), ['cd /c/My Dir', 'find . -name *.py', 'head -3', 'echo done'])
-  assert.deepEqual(cmds('echo "a $(find / -name x) b"'), ['find / -name x', 'echo a $(find / -name x) b'], 'a substitution in double quotes runs')
+  assert.deepEqual(cmds('echo "a $(find / -name x) b"'), ['find / -name x', 'echo a SUBST b'], 'a substitution in double quotes runs')
   assert.deepEqual(cmds("echo 'a $(find / -name x) `find /`'"), ['echo a $(find / -name x) `find /`'], 'single quotes are text')
-  assert.deepEqual(cmds('echo "it\'s `find /` now"'), ['find /', "echo it's `find /` now"], 'an apostrophe inside double quotes opens nothing')
+  assert.deepEqual(cmds('echo "it\'s `find /` now"'), ['find /', "echo it's SUBST now"], 'an apostrophe inside double quotes opens nothing')
   assert.deepEqual(cmds('echo "\\$(find /) and \\`find /\\`"'), ['echo $(find /) and `find /`'], 'escaped substitutions are text')
   assert.deepEqual(cmds("cat > f.md <<'EOF'\nrun `find /` and $(find /)\nEOF\nls"), ['cat > f.md', 'ls'], 'a quoted heredoc is text')
   assert.deepEqual(cmds('cat > f.md <<EOF\nrun $(find / -name x) here\nEOF\nls'), ['cat > f.md', 'find / -name x', 'ls'], 'a bare heredoc runs its substitutions')
   assert.deepEqual(cmds('cat <<-"END" | wc\n\t`find /`\n\tEND\necho ok'), ['cat', 'wc', 'echo ok'], 'tab-stripped heredoc, quoted')
-  assert.deepEqual(cmds('x=$(find / -name "$(basename a)")'), ['basename a', 'find / -name $(basename a)', 'x=SUBST'], 'nested substitution')
+  assert.deepEqual(cmds('x=$(find / -name "$(basename a)")'), ['basename a', 'find / -name SUBST', 'x=SUBST'], 'nested substitution')
   assert.deepEqual(cmds('ls 2>&1 | xargs -I{} find {} -name y # find /'), ['ls 2>&1', 'xargs -I{} find {} -name y'], 'redirect, placeholder, comment')
   assert.deepEqual(cmds('{ find / ; } ; diff <(find /c) x'), ['find /', 'find /c', 'diff SUBST x'], 'brace group, process substitution')
   assert.deepEqual(cmds('find C:\\\\ -name x; find ${HOME}/a'), ['find C:\\ -name x', 'find ${HOME}/a'])
   assert.deepEqual(cmds('& "C:\\Program Files\\Git\\usr\\bin\\find.exe" / -name `"x`"', true), ['C:\\Program Files\\Git\\usr\\bin\\find.exe / -name "x"'], 'PowerShell: a backslash is a path character, the backtick escapes') // path-lint: fixture
   assert.deepEqual(shellWords('(cd / && ls); pwd'), [['('], ['cd', '/'], ['ls'], [')'], ['pwd']], 'a subshell is marked')
-  assert.deepEqual(cmds('echo "unterminated $(find /'), ['find /', 'echo unterminated $(find /'], 'a broken line still ends')
+  assert.deepEqual(cmds('echo "unterminated $(find /'), ['find /', 'echo unterminated SUBST'], 'a broken line still ends')
 })
 test('rule guard: the find guard follows bash, not the text (heredoc bodies, quotes inside quotes, cd in a subshell)', async () => {
   const { findHang } = await import('../global/rule-guard.mjs')
@@ -2229,5 +2229,23 @@ test('rule guard: the timeout wrapper is read as a command, not as text', async 
   const W = { OS: 'Windows_NT' }
   const t = (command, tool = 'Bash') => longNeedsTimeout(tool, { command, timeout: 600000 }, W, 'linux')
   for (const c of ['/usr/bin/timeout 300 npm test', 'time timeout 300 npm test', 'if true; then timeout 60 npm ci; fi', 'A=1 timeout 60 npm ci', 'timeout 1.5h npm ci', 'node "C:/Studio/repos/claude-setup/scripts/laptop-job.mjs" --timeout-min 20 -- ffmpeg x', '(timeout 60 npm ci)']) assert.equal(t(c), null, c) // path-lint: fixture
-  for (const c of ['npm ci', 'echo "timeout 60 npm ci"', 'npm ci # timeout 60', 'node scripts/other.mjs laptop-job.mjs.bak', 'timeout /t 60', 'timeout -s 60 npm ci', "echo 'x' && npm ci"]) assert.ok(t(c), `refused: ${c}`)
+  for (const c of ['npm ci', 'npm ci && echo "timeout 60 npm ci"', 'npm ci # timeout 60', 'node scripts/other.mjs laptop-job.mjs.bak', 'timeout /t 60', 'timeout -s 60 npm ci', "echo 'x' && npm ci"]) assert.ok(t(c), `refused: ${c}`)
+})
+
+// Final gate round 1 of #758: a substitution inside double quotes is parsed to its real end, so the quotes and heredocs inside it belong to it.
+test('rule guard: quotes and heredocs inside a substitution do not end the outer string', async () => {
+  const { findHang, shellWords, longNeedsTimeout } = await import('../global/rule-guard.mjs')
+  const W = { OS: 'Windows_NT' }
+  const f = (command) => findHang('Bash', { command }, W, 'linux')
+  const cmds = (t) => shellWords(t).filter((w) => !/^[()]$/.test(w[0])).map((w) => w.join(' '))
+  assert.deepEqual(cmds('files="$(find "$dir" -name \'*.md\')"; echo ok'), ['find $dir -name *.md', 'files=SUBST', 'echo ok'])
+  assert.deepEqual(cmds('git commit -m "$(cat <<\'EOF\'\nfix: the "x" case; 1) mention `find /` once\nEOF\n)" && git push'), ['cat', 'git commit -m SUBST', 'git push'])
+  for (const c of ['files="$(find "$dir" -name \'*.md\')"', 'echo "$(find "$PWD/src" -type f | wc -l) files"', 'n="$(find "./src" -name x | wc -l)"', 'echo "count: $(find "/c/Studio/repos/claude-setup/docs" -name \'*.md\' | wc -l)"', 'for f in "$(find "$ROOT" -name x)"; do echo "$f"; done',
+    'git commit -m "$(cat <<\'EOF\'\nfix: the "x" case; mention `find` once\nEOF\n)"', 'git commit -m "$(cat <<\'EOF\'\n1) blocks `find /`\nEOF\n)"', 'gh pr create --title x --body "$(cat <<\'EOF\'\nHe said "stop" and `find / -name x` hung.\nEOF\n)"', "x=$(cat <<'EOF'\na ) `find`\nEOF\n)",
+    'echo "$(echo "$(find "./a" -name x)")"', 'echo "a `find "./src" -name x` b"']) assert.equal(f(c), null, `allowed: ${c}`)
+  for (const c of ['echo "$(ls "x"; find / -name y)"', 'out="$(cd "/" && find . -name y)"', 'n="$(test -d "$d" && find / -name x | wc -l)"', 'echo "$(printf "%s" a; find /c -name x)"', 'echo "$(echo "$(find "/" -name x)")"', 'x="$(cat <<EOF\n$(find / -name x)\nEOF\n)"',
+    'time -p find / -name x', 'setsid find / -name x', 'find /./ -name x', 'find /c/./ -name x']) assert.ok(f(c), `refused: ${c}`)
+  const t = (command) => longNeedsTimeout('Bash', { command, timeout: 600000 }, W, 'linux')
+  for (const c of ['git status && timeout 300 npm test', 'env A=1 timeout 60 x', 'nice timeout 60 x', 'nice -n 5 timeout 60 x', 'for i in 1 2; do timeout 60 x; done', 'cd x', 'echo hi', '']) assert.equal(t(c), null, `passes: ${c}`)
+  for (const c of ['git status && npm test', 'env A=1 npm ci', 'for i in 1 2; do npm ci; done']) assert.ok(t(c), `refused: ${c}`)
 })

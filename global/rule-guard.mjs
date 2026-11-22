@@ -653,72 +653,80 @@ export function opensWindow(tool, input = {}) {
 const winHost = (env = process.env, platform = process.platform) => platform === 'win32' || env.OS === 'Windows_NT' || /^(msys|cygwin)/i.test(env.OSTYPE ?? '') || Boolean(env.STUDIO_ROOT)
 // A search root that walks a whole drive or the whole profile: `/`, `/c`, `/mnt/c`, `C:`, `C:\`, `~`, `$HOME`, `$USERPROFILE`, `%USERPROFILE%` (a trailing `/.` is the same root).
 const SEARCH_ROOT = /^(\/+\*?|\/[a-z]\/?\*?|\/mnt\/[a-z]\/?\*?|\/cygdrive\/[a-z]\/?\*?|[a-z]:[\\/]*\*?|~\/?|\$\{?HOME\}?\/?|\$\{?USERPROFILE\}?\/?|%USERPROFILE%[\\/]?|\$env:USERPROFILE[\\/]?)$/i
-const rootPath = (p) => SEARCH_ROOT.test(p.replace(/(\/\.)+$/, '/'))
+const rootPath = (p) => SEARCH_ROOT.test(p.replace(/\/(\.\/)+/g, '/').replace(/(\/\.)+$/, '/'))
 // shellWords: the simple commands bash would run from a command line, each as its words with the quotes removed, in order. It follows bash where
 // it decides what runs: single quotes and a heredoc with a quoted delimiter are text; double quotes, a heredoc with a bare delimiter, $(...),
-// backticks and <(...) run what is inside them. `(` and `)` (also of a substitution) come out as the marker commands ['('] and [')'] so a `cd`
-// in a subshell does not leak. ps = the PowerShell tool: a backslash is a path character there and a backtick is the escape, no substitution.
-const closeParen = (s, j) => { let d = 1, q = ''; for (; j < s.length; j++) { const c = s[j]; if (q) { if (c === '\\' && q === '"') j++; else if (c === q) q = '' } else if (c === "'" || c === '"') q = c; else if (c === '\\') j++; else if (c === '(') d++; else if (c === ')' && --d === 0) return j } return s.length }
+// backticks and <(...) run what is inside them, and each is parsed to its real end (quotes and heredocs inside a substitution belong to it).
+// `(` and `)` (also of a substitution) come out as the marker commands ['('] and [')'] so a `cd` in a subshell does not leak.
+// ps = the PowerShell tool: a backslash is a path character there and a backtick is the escape, no heredocs and no backtick substitution.
 const closeTick = (s, j) => { for (; j < s.length; j++) { if (s[j] === '\\') j++; else if (s[j] === '`') return j } return s.length }
-export function shellWords(text, ps = false, out = [], depth = 0) {
-  if (depth > 6) return out
-  const n = text.length
-  let words = [], cur = '', has = false, i = 0
-  const heredocs = []
-  const endWord = () => { if (has) words.push(cur); cur = ''; has = false }
-  const endCmd = () => { endWord(); if (words.length) out.push(words); words = [] }
-  const sub = (body) => { out.push(['(']); shellWords(body, ps, out, depth + 1); out.push([')']) }
-  // the substitutions inside text that is not a command itself (a double-quoted string, an unquoted heredoc body)
-  const subsIn = (s, raw = false) => { for (let j = 0; j < s.length; j++) { if (raw && s[j] === '\\') j++; else if (s[j] === '$' && s[j + 1] === '(') { const e = closeParen(s, j + 2); sub(s.slice(j + 2, e)); j = e } else if (s[j] === '`' && !ps) { const e = closeTick(s, j + 1); sub(s.slice(j + 1, e)); j = e } } }
-  while (i < n) {
-    const ch = text[i]
-    if (ch === '\\' && !ps) { if (text[i + 1] !== '\n') { cur += text[i + 1] ?? ''; has = true } i += 2; continue }
-    if (ch === '`' && ps) { cur += text[i + 1] ?? ''; has = true; i += 2; continue }
-    if (ch === "'") { const j = text.indexOf("'", i + 1), e = j < 0 ? n : j; cur += text.slice(i + 1, e); has = true; i = e + 1; continue }
-    if (ch === '"') {
-      let j = i + 1, plain = '', live = '' // plain: the word's value; live: the same text with escaped characters blanked, scanned for substitutions
-      const esc = ps ? '`' : '\\'
-      for (; j < n && text[j] !== '"'; j++) {
-        if (text[j] === esc && j + 1 < n && (ps || /[$`"\\\n]/.test(text[j + 1]))) { if (text[j + 1] !== '\n' || ps) plain += text[j + 1]; live += '  '; j++ } else { plain += text[j]; live += text[j] }
+export function shellWords(text, ps = false) {
+  const out = []
+  // Parses s from i; with inParen it stops at the `)` that closes the substitution or subshell it was called for. Returns the index after it.
+  const run = (s, i, inParen, depth) => {
+    const n = s.length
+    if (depth > 12) return n
+    let words = [], cur = '', has = false
+    const heredocs = []
+    const endWord = () => { if (has) words.push(cur); cur = ''; has = false }
+    const endCmd = () => { endWord(); if (words.length) out.push(words); words = [] }
+    const paren = (from) => { out.push(['(']); const e = run(s, from, true, depth + 1); out.push([')']); return e } // `$(`, `(`, `<(`: index after its `)`
+    const tick = (from) => { const e = closeTick(s, from); out.push(['(']); run(s.slice(from, e).replace(/\\([\\`$])/g, '$1'), 0, false, depth + 1); out.push([')']); return e + 1 }
+    // Text that is not a command itself (an unquoted heredoc body): only its substitutions run.
+    const textOnly = (body) => { for (let j = 0; j < body.length; j++) { if (body[j] === '\\') j++; else if (body[j] === '$' && body[j + 1] === '(') { out.push(['(']); j = run(body, j + 2, true, depth + 1) - 1; out.push([')']) } else if (body[j] === '`') { const e = closeTick(body, j + 1); out.push(['(']); run(body.slice(j + 1, e), 0, false, depth + 1); out.push([')']); j = e } } }
+    while (i < n) {
+      const ch = s[i]
+      if (ch === '\\' && !ps) { if (s[i + 1] !== '\n') { cur += s[i + 1] ?? ''; has = true } i += 2; continue }
+      if (ch === '`' && ps) { cur += s[i + 1] ?? ''; has = true; i += 2; continue }
+      if (ch === "'") { const j = s.indexOf("'", i + 1), e = j < 0 ? n : j; cur += s.slice(i + 1, e); has = true; i = e + 1; continue }
+      if (ch === '"') {
+        has = true; i++
+        while (i < n && s[i] !== '"') {
+          const c = s[i]
+          if (!ps && c === '\\' && i + 1 < n && /[$`"\\\n]/.test(s[i + 1])) { if (s[i + 1] !== '\n') cur += s[i + 1]; i += 2 } else if (ps && c === '`' && i + 1 < n) { cur += s[i + 1]; i += 2 } else if (c === '$' && s[i + 1] === '(') { i = paren(i + 2); cur += 'SUBST' } else if (c === '`' && !ps) { i = tick(i + 1); cur += 'SUBST' } else { cur += c; i++ }
+        }
+        i++; continue
       }
-      subsIn(live)
-      cur += plain; has = true; i = j + 1; continue
-    }
-    if (ch === '$' && text[i + 1] === '(') { const e = closeParen(text, i + 2); sub(text.slice(i + 2, e)); cur += 'SUBST'; has = true; i = e + 1; continue }
-    if (ch === '$' && text[i + 1] === '{') { const j = text.indexOf('}', i), e = j < 0 ? n : j + 1; cur += text.slice(i, e); has = true; i = e; continue }
-    if (ch === '`') { const e = closeTick(text, i + 1); sub(text.slice(i + 1, e)); cur += 'SUBST'; has = true; i = e + 1; continue }
-    if ((ch === '<' || ch === '>') && text[i + 1] === '(') { const e = closeParen(text, i + 2); sub(text.slice(i + 2, e)); cur += 'SUBST'; has = true; i = e + 1; continue }
-    if (ch === '<' && text[i + 1] === '<' && text[i + 2] !== '<' && !ps) {
-      let j = i + 2, quoted = false, delim = ''
-      const strip = text[j] === '-'
-      if (strip) j++
-      while (text[j] === ' ' || text[j] === '\t') j++
-      while (j < n && !/[\s;&|()<>]/.test(text[j])) {
-        const c = text[j]
-        if (c === "'" || c === '"') { quoted = true; const k = text.indexOf(c, j + 1), e = k < 0 ? n : k; delim += text.slice(j + 1, e); j = e + 1 } else if (c === '\\') { quoted = true; delim += text[j + 1] ?? ''; j += 2 } else { delim += c; j++ }
+      if (ch === '$' && s[i + 1] === '(') { i = paren(i + 2); cur += 'SUBST'; has = true; continue }
+      if (ch === '$' && s[i + 1] === '{') { const j = s.indexOf('}', i), e = j < 0 ? n : j + 1; cur += s.slice(i, e); has = true; i = e; continue }
+      if (ch === '`') { i = tick(i + 1); cur += 'SUBST'; has = true; continue }
+      if ((ch === '<' || ch === '>') && s[i + 1] === '(') { i = paren(i + 2); cur += 'SUBST'; has = true; continue }
+      if (ch === '<' && s[i + 1] === '<' && s[i + 2] !== '<' && !ps) {
+        let j = i + 2, quoted = false, delim = ''
+        const strip = s[j] === '-'
+        if (strip) j++
+        while (s[j] === ' ' || s[j] === '\t') j++
+        while (j < n && !/[\s;&|()<>]/.test(s[j])) {
+          const c = s[j]
+          if (c === "'" || c === '"') { quoted = true; const k = s.indexOf(c, j + 1), e = k < 0 ? n : k; delim += s.slice(j + 1, e); j = e + 1 } else if (c === '\\') { quoted = true; delim += s[j + 1] ?? ''; j += 2 } else { delim += c; j++ }
+        }
+        if (delim) heredocs.push({ delim, quoted, strip })
+        endWord(); i = j; continue
       }
-      if (delim) heredocs.push({ delim, quoted, strip })
-      endWord(); i = j; continue
-    }
-    if (ch === '\n') {
-      endCmd(); i++
-      for (const h of heredocs.splice(0)) { // the bodies follow the line that named them, in order
-        let body = ''
-        while (i < n) { const nl = text.indexOf('\n', i), end = nl < 0 ? n : nl, line = text.slice(i, end); i = end + 1; if ((h.strip ? line.replace(/^\t+/, '') : line).trimEnd() === h.delim) break; body += `${line}\n` }
-        if (!h.quoted) subsIn(body, true)
+      if (ch === '\n') {
+        endCmd(); i++
+        for (const h of heredocs.splice(0)) { // the bodies follow the line that named them, in order; a body is never a command
+          let body = ''
+          while (i < n) { const nl = s.indexOf('\n', i), end = nl < 0 ? n : nl, line = s.slice(i, end); i = end + 1; if ((h.strip ? line.replace(/^\t+/, '') : line).trimEnd() === h.delim) break; body += `${line}\n` }
+          if (i > n) i = n
+          if (!h.quoted) textOnly(body)
+        }
+        continue
       }
-      continue
+      if (ch === '&' && (s[i + 1] === '>' || /[<>]$/.test(cur))) { cur += ch; has = true; i++; continue } // 2>&1, &>file
+      if (ch === ';' || ch === '&' || ch === '|') { endCmd(); i++; continue }
+      if (ch === '(') { endCmd(); i = paren(i + 1); continue }
+      if (ch === ')') { endCmd(); if (inParen) return i + 1; i++; continue }
+      if (ch === '{' && s[i + 1] === '}') { cur += '{}'; has = true; i += 2; continue } // the xargs placeholder
+      if ((ch === '{' || ch === '}') && !has && (i + 1 >= n || /[\s;]/.test(s[i + 1]))) { endCmd(); i++; continue } // a brace group
+      if (ch === '#' && !has && !ps) { while (i < n && s[i] !== '\n') i++; continue }
+      if (/\s/.test(ch)) { endWord(); i++; continue }
+      cur += ch; has = true; i++
     }
-    if (ch === '&' && (text[i + 1] === '>' || /[<>]$/.test(cur))) { cur += ch; has = true; i++; continue } // 2>&1, &>file
-    if (ch === ';' || ch === '&' || ch === '|') { endCmd(); i++; continue }
-    if (ch === '(' || ch === ')') { endCmd(); out.push([ch]); i++; continue }
-    if (ch === '{' && text[i + 1] === '}') { cur += '{}'; has = true; i += 2; continue } // the xargs placeholder
-    if ((ch === '{' || ch === '}') && !has && (i + 1 >= n || /[\s;]/.test(text[i + 1]))) { endCmd(); i++; continue } // a brace group
-    if (ch === '#' && !has && !ps) { while (i < n && text[i] !== '\n') i++; continue }
-    if (/\s/.test(ch)) { endWord(); i++; continue }
-    cur += ch; has = true; i++
+    endCmd()
+    return n
   }
-  endCmd()
+  run(String(text), 0, false, 0)
   return out
 }
 const exeName = (w) => w.split(/[\\/]/).pop().replace(/\.exe$/i, '').toLowerCase()
@@ -728,13 +736,13 @@ function bare(words) {
   const w = [...words]
   for (;;) {
     if (!w.length) return w
-    if (/^\w+=/.test(w[0]) || /^(then|do|else|elif|if|while|until|!|time)$/.test(w[0])) { w.shift(); continue }
+    if (/^\w+=/.test(w[0]) || /^(then|do|else|elif|if|while|until|!)$/.test(w[0])) { w.shift(); continue }
     if (REDIRECT.test(w[0])) { const alone = /^\d*(&?>>?|<<?<?|>&|<&)$/.test(w[0]); w.splice(0, alone ? 2 : 1); continue }
     return w
   }
 }
 // Wrappers that run the command after their own options; the value says which of their options take a value.
-const WRAPPERS = { sudo: /^-[ugUhpCDrRt]$/, env: /^-[uCS]$/, nohup: null, timeout: /^-[sk]$/, nice: /^-n$/, stdbuf: /^-[ioe]$/, command: null, exec: /^-a$/, xargs: /^-[InPdLEsa]$/, winpty: null, ionice: /^-[cnp]$/, builtin: null }
+const WRAPPERS = { sudo: /^-[ugUhpCDrRt]$/, env: /^-[uCS]$/, nohup: null, timeout: /^-[sk]$/, nice: /^-n$/, stdbuf: /^-[ioe]$/, command: null, exec: /^-a$/, xargs: /^-[InPdLEsa]$/, winpty: null, ionice: /^-[cnp]$/, builtin: null, time: /^-[of]$/, setsid: null }
 // Peels wrappers: returns { words, viaXargs } or null when the wrapper only asks about a command (`command -v find`).
 function unwrap(words) {
   let w = bare(words), viaXargs = false
@@ -804,21 +812,29 @@ export function findHang(tool, input = {}, env = process.env, platform = process
 }
 // A long foreground command (the tool timeout is raised above its 2 min default) must carry its own `timeout N` or run through laptop-job.mjs:
 // on Windows the tool's timeout kills bash but leaves the child (find.exe, ffmpeg) running as an orphan; GNU `timeout` kills the child itself.
-// The first real command of the line (past cd, export, mkdir and the like) must be the wrapped one; a background start is a service, not a foreground wait.
+// One command of the line must be wrapped as a command (a comment or a quoted "timeout 60" is text); a line with nothing but cd, export, mkdir
+// and the like has nothing long in it; a background start is a service, not a foreground wait.
 const LONG_OK = /^(cd|pushd|popd|export|set|source|\.|echo|true|mkdir|unset|pwd)$/
+const PRE_WRAP = /^(env|nice|time|sudo|nohup|stdbuf|ionice|command|exec|winpty)$/
+const isGnuTimeout = (w) => { // the first word after timeout's own options is a duration (`timeout /t 5` is the cmd.exe sleep)
+  for (let k = 1; k < w.length; k++) { if (/^-[sk]$/.test(w[k])) k++; else if (!/^-/.test(w[k])) return /^\d*\.?\d+[smhd]?$/.test(w[k]) }
+  return false
+}
 export function longNeedsTimeout(tool, input = {}, env = process.env, platform = process.platform) {
   if (!/^(Bash|PowerShell)$/.test(tool) || !winHost(env, platform) || input.run_in_background) return null
   if (!(Number(input.timeout) > 120000)) return null
   const command = String(input.command ?? ''), ps = tool === 'PowerShell'
-  const real = shellWords(command, ps).map(bare).find((w) => w.length && !/^[()]$/.test(w[0]) && !LONG_OK.test(exeName(w[0]))) ?? []
-  const exe = real.length ? exeName(real[0]) : ''
-  const gnuTimeout = !ps && exe === 'timeout' && (() => { // the first word after timeout's own options is a duration (`timeout /t 5` is the cmd.exe sleep)
-    for (let k = 1; k < real.length; k++) { if (/^-[sk]$/.test(real[k])) k++; else if (!/^-/.test(real[k])) return /^\d*\.?\d+[smhd]?$/.test(real[k]) }
-    return false
-  })()
-  const runner = exe === 'node' && real.slice(1).some((a) => /(^|[\\/])laptop-job\.mjs$/.test(a))
-  const psWait = ps && /\bWait-(Process|Job)\b[^;|\n]*-Timeout\b/i.test(command)
-  if (gnuTimeout || runner || psWait) return null
+  const real = shellWords(command, ps).map((w) => { // each command without assignments, keywords and the wrappers that sit before a timeout
+    let c = bare(w)
+    for (let hops = 0; hops < 4 && c.length && PRE_WRAP.test(exeName(c[0])); hops++) { let i = 1; while (i < c.length && (/^-/.test(c[i]) || /^\w+=/.test(c[i]) || (WRAPPERS[exeName(c[0])]?.test(c[i - 1]) && i > 1))) i++; c = bare(c.slice(i)) }
+    return c
+  }).filter((w) => w.length && !/^[()]$/.test(w[0]) && !LONG_OK.test(exeName(w[0])))
+  if (!real.length) return null
+  const wrapped = real.some((w) => {
+    const exe = exeName(w[0])
+    return (!ps && exe === 'timeout' && isGnuTimeout(w)) || (exe === 'node' && w.slice(1).some((a) => /(^|[\\/])laptop-job\.mjs$/.test(a)))
+  })
+  if (wrapped || (ps && /\bWait-(Process|Job)\b[^;|\n]*-Timeout\b/i.test(command))) return null
   return 'rule-guard: on Windows a long command (tool timeout above 2 min) needs its own timeout, because the tool\'s timeout kills the shell but leaves the child running, orphaned and hidden. Start it as `timeout <seconds> <command>` (GNU, Git Bash), or through `node scripts/laptop-job.mjs --timeout-min <N> -- <command>`, or in PowerShell with `-Timeout` on Wait-Process or Wait-Job (docs/pc-claude-user.md, Find hangs and timeouts).'
 }
 // The Archivist documents scripts and workflows; yskills' references are filed by the laptop lane, never by it
