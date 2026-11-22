@@ -1950,3 +1950,20 @@ test('rule-guard: a cancelled prompt hook that left its marks still gets the rol
     assert.equal(pre(`${spawn}\n${done}`), '', 'and only once')
   } finally { for (const m of marks) rmSync(m, { force: true }); rmSync(dir, { recursive: true, force: true }) }
 })
+
+test('rule-guard: the late role card is for the thread, and only a hook row shows it arrived (#728 gate round 1)', () => {
+  const id = `g1${process.pid}`, dir = mkdtempSync(join(tmpdir(), 'late-card2-')), tfile = join(dir, 't.jsonl')
+  const marks = ['role', 'start', 'card', 'badbrief'].map((f) => join(tmpdir(), `claude-setup-${f}-${id}`))
+  const spawn = JSON.stringify({ type: 'user', message: { content: '<wake reason="spawn">Role: Planner · Kit: setup · Size: M\nItem: new</wake>' } })
+  const quoted = JSON.stringify({ type: 'user', message: { content: [{ type: 'tool_result', tool_use_id: 'q1', content: "rule-guard: you are the ${role.name} of this task" }] } })
+  const arrived = JSON.stringify({ type: 'attachment', attachment: { type: 'hook_additional_context', hookEvent: 'UserPromptSubmit', content: 'rule-guard: you are the Planner of this task' } })
+  const pre = (transcript, agent_id) => { writeFileSync(tfile, transcript); const r = spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'pre'], { input: JSON.stringify({ cwd: root, session_id: id, transcript_path: tfile, agent_id, tool_name: 'Write', tool_input: { file_path: join(dir, 'a.txt'), content: 'x' } }), encoding: 'utf8', env: { ...process.env, CLAUDE_SETUP_HOME: dir } }); return r.stdout + r.stderr } // the card rides stdout, or stderr when the brief check locked the thread
+  try {
+    writeFileSync(marks[0], 'Planner')
+    assert.equal(pre(`${spawn}\n${quoted}`, 'sub1'), '', 'a subagent call gets no start note')
+    assert.equal(existsSync(marks[2]), false, 'and leaves the once-mark')
+    assert.match(pre(`${spawn}\n${quoted}`), /you are the Planner/, 'the thread\'s next call gets the card although a Read result quotes the sentence')
+    rmSync(marks[2], { force: true }); rmSync(marks[3], { force: true }) // the brief check of that call locked the test's bare brief
+    assert.equal(pre(`${spawn}\n${arrived}`), '', 'a hook attachment row with the card means it arrived')
+  } finally { for (const m of marks) rmSync(m, { force: true }); rmSync(dir, { recursive: true, force: true }) }
+})

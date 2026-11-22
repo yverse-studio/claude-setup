@@ -2779,7 +2779,7 @@ async function startFromTranscript(session, transcript, cwd) {
   const t = transcript(), brief = spawnPrompt('', t.split('\n').find((l) => /"type":"user"/.test(l)) ?? '')
   // #728: a cancelled prompt hook may have left the start mark and the role stamp without the card (live 2026-11-22: 2 of 2 starts hit the 5 s limit). The card is
   // sent at the next matching tool call, once, unless the transcript shows it arrived; a thread that already worked still gets it, the brief check only before work.
-  if (!brief || /rule-guard: you are the /.test(t)) return ''
+  if (!brief || t.split('\n').some((l) => l.includes('"attachment"') && l.includes('rule-guard: you are the '))) return '' // only a hook's attachment row counts: a Read result quoting the sentence is no card
   const fresh = !existsSync(startMark(session)) && !toolCalls(t).some((c) => c.result) // a thread that already worked (new container, no temp files) keeps going
   writeFileSync(again, ''); writeFileSync(startMark(session), '')
   const check = fresh ? await briefCheck(brief, cwd, knownModel(session, t)) : ''
@@ -2979,7 +2979,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         const shipped = join(tmpdir(), `claude-setup-artifacts-${String(session).replace(/\W/g, '')}`)
         const transcript = () => (transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : '')
         const sessionTranscript = () => [transcriptPath, agentTranscript(transcriptPath, agentId)].filter((p) => p && existsSync(p)).map(read).join('\n')
-        const startNote = await startFromTranscript(session, transcript, cwd)
+        const startNote = agentId ? '' : await startFromTranscript(session, transcript, cwd) // a subagent's call must not spend the thread's once-mark
         await stampFromTranscript(session, transcript, cwd)
         const gateRole = session ? read(join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)).trim() : ''
         // M50: a relay that reached the thread mid-turn may never have fired the prompt hook; the transcript has it, so a locked thread re-reads it at its next tool call.
