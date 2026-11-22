@@ -103,7 +103,9 @@ export function reviewerProof(body, calls = []) {
 }
 export function authorProblem(body, ctx = {}) {
   if (GATE_ROLE.test(ctx.role ?? '') || reviewerProof(body, ctx.calls ?? [])) return null
-  return `gate verdict: a verdict counts only from a gate session (a gate role: Tester, Reviewer, Critic ..., docs/TEAMS.md) or when its headline came out of a fresh reviewer subagent of this session (code-reviewer or evaluator). This session is ${ctx.role ? `the ${String(ctx.role).slice(0, 30)}` : 'not a gate role'} and no reviewer subagent returned this headline, so a builder cannot pass or merge its own work (gate.md, Rounds).`
+  const line = norm(String(body).split('\n').find((l) => l.trim()) ?? '')
+  const scripted = !!line && (ctx.calls ?? []).some((c) => /^(Agent|Task)$/.test(c.name) && REVIEWER.test(String(c.input?.subagent_type ?? '')) && [c.result, c.report].some((t) => norm(String(t ?? '').split('\n').find((l) => l.trim()) ?? '') === line) && norm(c.input?.prompt ?? '').includes(line))
+  return `gate verdict: a verdict counts only from a gate session (a gate role: Tester, Reviewer, Critic ..., docs/TEAMS.md) or when its headline came out of a fresh reviewer subagent of this session (code-reviewer or evaluator). This session is ${ctx.role ? `the ${String(ctx.role).slice(0, 30)}` : 'not a gate role'} and no reviewer subagent returned this headline, so a builder cannot pass or merge its own work (gate.md, Rounds).${scripted ? ' A reviewer did return this headline, but the prompt you gave it already contained it; ask for the format with placeholders, never the finished headline.' : ''}`
 }
 
 // "Gate 4.2/5 (L, round 3) [important]" or "Gate 5/5 (S, round 1)" or "Gate fail, round 2".

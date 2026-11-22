@@ -989,7 +989,9 @@ export function reviewerProof(body, calls = []) {
 }
 export function authorProblem(body, ctx = {}) {
   if (GATE_ROLE.test(ctx.role ?? '') || reviewerProof(body, ctx.calls ?? [])) return null
-  return `gate verdict: a verdict counts only from a gate session (a gate role: Tester, Reviewer, Critic ..., docs/TEAMS.md) or when its headline came out of a fresh reviewer subagent of this session (code-reviewer or evaluator). This session is ${ctx.role ? `the ${String(ctx.role).slice(0, 30)}` : 'not a gate role'} and no reviewer subagent returned this headline, so a builder cannot pass or merge its own work (gate.md, Rounds).`
+  const line = norm(String(body).split('\n').find((l) => l.trim()) ?? '')
+  const scripted = !!line && (ctx.calls ?? []).some((c) => /^(Agent|Task)$/.test(c.name) && REVIEWER.test(String(c.input?.subagent_type ?? '')) && [c.result, c.report].some((t) => norm(String(t ?? '').split('\n').find((l) => l.trim()) ?? '') === line) && norm(c.input?.prompt ?? '').includes(line))
+  return `gate verdict: a verdict counts only from a gate session (a gate role: Tester, Reviewer, Critic ..., docs/TEAMS.md) or when its headline came out of a fresh reviewer subagent of this session (code-reviewer or evaluator). This session is ${ctx.role ? `the ${String(ctx.role).slice(0, 30)}` : 'not a gate role'} and no reviewer subagent returned this headline, so a builder cannot pass or merge its own work (gate.md, Rounds).${scripted ? ' A reviewer did return this headline, but the prompt you gave it already contained it; ask for the format with placeholders, never the finished headline.' : ''}`
 }
 
 // "Gate 4.2/5 (L, round 3) [important]" or "Gate 5/5 (S, round 1)" or "Gate fail, round 2".
@@ -3099,10 +3101,13 @@ function agentReport(path, prompt) {
 // agent the note names (agentReport checks it was started with this call's prompt), never a row of the main transcript, which a builder can type.
 const DELIVERED = /^[^\n]{0,80}?\bdelivered to you as a message\b/i
 function deliveredReport(transcriptPath, prompt, note = '') {
-  // The note names the agent ("... from agent-<id>" or "agentId: <id>"): that one transcript only. No id: nothing counts (a scan by prompt could pick
-  // another agent that was started with a prompt that begins with this one, gate r1 of #525).
+  // The note names the agent ("... from agent-<id>", "agentId: <id>" or, in a foreground call, from "<id>" (#766, live 2026-11-22)): that one transcript only.
+  // No id: nothing counts (a scan by prompt could pick another agent that was started with a prompt that begins with this one, gate r1 of #525).
   const first = String(note).trim().split('\n')[0] // the harness's note is the opening line; an id mentioned later in a report is nobody's note
-  const id = /\bagent-?Id:\s*([A-Za-z0-9-]+)/i.exec(first)?.[1] ?? /\bfrom\s+agent-([A-Za-z0-9][A-Za-z0-9-]*)/i.exec(first)?.[1]
+  // The quoted token could be a name the builder gave the call, so it counts only when the harness's own `agentId:` line of the same note carries the same value.
+  const quoted = /\bfrom\s+"([A-Za-z0-9][A-Za-z0-9-]*)"/i.exec(first)?.[1]
+  const sameId = quoted && new RegExp(`^agentId:\\s*${quoted}(?![A-Za-z0-9-])`, 'm').test(String(note)) ? quoted : undefined
+  const id = /\bagent-?Id:\s*([A-Za-z0-9-]+)/i.exec(first)?.[1] ?? /\bfrom\s+agent-([A-Za-z0-9][A-Za-z0-9-]*)/i.exec(first)?.[1] ?? sameId
   const path = id ? agentTranscript(transcriptPath, id) : ''
   return path ? agentReport(path, prompt) : ''
 }

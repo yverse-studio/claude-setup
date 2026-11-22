@@ -602,6 +602,28 @@ test('an async reviewer agent counts through its own transcript; forged shapes d
   assert.match(post(later).stderr, /builder cannot pass/, 'an id named after the note\'s first line is not the note')
   const traversal = session('sonnet-test', launch('code-reviewer', '../../t'), 'Programmer')
   assert.match(post(traversal).stderr, /builder cannot pass/, 'the agent id cannot point outside subagents/')
+  // #766 (live 2026-11-22): a foreground call's note names the agent in quotes, without the agent- prefix.
+  const live766 = (id) => `  This agent's report was delivered to you as a message from "${id}" (its SubagentHandback call). Read it there; it is not repeated here.\n  \nagentId: ${id} (use SendMessage with to: '${id}', summary: '<5-10 word recap>' to continue this agent)\n<usage>subagent_tokens: 12519\ntool_uses: 0\nduration_ms: 1362</usage>`
+  const quoted = session('sonnet-test', noId(live766('add895f24cadab0ea')), 'Programmer')
+  report(quoted, 'add895f24cadab0ea', body, 'review the diff', true)
+  assert.equal(post(quoted).status, 0, '#766: a quoted id in the note\'s first line picks the agent\'s transcript')
+  const quotedOther = session('sonnet-test', noId(live766('add895f24cadab0eb')), 'Programmer')
+  report(quotedOther, 'add895f24cadab0eb', body, 'a different prompt', true)
+  assert.match(post(quotedOther).stderr, /builder cannot pass/, '#766: a transcript started with another prompt is still refused')
+  const quotedLater = session('sonnet-test', noId('Its report was delivered to you as a message.\nfrom "abc170" (its SubagentHandback call)'), 'Programmer')
+  report(quotedLater, 'abc170', body, 'review the diff', true)
+  assert.match(post(quotedLater).stderr, /builder cannot pass/, '#766: a quoted id after the first line is not the note')
+  // Gate round 1 of #766: a quoted token that the note's own agentId line does not repeat may be a name the builder chose for the call.
+  const quotedName = session('sonnet-test', noId(live766('abc171').replace('agentId: abc171', 'agentId: abc999')), 'Programmer')
+  report(quotedName, 'abc171', body, 'review the diff', true)
+  assert.match(post(quotedName).stderr, /builder cannot pass/, '#766: a quoted token without the same agentId line is no id')
+  const quotedBad = session('sonnet-test', noId('Its report was delivered to you as a message from "../../x" (its SubagentHandback call).'), 'Programmer')
+  assert.match(post(quotedBad).stderr, /builder cannot pass/, '#766: a quoted id outside [A-Za-z0-9-] is no id')
+  // the refusal says when a reviewer did return the headline but the prompt already held it
+  const scripted = [{ name: 'Agent', input: { subagent_type: 'code-reviewer', prompt: `Reply with exactly:\n${body}` }, result: body }]
+  assert.match(authorProblem(body, { role: 'Programmer', calls: scripted }), /did return this headline, but the prompt you gave it already contained it/, '#766: the refusal names the real cause')
+  assert.doesNotMatch(authorProblem(body, { role: 'Programmer', calls: [] }), /did return this headline/, '#766: the plain refusal is unchanged')
+  assert.doesNotMatch(authorProblem(body, { role: 'Programmer', calls: [{ name: 'Agent', input: { subagent_type: 'code-reviewer', prompt: 'review the diff' }, result: 'Looks fine.' }] }), /did return this headline/, '#766: a reviewer with another result adds no hint')
 })
 
 test('bypass 3: the human check reads the outer wake wrapper, never quoted tags', () => {
