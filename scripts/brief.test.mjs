@@ -70,17 +70,18 @@ test('for every Roster role x kit x size the generated brief passes team-guard, 
   assert.ok(built > 40 && refused > 20, `built ${built}, refused ${refused}`)
 })
 
-test('the lines the guard demands are built or asked for, never dropped: Sheet, Look-Lock, Tester', () => {
+test('the lines the guard demands are built or asked for, never dropped: Sheet, Target image, Source, Tester', () => {
   const { sheet, ...noSheet } = FIELDS
   const need = (f, re) => assert.throws(() => buildBrief({ teams, role: 'Programmer', kit: 'game', size: 'M', ...f }), (e) => e instanceof BriefError && re.test(e.message) && !/fails team-guard/.test(e.message))
   need(noSheet, /--sheet/)
   const { level, ...noLevel } = FIELDS
   need(noLevel, /--level/)
-  need({ ...FIELDS, sheet: 'docs/cast.md' }, /--look-lock/)
+  need({ ...FIELDS, sheet: 'docs/cast.md' }, /--target-image, --source/)
+  need({ ...FIELDS, sheet: 'docs/cast.md', targetImage: 'lib/characters/CH_x/approval/A.png' }, /--source/)
   need({ ...FIELDS, sheet: 'n/a' }, /10\+ characters|reason/)
   assert.throws(() => buildBrief({ teams, role: 'Programmer', kit: 'setup', size: 'L', ...FIELDS }), (e) => /--tester/.test(e.message))
-  const full = buildBrief({ teams, role: 'Programmer', kit: 'game', size: 'M', ...FIELDS, sheet: 'docs/cast.md', lookLock: 'https://example.com/card/1' })
-  assert.match(full.brief, /\nSheet: docs\/cast\.md\nLook-Lock: https:\/\/example\.com\/card\/1\n/)
+  const full = buildBrief({ teams, role: 'Programmer', kit: 'game', size: 'M', ...FIELDS, sheet: 'docs/cast.md', targetImage: 'lib/characters/CH_x/approval/A.png', source: 'lib/characters/CH_x/source/A.blend' })
+  assert.match(full.brief, /\nSheet: docs\/cast\.md\nTarget image: lib\/characters\/CH_x\/approval\/A\.png\nSource: lib\/characters\/CH_x\/source\/A\.blend\n/)
   assert.deepEqual(decide(START, { brief: full.brief, title: full.title, model: full.model }, [], [], teams), {})
   assert.match(buildBrief({ teams, role: 'Programmer', kit: 'setup', size: 'L', ...FIELDS, tester: 'Tester · x' }).brief, /\nTester: Tester · x\n/)
   assert.doesNotThrow(() => buildBrief({ teams, role: 'Programmer', kit: 'setup', size: 'M', ...FIELDS, what: 'Fix the brief check for Kit: game threads.' }), 'a setup brief that quotes Kit: game needs no Level line')
@@ -149,11 +150,11 @@ test('a generated gate-role brief names gate.md and the kit checks in Prior art 
   assert.match(await briefCheck(spawn(handWritten), root), /^Brief repair \(no block\)[\s\S]*gate\.md/, 'the hand-written brief without gate.md blocked two Reviewer threads; now it is told to read gate.md')
 })
 
-test('Character TD is a sheet role and a gate builder: the generated game brief asks for Sheet, Look-Lock and Gate, and passes once filled (gate #483 r2, F5)', () => {
+test('Character TD is a sheet role and a gate builder: the generated game brief asks for Sheet, Target image, Source and Gate, and passes once filled (gate #483 r2, F5)', () => {
   const { sheet, ...noSheet } = FIELDS
   assert.throws(() => buildBrief({ teams, role: 'Character TD', kit: 'game', size: 'M', ...noSheet }), (e) => e instanceof BriefError && /--sheet/.test(e.message))
-  const full = buildBrief({ teams, role: 'Character TD', kit: 'game', size: 'M', ...FIELDS, sheet: 'docs/cast.md', lookLock: 'https://example.com/card/1', gate: 'Reviewer · fit round 1 before owner' })
-  assert.match(full.brief, /\nSheet: docs\/cast\.md\nLook-Lock: https:\/\/example\.com\/card\/1\n/)
+  const full = buildBrief({ teams, role: 'Character TD', kit: 'game', size: 'M', ...FIELDS, sheet: 'docs/cast.md', targetImage: 'lib/characters/CH_x/approval/A.png', source: 'lib/characters/CH_x/source/A.blend', gate: 'Reviewer · fit round 1 before owner' })
+  assert.match(full.brief, /\nSheet: docs\/cast\.md\nTarget image: lib\/characters\/CH_x\/approval\/A\.png\nSource: lib\/characters\/CH_x\/source\/A\.blend\n/)
   assert.match(full.brief, /\nGate: Reviewer · fit round 1 before owner\n/)
   assert.deepEqual(decide(START, { brief: full.brief, title: full.title, model: full.model }, [], [], teams), {})
   const noGate = decide(START, { brief: full.brief.replace(/\nGate:[^\n]*/, ''), title: full.title, model: full.model }, [], [], teams)
@@ -214,7 +215,7 @@ test('a rendered brief file per role passes team-guard once its <...> are filled
     for (const [name, only] of cell.map((c) => [c.match(/^[\w-]+/)[0], c.match(/size ([SML]( or [SML])*) only/)?.[1].split(' or ')])) for (const size of only ?? offered) {
       const kit = name
       const model = modelFor(role, size, teams)
-      const filled = block.split('\n').filter((l) => !/^(Look-Lock|Topic):/.test(l) && (size === 'L' || !/^Tester:/.test(l)))
+      const filled = block.split('\n').filter((l) => !/^(Target image|Source|Topic):/.test(l) && (size === 'L' || !/^Tester:/.test(l)))
         .map((l) => l.replace(/^Sheet: .*/, 'Sheet: n/a this slice is no body, face or outfit job').replace(/^Level: .*/, 'Level: n/a fixture, this slice changes no level').replace(/Size: <[^>]+>/, `Size: ${size}`).replace(/Kit: <[^>]+>/, `Kit: ${kit}`)
           .replace(/^Model: .*/, `Model: ${model}`).replace(/^Gate: .*/, 'Gate: Reviewer · x before owner')
           .replace(/<[^>\n]+>/g, (m) => (/PLAN\.json/.test(m) ? 'M30' : /^<sources/.test(m) ? 'obra/superpowers' : 'something concrete for this task'))).join('\n')
@@ -231,4 +232,29 @@ test('#627: an Animator brief is generated only with --scene-docs, and carries t
   const { sceneDocs, ...noDocs } = FIELDS
   assert.throws(() => buildBrief({ teams, role: 'Animator', kit: 'game', size: 'M', ...noDocs }), (e) => e instanceof BriefError && /--scene-docs/.test(e.message))
   assert.match(buildBrief({ teams, role: 'Animator', kit: 'game', size: 'M', ...FIELDS, gate: 'Reviewer · x before owner' }).brief, /^Scene docs: the docs the project CLAUDE\.md lists/m)
+})
+
+// #702: the CLI names the missing flag and exits 2; with both flags its output is a brief the guard starts.
+test('#702: brief.mjs exits 2 naming --target-image when a real sheet has no target, and passes decide() with both flags', async () => {
+  const { spawnSync } = await import('node:child_process')
+  const args = ['--role', 'Character TD', '--kit', 'game', '--size', 'M', '--item', 'M1', '--plan', 'gate.md', '--acceptance', 'tests pass', '--threads', 'list_threads checked, none open on this topic',
+    '--prior-art', 'yverse-studio/claude-setup checked -> adapt, because it exists', '--done', 'node --test passes', '--stop', 'two rounds', '--what', 'x', '--json']
+  const cli = (more, sheet = 'docs/cast.md') => spawnSync(process.execPath, [join(root, 'scripts', 'brief.mjs'), ...args, '--sheet', sheet, ...more], { encoding: 'utf8' })
+  const none = cli([])
+  assert.equal(none.status, 2)
+  assert.match(none.stderr, /missing, never guessed: --target-image, --source/)
+  assert.doesNotMatch(none.stderr, /look-lock/)
+  const built = cli(['--target-image', 'lib/characters/CH_x/approval/A.png', '--source', 'lib/characters/CH_x/source/A.blend'])
+  assert.equal(built.status, 0, built.stderr)
+  const out = JSON.parse(built.stdout)
+  assert.match(out.brief, /\nSheet: docs\/cast\.md\nTarget image: lib\/characters\/CH_x\/approval\/A\.png\nSource: lib\/characters\/CH_x\/source\/A\.blend\n/)
+  assert.deepEqual(decide(START, { brief: out.brief, title: out.title, model: out.model }, [], [], teams), {})
+  // A Character TD has no n/a: the generator says so in its own words, not as a guard failure after the fact.
+  const na = cli(['--target-image', 'n/a this slice changes no look at all', '--source', 'x/y'])
+  assert.equal(na.status, 2)
+  assert.match(na.stderr, /--target-image/)
+  // With `--sheet n/a <why>` neither flag is asked for and neither line is written.
+  const noSheet = cli([], 'n/a a rig check, no body, face or outfit job')
+  assert.equal(noSheet.status, 0, noSheet.stderr)
+  assert.doesNotMatch(JSON.parse(noSheet.stdout).brief, /Target image|Source:/)
 })

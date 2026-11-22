@@ -14,13 +14,13 @@ const spawn = (brief) => `<wake reason="spawn"><relay>${brief}</relay></wake>`
 const check = (brief, model = null) => briefCheck(spawn(brief), root, model)
 const LINES = { Item: 'Item: M50', Plan: 'Plan: p.md', Acceptance: 'Acceptance: tests pass', Model: 'Model: sonnet', Skills: 'Skills: .claude/skills/operator/roles/programmer.md',
   'Done when': 'Done when: tests pass', 'Stop when': 'Stop when: 3 rounds', Start: 'Start: read MEMORY.md first', Threads: 'Threads: list_threads checked, none open on this topic',
-  'Prior art': 'Prior art: obra/superpowers -> adapt, because it exists', Gate: 'Gate: Reviewer · x before owner', Sheet: 'Sheet: sheet.md', 'Look-Lock': 'Look-Lock: card https://x.y/z',
+  'Prior art': 'Prior art: obra/superpowers -> adapt, because it exists', Gate: 'Gate: Reviewer · x before owner', Sheet: 'Sheet: sheet.md', 'Target image': 'Target image: lib/characters/CH_x/approval/A.png', Source: 'Source: lib/characters/CH_x/source/A.blend',
   Researcher: 'Researcher: Opus subagent', Tester: 'Tester: Tester · app', 'Scene docs': 'Scene docs: the docs the project CLAUDE.md lists, copies the old scene X',
   Level: 'Level: research research/airport.md · plan plans/airport-PLAN.md · design design/airport.md' }
 
 test('table test: a brief that lacks only one row gets exactly that row\'s class behaviour', async () => {
   for (const f of BRIEF_FIELDS) {
-    const stamp = f.key === 'Scene docs' ? 'Animator · Kit: game · Size: M' : ['Sheet', 'Look-Lock'].includes(f.key) ? 'Programmer · Kit: game · Size: M' : f.key === 'Tester' ? 'Programmer · Kit: setup · Size: L' : 'Programmer · Kit: setup · Size: M'
+    const stamp = f.key === 'Scene docs' ? 'Animator · Kit: game · Size: M' : ['Sheet', 'Target image', 'Source'].includes(f.key) ? 'Programmer · Kit: game · Size: M' : f.key === 'Tester' ? 'Programmer · Kit: setup · Size: L' : 'Programmer · Kit: setup · Size: M'
     const brief = [`Role: ${f.key === 'Level' ? 'Programmer · Kit: game · Size: M' : stamp}`, f.key === 'Level' ? 'Research SOTA of the thing for the airport level.' : 'Research SOTA of the thing.', ...Object.entries(LINES).filter(([k]) => k !== f.key).map(([, l]) => l)].join('\n')
     const out = await check(brief)
     if (['Acceptance', 'Done when'].includes(f.key)) { assert.doesNotMatch(out, /^Brief (check|repair)[^\n]*(Acceptance|Done when)/, `${f.key}: the other one satisfies both`); continue }
@@ -99,7 +99,7 @@ test('briefs.md keeps no hand-written brief block: a fenced block with a Role st
 })
 
 // X1b (#540): the item holds the rest. Its template has exactly these lines and the brief file names the item as the place for them.
-const ITEM_LINES = ['Scope', 'Basis', 'Assets', 'Sheet', 'Look-Lock', 'Asset', 'Acceptance']
+const ITEM_LINES = ['Scope', 'Basis', 'Assets', 'Sheet', 'Target image', 'Source', 'Asset', 'Acceptance']
 test('X1b: the issue template holds the item lines and every brief file points at the item for the rest', async () => {
   const tpl = readFileSync(join(root, '.github/ISSUE_TEMPLATE/plan.md'), 'utf8')
   assert.match(tpl, /^---\n[\s\S]*labels:.*plan/m, 'the template sets the plan label')
@@ -109,9 +109,9 @@ test('X1b: the issue template holds the item lines and every brief file points a
   for (const role of ['Programmer', 'Reviewer', 'Researcher', 'Planner']) assert.match(briefFile(role), /Scope, Basis and Assets live in the item/, `${role} brief file names the item`)
 })
 
-// CompanyXY 2026-11-13 (brief-fix item 2): three starts of one Character TD each failed on a NEW line (Kit, then Gate, then model, then Sheet and Look-Lock).
+// CompanyXY 2026-11-13 (brief-fix item 2): three starts of one Character TD each failed on a NEW line (Kit, then Gate, then model, then Sheet and the look lines).
 // A wrong Kit hid the Sheet lines, and the model refusal named a tier, not the id to pass. One refusal now lists everything, the id included.
-test('a brief with a wrong kit, a wrong model and no gate gets ONE refusal that also names Sheet, Look-Lock and the exact model id', async () => {
+test('a brief with a wrong kit, a wrong model and no gate gets ONE refusal that also names Sheet, Target image, Source and the exact model id', async () => {
   const { decide } = await import('../global/team-guard.mjs')
   const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
   const checklists = readFileSync(join(root, '.claude/skills/operator/checklists.md'), 'utf8')
@@ -119,10 +119,10 @@ test('a brief with a wrong kit, a wrong model and no gate gets ONE refusal that 
   const [opusId, sonnetId] = [id('Opus'), id('Sonnet')]
   const brief = ['Role: Character TD · Kit: references · Size: M', 'Item: new', 'Plan: p.md', 'Acceptance: ok', 'Model: opus', 'Skills: blender-body', 'Done when: x', 'Stop when: 3', 'Start: read MEMORY.md first', 'Threads: none open on this topic'].join('\n')
   const out = decide('mcp__hearthbot__start_thread', { prompt: brief, model: opusId, title: 'Character TD · Lily' }, [], [], teams, checklists, []).block
-  for (const part of [/Kit: references is no kit/, /Gate:/, /Sheet:/, /Look-Lock:/, /Prior art/, new RegExp(`runs on sonnet \\(${sonnetId}\\)`)]) assert.match(out, part)
+  for (const part of [/Kit: references is no kit/, /Gate:/, /Sheet:/, /Target image:/, /Source:/, /Prior art/, new RegExp(`runs on sonnet \\(${sonnetId}\\)`)]) assert.match(out, part)
   // The same brief on a real kit lists the same gaps minus the kit: nothing new appears after the kit is fixed.
   const fixed = decide('mcp__hearthbot__start_thread', { prompt: brief.replace('references', 'game'), model: opusId, title: 'Character TD · Lily' }, [], [], teams, checklists, []).block
-  for (const part of [/Gate:/, /Sheet:/, /Look-Lock:/, /Prior art/, new RegExp(`runs on sonnet \\(${sonnetId}\\)`)]) assert.match(fixed, part)
+  for (const part of [/Gate:/, /Sheet:/, /Target image:/, /Source:/, /Prior art/, new RegExp(`runs on sonnet \\(${sonnetId}\\)`)]) assert.match(fixed, part)
   // A kit that is none of the game or story kits keeps the Sheet lines away.
   const site = decide('mcp__hearthbot__start_thread', { prompt: brief.replace('references', 'site'), model: sonnetId, title: 'Character TD · Lily' }, [], [], teams, checklists, []).block
   assert.doesNotMatch(site ?? '', /Sheet:/)
@@ -227,4 +227,60 @@ test('a game level brief names research, plan and design up to its own step, or 
   assert.match(refused, /^Brief check[\s\S]*Level/, 'the start is refused with the Level line named')
   assert.doesNotMatch(await check([`Role: Programmer · Kit: game · Size: M`, 'Build the airport level.', `Level: ${R} · ${P} · ${D}`, BASE].join('\n')), /^Brief check/)
   assert.match(readFileSync(join(root, 'docs/TEAMS.md'), 'utf8'), /\| `game` \|[^\n]*\| Researcher, Planner, Game Designer/, 'the game kit lists the order')
+})
+
+// GameDev 2026-11-15 (#697, #702): a builder guessed a chosen look because the brief named neither target nor source. The brief row Look-Lock is gone.
+test('#702: Target image and Source are judgment gaps for Programmer, Animator and Character TD on game and story with a real Sheet, and for no one else', async () => {
+  const { classify, missingLines } = await import('../global/team-guard.mjs')
+  const gaps = (brief) => classify(brief).judgment.map((f) => f.key).filter((k) => ['Target image', 'Source'].includes(k))
+  for (const role of ['Programmer', 'Animator', 'Character TD']) for (const kit of ['game', 'story']) {
+    assert.deepEqual(gaps(`Role: ${role} · Kit: ${kit} · Size: M\nSheet: sheet.md`), ['Target image', 'Source'], `${role} on ${kit}`)
+    assert.deepEqual(gaps(`Role: ${role} · Kit: ${kit} · Size: M\nSheet: n/a a rig check, no body, face or outfit job`), [], `${role} on ${kit} with Sheet: n/a is not asked`)
+    assert.deepEqual(gaps(`Role: ${role} · Kit: ${kit} · Size: M\nSheet: sheet.md\n${LINES['Target image']}\n${LINES.Source}`), [])
+    assert.deepEqual(gaps(`Role: ${role} · Kit: ${kit} · Size: M\nSheet: sheet.md\n${LINES['Target image']}`), ['Source'], 'a target without its source is refused')
+    assert.deepEqual(gaps(`Role: ${role} · Kit: ${kit} · Size: M\nSheet: sheet.md\nTarget image: [the pick](lib/characters/CH_x/approval/A.png)\nSource: [the files](https://example.com/files)`), [], 'titled Markdown links pass')
+    assert.deepEqual(gaps(`Role: ${role} · Kit: ${kit} · Size: M\nSheet: sheet.md\nTarget image: n/a\n${LINES.Source}`), ['Target image'], 'a bare n/a fails')
+    assert.deepEqual(gaps(`Role: ${role} · Kit: ${kit} · Size: M\nSheet: sheet.md\nTarget image: lib\\characters\\CH_x\\approval\\A.png\nSource: lib\\characters\\CH_x\\work`), [], 'laptop paths with backslashes pass')
+  }
+  assert.deepEqual(gaps('Role: Programmer · Kit: setup · Size: M\nSheet: sheet.md'), [], 'kit setup is not asked')
+  for (const role of ['Designer', 'Planner', 'Reviewer']) assert.deepEqual(gaps(`Role: ${role} · Kit: game · Size: M`), [], `${role} is not asked`)
+  // n/a: a Programmer may say why there is no target, and that drops Source; a visual role has no n/a.
+  const na = 'Target image: n/a this slice changes no look at all'
+  assert.deepEqual(gaps(`Role: Programmer · Kit: game · Size: M\nSheet: sheet.md\n${na}`), [], 'Programmer: n/a <why> passes and Source is not asked')
+  assert.deepEqual(gaps('Role: Programmer · Kit: game · Size: M\nSheet: sheet.md\nTarget image: n/a no'), ['Target image', 'Source'], 'a short reason is none')
+  for (const role of ['Animator', 'Character TD']) assert.deepEqual(gaps(`Role: ${role} · Kit: game · Size: M\nSheet: sheet.md\n${na}\n${LINES.Source}`), ['Target image'], `${role} has no n/a`)
+  // Gate fix 1 (PR 709 round 1): `Source: n/a <why>` is no source for any role, the `/` in `n/a` must not satisfy the path test.
+  for (const role of ['Programmer', 'Animator', 'Character TD']) assert.deepEqual(gaps(`Role: ${role} · Kit: game · Size: M\nSheet: sheet.md\n${LINES['Target image']}\nSource: n/a there are no source files`), ['Source'], `${role}: Source n/a is refused`)
+  // The path: an approval/ folder (reference/ for motion) and an image, PDF or clip; nothing else is a target.
+  const row = BRIEF_FIELDS.find((f) => f.key === 'Target image')
+  for (const good of ['lib/characters/CH_x/approval/A.png', 'scenes/S_x/reference/walk.mp4', 'approval/A.webp', 'lib/characters/CH_x/approval/A.jpg', 'lib/x/approval/A.png, pick A', 'lib/x/approval/A.png.', 'lib/x/approval/A.png; pick A']) assert.ok(row.ok(`Target image: ${good}`), good)
+  for (const bad of ['later', 'lib/characters/CH_x/A.png', 'lib/characters/CH_x/approval/', 'lib/characters/CH_x/approval/notes.md', 'https://x.y/card', '<path in approval/A.png>', 'lib/x/disapproval/A.png']) assert.equal(row.ok(`Target image: ${bad}`), false, bad)
+  assert.equal(BRIEF_FIELDS.some((f) => f.key === 'Look-Lock'), false, 'the brief row Look-Lock is gone')
+  // Gate fix 3: with no picture locked yet the refusal says what to do, and names reference/ for motion.
+  assert.match(missingLines('Role: Animator · Kit: story · Size: M').join('\n'), /Target image:[^\n]*lock the pick first or ask the owner one line/, 'the refusal says what to do when nothing is locked')
+  assert.ok(missingLines('Role: Animator · Kit: story · Size: M').some((l) => l.startsWith('Target image:')) && missingLines('Role: Animator · Kit: story · Size: M').some((l) => l.startsWith('Source:')), 'the coordinator-side refusal names both')
+})
+
+test('#702: an otherwise complete old brief that still carries a Look-Lock line starts, on both sides', async () => {
+  const { decide } = await import('../global/team-guard.mjs')
+  const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
+  const { modelFor } = await import('./brief.mjs')
+  const old = `Role: Programmer · Kit: game · Size: M\n${FULL_M}\nLook-Lock: owner card https://claude.ai/c/1`.replace('Model: sonnet', `Model: ${modelFor('Programmer', 'M')}`)
+  assert.deepEqual(decide('mcp__hearthbot__start_thread', { brief: old, title: 'Programmer · x', model: modelFor('Programmer', 'M') }, [], [], teams), {})
+  assert.doesNotMatch(await check(old), /^Brief check/)
+  // The same brief without the two new lines is refused: the old line does not stand in for them.
+  assert.match(decide('mcp__hearthbot__start_thread', { brief: old.replace(/^(Target image|Source):.*\n/gm, ''), title: 'Programmer · x', model: modelFor('Programmer', 'M') }, [], [], teams).block ?? '', /Target image:[\s\S]*Source:/)
+})
+
+test('#702: the template files carry Target image and Source and no Look-Lock line', async () => {
+  const { briefFile } = await import('./brief.mjs')
+  const template = readFileSync(join(root, 'docs/templates/thread-brief.md'), 'utf8')
+  for (const [name, text] of [['thread-brief.md', template], ...['Programmer', 'Animator', 'Character TD'].map((r) => [r, briefFile(r)])]) {
+    assert.match(text, /^Sheet: .*\nTarget image: <.*\nSource: </m, `${name}: both lines after Sheet`)
+    assert.doesNotMatch(text, /Look-Lock/, name)
+  }
+  for (const role of ['Designer', 'Planner', 'Reviewer']) assert.doesNotMatch(briefFile(role), /^(Target image|Source):/m, `${role} is not asked`)
+  assert.doesNotMatch(readFileSync(join(root, '.github/ISSUE_TEMPLATE/plan.md'), 'utf8'), /Look-Lock/)
+  for (const f of ['docs/character-workflow.md', '.claude/skills/operator/roles/project-manager.md', '.claude/skills/operator/briefs.md']) assert.doesNotMatch(readFileSync(join(root, f), 'utf8'), /Look-Lock/, `${f} names no Look-Lock brief line`)
+  assert.match(readFileSync(join(root, 'docs/character-workflow.md'), 'utf8'), /`Target image:` and `Source:`/)
 })
