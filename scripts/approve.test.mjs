@@ -206,3 +206,64 @@ test('brief prints the two brief lines for a locked picture; a wrong call exits 
     assert.equal(cli('check').status, 2); assert.equal(cli('nonsense', 'x').status, 2)
   } finally { s.done() }
 })
+
+// Gate round 1 of PR 708 (fresh Reviewer, head e5b2e39): five fixes, each test red before its fix.
+import { supersede } from './approve.mjs'
+
+test('gate fix 1: supersede takes only a picture name; INDEX.md, ../ and nested paths exit 2 and move nothing', () => {
+  const s = studio()
+  try {
+    clean(s); s.put('../DECISIONS.md', 'keep')
+    for (const bad of ['INDEX.md', '../DECISIONS.md', '../../CH_y/approval/A.png']) {
+      const out = cli('supersede', '--dir', s.dir, '--file', bad)
+      assert.equal(out.status, 2, bad)
+      assert.throws(() => supersede({ dir: s.dir, file: bad }), /picture name/, bad)
+    }
+    assert.ok(existsSync(join(s.dir, 'approval', 'INDEX.md'))); assert.ok(existsSync(join(s.dir, 'approval', 'A.png')))
+    assert.equal(readFileSync(join(s.dir, '..', 'DECISIONS.md'), 'utf8'), 'keep')
+    assert.equal(existsSync(join(s.dir, 'approval', '_superseded')), false)
+  } finally { s.done() }
+})
+
+test('gate fix 2: lock refuses a name that already has an INDEX row although its picture is gone', () => {
+  const s = studio()
+  try {
+    lock(s.pick())
+    rmSync(join(s.dir, 'approval', 'A.png'))
+    const before = s.read('approval', 'INDEX.md')
+    assert.throws(() => lock(s.pick()), /supersede|new name/)
+    assert.equal(s.read('approval', 'INDEX.md'), before, 'no second row')
+  } finally { s.done() }
+})
+
+test('gate fix 3: a DECISIONS.md citing another folder\'s existing pick is no false RED', () => {
+  const s = studio()
+  try {
+    clean(s)
+    const other = join(s.root, 'lib', 'a', 'b', 'c', 'CH1')
+    mkdirSync(join(other, 'approval'), { recursive: true }); writeFileSync(join(other, 'approval', 'A.PNG'), 'x')
+    s.put('DECISIONS.md', '- 2026-11-15 option A: `approval/A.png`, card\n- see lib/a/b/c/CH1/approval/A.PNG\n')
+    const r = approvalProblems(s.dir, s.root)
+    assert.deepEqual([r.red, r.warn], [[], []])
+  } finally { s.done() }
+})
+
+test('gate fix 4: every picture type needs its own row (.webp .gif .pdf .jpeg .PNG)', () => {
+  for (const name of ['B.webp', 'B.gif', 'B.pdf', 'B.jpeg', 'B.PNG']) {
+    const s = studio()
+    try {
+      clean(s); s.put(`approval/${name}`, 'x')
+      assert.ok(approvalProblems(s.dir, s.root).red.some((l) => l.includes(`approval/${name} has no INDEX.md row`)), name)
+    } finally { s.done() }
+  }
+})
+
+test('gate fix 5: a superseded row with no DECISIONS.md mention is no RED', () => {
+  const s = studio()
+  try {
+    clean(s)
+    s.put('approval/_superseded/A2.png', 'x')
+    s.put('approval/INDEX.md', `${HEAD}| A.png | option A | 2026-11-15 | votes/round-1; card |\n| _superseded/A2.png | old | 2026-11-14 | votes/round-0; card |\n`)
+    assert.deepEqual(approvalProblems(s.dir, s.root).red, [])
+  } finally { s.done() }
+})

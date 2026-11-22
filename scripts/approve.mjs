@@ -65,12 +65,12 @@ export function approvalProblems(dir, root) {
   const df = join(dir, 'DECISIONS.md')
   if (!existsSync(df)) { if (has) red.push('approval/ has no DECISIONS.md beside it'); return { red, warn, pictures: pics.length, folder: has } }
   const text = readFileSync(df, 'utf8')
-  const named = new Set([...text.matchAll(/approval\/([\w.\-/]*\.(?:png|jpe?g|webp|gif|pdf))(?!\w)/gi)].map((m) => m[1]))
+  const named = new Set([...text.matchAll(/(?<![\w./-])approval\/([\w.\-/]*\.(?:png|jpe?g|webp|gif|pdf))(?!\w)/gi)].map((m) => m[1]))
   for (const n of named) if (!existsSync(join(ap, n))) red.push(`DECISIONS.md names approval/${n}, which is not there`)
   for (const r of live) if (r.file && !text.includes(`approval/${r.file}`)) red.push(`approval/${r.file} is named by no DECISIONS.md line`)
   // WARN, not RED, in v1: the files of 2026-11-15 cite a dead sheet path and three dead gate folders and would all be red.
   for (const [, p] of text.matchAll(/`([^`\n]+)`/g)) {
-    if (!p.includes('/') || p.includes('://') || /approval\/[\w.\-/]*\.(?:png|jpe?g|webp|gif|pdf)$/i.test(p)) continue
+    if (!p.includes('/') || p.includes('://') || /^approval\/[\w.\-/]*\.(?:png|jpe?g|webp|gif|pdf)$/i.test(p)) continue
     if (![dir, root].some((base) => base && existsSync(resolve(base, p)))) warn.push(`DECISIONS.md names \`${p}\`, which resolves neither from the thing folder nor from the root`)
   }
   return { red, warn: [...new Set(warn)], pictures: pics.length, folder: has }
@@ -121,6 +121,7 @@ export function lock({ dir, image, decision, source, msg, on, name, item, plan: 
   if (!isDir(dir)) throw new Error(`${dir} is not a folder`)
   const ap = join(dir, 'approval'), dest = join(ap, file), indexFile = join(ap, 'INDEX.md')
   if (existsSync(dest)) throw new Error(`${dest} exists; a new pick gets a new name, the old one goes with: approve.mjs supersede --dir ${dir} --file ${file}`)
+  if ((readIndex(dir)?.rows ?? []).some((r) => r.file === file)) throw new Error(`INDEX.md already has a row for ${file} although its picture is gone; a new pick gets a new name, or: approve.mjs supersede --dir ${dir} --file ${file}`)
   // the plan is read and checked before the first write, so a bad item id leaves no half lock
   const nextPlan = item ? setItem(JSON.parse(readFileSync(planFile, 'utf8')), item, { target_image: slash(relative(dirname(resolve(planFile)), resolve(dest))) }) : null
   const date = msg ? today : on.match(ON)[1]
@@ -147,6 +148,7 @@ export function lock({ dir, image, decision, source, msg, on, name, item, plan: 
 
 export function supersede({ dir, file }) {
   if (!dir || !file) throw usage('supersede needs --dir and --file')
+  if (!/^[\w.-]+$/.test(file) || !PIC.test(file)) throw usage(`"${file}" is no picture name (letters, digits, . _ - and .png .jpg .jpeg .webp .gif .pdf): supersede moves one picture of approval/`)
   const ap = join(dir, 'approval'), from = join(ap, file), to = join(ap, OLD, file)
   if (!existsSync(from)) throw new Error(`${from} is not there`)
   if (existsSync(to)) throw new Error(`${to} exists already`)
