@@ -1143,7 +1143,8 @@ test('team guard #761: rule-guard holds the same normStamp, and roleOf, roleCont
   assert.equal(tg.normStamp.toString(), rg.normStamp.toString())
   const loose = (sep) => `Role ${sep} Kit ${sep} Size: Reviewer ${sep} setup ${sep} M`
   for (const text of [`${loose('·')}\nrest`, `${loose('|')}\nrest`, `${loose('/')}\nrest`, `${loose(',')}\nrest`, `> ${loose('·')}`, `**Role** · Kit · Size: **Reviewer** · setup · M`, '`Role · Kit · Size: Reviewer · setup · M`',
-    'Role · Kit · Size: Reviewer · setup · m', 'Role: Reviewer · Kit: setup · Size: M\nRole · Kit · Size: A · b · L', 'Make a bee video.', '<note>Role · Kit · Size: Tester · web · L</note>']) {
+    'Role · Kit · Size: Reviewer · setup · m', 'Role: Reviewer · Kit: setup · Size: M\nRole · Kit · Size: A · b · L', 'Make a bee video.', '<note>Role · Kit · Size: Tester · web · L</note>', 'Role: Programmer\n> Role | Kit | Size: Reviewer | setup | M', '**Role** · Kit · Size: **Reviewer** · setup · M', 'Role · Kit · Size: Reviewer · app · s · L', 'Role · Kit · Size: Game Designer/Lead · game · M',
+    'Role · Kit · Size: Reviewer · setup · Medium', 'Role: Reviewer\nThe Kit: is named in prose only.']) {
     assert.equal(rg.normStamp(text), tg.normStamp(text), JSON.stringify(text))
   }
   assert.equal(rg.normStamp('> Role | Kit | Size: Tester | web | l\nx'), '> Role: Tester · Kit: web · Size: L\nx')
@@ -1176,6 +1177,25 @@ test('team guard #761: rule-guard holds the same normStamp, and roleOf, roleCont
     const row = JSON.parse(readFileSync(join(dir, readdirSync(dir)[0]), 'utf8'))
     assert.deepEqual([row.role, row.kit, row.size], ['Reviewer', 'setup', 'M'])
   } finally { delete process.env.CLAUDE_SETUP_PROJECT_FILES; rmSync(out, { recursive: true, force: true }) }
+})
+
+// #761 gate fix: Acceptance blocks at M and L as on main, also when Done when is there; size S starts with a stamp, Model, Prior art and a task.
+test('team guard #761: Acceptance still blocks at size M and L next to a filled Done when; size S needs only stamp, Model, Prior art and the task', async () => {
+  const { decide } = await import('../global/team-guard.mjs')
+  const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
+  const base = ['Item: M30', 'Plan: docs/plans/x.md', 'Acceptance: node --test passes', 'Model: claude-x-1', 'Skills: roles/programmer.md', 'Done when: node --test passes', 'Stop when: two rounds',
+    'Start: read MEMORY.md first', 'Threads: list_threads checked, none open on this topic', 'Gate: Reviewer · x before owner', 'Prior art: none, because a test brief']
+  const dec = (size, lines, model) => decide('mcp__hearthbot__start_thread', { title: 'Programmer · x', instructions: [`Role: Programmer · Kit: setup · Size: ${size}`, ...lines].join('\n'), model }, [], [], teams).block ?? ''
+  const noAcc = base.filter((l) => !l.startsWith('Acceptance:'))
+  assert.equal(dec('M', base, 'opus'), '', 'fixture passes')
+  assert.match(dec('M', noAcc, 'opus'), /Acceptance:/, 'no Acceptance line at M, Done when filled')
+  assert.match(dec('M', [...noAcc, 'Acceptance: <what counts as accepted>'], 'opus'), /Acceptance:/, 'placeholder at M')
+  assert.equal(dec('L', [...base, 'Tester: Tester · app'], 'fable'), '', 'size L fixture passes')
+  assert.match(dec('L', [...noAcc, 'Tester: Tester · app'], 'fable'), /Acceptance:/, 'no Acceptance at L')
+  // size S: no Item, Plan or Acceptance needed
+  const small = ['Model: claude-x-1', 'Prior art: none, because a test brief', 'Fix the typo in the README.']
+  assert.equal(dec('S', small, 'sonnet'), '', 'size S starts')
+  assert.match(decide('mcp__hearthbot__start_thread', { title: 'Programmer · x', instructions: ['Role: Programmer · Kit: nonsense · Size: S', ...small].join('\n'), model: 'sonnet' }, [], [], teams).block ?? '', /no kit/, 'Kit: nonsense is refused at S')
 })
 
 // Luna (yskills 2026-10-27): every reply to him carries a kaomoji; nothing else is touched.
@@ -1749,10 +1769,8 @@ test('team guard (M30): a brief without Item, Plan or Acceptance names each miss
   const brief = `Role: Programmer · Kit: setup · Size: M${FULL}`
   assert.deepEqual(missingLines(brief), [])
   for (const [line, re] of [['Item:', /\nItem:[^\n]*/], ['Plan:', /\nPlan:[^\n]*/], ['Acceptance:', /\nAcceptance:[^\n]*/]]) {
-    // Acceptance and Done when are one datum: the Done when line goes with it.
-    const gone = (b) => (line === 'Acceptance:' ? b.replace(/\nDone when:[^\n]*/, '') : b)
-    assert.ok(missingLines(gone(brief.replace(re, ''))).some((m) => m.startsWith(line)), `${line} is required`)
-    assert.ok(missingLines(gone(brief.replace(re, `\n${line} <placeholder>`))).some((m) => m.startsWith(line)), `${line} placeholder does not count`)
+    assert.ok(missingLines(brief.replace(re, '')).some((m) => m.startsWith(line)), `${line} is required`)
+    assert.ok(missingLines(brief.replace(re, `\n${line} <placeholder>`)).some((m) => m.startsWith(line)), `${line} placeholder does not count`)
   }
   assert.ok(missingLines(brief.replace(/\nItem:[^\n]*/, '\nItem: <M<n> or new>')).some((m) => m.startsWith('Item:')), 'Item is M<n> or new')
   assert.deepEqual(missingLines(brief.replace(/\nItem:[^\n]*/, '\nItem: soon')), [], 'plain words are a derived repair, not a gap (#729 a)')

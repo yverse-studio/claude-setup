@@ -32,6 +32,22 @@ test('the card carries a pointer to the rendered brief files, not a template, an
   for (const s of ['briefs/<role>.md', 'ROSTER.md', 'send those lines to the same thread with message_thread, never a new thread', '`message_id`', 'never `project_post_id` or `auto_attach=false`']) assert.ok(card.includes(s), s)
 })
 
+// #761 gate fix: the short block the coordinator copies is accepted by the start hook once its placeholders are filled.
+test('#761: the short block of the card, filled in, starts a thread for Programmer M and S, Reviewer M and Researcher M', async () => {
+  const { decide } = await import('../global/team-guard.mjs')
+  const { modelFor } = await import('../global/card-render.mjs')
+  const teams = readFileSync(join(ROOT, 'docs/TEAMS.md'), 'utf8')
+  const block = buildCard({ hash: 'x', date: 'd' }).match(/```\n([\s\S]*?)```/)[1]
+  for (const [role, kit, size] of [['Programmer', 'setup', 'M'], ['Reviewer', 'setup', 'M'], ['Programmer', 'setup', 'S'], ['Researcher', 'app', 'M']]) {
+    const model = modelFor(role, size, teams)
+    const filled = block.split('\n').map((l) => (/^Role:/.test(l) ? `Role: ${role} · Kit: ${kit} · Size: ${size}` : /^Model:/.test(l) ? `Model: ${model}` : /^Item:/.test(l) ? 'Item: new' : /^Plan:/.test(l) ? 'Plan: docs/plans/x.md'
+      : /^Acceptance:/.test(l) ? 'Acceptance: node --test passes' : /^Prior art:/.test(l) ? 'Prior art: obra/superpowers -> adapt, because the skill exists' : /^<the task/.test(l) ? 'Fix the thing. Done when: tests pass. Stop when: two rounds.' : l)).join('\n')
+    assert.doesNotMatch(filled, /<[^>\n]+>/, `${role}: every placeholder is filled`)
+    const r = decide('mcp__hearthbot__start_thread', { title: `${role} · x`, instructions: filled, model }, [], [], teams)
+    assert.equal(r.block, undefined, `${role} ${size}: ${r.block}`)
+  }
+})
+
 test('lines with a hook or no failure on record are off the card, the ones the hook-less chat must keep stay (M27 step 6)', () => {
   const card = buildCard({ hash: 'x', date: 'd' })
   for (const gone of ['## Spawn rule', 'Escalation: stuck twice', '3 failed gate rounds', 'One home per rule']) assert.ok(!card.includes(gone), gone)
@@ -445,7 +461,7 @@ test('#743: the card with the 7-day line is at most 7,050 characters (the who-bu
 
 test('#743: the kept lines stay (spawn, models, sizes, roster, brief copy) and the cut lines are gone', () => {
   const card = buildCard({ hash: 'x', date: 'd' })
-  for (const kept of ['Short form, enough to start', 'briefs/<role>.md of this folder', '## Models', 'A thread picks no Fable', 'the Programmer is the lead', 'merge gate', '## Sizes', '- S:', '- M:', '- L:', '## Roster', '- Programmer:', '- Reviewer:', 'Controls and World life', 'no post per review round']) assert.ok(card.includes(kept), kept)
+  for (const kept of ['Short form (the thread fills the rest', 'briefs/<role>.md of this folder', '## Models', 'A thread picks no Fable', 'the Programmer is the lead', 'merge gate', '## Sizes', '- S:', '- M:', '- L:', '## Roster', '- Programmer:', '- Reviewer:', 'Controls and World life', 'no post per review round']) assert.ok(card.includes(kept), kept)
   for (const gone of ['Downloads/assets', "A gate round's brief has the Round, Asset and Picture card lines"]) assert.ok(!card.includes(gone), gone)
 })
 

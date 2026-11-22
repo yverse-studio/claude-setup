@@ -346,8 +346,12 @@ export const BRIEF_FIELDS = [
   { key: 'Tester', strict: false, tpl: 'Tester: <Tester thread; size L Programmer only>', applies: (p) => /^[ \t>-]*Role:[ \t]*Programmer\b/im.test(p), ok: (p) => !needsTester(p), cls: () => 'judgment' },
 ]
 // #761: only the gaps the coordinator must decide (class judgment); what follows from Role, Kit and Size or what the thread fetches itself is no refusal.
+// Acceptance stays a gap at size M and L whenever its own line is not ok, also next to a filled Done when (as before #761); classify (briefCheck) treats the two as one datum.
 export function missingLines(text) {
+  const plain = text.replace(/[*_`]/g, '')
   const keys = classify(text).judgment.map((f) => f.key)
+  const acc = BRIEF_FIELDS.find((f) => f.key === 'Acceptance')
+  if (!keys.includes('Acceptance') && (acc.applies?.(plain) ?? true) && !acc.ok(plain) && acc.cls(plain) === 'judgment') keys.push('Acceptance')
   return BRIEF_FIELDS.filter((f) => f.strict !== false && keys.includes(f.key)).map((f) => f.name)
 }
 // The same table sorted by who closes the gap. Acceptance and Done when are one datum: either satisfies both.

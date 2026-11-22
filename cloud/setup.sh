@@ -578,8 +578,12 @@ export const BRIEF_FIELDS = [
   { key: 'Tester', strict: false, tpl: 'Tester: <Tester thread; size L Programmer only>', applies: (p) => /^[ \t>-]*Role:[ \t]*Programmer\b/im.test(p), ok: (p) => !needsTester(p), cls: () => 'judgment' },
 ]
 // #761: only the gaps the coordinator must decide (class judgment); what follows from Role, Kit and Size or what the thread fetches itself is no refusal.
+// Acceptance stays a gap at size M and L whenever its own line is not ok, also next to a filled Done when (as before #761); classify (briefCheck) treats the two as one datum.
 export function missingLines(text) {
+  const plain = text.replace(/[*_`]/g, '')
   const keys = classify(text).judgment.map((f) => f.key)
+  const acc = BRIEF_FIELDS.find((f) => f.key === 'Acceptance')
+  if (!keys.includes('Acceptance') && (acc.applies?.(plain) ?? true) && !acc.ok(plain) && acc.cls(plain) === 'judgment') keys.push('Acceptance')
   return BRIEF_FIELDS.filter((f) => f.strict !== false && keys.includes(f.key)).map((f) => f.name)
 }
 // The same table sorted by who closes the gap. Acceptance and Done when are one datum: either satisfies both.
@@ -1542,15 +1546,15 @@ const SAMPLE_M = 'Role: Programmer · Kit: web · Size: M'
 export function briefSection(fields = BRIEF_FIELDS) {
   const own = (f) => !f.applies && f.strict !== false
   const short = fields.filter((f) => f.key === 'Model' || (own(f) && f.cls(SAMPLE_M) === 'judgment')).sort((x, y) => (x.key === 'Model' ? -1 : y.key === 'Model' ? 1 : 0)).map((f) => f.tpl)
-  const kit = fields.filter((f) => (f.applies || f.strict === false) && (f.cls(SAMPLE_M) === 'judgment' || f.key === 'Gate')).map((f) => f.key)
+  const kit = fields.filter((f) => (f.applies || f.strict === false) && f.cls(SAMPLE_M) === 'judgment').map((f) => f.key)
   return `## Thread brief
 
-Short form, enough to start (every other line the thread fills itself or its lock names):
+Short form (the thread fills the rest, or its lock names it):
 \`\`\`
 Role: <role> · Kit: <kit> · Size: <S|M|L>
-${[...short, '<the task: goal, done when, stop when>'].join('\n')}
+${[...short, 'Prior art: <source> -> copy|adapt|reuse|build, because <why>', '<the task: goal, done when, stop when>'].join('\n')}
 \`\`\`
-Long form with the kit's own lines (${kit.join(', ')}): briefs/<role>.md of this folder; pass its Model as \`model\`.
+Long form (kit lines: ${kit.join(', ')}): briefs/<role>.md of this folder; pass its Model as \`model\`.
 A refusal names every gap at once: send those lines to the same thread with message_thread, never a new thread.
 A device thread passes \`message_id\` (yskills' message or your own project-chat post), never \`project_post_id\` or \`auto_attach=false\`.`
 }

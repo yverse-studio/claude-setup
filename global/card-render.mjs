@@ -63,15 +63,15 @@ const SAMPLE_M = 'Role: Programmer · Kit: web · Size: M'
 export function briefSection(fields = BRIEF_FIELDS) {
   const own = (f) => !f.applies && f.strict !== false
   const short = fields.filter((f) => f.key === 'Model' || (own(f) && f.cls(SAMPLE_M) === 'judgment')).sort((x, y) => (x.key === 'Model' ? -1 : y.key === 'Model' ? 1 : 0)).map((f) => f.tpl)
-  const kit = fields.filter((f) => (f.applies || f.strict === false) && (f.cls(SAMPLE_M) === 'judgment' || f.key === 'Gate')).map((f) => f.key)
+  const kit = fields.filter((f) => (f.applies || f.strict === false) && f.cls(SAMPLE_M) === 'judgment').map((f) => f.key)
   return `## Thread brief
 
-Short form, enough to start (every other line the thread fills itself or its lock names):
+Short form (the thread fills the rest, or its lock names it):
 \`\`\`
 Role: <role> · Kit: <kit> · Size: <S|M|L>
-${[...short, '<the task: goal, done when, stop when>'].join('\n')}
+${[...short, 'Prior art: <source> -> copy|adapt|reuse|build, because <why>', '<the task: goal, done when, stop when>'].join('\n')}
 \`\`\`
-Long form with the kit's own lines (${kit.join(', ')}): briefs/<role>.md of this folder; pass its Model as \`model\`.
+Long form (kit lines: ${kit.join(', ')}): briefs/<role>.md of this folder; pass its Model as \`model\`.
 A refusal names every gap at once: send those lines to the same thread with message_thread, never a new thread.
 A device thread passes \`message_id\` (yskills' message or your own project-chat post), never \`project_post_id\` or \`auto_attach=false\`.`
 }
