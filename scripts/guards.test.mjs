@@ -1371,7 +1371,7 @@ test('rule-guard: the hook blocks a first reply until the fallback files are rea
     assert.equal(unread.status, 2, 'the right receipt is not enough: the fallback files are read first')
     assert.match(unread.stderr, /read what stands in for it[\s\S]*impeccable\/SKILL\.md/)
     const read = (f) => JSON.stringify({ type: 'assistant', message: { content: [{ type: 'tool_use', id: `r${f.length}`, name: 'Read', input: { file_path: `/home/user/claude-setup/${f}` } }] } })
-    const done = [spawned, ...['.claude/skills/impeccable/SKILL.md', '.claude/skills/ui-review/SKILL.md', '.claude/agents/design-critic.md'].map(read)].join('\n')
+    const done = [spawned, ...['.claude/skills/impeccable/SKILL.md', '.claude/skills/ui-review/SKILL.md', '.claude/agents/design-critic.md', '.claude/skills/operator/roles/designer.md'].map(read)].join('\n')
     assert.equal(run(done, `${receipt}\nHi (◕‿◕)`).status, 0, 'files read, receipt copied: the reply goes out')
     assert.equal(blocked.status, 2)
     assert.match(blocked.stderr, /missing: frontend-design, impeccable, ui-review \(read \.claude\/skills\/impeccable\/SKILL\.md, \.claude\/skills\/ui-review\/SKILL\.md instead; no file for frontend-design\)/, 'an empty home says what is missing, with the file to read')
@@ -1896,4 +1896,84 @@ test('design-type role files carry the Start step and the design brief names it'
     assert.match(t, /\*\*Start step \(#582\):\*\*[^\n]*proven, working examples[^\n]*9 options[^\n]*one sheet[^\n]*which he likes[^\n]*skills? at start/, `${r}.md`)
   }
   assert.match(readFileSync(join(root, '.claude/skills/operator/briefs.md'), 'utf8'), /design-type item[^\n]*`Start:` line[^\n]*Start step \(#582\)/)
+})
+
+// #728 (B1): a playbook too long for the start card arrives as a pointer; the first reply waits for the Read, the start card survives a lost prompt hook and a compaction.
+test('rule-guard: a pointer-only playbook is read before the first reply (#728)', () => {
+  const id = `pb${process.pid}`, dir = mkdtempSync(join(tmpdir(), 'playbook-')), rolefile = join(tmpdir(), `claude-setup-role-${id}`), tfile = join(dir, 't.jsonl')
+  const spawned = JSON.stringify({ type: 'user', message: { content: '<wake reason="spawn">Role: Game Designer · Kit: game · Size: M</wake>' } })
+  const readRow = (f) => JSON.stringify({ type: 'assistant', message: { content: [{ type: 'tool_use', id: 'rp', name: 'Read', input: { file_path: `/home/user/claude-setup/${f}` } }] } })
+  const run = (transcript, text = 'Hi (◕‿◕)') => { writeFileSync(tfile, transcript); return spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'pre'], { input: JSON.stringify({ cwd: root, session_id: id, transcript_path: tfile, tool_name: 'mcp__hearthbot__post_message', tool_input: { text } }), encoding: 'utf8', env: { ...process.env, CLAUDE_SETUP_HOME: dir } }) }
+  try {
+    writeFileSync(rolefile, 'Game Designer')
+    assert.ok(statSync(join(root, '.claude/skills/operator/roles/game-designer.md')).size > 9000, 'the case needs a playbook over the card cap')
+    const receipt = run(spawned).stderr.match(/TEAMS\.md\): (Thread · .*)/)?.[1] ?? ''
+    assert.match(receipt, /^Thread · Game Designer/)
+    const unread = run(spawned, `${receipt}\nHi (◕‿◕)`)
+    assert.equal(unread.status, 2, 'the right receipt is not enough: the playbook is read first')
+    assert.match(unread.stderr, /roles\/game-designer\.md/, 'the refusal names the path')
+    const skill = (n) => JSON.stringify({ type: 'assistant', message: { content: [{ type: 'tool_use', id: `s${n}`, name: 'Skill', input: { skill: n } }] } })
+    const after = [spawned, readRow('.claude/skills/operator/roles/game-designer.md'), skill('game-3d'), skill('game-ux')].join('\n')
+    const done = run(after, `${run(after).stderr.match(/TEAMS\.md\): (Thread · .*)/)?.[1]}\nHi (◕‿◕)`)
+    assert.equal(done.status, 0, `after the Read the reply goes out: ${done.stderr}`)
+  } finally { rmSync(dir, { recursive: true, force: true }); rmSync(rolefile, { force: true }) }
+})
+
+test('rule-guard: a start whose prompt hook timed out still gets its role card at the first tool call (#728)', () => {
+  const id = `to${process.pid}`, dir = mkdtempSync(join(tmpdir(), 'timeout-')), tfile = join(dir, 't.jsonl')
+  try {
+    writeFileSync(tfile, JSON.stringify({ type: 'user', message: { content: '<wake reason="spawn">Role: Planner · Kit: setup · Size: M\nItem: new</wake>' } }))
+    const out = spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'pre'], { input: JSON.stringify({ cwd: root, session_id: id, transcript_path: tfile, tool_name: 'Read', tool_input: { file_path: join(root, 'CLAUDE.md') } }), encoding: 'utf8', env: { ...process.env, CLAUDE_SETUP_HOME: dir } })
+    assert.match(out.stdout, /you are the Planner/, 'no prompt hook ran, the transcript start gives the card')
+  } finally { for (const f of ['role', 'start', 'brief']) rmSync(join(tmpdir(), `claude-setup-${f}-${id}`), { force: true }); rmSync(dir, { recursive: true, force: true }) }
+})
+
+test('rule-guard: the joined start context of a Planner stays under 10,000 characters (#728)', () => {
+  const id = `jc${process.pid}`
+  try {
+    const out = spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'prompt'], { input: JSON.stringify({ prompt: '<wake reason="spawn">Role: Planner · Kit: setup · Size: M\nItem: new</wake>', cwd: root, session_id: id }), encoding: 'utf8' }).stdout
+    const context = JSON.parse(out).hookSpecificOutput.additionalContext
+    assert.match(context, /you are the Planner/)
+    assert.ok(context.length < 10_000, `${context.length} characters`)
+  } finally { for (const f of ['role', 'start', 'brief']) rmSync(join(tmpdir(), `claude-setup-${f}-${id}`), { force: true }) }
+})
+
+test('team guard: a SessionStart after a compaction prints the stamped role card again (#728)', () => {
+  const id = `cp${process.pid}`, rolefile = join(tmpdir(), `claude-setup-role-${id}`)
+  const start = (source) => runTeam('start', { cwd: root, session_id: id, source }, { CLAUDE_SETUP_BOOT_FETCH: 'off' }).stdout
+  try {
+    writeFileSync(rolefile, 'Tester')
+    assert.match(JSON.parse(start('compact')).hookSpecificOutput.additionalContext, /you are the Tester[\s\S]*# Tester/, 'the card and the playbook text come back')
+    assert.doesNotMatch(start('startup'), /you are the Tester/, 'a plain start has the prompt hook for it')
+  } finally { rmSync(rolefile, { force: true }) }
+})
+
+test('rule-guard: a cancelled prompt hook that left its marks still gets the role card once, later in the session (#728)', () => {
+  const id = `lc${process.pid}`, dir = mkdtempSync(join(tmpdir(), 'late-card-')), tfile = join(dir, 't.jsonl')
+  const marks = ['role', 'start', 'card'].map((f) => join(tmpdir(), `claude-setup-${f}-${id}`))
+  const spawn = JSON.stringify({ type: 'user', message: { content: '<wake reason="spawn">Role: Planner · Kit: setup · Size: M\nItem: new</wake>' } })
+  const done = JSON.stringify({ type: 'assistant', message: { content: [{ type: 'tool_use', id: 'x1', name: 'ToolSearch', input: {} }] } }) + '\n' + JSON.stringify({ type: 'user', message: { content: [{ type: 'tool_result', tool_use_id: 'x1', content: 'ok' }] } })
+  const pre = (transcript) => { writeFileSync(tfile, transcript); return spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'pre'], { input: JSON.stringify({ cwd: root, session_id: id, transcript_path: tfile, tool_name: 'Write', tool_input: { file_path: join(dir, 'a.txt'), content: 'x' } }), encoding: 'utf8', env: { ...process.env, CLAUDE_SETUP_HOME: dir } }).stdout }
+  try {
+    writeFileSync(marks[0], 'Planner'); writeFileSync(marks[1], '') // the hook wrote its stamp and start mark, then was cancelled before it printed
+    assert.match(pre(`${spawn}\n${done}`), /you are the Planner/, 'the card comes at the next matching call although work already ran')
+    assert.equal(pre(`${spawn}\n${done}`), '', 'and only once')
+  } finally { for (const m of marks) rmSync(m, { force: true }); rmSync(dir, { recursive: true, force: true }) }
+})
+
+test('rule-guard: the late role card is for the thread, and only a hook row shows it arrived (#728 gate round 1)', () => {
+  const id = `g1${process.pid}`, dir = mkdtempSync(join(tmpdir(), 'late-card2-')), tfile = join(dir, 't.jsonl')
+  const marks = ['role', 'start', 'card', 'badbrief'].map((f) => join(tmpdir(), `claude-setup-${f}-${id}`))
+  const spawn = JSON.stringify({ type: 'user', message: { content: '<wake reason="spawn">Role: Planner · Kit: setup · Size: M\nItem: new</wake>' } })
+  const quoted = JSON.stringify({ type: 'user', message: { content: [{ type: 'tool_result', tool_use_id: 'q1', content: "rule-guard: you are the ${role.name} of this task" }] } })
+  const arrived = JSON.stringify({ type: 'attachment', attachment: { type: 'hook_additional_context', hookEvent: 'UserPromptSubmit', content: 'rule-guard: you are the Planner of this task' } })
+  const pre = (transcript, agent_id) => { writeFileSync(tfile, transcript); const r = spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'pre'], { input: JSON.stringify({ cwd: root, session_id: id, transcript_path: tfile, agent_id, tool_name: 'Write', tool_input: { file_path: join(dir, 'a.txt'), content: 'x' } }), encoding: 'utf8', env: { ...process.env, CLAUDE_SETUP_HOME: dir } }); return r.stdout + r.stderr } // the card rides stdout, or stderr when the brief check locked the thread
+  try {
+    writeFileSync(marks[0], 'Planner')
+    assert.equal(pre(`${spawn}\n${quoted}`, 'sub1'), '', 'a subagent call gets no start note')
+    assert.equal(existsSync(marks[2]), false, 'and leaves the once-mark')
+    assert.match(pre(`${spawn}\n${quoted}`), /you are the Planner/, 'the thread\'s next call gets the card although a Read result quotes the sentence')
+    rmSync(marks[2], { force: true }); rmSync(marks[3], { force: true }) // the brief check of that call locked the test's bare brief
+    assert.equal(pre(`${spawn}\n${arrived}`), '', 'a hook attachment row with the card means it arrived')
+  } finally { for (const m of marks) rmSync(m, { force: true }); rmSync(dir, { recursive: true, force: true }) }
 })
