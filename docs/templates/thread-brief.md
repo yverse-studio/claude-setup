@@ -16,7 +16,7 @@ Threads: <list_threads checked: none open on this topic | continues <title of th
 Prior art: <sources named: repo, path, URL, #n> -> copy | adapt | reuse | build, because <why>
 Skills: <role file and skills the thread loads first>
 Sheet: <approved cast sheet .md, or `n/a <why no body, face or outfit job>`; Programmer or Animator on a game or story kit>
-Target image: <path of the approved image in an approval/ folder; Programmer only: n/a <why>>
+Target image: <path of the approved image in an approval/ folder (reference/ for motion); none locked yet: lock the pick first or ask the owner one line; Programmer only: n/a <why>>
 Source: <original files of the chosen design, path or link>
 Round: <n> (gate rounds only)
 Asset: <owner/repo#n> (with Round)

@@ -249,11 +249,15 @@ test('#702: Target image and Source are judgment gaps for Programmer, Animator a
   assert.deepEqual(gaps(`Role: Programmer · Kit: game · Size: M\nSheet: sheet.md\n${na}`), [], 'Programmer: n/a <why> passes and Source is not asked')
   assert.deepEqual(gaps('Role: Programmer · Kit: game · Size: M\nSheet: sheet.md\nTarget image: n/a no'), ['Target image', 'Source'], 'a short reason is none')
   for (const role of ['Animator', 'Character TD']) assert.deepEqual(gaps(`Role: ${role} · Kit: game · Size: M\nSheet: sheet.md\n${na}\n${LINES.Source}`), ['Target image'], `${role} has no n/a`)
+  // Gate fix 1 (PR 709 round 1): `Source: n/a <why>` is no source for any role, the `/` in `n/a` must not satisfy the path test.
+  for (const role of ['Programmer', 'Animator', 'Character TD']) assert.deepEqual(gaps(`Role: ${role} · Kit: game · Size: M\nSheet: sheet.md\n${LINES['Target image']}\nSource: n/a there are no source files`), ['Source'], `${role}: Source n/a is refused`)
   // The path: an approval/ folder (reference/ for motion) and an image, PDF or clip; nothing else is a target.
   const row = BRIEF_FIELDS.find((f) => f.key === 'Target image')
-  for (const good of ['lib/characters/CH_x/approval/A.png', 'scenes/S_x/reference/walk.mp4', 'approval/A.webp', 'lib/characters/CH_x/approval/A.jpg']) assert.ok(row.ok(`Target image: ${good}`), good)
-  for (const bad of ['later', 'lib/characters/CH_x/A.png', 'lib/characters/CH_x/approval/', 'lib/characters/CH_x/approval/notes.md', 'https://x.y/card', '<path in approval/A.png>']) assert.equal(row.ok(`Target image: ${bad}`), false, bad)
+  for (const good of ['lib/characters/CH_x/approval/A.png', 'scenes/S_x/reference/walk.mp4', 'approval/A.webp', 'lib/characters/CH_x/approval/A.jpg', 'lib/x/approval/A.png, pick A', 'lib/x/approval/A.png.', 'lib/x/approval/A.png; pick A']) assert.ok(row.ok(`Target image: ${good}`), good)
+  for (const bad of ['later', 'lib/characters/CH_x/A.png', 'lib/characters/CH_x/approval/', 'lib/characters/CH_x/approval/notes.md', 'https://x.y/card', '<path in approval/A.png>', 'lib/x/disapproval/A.png']) assert.equal(row.ok(`Target image: ${bad}`), false, bad)
   assert.equal(BRIEF_FIELDS.some((f) => f.key === 'Look-Lock'), false, 'the brief row Look-Lock is gone')
+  // Gate fix 3: with no picture locked yet the refusal says what to do, and names reference/ for motion.
+  assert.match(missingLines('Role: Animator · Kit: story · Size: M').join('\n'), /Target image:[^\n]*lock the pick first or ask the owner one line/, 'the refusal says what to do when nothing is locked')
   assert.ok(missingLines('Role: Animator · Kit: story · Size: M').some((l) => l.startsWith('Target image:')) && missingLines('Role: Animator · Kit: story · Size: M').some((l) => l.startsWith('Source:')), 'the coordinator-side refusal names both')
 })
 

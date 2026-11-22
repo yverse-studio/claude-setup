@@ -1487,7 +1487,7 @@ test('gate fixes: a Target image as a titled Markdown link counts, and a Source 
 test('team guard: every Programmer or Animator brief on a game or story kit names its cast sheet, target image and source, or declares n/a', async () => {
   const { missingLines } = await import('../global/team-guard.mjs')
   const brief = (more, role = 'Programmer', kit = 'game') => `Role: ${role} · Kit: ${kit} · Size: L${FULL}\n${more}`
-  const both = ['Sheet: (approved cast sheet, docs/preproduction-workflow.md)', 'Target image: (the approved image in an approval/ folder)', 'Source: (original files of the chosen design)']
+  const both = ['Sheet: (approved cast sheet, docs/preproduction-workflow.md)', 'Target image: (the approved image in an approval/ folder, reference/ for motion; none locked yet: lock the pick first or ask the owner one line, never guess)', 'Source: (original files of the chosen design)']
   for (const task of ['Fit the school outfit to Mira.', "Make Nova's legs longer", 'Put a hoodie on Kai', 'Make the HUD fit on 390px', 'Rig the camera dolly']) assert.deepEqual(missingLines(brief(task)), both, task)
   assert.deepEqual(missingLines(brief('Fit the school outfit to Mira.\nSheet: characters/mira/SHEET.md\nTarget image: lib/characters/CH_x/approval/A.png\nSource: lib/characters/CH_x/source/A.blend')), [])
   assert.equal(missingLines(brief('Fit the outfit.\nSheet: <path>\nTarget image: <path>\nSource: <files>')).length, 3, 'placeholders do not count')
