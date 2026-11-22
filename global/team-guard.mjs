@@ -24,6 +24,9 @@ export const POINTER = 'Team rule (claude-setup docs/TEAMS.md): route every task
 export const PM_FILE = '.claude/skills/operator/roles/project-manager.md'
 export const CHECKLISTS = '.claude/skills/operator/checklists.md' // M48: the topics a Reviewer brief may name; in the boot copy so the guard knows them outside claude-setup too
 export const BOOT_FILES = ['CLAUDE.md', 'docs/TEAMS.md', 'docs/MAP.md', PM_FILE, 'config/persona.json', CHECKLISTS]
+// #742: rule-guard's prompt hook reads a role's playbook and gate.md from disk only (a curl there cost up to 4 s of its 5 s), so outside a checkout the boot copy must hold
+// every Roster playbook and the gate file; they come with the session start's fetch (a second, short download after TEAMS.md is in place).
+export const GATE_FILE = '.claude/skills/operator/gate.md'
 const RAW = 'https://raw.githubusercontent.com/yverse-studio/claude-setup/main/'
 const MARK = '# Working for yskills' // first line of claude-setup's CLAUDE.md
 
@@ -48,24 +51,31 @@ export const GUARD_FILES = ['context-guard.mjs', 'compact-guard.mjs', 'attempt-g
 const parses = (f) => { try { execFileSync(process.execPath, ['--check', f], { stdio: 'ignore', timeout: 2000 }); return true } catch { return false } }
 // Two downloads, so a guard missing on main (renamed, or not merged yet) never costs the boot files,
 // and each keeps its own time limit inside the hook's 5 s.
-function fetchAll(dir, files, url, seconds) {
+function fetchAll(dir, files, url, seconds, parallel = false) {
   // The extension stays last, so `node --check` reads a guard as the ES module it is (a `.new` name is CommonJS).
   const tmp = (f) => join(dir, f.replace(/(\.\w+)?$/, `.${process.pid}.new$1`))
   if (!files.length) return []
   const args = ['-fsSL', '--max-time', String(seconds), '--create-dirs']
   for (const f of files) args.push('-o', tmp(f), url(f))
   let ok = true
-  try { execFileSync('curl', args, { stdio: 'ignore', timeout: seconds * 1000 + 500 }) } catch { ok = false }
+  // 36 playbooks one after the other took ~4 s; in parallel 0.3 s (measured 2026-11-22). A curl older than 7.66 does not know the flag (exit 2): one more try without it.
+  const run = (extra) => execFileSync('curl', [...extra, ...args], { stdio: 'ignore', timeout: seconds * 1000 + 500 })
+  try { run(parallel ? ['--parallel', '--parallel-max', '12'] : []) } catch (e) { if (parallel && e?.status === 2) { try { run([]) } catch { ok = false } } else ok = false }
   // curl -f writes nothing for a missing file; a cut-off run (ok false) keeps a guard only if it still parses.
   return files.map((f) => ({ f, tmp: tmp(f), got: existsSync(tmp(f)) && statSync(tmp(f)).size > 0, ok }))
 }
 // The pre-push hook rides the guard download: git skips a hook without the exec bit and says nothing (S10).
 const PREPUSH = 'git-hooks/pre-push'
 const guardUrl = (f) => (GUARD_FILES.includes(f) || f === PREPUSH ? `${RAW}global/${f}` : RAW + f)
+// The playbooks the Roster of the boot copy's TEAMS.md links, plus gate.md.
+const ROLE_LINK = /\]\(\.\.\/(\.claude\/skills\/[a-z0-9-]+\/roles\/[a-z0-9-]+\.md)\)/g
+export const roleFiles = (dir) => [...new Set([...text(join(dir, 'docs', 'TEAMS.md')).matchAll(ROLE_LINK)].map((m) => m[1]).filter((f) => !BOOT_FILES.includes(f))), GATE_FILE]
 export function refresh(dir, only = null) {
   const guards = GUARD_FILES.filter((f) => !only || only.includes(f)) // a guard missing on disk is fetched too: an image pasted before a guard existed never had it (2026-11-12)
   const boot = only ? [] : fetchAll(dir, BOOT_FILES, (f) => RAW + f, 2.5)
-  install(dir, [...boot, ...fetchAll(dir, [...guards, ...(only ? [] : [PREPUSH])], guardUrl, 1.5)])
+  if (boot.length) install(dir, boot) // TEAMS.md first: it names the playbooks of the second download
+  const roles = only ? [] : fetchAll(dir, roleFiles(dir), (f) => RAW + f, 1.5, true)
+  install(dir, [...roles, ...fetchAll(dir, [...guards, ...(only ? [] : [PREPUSH])], guardUrl, 1.5)])
 }
 function install(dir, fetched) {
   for (const { f, tmp, got, ok } of fetched) {

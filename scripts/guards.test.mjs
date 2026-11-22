@@ -757,19 +757,27 @@ test('rule guard: a thread start refreshes a stale coordinator card in its proje
 // (2.1 s to 2.4 s measured) and a missing playbook was fetched with curl (up to 4 s) before the context was printed.
 test('#742: the prompt path makes no network call and no write to the project folder before it prints; the deferred step does the writes', () => {
   if (process.platform === 'win32') return
-  const dir = mkdtempSync(join(tmpdir(), 'p742-'))
+  const home = mkdtempSync(join(tmpdir(), 'p742home-'))
+  const dir = join(home, '.claude', 'claude-setup') // the boot copy a cloud session has: no checkout at cwd, so setupRoot lands here
+  const cwd = mkdtempSync(join(tmpdir(), 'p742cwd-'))
   const bin = mkdtempSync(join(tmpdir(), 'p742bin-'))
   const out = mkdtempSync(join(tmpdir(), 'p742out-'))
   try {
+    mkdirSync(dir, { recursive: true })
     for (const f of readdirSync(join(root, 'global')).filter((x) => x.endsWith('.mjs'))) cpSync(join(root, 'global', f), join(dir, f))
-    for (const f of ['CLAUDE.md', 'docs/TEAMS.md', 'docs/MAP.md', 'config/persona.json', '.claude/skills/operator/checklists.md', '.claude/skills/operator/roles/project-manager.md']) { mkdirSync(join(dir, f, '..'), { recursive: true }); cpSync(join(root, f), join(dir, f)) } // a complete install (no guard or boot file missing, so fillMissing fetches nothing), but no playbook beside it: the old path fetched that
+    const roles = readdirSync(join(root, '.claude/skills/operator/roles')).map((f) => `.claude/skills/operator/roles/${f}`)
+    for (const f of ['CLAUDE.md', 'docs/TEAMS.md', 'docs/MAP.md', 'config/persona.json', '.claude/skills/operator/checklists.md', '.claude/skills/operator/gate.md', ...roles]) { mkdirSync(join(dir, f, '..'), { recursive: true }); cpSync(join(root, f), join(dir, f)) }
     const curlLog = join(bin, 'curl.log')
     writeFileSync(join(bin, 'curl'), `#!/bin/sh\necho "$@" >> ${curlLog}\nexit 0\n`, { mode: 0o755 })
-    const env = { ...process.env, PATH: `${bin}:${process.env.PATH}`, CLAUDE_SETUP_RULE_GUARD: '', CLAUDE_SETUP_PROJECT_FILES: out, CLAUDE_SETUP_DEFER: 'skip' }
+    const env = { ...process.env, HOME: home, USERPROFILE: home, PATH: `${bin}:${process.env.PATH}`, CLAUDE_SETUP_RULE_GUARD: '', CLAUDE_SETUP_PROJECT_FILES: out, CLAUDE_SETUP_DEFER: 'skip' }
     const brief = `<wake reason="spawn"><relay>\nRole: Programmer · Kit: setup · Size: S${FULL}</relay></wake>`
+    const start = (session) => spawnSync(process.execPath, [join(dir, 'rule-guard.mjs'), 'prompt'], { input: JSON.stringify({ prompt: brief, cwd, session_id: session }), encoding: 'utf8', env })
     const session = randomUUID() // a real session id (the start log refuses others), new per run (the hook leaves marks in tmpdir)
-    const first = spawnSync(process.execPath, [join(dir, 'rule-guard.mjs'), 'prompt'], { input: JSON.stringify({ prompt: brief, cwd: root, session_id: session }), encoding: 'utf8', env })
-    assert.match(first.stdout, /you are the Programmer/, 'the context is printed')
+    const first = start(session)
+    assert.match(first.stdout, /Your playbook, \.claude\/skills\/operator\/roles\/programmer\.md, follows/, 'outside a checkout the boot copy gives the playbook itself')
+    // a missing playbook is the pointer line, and a curl fallback put back into the prompt path fails here
+    rmSync(join(dir, '.claude/skills/operator/roles/programmer.md'))
+    assert.match(start(randomUUID()).stdout, /Read your playbook \.claude\/skills\/operator\/roles\/programmer\.md of claude-setup/, 'a missing playbook is a pointer line')
     assert.equal(existsSync(curlLog), false, `no curl before the context is printed: ${existsSync(curlLog) ? readFileSync(curlLog, 'utf8') : ''}`)
     assert.deepEqual(existsSync(join(out, 'claude-setup')) ? readdirSync(join(out, 'claude-setup')) : [], [], 'nothing was written to the project folder')
     const later = spawnSync(process.execPath, [join(dir, 'rule-guard.mjs'), 'deferred'], { input: JSON.stringify({ session, brief, checkNow: '', modelNote: '', guard: '', ms: 321 }), encoding: 'utf8', env })
@@ -778,7 +786,24 @@ test('#742: the prompt path makes no network call and no write to the project fo
     const log = readdirSync(join(out, 'claude-setup', 'brief-log'))
     assert.equal(log.length, 1, 'and writes the start log')
     assert.equal(JSON.parse(readFileSync(join(out, 'claude-setup', 'brief-log', log[0]), 'utf8')).ms, 321)
-  } finally { for (const d of [dir, bin, out]) rmSync(d, { recursive: true, force: true }) }
+  } finally { for (const d of [home, cwd, bin, out]) rmSync(d, { recursive: true, force: true }) }
+})
+
+// #742: the session start's fetch brings every Roster playbook and gate.md into the boot copy (TEAMS.md first, it names them), so the prompt hook reads them from disk.
+test('#742: team-guard refresh downloads the Roster playbooks and gate.md named by the fetched TEAMS.md', async () => {
+  if (process.platform === 'win32') return
+  const dir = mkdtempSync(join(tmpdir(), 'p742boot-'))
+  const bin = mkdtempSync(join(tmpdir(), 'p742serve-'))
+  const old = process.env.PATH
+  try {
+    writeFileSync(join(bin, 'curl'), `#!/bin/sh\nwhile [ $# -gt 0 ]; do\n  if [ "$1" = "-o" ]; then out="$2"; url="$3"; shift 3\n    f="\${url#https://raw.githubusercontent.com/yverse-studio/claude-setup/main/}"; f="\${f#global/}"\n    for src in "${root}/$f" "${root}/global/$f"; do [ -f "$src" ] && mkdir -p "$(dirname "$out")" && cp "$src" "$out" && break; done\n  else shift; fi\ndone\nexit 0\n`, { mode: 0o755 })
+    process.env.PATH = `${bin}:${old}`
+    const { refresh, roleFiles, GATE_FILE } = await import(`${pathToFileURL(join(root, 'global/team-guard.mjs')).href}?p742`)
+    refresh(dir)
+    const want = roleFiles(dir)
+    assert.ok(want.length > 5 && want.includes(GATE_FILE), `the Roster names its playbooks (${want.length})`)
+    for (const f of want) assert.ok(existsSync(join(dir, f)), `${f} is in the boot copy`)
+  } finally { process.env.PATH = old; for (const d of [dir, bin]) rmSync(d, { recursive: true, force: true }) }
 })
 
 // Plan M47: a thread's start proof names the guard version and any missing guard file.
