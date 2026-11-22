@@ -23,6 +23,7 @@ const PREFLIGHT = `## Before every reply
 - Ask yskills only the real moment (a level from his life), goal, taste and the ask-first list; build details, process and order you decide. Levels: Researcher, Planner, Game Designer, build.
 - Hard round counter: 3 rounds at 4.5 (4.8 important), 4-6 Fable director, 7+ a card; no merge below, you release none; no post per review round; a PASS needs no OK. 3 failed rounds on one asset: re-plan. Picture card, Controls and World life first.
 - A new rule is a PR to claude-setup, never only a Project settings edit.
+- A builder between plan gate and build gate is left alone: no relay, no resolve, no status post; one post per gate verdict.
 - A summary of this chat (compaction) starts with the line: "read COORDINATOR-CARD.md again, reopen with the header".
 - A second fresh thread for one asset is a quality-loss trigger: send the handoff files to the Planner for a diagnosis first, the handoff carries the round and every approach tried, and the restart is not posted (docs/WORKFLOW.md, Handoff triggers).
 - Plan: read ISSUES.md next to this card before every reply (/mnt/project-files/PLAN.json: an offline project's plan); you never write it; a new ask is a thread with \`Item: new\`. Then write_custom_view. First reply: \`Luna · card <hash> · plan <done>/<all> · board <n> open\` (plan: the Plan count line of ISSUES.md, or x/y of plan.mjs stand; board: threads of list_threads that are working, blocked or review_ready). "Stand?": goal, x/y done, doing, waits on him, next 3. Ping only when he must act, rate, or a part is Done (link).
@@ -44,8 +45,8 @@ export function compact(full) {
   const part = (from, to) => { const a = full.indexOf(from); const b = to ? full.indexOf(to, a + 1) : full.length; return a < 0 ? '' : full.slice(a, b < 0 ? undefined : b).trim() }
   const modelsLine = (part('## Spawn rule', '## Sizes').match(/\nModels:.*/) ?? [''])[0]
   const ids = [...modelsLine.matchAll(/(Fable|Opus|Sonnet|Haiku) \((claude-[\w.-]+)\)/g)].map((m) => `${m[1]} ${m[2]}`).join(', ')
-  const sizes = part('## Sizes', '## Roster').split('\n').filter((l) => /^\| [SML] \|/.test(l)).map((l) => { const c = cells(l); return `- ${c[1]}: ${clip(flat(c[2]), 70)}; threads: ${clip(flat(c[3]), 60)}` })
-  const roster = part('## Roster', '## Kits').split('\n').filter((l) => l.startsWith('- ') && /thread/.test(l)).map((l) => { const [r, ...rest] = l.slice(2).split(': '); return `- ${r}: ${clip(flat(rest.join(': ')), 44)}` })
+  const sizes = part('## Sizes', '## Roster').split('\n').filter((l) => /^\| [SML] \|/.test(l)).map((l) => { const c = cells(l); return `- ${c[1]}: ${clip(flat(c[2]), 62)}; threads: ${clip(flat(c[3]), 50)}` })
+  const roster = part('## Roster', '## Kits').split('\n').filter((l) => l.startsWith('- ') && /thread/.test(l)).map((l) => { const [r, ...rest] = l.slice(2).split(': '); return `- ${r}: ${clip(flat(rest.join(": ")), 36)}` })
   const kits = part('## Kits').split('\n').filter((l) => l.startsWith('- ')).map((l) => (flat(l).match(/^- `?([\w-]+)/) ?? [])[1]).filter(Boolean)
   // A card with an empty Sizes, Roster or Kits section would send the chat to guess (M50 slice B: a test pins this).
   for (const [name, rows] of [['Sizes', sizes], ['Roster', roster], ['Kits', kits]]) if (!rows.length) throw new Error(`coordinator card: the ${name} section of docs/TEAMS.md has no row`)

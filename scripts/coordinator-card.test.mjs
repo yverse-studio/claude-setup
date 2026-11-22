@@ -453,3 +453,9 @@ test('#743: Kits is one line of names, not nine clipped rows; the full team text
   assert.ok(kits.split('\n').filter((l) => l.startsWith('- ')).length <= 1, 'one line')
   assert.match(kits, /ROSTER\.md/)
 })
+
+test('#743 (moved from #689): the card leaves a builder between plan gate and build gate alone, one post per gate verdict', () => {
+  const card = buildCard({ hash: 'x', date: 'd' })
+  assert.ok(card.includes('- A builder between plan gate and build gate is left alone: no relay, no resolve, no status post; one post per gate verdict.'))
+  assert.ok(card.length < CARD_MAX - 700, String(card.length))
+})
