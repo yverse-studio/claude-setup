@@ -2249,3 +2249,32 @@ test('rule guard: quotes and heredocs inside a substitution do not end the outer
   for (const c of ['git status && timeout 300 npm test', 'env A=1 timeout 60 x', 'nice timeout 60 x', 'nice -n 5 timeout 60 x', 'for i in 1 2; do timeout 60 x; done', 'cd x', 'echo hi', '']) assert.equal(t(c), null, `passes: ${c}`)
   for (const c of ['git status && npm test', 'env A=1 npm ci', 'for i in 1 2; do npm ci; done']) assert.ok(t(c), `refused: ${c}`)
 })
+
+// Counted gate round 2 of #758: here-strings, case patterns, [[ ]], arrays, function names, extglob and ${...} are read as bash reads them.
+test('rule guard: a here-string is no heredoc, and the word find as a pattern, array value or function name is no command', async () => {
+  const { findHang, shellWords, longNeedsTimeout } = await import('../global/rule-guard.mjs')
+  const W = { OS: 'Windows_NT' }
+  const f = (command) => findHang('Bash', { command }, W, 'linux')
+  const cmds = (t) => shellWords(t).filter((w) => !/^[()]$/.test(w[0])).map((w) => w.join(' '))
+  assert.deepEqual(cmds('read a <<< "$x"\nfind / -name x'), ['read a <<< $x', 'find / -name x'], 'the line after a here-string is still a command')
+  assert.deepEqual(cmds('wc -l <<< "$(find / -name x)"'), ['find / -name x', 'wc -l <<< SUBST'])
+  assert.deepEqual(cmds('case "$c" in\n  find) echo f ;;\n  a|find) ls ;;\n  *) find / ;;\nesac\necho end'), ['case $c in', 'echo f', 'ls', 'find /', 'esac', 'echo end'])
+  assert.deepEqual(cmds('case $x in find) echo a;; grep|find) echo b;; esac; pwd'), ['echo a', 'echo b', 'esac', 'pwd'])
+  assert.deepEqual(cmds('[[ $c =~ ^(find|grep)$ && -n "$(ls)" ]] && echo y'), ['ls', '[[ $c =~ ^(find|grep)$ && -n SUBST ]]', 'echo y'])
+  assert.deepEqual(cmds('arr=(find "a b" $(ls)); find() { echo no; }; echo ${x:-$(pwd)} ${HOME}/a'), ['ls', 'arr=()', 'echo no', 'pwd', 'echo SUBST ${HOME}/a'])
+  for (const c of ['wc -l <<< "$(find / -name x)"', 'while read f; do echo $f; done <<< "$(find / -name x)"', 'read a <<< "$x"\nfind / -name x', 'grep foo <<< "$v"\nfind / -name x', 'echo ${x:-$(find / -name y)}', 'echo "${x:-`find /`}"',
+    'case $x in\n a) find / -name y ;;\nesac', 'case $x in a) find / ;; esac', '[[ -n "$(find / -name x)" ]] && echo y', '[[ -d x ]] && find / -name y', 'arr=($(find / -name x))', 'f() { find / -name x; }; f', 'x=$(case a in a) find / ;; esac)']) assert.ok(f(c), `refused: ${c}`)
+  for (const c of ['grep foo <<< "$(find ./src -name x)"', 'read a b <<< "$line"; find ./src -name x', "grep -c x <<< $out\necho 'never $(find / -name x)'", 'case "$cmd" in\n  find) echo f ;;\n  *) echo o ;;\nesac', 'case $x in find|grep) echo y ;; esac', 'case $x in\n  find | grep) echo y ;;\nesac',
+    '[[ $cmd =~ ^(find|grep)$ ]] && echo y', '[[ $cmd == find ]] && echo y', 'arr=(find)', 'tools=(find grep sed); echo ${tools[0]}', 'shopt -s extglob; ls !(find|x)', 'find() { echo no; }', 'function find() { echo no; }', 'echo ${x:-find} ${#arr[@]}', 'echo $((1<<2)) $(( (a+b) * 2 ))',
+    'for ((i=0;i<3;i++)); do echo $i; done', 'if [[ -f a ]]; then find ./src -name x; fi']) assert.equal(f(c), null, `allowed: ${c}`)
+  assert.deepEqual(cmds("echo $'it\\'s' && find / -name x"), ["echo it\\'s", 'find / -name x'], "$'...' ends at its own quote")
+  assert.deepEqual(cmds('if [[ $c =~ ^(find|grep)$ ]]; then ls; fi'), ['if [[ $c =~ ^(find|grep)$ ]]', 'then ls', 'fi'])
+  assert.ok(f("echo $'it\\'s' && find / -name x"))
+  assert.equal(f("git commit -m $'it\\'s find / again'"), null)
+  assert.equal(f('while [[ $x =~ ^(find)$ ]]; do x=1; done'), null)
+  const t = (command, tool = 'Bash') => longNeedsTimeout(tool, { command, timeout: 600000 }, W, 'linux')
+  assert.equal(t('bash -c "timeout 60 npm ci"'), null, 'a timeout inside bash -c counts')
+  assert.equal(t('bash -c "timeout 300 npm ci"', 'PowerShell'), null, 'also from the PowerShell tool')
+  assert.ok(t('bash -c "npm ci"'))
+  assert.ok(t('timeout 300 npm ci', 'PowerShell'), 'PowerShell\'s own timeout is the cmd sleep')
+})
