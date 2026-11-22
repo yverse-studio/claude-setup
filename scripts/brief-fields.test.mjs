@@ -235,6 +235,8 @@ test('GameDev 2026-11-15: a Character TD brief needs a Proven recipe line that n
   assert.doesNotMatch(await check(td([LINES['Proven recipe']])), /Proven recipe/, 'a named recipe passes')
   assert.doesNotMatch(await check(td(['Proven recipe: n/a hair job, no garment recipe applies'])), /Proven recipe/, 'n/a with a reason passes (hair, face or body jobs)')
   assert.match(await check(td(['Proven recipe: the project proven list'])), /Proven recipe/, 'the list alone, with no recipe named and no n/a, is still a gap (audit 2026-11-15, point 3)')
+  const rawTpl = BRIEF_FIELDS.find((f) => f.key === 'Proven recipe').tpl
+  assert.match(await check(td([rawTpl])), /Proven recipe/, 'the raw template placeholder is still a gap (gate round 1 of PR 688)')
   assert.doesNotMatch(await check(`Role: Programmer · Kit: setup · Size: M\n${Object.values(LINES).join('\n')}`.replace(/\nProven recipe:[^\n]*/, '')), /Proven recipe/, 'a Programmer brief is not asked for it')
   const { briefFile } = await import('./brief.mjs')
   assert.match(briefFile('Character TD'), /^Proven recipe:/m, 'the Character TD brief file carries the line')
