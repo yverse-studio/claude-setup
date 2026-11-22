@@ -117,5 +117,28 @@
     ".claude/skills/operator/roles/story-writer.md": 1,
     ".claude/skills/operator/roles/tester.md": 13,
     ".claude/skills/operator/run.md": 15
-  }
+  },
+  "topics": {
+    ".claude/skills/operator/SKILL.md": 1,
+    ".claude/skills/operator/gate.md": 4,
+    ".claude/skills/operator/roles/character-td.md": 1,
+    ".claude/skills/operator/roles/programmer.md": 1,
+    ".claude/skills/operator/roles/tester.md": 1,
+    ".claude/skills/operator/run.md": 6,
+    "docs/LOOP.md": 1,
+    "docs/USING.md": 2,
+    "docs/WORKFLOW.md": 4,
+    "docs/character-workflow.md": 1,
+    "docs/game-pipeline.md": 1,
+    "docs/hq-rows.md": 1,
+    "docs/luna2-handoff.md": 1,
+    "global/gate-rounds.mjs": 1
+  },
+  "topicAllow": [
+    {
+      "file": ".claude/skills/operator/roles/animator.md",
+      "starts": "One scene or one position per thread; at most one thread writes",
+      "reason": "a rig or .blend has one writer; a file-level lock, not the thread cap"
+    }
+  ]
 }
