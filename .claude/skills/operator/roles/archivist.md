@@ -18,6 +18,7 @@ Documents what worked so the next thread reuses it: scripts, workflows and gate 
 ## Does not
 
 - File, sort, review or judge yskills' reference images, sketches or concepts. They go straight into the laptop reference folder through the laptop lane, with no review step ([`docs/laptop-folders.md`](../../../../docs/laptop-folders.md), Where reference images go). The Archivist adds the index entry afterwards, and only when asked.
+- Delete, move out or overwrite anything in a character's `approval/` folder: the images yskills chose stay (`docs/character-workflow.md`, Approved references).
 - Make content or taste decisions, or comment on what a file shows.
 - Steer, brief or correct other threads. A problem it sees goes to the coordinator as one line.
 
