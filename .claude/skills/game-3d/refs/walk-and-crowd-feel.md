@@ -18,7 +18,7 @@ Living-world items (reaction ladder, sound from sources, spring bones) stay in [
 4. **Decel never shorter than accel** (V, Source SDK friction): accel 350 to 450 ms, decel 400 to 500 ms
    (exponential, tau ~150 ms, short tail) [U from Source's 100 ms / ~400 ms]. A stop faster than the start feels like a wall.
 5. **Bob shape** (V, Doom 3): one |sin| bump per step with the trough at foot strike; 1.2 cm peak-to-peak at 1.4 m/s,
-   scaled by speed; lateral 0.6 cm at half the step rate (2:1, V Unity); roll ±0.25° flipping per foot; stop settle
+   scaled by speed; lateral 0.6 cm at half the step rate (2:1, V Unity); no roll (game-ux §1; Doom 3's ±0.4° per foot is skipped); stop settle
    0.6 cm down in 150 ms, back in 300 ms; step-up smoothing 200 ms. Real heads move 3 to 4.4 cm, but gaze
    stabilisation means the seen picture moves far less (C, Hirasaki 1999), so a third or less. Unity's 10 cm is too big.
 6. **One motion source** (V, Game Accessibility Guidelines): bob, roll and settle all from the step phase, behind one
@@ -26,7 +26,8 @@ Living-world items (reaction ladder, sound from sources, spring bones) stay in [
    a slider (Xbox XAG 117, ESO, Cyberpunk); measured Firewatch and Ethan Carter footage moves under 1 % of screen height.
 7. **Speed** (C, Bohannon 1997): comfortable walk 1.3 to 1.4 m/s, cadence ~1.9 Hz; a hold-to-hurry to ~2.0 m/s with a
    ~1.5 s ramp, named in the hints (The Chinese Room: a hidden sprint made "too slow" the top review complaint).
-8. **FOV** (C): Firewatch 55° vertical, Unity 60°; wider adds peripheral flow and the sliding feel (baseline row 4).
+8. **FOV** (C): Firewatch 55° and Unity 60° vertical (about 86° and 91° horizontal at 16:9). Check which axis the
+   game stores before comparing (baseline row 4 stores vertical; vacation-game's setting is horizontal); a narrow view is no cure for gliding, steps are.
 
 ## Crowds that keep their distance
 
