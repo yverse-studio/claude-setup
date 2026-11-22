@@ -112,6 +112,14 @@ powercfg /change monitor-timeout-ac 0
 
 Check: `powercfg /query SCHEME_CURRENT SUB_SLEEP STANDBYIDLE` shows `Current AC Power Setting Index: 0x00000000`. Settings, System, Power also works: "Plugged in: sleep after" = Never. The script's keep-awake covers the job itself without admin, but not an idle gap between jobs.
 
+## Find hangs and timeouts (yskills 2026-11-22)
+
+Threads started `find /` in Git Bash on Windows. It hangs, pins one CPU core per call and grows the kernel Paged Pool past 6 GB; Task Manager's process list shows nothing, and the tool's own timeout kills the shell but leaves `find.exe` running, orphaned.
+
+- On Windows (Git Bash) `find /`, a drive root (`/c`, `C:/`), `~` and a `find` with no path are refused; search files with the Glob tool, contents with the Grep tool, or give `find` one fixed project folder (`find ./src -name x`). [guard: hook global/rule-guard.mjs, test scripts/guards.test.mjs]
+- A long foreground command (the tool timeout raised above 2 min) carries its own `timeout <seconds>` prefix, or runs through `scripts/laptop-job.mjs`, or in PowerShell uses `-Timeout` on Wait-Process or Wait-Job. [guard: hook global/rule-guard.mjs, test scripts/guards.test.mjs]
+- Before a Blender or Ren'Py job, `scripts/heavy-precheck.mjs` reads the kernel Paged Pool (limit 4 GB, `HEAVY_PAGED_POOL_MAX_GB`) and every `find.exe` (orphaned or running over 10 min); red prints `PRECHECK BLOCKED: <why>` and the job does not start, the thread reports it to yskills (his fix: `taskkill /F /IM find.exe`, a restart if the pool stays high). It never kills anything and skips when it cannot read the probes. `scripts/laptop-job.mjs` runs it for every heavy job. [guard: test scripts/heavy-precheck.test.mjs]
+
 ## Dropped sessions and permissions (2026-11-03)
 
 yskills (2026-11-03): Remote Control sessions on the laptop dropped mid-turn, "this happens too often". Evidence from the Windows event log, `%LOCALAPPDATA%\Claude\logs\main.log` and `remote-control.log`: the laptop had 0.6 of 15.7 GB RAM free, so the Claude app's CliGovernor evicted "idle" sessions (`governor_evict`); a session waiting 23 min on a Blender batch counts as idle and its turn dies. It was not the network, not sleep (none since the reboot) and not Surfshark. The same night the Acer Quick Access service reset the power plan after every charger blip, which put Wi-Fi power saving back to Maximum.
