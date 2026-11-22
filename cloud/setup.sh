@@ -256,6 +256,9 @@ export const POINTER = 'Team rule (claude-setup docs/TEAMS.md): route every task
 export const PM_FILE = '.claude/skills/operator/roles/project-manager.md'
 export const CHECKLISTS = '.claude/skills/operator/checklists.md' // M48: the topics a Reviewer brief may name; in the boot copy so the guard knows them outside claude-setup too
 export const BOOT_FILES = ['CLAUDE.md', 'docs/TEAMS.md', 'docs/MAP.md', PM_FILE, 'config/persona.json', CHECKLISTS]
+// #742: rule-guard's prompt hook reads a role's playbook and gate.md from disk only (a curl there cost up to 4 s of its 5 s), so outside a checkout the boot copy must hold
+// every Roster playbook and the gate file; they come with the session start's fetch (a second, short download after TEAMS.md is in place).
+export const GATE_FILE = '.claude/skills/operator/gate.md'
 const RAW = 'https://raw.githubusercontent.com/yverse-studio/claude-setup/main/'
 const MARK = '# Working for yskills' // first line of claude-setup's CLAUDE.md
 
@@ -280,24 +283,38 @@ export const GUARD_FILES = ['context-guard.mjs', 'compact-guard.mjs', 'attempt-g
 const parses = (f) => { try { execFileSync(process.execPath, ['--check', f], { stdio: 'ignore', timeout: 2000 }); return true } catch { return false } }
 // Two downloads, so a guard missing on main (renamed, or not merged yet) never costs the boot files,
 // and each keeps its own time limit inside the hook's 5 s.
-function fetchAll(dir, files, url, seconds) {
+function fetchAll(dir, files, url, seconds, parallel = false) {
   // The extension stays last, so `node --check` reads a guard as the ES module it is (a `.new` name is CommonJS).
   const tmp = (f) => join(dir, f.replace(/(\.\w+)?$/, `.${process.pid}.new$1`))
   if (!files.length) return []
   const args = ['-fsSL', '--max-time', String(seconds), '--create-dirs']
   for (const f of files) args.push('-o', tmp(f), url(f))
   let ok = true
-  try { execFileSync('curl', args, { stdio: 'ignore', timeout: seconds * 1000 + 500 }) } catch { ok = false }
+  // 36 playbooks one after the other took ~4 s; in parallel 0.3 s (measured 2026-11-22). A curl older than 7.66 does not know the flag (exit 2): one more try without it.
+  const run = (extra) => execFileSync('curl', [...extra, ...args], { stdio: 'ignore', timeout: seconds * 1000 + 500 })
+  try { run(parallel ? ['--parallel', '--parallel-max', '12'] : []) } catch (e) { if (parallel && e?.status === 2) { try { run([]) } catch { ok = false } } else ok = false }
   // curl -f writes nothing for a missing file; a cut-off run (ok false) keeps a guard only if it still parses.
   return files.map((f) => ({ f, tmp: tmp(f), got: existsSync(tmp(f)) && statSync(tmp(f)).size > 0, ok }))
 }
 // The pre-push hook rides the guard download: git skips a hook without the exec bit and says nothing (S10).
 const PREPUSH = 'git-hooks/pre-push'
 const guardUrl = (f) => (GUARD_FILES.includes(f) || f === PREPUSH ? `${RAW}global/${f}` : RAW + f)
+// The playbooks the Roster of the boot copy's TEAMS.md links, plus gate.md.
+const ROLE_LINK = /\]\(\.\.\/(\.claude\/skills\/[a-z0-9-]+\/roles\/[a-z0-9-]+\.md)\)/g
+export const roleFiles = (dir) => [...new Set([...text(join(dir, 'docs', 'TEAMS.md')).matchAll(ROLE_LINK)].map((m) => m[1]).filter((f) => !BOOT_FILES.includes(f))), GATE_FILE]
+// One shared budget for the three downloads (the SessionStart hook is killed at 5 s; 2.5 + 1.5 + 1.5 s of max times plus curl's 0.5 s grace each was 6.5 s): each gets what is left
+// minus its own grace, at most its cap, and a download that has under 0.3 s left is skipped (the next start tries again).
+export const REFRESH_BUDGET_MS = 4200
+const GRACE_MS = 500
 export function refresh(dir, only = null) {
+  const t0 = Date.now()
+  const left = (cap) => Math.min(cap, (REFRESH_BUDGET_MS - (Date.now() - t0) - GRACE_MS) / 1000)
+  const get = (files, url, cap, parallel) => { const seconds = left(cap); return seconds < 0.3 ? [] : fetchAll(dir, files, url, Math.round(seconds * 10) / 10, parallel) }
   const guards = GUARD_FILES.filter((f) => !only || only.includes(f)) // a guard missing on disk is fetched too: an image pasted before a guard existed never had it (2026-11-12)
-  const boot = only ? [] : fetchAll(dir, BOOT_FILES, (f) => RAW + f, 2.5)
-  install(dir, [...boot, ...fetchAll(dir, [...guards, ...(only ? [] : [PREPUSH])], guardUrl, 1.5)])
+  const boot = only ? [] : get(BOOT_FILES, (f) => RAW + f, 2.5)
+  if (boot.length) install(dir, boot) // TEAMS.md first: it names the playbooks of the last download
+  const fresh = get([...guards, ...(only ? [] : [PREPUSH])], guardUrl, 1.5)
+  install(dir, [...fresh, ...(only ? [] : get(roleFiles(dir), (f) => RAW + f, 1.5, true))])
 }
 function install(dir, fetched) {
   for (const { f, tmp, got, ok } of fetched) {
@@ -1779,7 +1796,7 @@ cat > "$HOME/.claude/claude-setup/rule-guard.mjs" <<'RULE'
 // prompt: a bare "stop" gets its CLAUDE.md line, a brief gets its checks and its role's card (yskills 2026-10-27). pre also warns, never blocks, on a PR without its `## Jetzt` update.
 // CLAUDE_SETUP_RULE_GUARD=off turns it off. It never breaks a tool call on its own errors.
 
-import { execFileSync } from 'node:child_process'
+import { execFileSync, spawn } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { appendFileSync, existsSync, readdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'node:fs'
 import { isIP } from 'node:net'
@@ -1789,7 +1806,6 @@ import { fileURLToPath } from 'node:url'
 
 const OWNER = 'yskills'
 const MARK = '# Working for yskills' // first line of claude-setup's CLAUDE.md
-const RAW = 'https://raw.githubusercontent.com/yverse-studio/claude-setup/main/'
 const CARD_MAX = 9000 // under the 10,000-char cap on hook context
 export const REPLY_MAX_CHARS = 1500
 export const REPLY_MAX_LINES = 15
@@ -2035,7 +2051,7 @@ function setupRoot(cwd) {
   }
   return join(homedir(), '.claude', 'claude-setup')
 }
-const fetchRaw = (path) => { try { return execFileSync('curl', ['-fsSL', '--max-time', '3', RAW + path], { encoding: 'utf8', timeout: 4000 }) } catch { return '' } }
+// #742: no fetch of a missing playbook or checklist in the prompt path (curl, up to 4 s of the hook's 5 s); a missing file becomes roleCard's pointer line.
 
 // M50 slice B: the hash in the header of the project folder's COORDINATOR-CARD.md, so the receipt says which card this thread's start left there (the coordinator
 // compares it with the card it read, and reads again when they differ). Empty when the project has no card folder.
@@ -2071,10 +2087,10 @@ export async function topicPlaybook(brief, root) {
   try { guard = await import(new URL('./team-guard.mjs', import.meta.url)) } catch { return null }
   const plain = brief.replace(/[*_`]/g, '')
   const topic = plain.match(/^[ \t>-]*Topic:[ \t]*([^\n]*)/im)?.[1].trim()
-  const checklists = read(join(root, guard.CHECKLISTS)) || fetchRaw(guard.CHECKLISTS)
+  const checklists = read(join(root, guard.CHECKLISTS))
   if (!topic || !/^[ \t>-]*Role:[ \t]*Reviewer\b/im.test(plain) || guard.badTopic(plain, checklists)) return null
   const name = guard.topicNames(checklists).find((n) => n.toLowerCase() === topic.toLowerCase())
-  const scored = mdSection(read(join(root, '.claude/skills/operator/gate.md')) || fetchRaw('.claude/skills/operator/gate.md'), 'Scored gates', true)
+  const scored = mdSection(read(join(root, '.claude/skills/operator/gate.md')), 'Scored gates', true)
   return { name, text: `Topic: ${name}. Your whole job is this checklist, scored by the rule below; judge only these rows.\n\n${mdSection(checklists, name)}\n\n${scored}` }
 }
 
@@ -2095,7 +2111,7 @@ async function roleContext(prompt, cwd, session) {
   writeFileSync(once, existsSync(lockFile(session)) ? '' : role.name) // a rejected brief gets its card once but an empty stamp (it could name a gate role); a coordinator re-brief stamps it (relayRebrief)
   const topic = role.name === 'Reviewer' ? await topicPlaybook(prompt, root) : null
   if (topic) return roleCard({ ...role, path: `${'.claude/skills/operator/checklists.md'} (${topic.name}) and gate.md, Scored gates` }, topic.text)
-  const playbook = role.path ? read(join(root, role.path)) || fetchRaw(role.path) : ''
+  const playbook = role.path ? read(join(root, role.path)) : ''
   return roleCard(role, playbook, wanted(root, playbook, prompt))
 }
 
@@ -2952,7 +2968,7 @@ async function relayRebrief(session, prompt, cwd, model, transcript = '') {
   const accepted = 'correction accepted, lock lifted'
   if (!role || read(stamp).trim() !== role.name) return accepted
   const topic = role.name === 'Reviewer' ? await topicPlaybook(text, root) : null
-  const card = topic ? roleCard({ ...role, path: `${'.claude/skills/operator/checklists.md'} (${topic.name}) and gate.md, Scored gates` }, topic.text) : roleCard(role, role.path ? read(join(root, role.path)) || fetchRaw(role.path) : '')
+  const card = topic ? roleCard({ ...role, path: `${'.claude/skills/operator/checklists.md'} (${topic.name}) and gate.md, Scored gates` }, topic.text) : roleCard(role, role.path ? read(join(root, role.path)) : '')
   return [accepted, card].filter(Boolean).join('\n')
 }
 // #522/#523: the role stamp is also written from the transcript (a spawn or a coordinator re-brief the prompt hook never saw), only for a thread that holds
@@ -3070,7 +3086,7 @@ export async function gateBlock(tool, input, transcript, model, dry = false, rol
 // what this team-guard lists and the disk lacks (M47 follow-up).
 async function guardLine() {
   const dir = dirname(fileURLToPath(import.meta.url))
-  try { const team = await import(new URL('./team-guard.mjs', import.meta.url)); team.fillMissing?.(dir); return team.guardVersion(dir) } catch { return '' }
+  try { const team = await import(new URL('./team-guard.mjs', import.meta.url)); team.fillMissing?.(dir); return team.guardVersion(dir) } catch { return '' } // a curl, but only when a guard or boot file is missing (an old image); a complete install never fetches
 }
 // M50 slice B: a thread's start rewrites its project's rulebook folder (card, rules index, ROSTER.md, briefs/) when the card is missing or stale, so no
 // project depends on a hand-started "Setup-Karte einrichten" thread; the line is the start receipt a running coordinator reads. Never stops the start.
@@ -3080,6 +3096,24 @@ async function cardLine() {
     const hash = refreshCard(dirname(fileURLToPath(import.meta.url)))
     return hash ? `Card refreshed ${hash}: the project folder's COORDINATOR-CARD.md, ROSTER.md and briefs/ now match main; the coordinator reads them again.` : ''
   } catch { return '' }
+}
+// #742: the start's two project-folder writes run in a detached child (`rule-guard.mjs deferred`, the input on its stdin) so the prompt hook never waits for the mount.
+// CLAUDE_SETUP_DEFER: `skip` (a test) starts nothing, `wait` runs the step inline; unset, the child runs on its own and its failure never reaches the start.
+async function deferStart(info) {
+  const mode = process.env.CLAUDE_SETUP_DEFER
+  if (mode === 'skip') return
+  if (mode === 'wait') return deferredStart(info)
+  try {
+    const child = spawn(process.execPath, [fileURLToPath(import.meta.url), 'deferred'], { detached: true, stdio: ['pipe', 'ignore', 'ignore'], env: process.env })
+    child.on('error', () => {})
+    child.stdin.on('error', () => {})
+    child.stdin.end(JSON.stringify(info))
+    child.unref()
+  } catch { /* never a reason to stop a start */ }
+}
+async function deferredStart(info) {
+  await countStart({ ...info, card: '' }) // the count first: a child killed halfway still leaves the start (#730)
+  await cardLine()
 }
 // M50 slice C: every checked start writes one count file in its project's folder (card-render.mjs, logStart); never stops the start.
 export async function countStart({ session, brief, checkNow, modelNote, guard, card, ms }) {
@@ -3146,6 +3180,15 @@ export async function runChecks(steps, { session } = {}) {
   return null
 }
 
+// Timing (#742): with CLAUDE_SETUP_TIMING=1 every awaited step of the prompt path writes `rule-guard timing <step> <ms since hook start>` to stderr.
+const lap = (name, fn) => {
+  const on = process.env.CLAUDE_SETUP_TIMING === '1', t0 = performance.now()
+  const done = (v) => { if (on) console.error(`rule-guard timing ${name} +${Math.round(performance.now() - t0)} ms (at ${Math.round(performance.now())} ms)`); return v }
+  if (!fn) return done()
+  const r = fn()
+  return r?.then ? r.then(done) : done(r)
+}
+
 if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/').split('/').pop())) {
   const mode = process.argv[2]
   if (mode === 'neverpush') {
@@ -3168,6 +3211,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
     process.stdin.on('end', async () => {
       try {
         if (process.env.CLAUDE_SETUP_RULE_GUARD === 'off') return
+        if (mode === 'deferred') { await deferredStart(JSON.parse(raw || '{}')); return }
         const { tool_name: tool = '', tool_input: input = {}, prompt = '', cwd = process.cwd(), session_id: session, transcript_path: transcriptPath, agent_id: agentId } = JSON.parse(raw || '{}')
         if (mode === 'prompt') {
           const briefOnce = join(tmpdir(), `claude-setup-brief-${String(session).replace(/\W/g, '')}`)
@@ -3179,21 +3223,21 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           const brief = lookup ? spawnPrompt(prompt, read(transcriptPath)) : prompt
           if (session && (spawned || (lookup && brief !== prompt))) writeFileSync(briefOnce, '')
           const model = knownModel(session, transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : '')
-          const checkNow = midWork ? '' : await briefCheck(brief, cwd, model)
+          const checkNow = midWork ? '' : await lap('briefCheck', () => briefCheck(brief, cwd, model))
           let relayNote = ''
           if (spawned || (lookup && brief !== prompt)) updateLock(session, checkNow)
           else if (existsSync(lockFile(session)) && COORDINATOR_RELAY.test(prompt)) relayNote = await relayRebrief(session, prompt, cwd, model, transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : '')
           const isStart = spawned || (lookup && brief !== prompt)
           const modelNote = modelOnce(brief, transcriptPath, session)
-          const guard = isStart ? await guardLine() : ''
-          // B3 #730: the count goes first. The card refresh writes ~35 files to the project mount (1.4 s warm) and the hook is killed at 5 s,
-          // after which no start was logged (hook_cancelled, timedOut, 5087 ms, 2026-11-22). `ms` is the hook's age when the line was written.
-          if (isStart) await countStart({ session, brief, checkNow, modelNote, guard, card: '', ms: Math.round(performance.now()) })
-          const card = isStart ? await cardLine() : ''
-          const roleCardText = await roleContext(brief, cwd, session)
-          await stampFromTranscript(session, () => (transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : ''), cwd)
-          const context = [checkNow, relayNote, isStart ? await gateBriefContext(brief, model) : '', guard, card, modelNote, roleCardText, await itemContext(brief, cwd, session), await stopNote(prompt), persona(setupRoot(cwd))].filter(Boolean).join('\n')
+          const guard = isStart ? await lap('guardLine', guardLine) : ''
+          // #742: the start count and the card refresh write to the project mount (the refresh ~35 files, 2.1 s to 2.4 s measured; the hook is killed at 5 s, hook_cancelled
+          // timedOut 5087 ms on 2026-11-22), so they run in a detached child after this hook returns. `ms` is the hook's age when the child was started.
+          if (isStart) await lap('deferStart', () => deferStart({ session, brief, checkNow, modelNote, guard, ms: Math.round(performance.now()) }))
+          const roleCardText = await lap('roleContext', () => roleContext(brief, cwd, session))
+          await lap('stamp', () => stampFromTranscript(session, () => (transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : ''), cwd))
+          const context = [checkNow, relayNote, isStart ? await lap('gateBrief', () => gateBriefContext(brief, model)) : '', guard, modelNote, roleCardText, await lap('itemContext', () => itemContext(brief, cwd, session)), await lap('stopNote', () => stopNote(prompt)), persona(setupRoot(cwd))].filter(Boolean).join('\n')
           if (isStart && session) writeFileSync(startMark(session), '')
+          lap('printed')
           if (context) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: context } }))
           return
         }
