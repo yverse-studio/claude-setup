@@ -1082,10 +1082,10 @@ function agentReport(path, prompt) {
 // agent the note names (agentReport checks it was started with this call's prompt), never a row of the main transcript, which a builder can type.
 const DELIVERED = /^[^\n]{0,80}?\bdelivered to you as a message\b/i
 function deliveredReport(transcriptPath, prompt, note = '') {
-  // The note names the agent ("... from agent-<id>" or "agentId: <id>"): that one transcript only. No id: nothing counts (a scan by prompt could pick
-  // another agent that was started with a prompt that begins with this one, gate r1 of #525).
+  // The note names the agent ("... from agent-<id>", "agentId: <id>" or, in a foreground call, from "<id>" (#766, live 2026-11-22)): that one transcript only.
+  // No id: nothing counts (a scan by prompt could pick another agent that was started with a prompt that begins with this one, gate r1 of #525).
   const first = String(note).trim().split('\n')[0] // the harness's note is the opening line; an id mentioned later in a report is nobody's note
-  const id = /\bagent-?Id:\s*([A-Za-z0-9-]+)/i.exec(first)?.[1] ?? /\bfrom\s+agent-([A-Za-z0-9][A-Za-z0-9-]*)/i.exec(first)?.[1]
+  const id = /\bagent-?Id:\s*([A-Za-z0-9-]+)/i.exec(first)?.[1] ?? /\bfrom\s+agent-([A-Za-z0-9][A-Za-z0-9-]*)/i.exec(first)?.[1] ?? /\bfrom\s+"([A-Za-z0-9][A-Za-z0-9-]*)"/i.exec(first)?.[1]
   const path = id ? agentTranscript(transcriptPath, id) : ''
   return path ? agentReport(path, prompt) : ''
 }
