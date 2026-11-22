@@ -651,83 +651,174 @@ export function opensWindow(tool, input = {}) {
 // yskills 2026-11-22: threads started `find /` in Git Bash on Windows; it hung, pinned one CPU core each and grew the kernel Paged Pool past 6 GB,
 // invisible in the process list. Home of the rule: docs/pc-claude-user.md (Find hangs and timeouts). Windows only (the host check below).
 const winHost = (env = process.env, platform = process.platform) => platform === 'win32' || env.OS === 'Windows_NT' || /^(msys|cygwin)/i.test(env.OSTYPE ?? '') || Boolean(env.STUDIO_ROOT)
-const unquote = (t) => t.replace(/^["']|["']$/g, '')
 // A search root that walks a whole drive or the whole profile: `/`, `/c`, `/mnt/c`, `C:`, `C:\`, `~`, `$HOME`, `$USERPROFILE`, `%USERPROFILE%` (a trailing `/.` is the same root).
-const SEARCH_ROOT = /^(\/+\*?|\/[a-z]\/?\*?|\/mnt\/[a-z]\/?\*?|[a-z]:[\\/]*\*?|~\/?|\$HOME\/?|\$USERPROFILE\/?|%USERPROFILE%[\\/]?|\$env:USERPROFILE[\\/]?)$/i
-const rootPath = (p) => SEARCH_ROOT.test(p.replace(/\\\//g, '/').replace(/(\/\.)+$/, '/'))
-const FIND_WRAP = /^(sudo|env|time|nohup|timeout|nice|stdbuf|command|exec|xargs|winpty)$/
-const KEYWORDS = /^((then|do|else|elif|if|while|until|!)\s+)+/
-const REDIRECT = /^\d*[<>]+&?\S*$/
-// What a command line runs, as commands: each one split by commandsOf, plus the bodies of $(...) and backticks and the text of `bash -c`, `sh -c` and `eval`.
-// Returns the first `find` that walks a search root or has no path, as { paths, root, noPath }; viaShell marks GNU find (the Bash tool, or a nested bash -c).
-function findVerdict(text, gnu, depth = 0) {
-  if (depth > 3) return null
-  const flat = text.replace(/\$\{(HOME|USERPROFILE)\}/g, '$$$1').replace(/\{\}/g, 'PLACEHOLDER') // `{}` (xargs -I{}) would split the command in commandsOf
-  // Substitutions run only where bash runs them: heredoc bodies and single-quoted text are skipped, double-quoted text and bare text count.
-  const live = flat.replace(/<<-?\s*(['"]?)([^\s'"<>;&|()]+)\1[^\n]*\n[\s\S]*?\n\s*\2(?=\s|\)|$)/g, '').replace(/'[^'\n]*'/g, "''")
-  const bodies = [...live.matchAll(/\$\(([^()]*)\)/g), ...live.matchAll(/`([^`]*)`/g)].map((m) => m[1])
-  for (const b of bodies) { const v = findVerdict(b, gnu, depth + 1); if (v) return v }
-  let cwdRoot = false
-  for (const raw of commandsOf(flat)) {
-    let c = raw.replace(/^(\w+=\S*\s+)+/, '').replace(KEYWORDS, '').replace(/^(\d*[<>]+\s*\S+\s+)+/, '')
-    let viaXargs = false
-    for (let hops = 0; hops < 4; hops++) {
-      const m = c.match(/^(?:"([^"]*)"|'([^']*)'|(\S+))\s*([\s\S]*)$/)
-      if (!m) { c = ''; break }
-      const exe = (m[1] ?? m[2] ?? m[3]).split(/[\\/]/).pop().replace(/\.exe$/i, '').toLowerCase()
-      if (!FIND_WRAP.test(exe)) break
-      if (exe === 'command' && /^-[vV]\b/.test(m[4])) { c = ''; break }
-      if (exe === 'xargs') viaXargs = true
-      c = m[4].replace(/^((-[ugsknUCDEhp]\s+\S+|-\S*|\d+\w?|\w+=\S*)\s+)+/, '')
+const SEARCH_ROOT = /^(\/+\*?|\/[a-z]\/?\*?|\/mnt\/[a-z]\/?\*?|\/cygdrive\/[a-z]\/?\*?|[a-z]:[\\/]*\*?|~\/?|\$\{?HOME\}?\/?|\$\{?USERPROFILE\}?\/?|%USERPROFILE%[\\/]?|\$env:USERPROFILE[\\/]?)$/i
+const rootPath = (p) => SEARCH_ROOT.test(p.replace(/(\/\.)+$/, '/'))
+// shellWords: the simple commands bash would run from a command line, each as its words with the quotes removed, in order. It follows bash where
+// it decides what runs: single quotes and a heredoc with a quoted delimiter are text; double quotes, a heredoc with a bare delimiter, $(...),
+// backticks and <(...) run what is inside them. `(` and `)` (also of a substitution) come out as the marker commands ['('] and [')'] so a `cd`
+// in a subshell does not leak. ps = the PowerShell tool: a backslash is a path character there and a backtick is the escape, no substitution.
+const closeParen = (s, j) => { let d = 1, q = ''; for (; j < s.length; j++) { const c = s[j]; if (q) { if (c === '\\' && q === '"') j++; else if (c === q) q = '' } else if (c === "'" || c === '"') q = c; else if (c === '\\') j++; else if (c === '(') d++; else if (c === ')' && --d === 0) return j } return s.length }
+const closeTick = (s, j) => { for (; j < s.length; j++) { if (s[j] === '\\') j++; else if (s[j] === '`') return j } return s.length }
+export function shellWords(text, ps = false, out = [], depth = 0) {
+  if (depth > 6) return out
+  const n = text.length
+  let words = [], cur = '', has = false, i = 0
+  const heredocs = []
+  const endWord = () => { if (has) words.push(cur); cur = ''; has = false }
+  const endCmd = () => { endWord(); if (words.length) out.push(words); words = [] }
+  const sub = (body) => { out.push(['(']); shellWords(body, ps, out, depth + 1); out.push([')']) }
+  // the substitutions inside text that is not a command itself (a double-quoted string, an unquoted heredoc body)
+  const subsIn = (s, raw = false) => { for (let j = 0; j < s.length; j++) { if (raw && s[j] === '\\') j++; else if (s[j] === '$' && s[j + 1] === '(') { const e = closeParen(s, j + 2); sub(s.slice(j + 2, e)); j = e } else if (s[j] === '`' && !ps) { const e = closeTick(s, j + 1); sub(s.slice(j + 1, e)); j = e } } }
+  while (i < n) {
+    const ch = text[i]
+    if (ch === '\\' && !ps) { if (text[i + 1] !== '\n') { cur += text[i + 1] ?? ''; has = true } i += 2; continue }
+    if (ch === '`' && ps) { cur += text[i + 1] ?? ''; has = true; i += 2; continue }
+    if (ch === "'") { const j = text.indexOf("'", i + 1), e = j < 0 ? n : j; cur += text.slice(i + 1, e); has = true; i = e + 1; continue }
+    if (ch === '"') {
+      let j = i + 1, plain = '', live = '' // plain: the word's value; live: the same text with escaped characters blanked, scanned for substitutions
+      const esc = ps ? '`' : '\\'
+      for (; j < n && text[j] !== '"'; j++) {
+        if (text[j] === esc && j + 1 < n && (ps || /[$`"\\\n]/.test(text[j + 1]))) { if (text[j + 1] !== '\n' || ps) plain += text[j + 1]; live += '  '; j++ } else { plain += text[j]; live += text[j] }
+      }
+      subsIn(live)
+      cur += plain; has = true; i = j + 1; continue
     }
-    const m = c.match(/^(?:"([^"]*)"|'([^']*)'|(\S+))\s*([\s\S]*)$/)
-    if (!m) continue
-    const word = m[1] ?? m[2] ?? m[3]
-    const exe = word.split(/[\\/]/).pop().replace(/\.exe$/i, '').toLowerCase()
-    const args = m[4]
-    if (exe === 'cd' || exe === 'pushd') { const to = unquote(args.trim().split(/\s+/)[0] ?? ''); if (!to || rootPath(to)) cwdRoot = true; else if (/^([/~$]|[a-z]:)/i.test(to)) cwdRoot = false; continue }
-    if (/^(bash|sh|zsh)$/.test(exe) && /(^|\s)-\w*c\s/.test(args)) {
-      const inner = args.replace(/^[\s\S]*?-\w*c\s+/, '').trim().replace(/^(["'])([\s\S]*)\1$/, '$2').replace(/\\"/g, '"')
-      const v = findVerdict(`${cwdRoot ? 'cd / && ' : ''}${inner}`, true, depth + 1)
-      if (v) return v
+    if (ch === '$' && text[i + 1] === '(') { const e = closeParen(text, i + 2); sub(text.slice(i + 2, e)); cur += 'SUBST'; has = true; i = e + 1; continue }
+    if (ch === '$' && text[i + 1] === '{') { const j = text.indexOf('}', i), e = j < 0 ? n : j + 1; cur += text.slice(i, e); has = true; i = e; continue }
+    if (ch === '`') { const e = closeTick(text, i + 1); sub(text.slice(i + 1, e)); cur += 'SUBST'; has = true; i = e + 1; continue }
+    if ((ch === '<' || ch === '>') && text[i + 1] === '(') { const e = closeParen(text, i + 2); sub(text.slice(i + 2, e)); cur += 'SUBST'; has = true; i = e + 1; continue }
+    if (ch === '<' && text[i + 1] === '<' && text[i + 2] !== '<' && !ps) {
+      let j = i + 2, quoted = false, delim = ''
+      const strip = text[j] === '-'
+      if (strip) j++
+      while (text[j] === ' ' || text[j] === '\t') j++
+      while (j < n && !/[\s;&|()<>]/.test(text[j])) {
+        const c = text[j]
+        if (c === "'" || c === '"') { quoted = true; const k = text.indexOf(c, j + 1), e = k < 0 ? n : k; delim += text.slice(j + 1, e); j = e + 1 } else if (c === '\\') { quoted = true; delim += text[j + 1] ?? ''; j += 2 } else { delim += c; j++ }
+      }
+      if (delim) heredocs.push({ delim, quoted, strip })
+      endWord(); i = j; continue
+    }
+    if (ch === '\n') {
+      endCmd(); i++
+      for (const h of heredocs.splice(0)) { // the bodies follow the line that named them, in order
+        let body = ''
+        while (i < n) { const nl = text.indexOf('\n', i), end = nl < 0 ? n : nl, line = text.slice(i, end); i = end + 1; if ((h.strip ? line.replace(/^\t+/, '') : line).trimEnd() === h.delim) break; body += `${line}\n` }
+        if (!h.quoted) subsIn(body, true)
+      }
       continue
     }
-    if (exe === 'eval') { const v = findVerdict(args.trim().replace(/^(["'])([\s\S]*)\1$/, '$2'), gnu, depth + 1); if (v) return v; continue }
+    if (ch === '&' && (text[i + 1] === '>' || /[<>]$/.test(cur))) { cur += ch; has = true; i++; continue } // 2>&1, &>file
+    if (ch === ';' || ch === '&' || ch === '|') { endCmd(); i++; continue }
+    if (ch === '(' || ch === ')') { endCmd(); out.push([ch]); i++; continue }
+    if (ch === '{' && text[i + 1] === '}') { cur += '{}'; has = true; i += 2; continue } // the xargs placeholder
+    if ((ch === '{' || ch === '}') && !has && (i + 1 >= n || /[\s;]/.test(text[i + 1]))) { endCmd(); i++; continue } // a brace group
+    if (ch === '#' && !has && !ps) { while (i < n && text[i] !== '\n') i++; continue }
+    if (/\s/.test(ch)) { endWord(); i++; continue }
+    cur += ch; has = true; i++
+  }
+  endCmd()
+  return out
+}
+const exeName = (w) => w.split(/[\\/]/).pop().replace(/\.exe$/i, '').toLowerCase()
+const REDIRECT = /^\d*(&?>>?|<<?<?|>&|<&)/
+// A command's words without what comes before the program: assignments, shell keywords, redirects.
+function bare(words) {
+  const w = [...words]
+  for (;;) {
+    if (!w.length) return w
+    if (/^\w+=/.test(w[0]) || /^(then|do|else|elif|if|while|until|!|time)$/.test(w[0])) { w.shift(); continue }
+    if (REDIRECT.test(w[0])) { const alone = /^\d*(&?>>?|<<?<?|>&|<&)$/.test(w[0]); w.splice(0, alone ? 2 : 1); continue }
+    return w
+  }
+}
+// Wrappers that run the command after their own options; the value says which of their options take a value.
+const WRAPPERS = { sudo: /^-[ugUhpCDrRt]$/, env: /^-[uCS]$/, nohup: null, timeout: /^-[sk]$/, nice: /^-n$/, stdbuf: /^-[ioe]$/, command: null, exec: /^-a$/, xargs: /^-[InPdLEsa]$/, winpty: null, ionice: /^-[cnp]$/, builtin: null }
+// Peels wrappers: returns { words, viaXargs } or null when the wrapper only asks about a command (`command -v find`).
+function unwrap(words) {
+  let w = bare(words), viaXargs = false
+  for (let hops = 0; hops < 5 && w.length; hops++) {
+    const exe = exeName(w[0])
+    if (!Object.hasOwn(WRAPPERS, exe)) break
+    if (exe === 'command' && /^-[vV]/.test(w[1] ?? '')) return null
+    if (exe === 'xargs') viaXargs = true
+    let i = 1
+    for (; i < w.length; i++) {
+      if (WRAPPERS[exe]?.test(w[i])) { i++; continue }
+      if (/^-/.test(w[i]) || /^\w+=/.test(w[i]) || (exe === 'timeout' && /^\d*\.?\d+[smhd]?$/.test(w[i]))) continue
+      break
+    }
+    w = bare(w.slice(i))
+  }
+  return { words: w, viaXargs }
+}
+// The first `find` of the commands that walks a search root or has no path: { root } or { noPath }. gnu: `find` is GNU find here (Git Bash).
+function findVerdict(commands, gnu, ps, depth = 0, startAtRoot = false) {
+  const cwd = [startAtRoot] // is the working directory a search root; one entry per open subshell
+  for (const raw of commands) {
+    if (raw.length === 1 && raw[0] === '(') { cwd.push(cwd.at(-1)); continue }
+    if (raw.length === 1 && raw[0] === ')') { if (cwd.length > 1) cwd.pop(); continue }
+    const u = unwrap(raw)
+    if (!u || !u.words.length) continue
+    const [word, ...args] = u.words
+    const exe = exeName(word)
+    if (exe === 'cd' || exe === 'pushd' || exe === 'set-location') {
+      const to = args.find((a) => !/^-/.test(a) || a === '-')
+      if (to === undefined) cwd[cwd.length - 1] = exe === 'cd' // a bare cd goes home
+      else if (rootPath(to)) cwd[cwd.length - 1] = true
+      else if (!/^\.{1,2}(\/\.{1,2})*\/?$/.test(to)) cwd[cwd.length - 1] = false // a named folder (absolute, relative or `-`) leaves the root; `.` and `..` stay
+      continue
+    }
+    if (/^(bash|sh|zsh|dash)$/.test(exe) && depth < 4) {
+      const at = args.findIndex((a) => /^-[a-z]*c[a-z]*$/i.test(a))
+      if (at >= 0 && args[at + 1] !== undefined) { const v = findVerdict(shellWords(args[at + 1]), true, false, depth + 1, cwd.at(-1)); if (v) return v }
+      continue
+    }
+    if (exe === 'eval' && depth < 4) { const v = findVerdict(shellWords(args.join(' '), ps), gnu, ps, depth + 1, cwd.at(-1)); if (v) return v; continue }
     if (exe !== 'find') continue
-    if (!gnu && !/[\\/]usr[\\/]bin[\\/]find(\.exe)?$/i.test(word)) continue // PowerShell's `find` is the Windows string filter (also by path, System32); only Git's usr/bin/find.exe is GNU there
-    const words = (args.match(/"[^"]*"|'[^']*'|\S+/g) ?? []).map(unquote)
-    if (words.length === 1 && /^-{1,2}(version|help)$/.test(words[0])) continue
+    if (!gnu && !/[\\/]usr[\\/]bin[\\/]find(\.exe)?$/i.test(word)) continue // PowerShell's `find` is the Windows string filter, by path too; only Git's usr/bin/find.exe is GNU there
+    if (args.length === 1 && /^-{1,2}(version|help)$/.test(args[0])) continue
     let i = 0
-    while (i < words.length && /^-(H|L|P|D\S*|O\d?)$/.test(words[i])) i += words[i] === '-D' ? 2 : 1 // find's global options come before the paths
+    while (i < args.length && /^-(H|L|P|D\S*|O\d?)$/.test(args[i])) i += args[i] === '-D' ? 2 : 1 // find's global options come before the paths
     const paths = []
-    for (; i < words.length && !/^(-|!$|\(|\)|,)/.test(words[i]); i++) {
-      if (REDIRECT.test(words[i])) { if (/^\d*[<>]+&?$/.test(words[i])) i++; continue }
-      paths.push(words[i])
+    for (; i < args.length && !/^(-|!$|\($|\)$|,$)/.test(args[i]); i++) {
+      if (REDIRECT.test(args[i])) { if (/^\d*(&?>>?|<<?<?|>&|<&)$/.test(args[i])) i++; continue }
+      paths.push(args[i])
     }
     const root = paths.find(rootPath)
     if (root !== undefined) return { root }
-    if (!paths.length && !viaXargs) return { noPath: true }
-    if (cwdRoot && paths.every((p) => /^\.\/?$/.test(p))) return { root: 'after cd to a drive root' }
+    if (!paths.length && !u.viaXargs) return { noPath: true }
+    if (cwd.at(-1) && paths.length && paths.every((p) => /^\.\/?$/.test(p))) return { root: '. after a cd to a drive root' }
   }
   return null
 }
 export function findHang(tool, input = {}, env = process.env, platform = process.platform) {
   if (!/^(Bash|PowerShell)$/.test(tool) || !winHost(env, platform)) return null
-  const v = findVerdict(String(input.command ?? ''), tool === 'Bash')
+  const command = String(input.command ?? '')
+  if (!/find/i.test(command)) return null
+  const ps = tool === 'PowerShell'
+  const v = findVerdict(shellWords(command, ps), !ps, ps)
   if (!v) return null
-  return `rule-guard: ${v.noPath ? '`find` with no path searches wherever the shell happens to be' : `\`find\` on ${v.root} walks a whole drive`} and hangs on Windows: it pins a CPU core and grows the kernel Paged Pool past 6 GB, invisible in the process list (yskills 2026-11-22). Use the Glob tool (file names) or the Grep tool (contents), or give find one fixed project folder: \`find ./src -name "x"\` (docs/pc-claude-user.md, Find hangs and timeouts).`
+  return `rule-guard: ${v.noPath ? '`find` with no path searches wherever the shell happens to be' : `\`find ${v.root}\` walks a whole drive`} and hangs on Windows: it pins a CPU core and grows the kernel Paged Pool past 6 GB, invisible in the process list (yskills 2026-11-22). Use the Glob tool (file names) or the Grep tool (contents), or give find one fixed project folder: \`find ./src -name "x"\` (docs/pc-claude-user.md, Find hangs and timeouts).`
 }
 // A long foreground command (the tool timeout is raised above its 2 min default) must carry its own `timeout N` or run through laptop-job.mjs:
 // on Windows the tool's timeout kills bash but leaves the child (find.exe, ffmpeg) running as an orphan; GNU `timeout` kills the child itself.
-// The first real command of the line (past cd, export, env assignments) must be the wrapped one; a background start is a service, not a foreground wait.
-const GNU_TIMEOUT = /^timeout(\.exe)?\s+((-[ks]|--signal|--kill-after)(=\S+|\s+\S+)\s+|-\S+\s+)*\d/
-const LONG_OK = /^(cd|pushd|export|set|source|echo|true|mkdir)\b/
+// The first real command of the line (past cd, export, mkdir and the like) must be the wrapped one; a background start is a service, not a foreground wait.
+const LONG_OK = /^(cd|pushd|popd|export|set|source|\.|echo|true|mkdir|unset|pwd)$/
 export function longNeedsTimeout(tool, input = {}, env = process.env, platform = process.platform) {
   if (!/^(Bash|PowerShell)$/.test(tool) || !winHost(env, platform) || input.run_in_background) return null
   if (!(Number(input.timeout) > 120000)) return null
-  const command = String(input.command ?? '')
-  const real = commandsOf(command).map((c) => c.replace(/^(\w+=\S*\s+)+/, '')).find((c) => !LONG_OK.test(c)) ?? ''
-  if ((tool === 'Bash' && GNU_TIMEOUT.test(real)) || /^node(\.exe)?\s+("[^"]*"|\S*)laptop-job\.mjs\b/.test(real) || (tool === 'PowerShell' && /\bWait-(Process|Job)\b[^;|]*-Timeout\b/i.test(command))) return null
+  const command = String(input.command ?? ''), ps = tool === 'PowerShell'
+  const real = shellWords(command, ps).map(bare).find((w) => w.length && !/^[()]$/.test(w[0]) && !LONG_OK.test(exeName(w[0]))) ?? []
+  const exe = real.length ? exeName(real[0]) : ''
+  const gnuTimeout = !ps && exe === 'timeout' && (() => { // the first word after timeout's own options is a duration (`timeout /t 5` is the cmd.exe sleep)
+    for (let k = 1; k < real.length; k++) { if (/^-[sk]$/.test(real[k])) k++; else if (!/^-/.test(real[k])) return /^\d*\.?\d+[smhd]?$/.test(real[k]) }
+    return false
+  })()
+  const runner = exe === 'node' && real.slice(1).some((a) => /(^|[\\/])laptop-job\.mjs$/.test(a))
+  const psWait = ps && /\bWait-(Process|Job)\b[^;|\n]*-Timeout\b/i.test(command)
+  if (gnuTimeout || runner || psWait) return null
   return 'rule-guard: on Windows a long command (tool timeout above 2 min) needs its own timeout, because the tool\'s timeout kills the shell but leaves the child running, orphaned and hidden. Start it as `timeout <seconds> <command>` (GNU, Git Bash), or through `node scripts/laptop-job.mjs --timeout-min <N> -- <command>`, or in PowerShell with `-Timeout` on Wait-Process or Wait-Job (docs/pc-claude-user.md, Find hangs and timeouts).'
 }
 // The Archivist documents scripts and workflows; yskills' references are filed by the laptop lane, never by it

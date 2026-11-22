@@ -12,13 +12,14 @@ export const MAX_POOL_GB = 4 // a healthy laptop holds well under 1 GB of Paged 
 export const HUNG_FIND_MIN = 10 // a find.exe that runs longer than this is hung, whatever its parent
 const GB = 2 ** 30
 const ORPHAN_MIN_AGE_MS = 60000
+const WINDOWS_FIND = /[\\/]windows[\\/](system32|syswow64)[\\/]find\.exe$/i
 
 // One PowerShell call: Paged Pool bytes (WMI property names are not localized, unlike the counter paths), every find.exe, every pid.
 // CreationDate comes back as a DateTime, converted to epoch milliseconds in the script.
 export const PROBE_PS = [
   "$p = (Get-CimInstance Win32_PerfRawData_PerfOS_Memory).PoolPagedBytes",
   "$all = @(Get-CimInstance Win32_Process)",
-  "$f = @($all | Where-Object { $_.Name -eq 'find.exe' } | ForEach-Object { [pscustomobject]@{ pid = $_.ProcessId; ppid = $_.ParentProcessId; startedMs = ([DateTimeOffset]$_.CreationDate).ToUnixTimeMilliseconds(); cmd = $_.CommandLine } })",
+  "$f = @($all | Where-Object { $_.Name -eq 'find.exe' } | ForEach-Object { [pscustomobject]@{ pid = $_.ProcessId; ppid = $_.ParentProcessId; startedMs = ([DateTimeOffset]$_.CreationDate).ToUnixTimeMilliseconds(); cmd = $_.CommandLine; path = $_.ExecutablePath } })",
   "[pscustomobject]@{ pagedPoolBytes = $(if ($null -eq $p) { $null } else { [double]$p }); finds = $f; pids = @($all | ForEach-Object { $_.ProcessId }) } | ConvertTo-Json -Compress -Depth 4",
 ].join('; ')
 
@@ -38,6 +39,7 @@ export function readProbe(run = (cmd, args) => spawnSync(cmd, args, { encoding: 
 export function badFinds({ finds = [], pids = [] }, now = Date.now(), hungMin = HUNG_FIND_MIN) {
   const alive = new Set(pids.map(Number))
   return finds.flatMap((f) => {
+    if (WINDOWS_FIND.test(String(f.path ?? ''))) return [] // Windows' own find.exe is a text filter in a pipe, it walks nothing
     const why = []
     if (!alive.has(Number(f.ppid)) && now - Number(f.startedMs) > ORPHAN_MIN_AGE_MS) why.push('orphaned (parent gone)') // a seconds-old find may show a dead parent under MSYS exec
     if (now - Number(f.startedMs) > hungMin * 60000) why.push(`running ${Math.round((now - Number(f.startedMs)) / 60000)} min`)
@@ -57,7 +59,7 @@ export function precheck({ maxPoolGb = Number(process.env.HEAVY_PAGED_POOL_MAX_G
   const poolGb = data.pagedPoolBytes / GB
   if (Number.isFinite(poolGb) && poolGb > maxPoolGb) problems.push(`kernel Paged Pool is ${poolGb.toFixed(1)} GB (limit ${maxPoolGb} GB)`)
   const finds = badFinds(data, now)
-  if (finds.length) problems.push(`${finds.length} stuck find.exe: ${finds.slice(0, 5).map((f) => `pid ${f.pid} ${f.why}`).join('; ')}`)
+  if (finds.length) problems.push(`${finds.length} stuck find.exe: ${finds.slice(0, 5).map((f) => `pid ${f.pid} ${f.why}${f.cmd ? ` (${f.cmd})` : ''}`).join('; ')}`)
   if (!problems.length && !Number.isFinite(poolGb)) return { state: 'SKIP', why: 'the Paged Pool could not be read (perf counters unavailable); no stuck find.exe', problems }
   if (!problems.length) return { state: 'OK', why: `Paged Pool ${Number.isFinite(poolGb) ? poolGb.toFixed(1) : '?'} GB, no stuck find.exe`, problems }
   const fix = finds.length ? ` Stop it and report to yskills; his fix: taskkill /F /IM find.exe, and a restart if the Paged Pool stays high.` : ' Stop and report to yskills; a restart frees the pool.'

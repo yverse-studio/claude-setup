@@ -59,6 +59,14 @@ test('an unreadable Paged Pool value skips, but a stuck find.exe still blocks', 
   assert.equal(readProbe(() => ({ status: 0, stdout: '{"pagedPoolBytes":null,"finds":[],"pids":[1]}' }), 'win32').pagedPoolBytes, NaN)
   assert.equal(precheck({ probe: () => ({ pagedPoolBytes: NaN, finds: [find({ ppid: 9999, startedMs: NOW - 120000 })], pids: [1] }), now: NOW }).state, 'BLOCKED')
 })
+test('the BLOCKED line names the command of the stuck find, and Windows\' own find.exe is left alone', () => {
+  const old = { startedMs: NOW - 25 * 60000 }
+  assert.match(precheck({ probe: probe({ finds: [find(old)] }), now: NOW }).why, /pid 555 running 25 min \(find \/ -name x\)/)
+  const win = find({ ...old, ppid: 9999, cmd: 'find /i "node"', path: 'C:\\Windows\\System32\\find.exe' }) // path-lint: fixture
+  assert.equal(precheck({ probe: probe({ finds: [win] }), now: NOW }).state, 'OK')
+  const git = find({ ...old, path: 'C:\\Program Files\\Git\\usr\\bin\\find.exe' }) // path-lint: fixture
+  assert.equal(precheck({ probe: probe({ finds: [git] }), now: NOW }).state, 'BLOCKED')
+})
 test('the CLI exits 2 with one BLOCKED line when the pool is over the limit, 0 when fine', () => {
   const env = (j) => ({ ...process.env, HEAVY_PRECHECK_PROBE_JSON: JSON.stringify(j) })
   const bad = spawnSync('node', [script], { encoding: 'utf8', env: env({ pagedPoolBytes: 6.5 * GB, finds: [], pids: [] }) })
