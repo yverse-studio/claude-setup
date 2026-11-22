@@ -1095,20 +1095,19 @@ test('rule guard: no second headless Blender while bl_server.py runs; Blender on
   const read = (file_path) => JSON.stringify({ type: 'assistant', message: { content: [{ type: 'tool_use', id: file_path, name: 'Read', input: { file_path } }] } })
   process.env.STUDIO_ROOT ??= join(tmpdir(), 'studio-root-test') // the resolver has no default root
   const plan = read(studioPath('companyxy', 'ch01', 'NACHT-FIX-PLAN.md'))
-  const cloudPlan = read('/mnt/project-files/NACHT-FIX-PLAN.md')
   const animator = read(studioPath('repos', 'claude-setup', '.claude', 'skills', 'operator', 'roles', 'animator.md'))
-  assert.match(blenderDocsMissing('Bash', { command: 'blender -b f.blend' }, '') ?? '', /NACHT-FIX-PLAN\.md.* und .*animator\.md/)
-  assert.match(blenderDocsMissing('mcp__Blender__execute_blender_code', { code: 'x' }, plan) ?? '', /animator\.md/)
-  assert.doesNotMatch(blenderDocsMissing('mcp__Blender__execute_blender_code', { code: 'x' }, plan) ?? '', /NACHT/)
-  assert.match(blenderDocsMissing('PowerShell', { command: '& $env:BL -b f.blend' }, () => animator) ?? '', /NACHT-FIX-PLAN/)
-  assert.equal(blenderDocsMissing('Bash', { command: 'blender -b f.blend' }, `${plan}\n${animator}`), null)
-  assert.equal(blenderDocsMissing('Bash', { command: 'blender -b f.blend' }, `${cloudPlan}\n${animator}`), null, 'cloud copy in the project files counts')
-  assert.match(blenderDocsMissing('Bash', { command: 'blender -b f.blend' }, '') ?? '', /projects\/games\/companyxy\/ch01\/NACHT-FIX-PLAN\.md.*\/mnt\/project-files/)
+  // #729 (b): the animator playbook is the one doc every project shares; the 91 KB night plan of one chapter of one game is no longer asked of every session.
+  assert.match(blenderDocsMissing('Bash', { command: 'blender -b f.blend' }, '') ?? '', /animator\.md/)
+  assert.doesNotMatch(blenderDocsMissing('Bash', { command: 'blender -b f.blend' }, '') ?? '', /NACHT/, 'no companyxy file in the list')
+  assert.equal(blenderDocsMissing('mcp__Blender__execute_blender_code', { code: 'x' }, animator), null, 'the playbook alone is enough')
+  assert.equal(blenderDocsMissing('PowerShell', { command: '& $env:BL -b f.blend' }, () => animator), null)
+  assert.match(blenderDocsMissing('Bash', { command: 'blender -b f.blend' }, plan) ?? '', /animator\.md/, 'the night plan alone does not count')
   assert.equal(blenderDocsMissing('Bash', { command: 'git status' }, ''), null, 'not a Blender call')
-  const bash = JSON.stringify({ type: 'assistant', message: { content: [{ type: 'tool_use', id: 'b', name: 'Bash', input: { command: 'cat NACHT-FIX-PLAN.md roles/animator.md' } }] } })
-  assert.match(blenderDocsMissing('Bash', { command: 'blender -b f.blend' }, bash) ?? '', /NACHT/, 'only a Read counts')
+  const bash = JSON.stringify({ type: 'assistant', message: { content: [{ type: 'tool_use', id: 'b', name: 'Bash', input: { command: 'cat roles/animator.md' } }] } })
+  assert.match(blenderDocsMissing('Bash', { command: 'blender -b f.blend' }, bash) ?? '', /animator\.md/, 'only a Read counts')
 
   const dir = mkdtempSync(join(tmpdir(), 'blender-guard-'))
+  rmSync(join(tmpdir(), 'claude-setup-guardlog-s1.jsonl'), { force: true }) // #729: the fixed session id keeps its guard log in tmpdir between runs
   try {
     const t = join(dir, 's1.jsonl')
     mkdirSync(join(dir, 's1', 'subagents'), { recursive: true })
@@ -1118,7 +1117,7 @@ test('rule guard: no second headless Blender while bl_server.py runs; Blender on
     }
     const unread = run('blender -b f.blend', '')
     assert.equal(unread.status, 2)
-    assert.match(unread.stderr, /NACHT-FIX-PLAN/)
+    assert.match(unread.stderr, /animator\.md/)
     assert.equal(run('node scripts/laptop-job.mjs --no-progress t -- blender -b f.blend', `${plan}\n${animator}`).status, 0)
     assert.equal(run('blender -b f.blend', `${plan}\n${animator}`, server).status, 2, 'bl_server.py runs')
     assert.match(run('blender -b f.blend', `${plan}\n${animator}`).stderr, /laptop-job\.mjs/, 'plain headless start on the laptop: refused, the runner named (#607)')
@@ -1377,6 +1376,7 @@ test('rule-guard: the hook blocks a first reply until the fallback files are rea
     assert.match(blocked.stderr, /missing: frontend-design, impeccable, ui-review \(read \.claude\/skills\/impeccable\/SKILL\.md, \.claude\/skills\/ui-review\/SKILL\.md instead; no file for frontend-design\)/, 'an empty home says what is missing, with the file to read')
     // No checkout at or above the cwd (a project thread that did not add_repo): never a false `none`.
     rmSync(join(dir, 'claude-setup'), { force: true })
+    rmSync(join(tmpdir(), `claude-setup-guardlog-${id}.jsonl`), { force: true }) // #729: this session already used its two form refusals; the bare case is a fresh session
     const bare = mkdtempSync(join(tmpdir(), 'no-setup-'))
     try {
       const out = spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'pre'], { input: JSON.stringify({ cwd: bare, session_id: id, transcript_path: join(dir, 't.jsonl'), tool_name: 'mcp__hearthbot__post_message', tool_input: { text: 'Hi (◕‿◕)' } }), encoding: 'utf8', env: { ...process.env, CLAUDE_SETUP_HOME: bare } })
@@ -1976,4 +1976,34 @@ test('rule-guard: the late role card is for the thread, and only a hook row show
     rmSync(marks[2], { force: true }); rmSync(marks[3], { force: true }) // the brief check of that call locked the test's bare brief
     assert.equal(pre(`${spawn}\n${arrived}`), '', 'a hook attachment row with the card means it arrived')
   } finally { for (const m of marks) rmSync(m, { force: true }); rmSync(dir, { recursive: true, force: true }) }
+})
+
+// #729 (c): every refusing check of the pre hook has an id and a kind; each refusal writes one log line; a FORM check that refused twice in a session passes the third time (logged `cap`), a SAFETY check never does.
+test('rule guard: refusing checks have an id and a kind, log one line per refusal, and a form check passes its third hit', async () => {
+  const { GUARD_CHECKS, runChecks, readGuardLog } = await import('../global/rule-guard.mjs')
+  for (const [id, kind] of Object.entries(GUARD_CHECKS)) assert.match(kind, /^(form|safety)$/, `${id} has a kind`)
+  for (const id of ['lock', 'neverpush', 'hands-off', 'gate', 'decide', 'plan-item-open', 'receipt', 'propose-skills', 'opens-window', 'archivist-files', 'kaomoji', 'dupe-check', 'blender-busy', 'blender-docs', 'blender-runner', 'grill']) assert.ok(GUARD_CHECKS[id], `${id} is in the table`)
+  for (const id of ['neverpush', 'decide', 'gate', 'lock', 'hands-off']) assert.equal(GUARD_CHECKS[id], 'safety', `${id} is a safety check`)
+  for (const id of ['kaomoji', 'blender-docs', 'grill', 'dupe-check', 'plan-item-open']) assert.equal(GUARD_CHECKS[id], 'form', `${id} is a form check`)
+  const session = `cap-test-${process.pid}-${Date.now()}`
+  const form = [['kaomoji', () => 'add a kaomoji']]
+  assert.equal(await runChecks(form, { session }), 'add a kaomoji')
+  assert.equal(await runChecks(form, { session }), 'add a kaomoji')
+  assert.equal(await runChecks(form, { session }), null, 'the third hit of the same form check passes')
+  assert.equal(await runChecks(form, { session: `${session}-other` }), 'add a kaomoji', 'the count is per session')
+  const safety = [['neverpush', () => 'never goes to GitHub']]
+  for (let i = 0; i < 5; i++) assert.equal(await runChecks(safety, { session }), 'never goes to GitHub', `safety refusal ${i + 1}`)
+  const log = readGuardLog(session)
+  assert.deepEqual(log.filter((l) => l.id === 'kaomoji').map((l) => l.outcome), ['block', 'block', 'cap'])
+  assert.equal(log.filter((l) => l.id === 'neverpush' && l.outcome === 'block').length, 5)
+  assert.ok(log.every((l) => l.id && l.kind && l.outcome && l.at), 'each line has id, kind, outcome and time')
+  assert.equal(log.some((l) => l.id === 'neverpush' && l.outcome === 'cap'), false, 'a safety check is never capped')
+  assert.equal(await runChecks([['kaomoji', () => null], ['grill', () => 'second']], { session: `${session}-two` }), 'second', 'a check that passes writes nothing and the chain goes on')
+})
+test('rule guard: the pre hook logs a refusal with its check id and passes the third identical form refusal (live process)', () => {
+  const session = `cap-live-${process.pid}-${Date.now()}`
+  const run = () => spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'pre'], { input: JSON.stringify({ session_id: session, tool_name: 'mcp__hearthbot__post_message', tool_input: { text: 'Fertig' } }), env: { ...process.env, CLAUDE_SETUP_RULE_GUARD: '' }, encoding: 'utf8' })
+  assert.equal(run().status, 2)
+  assert.equal(run().status, 2)
+  assert.equal(run().status, 0, 'third time passes')
 })

@@ -506,6 +506,9 @@ export const ITEM_REF = /^[ \t>-]*Item:[^<\n]*?(?:\b(M\d+|new)\b|((?:[\w.-]+\/[\
 export const normItem = (t) => t.replace(/^m(?=\d)/, 'M').replace(/^new$/i, 'new')
 const itemTok = (p) => { const m = p.match(ITEM_REF); return m ? normItem(m[2] ?? m[1]) : null }
 const line = (re) => (plain) => re.test(plain)
+// #729 (a): an Item line with text but no `#n`, `M<n>` or `new` and no `<` placeholder is plain words (`Item: Setup vs SOTA audit`): the thread works as `Item: new` and says so,
+// no coordinator round. `PLAN.json item 29` is a half-written `M29` and stays a fault that names the form, so the #605 open-item check keeps its token.
+const itemFreeText = (p) => /^[ \t>-]*Item:[ \t]*[^<\s][^<\n]*$/im.test(p) && !ITEM_REF.test(p) && !/^[ \t>-]*Item:[^\n]*\bitem[ \t]*\d/im.test(p)
 // The target of a look, scene or asset: a file in an approval/ folder (reference/ for motion), bare or inside a Markdown link. Only a Programmer may say
 // `n/a <why>` (10+ characters), which also drops the Source line; an Animator or Character TD with a real sheet has no n/a (owner 2026-11-16).
 export const TARGET_FILE = /^[ \t>-]*Target image:[ \t]*[^<\n]*(?<![\w-])(?:approval|reference)[\\/][^\s<>()]*\.(?:png|jpe?g|webp|gif|pdf|mp4|webm)(?=[\s),;]|\.?\s|\.?$)/im
@@ -513,7 +516,7 @@ export const TARGET_NA = /^[ \t>-]*Target image:[ \t]*n\/a[ \t]+\S[^\n]{9,}$/im
 const targetNa = (plain) => /^[ \t>-]*Role:[ \t]*Programmer\b/im.test(plain) && TARGET_NA.test(plain)
 const sizeCls = (plain) => (small(plain) ? 'recoverable' : 'judgment')
 export const BRIEF_FIELDS = [
-  { key: 'Item', name: 'Item: (#n of its issue, M<n> from PLAN.json, or new)', tpl: 'Item: <issue #n, M<n> or new>', ok: line(ITEM_REF), clean: (p) => /^[ \t>-]*Item:[ \t]*(?:issue )?(M\d+|new|(?:[\w.-]+\/[\w.-]+)?#\d+)[ \t]*$/m.test(p.replace(/^([ \t>-]*)item:/gim, '$1Item:')), cls: sizeCls, fill: (p) => `Item: ${itemTok(p) ?? 'new'}` },
+  { key: 'Item', name: 'Item: (#n of its issue, M<n> from PLAN.json, or new)', tpl: 'Item: <issue #n, M<n> or new>', ok: line(ITEM_REF), clean: (p) => /^[ \t>-]*Item:[ \t]*(?:issue )?(M\d+|new|(?:[\w.-]+\/[\w.-]+)?#\d+)[ \t]*$/m.test(p.replace(/^([ \t>-]*)item:/gim, '$1Item:')), cls: (p) => (itemFreeText(p) ? 'derived' : sizeCls(p)), fill: (p) => `Item: ${itemTok(p) ?? 'new'}` },
   { key: 'Plan', name: 'Plan: (the plan file or card this thread builds)', tpl: 'Plan: <plan file or card it builds>', ok: line(/^[ \t>-]*Plan:[ \t]*[^<\s]/im), cls: sizeCls, fill: () => 'Plan: n/a, size S' },
   { key: 'Acceptance', name: 'Acceptance: (what counts as accepted)', tpl: 'Acceptance: <what counts as accepted>', ok: line(/^[ \t>-]*Acceptance:[ \t]*[^<\s]/im), cls: sizeCls, fill: () => 'Acceptance: propose one from the task, say so in your first checklist line' },
   { key: 'Model', name: 'Model:', tpl: 'Model: <model id of the role\'s Roster row>', ok: line(/^[ \t>-]*Model:[ \t]*[^<\s]/im), cls: () => 'derived', fill: () => 'Model: the model this thread runs on' },
@@ -534,7 +537,7 @@ export const BRIEF_FIELDS = [
   { key: 'Scene docs', name: 'Scene docs: (the scene docs the project\'s CLAUDE.md lists, read on the laptop before planning)', tpl: 'Scene docs: <the scene docs the project\'s CLAUDE.md lists, read on the laptop before planning, and the old scene the plan copies; laptop offline means stop and report>', applies: (p) => /^[ \t>-]*Role:[ \t]*Animator\b/im.test(p), ok: line(/^[ \t>-]*Scene docs:[ \t]*[^<\s]/im), cls: () => 'recoverable', fill: () => 'Scene docs: read the scene docs the project\'s CLAUDE.md lists on the laptop before planning, name the old scene the plan copies; laptop offline means stop and report, never plan without them' },
   // vacation-game 2026-11-15 (yskills): levels went to build without a teardown, a level plan or design proposals. A level brief in the game kit names the
   // files of the steps before it (docs/TEAMS.md, A level): the Planner the Researcher's page, the Game Designer that page and the plan, a builder all three.
-  { key: 'Level', name: 'Level: research <page> · plan <file> · design <file> (a level brief in the game kit, docs/TEAMS.md A level)', tpl: 'Level: research <page> · plan <file> · design <file>, or `n/a <why no new or reworked level>`; game kit builder and designer briefs', applies: needsLevel, ok: levelOk, cls: () => 'judgment' },
+  { key: 'Level', name: 'Level: research <page> · plan <file> · design <file> (a level brief in the game kit, docs/TEAMS.md A level)', tpl: 'Level: research <page> · plan <file> · design <file>, or `n/a <why no new or reworked level>` (n/a only as the whole line, never inside one step); game kit builder and designer briefs', applies: needsLevel, ok: levelOk, cls: () => 'judgment' },
   { key: 'Researcher', name: 'Researcher: (the task asks for research)', tpl: 'Researcher: <subagent and model, or the Researcher thread; research tasks only>', applies: (p) => ASKS_RESEARCH.test(p) && !/\bRole:[ \t]*Researcher\b/i.test(p), ok: line(/^[ \t>-]*Researcher:[ \t]*[^<\s]/im), cls: () => 'recoverable', fill: () => 'Researcher: ask the coordinator for a Researcher thread (message_coordinator) and go on meanwhile' },
   { key: 'Tester', strict: false, tpl: 'Tester: <Tester thread; size L Programmer only>', applies: (p) => /^[ \t>-]*Role:[ \t]*Programmer\b/im.test(p), ok: (p) => !needsTester(p), cls: () => 'judgment' },
 ]
@@ -1434,8 +1437,8 @@ cat > "$HOME/.claude/claude-setup/card-render.mjs" <<'CARD'
 #!/usr/bin/env node
 // Renders the project chat's folder (card, index, roster, briefs/, tools/brief-check/) from docs/ and BRIEF_FIELDS; rule-guard calls refreshCard().
 import { createHash, randomBytes } from 'node:crypto'
-import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { appendFileSync, existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
 import { BRIEF_FIELDS, CHECKLISTS, GATE_BUILDER_ROLES, GUARD_FILES, badRole, badTeam, coordinatorCard, kitNames, kitRows, rosterNames } from './team-guard.mjs'
 import { GATE_ROLES, roleOf } from './rule-guard.mjs'
 
@@ -1717,6 +1720,16 @@ export function logStart(info, out = projectFolder(), now = new Date()) {
     return null
   }
 }
+// #729 (c): one line per guard decision (a refusal or a cap), appended to `guard-log/<date>-<session>.jsonl` beside the start logs. Never stops a call.
+export function logDecision(entry, out = projectFolder(), now = new Date()) {
+  try {
+    if (!out || !isRealSession(entry?.session)) return null
+    const file = join(out, 'guard-log', `${now.toISOString().slice(0, 10)}-${String(entry.session).replace(/\W/g, '').slice(0, 40)}.jsonl`)
+    mkdirSync(dirname(file), { recursive: true })
+    appendFileSync(file, `${JSON.stringify(entry)}\n`)
+    return file
+  } catch { return null }
+}
 // A later relay on a refused start is added to the same file (`lifted` once a relay brings the thread to work).
 export function noteRelay(session, lifted, out = projectFolder()) {
   try {
@@ -1765,7 +1778,7 @@ cat > "$HOME/.claude/claude-setup/rule-guard.mjs" <<'RULE'
 
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { existsSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
+import { appendFileSync, existsSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
 import { isIP } from 'node:net'
 import { homedir, tmpdir } from 'node:os'
 import { dirname, join, relative } from 'node:path'
@@ -2629,7 +2642,7 @@ const BLENDER_EXE = String.raw`(?:"[^"\n]*[\\/]blender(?:\.exe)?"|'[^'\n]*[\\/]b
 const BLENDER_RUN = new RegExp(String.raw`(?:^|[;&|(\n\x60]|\s--\s|\b(?:then|do|else|exec|nohup|start|time|xargs|Start-Process(?:\s+-FilePath)?|timeout\s+\S+)\s)\s*(?:&\s*)?${BLENDER_EXE}(?=\s|$)`, 'i')
 const HEADLESS = /(?:^|[\s'",])(?:-b|--background)(?=[\s'",]|$)/
 const BL_SERVER_PROC = /blender(?:\.exe)?["']?\s.*bl_server\.py/i
-export const BLENDER_DOCS = [['projects/games/companyxy/ch01/NACHT-FIX-PLAN.md (cloud: /mnt/project-files/NACHT-FIX-PLAN.md)', /NACHT-FIX-PLAN\.md$/i], ['claude-setup/.claude/skills/operator/roles/animator.md (Fast loop)', /operator[\\/]roles[\\/]animator\.md$/i]]
+export const BLENDER_DOCS = [['claude-setup/.claude/skills/operator/roles/animator.md (Fast loop)', /operator[\\/]roles[\\/]animator\.md$/i]]
 const shellCommand = (tool, input) => (/^(Bash|PowerShell)$/.test(tool) ? String(input.command ?? '') : '')
 export const blenderStart = (command) => BLENDER_RUN.exec(command)
 export function blenderCall(tool, input = {}) {
@@ -2981,6 +2994,35 @@ function neverPushBlock(tool, input, cwd) {
   return hit.length ? `rule-guard: neverPush: ${hit.join(', ')} never goes to GitHub (a Private18 folder, nacht-*.rpy, kontakt_sex* or a .neverpush prefix); leave it out of the push.` : null
 }
 
+// #729 (c): every refusing check of the pre hook has an id and a kind. FORM = a rule about how a call or text is shaped (it heals or caps: the same form check that refused
+// twice in a session passes the third time, logged `cap`, so a form fault never costs more than two rounds). SAFETY = secrets, 18+ push, ask-first, the brief lock (judgment gaps and model tier),
+// the role hands-off, the gate round ledger, Blender slot and runner: unlimited, never capped. Each refusal and each cap writes one line (id, kind, outcome) to the session's own log.
+export const GUARD_CHECKS = {
+  lock: 'safety', neverpush: 'safety', 'hands-off': 'safety', gate: 'safety', decide: 'safety',
+  'plan-item-open': 'form', receipt: 'form', 'propose-skills': 'safety', 'opens-window': 'safety', 'archivist-files': 'safety',
+  kaomoji: 'form', 'dupe-check': 'form', 'blender-busy': 'safety', 'blender-docs': 'form', 'blender-runner': 'safety', grill: 'form',
+}
+const GUARD_CAP = 2
+const guardLogFile = (session) => join(tmpdir(), `claude-setup-guardlog-${String(session).replace(/\W/g, '')}.jsonl`)
+export const readGuardLog = (session) => read(guardLogFile(session)).split('\n').filter(Boolean).flatMap((l) => { try { return [JSON.parse(l)] } catch { return [] } })
+async function logGuard(session, id, outcome) {
+  const entry = { at: new Date().toISOString(), session: String(session), id, kind: GUARD_CHECKS[id], outcome }
+  try { appendFileSync(guardLogFile(session), `${JSON.stringify(entry)}\n`) } catch { /* a log must never stop a call */ }
+  try { (await import(new URL('./card-render.mjs', import.meta.url))).logDecision(entry) } catch { /* same */ }
+}
+// steps: [[id, () => block text | null]...], run in order, lazily; the first refusal wins. A form check past its cap passes and the chain goes on.
+export async function runChecks(steps, { session } = {}) {
+  for (const [id, fn] of steps) {
+    const text = await fn()
+    if (!text) continue
+    if (!session) return text
+    if (GUARD_CHECKS[id] === 'form' && readGuardLog(session).filter((l) => l.id === id && l.outcome === 'block').length >= GUARD_CAP) { await logGuard(session, id, 'cap'); continue }
+    await logGuard(session, id, 'block')
+    return text
+  }
+  return null
+}
+
 if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/').split('/').pop())) {
   const mode = process.argv[2]
   if (mode === 'neverpush') {
@@ -3051,22 +3093,25 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
         if (session && existsSync(lockFile(session))) rebriefNote = '' // the lock note is in the lock block's own text; only a lifted lock is news
         // S2 (#543): a thread's post_message renders the open plan issues for the coordinator, who has no hooks and no GitHub tool. Never blocks.
         if (tool === 'mcp__hearthbot__post_message') { try { (await import(new URL('./card-render.mjs', import.meta.url))).refreshIssues(() => planIssues(cwd)) } catch { /* same */ } }
-        let block = lockBlock(tool, session)
-          ?? neverPushBlock(tool, input ?? {}, cwd)
-          ?? handsOff(tool, input ?? {}, gateRole, setupRoot(cwd))
-          ?? (await gateBlock(tool, input ?? {}, transcript, sessionModel(transcript()), true, gateRole, transcriptPath))
-          ?? decide(tool, input ?? {}, process.env, session ? read(shipped).split('\n') : [], () => threadBoard(toolCalls(transcript())))
-          ?? planItemOpen(tool, input ?? {}, session, transcript, cwd)
-          ?? await receiptBlock(tool, input ?? {}, session, cwd, agentId, transcript)
-          ?? proposeSkillsBlocked(tool)
-          ?? opensWindow(tool, input ?? {})
-          ?? archivistFiles(tool, input ?? {}, session ? read(join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)) : '')
-          ?? kaomojiMissing(tool, input ?? {})
-          ?? dupeCheckMissing(tool, input ?? {}, sessionTranscript)
-          ?? blenderServerBusy(tool, input ?? {}, listProcs)
-          ?? blenderDocsMissing(tool, input ?? {}, sessionTranscript)
-          ?? blenderOutsideRunner(tool, input ?? {})
-          ?? (grillMissing(tool, input ?? {}, transcript) ? 'rule-guard: a Planner at size M or L grills first (operator SKILL.md, Grill first): post the real-moment question (when it comes from his life) and up to 2 request_decision cards (goal, taste), each with your recommended answer, then write the plan on the answers (or the recommendations while he is away).' : null)
+        const grill = () => (grillMissing(tool, input ?? {}, transcript) ? 'rule-guard: a Planner at size M or L grills first (operator SKILL.md, Grill first): post the real-moment question (when it comes from his life) and up to 2 request_decision cards (goal, taste), each with your recommended answer, then write the plan on the answers (or the recommendations while he is away).' : null)
+        let block = await runChecks([
+          ['lock', () => lockBlock(tool, session)],
+          ['neverpush', () => neverPushBlock(tool, input ?? {}, cwd)],
+          ['hands-off', () => handsOff(tool, input ?? {}, gateRole, setupRoot(cwd))],
+          ['gate', () => gateBlock(tool, input ?? {}, transcript, sessionModel(transcript()), true, gateRole, transcriptPath)],
+          ['decide', () => decide(tool, input ?? {}, process.env, session ? read(shipped).split('\n') : [], () => threadBoard(toolCalls(transcript())))],
+          ['plan-item-open', () => planItemOpen(tool, input ?? {}, session, transcript, cwd)],
+          ['receipt', () => receiptBlock(tool, input ?? {}, session, cwd, agentId, transcript)],
+          ['propose-skills', () => proposeSkillsBlocked(tool)],
+          ['opens-window', () => opensWindow(tool, input ?? {})],
+          ['archivist-files', () => archivistFiles(tool, input ?? {}, session ? read(join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)) : '')],
+          ['kaomoji', () => kaomojiMissing(tool, input ?? {})],
+          ['dupe-check', () => dupeCheckMissing(tool, input ?? {}, sessionTranscript)],
+          ['blender-busy', () => blenderServerBusy(tool, input ?? {}, listProcs)],
+          ['blender-docs', () => blenderDocsMissing(tool, input ?? {}, sessionTranscript)],
+          ['blender-runner', () => blenderOutsideRunner(tool, input ?? {})],
+          ['grill', grill],
+        ], { session })
         if (!block) block = await gateBlock(tool, input ?? {}, transcript, sessionModel(transcript()), false, gateRole, transcriptPath) // commit the round only now: no other guard refused the post
         if (!block && session && tool === 'Artifact' && input?.url && input.file_path) writeFileSync(shipped, `${input.file_path}\n`, { flag: 'a' })
         if (block) { process.stderr.write([block, rebriefNote, startNote].filter(Boolean).join('\n')); process.exitCode = 2 }
