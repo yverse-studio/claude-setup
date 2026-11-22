@@ -10,7 +10,7 @@ import { budgetFiles } from './rule-budget.mjs'
 export const TOPICS = {
   gateModel: { home: 'docs/TEAMS.md', re: /\b(Fable|Opus|Sonnet|Haiku)\b[^.|]{0,40}\b(gates?|gated|reviews?|reviewers?|verdict)\b|\b(gate|review|reviewer|verdict)\b[^.|]{0,25}\b(is|on|runs on)\s+(Fable|Opus|Sonnet|Haiku)\b/i },
   whoMerges: { home: '.claude/skills/operator/gate.md', re: /\b(gate|author thread|gate thread|reviewer|tester|builder|programmer|lead|coordinator)\b[^.|]{0,30}\bmerges?\b|\b(don'?t|never|cannot|does not)\s+merge\b/i },
-  gateWhere: { home: 'docs/TEAMS.md', re: /\b(author thread|gate thread)\b[^.|]{0,60}\b(size|S and M|S, M|L)\b|\b(size [SML]|S and M|S, M)\b[^.|]{0,60}\b(author thread|gate thread)\b/ },
+  gateWhere: { home: '.claude/skills/operator/gate.md', re: /\b(author thread|gate thread)\b[^.|]{0,60}\b(size|S and M|S, M|L)\b|\b(size [SML]|S and M|S, M)\b[^.|]{0,60}\b(author thread|gate thread)\b/ },
   threadCount: { home: 'docs/TEAMS.md', re: /\b(max(imum)?|at most|never more than|no more than)\s+(one|two|three|\d)\b[^.|]{0,30}\b(threads?|programmers?|builders?)\b|\bone build thread\b/i },
 }
 

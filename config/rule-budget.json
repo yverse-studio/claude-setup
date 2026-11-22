@@ -13,7 +13,7 @@
     "docs/WORKFLOW.md": 8,
     "docs/base-delta.md": 5,
     "docs/character-creator.md": 5,
-    "docs/character-workflow.md": 10,
+    "docs/character-workflow.md": 9,
     "docs/clothing-pipeline.md": 10,
     "docs/game-in-an-hour.md": 8,
     "docs/game-pipeline-template.md": 11,
@@ -67,7 +67,7 @@
     "docs/WORKFLOW.md": 18,
     "docs/base-delta.md": 10,
     "docs/character-creator.md": 14,
-    "docs/character-workflow.md": 25,
+    "docs/character-workflow.md": 26,
     "docs/clothing-pipeline.md": 25,
     "docs/game-in-an-hour.md": 22,
     "docs/game-pipeline-template.md": 23,
@@ -118,27 +118,32 @@
     ".claude/skills/operator/roles/tester.md": 13,
     ".claude/skills/operator/run.md": 15
   },
-  "topics": {
-    ".claude/skills/operator/SKILL.md": 1,
-    ".claude/skills/operator/gate.md": 4,
-    ".claude/skills/operator/roles/character-td.md": 1,
-    ".claude/skills/operator/roles/programmer.md": 1,
-    ".claude/skills/operator/roles/tester.md": 1,
-    ".claude/skills/operator/run.md": 6,
-    "docs/LOOP.md": 1,
-    "docs/USING.md": 2,
-    "docs/WORKFLOW.md": 4,
-    "docs/character-workflow.md": 1,
-    "docs/game-pipeline.md": 1,
-    "docs/hq-rows.md": 1,
-    "docs/luna2-handoff.md": 1,
-    "global/gate-rounds.mjs": 1
-  },
+  "topics": {},
   "topicAllow": [
     {
       "file": ".claude/skills/operator/roles/animator.md",
       "starts": "One scene or one position per thread; at most one thread writes",
       "reason": "a rig or .blend has one writer; a file-level lock, not the thread cap"
+    },
+    {
+      "file": "docs/hq-rows.md",
+      "starts": "\"nach dem Gate-Merge\"), `link` = the PR or thread, `sessions[]` = the",
+      "reason": "a field example of the HQ row format, not a rule"
+    },
+    {
+      "file": ".claude/skills/operator/roles/character-td.md",
+      "starts": "One asset or one character part per thread; at most one thread writes the same",
+      "reason": "a rig or .blend has one writer; a file-level lock, not the thread cap"
+    },
+    {
+      "file": "global/gate-rounds.mjs",
+      "starts": "if (!dry) writeLedger(dir, recordRound(l, { ...head, round })) return null }",
+      "reason": "a code comment inside a string literal, not rule text"
+    },
+    {
+      "file": "docs/TEAMS.md",
+      "starts": "Tester ([`tester.md`](../.claude/skills/operator/roles/tester.md)) | QA: the gate, grades",
+      "reason": "the role table in TEAMS.md states the Tester's size split; TEAMS.md is the home of sizes (gateWhere moved to gate.md)"
     }
   ]
 }
