@@ -806,6 +806,27 @@ test('#742: team-guard refresh downloads the Roster playbooks and gate.md named 
   } finally { process.env.PATH = old; for (const d of [dir, bin]) rmSync(d, { recursive: true, force: true }) }
 })
 
+// #742 gate round 2: three downloads with 2.5 + 1.5 + 1.5 s max times (plus curl's 0.5 s grace each) did not fit the 5 s SessionStart hook; they share one budget.
+test('#742: team-guard refresh stays under the 5 s hook limit when every download hangs until its max time', async () => {
+  if (process.platform === 'win32') return
+  const dir = mkdtempSync(join(tmpdir(), 'p742slow-'))
+  const bin = mkdtempSync(join(tmpdir(), 'p742sleep-'))
+  const old = process.env.PATH
+  try {
+    mkdirSync(join(dir, 'docs'), { recursive: true })
+    cpSync(join(root, 'docs/TEAMS.md'), join(dir, 'docs/TEAMS.md')) // the role download has a list to ask for
+    // every call sleeps to its --max-time, then fails like a curl that ran out of time (exit 28)
+    writeFileSync(join(bin, 'curl'), '#!/bin/sh\nwhile [ $# -gt 0 ]; do [ "$1" = "--max-time" ] && t="$2"; shift; done\nsleep "${t:-5}"\nexit 28\n', { mode: 0o755 })
+    process.env.PATH = `${bin}:${old}`
+    const { refresh, REFRESH_BUDGET_MS } = await import(`${pathToFileURL(join(root, 'global/team-guard.mjs')).href}?p742slow`)
+    const t0 = Date.now()
+    refresh(dir)
+    const took = Date.now() - t0
+    assert.ok(REFRESH_BUDGET_MS <= 4500, 'the budget leaves room inside 5 s')
+    assert.ok(took < 4700, `refresh took ${took} ms with every download hanging; the hook limit is 5000`)
+  } finally { process.env.PATH = old; for (const d of [dir, bin]) rmSync(d, { recursive: true, force: true }) }
+})
+
 // Plan M47: a thread's start proof names the guard version and any missing guard file.
 test('team guard: the version line names the guards in force and the ones missing', async () => {
   const { guardVersion, GUARD_FILES } = await import('../global/team-guard.mjs')

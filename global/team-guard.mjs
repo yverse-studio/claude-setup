@@ -70,12 +70,19 @@ const guardUrl = (f) => (GUARD_FILES.includes(f) || f === PREPUSH ? `${RAW}globa
 // The playbooks the Roster of the boot copy's TEAMS.md links, plus gate.md.
 const ROLE_LINK = /\]\(\.\.\/(\.claude\/skills\/[a-z0-9-]+\/roles\/[a-z0-9-]+\.md)\)/g
 export const roleFiles = (dir) => [...new Set([...text(join(dir, 'docs', 'TEAMS.md')).matchAll(ROLE_LINK)].map((m) => m[1]).filter((f) => !BOOT_FILES.includes(f))), GATE_FILE]
+// One shared budget for the three downloads (the SessionStart hook is killed at 5 s; 2.5 + 1.5 + 1.5 s of max times plus curl's 0.5 s grace each was 6.5 s): each gets what is left
+// minus its own grace, at most its cap, and a download that has under 0.3 s left is skipped (the next start tries again).
+export const REFRESH_BUDGET_MS = 4200
+const GRACE_MS = 500
 export function refresh(dir, only = null) {
+  const t0 = Date.now()
+  const left = (cap) => Math.min(cap, (REFRESH_BUDGET_MS - (Date.now() - t0) - GRACE_MS) / 1000)
+  const get = (files, url, cap, parallel) => { const seconds = left(cap); return seconds < 0.3 ? [] : fetchAll(dir, files, url, Math.round(seconds * 10) / 10, parallel) }
   const guards = GUARD_FILES.filter((f) => !only || only.includes(f)) // a guard missing on disk is fetched too: an image pasted before a guard existed never had it (2026-11-12)
-  const boot = only ? [] : fetchAll(dir, BOOT_FILES, (f) => RAW + f, 2.5)
-  if (boot.length) install(dir, boot) // TEAMS.md first: it names the playbooks of the second download
-  const roles = only ? [] : fetchAll(dir, roleFiles(dir), (f) => RAW + f, 1.5, true)
-  install(dir, [...roles, ...fetchAll(dir, [...guards, ...(only ? [] : [PREPUSH])], guardUrl, 1.5)])
+  const boot = only ? [] : get(BOOT_FILES, (f) => RAW + f, 2.5)
+  if (boot.length) install(dir, boot) // TEAMS.md first: it names the playbooks of the last download
+  const fresh = get([...guards, ...(only ? [] : [PREPUSH])], guardUrl, 1.5)
+  install(dir, [...fresh, ...(only ? [] : get(roleFiles(dir), (f) => RAW + f, 1.5, true))])
 }
 function install(dir, fetched) {
   for (const { f, tmp, got, ok } of fetched) {
