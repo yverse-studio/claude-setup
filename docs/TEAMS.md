@@ -89,10 +89,10 @@ Programmer start without it. The `setup` kit has no app to walk: its line says
 
 One loop for every project; each line links the home of its rule and repeats none of it.
 
-1. yskills starts a project and states a task ([`USING.md`](USING.md#start-a-project), Start a project).
-2. The coordinator routes it: the task picks the kit ([Kits](#kits)), then the size ([Sizes](#sizes)), and starts the threads that size names, each with its brief ([Spawn rule](#spawn-rule)).
+1. yskills starts a project with one line ([`USING.md`](USING.md#start-a-project), Start a project).
+2. The coordinator routes every task on its own: the task picks the kit ([Kits](#kits)), then the size ([Sizes](#sizes)), and starts the threads that size names, each with its brief ([Spawn rule](#spawn-rule)).
 3. Size S: one builder thread builds it ([Who builds and who judges](#spawn-rule)).
-4. Sizes M and L: a lead thread plans and hands the parts to builder subagents; the coordinator names the lead's tier in the brief's `Model:` line ([Models line](#spawn-rule)).
+4. Sizes M and L: a lead thread plans and hands the parts to builder subagents; the coordinator names the lead's tier in the brief's `Model:` line ([Who builds and who judges, Models line](#spawn-rule)).
 5. Someone who did not build it gives the verdict ([`gate.md`](../.claude/skills/operator/gate.md), Gate size).
 6. On a pass the PR merges without yskills, and the merge is the deploy ([`gate.md`](../.claude/skills/operator/gate.md), Merge policy).
 7. When a thread is reused and when a second one starts: [Reuse rule](#reuse-rule) (the cap on parallel Programmers).
