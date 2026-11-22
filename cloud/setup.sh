@@ -1471,7 +1471,6 @@ const today = () => new Date().toISOString().slice(0, 10)
 const PREFLIGHT = `## Before every reply
 
 - How we work, one loop: every thread has a role from the Roster (only a mini or unclear task has \`Role: none\`); the role loads its playbook, skills and workflows from claude-setup; what it lacks a Researcher finds; what holds for every project goes back to claude-setup. a brief with no Role line, an unknown role or an unknown kit starts a thread that locks itself (no work until a corrected brief arrives); rule-guard's start receipt shows the role loaded and ends with \`card #<hash>\`: another hash than this card's header means Read this card again.
-- Downloads/assets: Character TD runs \`asset-intake\`; Archivist indexes after the gate.
 - Luna: at most 15 lines / 1,500 characters, at least one kaomoji, result first, in his language.
 - Facts (code, PR, device, model, plan) only from a source read this turn and linked: ISSUES.md, PLAN.json, NOW.md, list_threads, a thread's last reply. None in reach: "prüfe ich", ask the owning thread; silent for a thread until it answered; a dropped device is one line the same turn.
 - Every start_thread passes \`model\` and a brief copied from briefs/<role>.md (section Thread brief). Before a message_thread with work: same role and topic as the thread's title, thread not done; else a new thread. Folder moves and cleanups never go to a builder.
@@ -1479,11 +1478,12 @@ const PREFLIGHT = `## Before every reply
 - Every ask or pointer carries its clickable link ([title](#cmsg_…), URL, [Project settings](#project-settings/resources)); every ask of yskills gets a thread, a PR or a \`Done:\` line the same turn; a skill idea is a PR (\`new-skill\`), never a propose_skills card.
 - A PR whose \`Depends on: #n\` is parked or blocked: one chat line the same turn naming both PRs and the fix.
 - Ask yskills only the real moment (a level from his life), goal, taste and the ask-first list; build details, process and order you decide. Levels: Researcher, Planner, Game Designer, build.
-- Hard round counter: 3 rounds at 4.5 (4.8 important), 4-6 Fable director, 7+ a card; no merge below, you release none; no post per review round; a PASS needs no OK. 3 failed rounds on one asset: re-plan. A gate round's brief has the Round, Asset and Picture card lines (briefs/reviewer.md). Controls and World life first.
+- Hard round counter: 3 rounds at 4.5 (4.8 important), 4-6 Fable director, 7+ a card; no merge below, you release none; no post per review round; a PASS needs no OK. 3 failed rounds on one asset: re-plan. Picture card, Controls and World life first.
 - A new rule is a PR to claude-setup, never only a Project settings edit.
+- A builder between plan gate and build gate is left alone: no relay, no resolve, no status post; one post per gate verdict.
 - A summary of this chat (compaction) starts with the line: "read COORDINATOR-CARD.md again, reopen with the header".
 - A second fresh thread for one asset is a quality-loss trigger: send the handoff files to the Planner for a diagnosis first, the handoff carries the round and every approach tried, and the restart is not posted (docs/WORKFLOW.md, Handoff triggers).
-- Plan: read ISSUES.md in the claude-setup folder next to this card before every reply (/mnt/project-files/PLAN.json: an offline project's plan); you never write it; a new ask is a thread with \`Item: new\`, which opens the issue. Then write_custom_view. First reply: \`Luna · card <hash> · plan <done>/<all> · board <n> open\` (plan: the Plan count line of ISSUES.md, or x/y of plan.mjs stand; board: threads of list_threads that are working, blocked or review_ready). "Stand?": goal, x/y done, doing, waits on him, next 3. Ping only when he must act, rate, or a part is Done (link).
+- Plan: read ISSUES.md next to this card before every reply (/mnt/project-files/PLAN.json: an offline project's plan); you never write it; a new ask is a thread with \`Item: new\`. Then write_custom_view. First reply: \`Luna · card <hash> · plan <done>/<all> · board <n> open\` (plan: the Plan count line of ISSUES.md, or x/y of plan.mjs stand; board: threads of list_threads that are working, blocked or review_ready). "Stand?": goal, x/y done, doing, waits on him, next 3. Ping only when he must act, rate, or a part is Done (link).
 - Project instructions lack the line "Read /mnt/project-files/claude-setup/COORDINATOR-CARD.md first": call update_project_settings once, PREPEND operator/templates/project-instructions.md filled in, keep every existing line, say so in one line.`
 
 export function ruleRows(map) {
@@ -1502,14 +1502,14 @@ export function compact(full) {
   const part = (from, to) => { const a = full.indexOf(from); const b = to ? full.indexOf(to, a + 1) : full.length; return a < 0 ? '' : full.slice(a, b < 0 ? undefined : b).trim() }
   const modelsLine = (part('## Spawn rule', '## Sizes').match(/\nModels:.*/) ?? [''])[0]
   const ids = [...modelsLine.matchAll(/(Fable|Opus|Sonnet|Haiku) \((claude-[\w.-]+)\)/g)].map((m) => `${m[1]} ${m[2]}`).join(', ')
-  const sizes = part('## Sizes', '## Roster').split('\n').filter((l) => /^\| [SML] \|/.test(l)).map((l) => { const c = cells(l); return `- ${c[1]}: ${clip(flat(c[2]), 70)}; threads: ${clip(flat(c[3]), 60)}` })
-  const roster = part('## Roster', '## Kits').split('\n').filter((l) => l.startsWith('- ') && /thread/.test(l)).map((l) => { const [r, ...rest] = l.slice(2).split(': '); return `- ${r}: ${clip(flat(rest.join(': ')), 44)}` })
-  const kits = part('## Kits').split('\n').filter((l) => l.startsWith('- ')).map((l) => clip(flat(l), 90))
+  const sizes = part('## Sizes', '## Roster').split('\n').filter((l) => /^\| [SML] \|/.test(l)).map((l) => { const c = cells(l); return `- ${c[1]}: ${clip(flat(c[2]), 62)}; threads: ${clip(flat(c[3]), 50)}` })
+  const roster = part('## Roster', '## Kits').split('\n').filter((l) => l.startsWith('- ') && /thread/.test(l)).map((l) => { const [r, ...rest] = l.slice(2).split(': '); return `- ${r}: ${clip(flat(rest.join(": ")), 36)}` })
+  const kits = part('## Kits').split('\n').filter((l) => l.startsWith('- ')).map((l) => (flat(l).match(/^- `?([\w-]+)/) ?? [])[1]).filter(Boolean)
   // A card with an empty Sizes, Roster or Kits section would send the chat to guess (M50 slice B: a test pins this).
   for (const [name, rows] of [['Sizes', sizes], ['Roster', roster], ['Kits', kits]]) if (!rows.length) throw new Error(`coordinator card: the ${name} section of docs/TEAMS.md has no row`)
   return [
     `## Models (docs/TEAMS.md)\n\n${ids}. A model yskills names is used as named. A thread picks no Fable. Task first, then kit, then size; the thread's brief check refuses an unknown kit and a size or role that kit does not allow.`,
-    `## Sizes\n\n${sizes.join('\n')}`, `## Roster (thread roles: runs as; model; all of it in ROSTER.md)\n\n${roster.join('\n')}`, `## Kits (team at size L; roles and sizes per kit in ROSTER.md)\n\n${kits.join('\n')}`,
+    `## Sizes\n\n${sizes.join('\n')}`, `## Roster (thread roles: runs as; model; all of it in ROSTER.md)\n\n${roster.join('\n')}`, `## Kits (the team per kit, its roles and sizes: ROSTER.md)\n\n${kits.join(', ')}`,
   ].join('\n\n')
 }
 

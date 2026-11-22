@@ -7,14 +7,14 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { buildBrief } from './brief.mjs'
 import { buildIndex, buildCard, ruleRows, CARD_MAX } from './coordinator-card.mjs'
-import { BRIEF_FIELDS, rosterNames } from '../global/team-guard.mjs'
+import { BRIEF_FIELDS, kitNames, rosterNames } from '../global/team-guard.mjs'
 import { compact, projectFolder, renderAll, renderBrief, renderRoster, writeAll } from '../global/card-render.mjs'
 
 test('the card builds, stays under CARD_MAX characters and has its parts', () => {
   const card = buildCard({ hash: 'abc1234', date: '2026-11-08' })
   assert.ok(card.length < CARD_MAX, String(card.length))
   assert.match(card, /^Coordinator card \(claude-setup abc1234, 2026-11-08\)/)
-  for (const s of ['Before every reply', 'Thread brief', 'Models', 'Roster', 'Kits', 'COORDINATOR-RULES-INDEX.md', '3 failed rounds on one asset', '4-6 Fable director', 'Picture card']) assert.ok(card.includes(s), s)
+  for (const s of ['Before every reply', 'Thread brief', 'Models', 'Roster', 'Kits', 'COORDINATOR-RULES-INDEX.md', '3 failed rounds on one asset', '4-6 Fable director']) assert.ok(card.includes(s), s)
 })
 
 test('the pre-flight carries the masterplan duty (roles/project-manager.md, Masterplan)', () => {
@@ -430,4 +430,39 @@ test('#730: an upper-case UUID is a real session and its file is counted', () =>
   logStart({ session: upper, outcome: 'clean' }, out)
   assert.match(statsLine(out), /^starts 1:/)
   rmSync(out, { recursive: true, force: true })
+})
+
+// ---- #743: the card is cut by use; CARD_MAX stays 7,400 (raising it again is the pattern the audit names).
+test('#743: the card with the 7-day line is at most 6,600 characters, CARD_MAX is still 7,400, 800 stay free', () => {
+  assert.equal(CARD_MAX, 7400)
+  const line = 'Thread starts, last 7 days (as of 2026-11-22): 7, clean 0, repaired 6, refused 1, wrong-model 0 (false starts 14%).'
+  const card = buildCard({ teams, hash: 'abc12345', date: '2026-11-22', startsLine: line })
+  assert.ok(card.length <= 6600, String(card.length))
+  assert.ok(CARD_MAX - card.length >= 800, `free: ${CARD_MAX - card.length}`)
+})
+
+test('#743: the kept lines stay (spawn, models, sizes, roster, brief copy) and the cut lines are gone', () => {
+  const card = buildCard({ hash: 'x', date: 'd' })
+  for (const kept of ['Copy briefs/<role>.md of this folder', 'Nothing else is added or written from memory', '## Models', 'A thread picks no Fable', '## Sizes', '- S:', '- M:', '- L:', '## Roster', '- Programmer:', '- Reviewer:', 'Controls and World life', 'no post per review round']) assert.ok(card.includes(kept), kept)
+  for (const gone of ['Downloads/assets', "A gate round's brief has the Round, Asset and Picture card lines"]) assert.ok(!card.includes(gone), gone)
+})
+
+test('#743: Kits is one line of names, not nine clipped rows; the full team text stays in ROSTER.md', () => {
+  const card = buildCard({ teams, hash: 'x', date: 'd' })
+  const kits = card.split('## Kits')[1]
+  for (const kit of kitNames(teams)) assert.ok(kits.includes(kit), kit)
+  assert.doesNotMatch(kits, /…/, 'no clipped kit row')
+  assert.ok(kits.split('\n').filter((l) => l.startsWith('- ')).length <= 1, 'one line')
+  assert.match(kits, /ROSTER\.md/)
+})
+
+test('#743 (moved from #689): the card leaves a builder between plan gate and build gate alone, one post per gate verdict', () => {
+  const card = buildCard({ hash: 'x', date: 'd' })
+  assert.ok(card.includes('- A builder between plan gate and build gate is left alone: no relay, no resolve, no status post; one post per gate verdict.'))
+  assert.ok(card.length < CARD_MAX - 700, String(card.length))
+})
+
+test('#743 gate round 1: the download rule left the card for the index, which carries it with its homes', () => {
+  const idx = buildIndex({ hash: 'x', date: 'd' })
+  assert.match(idx, /- A download or asset in the inbox goes to a Character TD thread[^\n]*asset-intake[^\n]*Archivist indexes after the gate → [^\n]*asset-intake\/SKILL\.md[^\n]*character-td\.md/)
 })
