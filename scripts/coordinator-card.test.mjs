@@ -105,7 +105,7 @@ test('M30: the CLI writes one rendered brief file per role next to the card, and
   assert.equal(r.status, 0, r.stderr)
   const files = readdirSync(join(dir, 'briefs'))
   assert.ok(files.includes('programmer.md') && files.includes('reviewer.md') && !files.includes('project-manager.md'), files.join(', '))
-  assert.match(readFileSync(join(dir, 'briefs/programmer.md'), 'utf8'), /^# Brief file: Programmer[\s\S]*Model: claude-sonnet[\s\S]*Acceptance:/)
+  assert.match(readFileSync(join(dir, 'briefs/programmer.md'), 'utf8'), /^# Brief file: Programmer[\s\S]*size S claude-sonnet[\s\S]*Model: claude-opus[\s\S]*Acceptance:/)
   assert.ok(existsSync(join(dir, 'COORDINATOR-RULES-INDEX.md')))
   assert.match(readFileSync(join(dir, 'COORDINATOR-RULES-INDEX.md'), 'utf8'), /briefs\/<role>\.md/)
 })
@@ -432,18 +432,18 @@ test('#730: an upper-case UUID is a real session and its file is counted', () =>
   rmSync(out, { recursive: true, force: true })
 })
 
-// ---- #743: the card is cut by use; CARD_MAX stays 7,400 (raising it again is the pattern the audit names).
-test('#743: the card with the 7-day line is at most 6,600 characters, CARD_MAX is still 7,400, 800 stay free', () => {
+// ---- #743: the card is cut by use; CARD_MAX stays 7,400 (raising it again is the pattern the audit names). 2026-11-22 (#756): the who-builds paragraph of TEAMS.md rides on the card, so the free headroom bound went from 800 to 350 and the two bounds below moved with it.
+test('#743: the card with the 7-day line is at most 7,050 characters (the who-builds paragraph of TEAMS.md rides on the card, 2026-11-22), CARD_MAX is still 7,400, 350 stay free', () => {
   assert.equal(CARD_MAX, 7400)
   const line = 'Thread starts, last 7 days (as of 2026-11-22): 7, clean 0, repaired 6, refused 1, wrong-model 0 (false starts 14%).'
   const card = buildCard({ teams, hash: 'abc12345', date: '2026-11-22', startsLine: line })
-  assert.ok(card.length <= 6600, String(card.length))
-  assert.ok(CARD_MAX - card.length >= 800, `free: ${CARD_MAX - card.length}`)
+  assert.ok(card.length <= 7050, String(card.length))
+  assert.ok(CARD_MAX - card.length >= 350, `free: ${CARD_MAX - card.length}`)
 })
 
 test('#743: the kept lines stay (spawn, models, sizes, roster, brief copy) and the cut lines are gone', () => {
   const card = buildCard({ hash: 'x', date: 'd' })
-  for (const kept of ['Copy briefs/<role>.md of this folder', 'Nothing else is added or written from memory', '## Models', 'A thread picks no Fable', '## Sizes', '- S:', '- M:', '- L:', '## Roster', '- Programmer:', '- Reviewer:', 'Controls and World life', 'no post per review round']) assert.ok(card.includes(kept), kept)
+  for (const kept of ['Copy briefs/<role>.md of this folder', 'Nothing else is added or written from memory', '## Models', 'A thread picks no Fable', 'the Programmer is the lead', 'merge gate', '## Sizes', '- S:', '- M:', '- L:', '## Roster', '- Programmer:', '- Reviewer:', 'Controls and World life', 'no post per review round']) assert.ok(card.includes(kept), kept)
   for (const gone of ['Downloads/assets', "A gate round's brief has the Round, Asset and Picture card lines"]) assert.ok(!card.includes(gone), gone)
 })
 
@@ -459,10 +459,14 @@ test('#743: Kits is one line of names, not nine clipped rows; the full team text
 test('#743 (moved from #689): the card leaves a builder between plan gate and build gate alone, one post per gate verdict', () => {
   const card = buildCard({ hash: 'x', date: 'd' })
   assert.ok(card.includes('- A builder between plan gate and build gate is left alone: no relay, no resolve, no status post; one post per gate verdict.'))
-  assert.ok(card.length < CARD_MAX - 700, String(card.length))
+  assert.ok(card.length < CARD_MAX - 350, String(card.length))
 })
 
 test('#743 gate round 1: the download rule left the card for the index, which carries it with its homes', () => {
   const idx = buildIndex({ hash: 'x', date: 'd' })
   assert.match(idx, /- A download or asset in the inbox goes to a Character TD thread[^\n]*asset-intake[^\n]*Archivist indexes after the gate → [^\n]*asset-intake\/SKILL\.md[^\n]*character-td\.md/)
+})
+
+test('#756: a TEAMS.md without the Who-builds paragraph stops the card', () => {
+  assert.throws(() => buildCard({ teams: teams.replace(/\*\*Who builds and who judges\*\*[^\n]*/, ''), hash: 'x', date: 'd' }), /Who builds and who judges/)
 })

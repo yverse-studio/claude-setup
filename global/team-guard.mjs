@@ -231,6 +231,9 @@ export function needsTester(text) {
 // The model tiers a brief's role may run on, from its Roster row: the first tier named, Fable where
 // the row names it, and a tier the row gives "on L" for a size L brief (`Sonnet; Opus on L`). A thread start whose `model` is another tier was a guess (yskills 2026-10-27); a model yskills named passes when the brief says so.
 const TIERS = ['fable', 'opus', 'sonnet', 'haiku']
+// The thread lead of a role at size M or L (docs/TEAMS.md, Spawn rule, Who builds and who judges): the Programmer leads on Opus at M and Fable at L;
+// Sonnet builds as its subagent. `hard` (the brief says Model: fable (<why>)) passes through the Fable-is-allowed rule below.
+export const LEAD_TIER = { Programmer: { M: 'opus', L: 'fable' } }
 export function wrongModel(text, model, teams) {
   const role = teams && roleOf(text, teams)
   if (!role?.row || !model || /yskills (named|asked|set|chose)/i.test(text)) return null
@@ -241,6 +244,10 @@ export function wrongModel(text, model, teams) {
   const sizeL = /\bSize:[ \t]*L\b/i.test(text.replace(/[*_`]/g, ''))
   // The first tier is the thread's own; a later one only for Fable or a size L exception ("Opus on L"), never a subagent's.
   const allowed = TIERS.filter((t, _i, all) => parts.some((p, i) => p.includes(t) && (i === 0 ? all.filter((x) => p.includes(x)).indexOf(t) === 0 : t === 'fable' || (sizeL && /\bon l\b/.test(p)))))
+  const size = text.replace(/[*_`]/g, '').match(/\bSize:[ \t]*([SML])\b/i)?.[1]?.toUpperCase()
+  // A lead at M or L is not a Sonnet thread: Sonnet there needs the written why above; Opus and Fable pass.
+  if (LEAD_TIER[role.name] && LEAD_TIER[role.name][size]) allowed.splice(0, allowed.length, 'opus', 'fable')
+  else if (LEAD_TIER[role.name] && size) allowed.splice(0, allowed.length, 'sonnet') // size S: Fable or Opus needs `Model: <tier> (<why>)`
   const tier = TIERS.find((t) => String(model).toLowerCase().includes(t))
   return allowed.length && tier && !allowed.includes(tier) ? { role: role.name, allowed, tier } : null
 }

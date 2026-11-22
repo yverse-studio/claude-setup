@@ -3,7 +3,7 @@
 import { createHash, randomBytes } from 'node:crypto'
 import { appendFileSync, existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import { BRIEF_FIELDS, CHECKLISTS, GATE_BUILDER_ROLES, GUARD_FILES, badRole, badTeam, coordinatorCard, kitNames, kitRows, rosterNames } from './team-guard.mjs'
+import { BRIEF_FIELDS, CHECKLISTS, GATE_BUILDER_ROLES, GUARD_FILES, LEAD_TIER, badRole, badTeam, coordinatorCard, kitNames, kitRows, rosterNames } from './team-guard.mjs'
 import { GATE_ROLES, roleOf } from './rule-guard.mjs'
 
 export const CARD_MAX = 7400 // 7,200 until B3 #730 (the 7-day start line, +130), 7,050 until F1 #613 (the compaction line, +116: the summary must carry the re-read order, the card itself is dropped by a compaction), 7,000 until #601 (the "root clean" proof), 6,800 until #604 (the first-reply header carries plan and board, and says what they count, +160), 6,600 until #430, 8,000 until 2026-11-12 (M27 step 6: rules a hook enforces left the card, the brief template came in)
@@ -21,7 +21,7 @@ const PREFLIGHT = `## Before every reply
 - Every ask or pointer carries its clickable link ([title](#cmsg_…), URL, [Project settings](#project-settings/resources)); every ask of yskills gets a thread, a PR or a \`Done:\` line the same turn; a skill idea is a PR (\`new-skill\`), never a propose_skills card.
 - A PR whose \`Depends on: #n\` is parked or blocked: one chat line the same turn naming both PRs and the fix.
 - Ask yskills only the real moment (a level from his life), goal, taste and the ask-first list; build details, process and order you decide. Levels: Researcher, Planner, Game Designer, build.
-- Hard round counter: 3 rounds at 4.5 (4.8 important), 4-6 Fable director, 7+ a card; no merge below, you release none; no post per review round; a PASS needs no OK. 3 failed rounds on one asset: re-plan. Picture card, Controls and World life first.
+- Hard round counter: 3 rounds at 4.5 (4.8 important), 4-6 Fable director, 7+ a card; no merge below, you release none; no post per review round; a PASS needs no OK, the gate's thread merges (gate.md, Merge policy). 3 failed rounds on one asset: re-plan. Picture card, Controls and World life first.
 - A new rule is a PR to claude-setup, never only a Project settings edit.
 - A builder between plan gate and build gate is left alone: no relay, no resolve, no status post; one post per gate verdict.
 - A summary of this chat (compaction) starts with the line: "read COORDINATOR-CARD.md again, reopen with the header".
@@ -50,8 +50,10 @@ export function compact(full) {
   const kits = part('## Kits').split('\n').filter((l) => l.startsWith('- ')).map((l) => (flat(l).match(/^- `?([\w-]+)/) ?? [])[1]).filter(Boolean)
   // A card with an empty Sizes, Roster or Kits section would send the chat to guess (M50 slice B: a test pins this).
   for (const [name, rows] of [['Sizes', sizes], ['Roster', roster], ['Kits', kits]]) if (!rows.length) throw new Error(`coordinator card: the ${name} section of docs/TEAMS.md has no row`)
+  const who = flat((part('## Spawn rule', '## Sizes').match(/\*\*Who builds and who judges\*\*[^\n]*/) ?? [''])[0]).replace(/^\*\*Who builds and who judges\*\* \([^)]*\)\. /, '')
+  if (!who) throw new Error('coordinator card: docs/TEAMS.md has no "Who builds and who judges" paragraph')
   return [
-    `## Models (docs/TEAMS.md)\n\n${ids}. A model yskills names is used as named. A thread picks no Fable. Task first, then kit, then size; the thread's brief check refuses an unknown kit and a size or role that kit does not allow.`,
+    `## Models (docs/TEAMS.md)\n\n${ids}. A model yskills names is used as named. A thread picks no Fable itself. ${who} Task first, then kit, then size; the thread's brief check refuses an unknown kit and a size or role that kit does not allow.`,
     `## Sizes\n\n${sizes.join('\n')}`, `## Roster (thread roles: runs as; model; all of it in ROSTER.md)\n\n${roster.join('\n')}`, `## Kits (the team per kit, its roles and sizes: ROSTER.md)\n\n${kits.join(', ')}`,
   ].join('\n\n')
 }
@@ -90,7 +92,7 @@ const runsAs = (row) => row.match(/Runs as: (.*?)\. Model:/)?.[1] ?? ''
 export const stub = (role, kit, size) => `Role: ${role} · Kit: ${kit} · Size: ${size}`
 // The model a thread of this role starts on at this size: the first tier its Roster row names (team-guard wrongModel).
 export const modelFor = (role, size, teams) => {
-  const tier = tierOf(roleOf(stub(role, 'setup', size), teams).row)
+  const tier = LEAD_TIER[role]?.[size] ?? tierOf(roleOf(stub(role, 'setup', size), teams).row)
   return tier ? modelIds(teams)[tier] : undefined
 }
 // The sizes a role may start on a kit: the sizes the guard accepts (a Planner never at S).
@@ -160,7 +162,7 @@ export function renderBrief(role, teams, fields = BRIEF_FIELDS) {
     else if (key === 'Gate' && !new RegExp(`^${GATE_BUILDER_ROLES}$`).test(role)) continue
     else lines.push(f.tpl)
   }
-  return `# Brief file: ${role}\n\nCopy the block, fill every <...>, delete the lines marked delete, start the thread with it as the brief, title \`${role} · <what>\` and \`model\` = the Model line (${modelFor(role, 'M', teams)} at size M). Scope, Basis and Assets live in the item (the Item: line), the thread reads them there. Sizes and kits are checked by team-guard; the block is rendered from BRIEF_FIELDS and docs/TEAMS.md (claude-setup global/card-render.mjs), never edited by hand.\n\n\`\`\`\n${lines.join('\n')}\n\`\`\`\n\nThen write the task itself under the block, in four short parts (taught, not checked):\n\n\`\`\`\n${TASK_PARTS.join('\n')}\n\`\`\`\n`
+  return `# Brief file: ${role}\n\nCopy the block, fill every <...>, delete the lines marked delete, start the thread with it as the brief, title \`${role} · <what>\` and \`model\` = the Model line (${modelFor(role, 'M', teams)} at size M${LEAD_TIER[role] ? `; size S ${modelFor(role, 'S', teams)}; size L or a hard task ${modelFor(role, 'L', teams)}, said as \`Model: <tier> (<why>)\`` : ''}). Scope, Basis and Assets live in the item (the Item: line), the thread reads them there. Sizes and kits are checked by team-guard; the block is rendered from BRIEF_FIELDS and docs/TEAMS.md (claude-setup global/card-render.mjs), never edited by hand.\n\n\`\`\`\n${lines.join('\n')}\n\`\`\`\n\nThen write the task itself under the block, in four short parts (taught, not checked):\n\n\`\`\`\n${TASK_PARTS.join('\n')}\n\`\`\`\n`
 }
 export const briefFileName = (role) => `${role.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.md`
 
