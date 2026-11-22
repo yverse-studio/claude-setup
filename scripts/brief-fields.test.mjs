@@ -310,3 +310,27 @@ test('#702: the template files carry Target image and Source and no Look-Lock li
   for (const f of ['docs/character-workflow.md', '.claude/skills/operator/roles/project-manager.md', '.claude/skills/operator/briefs.md']) assert.doesNotMatch(readFileSync(join(root, f), 'utf8'), /Look-Lock/, `${f} names no Look-Lock brief line`)
   assert.match(readFileSync(join(root, 'docs/character-workflow.md'), 'utf8'), /`Target image:` and `Source:`/)
 })
+
+// #729 (a): an Item line with text but no token is repaired to `Item: new`, never refused; a placeholder and the `PLAN.json item <n>` shape keep their refusal.
+test('Item free text: repaired to `Item: new` and counted repaired; PLAN.json item 29 and the placeholder stay faults', async () => {
+  const withItem = (item) => `Role: Programmer · Kit: setup · Size: M\n${FULL_M.replace('Item: M50', item)}`
+  const free = await check(withItem('Item: Setup vs SOTA audit + role test via real game build'))
+  assert.doesNotMatch(free, /^Brief check/, 'not refused')
+  assert.match(free, /^Brief repair[^\n]*lacks[^\n]*Item[^\n]*Item: new/, 'the thread sees `Item: new`')
+  const { startOutcome } = await import('../global/card-render.mjs')
+  assert.equal(startOutcome(free).outcome, 'repaired')
+  assert.deepEqual(startOutcome(free).reasons, ['Item'])
+  const plan = await check(withItem('Item: PLAN.json item 29'))
+  assert.match(plan, /^Brief check[\s\S]*Item is there but not in the asked form[\s\S]*Item: <issue #n, M<n> or new>/, 'it names the form')
+  assert.match(await check(withItem('Item: <issue #n, M<n> or new>')), /^Brief check[\s\S]*Item is missing/, 'the placeholder is still refused at size M')
+  for (const half of ['Item: 729', 'Item: issue 729', 'Item: PR 744', 'Item: PLAN.json 29', 'Item: Milestone 29', 'Item: m 29']) assert.match(await check(withItem(half)), /^Brief check[\s\S]*Item is there but not in the asked form/, `${half}: a reference with its sign missing is a fault, never new`)
+  assert.match(await check(withItem('Item: M50')), /^(?!Brief)/, 'a real token is untouched')
+})
+// #729 (d): `n/a` is accepted for the whole Level line only; the refusal says so.
+test('Level: n/a per segment is refused with a message that names the whole-line rule; the whole-line n/a and real files pass', async () => {
+  const lvl = (l) => `Role: Game Designer · Kit: game · Size: M\n${Object.entries(LINES).filter(([k]) => k !== 'Level').map(([, x]) => x).join('\n')}\n${l}`
+  const refused = await check(lvl('Level: research n/a (plan covers scope, role test not launch) · plan plans/kofferlauf.md'))
+  assert.match(refused, /^Brief check[\s\S]*Level is there but not in the asked form[\s\S]*n\/a only as the whole line/)
+  assert.doesNotMatch(await check(lvl('Level: n/a role test of a one-room game, no new or reworked level')), /^Brief check[^\n]*Level/)
+  assert.doesNotMatch(await check(lvl('Level: research research/a.md · plan plans/b.md')), /^Brief check[^\n]*Level/)
+})

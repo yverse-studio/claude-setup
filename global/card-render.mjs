@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // Renders the project chat's folder (card, index, roster, briefs/, tools/brief-check/) from docs/ and BRIEF_FIELDS; rule-guard calls refreshCard().
 import { createHash, randomBytes } from 'node:crypto'
-import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { appendFileSync, existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
 import { BRIEF_FIELDS, CHECKLISTS, GATE_BUILDER_ROLES, GUARD_FILES, badRole, badTeam, coordinatorCard, kitNames, kitRows, rosterNames } from './team-guard.mjs'
 import { GATE_ROLES, roleOf } from './rule-guard.mjs'
 
@@ -283,6 +283,16 @@ export function logStart(info, out = projectFolder(), now = new Date()) {
     console.error(`card-render: start log not written (${e?.code ?? 'error'}): ${String(e?.message ?? e).split('\n')[0].slice(0, 160)}`)
     return null
   }
+}
+// #729 (c): one line per guard decision (a refusal or a cap), appended to `guard-log/<date>-<session>.jsonl` beside the start logs. Never stops a call.
+export function logDecision(entry, out = projectFolder(), now = new Date()) {
+  try {
+    if (!out || !isRealSession(entry?.session)) return null
+    const file = join(out, 'guard-log', `${now.toISOString().slice(0, 10)}-${String(entry.session).replace(/\W/g, '').slice(0, 40)}.jsonl`)
+    mkdirSync(dirname(file), { recursive: true })
+    appendFileSync(file, `${JSON.stringify(entry)}\n`)
+    return file
+  } catch { return null }
 }
 // A later relay on a refused start is added to the same file (`lifted` once a relay brings the thread to work).
 export function noteRelay(session, lifted, out = projectFolder()) {
