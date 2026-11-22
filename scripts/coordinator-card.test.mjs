@@ -432,7 +432,7 @@ test('#730: an upper-case UUID is a real session and its file is counted', () =>
   rmSync(out, { recursive: true, force: true })
 })
 
-// ---- #743: the card is cut by use; CARD_MAX stays 7,400 (raising it again is the pattern the audit names).
+// ---- #743: the card is cut by use; CARD_MAX stays 7,400 (raising it again is the pattern the audit names). 2026-11-22 (#756): the who-builds paragraph of TEAMS.md rides on the card, so the free headroom bound went from 800 to 350 and the two bounds below moved with it.
 test('#743: the card with the 7-day line is at most 7,050 characters (the who-builds paragraph of TEAMS.md rides on the card, 2026-11-22), CARD_MAX is still 7,400, 350 stay free', () => {
   assert.equal(CARD_MAX, 7400)
   const line = 'Thread starts, last 7 days (as of 2026-11-22): 7, clean 0, repaired 6, refused 1, wrong-model 0 (false starts 14%).'
