@@ -1447,8 +1447,8 @@ const PREFLIGHT = `## Before every reply
 - A finished thread (done, failed, stopped, or review_ready idle 2 h with Done:/hand-off) gets set_thread_resolved or a nudge before you stop; relist when your board is 2 h old; "root clean": quote root-check.mjs OK.
 - Every ask or pointer carries its clickable link ([title](#cmsg_…), URL, [Project settings](#project-settings/resources)); every ask of yskills gets a thread, a PR or a \`Done:\` line the same turn; a skill idea is a PR (\`new-skill\`), never a propose_skills card.
 - A PR whose \`Depends on: #n\` is parked or blocked: one chat line the same turn naming both PRs and the fix.
-- Ask yskills only the real moment (a level from his life), goal, taste and the ask-first list; build details, process and order you decide, in one line. Levels: Researcher, Planner, Game Designer, build.
-- Hard round counter (hook): 3 rounds at 4.5 (4.8 important), 4-6 Fable director, 7+ a card; no merge below; you release none; a PASS needs no OK. 3 failed rounds on one asset: re-plan. A gate round's brief has the Round, Asset and Picture card lines (briefs/reviewer.md). Controls and World life first.
+- Ask yskills only the real moment (a level from his life), goal, taste and the ask-first list; build details, process and order you decide. Levels: Researcher, Planner, Game Designer, build.
+- Hard round counter: 3 rounds at 4.5 (4.8 important), 4-6 Fable director, 7+ a card; no merge below, you release none; no post per review round; a PASS needs no OK. 3 failed rounds on one asset: re-plan. A gate round's brief has the Round, Asset and Picture card lines (briefs/reviewer.md). Controls and World life first.
 - A new rule is a PR to claude-setup, never only a Project settings edit.
 - A summary of this chat (compaction) starts with the line: "read COORDINATOR-CARD.md again, reopen with the header".
 - A second fresh thread for one asset is a quality-loss trigger: send the handoff files to the Planner for a diagnosis first, the handoff carries the round and every approach tried, and the restart is not posted (docs/WORKFLOW.md, Handoff triggers).
@@ -1682,7 +1682,7 @@ export const FALSE_STARTS = ['refused', 'wrong-model', 'duplicate']
 export function startOutcome(check = '', modelCheckText = '') {
   if (/^Model check\b/.test(modelCheckText)) return { outcome: 'wrong-model', reasons: ['model'] }
   const full = [...String(check).matchAll(/\((\d+)\) (.*?)(?= \(\d+\) |\. Do no work)/g)].map((m) => m[2].trim())
-  if (/^Brief check\b/.test(check)) return { outcome: full.some((i) => /ask the coordinator to restart it on that model/.test(i)) ? 'wrong-model' : 'refused', reasons: full.map((i) => i.slice(0, 80)) }
+  if (/^Brief check\b/.test(check)) return { outcome: full.some((i) => /ask the coordinator to restart it on that model/.test(i)) ? 'wrong-model' : 'refused', reasons: full.map((i) => i.split(' (found')[0].slice(0, 80)) }
   // Any repair text counts, whatever it repairs: both notes start with `Brief repair (no block):`.
   const repair = String(check).match(/Brief repair \(no block\): ([^\n]*)/)
   if (!repair) return { outcome: 'clean', reasons: [] }
@@ -1797,6 +1797,15 @@ const DONE = /^[\s>*_]*Done:/m
 // "everything you want me to do or show with a link"). Home: docs/pc-claude-user.md (What still needs yskills' hands).
 const NEEDS_YOU = /\b(du (musst|müsstest)(?![^.!?\n]{0,30}\b(nix|nichts|nicht)\b)|musst du|kannst du (bitte |mal |kurz )*(den |die |das )?\w+ (freigeben|erlauben|bestätigen|beantworten|hochladen|schicken|öffnen|reviewen|prüfen|verbinden)|bitte (tipp|klick|antwort|schau|gib|erlaub|freigeb|bestätig|prüf|check|lad|schick|öffne|verbind|wähl|approve|review)\w*|brauch\w* (ich )?(noch )?(von dir|dein\w*)|wartet? auf dich|waiting (on|for) you|you need to|you have to|can you (please )?(approve|allow|grant|answer|review|upload|send|open|connect|pick)|please (tap|click|answer|review|approve|allow|grant|open|connect|upload|send|pick|check)|needs? your (ok|approval|answer|review|allow|go|input)|siehe (den )?pr(?![\wäöüß])|see the pr\b)/i
 const THREAD_REF = /\b(im|in( the| dem| den)?) ([\w-]+-)?thread\b(?!-)|\b[\w]+-thread\b(?!-)|\bthread\s*["„“'«]/i
+// #595: a post whose headline (first line) is a review or gate round, with its number, shows yskills a step, not a result.
+// Only a pass passes: a headline score of 4.5 or more, or a capital PASS with no score and no fail word; or the headline itself is the ask.
+const ROUND_HEAD = /^[\s>*_#]*(gate\b[^\n]{0,40}\b(round|runde)\s*\d|(gate|review|reviewer|prüf\w*)[- ]?(round|runde)\s*\d)/i
+const HEAD_SCORE = /(\d+(?:[.,]\d+)?)\s*\/\s*5\b/
+const headlinePasses = (h) => {
+  const sc = h.match(HEAD_SCORE)
+  if (sc) return Number(sc[1].replace(',', '.')) >= 4.5
+  return /\bPASS(ED)?\b/.test(h) && !/\b(no PASS|FAIL(ED)?|not passed)\b/i.test(h)
+}
 const HAS_LINK = /https?:\/\/|\]\(#/
 const NOTHING_OPEN = /\b(no blockers?|keine blocker|nothing (is )?(open|left|blocking|needed from you|needs you|waiting on you)|nichts (mehr )?(ist )?(offen|blockiert)|nothing else needs you)\b/i
 // board: the thread board, or a function that builds it; read only when a reply says nothing is open.
@@ -1804,6 +1813,8 @@ export function replyRule(text, attached = [], board = null) {
   if (ASK_ALLOW.test(text) && !ASK_FIRST.test(text)) return 'rule-guard: do not ask yskills for an Allow or a go (CLAUDE.md, Hard rules): pick the sensible default and do it; a refused call takes its fixed way around (docs/permissions.md, Layer 3). Only the ask-first items wait, and a choice is a request_decision card.'
   if ((NEEDS_YOU.test(text) || THREAD_REF.test(text)) && !HAS_LINK.test(text)) return 'rule-guard: this reply asks yskills for something or points at a thread without a link (docs/pc-claude-user.md, What still needs yskills\' hands). Give the exact place as a clickable link: a thread [title](#cmsg_…), the PR or page URL, [Project settings](#project-settings/<section>), or the connect link.'
   if (DONE.test(text) && !/https?:\/\//.test(text) && !(attached ?? []).length) return 'rule-guard: a `Done:` line carries its proof (CLAUDE.md, How to work): the live link, the merged PR link or an attached screenshot or test output. Add it, then post.'
+  const head = text.trimStart().split('\n')[0]
+  if (ROUND_HEAD.test(head) && !headlinePasses(head) && !NEEDS_YOU.test(head)) return 'rule-guard: yskills sees a gate PASS plus its report, no ping per review round (gate-loop incident row 5, #595). Keep the round on the checklist and post at the PASS, or open with the ask he must answer and its link.'
   const listed = NOTHING_OPEN.test(text) && (typeof board === 'function' ? board() : board)
   if (listed) {
     const open = [...listed.finished.filter((t) => !listed.told.has(t.id)), ...listed.blocked]
@@ -2191,13 +2202,21 @@ export async function briefCheck(prompt, cwd, model = null, any = false) {
   const own = guard.classify(brief)
   const itemHas = (k) => guard.BRIEF_FIELDS.find((f) => f.key === k)?.ok(itemPlain)
   const sorted = itemPlain ? { ...own, judgment: own.judgment.filter((f) => !(['Sheet', 'Look-Lock', 'Level'].includes(f.key) && itemHas(f.key))) } : own
-  found.push(...sorted.judgment.map((f) => `${f.key} is missing or still a <placeholder>`))
+  // #712: a line that is there but in the wrong form says what was found and which form is asked; an absent or placeholder line stays "missing".
+  const wrongForm = (f) => {
+    const got = plain.match(new RegExp(`^[ \\t>-]*${f.key.replace(/\W/g, '\\$&')}:[ \\t]*([^\\n]*)`, 'im'))
+    return got && got[1].trim() && !/<[^>\n]+>/.test(got[1]) ? `${f.key} is there but not in the asked form (found "${got[0].replace(/^[ \t>-]+/, '').trim().replace(/\((\d+)\)/g, '[$1]').replace(/\. Do no work/g, '; Do no work').slice(0, 80)}"; asked: ${f.tpl})` : `${f.key} is missing or still a <placeholder>`
+  }
+  found.push(...sorted.judgment.map(wrongForm))
   const wrong = model && guard.wrongModel(brief, model, teams)
   if (wrong) found.push(`this thread runs on ${wrong.tier}, but the ${wrong.role} runs on ${wrong.allowed.join(' or ')}: ask the coordinator to restart it on that model`)
-  if (found.length) return `Brief check (docs/TEAMS.md): this start breaks the team rules in ${found.length} place${found.length === 1 ? '' : 's'}: ${found.map((f, i) => `(${i + 1}) ${f}`).join(' ')}. Do no work: send ALL of this to the coordinator in one message (message_coordinator) together with this template for a ${role?.name ?? '<Role>'}, then stop:\n${templateFor(guard, role?.name ?? '<Role>', plain.match(/\bSize:[ \t]*([SML])\b/i)?.[1])}`
+  // #712: three or more template lines gone means the brief was not copied from briefs/<role>.md; the sentence goes last so startOutcome's reasons stay one text per field.
+  const gone = sorted.judgment.length + sorted.recoverable.length + sorted.derived.length
+  const notCopied = gone >= 3 && role?.name ? ` ${gone} of this role's template lines are missing: this brief was not copied from briefs/${role.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.md.` : ''
+  if (found.length) return `Brief check (docs/TEAMS.md): this start breaks the team rules in ${found.length} place${found.length === 1 ? '' : 's'}: ${found.map((f, i) => `(${i + 1}) ${f}`).join(' ')}. Do no work: send ALL of this to the coordinator in one message (message_coordinator) together with this template for a ${role?.name ?? '<Role>'}, then stop:\n${templateFor(guard, role?.name ?? '<Role>', plain.match(/\bSize:[ \t]*([SML])\b/i)?.[1])}${notCopied ? `\n${notCopied.trim()}` : ''}`
   // Nothing the coordinator must decide is missing: the thread closes the rest itself and says so in its first checklist line.
   const mine = [...sorted.derived, ...sorted.recoverable]
-  const notes = mine.length ? [`Brief repair (no block): the brief lacks ${mine.map((f) => f.key).join(', ')}. Work as if it read: ${mine.map((f) => f.fill).join(' | ')}. Name the repaired lines in your first checklist line.`] : []
+  const notes = mine.length ? [`Brief repair (no block): the brief lacks ${mine.map((f) => f.key).join(', ')}. Work as if it read: ${mine.map((f) => f.fill).join(' | ')}. Name the repaired lines in your first checklist line.${notCopied}`] : []
   const gate = role?.name
   if (gate && GATE_ROLES.test(gate) && !GATE_PRIOR.test(plain) && !mine.some((f) => f.key === 'Prior art')) notes.push(`Brief repair (no block): a ${gate} brief names gate.md and the kit's checks in its \`Prior art:\` line; read .claude/skills/operator/gate.md first.`)
   if (item && !item.error && /\bv([2-9]|\d\d+)\b/i.test(`${item.head.replace(/^.*?\): /, '')}\n${itemPlain.match(/^[ \t>-]*Asset:[^\n]*/im)?.[0] ?? ''}`) && !/^[ \t>-]*Basis:[ \t]*[^<\s]/im.test(itemPlain)) notes.push('Item check: this item is a version above 1 and has no `Basis:` line. Find the passed predecessor in LIVE.md, write Basis and Assets into the item, then build from those files.')
@@ -2370,8 +2389,35 @@ function filesIntoRefs(command) {
   const dest = named >= 0 ? args[named + 1] : DEST_FLAG[verb] && !/-item$|^(cp|mv)$/.test(verb) ? '' : last
   return lands(dest) && (named >= 0 || verb === 'robocopy' || plain.length < 2 || plain.slice(0, -1).some((t) => !INDEX_FILE.test(t)))
 }
+// The images yskills chose live in CH_<name>/approval/ and a cleanup never touches them (docs/character-workflow.md, Approved references).
+const APPROVAL_DIR = /(^|[\\/])approval([\\/]|$)/i
+const inSuperseded = (t) => /approval[\\/]_superseded([\\/]|$)/i.test(t) && !/\.\./.test(t)
+const GONE_VERBS = /^(rm|rmdir|del|erase|remove-item|unlink|shred|truncate)$/
+function leavesApproval(command) {
+  const words = (command.match(/"[^"]*"|'[^']*'|\S+/g) ?? []).map((t) => t.replace(/^["']|["']$/g, ''))
+  const at = /^(git|sudo)$/i.test(words[0] ?? '') ? 1 : 0
+  const verb = (words[at] ?? '').toLowerCase()
+  const args = words.slice(at + 1).filter((t) => !t.startsWith('-'))
+  if (GONE_VERBS.test(verb)) return args.some((t) => APPROVAL_DIR.test(t) && !inSuperseded(t))
+  if (/^(mv|move|move-item|mi)$/.test(verb)) {
+    const all = words.slice(at + 1)
+    const named = all.findIndex((t) => /^(-t|--target-directory(=.*)?|-destination)$/i.test(t))
+    const dest = named < 0 ? args.at(-1) ?? '' : all[named].includes('=') ? all[named].split('=')[1] : all[named + 1] ?? ''
+    const from = named < 0 ? args.slice(0, -1) : args.filter((t) => t !== dest)
+    return !inSuperseded(dest) && from.some((t) => APPROVAL_DIR.test(t) && !inSuperseded(t))
+  }
+  return false
+}
+function approvalHit(tool, input) {
+  const path = /^(Write|Edit|NotebookEdit)$/.test(tool) ? String(input.file_path ?? input.notebook_path ?? '') : ''
+  const cmd = tool === 'Bash' ? String(input.command ?? '') : ''
+  const bad = (APPROVAL_DIR.test(path) && !INDEX_FILE.test(path)) || commandsOf(cmd).some(leavesApproval)
+  return bad ? 'rule-guard: approval/ holds the images yskills chose and is off-limits to cleanup (docs/character-workflow.md, Approved references). Reading, copying out and the INDEX file are fine; a replaced choice goes to approval/_superseded/. Say it to the coordinator in one line (message_coordinator).' : null
+}
 export function archivistFiles(tool, input = {}, role = '') {
   if (String(role ?? '').trim() !== 'Archivist') return null
+  const hit = approvalHit(tool, input)
+  if (hit) return hit
   const path = /^(Write|Edit|NotebookEdit)$/.test(tool) ? String(input.file_path ?? input.notebook_path ?? '') : ''
   const cmd = tool === 'Bash' ? String(input.command ?? '') : ''
   const files = (REF_DIR.test(path) && !INDEX_FILE.test(path)) || commandsOf(cmd).some(filesIntoRefs)
@@ -2708,9 +2754,12 @@ async function relayRebrief(session, prompt, cwd, model, transcript = '') {
   await countRelay(session)
   const stamp = join(tmpdir(), `claude-setup-role-${String(session).replace(/\W/g, '')}`)
   if (existsSync(lockFile(session))) {
-    if (coordinatorRelays(transcript, origin).filter((t) => t.trim() !== prompt.trim() && BRIEF_LINE.test(t)).length < 2) return ''
+    // #712: the thread hears what is still open and in which form, and that the coordinator's answer reaches this same thread.
+    const open = sameThread(read(lockFile(session))) ? lockReasons(read(lockFile(session))) : []
+    const still = open.length ? `Correction read, lock stays: ${open.length} open: ${open.map((g, i) => `(${i + 1}) ${g}`).join(' ')}. ${LOCK_CLOSING}` : ''
+    if (coordinatorRelays(transcript, origin).filter((t) => t.trim() !== prompt.trim() && BRIEF_LINE.test(t)).length < 2) return still
     const note = 'Three relays did not lift the lock: post one card to yskills with request_decision that names the lines still missing, then stay idle; a complete relay lifts the lock at any time.'
-    if (!read(lockFile(session)).includes('request_decision')) writeFileSync(lockFile(session), `${read(lockFile(session)).slice(0, 300)}\n${note}`)
+    if (!read(lockFile(session)).includes('request_decision')) writeFileSync(lockFile(session), `${lockText(read(lockFile(session)))}\n${note}`)
     return note
   }
   const root = setupRoot(cwd)
@@ -2752,10 +2801,20 @@ async function startFromTranscript(session, transcript, cwd) {
   if (kept) writeFileSync(stamp, kept)
   return [check, card].filter(Boolean).join('\n')
 }
+// #712: the lock text runs up to the refusal's own closing words (every gap with its found line fits, no character cap); a lock the third relay rewrote has no such mark and shows whole.
+const LOCK_CLOSING = 'Send exactly these lines to the coordinator (message_coordinator), one field per line; its answer reaches this same thread by message_thread and lifts the lock. No new thread.'
+// A Brief check lock is cut at its own closing words (every gap with its found line, a wrong-model gap and its restart instruction included); a Model check and a Gate check carry their own instruction and keep the first 700 characters. Only a lock without a restart gap says "same thread".
+const sameThread = (t) => /^Brief check\b/.test(t) && !/ask the coordinator to restart it on that model/.test(t)
+const lockText = (t) => { if (!/^Brief check\b/.test(t)) return String(t).slice(0, 700); const i = String(t).indexOf('. Do no work'); return i > 0 ? t.slice(0, i) : String(t).slice(0, 2000) }
+const LOCK_OLD_CLOSING = 'Send the reason and the corrected Role, Kit and Size to the coordinator (message_coordinator) and wait for a new brief.'
+// The gaps of a brief check text, one text each (the (n) numbering of briefCheck).
+const lockReasons = (check) => /^Brief check\b/.test(check) ? [...String(check).matchAll(/\((\d+)\) (.*?)(?= \(\d+\) |\. Do no work)/g)].map((m) => m[2].trim()) : []
+// After the third relay the lock holds the card note, which is the one instruction (#712 gate, O2).
+const closingFor = (t) => (!sameThread(t) ? LOCK_OLD_CLOSING : t.includes('request_decision') ? '' : LOCK_CLOSING)
 export function lockBlock(tool, session) {
   const f = session ? lockFile(session) : ''
   if (!f || !existsSync(f) || LOCK_FREE.test(tool)) return null
-  return `rule-guard: this thread's brief breaks the team rules, so it does no work (docs/TEAMS.md, Coordinator or thread): ${read(f).slice(0, 700)}\nSend the reason and the corrected Role, Kit and Size to the coordinator (message_coordinator) and wait for a new brief.`
+  return `rule-guard: this thread's brief breaks the team rules, so it does no work (docs/TEAMS.md, Coordinator or thread): ${lockText(read(f))}${closingFor(read(f)) ? `\n${closingFor(read(f))}` : ''}`
 }
 // docs/hands-off.md: a role never writes the files another role owns.
 export function handsOff(tool, input = {}, role = '', root = '') {

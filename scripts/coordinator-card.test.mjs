@@ -229,6 +229,13 @@ test('startOutcome sorts a start into clean, repaired, refused or wrong-model, w
   assert.equal(startOutcome('', 'Model check (docs/TEAMS.md, Spawn rule 4): the brief asks for fable').outcome, 'wrong-model')
 })
 
+test('#712 G1.3: startOutcome cuts the found part, so a logged reason is one fixed text per field', () => {
+  const plain = 'Brief check (docs/TEAMS.md): this start breaks the team rules in 1 place: (1) Level is there but not in the asked form. Do no work: send ALL of this to the coordinator'
+  const withFound = 'Brief check (docs/TEAMS.md): this start breaks the team rules in 1 place: (1) Level is there but not in the asked form (found "Level: research r.md"; asked: Level: research <page> · plan <file> (x)). Do no work: send ALL of this to the coordinator\nLevel: research <page>\n3 of this role\'s template lines are missing: this brief was not copied from briefs/programmer.md.'
+  assert.deepEqual(startOutcome(withFound), startOutcome(plain))
+  assert.deepEqual(startOutcome(withFound), { outcome: 'refused', reasons: ['Level is there but not in the asked form'] })
+})
+
 test('one count line per start type: --stats over a folder with every outcome', () => {
   const out = mkdtempSync(join(tmpdir(), 'brief-log-'))
   const t = new Date('2026-11-12T10:00:00Z')
@@ -338,4 +345,8 @@ test('#602: the brief check the card prints runs from the rendered folder with a
 test('F1 #613: the card tells the compaction summary to carry the re-read order (the card itself is dropped by a compaction)', () => {
   const pre = buildCard({ hash: 'x', date: 'd' }).split('## Thread brief')[0]
   assert.match(pre, /A summary of this chat \(compaction\) starts with the line: "read COORDINATOR-CARD\.md again, reopen with the header"/)
+})
+
+test('#595: the card says no post per review round, only a PASS or an ask (advisory in the chat, a hook for threads)', () => {
+  assert.match(buildCard({ hash: 'x', date: 'd' }), /no post per review round/)
 })

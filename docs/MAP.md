@@ -119,7 +119,7 @@ added as a second repo, or a plain chat), read that file by path, then the files
 | German law, DSGVO | `legal` | `legal-reviewer` agent; `sell/legal-de.md` for shops |
 | Security | the built-in `/security-review` command | `security-reviewer`, `red-team` agents |
 | Design, UI/UX | `operator/roles/designer.md` (Art direction first), `ui-review/SLOP.md`, the project's `DESIGN.md` | `impeccable`, `web-interface-guidelines`, `ui-review`, `design-critic` agent |
-| 3D games, Steam | `game-3d` (three.js + Electron, decided 2026-10-07) | `game-3d/refs/` (camera, game feel, levels, glTF, lighting, perf, Steam, `vfx-nodes.md`, `crowds-and-lod.md`, `real-map-overworld.md`) |
+| 3D games, Steam | `game-3d` (three.js + Electron, decided 2026-10-07) | `game-3d/refs/` (camera, game feel, levels, glTF, lighting, perf, Steam, `vfx-nodes.md`, `crowds-and-lod.md`, `real-map-overworld.md`, `living-world.md`) |
 | 2D and web games | `toolbox/catalog/data-web.md` (Phaser, PixiJS, Poki, CrazyGames) | `toolbox/catalog/money.md` (H5 game ads) |
 | Visual novels and story games (Ren'Py: setup, art slots, playthrough test, Windows build, laptop delivery) | `docs/game-pipeline.md` (all files, animation, scenes, scene briefs), `docs/two-figure-scenes.md` (gate, image language, natural motion, scripting traps, one-shot goal), `docs/renpy.md`, `storyteller` skill | `docs/renpy-template/`, `docs/character-workflow.md` (renders), `docs/clothing-pipeline.md` (garments per base) |
 | Roblox | `roblox` | `toolbox/catalog/roblox.md` (run and see), `studio` (PC) |
@@ -165,9 +165,11 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 | The words of a site or app (voice, terms, German and English strings, errors, empty states) | `operator/roles/content-designer.md`, template `operator/templates/copy-deck.md`, checked by `ui-review/scripts/copy-check.mjs` | `roles/tester.md`, `ui-review`, `SLOP.md` 9 |
 | What a site, app or game measures (events, money metric, legal basis, tools with prices, the weekly numbers line) | `operator/roles/analytics.md`, template `operator/templates/tracking-plan.md`, checked by `market/scripts/analytics-check.mjs` | `market` §5, `roles/tester.md`, `docs/hq-rows.md` |
 | Cards and votes (who posts them, the thread-to-coordinator loop, screenshots on a vote card per visual choice); yskills reads only the project chat | operator `SKILL.md` (Cards), `roles/project-manager.md` | `briefs.md` (b) |
+| Plan high, build cheap, gate high (who plans, who builds, who fixes a piece that failed twice) | `operator/gate.md` (Rounds, Plan high, build cheap, gate high) | `docs/TEAMS.md`, `roles/planner.md` |
 | Co-founder | `CLAUDE.md` (How to work) | `roles/*.md` (one role-specific line each) |
 | No windows on yskills' screen (headless only, unless he asked) | `docs/pc-claude-user.md` (No windows) | `global/rule-guard.mjs` (`opensWindow`) |
 | Who looks at and judges work (only the gate and yskills; every other role executes and runs fixed scripts) | `docs/TEAMS.md` (Who checks) | `roles/animator.md`, `roles/character-td.md`, `roles/project-manager.md`, `docs/character-workflow.md`, `docs/game-pipeline.md`, `docs/two-figure-scenes.md` |
+| Approved references (every owner-picked image kept in `CH_<name>/approval/` with INDEX.md; cleanup never touches it; DECISIONS lines, plan items, gates and handoffs link the image) | `docs/character-workflow.md` (Approved references) | `global/rule-guard.mjs` (`archivistFiles`), `.claude/skills/operator/roles/archivist.md`, `docs/laptop-folders.md` [guard: test scripts/guards.test.mjs] |
 | What the Archivist does and does not do (documents scripts, workflows, gate passes, indexes; never files or reviews references) | `operator/roles/archivist.md` | `docs/TEAMS.md` (Roster), `docs/laptop-folders.md` (Where reference images go), `global/rule-guard.mjs` (`archivistFiles`) |
 | Literal mode and cost | the brief block in `briefs.md` | nothing (the role files no longer repeat it) |
 | Offline outbox of a capture app (what leaves it, which errors may drop data, discard, form reset) | `docs/outbox.md` | `roles/programmer.md`, `social` repo |

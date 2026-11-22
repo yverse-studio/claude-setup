@@ -366,12 +366,18 @@ for (const part of ['Handoff:', '/handoff/<date>-<topic>.md']) {
 
 // Research method: one home (roles/researcher.md, Method); the report template keeps its checkable parts.
 const researcherRole = readFileSync(join(root, '.claude/skills/operator/roles/researcher.md'), 'utf8')
-for (const part of ['Primary sources only', 'Every claim carries its source', 'Describe before judging', 'Numbers only as read', 'Not checked:']) {
+for (const part of ['Primary sources only', 'Every claim carries its source', 'Describe before judging', 'Numbers only as read', 'Not checked:', 'Teardown before a copied mechanic']) {
   if (!researcherRole.includes(part)) errors.push(`roles/researcher.md: Method lacks "${part}"`)
 }
 const researchTemplate = readFileSync(join(root, '.claude/skills/operator/templates/research.md'), 'utf8')
-for (const part of ['## 6. Sources', 'Not checked:']) {
+for (const part of ['## 6. Sources', 'Not checked:', '## 4b. Teardown of a shipped product']) {
   if (!researchTemplate.includes(part)) errors.push(`templates/research.md: lacks "${part}"`)
+}
+
+// Plan shape (#624, #625): the Planner's plan opens with an issue-claims table and lists its steps with a command and expected output each.
+const plannerRole = readFileSync(join(root, '.claude/skills/operator/roles/planner.md'), 'utf8')
+for (const part of ['Issue claims', 'a recipe line the plan does not follow', 'Step, Change, Command, Expected', 'none (covered by step']) {
+  if (!plannerRole.includes(part)) errors.push(`roles/planner.md: Plan shape lacks "${part}"`)
 }
 
 // Game design doc: one home (roles/game-designer.md); the template must carry every heading gdd-check.mjs requires.

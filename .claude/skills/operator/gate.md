@@ -219,6 +219,7 @@ How to undo a merge, by kind of change (write the line into the PR's "undo" line
   the PR merges, and he gets the PASS line with its report, as information. He is asked only by the round-7 card of the counter
   below, for a taste call (a look, a body, a picture card) and for the `docs/permissions.md` ask-first list; his veto stops
   anything at once. No thread or coordinator posts a "passt das?" or waits for a release after a PASS.
+- **Plan high, build cheap, gate high** (yskills 2026-11-15, CompanyXY): the Planner (Fable) writes the step list and names, per known error, the script that already solved it in a gate-passed piece (adapt it); Sonnet executes only those steps; a fresh Fable or Opus reviewer gates each piece at the score rule (4.5, 4.8 important). A piece that fails twice is not sent to the same builder a third time: the hard step is done by the item's senior (the planner of that piece), and a fresh Fable gate judges it; the reviewer only gates; the counter below still counts every round.
 - **The hard round counter** (yskills 2026-11-12, vacation-game: a shell PR ran 11 rounds instead of 6, nothing counted, the
   coordinator released rounds itself, the gate asked to merge at 4.2; the one home of the round limit, every other file links
   here; was "up to 6 rounds", 2026-10-26). A hook counts, not text: `global/gate-rounds.mjs` keeps one ledger per asset (a PR

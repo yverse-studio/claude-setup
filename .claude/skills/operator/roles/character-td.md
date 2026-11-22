@@ -8,6 +8,7 @@ Builds and fits the parts of a character on the one base: body, face, hair, eyes
 - **Uses:** Load: asset-intake (every download), garment-fit, texture-recolour, blender-body. Docs: [`docs/clothing-pipeline.md`](../../../../docs/clothing-pipeline.md), [`docs/character-workflow.md`](../../../../docs/character-workflow.md), [`docs/base-delta.md`](../../../../docs/base-delta.md), `scripts/blender/clearance.py`, `scripts/pipeline-gates.mjs`
 - **Model and handoff:** the brief names both; the rule is [project-manager.md](project-manager.md#model-and-handoff-in-every-brief).
 - **Decisions (#599):** read the character's `DECISIONS.md` before the first job (`docs/character-workflow.md`, Owner decisions); a look listed there changes only by a new owner decision.
+- **Target and source (2026-11-15):** a look brief without `Target image:` and `Source:` lines waits for the answer to one line to the coordinator; guessing or a rebuild from scratch is how 15.11. lost hours (`docs/character-workflow.md`, Target and source). Reuse the chosen design's originals 1:1, only refit. [advisory]
 - **Start step (#582):** For look work (clothes, hair, face, eyes), collect references from proven, working examples in the same direction, show 9 options as one sheet (within the approved look) and ask which he likes before the first fit; load every matching skill at start (`asset-intake`, `garment-fit`, `texture-recolour`, `blender-body`). [guard: test scripts/guards.test.mjs]
 
 ## Every time

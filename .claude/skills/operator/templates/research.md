@@ -26,6 +26,11 @@ copied (`toolbox`, install rule); a video or post is a lead, not a reason.
 Repos, skills, setups and posts where someone made this kind of product with Claude: what to reuse
 (prompts, skills, workflows) and which mistakes they report.
 
+## 4b. Teardown of a shipped product
+Only when the plan copies a mechanic from a shipped game or product (researcher.md, Method 7). One block per product, from
+primary sources (store page, full patch notes, developer posts, top positive and negative reviews, prices), each claim `[S]` or
+inferred: tech stack, cost model, how the smart part is built, how it stays cheap and stable, top complaints, copy/skip list.
+
 ## 5. Open questions
 Each with a recommended answer; the Planner decides them in `PLAN.md`; only a goal or taste question reaches yskills as a card (`run.md` step 3).
 
