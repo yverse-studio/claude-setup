@@ -28,7 +28,7 @@ search the library (`clothes\CL_*`, the catalog, the project's live list) for a 
 refit it to the figure (Moving or re-dressing, below). A new garment needs a line in the plan: what was searched and why
 nothing fits. The first check of any fit is the silhouette row of the gate (`gate.md`, Asset PRs), not the clipping.
 
-**Proven route before any fit:** the project's proven list (its CLAUDE.md names it) holds the passed fits; a garment job copies one and names it on the brief's `Proven recipe:` line. A body-cut shell garment or a material change (alpha, emission) in place of a fitted garment fails (GameDev 2026-11-15: ~18 rounds and a gate at 3.2 that way). The loop is in `garment-fit` (The loop) and `roles/character-td.md`.
+**Proven route before any fit:** a garment job copies a passed fit from the project's proven list and quotes it in the pre-gate file (`gate.md`, Before a builder asks for a gate). A material change (alpha, emission) in place of a fitted garment fails the gate. The loop is in `garment-fit` (The loop) and `roles/character-td.md`.
 
 ## Body first
 

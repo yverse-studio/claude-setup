@@ -328,3 +328,198 @@ test('#631: the plan gate row names the old scene a plan copies, once, in the pa
   assert.doesNotMatch(animator, /The plan names the old scene it copies/, 'the rule is not worded a second time')
   assert.match(animator, /plan gate[^\n]*game-pipeline\.md/, 'the Animator rule points to the pass list')
 })
+
+// #689: the pre-gate file check. Fixtures live in a temp project-files folder; every red case feeds one violation to a green file.
+import { pregateProblems, pregateCheck, pregateMissing, PREGATE_TOOL_NAMES } from '../global/rule-guard.mjs'
+import { tmpdir as osTmp } from 'node:os'
+
+const PG_DOCS = {
+  'docs/recipe.md': 'Passed recipe: the real garment route with a fitted shell, scored 4.9 on Mira bikini.\nSecond line about fitting.',
+  'docs/pitfalls.md': [
+    'Do not use alpha to hide skin showing through the garment.',
+    'A strap that floats above the shoulder must be pulled with the follow key.',
+    'Never bake a hem before the contact check is clean.',
+    'Hair cards clip through the hood when the hood is fitted last.',
+    'The gate got only one front and one back picture last time.',
+  ].join('\n'),
+  'docs/old-gate.md': 'Gate 3.2: skin showed at the waist, the material change did nothing.\nThe seams at the side read flat from the left.',
+}
+const Q = {
+  recipe: 'the real garment route with a fitted shell, scored 4.9',
+  p1: 'Do not use alpha to hide skin showing through the garment.',
+  p2: 'A strap that floats above the shoulder must be pulled',
+  p3: 'Never bake a hem before the contact check is clean.',
+  p4: 'Hair cards clip through the hood when the hood is fitted last.',
+  p5: 'The gate got only one front and one back picture last time.',
+}
+const VIEWS = ['front', 'back', 'left', 'right', 'close chest']
+function pgFile({ type = 'garment', docs = ['docs/recipe.md', 'docs/pitfalls.md'], recipe = `| docs/recipe.md | ${Q.recipe} | Mira bikini 4.9 | fit it the same way |`, pitfalls, tick = 'x', score = 'Self-score: 4.8 (silhouette 5, contact 4.8, seams 4.6, skin 5)', views = VIEWS } = {}) {
+  const rows = pitfalls ?? [Q.p1, Q.p2, Q.p3, Q.p4, Q.p5].map((q) => `| docs/pitfalls.md | ${q} | contact.py number |`)
+  return [
+    '# PREGATE: bikini', `Type: ${type}`, `Docs: ${docs.join(', ')}`,
+    '## Recipe', '| Source | Quote | Passed as | Use |', '|---|---|---|---|', recipe,
+    '## Pitfalls', '| # | Source | Quote | Checked by | OK |', '|---|---|---|---|---|',
+    ...rows.map((r, i) => (r.startsWith('none') ? `| ${i + 1} | ${r} | | | |` : `| ${i + 1} ${r}${tick ? ` [${tick}] |` : ' |'}`)),
+    score, '## Views', '| View | File |', '|---|---|', ...views.map((v) => `| ${v} | gate/bikini/${v.replace(/\s+/g, '-')}.png |`),
+  ].join('\n')
+}
+// A pitfall row is `| <n> | <source> | <quote> | <checked by> | [x] |`: pgFile writes it from `| <source> | <quote> | <checked by> |`.
+function pgProject({ list, files = {} } = {}) {
+  const root = mkdtempSync(join(tmpdir(), 'pregate-'))
+  const put = (p, body) => { mkdirSync(dirname(join(root, p)), { recursive: true }); writeFileSync(join(root, p), body) }
+  for (const [p, body] of Object.entries(PG_DOCS)) put(p, body)
+  for (const v of VIEWS) put(`gate/bikini/${v.replace(/\s+/g, '-')}.png`, 'png-bytes')
+  if (list !== undefined) put('PREGATE-DOCS.md', list)
+  for (const [p, body] of Object.entries(files)) put(p, body)
+  return { root, put, done: () => rmSync(root, { recursive: true, force: true }) }
+}
+const LIST = '| Type | Doc | Laptop path |\n|---|---|---|\n| garment | docs/recipe.md | STUDIO_ROOT\\docs\\recipe.md |\n| garment | docs/pitfalls.md | |\n| scene | docs/pitfalls.md | |\n'
+const pg = (p, text, stage = 'plan', extra = {}) => { p.put('gate/bikini/PREGATE.md', text); return pregateCheck(join(p.root, 'gate/bikini/PREGATE.md'), stage, [p.root], extra) }
+
+test('#689 test 1: a plan with a recipe row, five pitfalls and the project list is OK', () => {
+  const p = pgProject({ list: LIST })
+  try { const r = pg(p, pgFile()); assert.deepEqual(r.problems, []); assert.equal(r.noList, false) } finally { p.done() }
+})
+
+test('#689 test 2: a plan is red for each violation, one assertion each', () => {
+  const p = pgProject({ list: LIST })
+  const red = (text, re, msg) => assert.match(pg(p, text).problems.join('\n'), re, msg)
+  const rows = (...q) => q.map((x) => `| docs/pitfalls.md | ${x} | contact.py number |`)
+  try {
+    red(pgFile({ pitfalls: [`| docs/pitfalls.md | ${PG_DOCS['docs/old-gate.md'].split('\n')[0]} | n |`, ...rows(Q.p2, Q.p3, Q.p4, Q.p5)], docs: ['docs/recipe.md', 'docs/pitfalls.md', 'docs/old-gate.md'] }), /not found in docs\/pitfalls\.md/, 'a quote that sits in another listed doc is not found in its own Source')
+    red(pgFile({ pitfalls: rows('Do not use alpha', Q.p2, Q.p3, Q.p4, Q.p5) }), /under 25 characters/, 'a short quote')
+    red(pgFile({ pitfalls: rows(Q.p1, Q.p1, Q.p3, Q.p4, Q.p5) }), /used in two rows/, 'one quote twice')
+    red(pgFile({ pitfalls: [`| docs/old-gate.md | ${PG_DOCS['docs/old-gate.md'].split('\n')[0]} | n |`, ...rows(Q.p2, Q.p3, Q.p4, Q.p5)] }), /Source docs\/old-gate\.md is not in Docs:/, 'a Source outside Docs:')
+    red(pgFile({ docs: ['docs/recipe.md', 'docs/pitfalls.md', 'docs/old-gate.md'] }), /docs\/old-gate\.md[^\n]*no row quotes it/, 'a Docs: entry no row quotes')
+    red(pgFile({ docs: ['docs/recipe.md', 'docs/pitfalls.md', 'docs/gone.md'] }), /docs\/gone\.md[^\n]*no root holds it/, 'a doc no root holds')
+    red(pgFile({ docs: ['docs/pitfalls.md'], recipe: 'none, searched docs/pitfalls.md' }), /docs\/recipe\.md[^\n]*lists it for garment/, 'a doc the list names for this Type left out of Docs:')
+    red(pgFile({ pitfalls: rows(Q.p1, Q.p2, Q.p3, Q.p4) }), /5 pitfall rows/, 'four pitfall rows')
+    red(pgFile({ recipe: '' }), /no Recipe row/, 'no Recipe row')
+    red(pgFile({ type: '' }).replace('Type: ', 'Typo: '), /Type:/, 'no Type')
+    red(pgFile({ pitfalls: [`| docs/pitfalls.md | ${Q.p1} | |`, ...rows(Q.p2, Q.p3, Q.p4, Q.p5)] }), /no "Checked by"/, 'a quoted pitfall without Checked by')
+    // a short list laid next to the pre-gate file is ignored; the root list still makes the file red
+    p.put('gate/bikini/PREGATE-DOCS.md', '| Type | Doc | Laptop path |\n|---|---|---|\n| garment | docs/pitfalls.md | |\n')
+    red(pgFile({ docs: ['docs/pitfalls.md'], recipe: 'none, searched docs/pitfalls.md' }), /docs\/recipe\.md[^\n]*lists it for garment/, 'the list beside the file does not shadow the root list')
+  } finally { p.done() }
+})
+
+test('#689 test 3: none-rows and a project with no list file pass the plan, and the OK says the builder chose the docs', () => {
+  const p = pgProject()
+  try {
+    const text = pgFile({ recipe: 'none, searched docs/recipe.md, docs/pitfalls.md', pitfalls: [`| docs/pitfalls.md | ${Q.p1} | contact.py number |`, `| docs/pitfalls.md | ${Q.p2} | contact.py number |`, 'none, searched docs/pitfalls.md', 'none, searched docs/old-gate.md', 'none, searched docs/old-gate.md'], docs: ['docs/recipe.md', 'docs/pitfalls.md'] })
+    const r = pg(p, text.replace('Docs: docs/recipe.md, docs/pitfalls.md', 'Docs: docs/pitfalls.md'))
+    assert.deepEqual(r.problems, [])
+    assert.equal(r.noList, true)
+    const cli = spawnSync(process.execPath, [join(dirname(fileURLToPath(import.meta.url)), 'pipeline-gates.mjs'), 'pregate', join(p.root, 'gate/bikini/PREGATE.md'), '--stage', 'plan', '--root', p.root], { encoding: 'utf8' })
+    assert.equal(cli.status, 0, cli.stdout)
+    assert.match(cli.stdout, /^OK pregate plan \(no PREGATE-DOCS\.md: the doc set was the builder's choice\)$/m, 'the OK line says the builder chose the docs')
+  } finally { p.done() }
+})
+
+test('#689 test 4: a plan-OK file is red at the gate for each violation', () => {
+  const p = pgProject({ list: LIST })
+  const red = (text, re, msg) => assert.match(pg(p, text, 'gate').problems.join('\n'), re, msg)
+  try {
+    assert.deepEqual(pg(p, pgFile(), 'plan').problems, [], 'the same file passes the plan')
+    red(pgFile({ tick: '' }), /not ticked/, 'unticked rows')
+    red(pgFile({ score: 'Self-score: 4.5 (silhouette 5, contact 4)' }), /Self-score/, 'a self-score under 4.8')
+    red(pgFile({ score: 'Self-score: 4.9' }), /Self-score[^\n]*rubric rows/, 'a self-score with no rows')
+    red(pgFile({ views: ['front', 'back'] }), /no "left" view/, 'a garment with front and back only')
+    p.put('gate/bikini/front.png', '')
+    red(pgFile({ views: ['front', 'back', 'left', 'right', 'close chest'] }), /front[^\n]*(missing|empty)/, 'a view file of 0 bytes')
+    red(pgFile({ type: 'scene', views: ['front', 'close up'] }), /non-pov/, 'a scene without a non-pov view')
+  } finally { p.done() }
+})
+
+test('#689 test 5: a ticked file with a 4.8 self-score and five views passes the gate', () => {
+  const p = pgProject({ list: LIST })
+  try { assert.deepEqual(pg(p, pgFile(), 'gate').problems, []) } finally { p.done() }
+})
+
+test('#689 test 6: the hook refuses a hand-in without a passing pre-gate file of the right stage (Animator and Character TD only)', () => {
+  const p = pgProject({ list: LIST })
+  const env = { CLAUDE_SETUP_PROJECT_FILES: p.root }
+  const gate = (stage) => `Pre-gate: ${stage} gate/bikini/PREGATE.md`
+  const call = (tool, text, role = 'Character TD', extra = {}) => pregateMissing(tool, { text, ...extra }, role, env)
+  const refused = (v, msg) => assert.match(v ?? '', /^rule-guard: .*pipeline-gates\.mjs pregate/s, msg)
+  try {
+    p.put('gate/bikini/PREGATE.md', pgFile())
+    p.put('gate/bikini/PLAN-ONLY.md', pgFile({ tick: '', score: '' }))
+    const plan = 'Pre-gate: plan gate/bikini/PLAN-ONLY.md'
+    refused(call('mcp__hearthbot__post_message', 'Done: bikini is in gate/bikini/ (bikini.glb)'), 'Done: with no line')
+    refused(call('mcp__hearthbot__post_message', 'Done: bikini is in gate/bikini/\nPre-gate: n/a, not needed here'), 'n/a never passes a hand-in')
+    assert.equal(call('mcp__hearthbot__post_message', `Done: bikini is in gate/bikini/\n${gate('gate')}`), null, 'a passing gate file')
+    refused(call('mcp__hearthbot__post_message', `Done: the piece is in gate/x/ (x.glb)\n${plan}`), 'a plan-stage file on Done: with no picture')
+    assert.equal(call('mcp__hearthbot__message_coordinator', `Gate request: plan v2\n${plan}`), null, 'a plan to its gate')
+    refused(call('mcp__hearthbot__message_coordinator', 'Gate request: plan v2\nPre-gate: n/a, no file yet'), 'n/a on a gate request')
+    refused(call('mcp__hearthbot__message_thread', `Gate request: build\nfront.png\n${plan}`), 'a picture on a gate request needs the gate stage')
+    assert.equal(call('mcp__hearthbot__message_thread', `Gate request: build\nfront.png\n${gate('gate')}`), null, 'a gate file with a picture')
+    refused(call('mcp__hearthbot__post_message', 'Here is the result', 'Character TD', { attached_outputs: [{ kind: 'file', ref: '/mnt/project-files/x.png' }] }), 'an attachment with no line')
+    assert.equal(call('mcp__hearthbot__message_coordinator', 'Which bone do you want for the strap?'), null, 'a question is no hand-in')
+    refused(call('mcp__hearthbot__post_message', 'Done: scene is in gate/s/', 'Animator'), 'Animator Done: with no line')
+    assert.equal(call('mcp__hearthbot__post_message', `Done: scene is in gate/s/\n${gate('gate')}`, 'Animator'), null, 'Animator with a passing file')
+    for (const text of ['Done: x', 'Gate request: build\nfront.png', 'Done: x\nPre-gate: n/a, nothing']) assert.equal(call('mcp__hearthbot__post_message', text, 'Programmer'), null, `Programmer: ${text}`)
+    assert.equal(pregateMissing('Bash', { command: 'echo Done: x' }, 'Character TD', env), null, 'other tools are not checked')
+    // a red file names the command and the first three problems
+    p.put('gate/bikini/RED.md', pgFile({ tick: '', score: 'Self-score: 3' }))
+    const why = call('mcp__hearthbot__post_message', 'Done: x\nPre-gate: gate gate/bikini/RED.md')
+    assert.match(why, /node scripts\/pipeline-gates\.mjs pregate gate\/bikini\/RED\.md --stage gate/)
+    assert.ok(why.split('\n').filter((l) => /^\s*- /.test(l)).length <= 3)
+  } finally { p.done() }
+})
+
+test('#689 test 7: the CLI exits 1 with the problem lines on a red file and prints OK pregate gate on a green one', () => {
+  const p = pgProject({ list: LIST })
+  const cli = join(dirname(fileURLToPath(import.meta.url)), 'pipeline-gates.mjs')
+  try {
+    p.put('gate/bikini/PREGATE.md', pgFile())
+    const ok = spawnSync(process.execPath, [cli, 'pregate', join(p.root, 'gate/bikini/PREGATE.md'), '--stage', 'gate', '--root', p.root], { encoding: 'utf8' })
+    assert.equal(ok.status, 0, ok.stdout)
+    assert.match(ok.stdout, /^OK pregate gate$/m)
+    p.put('gate/bikini/PREGATE.md', pgFile({ tick: '' }))
+    const bad = spawnSync(process.execPath, [cli, 'pregate', join(p.root, 'gate/bikini/PREGATE.md'), '--stage', 'gate', '--root', p.root], { encoding: 'utf8' })
+    assert.equal(bad.status, 1)
+    assert.match(bad.stdout, /^RED .*not ticked/m)
+  } finally { p.done() }
+})
+
+test('#689 gate round 1: Docs: reads a comma list, bullets and plain path lines, each form on its own', () => {
+  const p = pgProject({ list: LIST })
+  try {
+    const base = pgFile()
+    const forms = {
+      comma: base,
+      bullets: base.replace('Docs: docs/recipe.md, docs/pitfalls.md', 'Docs:\n- docs/recipe.md\n- docs/pitfalls.md'),
+      plain: base.replace('Docs: docs/recipe.md, docs/pitfalls.md', 'Docs:\ndocs/recipe.md\ndocs/pitfalls.md'),
+      'plain after text': base.replace('Docs: docs/recipe.md, docs/pitfalls.md', 'Docs: docs/recipe.md\ndocs/pitfalls.md'),
+    }
+    for (const [name, text] of Object.entries(forms)) assert.deepEqual(pg(p, text).problems, [], name)
+    // a plain list stops at the next field line: the path-less Self-score line is no doc
+    assert.deepEqual(pg(p, forms.plain, 'gate').problems, [], 'plain lines end at the first heading or field line')
+  } finally { p.done() }
+})
+
+test('#689 gate round 1: every tool the hook checks is in the installed PreToolUse matcher, and the process refuses a Character TD hand-in', () => {
+  const root = join(dirname(fileURLToPath(import.meta.url)), '..')
+  for (const f of ['install.mjs', 'cloud/setup.sh']) {
+    const m = readFileSync(join(root, f), 'utf8').match(/['"]PreToolUse['"], ['"]([^'"]*propose_skills)['"]/)?.[1] ?? '' // the rule-guard entry
+    for (const t of PREGATE_TOOL_NAMES) assert.ok(m.split('|').includes(t), `${f}: matcher lacks ${t}`)
+  }
+  const p = pgProject({ list: LIST })
+  const script = join(root, 'global/rule-guard.mjs')
+  const stamp = (id, role) => writeFileSync(join(osTmp(), `claude-setup-role-${id}`), role)
+  const run = (id, tool, text) => spawnSync(process.execPath, [script, 'pre'], { input: JSON.stringify({ tool_name: tool, tool_input: { text }, session_id: id, cwd: root }), encoding: 'utf8', env: { ...process.env, CLAUDE_SETUP_PROJECT_FILES: p.root } })
+  const td = `pg${process.pid}td`, prog = `pg${process.pid}prog`
+  try {
+    p.put('gate/bikini/PREGATE.md', pgFile({ tick: '' }))
+    stamp(td, 'Character TD'); stamp(prog, 'Programmer')
+    for (const tool of ['mcp__hearthbot__message_coordinator', 'mcp__hearthbot__message_thread']) {
+      const r = run(td, tool, 'Gate request: plan v1\nPre-gate: n/a, no file')
+      assert.equal(r.status, 2, `${tool}: ${r.stderr}`)
+      assert.match(r.stderr, /pipeline-gates\.mjs pregate/)
+      const ok = run(td, tool, 'Gate request: plan v1\nPre-gate: plan gate/bikini/PREGATE.md')
+      assert.equal(ok.status, 0, `${tool} with a passing plan file: ${ok.stderr}`)
+      assert.equal(run(prog, tool, 'Gate request: build\nfront.png\nPre-gate: n/a, a code PR').status, 0, `${tool}: a Programmer passes the whole chain untouched`)
+    }
+  } finally { p.done(); for (const id of [td, prog]) rmSync(join(osTmp(), `claude-setup-role-${id}`), { force: true }) }
+})

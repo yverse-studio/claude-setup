@@ -11,8 +11,8 @@ The pipeline (fit once per base, follow keys, hide mask, dress script, the Done 
 
 ## The loop (GameDev 2026-11-15)
 
-- **Proven route, not tinkering.** The route is the one in the project's proven list (its CLAUDE.md names it): a real garment fitted per `docs/clothing-pipeline.md` and measured with `clearance.py`. A body-cut shell garment fails the gate, and material changes (alpha, emission, mm offsets) do not fix skin showing through; if the piece shows skin, the geometry or the fit is wrong.
-- **Self-loop:** change, render front, back, side and close-ups, score yourself against the table below, change again, without closing or reporting each step. Call a fresh gate only at a self-score of 4.8 or more with every hard check green, and hand it side and close-up views, not one front and one back image.
+- **Proven route, not tinkering.** The route is the passed garment recipe of the project's proven list, quoted in the pre-gate file. A material change (alpha, emission, offsets in mm) does not fix skin showing through; if the piece shows skin, the geometry or the fit is wrong.
+- **Self-loop:** change, render front, back, left, right and close-ups, score yourself against the table below, change again, without closing or reporting each step. Call a fresh gate only at a self-score of 4.8 or more with every hard check green, and hand it all of these views with the pre-gate file, not one front and one back image.
 
 ## Before the fit
 

@@ -325,7 +325,7 @@ test('team guard: an unknown or wrong role is refused with the roles that kit ac
 test('team guard: a Character TD thread starts on game and story, needs the Gate and Sheet lines, a typo in the role blocks', async () => {
   const { decide } = await import('../global/team-guard.mjs')
   const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
-  const brief = (kit, { role = 'Character TD', size = 'M', gate = true, sheet = true } = {}) => ({ brief: `Role: ${role} · Kit: ${kit} · Size: ${size}\nPrior art: docs/clothing-pipeline.md and .claude/skills/asset-intake checked; adapt, because the fit rules exist${FULL.replace(/\nGate:[^\n]*/, '')}${gate ? '\nGate: Reviewer · gate asset intake before owner' : ''}${sheet ? '\nSheet: n/a intake of a download, no new body or look' : ''}\nProven recipe: n/a intake of a download, no garment recipe applies`, title: `${role} · hoodie`, model: 'claude-x-1' })
+  const brief = (kit, { role = 'Character TD', size = 'M', gate = true, sheet = true } = {}) => ({ brief: `Role: ${role} · Kit: ${kit} · Size: ${size}\nPrior art: docs/clothing-pipeline.md and .claude/skills/asset-intake checked; adapt, because the fit rules exist${FULL.replace(/\nGate:[^\n]*/, '')}${gate ? '\nGate: Reviewer · gate asset intake before owner' : ''}${sheet ? '\nSheet: n/a intake of a download, no new body or look' : ''}\nPre-gate: gate/hoodie/PREGATE.md`, title: `${role} · hoodie`, model: 'claude-x-1' })
   for (const kit of ['game', 'story']) assert.deepEqual(decide('mcp__hearthbot__start_thread', brief(kit), [], [], teams), {}, `Character TD passes on ${kit}`)
   for (const kit of ['site', 'app', 'setup']) assert.match(decide('mcp__hearthbot__start_thread', brief(kit), [], [], teams).block ?? '', /not on the `\w+` kit's team/, `Character TD is skipped on ${kit}`)
   assert.match(decide('mcp__hearthbot__start_thread', brief('game', { gate: false }), [], [], teams).block ?? '', /Gate:/, 'size M without the Gate line is refused')
@@ -337,7 +337,7 @@ test('team guard: a Character TD thread starts on game and story, needs the Gate
 test('team guard: an Animator thread starts on the game and story kits, on Sonnet, not on site or setup', async () => {
   const { decide } = await import('../global/team-guard.mjs')
   const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
-  const brief = (kit, size = 'M') => ({ brief: `Role: Animator · Kit: ${kit} · Size: ${size}\nPrior art: docs/game-pipeline.md and our blender-body skill checked; adapt, because the key-pose library exists${FULL}\nScene docs: the project docs, copies the old scene X\nSheet: n/a scene animation, no body or outfit model change`, title: 'Animator · fenster', model: 'claude-x-1' })
+  const brief = (kit, size = 'M') => ({ brief: `Role: Animator · Kit: ${kit} · Size: ${size}\nPrior art: docs/game-pipeline.md and our blender-body skill checked; adapt, because the key-pose library exists${FULL}\nPre-gate: gate/fenster/PREGATE.md\nSheet: n/a scene animation, no body or outfit model change`, title: 'Animator · fenster', model: 'claude-x-1' })
   for (const kit of ['game', 'story']) assert.deepEqual(decide('mcp__hearthbot__start_thread', brief(kit), [], [], teams), {}, `Animator passes on ${kit}`)
   for (const kit of ['site', 'app', 'setup']) assert.match(decide('mcp__hearthbot__start_thread', brief(kit), [], [], teams).block ?? '', /not on the `\w+` kit's team/, `Animator is skipped on ${kit}`)
   assert.match(decide('mcp__hearthbot__start_thread', { ...brief('game'), model: 'claude-opus-x' }, [], [], teams).block ?? '', /runs on sonnet/, 'the Animator runs on Sonnet')
@@ -1586,7 +1586,7 @@ test('team guard: every Programmer or Animator brief on a game or story kit name
   assert.equal(missingLines(brief('Make the HUD fit on 390px.\nSheet: n/a this is a HUD layout job, no model changes')).length, 0, 'a declared exception passes')
   assert.equal(missingLines(brief('Make the HUD.\nSheet: n/a no')).length, 3, 'a one-word reason does not')
   assert.equal(missingLines(brief('Make the HUD.\nSheet: n/a\nModel: sonnet because the role says so')).length, 3, 'a bare n/a does not borrow the next line as its reason')
-  assert.equal(missingLines(brief('Make the HUD.\nScene docs: the project docs, copies the old scene X', 'Animator', 'story')).length, 3, 'Animator on the story kit too')
+  assert.equal(missingLines(brief('Make the HUD.\nPre-gate: gate/hud/PREGATE.md', 'Animator', 'story')).length, 3, 'Animator on the story kit too')
   assert.deepEqual(missingLines(brief('Fix the login page copy.', 'Programmer', 'app')), [], 'only game and story kits')
   assert.deepEqual(missingLines(brief('Write the cast sheet and body plan for Mira.', 'Planner', 'game')), [], 'the cast stage itself writes the sheet')
 })
@@ -2066,7 +2066,7 @@ test('rule guard: refusing checks have an id and a kind, log one line per refusa
   assert.deepEqual(GUARD_CHECKS, {
     lock: 'safety', neverpush: 'safety', 'hands-off': 'safety', gate: 'safety', decide: 'safety',
     'plan-item-open': 'form', receipt: 'form', 'propose-skills': 'safety', 'opens-window': 'safety', 'archivist-files': 'safety',
-    kaomoji: 'form', 'dupe-check': 'form', 'blender-busy': 'safety', 'blender-docs': 'form', 'blender-runner': 'safety', grill: 'form',
+    kaomoji: 'form', 'dupe-check': 'form', pregate: 'safety', 'blender-busy': 'safety', 'blender-docs': 'form', 'blender-runner': 'safety', grill: 'form',
   }, 'the whole table: a flipped kind is a test failure')
   const session = `cap-test-${process.pid}-${Date.now()}`
   const form = [['kaomoji', () => 'add a kaomoji']]

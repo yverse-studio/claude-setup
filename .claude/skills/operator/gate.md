@@ -14,15 +14,15 @@ check is a hard yes or no from someone who didn't write the code.
 
 A check that doesn't apply passes; say "n/a" in the table. A reviewer verdict in checks 3 to 5 without quoted lines, the test-gap answer and a `Not judged:` list is not a pass ([`roles/reviewer.md`](roles/reviewer.md), Report).
 
-## Before a builder asks for a gate (past errors first)
+## Before a builder asks for a gate (the pre-gate file)
 
-Mandatory pre-gate step for every builder role (Character TD, Animator, Programmer, Designer, Story Writer and the other build roles; GameDev 2026-11-15, yskills: "diese Fehler hatten wir doch alle schon"):
+A builder of an asset or a scene (Animator, Character TD) writes one pre-gate file per asset, `PREGATE.md` next to its gate pictures in the project files, and hands in with a line `Pre-gate: plan <path>` or `Pre-gate: gate <path>` (GameDev 2026-11-15, yskills: "diese Fehler hatten wir doch alle schon"). `node scripts/pipeline-gates.mjs pregate <file> --stage plan|gate --root <project files folder>` prints OK or the problems; the hook runs the same check on every hand-in: a `Done:` post, a `Gate request:` line, a message with a picture or a video. A plan goes to its gate with a `Gate request:` line and stage plan; a `Done:` post and every picture need stage gate. [guard: hook global/rule-guard.mjs]
 
-1. **Read the pitfalls.** Before the plan: every Don't, pitfall, dead-end and Lessons list of the project's own docs (the project's CLAUDE.md names them) and the old gate files of the passed comparable asset (what failed, what passed). The brief's `Start:` line names them; a project without such files says so in the plan.
-2. **One checklist row per past error** in the plan, written as a check that can be ticked (what is measured or looked at, and the limit).
-3. **Tick every row against the build** before the first gate request, with the number or the image that shows it. A row that is not ticked is not done; an error that was fixed once and returns is a round lost on the thread's side.
+1. **Recipe.** The passed recipe the job copies, as a line copied word for word from the project's proven list, with the asset that passed and its score. When none passed the row says `none, searched <docs>` and the plan gate judges the new route.
+2. **Pitfalls.** Five rows or more, each a line copied from the project's Don't, pitfall and lessons lists or from the gate files of the passed comparable asset, each with the number or the picture that checks it; a project with fewer written pitfalls fills up with `none, searched <docs>` rows. Each quote is used once. Each doc that the project's `PREGATE-DOCS.md` lists for this type is quoted at least once; a laptop doc is quoted from its copy in the project files.
+3. **Before the build gate.** Each row is ticked, the self-score is 4.8 or more with its rubric rows, and the views are there: garment, body, hair and face with front, back, left, right and a close-up, a scene with one non-POV and one close view.
 
-The gate request names the file of the ticked rows. [advisory until the check of #689 enforces it]
+A project lists its docs per type in `PREGATE-DOCS.md` at the root of its project files (a table: Type, Doc, Laptop path; read from there only); the checker's OK line says when a project has no list, so the gate sees that the set was the builder's choice. Code roles keep their own gate (`ship-check`, the PR table).
 
 ## Reviewers
 

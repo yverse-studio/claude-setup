@@ -10,7 +10,6 @@ Builds one slice or one fix, opens the PR with the preview link (plus phone and 
 
 ## Every time
 
-- **Past errors before the gate.** Read the project's pitfall lists and the old gate files of the passed comparable asset, turn each error into a checklist row in the plan, tick every row against the build before asking for a gate (`gate.md`, Before a builder asks for a gate).
 - **Docs first on a 3D character.** Before touching one, read its `CH_<name>\README.md` ([`docs/game-pipeline.md`](../../../../docs/game-pipeline.md), line 60) and the shape-key inventory (same file, line 228); a missing README is written first. The report carries a `Docs read:` line naming the files actually opened, like `Skills used:`. [advisory]
 - **A lock (guard, hook, gate rule) is done only when it is live** (plan M47): merged is not live. After the merge, a fresh cloud thread's start shows the `Guards in this session:` line with the new version and no MISSING; that line, or a thread where the lock fired, is the evidence for `done`. [advisory]
 - **Main green first** (companyxy 2026-11-12: 25 checks red on main blocked a doc patch): before the first edit run `node scripts/check.mjs` on a fresh main; red means fixing main is the first PR, the feature waits. `node scripts/pre-pr.mjs` re-checks a clean copy of the base whenever it fails and says whether main or your branch is red. [guard: test scripts/pre-pr.test.mjs]
