@@ -481,5 +481,16 @@ for (const [n, fs] of duplicateRules(DUP_FILES.map((f) => [f, readFileSync(join(
 // Rule budget (cleanup/PLAN.md step 2): unguarded prose rule lines per file only fall; scripts/rule-budget.mjs.
 errors.push(...budgetProblems(measureRepo(root), json('config/rule-budget.json') ?? { perFile: {} }))
 
+// Topic claims (#760): workflow rules restated outside their home only fall; scripts/topic-claims.mjs. `--topics` lists them.
+const { measureTopics, compareTopics } = await import('./topic-claims.mjs')
+const frozen = json('config/rule-budget.json') ?? {}
+const topicNow = measureTopics(root, frozen.topicAllow ?? [])
+errors.push(...compareTopics(topicNow, frozen.topics ?? {}))
+if (process.argv.includes('--topics')) {
+  for (const [f, n] of Object.entries(topicNow.perFile).sort((a, b) => b[1] - a[1])) console.log(`${n} ${f}`)
+  for (const h of topicNow.hits) console.log(`${h.file} [${h.topic}] ${h.sentence.slice(0, 140)}`)
+  console.log(`total: ${topicNow.hits.length} topic sentences restated outside their home in ${Object.keys(topicNow.perFile).length} files`)
+}
+
 if (errors.length) { console.error(errors.map((e) => `x ${e}`).join('\n')); process.exit(1) }
 console.log(`ok: ${seen.skill.size} skills, ${seen.agent.size} agents, ${plugins?.global.length ?? 0}+${plugins?.project.length ?? 0} plugins`)

@@ -87,3 +87,9 @@ test('the frozen baseline holds the cap and CLAUDE.md in this repo is at or unde
   assert.equal(base.claudeMdMaxBytes, 3500)
   assert.deepEqual(capProblems(readFileSync(new URL('../CLAUDE.md', import.meta.url), 'utf8'), base), [])
 })
+
+test('the frozen baseline carries the topic-claim keys and --freeze keeps them', () => {
+  const base = JSON.parse(readFileSync(new URL('../config/rule-budget.json', import.meta.url), 'utf8'))
+  assert.ok(base.topics && Array.isArray(base.topicAllow))
+  assert.match(readFileSync(new URL('./rule-budget.mjs', import.meta.url), 'utf8'), /was\.topics[\s\S]*was\.topicAllow/)
+})

@@ -87,7 +87,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const m = measureRepo()
   if (process.argv.includes('--freeze')) {
     const was = existsSync(BASELINE) ? JSON.parse(readFileSync(BASELINE, 'utf8')) : {}
-    writeFileSync(BASELINE, `${JSON.stringify({ ...(was.claudeMdMaxBytes === undefined ? {} : { claudeMdMaxBytes: was.claudeMdMaxBytes }), perFile: m.perFile, wide: m.wide }, null, 2)}\n`)
+    writeFileSync(BASELINE, `${JSON.stringify({ ...(was.claudeMdMaxBytes === undefined ? {} : { claudeMdMaxBytes: was.claudeMdMaxBytes }), perFile: m.perFile, wide: m.wide, ...(was.topics === undefined ? {} : { topics: was.topics }), ...(was.topicAllow === undefined ? {} : { topicAllow: was.topicAllow }) }, null, 2)}\n`)
     console.log(`rule budget frozen: ${m.total} unguarded rule lines in ${Object.keys(m.perFile).length} files`)
   } else {
     const baseline = existsSync(BASELINE) ? JSON.parse(readFileSync(BASELINE, 'utf8')) : { perFile: {} }

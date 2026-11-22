@@ -90,7 +90,7 @@ outfits", "das hätte der workflow sein müssen klar einfach und direkt"):
    - Never a bare render, never a model file, never the sheet without the reference.
 6. **Gate.** A fresh Tester (figure and scene PRs are size L) runs `gate.md` on the figure's PR with fresh subagents. Extra
    criterion: likeness to the reference (a reviewer who gets only the sheet and the reference
-   picture says yes or no on face, hair, body and outfits). Merge at 5/5; builders never merge.
+   picture says yes or no on face, hair, body and outfits). Merge: `gate.md`, Merge policy.
 7. **After the merge.**
    - The game exports go to the artifact's asset store; the `cards/<id>` row points at the new
      asset ids ([`docs/hq-rows.md`](hq-rows.md), Figures (cards)).

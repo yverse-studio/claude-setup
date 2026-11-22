@@ -46,9 +46,9 @@ before each step; builder, gate and fix threads read their `roles/<role>.md` ins
    `config/coordinator` row, `{session, at}`). No tool probe up front: the first failed call says
    the same, and then the threads fall back to the coordinator relay (§ Starting threads).
 4. **Scaffold + design.** (site, app, game, story) Scaffold thread: "Scaffold PLAN.md's app on branch `scaffold` with
-   the `scaffold` skill (its file list, in order). Open a PR, don't merge." Its gate is CI only. The design team shoots 2-3
-   directions. **Brief (b)** carries the design pick only: the deploy exists since the workflow. The gate
-   merges the scaffold PR at 5/5 like any other (its branch has a Preview URL from the start). Building starts once
+   the `scaffold` skill (its file list, in order). Open a PR, don't merge (merge: `gate.md`, Merge policy)." Its gate is CI only. The design team shoots 2-3
+   directions. **Brief (b)** carries the design pick only: the deploy exists since the workflow. The scaffold PR
+   merges at 5/5 like any other (`gate.md`, Merge policy) (its branch has a Preview URL from the start). Building starts once
    brief (b) is answered.
 
    **Keys and accounts just in time.** Every other key or account is asked for by a **key card**
@@ -64,8 +64,8 @@ before each step; builder, gate and fix threads read their `roles/<role>.md` ins
    slice <id> of PLAN.md;
    its criteria are in features.json (read only). Read PLAN.md, PROGRESS.md and CLAUDE.md first. Do not read: node_modules, build output, lockfiles, generated files, screenshots, other slices' code, HANDOFF files of old threads; `grep` first, read only the part you need.
    Tests first, then code, then ship-check. Push branch `slice/<id>`, open a PR with phone and
-   desktop screenshots and a 3-line progress note. Don't merge; keep fixing CI and the review
-   findings on the PR until it is merged. Pull main into the branch right before the gate merges
+   desktop screenshots and a 3-line progress note. Don't merge (merge: `gate.md`, Merge policy); keep fixing CI and the review
+   findings on the PR until it is merged. Pull main into the branch right before the merge
    (other slices may edit the same file). yskills' pauses and taste calls are final: a 'stop'
    stops you mid-step, a rejected asset or look is replaced, not defended. Write HQ's
    `work/<your session>` row when you start and when you end (`docs/hq-rows.md`, Work board)." The first
@@ -93,7 +93,7 @@ before each step; builder, gate and fix threads read their `roles/<role>.md` ins
    criterion per user journey that crosses slices) before yskills hears "ready to test". Test run
    1's slices each passed and broke at their seams.
 7. **Launch.** (site, app, game; story at release: `store-publish` or a Windows build) The last PR gets the full `red-team` and `legal-reviewer` pass. **Brief (c)** is
-   posted, and the gate merges at 5/5, which goes live (auto-run: launch included); live keys
+   posted, and it merges at 5/5 (`gate.md`, Merge policy), which goes live (auto-run: launch included); live keys
    are the one thing on it that waits for yskills' hands. Then `sell`'s go-live (§4) if it sells.
    **The loop is wired before launch** (`docs/LOOP.md`): the app stores its errors and feedback
    and lists them in its owner report, `loop.yml` files them as `loop` issues, the daily reader
@@ -102,7 +102,7 @@ before each step; builder, gate and fix threads read their `roles/<role>.md` ins
 8. **Grow.** (site, app, game; social: its weekly routine) At launch `create_trigger` a weekly routine (fresh session, jittered time): it
    collects the numbers (`market` §5) and opens one PR with the week's `metrics/` file and the best
    next step as a slice in `features.json`. That PR is the weekly report; it gets the gate with
-   checks 2-5 n/a, and its merge is the go for the next slice. `PLAN.md` fixes 30/60/90-day
+   checks 2-5 n/a, and its merge (`gate.md`, Merge policy) is the go for the next slice. `PLAN.md` fixes 30/60/90-day
    targets before launch (defaults: 100 signups, 10 paying, €100 revenue in total); the routine copies them
    into each `metrics/` file. A missed target sends one tap card: **kill** (stop the routine,
    archive, lessons into claude-setup), **change** (one new offer or channel, next target in 30

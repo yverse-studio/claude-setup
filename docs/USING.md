@@ -53,7 +53,7 @@ files, tools or models.
 2. **Research, plan.** Market, prices, law, tools. Result: `PLAN.md` and the acceptance criteria.
 3. **Brief (a): ok or no.** The first thing you get. Nothing to set up: Claude makes the repo,
    the Worker and the first deploy itself (below).
-4. **Build.** One thread per slice. Every change is a PR that a gate checks (size S and M in the author thread, L in a separate gate thread)
+4. **Build.** One thread per slice. Every change is a PR that a gate checks (who runs it: operator `gate.md`, Gate size)
    (CI, a live test of the preview, a fresh review, security, design and law). At 5/5 it **merges
    itself**, and the thread says `Done: <what changed>`.
 5. **Launch and after.** The loop reads errors and feedback every day (`docs/LOOP.md`).
@@ -226,5 +226,5 @@ Say "stop" or "pause" and everything stops; a look you reject stays rejected.
 | Example of waste | fanning out several threads before anything was visible cost about 10 € of tokens in test run 1 | operator `SKILL.md` |
 | Cost per finished app | not measured yet | |
 
-Keep it cheap: one app at a time, at most three working threads, ask for a first visible result
+Keep it cheap: one app at a time, the thread cap of `docs/TEAMS.md` (Reuse rule), ask for a first visible result
 before more.
