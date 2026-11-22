@@ -1277,6 +1277,16 @@ test('rule-guard: an Archivist thread documents, it does not file references', a
   assert.equal(archivistFiles('Write', { file_path: '/mnt/project-files/refs/posen/x.png' }, null), null)
 })
 
+test('rule-guard: an Archivist thread leaves approval/ alone', async () => {
+  const { archivistFiles } = await import('../global/rule-guard.mjs')
+  const a = (tool, input) => archivistFiles(tool, input, 'Archivist\n')
+  for (const command of ['rm -rf lib/characters/CH_yumeka/approval', 'rm lib/characters/CH_yumeka/approval/A.png', 'mv lib/characters/CH_yumeka/approval/A.png /tmp/x/', 'Remove-Item lib\\characters\\CH_otonari\\approval\\A.png', 'cd x && rm approval/B.png', 'git rm lib/characters/CH_yumeka/approval/A.png', 'git mv lib/characters/CH_yumeka/approval/A.png /tmp/x/', 'truncate -s 0 approval/A.png', 'mv -t /tmp/x approval/A.png', 'Move-Item -Destination out\\x -Path approval\\A.png', 'rm approval/_superseded/../A.png', 'mv approval/A.png x/approval/_superseded/../']) assert.match(a('Bash', { command }) ?? '', /approval\//, command)
+  assert.match(a('Write', { file_path: 'lib/characters/CH_yumeka/approval/A.png' }) ?? '', /approval\//)
+  for (const command of ['cp lib/characters/CH_yumeka/approval/A.png /tmp/x/', 'ls lib/characters/CH_yumeka/approval/', 'mv a.png lib/characters/CH_yumeka/approval/_superseded/', 'mv lib/characters/CH_yumeka/approval/A.png lib/characters/CH_yumeka/approval/_superseded/', 'rm /tmp/approvals.txt', 'mv -t x/approval/_superseded approval/A.png']) assert.equal(a('Bash', { command }), null, command)
+  assert.equal(a('Edit', { file_path: 'lib/characters/CH_yumeka/approval/INDEX.md' }), null)
+  assert.equal(archivistFiles('Write', { file_path: 'x/approval/A.png' }, 'Animator'), null)
+})
+
 // yskills 2026-11-12: every thread opens with a start receipt the hook builds from the transcript (role, kit, size, Skill calls, rules hash).
 test('rule-guard: a thread\'s first reply carries the hook-built start receipt', async () => {
   const { threadReceipt, receiptMissing } = await import('../global/rule-guard.mjs')

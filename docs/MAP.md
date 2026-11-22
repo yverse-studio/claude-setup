@@ -168,6 +168,7 @@ Unity and Unreal are not used (they need the editor on the PC for every look); G
 | Co-founder | `CLAUDE.md` (How to work) | `roles/*.md` (one role-specific line each) |
 | No windows on yskills' screen (headless only, unless he asked) | `docs/pc-claude-user.md` (No windows) | `global/rule-guard.mjs` (`opensWindow`) |
 | Who looks at and judges work (only the gate and yskills; every other role executes and runs fixed scripts) | `docs/TEAMS.md` (Who checks) | `roles/animator.md`, `roles/character-td.md`, `roles/project-manager.md`, `docs/character-workflow.md`, `docs/game-pipeline.md`, `docs/two-figure-scenes.md` |
+| Approved references (every owner-picked image kept in `CH_<name>/approval/` with INDEX.md; cleanup never touches it; DECISIONS lines, plan items, gates and handoffs link the image) | `docs/character-workflow.md` (Approved references) | `global/rule-guard.mjs` (`archivistFiles`), `.claude/skills/operator/roles/archivist.md`, `docs/laptop-folders.md` [guard: test scripts/guards.test.mjs] |
 | What the Archivist does and does not do (documents scripts, workflows, gate passes, indexes; never files or reviews references) | `operator/roles/archivist.md` | `docs/TEAMS.md` (Roster), `docs/laptop-folders.md` (Where reference images go), `global/rule-guard.mjs` (`archivistFiles`) |
 | Literal mode and cost | the brief block in `briefs.md` | nothing (the role files no longer repeat it) |
 | Offline outbox of a capture app (what leaves it, which errors may drop data, discard, form reset) | `docs/outbox.md` | `roles/programmer.md`, `social` repo |
