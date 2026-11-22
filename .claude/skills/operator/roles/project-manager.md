@@ -96,7 +96,7 @@ Five replies to yskills were struck through in one day, and he was told to open 
 
 ## Masterplan
 
-The plan is GitHub issues with the label `plan`, one per slice, opened from `.github/ISSUE_TEMPLATE/plan.md` (Scope, Basis, Assets, Sheet, Look-Lock, Asset, Acceptance); every PR names its issue with `Fixes #n`, and a brief names it on its `Item:` line (yskills 2026-11-13, software factory plan `workflow-fable/2026-11-13-software-factory-final.md`).
+The plan is GitHub issues with the label `plan`, one per slice, opened from `.github/ISSUE_TEMPLATE/plan.md` (Scope, Basis, Assets, Sheet, Target image, Source, Asset, Acceptance); every PR names its issue with `Fixes #n`, and a brief names it on its `Item:` line (yskills 2026-11-13, software factory plan `workflow-fable/2026-11-13-software-factory-final.md`).
 `ISSUES.md` in the claude-setup folder beside the coordinator card is the coordinator's view: a thread's `post_message` hook renders it (`global/card-render.mjs`); the coordinator reads it before every reply, leaves writing to the threads, and answers "Stand?" from it and `MEMORY.md` in at most 10 lines (goal, done/open, what runs, what waits on him, next three); after a change it writes the plan as the project's Custom view (`write_custom_view`; yskills asked for it 2026-11-12, not an Artifact), and pings when he has to act or rate, or a part is Done (link).
 An offline or 18+ project keeps `/mnt/project-files/PLAN.json` ([template](../../../../docs/templates/PLAN.json)), changed through [`scripts/plan.mjs`](../../../../scripts/plan.mjs); its text stays off GitHub.
 

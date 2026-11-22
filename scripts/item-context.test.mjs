@@ -190,13 +190,13 @@ const storyBrief = (item) => `<wake reason="spawn"><relay>\nRole: Programmer · 
 // The brief check reads the Roster of docs/TEAMS.md from the repo it runs in; CI has no ~/.claude/claude-setup, so the test repo carries a copy.
 const withRoster = (env) => { spawnSync('mkdir', ['-p', join(env.repo, 'docs')]); for (const f of ['CLAUDE.md', 'docs/TEAMS.md']) writeFileSync(join(env.repo, f), readFileSync(join(root, f))); return env }
 const fullBrief = (item) => `<wake reason="spawn"><relay>\nRole: Programmer · Kit: game · Size: M · Model: sonnet\nItem: ${item}\nPlan: plan.md\nAcceptance: it is on.\n</relay></wake>`
-const full = 'Scope: the lamp.\nPlan: plan.md\nAcceptance: it is on.\nSheet: sheets/lamp.md\nLook-Lock: https://claude.ai/code/x#cmsg_ABCDEF123\nLevel: n/a fixture, this slice changes no level'
+const full = 'Scope: the lamp.\nPlan: plan.md\nAcceptance: it is on.\nSheet: sheets/lamp.md\nTarget image: lib/characters/CH_x/approval/A.png\nSource: lib/characters/CH_x/source/A.blend\nLevel: n/a fixture, this slice changes no level'
 
 test('X1a: a blocking field the brief lacks but the item has does not lock; without it the thread is locked as before', (t) => {
   const env = withRoster(setup(t))
   stub(env, { ...issue, body: full })
   const ok = run(env, fullBrief('#7'), `item-m${process.pid}-${n++}`)
-  assert.doesNotMatch(ok, /Brief check/, 'the item holds Sheet and Look-Lock')
+  assert.doesNotMatch(ok, /Brief check/, 'the item holds Sheet, Target image and Source')
   assert.match(ok, /Fix the lamp/, 'the issue is still in the context')
   const env2 = withRoster(setup(t))
   stub(env2, { ...issue, body: 'Scope: the lamp.' })
@@ -242,17 +242,44 @@ test('X1a: a field cannot span the join of the brief and the item: a bare `Done 
   const bare = `<wake reason="spawn"><relay>\nRole: Programmer · Kit: game · Size: M · Model: sonnet\nItem: #7\nDone when:</relay></wake>`
   assert.match(run(env, bare, `item-u${process.pid}-${n++}`), /Brief check[^\n]*Acceptance/)
   const env2 = withRoster(setup(t))
-  stub(env2, { ...issue, body: 'Scope: the item list renders.\nSheet: s.md\nLook-Lock: https://x.y/z\nLevel: n/a fixture, this slice changes no level' })
-  assert.doesNotMatch(run(env2, fullBrief('#7'), `item-v${process.pid}-${n++}`), /Brief check/, 'a line that contains the word item still fills Sheet and Look-Lock')
+  stub(env2, { ...issue, body: 'Scope: the item list renders.\nSheet: s.md\nTarget image: lib/characters/CH_x/approval/A.png\nSource: lib/characters/CH_x/source/A.blend\nLevel: n/a fixture, this slice changes no level' })
+  assert.doesNotMatch(run(env2, fullBrief('#7'), `item-v${process.pid}-${n++}`), /Brief check/, 'a line that contains the word item still fills Sheet, Target image and Source')
 })
 
-test('a Look-Lock needs a link or a card id: the bare word `card` is no look lock', async () => {
-  const tg = await import('../global/team-guard.mjs')
-  const row = tg.BRIEF_FIELDS.find((f) => f.key === 'Look-Lock')
-  assert.equal(row.ok('Look-Lock: no card yet'), false)
-  assert.equal(row.ok('Look-Lock: card'), false)
-  assert.ok(row.ok('Look-Lock: https://claude.ai/x'))
-  assert.ok(row.ok('Look-Lock: owner card #cmsg_ABCDEF123'))
+// #702: the item's `Target image:` line or its PLAN.json `target_image` field fills the brief, and refuses a brief that says n/a beside it (gate fix 6).
+test('#702: an item that names a target image refuses a brief with `Target image: n/a`; without one the n/a starts', (t) => {
+  const na = (item) => fullBrief(item).replace('Acceptance: it is on.', 'Acceptance: it is on.\nTarget image: n/a this slice changes no look at all')
+  const env = withRoster(setup(t))
+  stub(env, { ...issue, body: full })
+  assert.match(run(env, na('#7'), `item-w${process.pid}-${n++}`), /Brief check[^\n]*the item names a target image[^\n]*n\/a` is refused/)
+  const env2 = withRoster(setup(t))
+  writeFileSync(join(env2.dir, 'plan.json'), JSON.stringify({ items: [{ id: 'M1', title: 'x', status: 'doing', sheet: 'sheets/lamp.md', level: 'n/a fixture, this slice changes no level', target_image: 'lib/characters/CH_x/approval/A.png' }] }))
+  stub(env2)
+  assert.match(run(env2, na('M1'), `item-x${process.pid}-${n++}`, { PLAN_FILE: join(env2.dir, 'plan.json') }), /Brief check[^\n]*the item names a target image/, 'the target_image field of PLAN.json counts')
+  assert.doesNotMatch(run(env2, fullBrief('M1').replace('Acceptance: it is on.', 'Acceptance: it is on.\nSource: lib/characters/CH_x/source/A.blend'), `item-y${process.pid}-${n++}`, { PLAN_FILE: join(env2.dir, 'plan.json') }), /Brief check/, 'target_image fills the Target image line of a brief that lacks it')
+  const env3 = withRoster(setup(t))
+  stub(env3, { ...issue, body: 'Scope: the lamp.\nSheet: sheets/lamp.md\nLevel: n/a fixture, this slice changes no level' })
+  assert.doesNotMatch(run(env3, na('#7'), `item-z${process.pid}-${n++}`), /Brief check/, 'a Programmer n/a with no target in the item starts')
+})
+
+test('#702: a named target file that is not on this machine gives the start note; with the file present there is none', async (t) => {
+  const named = fullBrief('#7').replace('Acceptance: it is on.', 'Acceptance: it is on.\nTarget image: lib/characters/CH_x/approval/A.png\nSource: lib/characters/CH_x/source/A.blend')
+  const env = withRoster(setup(t))
+  stub(env, { ...issue, body: 'Scope: the lamp.\nSheet: sheets/lamp.md\nLevel: n/a fixture, this slice changes no level' })
+  const out = run(env, named, `item-ta${process.pid}-${n++}`)
+  assert.doesNotMatch(out, /Brief check/)
+  assert.match(out, /Target check: lib\/characters\/CH_x\/approval\/A\.png is not on this machine\. Open the target first \(read it from the project files or the device\) or ask the coordinator one line; do no work before you have seen it\./)
+  spawnSync('mkdir', ['-p', join(env.repo, 'lib/characters/CH_x/approval')])
+  writeFileSync(join(env.repo, 'lib/characters/CH_x/approval/A.png'), 'x')
+  assert.doesNotMatch(run(env, named, `item-tb${process.pid}-${n++}`), /Target check/, 'the file is there: no note')
+  const rg = await import('../global/rule-guard.mjs')
+  const seen = []
+  const probe = (hit) => (p) => { seen.push(p); return p === hit }
+  assert.equal(rg.targetAbsent('Target image: lib/characters/CH_x/approval/A.png', '/w', probe('/mnt/project-files/lib/characters/CH_x/approval/A.png')), null, 'found under the project files')
+  assert.deepEqual(seen, ['lib/characters/CH_x/approval/A.png', '/w/lib/characters/CH_x/approval/A.png', '/mnt/project-files/lib/characters/CH_x/approval/A.png'])
+  assert.equal(rg.targetAbsent('Target image: [Mira look](lib/characters/CH_x/approval/A.png)', '/w', () => false), 'lib/characters/CH_x/approval/A.png', 'the path inside a Markdown link')
+  assert.equal(rg.targetAbsent('Target image: n/a this slice changes no look at all', '/w', () => false), null, 'n/a names no file')
+  assert.equal(rg.targetAbsent('Target image: https://example.com/approval/A.png', '/w', () => false), null, 'a link is no file on this machine')
 })
 
 // #609: in the cloud a thread starts in /home/user, which is no repo and holds its checkout as the one child folder.

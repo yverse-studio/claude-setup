@@ -4,12 +4,12 @@
 // role or kit, a role the kit does not allow) and names every field you did not give; it guesses none (operator SKILL.md, Grill first).
 // Usage: node scripts/brief.mjs --role <Role> --kit <kit> --size <S|M|L> --item <M<n>|new> --plan <file or card> --acceptance <text> --threads <text> --prior-art <text>
 //          --done <text> --stop <text> [--what <title words>] [--start <files>] [--skills <text>] [--sheet <path|n/a why>]
-//          [--look-lock <card link>] [--topic <checklist topic, Reviewer only>] [--tester <thread>] [--researcher <text>] [--gate <reviewer thread>] [--json]
+//          [--target-image <approval/ file | n/a why, Programmer only> --source <path or link>, both with a --sheet file] [--topic <checklist topic, Reviewer only>] [--tester <thread>] [--researcher <text>] [--gate <reviewer thread>] [--json]
 //        node scripts/brief.mjs --lines   one line per Roster role: its kits, model and playbook (for the coordinator's index)
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { CHECKLISTS, GATE_BUILDER_ROLES, GATE_LINE, badRole, badTeam, badTopic, decide, kitNames, needsLevelRole, needsSheetRole, rosterNames } from '../global/team-guard.mjs'
+import { BRIEF_FIELDS, CHECKLISTS, GATE_BUILDER_ROLES, GATE_LINE, badRole, badTeam, badTopic, decide, kitNames, needsLevelRole, needsSheetRole, rosterNames } from '../global/team-guard.mjs'
 import { GATE_ROLES, roleOf } from '../global/rule-guard.mjs'
 import { briefFileName, modelCell, modelFor as renderModelFor, renderBrief, roleLines as renderRoleLines, stub, tierOf } from '../global/card-render.mjs'
 
@@ -21,7 +21,7 @@ export const modelFor = (role, size, teams = teamsText()) => renderModelFor(role
 export const briefFile = (role, teams = teamsText()) => renderBrief(role, teams)
 export { briefFileName }
 
-export function buildBrief({ role, kit, size, item, plan, acceptance, threads, priorArt, done, stop, what, start, skills, sheet, lookLock, tester, researcher, gate, topic, sceneDocs, level, checklists = readFileSync(join(root, CHECKLISTS), 'utf8'), teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8') }) {
+export function buildBrief({ role, kit, size, item, plan, acceptance, threads, priorArt, done, stop, what, start, skills, sheet, targetImage, source, tester, researcher, gate, topic, sceneDocs, level, checklists = readFileSync(join(root, CHECKLISTS), 'utf8'), teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8') }) {
   const roles = rosterNames(teams)
   const kits = kitNames(teams)
   if (!roles.includes(role)) throw new BriefError(`Role: ${role} is no role in docs/TEAMS.md (Roster); valid: ${roles.join(', ')}`)
@@ -44,14 +44,20 @@ export function buildBrief({ role, kit, size, item, plan, acceptance, threads, p
   if (gateLine && !GATE_LINE.test(gateLine)) throw new BriefError('--gate names a Reviewer or Tester thread and ends "before owner" (given as --gate "Reviewer · <what> before owner"), or reads "n/a <why this slice has no owner-facing result>" with 10+ characters')
   const missing = Object.entries({ item, plan, acceptance, threads, 'prior-art': prior, done, stop, skills: skillsLine, ...(size === 'S' ? {} : { what }), ...(needsSheet ? { sheet } : {}), ...(needsLevel ? { level } : {}), ...(role === 'Animator' ? { 'scene-docs': sceneDocs } : {}), ...(role === 'Programmer' && size === 'L' ? { tester } : {}) })
     .filter(([, v]) => !v).map(([k]) => `--${k}`)
-  if (needsSheet && sheet && !/^n\/a/i.test(sheet) && !lookLock) missing.push('--look-lock')
+  // #702: a real sheet brings the target image and its source; a Programmer's `n/a <why>` target drops the source (the row of BRIEF_FIELDS decides what a target is).
+  const look = needsSheet && sheet && !/^n\/a/i.test(sheet)
+  const targetOk = look && targetImage && BRIEF_FIELDS.find((f) => f.key === 'Target image').ok(`Role: ${role}\nTarget image: ${targetImage}`)
+  if (look && targetImage && !targetOk) throw new BriefError('--target-image names the approved image in an approval/ folder (reference/ for motion): a png, jpg, webp, gif, pdf, mp4 or webm; only a Programmer may give "n/a <why>" with 10+ characters')
+  const noTarget = look && /^n\/a/i.test(targetImage ?? '')
+  if (look && !targetImage) missing.push('--target-image')
+  if (look && !noTarget && !source) missing.push('--source')
   if (needsSheet && /^n\/a/i.test(sheet ?? '') && !/^n\/a[ \t]+\S[^\n]{9,}$/i.test(sheet)) throw new BriefError('--sheet n/a needs a reason of 10+ characters after it (team-guard: Sheet: n/a <why this is no body, face or outfit job>)')
   if (missing.length) throw new BriefError(`missing, never guessed: ${missing.join(', ')}`)
   const tier = tierOf(info.row)
   if (!tier) throw new BriefError(`the Roster row of ${role} names no model tier ("${modelCell(info.row)}"); the model of this role is not the generator's to pick`)
   const model = modelFor(role, size, teams)
   const lines = [stub(role, kit, size), `Model: ${model}`, `Item: ${item}`, `Plan: ${plan}`, `Acceptance: ${acceptance}`, `Threads: ${threads}`, `Prior art: ${prior}`, `Skills: ${skillsLine}`,
-    ...(needsSheet ? [`Sheet: ${sheet}`, ...(/^n\/a/i.test(sheet) ? [] : [`Look-Lock: ${lookLock}`])] : []),
+    ...(needsSheet ? [`Sheet: ${sheet}`, ...(look ? [`Target image: ${targetImage}`, ...(noTarget ? [] : [`Source: ${source}`])] : [])] : []),
     ...(needsLevel ? [`Level: ${level}`] : []),
     ...(role === 'Animator' ? [`Scene docs: ${sceneDocs}`] : []),
     ...(topic ? [`Topic: ${topic}`] : []), ...(gateLine ? [gateLine] : []), ...(researcher ? [`Researcher: ${researcher}`] : []), ...(role === 'Programmer' && size === 'L' ? [`Tester: ${tester}`] : []),
@@ -76,7 +82,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   if (args.includes('--lines')) { console.log(roleLines().join('\n')); process.exit(0) }
   try {
     const out = buildBrief({ role: flag('role'), kit: flag('kit'), size: flag('size'), item: flag('item'), plan: flag('plan'), acceptance: flag('acceptance'), threads: flag('threads'), priorArt: flag('prior-art'),
-      done: flag('done'), stop: flag('stop'), what: flag('what'), start: flag('start'), skills: flag('skills'), sheet: flag('sheet'), lookLock: flag('look-lock'),
+      done: flag('done'), stop: flag('stop'), what: flag('what'), start: flag('start'), skills: flag('skills'), sheet: flag('sheet'), targetImage: flag('target-image'), source: flag('source'),
       tester: flag('tester'), researcher: flag('researcher'), gate: flag('gate'), topic: flag('topic'), sceneDocs: flag('scene-docs'), level: flag('level') })
     console.log(args.includes('--json') ? JSON.stringify(out) : out.brief)
   } catch (e) {
