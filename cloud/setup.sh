@@ -1256,11 +1256,12 @@ const flat = (a) => posix.normalize(a.replace(/%([0-9a-f]{2})/gi, (_, h) => Stri
 
 // gh decided by command position only: a merge goes through the counter. Comments are never read here: a verdict posted through plain gh
 // is not counted, so it can never lead to a merge (the comment tool or `post` counts it).
-function ghProblem(s) {
+function ghProblem(s, ctx = {}) {
   const w = [] // the subcommand words: flags and the value of -R/--repo dropped
   for (let j = 0; j < s.args.length; j++) { const x = s.args[j]; if (/^(-R|--repo)$/.test(x)) j++; else if (!x.startsWith('-')) w.push(x) }
   const gh = s.a0.toLowerCase() === 'gh'
   const merge = (gh && w[0] === 'pr' && w[1] === 'merge') || ((!gh || w[0] === 'api') && s.args.some((a) => MERGE_DOOR.test(a) || MERGE_DOOR.test(flat(a)))) // gh api, curl and wget reach the same routes
+  if (merge && finderProblem(ctx.role)) return finderProblem(ctx.role)
   return merge ? 'gate ledger: a merge goes through the counter (gate.md, Rounds): the merge tool mcp__github__merge_pull_request, or "node ~/.claude/claude-setup/gate-rounds.mjs merge <owner/repo#n> [--squash|--merge|--rebase] [--auto] [--delete-branch]". It refuses a PR without a counted pass.' : null
 }
 
@@ -1305,7 +1306,7 @@ function bashProblem(cmd, dir, ctx) {
   // not a plain read (a copy, node -e, an import, a symlink) is refused, so the proofs cannot be walked around by renaming the script.
   if (/gate-rounds\.mjs/.test(cmd) && !list.every((s) => isCounterCall(s) || readsOnly(s))) return 'gate ledger: gate-rounds.mjs is run only as "node ~/.claude/claude-setup/gate-rounds.mjs <verb> <asset> ..." (gate.md, Rounds); copying it, importing it or running it through node -e is refused, because the proofs live in this hook and in the CLI. To read the file use the Read or Grep tool.'
   for (const s of list) {
-    if (/^(gh|curl|wget|http|https|xh|invoke-restmethod|invoke-webrequest|irm|iwr)$/i.test(s.a0)) { const r = ghProblem(s); if (r) return r }
+    if (/^(gh|curl|wget|http|https|xh|invoke-restmethod|invoke-webrequest|irm|iwr)$/i.test(s.a0)) { const r = ghProblem(s, ctx); if (r) return r }
     if (s.redirs.some((r) => !/\s/.test(r) && (named(r) || GUARD_FILE.test(r)))) return msg
     const script = s.a0 === 'node' ? s.args.find((a) => base(a) === 'gate-rounds.mjs') ?? s.args.find((a) => !a.startsWith('-')) : null
     if (script && base(script) === 'gate-rounds.mjs') {
@@ -1314,7 +1315,7 @@ function bashProblem(cmd, dir, ctx) {
       if (!CLI_VERBS.includes(verb) || ['status', 'check'].includes(verb)) continue
       // Round 2, finding 4 of the review: only the installed copy is the counter. A file of that name in a checkout or /tmp can be edited, and merge needs no grant.
       if (!GUARD_FILE.test(script)) return `gate ledger: "${verb}" runs only from the installed copy, "node ~/.claude/claude-setup/gate-rounds.mjs ${verb} ..."; a file of that name anywhere else is not the counter (gate.md, Rounds).`
-      if (verb === 'merge') { const why = mergeProblem(readLedger(dir, s.args[at + 2])); if (why) return why } // the hook checks the pass itself, not only the CLI
+      if (verb === 'merge') { const why = finderProblem(ctx.role) ?? mergeProblem(readLedger(dir, s.args[at + 2])); if (why) return why } // the hook checks the pass itself, not only the CLI
       if (list.length !== 1 || /\$\(|`/.test(cmd)) return `gate ledger: "${verb}" runs as the only command of the call, without substitution, so its proof can be read (gate.md, Rounds).`
       const ref = s.args[s.args.indexOf('--ref') + 1]
       if (verb === 'init' && !(Number(s.args[s.args.indexOf('--round') + 1]) >= 1)) return 'gate ledger: init imports the rounds that already ran: --round <n> with n of 1 or more (gate.md, Rounds).'
@@ -1337,6 +1338,11 @@ function bashProblem(cmd, dir, ctx) {
   }
   return null
 }
+
+// #785: a Researcher finds, it does not build or merge (docs/TEAMS.md, Sizes row S). The refusal names the next step, so a gated PR is not left
+// with no one to merge it. Nothing gets looser: only a refusal that was there before now says who merges.
+export const FINDER_ROLE = /^researcher$/i
+export const finderProblem = (role) => FINDER_ROLE.test(role ?? '') ? `gate ledger: a ${String(role).slice(0, 30)} finds and reports, it does not merge. Send the fix to the coordinator (message_coordinator): it starts a \`Programmer · fix <what>\` thread at size S (docs/TEAMS.md, Sizes row S).` : null
 
 const POSTS = /^mcp__github__(add_issue_comment|pull_request_review_write|update_pull_request|add_reply_to_pull_request_comment|add_comment_to_pending_review)$/
 const MERGES = /^mcp__github__(merge_pull_request|enable_pr_auto_merge)$/
@@ -1372,7 +1378,7 @@ export function gateStep(tool, input = {}, ctx = {}) {
   }
   const asset = assetOf(input)
   if (!asset) return null
-  if (MERGES.test(tool)) return mergeProblem(readLedger(dir, asset))
+  if (MERGES.test(tool)) return finderProblem(ctx.role) ?? mergeProblem(readLedger(dir, asset))
   if (!POSTS.test(tool)) return null
   const text = input.body ?? input.comment ?? ''
   const head = parseHeadline(text)

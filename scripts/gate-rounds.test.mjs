@@ -1,4 +1,28 @@
 // The hard gate round counter (global/gate-rounds.mjs through global/rule-guard.mjs). Run: node --test scripts/gate-rounds.test.mjs
+// #785: a Researcher that reaches a merge is told the next step (message_coordinator, a `Programmer · fix` thread at size S); a builder's merge is unchanged.
+import { test as finderTest } from 'node:test'
+import { mkdtempSync as finderTmp, rmSync as finderRm } from 'node:fs'
+import { tmpdir as finderTmpdir } from 'node:os'
+import { join as finderJoin } from 'node:path'
+import { gateStep as finderStep } from '../global/gate-rounds.mjs'
+import finderAssert from 'node:assert/strict'
+finderTest('a Researcher merge is refused with the path: coordinator starts a Programmer fix thread (#785)', () => {
+  const merge = { owner: 'o', repo: 'r', pullNumber: 785 }
+  const dir = finderTmp(finderJoin(finderTmpdir(), 'finder-'))
+  try {
+    for (const tool of ['mcp__github__merge_pull_request', 'mcp__github__enable_pr_auto_merge']) {
+      const why = finderStep(tool, merge, { dir, role: 'Researcher', calls: [] })
+      finderAssert.match(why ?? '', /message_coordinator/)
+      finderAssert.match(why ?? '', /Programmer · fix/)
+      finderAssert.match(why ?? '', /size S/)
+    }
+    finderAssert.match(finderStep('Bash', { command: 'gh pr merge 785 --squash' }, { dir, role: 'Researcher' }) ?? '', /message_coordinator/, 'gh pr merge')
+    // Not looser: a Programmer with no counted pass is still refused by the ledger, with its own text.
+    const prog = finderStep('mcp__github__merge_pull_request', merge, { dir, role: 'Programmer', calls: [] })
+    finderAssert.match(prog ?? '', /no gate round is counted/)
+    finderAssert.doesNotMatch(prog ?? '', /message_coordinator/)
+  } finally { finderRm(dir, { recursive: true, force: true }) }
+})
 // Proof for yskills (2026-11-12): round 4 without Fable is refused, round 7 without a card is refused, an incomplete brief is blocked.
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
