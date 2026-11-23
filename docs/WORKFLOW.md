@@ -95,7 +95,7 @@ A thread that cannot open a PR itself (cloud, GitHub App disconnected) writes th
 
 **Memory check, two speeds.** Every coordinator start, cheap: `MEMORY.md` has only the four sections of
 [the template](../.claude/skills/operator/templates/project-memory.md) and no line that is a rule; a rule
-found there becomes a `loop:setup` issue. Monthly, or when you say "memory check": full. Every fact
+found there becomes a `loop:setup` issue; it also flags a topic memory file over 1.5 KB (`scripts/memory-size.mjs`), and the full check archives the files of finished plans. Monthly, or when you say "memory check": full. Every fact
 file and auto-memory note is moved into its home ([`docs/MAP.md`, Start here](MAP.md#start-here)) or
 deleted (git history keeps the raw copy), and you get three lines on what moved and
 what went. Claude Code's built-in auto-memory on your PC (`~/.claude/projects/*/memory/`) stays a

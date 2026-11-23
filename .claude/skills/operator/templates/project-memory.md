@@ -22,3 +22,4 @@ Example: yverse-studio/company-xy, lessons in `docs/LESSONS.md`.
 ---
 Under 3 KB, state only. The coordinator rewrites it at milestones. A rule found here becomes a
 `loop:setup` issue (`docs/MAP.md`, Start here).
+A topic memory file holds state only and stays at about 1.5 KB (`node scripts/memory-size.mjs <memory dir>` lists the long ones); the file of a finished plan is archived (moved out of recall) by the memory check.
