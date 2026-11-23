@@ -509,6 +509,7 @@ const needsSheet = (plain) => new RegExp(`^[ \\t>-]*Role:[ \\t]*(${SHEET_ROLES.j
   && !SHEET_NA.test(plain)
 // CompanyXY 2026-11-12 (yskills 13:23, point 5): gates were planned only after the owner complained. A builder, designer or animator brief
 // at size M or L names the Reviewer thread that gates its work before the owner sees it; the gate roles themselves need no such line.
+// #780: at size M a missing line is a fill (class derived, a clean start): the thread asks for the Reviewer thread before the owner sees a result; at size L it is a repair the thread names at its start.
 // A Gate line names a reviewer thread (`Gate: Reviewer · fit round 2 before owner`), or says in 10+ characters why the slice has no owner-facing
 // result (`Gate: n/a no owner-facing result, a CI script only`); the same shape as `Sheet: n/a`. `none`, `later` or `skipped` do not count.
 export const GATE_BUILDER_ROLES = '(?:Planner|Programmer|Designer|Animator|Character TD|Story Writer|Game Designer|Content Designer|Sound Designer)'
@@ -563,7 +564,7 @@ export const BRIEF_FIELDS = [
   // Companyxy 2026-11-12: finished threads stayed open and work lay twice. The thread lists the threads itself before it builds.
   { key: 'Threads', name: 'Threads: (list_threads checked, none open on this topic)', tpl: 'Threads: <list_threads checked: none open on this topic | continues <title of the open thread>>', ok: line(/^[ \t>-]*Threads:[ \t]*[^<\s][^\n]{8,}$/im), cls: () => 'recoverable', fill: () => 'Threads: call list_threads yourself and reuse an open thread of this topic' },
   { key: 'Prior art', strict: false, tpl: 'Prior art: <sources named: repo, path, URL, #n> -> copy | adapt | reuse | build, because <why>', ok: (p) => !needsPriorArt(p), cls: (p) => (gateRolePlain(p) ? 'derived' : 'recoverable'), fill: (p) => (gateRolePlain(p) ? 'Prior art: .claude/skills/operator/gate.md and the kit\'s checks -> adapt, because the gate rules exist' : 'Prior art: to find: the repo and docs first, sources named before you build') },
-  { key: 'Gate', name: 'Gate: <Reviewer thread> before owner, or `Gate: n/a <why no owner-facing result>` (a builder, designer or animator brief at size M or L)', tpl: 'Gate: <Reviewer thread> before owner (M or L)', applies: needsGate, ok: line(GATE_LINE), cls: () => 'recoverable', fill: () => 'Gate: ask the coordinator (message_coordinator) for the Reviewer thread, then write `Gate: Reviewer · <what> before owner`' },
+  { key: 'Gate', name: 'Gate: <Reviewer thread> before owner, or `Gate: n/a <why no owner-facing result>` (a builder, designer or animator brief at size M or L)', tpl: 'Gate: <Reviewer thread> before owner (M or L)', applies: needsGate, ok: line(GATE_LINE), cls: (p) => (/\bSize:[ \t]*L\b/i.test(p) ? 'recoverable' : 'derived'), fill: (p) => (/\bSize:[ \t]*L\b/i.test(p) ? 'Gate: ask the coordinator (message_coordinator) for the Reviewer thread, then write `Gate: Reviewer · <what> before owner`' : 'Gate: none named; before yskills sees an image, a sheet, a build or a page of this slice, ask the coordinator (message_coordinator) for a Reviewer thread (gate.md, Owner-facing results)') },
   { key: 'Sheet', name: 'Sheet: (approved cast sheet, docs/preproduction-workflow.md)', tpl: 'Sheet: <approved cast sheet .md, or `n/a <why no body, face or outfit job>`; Programmer or Animator on a game or story kit>', applies: needsSheet, ok: line(/^[ \t>-]*Sheet:[ \t]*[^<\n]*\.md\b/im), cls: () => 'judgment' },
   // GameDev 2026-11-15 (#697, #702): a builder guessed a chosen look because the brief named neither target nor source. The look-lock card link is gone from
   // the brief (the cast sheet keeps its own, scripts/pipeline-gates.mjs); an old brief that still carries a `Look-Lock:` line starts, the line is not read.
@@ -575,7 +576,7 @@ export const BRIEF_FIELDS = [
   // GameDev 2026-11-15 (#627, #688, #689): a plan built from cloud docs alone failed a gate and a garment took ~18 rounds of material tinkering while a passed route existed. One line names the
   // asset's pre-gate file, which quotes the project's recipe and pitfall docs (operator/gate.md, Before a builder asks for a gate; scripts/pipeline-gates.mjs pregate checks it).
   { key: 'Pre-gate', name: 'Pre-gate: (the asset\'s pre-gate file, operator/gate.md)', tpl: 'Pre-gate: <path of the asset\'s PREGATE.md in the project files; written before the plan, it quotes the project\'s recipe and pitfall docs; laptop offline means stop and report> (Animator and Character TD)', applies: (p) => /^[ \t>-]*Role:[ \t]*(Animator|Character TD)\b/im.test(p), ok: line(/^[ \t>-]*Pre-gate:[ \t]*[^<\s]/im), cls: () => 'recoverable', fill: () => 'Pre-gate: write <project files>/gate/<asset>/PREGATE.md before the plan (operator/gate.md, Before a builder asks for a gate): recipe and pitfall rows quoted from the docs the project lists, read on the laptop where they live; laptop offline means stop and report' },
-  { key: 'Researcher', name: 'Researcher: (the task asks for research)', tpl: 'Researcher: <subagent and model, or the Researcher thread; research tasks only>', applies: (p) => ASKS_RESEARCH.test(p) && !/\bRole:[ \t]*Researcher\b/i.test(p), ok: line(/^[ \t>-]*Researcher:[ \t]*[^<\s]/im), cls: () => 'recoverable', fill: () => 'Researcher: ask the coordinator for a Researcher thread (message_coordinator) and go on meanwhile' },
+  { key: 'Researcher', name: 'Researcher: (the task asks for research)', tpl: 'Researcher: <subagent and model, or the Researcher thread; research tasks only>', applies: (p) => ASKS_RESEARCH.test(p) && !/\bRole:[ \t]*Researcher\b/i.test(p) && !gateRolePlain(p), ok: line(/^[ \t>-]*Researcher:[ \t]*[^<\s]/im), cls: () => 'recoverable', fill: () => 'Researcher: ask the coordinator for a Researcher thread (message_coordinator) and go on meanwhile' },
   { key: 'Tester', strict: false, tpl: 'Tester: <Tester thread; size L Programmer only>', applies: (p) => /^[ \t>-]*Role:[ \t]*Programmer\b/im.test(p), ok: (p) => !needsTester(p), cls: () => 'judgment' },
 ]
 // #761: only the gaps the coordinator must decide (class judgment); what follows from Role, Kit and Size or what the thread fetches itself is no refusal.
@@ -1641,7 +1642,7 @@ export function renderBrief(role, teams, fields = BRIEF_FIELDS) {
   const offered = [...new Set(kits.flatMap((kit) => sizesOf(role, kit, teams)))]
   const kitCell = kits.map((kit) => (sizesOf(role, kit, teams).length < offered.length ? `${kit} (size ${sizesOf(role, kit, teams).join(' or ')} only)` : kit)).join(' | ')
   const gateRole = GATE_ROLES.test(role)
-  const probes = [stub(role, 'game', 'M'), stub(role, 'setup', 'M')]
+  const probes = [stub(role, 'game', 'M'), stub(role, 'setup', 'M'), stub(role, 'setup', 'L')] // L too: at size M the Gate line is a fill, at L an ask (#780)
   const rows = new Map(fields.map((f) => [f.key, f]))
   const keys = [...ORDER.filter((k) => rows.has(k) || k === 'Topic'), ...fields.map((f) => f.key).filter((k) => !ORDER.includes(k))]
   const at = keys.indexOf('Done when')
@@ -1755,7 +1756,7 @@ export function startOutcome(check = '', modelCheckText = '') {
   if (/^Model check\b/.test(modelCheckText)) return { outcome: 'wrong-model', reasons: ['model'] }
   const full = [...String(check).matchAll(/\((\d+)\) (.*?)(?= \(\d+\) |\. Do no work)/g)].map((m) => m[2].trim())
   if (/^Brief check\b/.test(check)) return { outcome: full.some((i) => /ask the coordinator to restart it on that model/.test(i)) ? 'wrong-model' : 'refused', reasons: full.map((i) => i.split(' (found')[0].slice(0, 80)) }
-  // Any repair text counts, whatever it repairs: both notes start with `Brief repair (no block):`.
+  // Any repair text counts, whatever it repairs: a `Brief fill:` line alone (a derived gap) is clean.
   const repair = String(check).match(/Brief repair \(no block\): ([^\n]*)/)
   if (!repair) return { outcome: 'clean', reasons: [] }
   const lacks = repair[1].match(/^the brief lacks ([^.]*?)\. Work as if/)?.[1]
@@ -1818,13 +1819,14 @@ export function statsLine(out = projectFolder(), since = null) {
   for (const e of entries.filter((x) => x.outcome !== 'clean')) for (const r of e.reasons ?? []) reasons.set(r, (reasons.get(r) ?? 0) + 1)
   const top = [...reasons].sort((a, b) => b[1] - a[1])[0]
   const pct = entries.length ? Math.round((100 * bad) / entries.length) : 0
-  return `starts ${entries.length}: ${OUTCOMES.map((o) => `${o} ${count[o]}`).join(', ')} (false starts ${bad}, ${pct}%); top reason: ${top ? `${top[0]} (${top[1]}x)` : 'none'}`
+  // #780: a repaired start began work, so the line says `started` (clean plus repaired) and how many of those filled lines themselves.
+  return `starts ${entries.length}: started ${count.clean + count.repaired} (${count.repaired} self-filled), ${OUTCOMES.slice(2).map((o) => `${o} ${count[o]}`).join(', ')} (false starts ${bad}, ${pct}%); top reason: ${top ? `${top[0]} (${top[1]}x)` : 'none'}`
 }
 // The line the coordinator card carries: the last 7 days of real starts in this folder, rendered when the card is. '' without a folder.
 export function startsWeek(out = projectFolder(), now = new Date()) {
   if (!out) return ''
-  const m = statsLine(out, new Date(now - 7 * 864e5)).match(/^starts (\d+): clean (\d+), repaired (\d+), refused (\d+), wrong-model (\d+), duplicate \d+ \(false starts \d+, (\d+)%\)/)
-  return m ? `Thread starts, last 7 days (as of ${now.toISOString().slice(0, 10)}): ${m[1]}, clean ${m[2]}, repaired ${m[3]}, refused ${m[4]}, wrong-model ${m[5]} (false starts ${m[6]}%).` : ''
+  const m = statsLine(out, new Date(now - 7 * 864e5)).match(/^starts (\d+): started (\d+) \((\d+) self-filled\), refused (\d+), wrong-model (\d+), duplicate \d+ \(false starts \d+, (\d+)%\)/)
+  return m ? `Thread starts, last 7 days (as of ${now.toISOString().slice(0, 10)}): ${m[1]}, started ${m[2]} (${m[3]} self-filled), refused ${m[4]}, wrong-model ${m[5]} (false starts ${m[6]}%).` : ''
 }
 CARD
 
@@ -2301,7 +2303,7 @@ export function targetAbsent(brief, cwd, exists = existsSync) {
   return [path, join(cwd, path), join('/mnt/project-files', path)].some((p) => exists(p)) ? null : path
 }
 // M50: ONE refusal lists every judgment gap (role, kit, size, topic, model, and at size M or L Item, Plan, Acceptance; Sheet; Tester at size L) with the role's
-// template; what follows from Role, Kit and Size or what the thread can fetch itself is no block: the thread is told how it fills each line (`Brief repair`).
+// template; what follows from Role, Kit and Size or what the thread can fetch itself is no block: the thread is told how it fills each line (`Brief fill` for what follows from the stamp, `Brief repair` for what it fetches).
 export async function briefCheck(prompt, cwd, model = null, any = false) {
   if (!any && !/<(wake|relay)\b[^>]*reason=\\?"spawn/.test(prompt)) return ''
   let guard
@@ -2349,7 +2351,12 @@ export async function briefCheck(prompt, cwd, model = null, any = false) {
   if (found.length) return `Brief check (docs/TEAMS.md): this start breaks the team rules in ${found.length} place${found.length === 1 ? '' : 's'}: ${found.map((f, i) => `(${i + 1}) ${f}`).join(' ')}. Do no work: send ALL of this to the coordinator in one message (message_coordinator) together with this template for a ${role?.name ?? '<Role>'}, then stop:\n${templateFor(guard, role?.name ?? '<Role>', plain.match(/\bSize:[ \t]*([SML])\b/i)?.[1])}${notCopied ? `\n${notCopied.trim()}` : ''}`
   // Nothing the coordinator must decide is missing: the thread closes the rest itself and says so in its first checklist line.
   const mine = [...sorted.derived, ...sorted.recoverable]
-  const notes = mine.length ? [`Brief repair (no block): the brief lacks ${mine.map((f) => f.key).join(', ')}. Work as if it read: ${mine.map((f) => f.fill).join(' | ')}. Name the repaired lines in your first checklist line.${notCopied}`] : []
+  // #780: a gap that follows from Role, Kit and Size is filled, not repaired: a short `Brief fill:` line, no demand to name it, and the start counts as clean.
+  const fills = sorted.derived
+  const repairs = sorted.recoverable
+  const notes = []
+  if (fills.length) notes.push(`Brief fill: ${fills.map((f) => f.fill).join(' | ')}${repairs.length || !notCopied ? '' : `.${notCopied}`}`) // the not-copied sentence (#712) rides on the fill line when no repair note carries it
+  if (repairs.length) notes.push(`Brief repair (no block): the brief lacks ${repairs.map((f) => f.key).join(', ')}. Work as if it read: ${repairs.map((f) => f.fill).join(' | ')}. Name the repaired lines in your first checklist line.${notCopied}`)
   const gate = role?.name
   if (gate && GATE_ROLES.test(gate) && !GATE_PRIOR.test(plain) && !mine.some((f) => f.key === 'Prior art')) notes.push(`Brief repair (no block): a ${gate} brief names gate.md and the kit's checks in its \`Prior art:\` line; read .claude/skills/operator/gate.md first.`)
   if (item && !item.error && /\bv([2-9]|\d\d+)\b/i.test(`${item.head.replace(/^.*?\): /, '')}\n${itemPlain.match(/^[ \t>-]*Asset:[^\n]*/im)?.[0] ?? ''}`) && !/^[ \t>-]*Basis:[ \t]*[^<\s]/im.test(itemPlain)) notes.push('Item check: this item is a version above 1 and has no `Basis:` line. Find the passed predecessor in LIVE.md, write Basis and Assets into the item, then build from those files.')

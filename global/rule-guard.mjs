@@ -468,7 +468,7 @@ export function targetAbsent(brief, cwd, exists = existsSync) {
   return [path, join(cwd, path), join('/mnt/project-files', path)].some((p) => exists(p)) ? null : path
 }
 // M50: ONE refusal lists every judgment gap (role, kit, size, topic, model, and at size M or L Item, Plan, Acceptance; Sheet; Tester at size L) with the role's
-// template; what follows from Role, Kit and Size or what the thread can fetch itself is no block: the thread is told how it fills each line (`Brief repair`).
+// template; what follows from Role, Kit and Size or what the thread can fetch itself is no block: the thread is told how it fills each line (`Brief fill` for what follows from the stamp, `Brief repair` for what it fetches).
 export async function briefCheck(prompt, cwd, model = null, any = false) {
   if (!any && !/<(wake|relay)\b[^>]*reason=\\?"spawn/.test(prompt)) return ''
   let guard
@@ -516,7 +516,12 @@ export async function briefCheck(prompt, cwd, model = null, any = false) {
   if (found.length) return `Brief check (docs/TEAMS.md): this start breaks the team rules in ${found.length} place${found.length === 1 ? '' : 's'}: ${found.map((f, i) => `(${i + 1}) ${f}`).join(' ')}. Do no work: send ALL of this to the coordinator in one message (message_coordinator) together with this template for a ${role?.name ?? '<Role>'}, then stop:\n${templateFor(guard, role?.name ?? '<Role>', plain.match(/\bSize:[ \t]*([SML])\b/i)?.[1])}${notCopied ? `\n${notCopied.trim()}` : ''}`
   // Nothing the coordinator must decide is missing: the thread closes the rest itself and says so in its first checklist line.
   const mine = [...sorted.derived, ...sorted.recoverable]
-  const notes = mine.length ? [`Brief repair (no block): the brief lacks ${mine.map((f) => f.key).join(', ')}. Work as if it read: ${mine.map((f) => f.fill).join(' | ')}. Name the repaired lines in your first checklist line.${notCopied}`] : []
+  // #780: a gap that follows from Role, Kit and Size is filled, not repaired: a short `Brief fill:` line, no demand to name it, and the start counts as clean.
+  const fills = sorted.derived
+  const repairs = sorted.recoverable
+  const notes = []
+  if (fills.length) notes.push(`Brief fill: ${fills.map((f) => f.fill).join(' | ')}${repairs.length || !notCopied ? '' : `.${notCopied}`}`) // the not-copied sentence (#712) rides on the fill line when no repair note carries it
+  if (repairs.length) notes.push(`Brief repair (no block): the brief lacks ${repairs.map((f) => f.key).join(', ')}. Work as if it read: ${repairs.map((f) => f.fill).join(' | ')}. Name the repaired lines in your first checklist line.${notCopied}`)
   const gate = role?.name
   if (gate && GATE_ROLES.test(gate) && !GATE_PRIOR.test(plain) && !mine.some((f) => f.key === 'Prior art')) notes.push(`Brief repair (no block): a ${gate} brief names gate.md and the kit's checks in its \`Prior art:\` line; read .claude/skills/operator/gate.md first.`)
   if (item && !item.error && /\bv([2-9]|\d\d+)\b/i.test(`${item.head.replace(/^.*?\): /, '')}\n${itemPlain.match(/^[ \t>-]*Asset:[^\n]*/im)?.[0] ?? ''}`) && !/^[ \t>-]*Basis:[ \t]*[^<\s]/im.test(itemPlain)) notes.push('Item check: this item is a version above 1 and has no `Basis:` line. Find the passed predecessor in LIVE.md, write Basis and Assets into the item, then build from those files.')

@@ -156,7 +156,7 @@ export function renderBrief(role, teams, fields = BRIEF_FIELDS) {
   const offered = [...new Set(kits.flatMap((kit) => sizesOf(role, kit, teams)))]
   const kitCell = kits.map((kit) => (sizesOf(role, kit, teams).length < offered.length ? `${kit} (size ${sizesOf(role, kit, teams).join(' or ')} only)` : kit)).join(' | ')
   const gateRole = GATE_ROLES.test(role)
-  const probes = [stub(role, 'game', 'M'), stub(role, 'setup', 'M')]
+  const probes = [stub(role, 'game', 'M'), stub(role, 'setup', 'M'), stub(role, 'setup', 'L')] // L too: at size M the Gate line is a fill, at L an ask (#780)
   const rows = new Map(fields.map((f) => [f.key, f]))
   const keys = [...ORDER.filter((k) => rows.has(k) || k === 'Topic'), ...fields.map((f) => f.key).filter((k) => !ORDER.includes(k))]
   const at = keys.indexOf('Done when')
@@ -270,7 +270,7 @@ export function startOutcome(check = '', modelCheckText = '') {
   if (/^Model check\b/.test(modelCheckText)) return { outcome: 'wrong-model', reasons: ['model'] }
   const full = [...String(check).matchAll(/\((\d+)\) (.*?)(?= \(\d+\) |\. Do no work)/g)].map((m) => m[2].trim())
   if (/^Brief check\b/.test(check)) return { outcome: full.some((i) => /ask the coordinator to restart it on that model/.test(i)) ? 'wrong-model' : 'refused', reasons: full.map((i) => i.split(' (found')[0].slice(0, 80)) }
-  // Any repair text counts, whatever it repairs: both notes start with `Brief repair (no block):`.
+  // Any repair text counts, whatever it repairs: a `Brief fill:` line alone (a derived gap) is clean.
   const repair = String(check).match(/Brief repair \(no block\): ([^\n]*)/)
   if (!repair) return { outcome: 'clean', reasons: [] }
   const lacks = repair[1].match(/^the brief lacks ([^.]*?)\. Work as if/)?.[1]
@@ -333,11 +333,12 @@ export function statsLine(out = projectFolder(), since = null) {
   for (const e of entries.filter((x) => x.outcome !== 'clean')) for (const r of e.reasons ?? []) reasons.set(r, (reasons.get(r) ?? 0) + 1)
   const top = [...reasons].sort((a, b) => b[1] - a[1])[0]
   const pct = entries.length ? Math.round((100 * bad) / entries.length) : 0
-  return `starts ${entries.length}: ${OUTCOMES.map((o) => `${o} ${count[o]}`).join(', ')} (false starts ${bad}, ${pct}%); top reason: ${top ? `${top[0]} (${top[1]}x)` : 'none'}`
+  // #780: a repaired start began work, so the line says `started` (clean plus repaired) and how many of those filled lines themselves.
+  return `starts ${entries.length}: started ${count.clean + count.repaired} (${count.repaired} self-filled), ${OUTCOMES.slice(2).map((o) => `${o} ${count[o]}`).join(', ')} (false starts ${bad}, ${pct}%); top reason: ${top ? `${top[0]} (${top[1]}x)` : 'none'}`
 }
 // The line the coordinator card carries: the last 7 days of real starts in this folder, rendered when the card is. '' without a folder.
 export function startsWeek(out = projectFolder(), now = new Date()) {
   if (!out) return ''
-  const m = statsLine(out, new Date(now - 7 * 864e5)).match(/^starts (\d+): clean (\d+), repaired (\d+), refused (\d+), wrong-model (\d+), duplicate \d+ \(false starts \d+, (\d+)%\)/)
-  return m ? `Thread starts, last 7 days (as of ${now.toISOString().slice(0, 10)}): ${m[1]}, clean ${m[2]}, repaired ${m[3]}, refused ${m[4]}, wrong-model ${m[5]} (false starts ${m[6]}%).` : ''
+  const m = statsLine(out, new Date(now - 7 * 864e5)).match(/^starts (\d+): started (\d+) \((\d+) self-filled\), refused (\d+), wrong-model (\d+), duplicate \d+ \(false starts \d+, (\d+)%\)/)
+  return m ? `Thread starts, last 7 days (as of ${now.toISOString().slice(0, 10)}): ${m[1]}, started ${m[2]} (${m[3]} self-filled), refused ${m[4]}, wrong-model ${m[5]} (false starts ${m[6]}%).` : ''
 }
