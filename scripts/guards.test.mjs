@@ -2151,6 +2151,24 @@ test('team guard: a SessionStart after a compaction prints the stamped role card
   } finally { rmSync(rolefile, { force: true }) }
 })
 
+test('#755 wiring: the prompt hook prints the full persona once, the short form after it, and a SessionStart after a compaction or a clear brings the full text back', async () => {
+  const { persona, personaShort } = await import('../global/rule-guard.mjs')
+  const id = `pw${process.pid}`
+  const prompt = () => { const out = spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'prompt'], { input: JSON.stringify({ prompt: 'wie weit?', cwd: root, session_id: id }), encoding: 'utf8' }).stdout; return JSON.parse(out).hookSpecificOutput.additionalContext.split('\n').find((l) => l.startsWith('Persona:')) }
+  const start = (source) => runTeam('start', { cwd: root, session_id: id, source }, { CLAUDE_SETUP_BOOT_FETCH: 'off' })
+  try {
+    assert.equal(prompt(), persona(root), 'the first prompt of a session: the full text')
+    assert.equal(prompt(), personaShort(root), 'the second prompt: the short form')
+    start('startup')
+    assert.equal(prompt(), personaShort(root), 'a plain start resets nothing')
+    start('compact')
+    assert.equal(prompt(), persona(root), 'after a compaction: the full text again')
+    assert.equal(prompt(), personaShort(root), 'and short after it')
+    start('clear')
+    assert.equal(prompt(), persona(root), 'after a clear: the full text again')
+  } finally { for (const f of ['persona', 'role', 'start', 'brief', 'card', 'model']) rmSync(join(tmpdir(), `claude-setup-${f}-${id}`), { force: true }) }
+})
+
 test('rule-guard: a cancelled prompt hook that left its marks still gets the role card once, later in the session (#728)', () => {
   const id = `lc${process.pid}`, dir = mkdtempSync(join(tmpdir(), 'late-card-')), tfile = join(dir, 't.jsonl')
   const marks = ['role', 'start', 'card'].map((f) => join(tmpdir(), `claude-setup-${f}-${id}`))
