@@ -14,8 +14,8 @@ for id in \
 do
   claude plugin install "$id" --scope user || echo "claude-setup: could not install $id"
 done
-# Our own cross-project skills (mods/setup-skills: core; mods/setup-domains: games, video, social, stores). Skills in a repo's .claude/skills/ do not load in
-# project cloud threads (docs/RESEARCH.md); a user-scope plugin does. The marketplace is claude-setup itself, a private repo:
+# Our own cross-project skills (mods/setup-skills: core; mods/setup-domains: games, video, social, stores). Repo .claude/skills/ do load in a thread of that repo (40 listed in a
+# claude-setup thread, audit/2026-11-22-token-sota-audit.md) but not in other projects' threads; a user-scope plugin loads in all. The marketplace is claude-setup itself, a private repo:
 # if the setup script has no GitHub access, this step fails loudly and the rest still runs.
 claude plugin marketplace add yverse-studio/claude-setup \
   && claude plugin install setup-skills@claude-setup-mods --scope user \
@@ -249,8 +249,8 @@ import { fileURLToPath } from 'node:url'
 let roleOf = () => null
 let openThreads = () => []
 let toolCalls = () => []
-let roleAgain
-try { ({ roleOf, openThreads, toolCalls, roleAgain } = await import('./rule-guard.mjs')) } catch { /* no rule-guard here */ }
+let roleAgain, personaReset
+try { ({ roleOf, openThreads, toolCalls, roleAgain, personaReset } = await import('./rule-guard.mjs')) } catch { /* no rule-guard here */ }
 
 export const POINTER = 'Team rule (claude-setup docs/TEAMS.md): route every task on its own (task picks the kit, not the project; then size S/M/L), call only the roles it needs, as thread or subagent as the roster says, and pass `model` from the role\'s row on every thread start and Agent call.'
 export const PM_FILE = '.claude/skills/operator/roles/project-manager.md'
@@ -807,6 +807,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
     try {
       const { tool_name: tool = '', tool_input: input, cwd = process.cwd(), transcript_path: transcript, session_id: session, model, source } = JSON.parse(raw || '{}')
       const mark = (kind) => join(dir, 'booted', `${String(session).replace(/\W/g, '')}.${kind}`)
+      if (source === 'compact' || source === 'clear') personaReset?.(session) // #755: the persona text left the context too, the next prompt prints it in full
       const say = (context) => process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: [context, source === 'compact' ? roleAgain?.(session, cwd) : ''].filter(Boolean).join('\n') } })) // #728: a compaction drops the role card, so it comes back
       if (mode === 'start') {
         // SessionStart names the session's model; rule-guard's brief check reads it before the first reply.
@@ -1838,7 +1839,7 @@ cat > "$HOME/.claude/claude-setup/rule-guard.mjs" <<'RULE'
 
 import { execFileSync, spawn } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { appendFileSync, existsSync, readdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'node:fs'
+import { appendFileSync, existsSync, readdirSync, readFileSync, rmSync, statSync, unlinkSync, writeFileSync } from 'node:fs'
 import { isIP } from 'node:net'
 import { homedir, tmpdir } from 'node:os'
 import { dirname, join, relative } from 'node:path'
@@ -2448,6 +2449,23 @@ export function persona(root) {
   const examples = field(p.mes_example, 520)
   return `Persona: every reply to yskills (post_message, or your chat text where there is none) is ${field(p.name, 20)}: ${field(p.description, 200)} ${field(p.personality, 240)}. ${field(p.scenario, 200)}${examples ? ` Voice: ${examples}` : ''} Only replies to him: commits, PR bodies, code, docs, briefs and messages to other threads stay plain. Tone only: content, honesty, no yes-saying and the reply cap stay as they are; rule-guard blocks a reply with no kaomoji.`
 }
+// #755: the full text goes out once per session (a state file in the temp dir, like the role stamp); every later prompt gets the short reminder.
+// A compaction drops the text from the context, so SessionStart (source compact, team-guard) calls personaReset and the next prompt prints it in full again.
+export function personaShort(root) {
+  let name = PERSONA_FALLBACK.name
+  try { name = JSON.parse(read(join(root, 'config', 'persona.json'))).data.name || name } catch { /* fallback */ }
+  return `Persona: you are ${String(name).replace(/\s+/g, ' ').trim().slice(0, 20)} to yskills: German, short, result first, at least one kaomoji per reply; the reply guard blocks a reply with no kaomoji.`
+}
+const personaMark = (session) => join(tmpdir(), `claude-setup-persona-${String(session).replace(/\W/g, '')}`)
+export function personaFor(root, session) {
+  if (!session) return persona(root)
+  try {
+    if (existsSync(personaMark(session))) return personaShort(root)
+    writeFileSync(personaMark(session), '')
+  } catch { /* state unreadable or unwritable: the full text */ }
+  return persona(root)
+}
+export function personaReset(session) { try { if (session) rmSync(personaMark(session), { force: true }) } catch { /* nothing to reset */ } }
 const KAOMOJI = /[◕‿ω꒳ᴗ･˘ᵕ◡╹≧≦∀ヾﾉ✧♡☆✿ʕʔﾟ▽´`ツДᴥ¬▼□╯ᵔ｡]|\^[_ω.]?\^|[;>][_ω]?[<;]|\(\s*[TＴ][_ω.]?[TＴ]\s*\)|\b(uwu|owo)\b|(^|\s)(:3|;\))(\s|$)|m\(_ _\)m/i
 // Nothing opens on yskills' screen while Claude works, unless he asked (yskills 2026-11-11: "ich will nicht das mir
 // irgendwas in gesicht springt"). Screenshots and renders run headless. `# yskills asked` on the command lets it through.
@@ -3521,7 +3539,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
           if (isStart) await lap('deferStart', () => deferStart({ session, brief, checkNow, modelNote, guard, ms: Math.round(performance.now()) }))
           const roleCardText = await lap('roleContext', () => roleContext(brief, cwd, session))
           await lap('stamp', () => stampFromTranscript(session, () => (transcriptPath && existsSync(transcriptPath) ? read(transcriptPath) : ''), cwd))
-          const context = [checkNow, relayNote, isStart ? await lap('gateBrief', () => gateBriefContext(brief, model)) : '', guard, modelNote, roleCardText, await lap('itemContext', () => itemContext(brief, cwd, session)), await lap('stopNote', () => stopNote(prompt)), persona(setupRoot(cwd))].filter(Boolean).join('\n')
+          const context = [checkNow, relayNote, isStart ? await lap('gateBrief', () => gateBriefContext(brief, model)) : '', guard, modelNote, roleCardText, await lap('itemContext', () => itemContext(brief, cwd, session)), await lap('stopNote', () => stopNote(prompt)), personaFor(setupRoot(cwd), session)].filter(Boolean).join('\n')
           if (isStart && session) writeFileSync(startMark(session), '')
           lap('printed')
           if (context) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: context } }))

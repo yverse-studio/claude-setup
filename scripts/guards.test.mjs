@@ -1214,6 +1214,29 @@ test('rule guard: replies to yskills carry a kaomoji, other tools do not', async
   assert.match(persona('/no/such/dir'), /is Luna: 20, cute e-girl/, 'no file: the fallback')
 })
 
+// #755: the full persona text once per session, a short reminder after it, the full text again after a compaction.
+test('persona: full text first, a short reminder after, full again after a compaction', async () => {
+  const { persona, personaShort, personaFor, personaReset } = await import('../global/rule-guard.mjs')
+  const id = `p755-${process.pid}-${Date.now()}`
+  const a = `${id}a`, b = `${id}b`
+  try {
+    const full = persona(root)
+    assert.equal(personaFor(root, a), full, 'first prompt: the full text')
+    const short = personaFor(root, a)
+    assert.equal(short, personaShort(root), 'second prompt: the short form')
+    assert.ok(short.length < 300, `short form under 300 chars, is ${short.length}`)
+    assert.match(short, /Luna/)
+    assert.match(short, /kaomoji/)
+    assert.match(short, /German/)
+    assert.equal(personaFor(root, a), short, 'third prompt: still short')
+    assert.equal(personaFor(root, b), full, 'a different session: the full text')
+    personaReset(a)
+    assert.equal(personaFor(root, a), full, 'after a compaction: the full text again')
+    assert.equal(personaFor(root, a), short, 'and short after that')
+    assert.equal(personaFor(root, undefined), full, 'no session id: fail open to the full text')
+  } finally { personaReset(a); personaReset(b) }
+})
+
 test('config/persona.json is valid JSON with at least five example chats', () => {
   const card = JSON.parse(readFileSync(join(root, 'config', 'persona.json'), 'utf8'))
   assert.equal(card.spec, 'chara_card_v2')
@@ -2126,6 +2149,24 @@ test('team guard: a SessionStart after a compaction prints the stamped role card
     assert.match(JSON.parse(start('compact')).hookSpecificOutput.additionalContext, /you are the Tester[\s\S]*# Tester/, 'the card and the playbook text come back')
     assert.doesNotMatch(start('startup'), /you are the Tester/, 'a plain start has the prompt hook for it')
   } finally { rmSync(rolefile, { force: true }) }
+})
+
+test('#755 wiring: the prompt hook prints the full persona once, the short form after it, and a SessionStart after a compaction or a clear brings the full text back', async () => {
+  const { persona, personaShort } = await import('../global/rule-guard.mjs')
+  const id = `pw${process.pid}`
+  const prompt = () => { const out = spawnSync(process.execPath, [join(root, 'global/rule-guard.mjs'), 'prompt'], { input: JSON.stringify({ prompt: 'wie weit?', cwd: root, session_id: id }), encoding: 'utf8' }).stdout; return JSON.parse(out).hookSpecificOutput.additionalContext.split('\n').find((l) => l.startsWith('Persona:')) }
+  const start = (source) => runTeam('start', { cwd: root, session_id: id, source }, { CLAUDE_SETUP_BOOT_FETCH: 'off' })
+  try {
+    assert.equal(prompt(), persona(root), 'the first prompt of a session: the full text')
+    assert.equal(prompt(), personaShort(root), 'the second prompt: the short form')
+    start('startup')
+    assert.equal(prompt(), personaShort(root), 'a plain start resets nothing')
+    start('compact')
+    assert.equal(prompt(), persona(root), 'after a compaction: the full text again')
+    assert.equal(prompt(), personaShort(root), 'and short after it')
+    start('clear')
+    assert.equal(prompt(), persona(root), 'after a clear: the full text again')
+  } finally { for (const f of ['persona', 'role', 'start', 'brief', 'card', 'model']) rmSync(join(tmpdir(), `claude-setup-${f}-${id}`), { force: true }) }
 })
 
 test('rule-guard: a cancelled prompt hook that left its marks still gets the role card once, later in the session (#728)', () => {
