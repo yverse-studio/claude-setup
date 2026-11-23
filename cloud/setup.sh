@@ -1340,7 +1340,7 @@ function bashProblem(cmd, dir, ctx) {
 }
 
 // #785: a Researcher finds, it does not build or merge (docs/TEAMS.md, Sizes row S). The refusal names the next step, so a gated PR is not left
-// with no one to merge it. Nothing gets looser: only a refusal that was there before now says who merges.
+// with no one to merge it. Nothing gets looser: a Researcher is now refused on every merge route, with or without a counted pass; every other role is unchanged.
 export const FINDER_ROLE = /^researcher$/i
 export const finderProblem = (role) => FINDER_ROLE.test(role ?? '') ? `gate ledger: a ${String(role).slice(0, 30)} finds and reports, it does not merge. Send the fix to the coordinator (message_coordinator): it starts a \`Programmer · fix <what>\` thread at size S (docs/TEAMS.md, Sizes row S).` : null
 

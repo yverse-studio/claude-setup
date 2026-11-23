@@ -4,7 +4,7 @@ import { test as finderTest } from 'node:test'
 import { mkdtempSync as finderTmp, rmSync as finderRm } from 'node:fs'
 import { tmpdir as finderTmpdir } from 'node:os'
 import { join as finderJoin } from 'node:path'
-import { gateStep as finderStep } from '../global/gate-rounds.mjs'
+import { gateStep as finderStep, readLedger as finderRead, recordRound as finderRecord, writeLedger as finderWrite } from '../global/gate-rounds.mjs'
 import finderAssert from 'node:assert/strict'
 finderTest('a Researcher merge is refused with the path: coordinator starts a Programmer fix thread (#785)', () => {
   const merge = { owner: 'o', repo: 'r', pullNumber: 785 }
@@ -17,6 +17,15 @@ finderTest('a Researcher merge is refused with the path: coordinator starts a Pr
       finderAssert.match(why ?? '', /size S/)
     }
     finderAssert.match(finderStep('Bash', { command: 'gh pr merge 785 --squash' }, { dir, role: 'Researcher' }) ?? '', /message_coordinator/, 'gh pr merge')
+    finderAssert.match(finderStep('Bash', { command: 'gh api -X PUT repos/o/r/pulls/785/merge' }, { dir, role: 'Researcher' }) ?? '', /message_coordinator/, 'gh api')
+    finderAssert.match(finderStep('Bash', { command: 'node ~/.claude/claude-setup/gate-rounds.mjs merge o/r#785 --squash' }, { dir, role: 'Researcher' }) ?? '', /message_coordinator/, 'the counter merge verb')
+    // The issue's own case: a counted pass does not free a Researcher's merge, and does free a Programmer's.
+    finderWrite(dir, finderRecord(finderRead(dir, 'o/r#785'), { round: 1, score: 5, important: false }))
+    for (const tool of ['mcp__github__merge_pull_request', 'mcp__github__enable_pr_auto_merge']) {
+      finderAssert.match(finderStep(tool, merge, { dir, role: 'Researcher', calls: [] }) ?? '', /message_coordinator/, `${tool} with a pass`)
+      finderAssert.equal(finderStep(tool, merge, { dir, role: 'Programmer', calls: [] }), null, `${tool} Programmer with a pass`)
+    }
+    finderRm(dir, { recursive: true, force: true })
     // Not looser: a Programmer with no counted pass is still refused by the ledger, with its own text.
     const prog = finderStep('mcp__github__merge_pull_request', merge, { dir, role: 'Programmer', calls: [] })
     finderAssert.match(prog ?? '', /no gate round is counted/)
