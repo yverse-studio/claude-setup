@@ -493,7 +493,8 @@ export async function briefCheck(prompt, cwd, model = null, any = false) {
   const itemPlain = item && !item.error ? String(item.body).slice(0, ITEM_CAP).replace(/^brief:[ \t]*/gim, '').replace(/^([ \t>-]*)target_image:/gim, '$1Target image:').replace(/[*_`]/g, '') : '' // #702: the PLAN.json field target_image is the item's Target image line
   const own = guard.classify(brief)
   const itemHas = (k) => guard.BRIEF_FIELDS.find((f) => f.key === k)?.ok(itemPlain)
-  const sorted = itemPlain ? { ...own, judgment: own.judgment.filter((f) => !(['Sheet', 'Target image', 'Source', 'Level'].includes(f.key) && itemHas(f.key))) } : own
+  const itemNa = guard.SHEET_NA.test(itemPlain) // #762: an item's `Sheet: n/a <why>` answers Sheet, Target image and Source together, as the same line does in a brief
+  const sorted = itemPlain ? { ...own, judgment: own.judgment.filter((f) => !(['Sheet', 'Target image', 'Source', 'Level'].includes(f.key) && itemHas(f.key)) && !(itemNa && ['Sheet', 'Target image', 'Source'].includes(f.key))) } : own
   // #712: a line that is there but in the wrong form says what was found and which form is asked; an absent or placeholder line stays "missing".
   const wrongForm = (f) => {
     const got = plain.match(new RegExp(`^[ \\t>-]*${f.key.replace(/\W/g, '\\$&')}:[ \\t]*([^\\n]*)`, 'im'))
