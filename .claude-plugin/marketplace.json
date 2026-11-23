@@ -12,7 +12,7 @@
     {
       "name": "setup-skills",
       "source": "./mods/setup-skills",
-      "description": "yskills' own cross-project skills from claude-setup (deploy, review, UI, video watch, legal, sell, market). Loads in project cloud threads, where repo .claude/skills/ does not."
+      "description": "yskills' own cross-project skills from claude-setup (deploy, review, UI, video watch, legal, sell, market). Loads in every project's cloud threads; repo .claude/skills/ load only in that repo's own thread."
     },
     {
       "name": "setup-domains",

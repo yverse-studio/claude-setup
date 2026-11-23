@@ -14,8 +14,8 @@ for id in \
 do
   claude plugin install "$id" --scope user || echo "claude-setup: could not install $id"
 done
-# Our own cross-project skills (mods/setup-skills: core; mods/setup-domains: games, video, social, stores). Skills in a repo's .claude/skills/ do not load in
-# project cloud threads (docs/RESEARCH.md); a user-scope plugin does. The marketplace is claude-setup itself, a private repo:
+# Our own cross-project skills (mods/setup-skills: core; mods/setup-domains: games, video, social, stores). Repo .claude/skills/ do load in a thread of that repo (40 listed in a
+# claude-setup thread, audit/2026-11-22-token-sota-audit.md) but not in other projects' threads; a user-scope plugin loads in all. The marketplace is claude-setup itself, a private repo:
 # if the setup script has no GitHub access, this step fails loudly and the rest still runs.
 claude plugin marketplace add yverse-studio/claude-setup \
   && claude plugin install setup-skills@claude-setup-mods --scope user \

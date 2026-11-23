@@ -48,8 +48,7 @@ Each thread reads only the Read-first files of its own role from its Kits row. A
 | When an agent is started | its `.claude/agents/<name>.md`, in its own context | 1k to 2k |
 | Only when a file says to read it | `docs/*`, operator `roles/`, `gate.md`, `briefs.md`, templates | 0 until read |
 
-A project thread's own base (system prompt, tools, project instructions, memory) is ~110k and
-lives outside this repo.
+A project thread's first call is 103,070 tokens (measured 2026-11-22, `audit/2026-11-22-token-sota-audit.md` in the project files): tool schemas about 58 %, this repo about 6k (6 %). A subagent starts at 57,549 (`general-purpose`) or 12,635 (`code-reviewer`).
 
 ## Parts
 
