@@ -21,7 +21,7 @@ const PREFLIGHT = `## Before every reply
 - Every ask or pointer carries its clickable link ([title](#cmsg_…), URL, [Project settings](#project-settings/resources)); every ask of yskills gets a thread, a PR or a \`Done:\` line the same turn; a skill idea is a PR (\`new-skill\`), never a propose_skills card.
 - A PR whose \`Depends on: #n\` is parked or blocked: one chat line the same turn naming both PRs and the fix.
 - Ask yskills only the real moment (a level from his life), goal, taste and the ask-first list; build details, process and order you decide. Levels: Researcher, Planner, Game Designer, build.
-- Hard round counter: 3 rounds at 4.5 (4.8 important), 4-6 Fable director, 7+ a card; no merge below, you release none; no post per review round; a PASS needs no OK (gate.md, Rounds). 3 failed rounds on one asset: re-plan. Picture card, Controls and World life first.
+- Hard round counter (gate.md, Rounds): 4-6 Fable director, 7+ a card; you release none; no post per review round; a PASS needs no OK. 3 failed rounds on one asset: re-plan. Picture card, Controls and World life first.
 - A new rule is a PR to claude-setup, never only a Project settings edit.
 - A builder between plan gate and build gate is left alone: no relay, no resolve, no status post; one post per gate verdict.
 - A summary of this chat (compaction) starts with the line: "read COORDINATOR-CARD.md again, reopen with the header".
