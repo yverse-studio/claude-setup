@@ -1,0 +1,218 @@
+[
+ {
+  "at": "2026-11-22T14:55:11.184Z",
+  "role": "Reviewer",
+  "kit": "setup",
+  "size": "M",
+  "outcome": "repaired",
+  "reasons": [
+   "Start",
+   "Prior art",
+   "Researcher"
+  ]
+ },
+ {
+  "at": "2026-11-22T14:55:24.245Z",
+  "role": "Reviewer",
+  "kit": "setup",
+  "size": "M",
+  "outcome": "repaired",
+  "reasons": [
+   "Start",
+   "Prior art",
+   "Researcher"
+  ]
+ },
+ {
+  "at": "2026-11-22T14:55:39.482Z",
+  "role": "Programmer",
+  "kit": "game",
+  "size": "L",
+  "outcome": "refused",
+  "reasons": [
+   "Sheet is missing or still a <placeholder>",
+   "Look-Lock is missing or still a <placeholder>"
+  ]
+ },
+ {
+  "at": "2026-11-22T14:57:33.325Z",
+  "role": "Researcher",
+  "kit": "setup",
+  "size": "S",
+  "outcome": "repaired",
+  "reasons": [
+   "Start"
+  ]
+ },
+ {
+  "at": "2026-11-22T15:26:33.482Z",
+  "role": "Programmer",
+  "kit": "setup",
+  "size": "M",
+  "outcome": "repaired",
+  "reasons": [
+   "Start",
+   "Threads",
+   "Prior art",
+   "Gate",
+   "Researcher"
+  ]
+ },
+ {
+  "at": "2026-11-22T15:26:34.125Z",
+  "role": "Programmer",
+  "kit": "setup",
+  "size": "M",
+  "outcome": "repaired",
+  "reasons": [
+   "Start",
+   "Threads",
+   "Prior art",
+   "Gate",
+   "Researcher"
+  ]
+ },
+ {
+  "at": "2026-11-22T15:26:34.582Z",
+  "role": "Programmer",
+  "kit": "setup",
+  "size": "M",
+  "outcome": "repaired",
+  "reasons": [
+   "Start",
+   "Threads",
+   "Prior art",
+   "Gate",
+   "Researcher"
+  ]
+ },
+ {
+  "at": "2026-11-22T15:35:21.467Z",
+  "role": "Programmer",
+  "kit": "setup",
+  "size": "M",
+  "outcome": "repaired",
+  "reasons": [
+   "Gate"
+  ]
+ },
+ {
+  "at": "2026-11-22T15:40:33.848Z",
+  "role": "Reviewer",
+  "kit": "setup",
+  "size": "M",
+  "outcome": "repaired",
+  "reasons": [
+   "Start",
+   "Prior art",
+   "Researcher"
+  ]
+ },
+ {
+  "at": "2026-11-22T15:41:10.587Z",
+  "role": "Reviewer",
+  "kit": "setup",
+  "size": "M",
+  "outcome": "repaired",
+  "reasons": [
+   "Start",
+   "Prior art",
+   "Researcher"
+  ]
+ },
+ {
+  "at": "2026-11-22T15:49:49.167Z",
+  "role": "Reviewer",
+  "kit": "setup",
+  "size": "M",
+  "outcome": "repaired",
+  "reasons": [
+   "Start",
+   "Prior art"
+  ]
+ },
+ {
+  "at": "2026-11-22T15:55:56.612Z",
+  "role": "Programmer",
+  "kit": "setup",
+  "size": "S",
+  "outcome": "clean",
+  "reasons": []
+ },
+ {
+  "at": "2026-11-22T16:06:31.661Z",
+  "role": "Reviewer",
+  "kit": "setup",
+  "size": "S",
+  "outcome": "repaired",
+  "reasons": [
+   "Start",
+   "Prior art"
+  ]
+ },
+ {
+  "at": "2026-11-22T19:33:01.453Z",
+  "role": "",
+  "kit": "",
+  "size": "",
+  "outcome": "refused",
+  "reasons": [
+   "no `Role: \u00b7 Kit: \u00b7 Size:` stamp line"
+  ]
+ },
+ {
+  "at": "2026-11-22T19:37:39.559Z",
+  "role": "Tester",
+  "kit": "game",
+  "size": "S",
+  "outcome": "repaired",
+  "reasons": [
+   "Researcher"
+  ]
+ },
+ {
+  "at": "2026-11-22T20:33:15.790Z",
+  "role": "Programmer",
+  "kit": "setup",
+  "size": "M",
+  "outcome": "repaired",
+  "reasons": [
+   "Item",
+   "Gate"
+  ]
+ },
+ {
+  "at": "2026-11-22T21:05:20.463Z",
+  "role": "Programmer",
+  "kit": "setup",
+  "size": "M",
+  "outcome": "repaired",
+  "reasons": [
+   "Item",
+   "Gate",
+   "Researcher"
+  ]
+ },
+ {
+  "at": "2026-11-22T21:09:11.350Z",
+  "role": "Planner",
+  "kit": "setup",
+  "size": "L",
+  "outcome": "repaired",
+  "reasons": [
+   "Item",
+   "Gate",
+   "Researcher"
+  ]
+ },
+ {
+  "at": "2026-11-22T21:44:33.132Z",
+  "role": "Reviewer",
+  "kit": "setup",
+  "size": "M",
+  "outcome": "repaired",
+  "reasons": [
+   "Researcher"
+  ]
+ }
+]

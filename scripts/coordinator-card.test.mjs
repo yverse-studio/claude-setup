@@ -263,7 +263,7 @@ test('one count line per start type: --stats over a folder with every outcome', 
   const starts = [[sid(1), REFUSED], [sid(2), ''], [sid(3), ''], [sid(4), REPAIRED], [sid(5), WRONG]]
   for (const [session, check] of starts) logStart({ session, project: 'P', role: 'Programmer', kit: 'setup', size: 'S', guard: 'abcd1234', card: 'b6a9c717', ...startOutcome(check) }, out, t)
   assert.equal(readdirSync(join(out, 'brief-log')).length, 5, 'one file per start')
-  assert.equal(statsLine(out), 'starts 5: clean 2, repaired 1, refused 1, wrong-model 1, duplicate 0 (false starts 2, 40%); top reason: Item is missing or still a <placeholder> (1x)')
+  assert.equal(statsLine(out), 'starts 5: started 3 (1 self-filled), refused 1, wrong-model 1, duplicate 0 (false starts 2, 40%); top reason: Item is missing or still a <placeholder> (1x)')
   assert.equal(statsLine(out, new Date('2026-11-13T00:00:00Z')).startsWith('starts 0:'), true, 'since drops older starts')
   const file = JSON.parse(readFileSync(join(out, 'brief-log', fileOf(1, '2026-11-12')), 'utf8'))
   assert.deepEqual([file.project, file.role, file.kit, file.size, file.guard, file.card, file.outcome], ['P', 'Programmer', 'setup', 'S', 'abcd1234', 'b6a9c717', 'refused'])
@@ -289,7 +289,7 @@ test('twenty processes logging at once lose no start, and no folder or session m
   const code = (i) => `const { logStart } = await import(${JSON.stringify(join(process.cwd(), 'global/card-render.mjs'))}); logStart({ session: '00000000-0000-4000-8000-0000000001${String(i).padStart(2, '0')}', outcome: 'repaired', reasons: ['Skills'] }, ${JSON.stringify(out)})`
   const kids = Array.from({ length: 20 }, (_, i) => spawnSync(process.execPath, ['--input-type=module', '-e', code(i)], { encoding: 'utf8' }))
   assert.ok(kids.every((k) => k.status === 0))
-  assert.match(statsLine(out), /^starts 20: clean 0, repaired 20,/)
+  assert.match(statsLine(out), /^starts 20: started 20 \(20 self-filled\),/)
   assert.equal(logStart({ session: sid(13), outcome: 'clean' }, null), null)
   assert.equal(logStart({ outcome: 'clean' }, out), null)
   assert.match(statsLine(null), /^starts 0:/)
@@ -319,8 +319,11 @@ const BODY = '\nItem: M50\nPlan: p.md\nAcceptance: tests pass\nModel: x\nSkills:
 test('a real briefCheck result is sorted right: a Reviewer\'s gate.md note is repaired, a wrong model next to another gap is wrong-model', async () => {
   const { briefCheck } = await import('../global/rule-guard.mjs')
   const repaired = await briefCheck(spawned(`Role: Reviewer · Kit: setup · Size: S${BODY}\nPrior art: our notes -> adapt, because they exist`), ROOT, null)
-  assert.match(repaired, /^Brief repair \(no block\)/)
-  assert.equal(startOutcome(repaired).outcome, 'repaired', 'any Brief repair text is a repair')
+  assert.match(repaired, /^Brief fill: Prior art/)
+  assert.equal(startOutcome(repaired).outcome, 'clean', 'a Reviewer\'s derived Prior art is a fill, the start is clean (#780)')
+  const lacking = await briefCheck(spawned(`Role: Programmer · Kit: setup · Size: S${BODY.replace(/\nThreads:[^\n]*/, '')}\nPrior art: obra/superpowers -> adapt, because it exists`), ROOT, null)
+  assert.match(lacking, /^Brief repair \(no block\)/)
+  assert.equal(startOutcome(lacking).outcome, 'repaired', 'any Brief repair text is a repair')
   assert.equal(startOutcome(await briefCheck(spawned(`Role: Programmer · Kit: setup · Size: S${BODY}\nPrior art: obra/superpowers -> adapt, because it exists`), ROOT, null)).outcome, 'clean')
   const mixed = await briefCheck(spawned(`Role: Planner · Kit: setup · Size: M${BODY.replace('Item: M50\n', '')}\nPrior art: obra/superpowers -> adapt, because it exists`), ROOT, SONNET_ID)
   assert.match(mixed, /^Brief check[\s\S]*in 2 places[\s\S]*restart it on that model/, mixed)
@@ -385,7 +388,7 @@ test('#730: only a UUID session is written and counted; a probe, rolelock or dbg
   const stray = JSON.stringify({ at: '2026-11-17T10:00:00Z', outcome: 'refused', reasons: ['x'] })
   for (const n of ['2026-11-17-rolelock14998x2.json', '2026-11-17-dbg2.json', '2026-11-13-0a27810483b65cb19043f586b308460d.json.bak']) writeFileSync(join(out, 'brief-log', n), stray)
   logStart({ session: sid(1), outcome: 'clean' }, out)
-  assert.match(statsLine(out), /^starts 1: clean 1,/)
+  assert.match(statsLine(out), /^starts 1: started 1 \(0 self-filled\),/)
   assert.equal(readdirSync(join(out, 'brief-log')).length, 4, 'nothing was moved or deleted')
   rmSync(out, { recursive: true, force: true })
 })
@@ -418,7 +421,7 @@ test('#730: the card carries the 7-day start line, rendered from the folder, and
   logStart({ session: sid(2), ...startOutcome(REFUSED) }, out, new Date('2026-11-20T10:00:00Z'))
   logStart({ session: sid(3), ...startOutcome('') }, out, new Date('2026-11-10T10:00:00Z'))
   const line = startsWeek(out, now)
-  assert.equal(line, 'Thread starts, last 7 days (as of 2026-11-22): 2, clean 1, repaired 0, refused 1, wrong-model 0 (false starts 50%).')
+  assert.equal(line, 'Thread starts, last 7 days (as of 2026-11-22): 2, started 1 (0 self-filled), refused 1, wrong-model 0 (false starts 50%).')
   assert.ok(line.length <= 130, String(line.length))
   const card = buildCard({ teams, hash: 'abc12345', date: '2026-11-22', startsLine: line })
   assert.ok(card.includes(line))
@@ -437,7 +440,7 @@ test('#730: the CLI writes the 7-day line into the card it renders, from the bri
   const run = spawnSync(process.execPath, [join(ROOT, 'scripts/coordinator-card.mjs'), join(out, 'COORDINATOR-CARD.md')], { encoding: 'utf8' })
   assert.equal(run.status, 0, run.stderr)
   const card = readFileSync(join(out, 'COORDINATOR-CARD.md'), 'utf8')
-  assert.match(card, /Thread starts, last 7 days \(as of \d{4}-\d{2}-\d{2}\): 2, clean 1, repaired 0, refused 1, wrong-model 0 \(false starts 50%\)\./)
+  assert.match(card, /Thread starts, last 7 days \(as of \d{4}-\d{2}-\d{2}\): 2, started 1 \(0 self-filled\), refused 1, wrong-model 0 \(false starts 50%\)\./)
   rmSync(out, { recursive: true, force: true })
 })
 
@@ -453,7 +456,7 @@ test('#730: an upper-case UUID is a real session and its file is counted', () =>
 // ---- #743: the card is cut by use; CARD_MAX stays 7,400 (raising it again is the pattern the audit names). 2026-11-22 (#756): the who-builds paragraph of TEAMS.md rides on the card, so the free headroom bound went from 800 to 350 and the two bounds below moved with it.
 test('#743: the card with the 7-day line is at most 7,050 characters (the who-builds paragraph of TEAMS.md rides on the card, 2026-11-22), CARD_MAX is still 7,400, 350 stay free', () => {
   assert.equal(CARD_MAX, 7400)
-  const line = 'Thread starts, last 7 days (as of 2026-11-22): 7, clean 0, repaired 6, refused 1, wrong-model 0 (false starts 14%).'
+  const line = 'Thread starts, last 7 days (as of 2026-11-22): 7, started 6 (6 self-filled), refused 1, wrong-model 0 (false starts 14%).'
   const card = buildCard({ teams, hash: 'abc12345', date: '2026-11-22', startsLine: line })
   assert.ok(card.length <= 7050, String(card.length))
   assert.ok(CARD_MAX - card.length >= 350, `free: ${CARD_MAX - card.length}`)

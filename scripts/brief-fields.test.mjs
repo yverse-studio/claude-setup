@@ -20,13 +20,13 @@ const LINES = { Item: 'Item: M50', Plan: 'Plan: p.md', Acceptance: 'Acceptance: 
 
 test('table test: a brief that lacks only one row gets exactly that row\'s class behaviour', async () => {
   for (const f of BRIEF_FIELDS) {
-    const stamp = f.key === 'Pre-gate' ? 'Animator · Kit: game · Size: M' : ['Sheet', 'Target image', 'Source'].includes(f.key) ? 'Programmer · Kit: game · Size: M' : f.key === 'Tester' ? 'Programmer · Kit: setup · Size: L' : 'Programmer · Kit: setup · Size: M'
+    const stamp = f.key === 'Pre-gate' ? 'Animator · Kit: game · Size: M' : ['Sheet', 'Target image', 'Source'].includes(f.key) ? 'Programmer · Kit: game · Size: M' : ['Tester', 'Gate'].includes(f.key) ? 'Programmer · Kit: setup · Size: L' : 'Programmer · Kit: setup · Size: M'
     const brief = [`Role: ${f.key === 'Level' ? 'Programmer · Kit: game · Size: M' : stamp}`, f.key === 'Level' ? 'Research SOTA of the thing for the airport level.' : 'Research SOTA of the thing.', ...Object.entries(LINES).filter(([k]) => k !== f.key).map(([, l]) => l)].join('\n')
     const out = await check(brief)
     if (['Acceptance', 'Done when'].includes(f.key)) { assert.doesNotMatch(out, /^Brief (check|repair)[^\n]*(Acceptance|Done when)/, `${f.key}: the other one satisfies both`); continue }
     const cls = f.cls(brief.replace(/[*_`]/g, ''))
     if (cls === 'judgment') { assert.match(out, new RegExp(`^Brief check[\\s\\S]*${f.key}`), `${f.key}: one refusal names it`); assert.match(out, /Role: Programmer · Kit: <kit>/, `${f.key}: the refusal carries the role's template`) }
-    else { assert.doesNotMatch(out, /^Brief check/, `${f.key} (${cls}) never blocks`); assert.match(out, new RegExp(`^Brief repair[^\\n]*lacks[^\\n]*${f.key}`), `${f.key}: the thread is told how it closes the gap`) }
+    else { assert.doesNotMatch(out, /^Brief check/, `${f.key} (${cls}) never blocks`); assert.match(out, new RegExp(cls === 'derived' ? `^Brief fill:[^\\n]*${f.key}:` : `^Brief repair[^\\n]*lacks[^\\n]*${f.key}`, 'm'), `${f.key}: the thread is told how it closes the gap`) }
   }
   // Acceptance and Done when are one datum: either satisfies both, both missing at size M is a judgment gap.
   const both = await check(['Role: Programmer · Kit: setup · Size: M', ...Object.entries(LINES).filter(([k]) => !['Acceptance', 'Done when'].includes(k)).map(([, l]) => l)].join('\n'))
@@ -73,11 +73,12 @@ test('live fixtures: the Researcher start of 16:40 gets one refusal with every e
   assert.match(first, /Role: Researcher · Kit: <kit>[\s\S]*Item: <issue #n, M<n> or new>/, 'the refusal carries the Researcher template')
   const second = await check(`Role: Researcher · Kit: setup · Size: M\nItem: PLAN.json item M29\nThreads: none\nPlan: p.md\nAcceptance: ok\nModel: opus\nSkills: s\nStart: read MEMORY.md first\nDone when: x\nStop when: y\nPrior art: .claude/skills/operator/gate.md -> adapt, because it exists`)
   assert.doesNotMatch(second, /^Brief check/, 'the restart is not refused')
-  assert.match(second, /^Brief repair[^\n]*Item[^\n]*Threads|^Brief repair[^\n]*Threads[^\n]*Item/, 'the repairs are named')
+  assert.match(second, /^Brief repair[^\n]*lacks Threads/m, 'the repair is named')
+  assert.match(second, /^Brief fill:[^\n]*Item: M29/m, 'the fill is named')
   assert.match(second, /Item: M29/, 'Item: PLAN.json item M29 counts as M29')
 })
 test('live fixtures: the Gate line without "before owner" is repaired, a Director and a missing Role get one refusal, a size L Programmer needs its Tester', async () => {
-  const noOwner = await check(FULL_M.replace('Gate: Reviewer · x before owner', 'Gate: Reviewer · Gate brief-fix plan M50 (cmsg_1)').replace(/^/, 'Role: Programmer · Kit: setup · Size: M\n'))
+  const noOwner = await check(FULL_M.replace('Gate: Reviewer · x before owner', 'Gate: Reviewer · Gate brief-fix plan M50 (cmsg_1)').replace(/^/, 'Role: Programmer · Kit: setup · Size: L\nTester: Tester · x\n'))
   assert.doesNotMatch(noOwner, /^Brief check/)
   assert.match(noOwner, /^Brief repair[^\n]*Gate[\s\S]*before owner/, 'precisely reported: what the thread does about the Gate line')
   const director = await check(`Role: Director · Kit: setup · Size: M\n${FULL_M}`)
@@ -94,13 +95,14 @@ test('live fixtures: gaps in three categories come in one refusal, the wrong mod
   assert.match(out, /^Brief check[^\n]*in (3|4|5|6) places[\s\S]*Kit: content is no kit[\s\S]*Plan is missing[\s\S]*runs on haiku/)
 })
 
-test('a Planner is a gate-builder role: an M brief without a Gate line is a recoverable gap (classify, not missingLines), and its brief file carries the line', async () => {
+test('a Planner is a gate-builder role: an L brief without a Gate line is a recoverable gap (classify, not missingLines), an M brief has none, and its brief file carries the line', async () => {
   const { classify } = await import('../global/team-guard.mjs')
   const gaps = (b) => classify(b).recoverable.map((f) => f.key).join('\n')
   const { briefFile } = await import('./brief.mjs')
-  const planner = (gate) => ['Role: Planner · Kit: setup · Size: M', ...(gate ? ['Gate: Reviewer · plan round 1 before owner'] : [])].join('\n')
+  const planner = (gate, size = 'L') => [`Role: Planner · Kit: setup · Size: ${size}`, ...(gate ? ['Gate: Reviewer · plan round 1 before owner'] : [])].join('\n')
   assert.match(gaps(planner(false)), /Gate/)
   assert.doesNotMatch(gaps(planner(true)), /Gate/)
+  assert.doesNotMatch(gaps(planner(false, 'M')), /Gate/, 'size M: the gate runs in the thread (#780)')
   assert.match(briefFile('Planner'), /^Gate:/m)
 })
 
@@ -324,10 +326,10 @@ test('Item free text: repaired to `Item: new` and counted repaired; PLAN.json it
   const withItem = (item) => `Role: Programmer · Kit: setup · Size: M\n${FULL_M.replace('Item: M50', item)}`
   const free = await check(withItem('Item: Setup vs SOTA audit + role test via real game build'))
   assert.doesNotMatch(free, /^Brief check/, 'not refused')
-  assert.match(free, /^Brief repair[^\n]*lacks[^\n]*Item[^\n]*Item: new/, 'the thread sees `Item: new`')
+  assert.match(free, /^Brief fill:[^\n]*Item: new/m, 'the thread sees `Item: new`')
   const { startOutcome } = await import('../global/card-render.mjs')
-  assert.equal(startOutcome(free).outcome, 'repaired')
-  assert.deepEqual(startOutcome(free).reasons, ['Item'])
+  assert.equal(startOutcome(free).outcome, 'clean', 'a self-filled Item is a fill, not a repair (#780)')
+  assert.deepEqual(startOutcome(free).reasons, [])
   const plan = await check(withItem('Item: PLAN.json item 29'))
   assert.match(plan, /^Brief check[\s\S]*Item is there but not in the asked form[\s\S]*Item: <issue #n, M<n> or new>/, 'it names the form')
   assert.match(await check(withItem('Item: <issue #n, M<n> or new>')), /^Brief check[\s\S]*Item is missing/, 'the placeholder is still refused at size M')

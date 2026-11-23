@@ -14,7 +14,7 @@ const run = (args, input) => spawnSync(process.execPath, [script, 'check', ...ar
 const teams = readFileSync(join(fileURLToPath(import.meta.url), '..', '..', 'docs/TEAMS.md'), 'utf8')
 const opusId = teams.match(/Opus \((claude-[\w.-]+)\)/)[1]
 const dir = mkdtempSync(join(tmpdir(), 'check-brief-'))
-const BAD = ['Role: Character TD · Kit: references · Size: M', 'Item: new', 'Plan: p.md', 'Acceptance: ok', 'Model: opus', 'Skills: blender-body', 'Done when: x', 'Stop when: 3', 'Start: read MEMORY.md first', 'Threads: none open on this topic'].join('\n')
+const BAD = ['Role: Character TD · Kit: references · Size: L', 'Item: new', 'Plan: p.md', 'Acceptance: ok', 'Model: opus', 'Skills: blender-body', 'Done when: x', 'Stop when: 3', 'Start: read MEMORY.md first', 'Threads: none open on this topic'].join('\n')
 
 test('a bad brief: every problem on its own line in one run, exit 1, and the exact model id of the role', () => {
   const file = join(dir, 'bad.md')

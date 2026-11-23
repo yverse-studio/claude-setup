@@ -11,6 +11,7 @@ import { briefCheck } from '../global/rule-guard.mjs'
 const root = join(fileURLToPath(import.meta.url), '..', '..')
 const teams = readFileSync(join(root, 'docs/TEAMS.md'), 'utf8')
 const SONNET = teams.match(/Sonnet \((claude-[\w.-]+)\)/)[1]
+const FABLE = teams.match(/Fable \((claude-[\w.-]+)\)/)[1]
 const OPUS = teams.match(/Opus \((claude-[\w.-]+)\)/)[1]
 const START = 'mcp__hearthbot__start_thread'
 const FULL = '\nGate: Reviewer thread before owner\nItem: M30\nPlan: docs/plans/x.md\nAcceptance: node --test passes\nModel: claude-x-1\nThreads: list_threads checked, none open on this topic\nPrior art: none, because a test brief\nSkills: x\nDone when: node --test passes\nStop when: two rounds\nStart: read MEMORY.md first, then CLAUDE.md'
@@ -153,41 +154,43 @@ test('a generated gate-role brief names gate.md and the kit checks in Prior art 
 
 test('Character TD is a sheet role and a gate builder: the generated game brief asks for Sheet, Target image, Source and Gate, and passes once filled (gate #483 r2, F5)', () => {
   const { sheet, ...noSheet } = FIELDS
-  assert.throws(() => buildBrief({ teams, role: 'Character TD', kit: 'game', size: 'M', ...noSheet, preGate: 'gate/x/PREGATE.md' }), (e) => e instanceof BriefError && /--sheet/.test(e.message))
-  const full = buildBrief({ teams, role: 'Character TD', kit: 'game', size: 'M', ...FIELDS, preGate: 'gate/x/PREGATE.md', sheet: 'docs/cast.md', targetImage: 'lib/characters/CH_x/approval/A.png', source: 'lib/characters/CH_x/source/A.blend', gate: 'Reviewer · fit round 1 before owner' })
+  assert.throws(() => buildBrief({ teams, role: 'Character TD', kit: 'game', size: 'L', ...noSheet, preGate: 'gate/x/PREGATE.md' }), (e) => e instanceof BriefError && /--sheet/.test(e.message))
+  const full = buildBrief({ teams, role: 'Character TD', kit: 'game', size: 'L', ...FIELDS, preGate: 'gate/x/PREGATE.md', sheet: 'docs/cast.md', targetImage: 'lib/characters/CH_x/approval/A.png', source: 'lib/characters/CH_x/source/A.blend', gate: 'Reviewer · fit round 1 before owner' })
   assert.match(full.brief, /\nSheet: docs\/cast\.md\nTarget image: lib\/characters\/CH_x\/approval\/A\.png\nSource: lib\/characters\/CH_x\/source\/A\.blend\n/)
   assert.match(full.brief, /\nGate: Reviewer · fit round 1 before owner\n/)
   assert.deepEqual(decide(START, { brief: full.brief, title: full.title, model: full.model }, [], [], teams), {})
   const noGate = decide(START, { brief: full.brief.replace(/\nGate:[^\n]*/, ''), title: full.title, model: full.model }, [], [], teams)
-  assert.equal(noGate.block, undefined, 'a Character TD brief at M without the Gate line is no block since #761')
+  assert.equal(noGate.block, undefined, 'a Character TD brief at L without the Gate line is no block since #761')
   assert.ok(classify(full.brief.replace(/\nGate:[^\n]*/, '')).recoverable.some((f) => f.key === 'Gate'), 'the gap is recoverable: the thread asks the coordinator for the Reviewer')
 })
 
-test('a builder, designer or animator brief at size M or L needs `Gate: <reviewer thread> before owner`; gate roles and size S do not', () => {
-  const ask = (role, kit, size, extra = '') => decide(START, { brief: `Role: ${role} · Kit: ${kit} · Size: ${size}${FULL.replace(/\nGate:[^\n]*/, '')}${extra}`, title: `${role} · x`, model: role === 'Programmer' && size !== 'S' ? OPUS : SONNET }, [], [], teams)
-  const gateGap = (role, kit, size, extra = '') => classify(`Role: ${role} · Kit: ${kit} · Size: ${size}${FULL.replace(/\nGate:[^\n]*/, '')}${extra}`).recoverable.some((f) => f.key === 'Gate')
+test('a builder, designer or animator brief at size L needs `Gate: <reviewer thread> before owner`; gate roles, size S and size M do not', () => {
+  const ask = (role, kit, size, extra = '') => decide(START, { brief: `Role: ${role} · Kit: ${kit} · Size: ${size}${size === 'L' && role === 'Programmer' ? '\nTester: Tester · x' : ''}${FULL.replace(/\nGate:[^\n]*/, '')}${extra}`, title: `${role} · x`, model: role === 'Programmer' && size !== 'S' ? (size === 'L' ? FABLE : OPUS) : SONNET }, [], [], teams)
+  const gateGap = (role, kit, size, extra = '') => classify(`Role: ${role} · Kit: ${kit} · Size: ${size}${size === 'L' && role === 'Programmer' ? '\nTester: Tester · x' : ''}${FULL.replace(/\nGate:[^\n]*/, '')}${extra}`).recoverable.some((f) => f.key === 'Gate')
   for (const [role, kit] of [['Programmer', 'setup'], ['Designer', 'site'], ['Animator', 'game']]) {
-    assert.ok(gateGap(role, kit, 'M', role === 'Animator' ? '\nSheet: n/a scene animation, no body model' : ''), `${role} M without the line is a recoverable Gate gap (no block since #761)`)
+    assert.ok(gateGap(role, kit, 'L', role === 'Animator' ? '\nSheet: n/a scene animation, no body model' : ''), `${role} L without the line is a recoverable Gate gap (no block since #761)`)
   }
   assert.ok(!gateGap('Programmer', 'setup', 'S'), 'size S needs none')
-  assert.deepEqual(ask('Programmer', 'setup', 'M', '\nGate: Reviewer · x before owner'), {}, 'with the line it starts')
-  assert.ok(gateGap('Programmer', 'setup', 'M', '\nGate: later'), 'the line says before owner')
+  assert.ok(!gateGap('Programmer', 'setup', 'M'), 'size M needs none: the gate runs in the thread (#780)')
+  assert.deepEqual(ask('Programmer', 'setup', 'L', '\nGate: Reviewer · x before owner'), {}, 'with the line it starts')
+  assert.ok(gateGap('Programmer', 'setup', 'L', '\nGate: later'), 'the line says before owner')
   assert.deepEqual(decide(START, { brief: `Role: Reviewer · Kit: setup · Size: M${FULL.replace(/\nGate:[^\n]*/, '')}`.replace('Prior art: none, because a test brief', 'Prior art: gate.md and the setup checks -> adapt, because they exist'), title: 'Reviewer · x', model: teams.match(/Fable \((claude-[\w.-]+)\)/)[1] }, [], [], teams), {}, 'a gate role is not asked for a Gate line')
 })
 
-test('the generator fills the Gate line for builder, designer and animator briefs at M and L, and only there', () => {
-  const m = buildBrief({ teams, role: 'Programmer', kit: 'setup', size: 'M', ...FIELDS })
+test('the generator fills the Gate line for builder, designer and animator briefs at size M and L', () => {
+  const m = buildBrief({ teams, role: 'Programmer', kit: 'setup', size: 'L', ...FIELDS, tester: 'Tester · x' })
   assert.match(m.brief, /\nGate: Reviewer · x before owner\n/)
-  assert.match(buildBrief({ teams, role: 'Programmer', kit: 'setup', size: 'M', ...FIELDS, gate: 'Reviewer · fit round 2' }).brief, /\nGate: Reviewer · fit round 2 before owner\n/)
+  assert.match(buildBrief({ teams, role: 'Programmer', kit: 'setup', size: 'L', ...FIELDS, tester: 'Tester · x', gate: 'Reviewer · fit round 2' }).brief, /\nGate: Reviewer · fit round 2 before owner\n/)
+  assert.match(buildBrief({ teams, role: 'Programmer', kit: 'setup', size: 'M', ...FIELDS }).brief, /\nGate: Reviewer · x before owner\n/)
   assert.doesNotMatch(buildBrief({ teams, role: 'Programmer', kit: 'setup', size: 'S', ...FIELDS }).brief, /\nGate:/)
   assert.doesNotMatch(buildBrief({ teams, role: 'Reviewer', kit: 'setup', size: 'M', ...FIELDS }).brief, /\nGate:/)
 })
 
 // Gate round 2: extra words after the role must not skip the demand; a Gate line must name a reviewer or say why no owner-facing result exists.
 test('the Gate demand cannot be skipped with words after the role, and a Gate line names a reviewer or says why none is needed', () => {
-  const noGate = FULL.replace(/\nGate:[^\n]*/, '')
-  const ask = (roleLine, gate) => decide(START, { brief: `${roleLine} · Kit: setup · Size: M${noGate}${gate ? `\nGate: ${gate}` : ''}`, title: 'Programmer · x', model: OPUS }, [], [], teams)
-  const gap = (roleLine, gate) => classify(`${roleLine} · Kit: setup · Size: M${noGate}${gate ? `\nGate: ${gate}` : ''}`).recoverable.some((f) => f.key === 'Gate')
+  const noGate = `\nTester: Tester · x${FULL.replace(/\nGate:[^\n]*/, '')}`
+  const ask = (roleLine, gate) => decide(START, { brief: `${roleLine} · Kit: setup · Size: L${noGate}${gate ? `\nGate: ${gate}` : ''}`, title: 'Programmer · x', model: FABLE }, [], [], teams)
+  const gap = (roleLine, gate) => classify(`${roleLine} · Kit: setup · Size: L${noGate}${gate ? `\nGate: ${gate}` : ''}`).recoverable.some((f) => f.key === 'Gate')
   assert.ok(gap('Role: Programmer for slice 2'))
   assert.ok(gap('Role: Programmer - slice 2'))
   for (const bad of ['none before owner', 'skipped, not before owner', 'later', 'n/a', 'n/a no']) assert.ok(gap('Role: Programmer', bad), bad)
@@ -195,7 +198,7 @@ test('the Gate demand cannot be skipped with words after the role, and a Gate li
 })
 
 test('the generator passes a `--gate n/a <why>` through and refuses a Gate that names no reviewer', () => {
-  const g = (gate) => () => buildBrief({ teams, role: 'Programmer', kit: 'setup', size: 'M', ...FIELDS, gate })
+  const g = (gate) => () => buildBrief({ teams, role: 'Programmer', kit: 'setup', size: 'L', ...FIELDS, tester: 'Tester · x', gate })
   assert.match(g('n/a no owner-facing result, a CI script only')().brief, /\nGate: n\/a no owner-facing result, a CI script only\n/)
   assert.throws(g('none'), (e) => e instanceof BriefError && /--gate/.test(e.message))
   assert.throws(g('n/a'), (e) => e instanceof BriefError && /--gate/.test(e.message))
