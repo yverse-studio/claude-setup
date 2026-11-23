@@ -110,11 +110,15 @@ A cloud thread has no files of its own on the laptop. When its work needs them:
 4. **Downloads go to `inbox/`** (top level of the root) and are processed within 7 days by the [`asset-intake`](../.claude/skills/asset-intake/SKILL.md) skill (Character TD: licence, fit on all bases, preview, `lib/`; no licence = `inbox/_quarantine/`); the untouched original is kept once in the `source/` of the main asset.
 5. **Big files have one fixed route, no new service.** Cloud to laptop: write the file under `/mnt/project-files/<project>/transfer/`, then `device_commit_files` it into the inbox folder `config/paths.json` names (per the tool description 400 MB per file, 1,024 MB per call). Laptop to cloud: `device_stage_files`. Above 400 MB: split and rejoin as [`renpy.md`](renpy.md) describes. GitHub LFS and releases are out (18+ assets stay off GitHub), and so is R2 (a new service); 18+ does not use this route either (rule 6). The limits come from the tool description; the live hash check (20 MB there and back, `sha256sum` equal) is still open.
 6. **18+ never goes into a repo that has a remote**, in no form (image, text, code, bundle), and never into the cloud project files; it stays in `lib/`, `projects/` and the local snapshots.
+   For an offline project the project files are its working copy; nothing from them reaches a git remote. The owner decides per project what may live there.
 7. A reference the owner sends himself is saved by the lane in the same turn, straight into the `reference/` of the thing it is for (rule 3 above); no review step. The Archivist indexes it only when asked.
+8. **A cloud-side twin of the entry file.** The project files root holds one table "where is what" with two columns (cloud path, laptop path) in its map file; a thread reads that table before it searches, and adds a row when it had to search.
 
 ## Path holders (the one list: what to update when a path changes)
 
 Change the name in `config/paths.json` first, then work through the holders; generated holders are regenerated, never edited.
+
+After a root move, the cloud copy of the entry file is regenerated or marked as history in the same freeze; an entry file that names a dead root is a `dead_names` hit.
 
 | Holder | How it follows |
 |---|---|
