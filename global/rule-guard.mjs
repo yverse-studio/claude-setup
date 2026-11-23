@@ -492,7 +492,9 @@ export async function briefCheck(prompt, cwd, model = null, any = false) {
   // X1a (#539), kept small: the item fills only Sheet, Target image, Source and Level (the lines a short brief lacked); every other lock, size and stamp word comes from the brief alone.
   const itemPlain = item && !item.error ? String(item.body).slice(0, ITEM_CAP).replace(/^brief:[ \t]*/gim, '').replace(/^([ \t>-]*)target_image:/gim, '$1Target image:').replace(/[*_`]/g, '') : '' // #702: the PLAN.json field target_image is the item's Target image line
   const own = guard.classify(brief)
-  const itemHas = (k) => guard.BRIEF_FIELDS.find((f) => f.key === k)?.ok(itemPlain)
+  // #762 gate round 1: the role an item line is judged for is the brief's, never a `Role:` line inside the item (an item saying `Role: Programmer` let an Animator brief pass a `Target image: n/a`).
+  const itemAsBrief = `${plain.match(/^[ \t>-]*Role:[^\n]*/im)?.[0] ?? ''}\n${itemPlain.replace(/^[ \t>-]*Role:[^\n]*$/gim, '')}`
+  const itemHas = (k) => guard.BRIEF_FIELDS.find((f) => f.key === k)?.ok(itemAsBrief)
   const itemNa = guard.SHEET_NA.test(itemPlain) // #762: an item's `Sheet: n/a <why>` answers Sheet, Target image and Source together, as the same line does in a brief
   const sorted = itemPlain ? { ...own, judgment: own.judgment.filter((f) => !(['Sheet', 'Target image', 'Source', 'Level'].includes(f.key) && itemHas(f.key)) && !(itemNa && ['Sheet', 'Target image', 'Source'].includes(f.key))) } : own
   // #712: a line that is there but in the wrong form says what was found and which form is asked; an absent or placeholder line stays "missing".

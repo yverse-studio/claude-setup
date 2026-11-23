@@ -312,6 +312,13 @@ test('#762: an item line `Sheet: n/a <why>` drops Sheet, Target image and Source
     const out = start(`Scope: the lamp.\nSheet: sheets/lamp.md\nTarget image: n/a this slice changes no look at all\nSource: lib/x/source/A.blend\n${lvl}`, b)
     assert.match(gaps(out), /Target image/, `${role}: an item's Target image n/a is no target`)
   }
+  const targetNa = `Scope: the lamp.\nSheet: sheets/lamp.md\nTarget image: n/a this slice changes no look at all\nSource: lib/x/source/A.blend\n${lvl}`
+  assert.doesNotMatch(gaps(start(targetNa)), /Target image/, 'Programmer brief: an item\'s Target image n/a counts, with no Role line in the item')
+  for (const role of ['Animator', 'Character TD']) {
+    const b = fullBrief('#7').replace('Role: Programmer', `Role: ${role}`)
+    assert.match(gaps(start(`Role: Programmer\n${targetNa}`, b)), /Target image/, `${role}: a Role line inside the item does not make its Target image n/a count`)
+    assert.doesNotMatch(gaps(start(`Scope: the lamp.\n${sheetNa}\n${lvl}`, b)), /Sheet|Target image|Source/, `${role}: an item's Sheet n/a lifts the three lines, as the same line in the brief does`)
+  }
   const stamp = fullBrief('#7').replace('Size: M', 'Size: S')
   assert.doesNotMatch(gaps(start(`Scope: the lamp.\n${sheetNa}\n${lvl}`, stamp)), /Sheet|Target image|Source/, 'size stays the brief\'s')
   const withPath = fullBrief('#7').replace('Acceptance: it is on.', 'Acceptance: it is on.\nTarget image: n/a this slice changes no look at all')
