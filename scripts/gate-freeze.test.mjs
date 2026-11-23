@@ -25,6 +25,6 @@ test('the bullet says who waits, the sha the gate names, what a push in between 
 test('it covers the playtest as well as the gate, and both sides name the sha (#437: "its gate or playtest", "names the frozen sha")', () => {
   assert.match(bullet, /gate or playtest/i, 'the playtest is named')
   assert.match(bullet, /request names the head sha/i, 'the request names the sha')
-  assert.match(bullet, /gate's first line names the sha it judged/i, 'the gate side names the sha it judged')
+  assert.match(bullet, /gate's report opens with the headline and names the sha it judged on the next line/i, 'the gate side names the sha it judged')
   assert.match(bullet, /two different shas/i, 'a push in between shows as two shas')
 })
