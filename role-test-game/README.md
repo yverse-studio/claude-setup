@@ -14,3 +14,5 @@ Design: `design/GDD.md`, `design/UX.md`. Style `real` (a ready third-party figur
 - Assets: `assets/manifest.json` has a row (name, sha256, licence, rating) for every file; `node scripts/check-assets.mjs assets/manifest.json` and `test/assets.test.mjs` check it.
 - The figure ships as the FBX it came as (Rocketbox, MIT), not as VRM: a written exception to `game-3d` section 3 ("VRM only"), the same way `vacation-game` ships it. Its textures are set from the three shipped images in `src/assets.ts` because the FBX points at seven `.tga` files by Windows temp paths that do not exist.
 - A page opened with `?paused=1` paints only inside `advanceTime()`, and CSS fades run on the real clock: take a shot only after `settle(page)` in `scripts/lib.mjs`.
+
+Setup-Probe 23.11.
