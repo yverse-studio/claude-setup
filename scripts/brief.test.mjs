@@ -201,9 +201,9 @@ test('the generator passes a `--gate n/a <why>` through and refuses a Gate that 
   assert.throws(g('n/a'), (e) => e instanceof BriefError && /--gate/.test(e.message))
 })
 
-test('the Gate line has a home: its BRIEF_FIELDS row and the owner-facing rule in gate.md, tagged with the hook that enforces it', () => {
+test('the Gate line has a home: its BRIEF_FIELDS row and the owner-facing rule in gate.md, tagged advisory (the start call repairs a missing line)', () => {
   const gate = readFileSync(join(root, '.claude/skills/operator/gate.md'), 'utf8')
-  assert.match(gate, /Owner-facing results[^\n]*Gate:[^\n]*\[guard: hook global\/team-guard\.mjs\]/)
+  assert.match(gate, /Owner-facing results[^\n]*Gate:[^\n]*\[advisory\]/)
 })
 
 // M30: the coordinator has no Bash, so each role's brief is a rendered file it fills; a filled file must pass team-guard at every size it offers.

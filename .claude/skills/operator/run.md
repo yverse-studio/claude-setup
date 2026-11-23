@@ -46,7 +46,7 @@ before each step; builder, gate and fix threads read their `roles/<role>.md` ins
    `config/coordinator` row, `{session, at}`). No tool probe up front: the first failed call says
    the same, and then the threads fall back to the coordinator relay (§ Starting threads).
 4. **Scaffold + design.** (site, app, game, story) Scaffold thread: "Scaffold PLAN.md's app on branch `scaffold` with
-   the `scaffold` skill (its file list, in order). Open a PR, don't merge (merge: `gate.md`, Merge policy)." Its gate is CI only. The design team shoots 2-3
+   the `scaffold` skill (its file list, in order). Open a PR; who merges it: `gate.md`, Gate size and Merge policy." Its gate is CI only. The design team shoots 2-3
    directions. **Brief (b)** carries the design pick only: the deploy exists since the workflow. The scaffold PR
    merges at 5/5 like any other (`gate.md`, Merge policy) (its branch has a Preview URL from the start). Building starts once
    brief (b) is answered.
@@ -64,8 +64,8 @@ before each step; builder, gate and fix threads read their `roles/<role>.md` ins
    slice <id> of PLAN.md;
    its criteria are in features.json (read only). Read PLAN.md, PROGRESS.md and CLAUDE.md first. Do not read: node_modules, build output, lockfiles, generated files, screenshots, other slices' code, HANDOFF files of old threads; `grep` first, read only the part you need.
    Tests first, then code, then ship-check. Push branch `slice/<id>`, open a PR with phone and
-   desktop screenshots and a 3-line progress note. Don't merge (merge: `gate.md`, Merge policy); keep fixing CI and the review
-   findings on the PR until it is merged. Pull main into the branch right before the merge
+   desktop screenshots and a 3-line progress note. Keep fixing CI and the review
+   findings on the PR until it is merged (who merges: `gate.md`, Gate size and Merge policy). Pull main into the branch right before the merge
    (other slices may edit the same file). yskills' pauses and taste calls are final: a 'stop'
    stops you mid-step, a rejected asset or look is replaced, not defended. Write HQ's
    `work/<your session>` row when you start and when you end (`docs/hq-rows.md`, Work board)." The first

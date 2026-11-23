@@ -103,7 +103,7 @@ threads research with WebSearch.
 
 ## Using it
 
-- **New idea:** just describe it. The `operator` skill sizes it, researches, plans and builds it, and sends you three ok/no briefs, and the gate merges every PR at 5/5; `toolbox` adds the tools to that project only.
+- **New idea:** just describe it. The `operator` skill takes it from there and sends you three ok/no briefs (the loop: [`docs/TEAMS.md`](docs/TEAMS.md#the-workflow)); `toolbox` adds the tools to that project only.
 - **New to a repo:** "onboard this project" runs `onboard-project`: a short `CLAUDE.md`,
   `.claude/settings.json` with the right per-project plugins, and a `verify` skill matching CI.
 - **Before every push:** Claude runs `ship-check` on its own; ask for it any time.

@@ -43,7 +43,7 @@ Who runs it (yskills, 2026-10-18: a gate thread starts at ~114k tokens and every
 
 ## Owner-facing results
 
-Owner-facing results (an image, a sheet, a build or a page to look at) of a builder, designer or animator thread at size M or L get a PASS from a separate Reviewer thread, started with its own brief from the coordinator and named in the brief's `Gate:` line, before yskills sees them (yskills 2026-11-12: unchecked outfit sheets and a self-briefed critic subagent reached him). A subagent passes the merge gate above, not this one; after a fix the result is gated again. A slice with no owner-facing result (a script, a CI check) says so in `Gate: n/a <why>`. [guard: hook global/team-guard.mjs] (the line is enforced; that the Reviewer ran is not yet, see the spec-to-review plan, S5)
+Owner-facing results (an image, a sheet, a build or a page to look at) of a builder, designer or animator thread at size M or L get a PASS from a separate Reviewer thread, started with its own brief from the coordinator and named in the brief's `Gate:` line, before yskills sees them (yskills 2026-11-12: unchecked outfit sheets and a self-briefed critic subagent reached him). A subagent passes the merge gate above, not this one; after a fix the result is gated again. A slice with no owner-facing result (a script, a CI check) says so in `Gate: n/a <why>`. [advisory] (the thread's brief repair names the `Gate:` line when it is missing)
 
 ## Asset PRs (models, garments, figures, scenes)
 

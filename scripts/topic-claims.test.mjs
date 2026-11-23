@@ -35,3 +35,11 @@ test('compareTopics errors only for a rise above baseline', () => {
   assert.deepEqual(compareTopics({ perFile: { 'a.md': 1 } }, { 'a.md': 1 }), [])
   assert.deepEqual(compareTopics({ perFile: { 'a.md': 0 } }, { 'a.md': 3 }), [])
 })
+
+test('countTopics returns the allow entries that matched no sentence', () => {
+  const f = '.claude/skills/operator/roles/animator.md'
+  const used = { file: f, starts: 'at most one thread writes', reason: 'x' }
+  const stale = { file: f, starts: 'a sentence that is gone', reason: 'x' }
+  const r = countTopics([[f, '- at most one thread writes the same rig or `.blend` at a time.']], [used, stale])
+  assert.deepEqual(r.unusedAllow, [stale])
+})

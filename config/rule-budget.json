@@ -139,11 +139,6 @@
       "file": "global/gate-rounds.mjs",
       "starts": "if (!dry) writeLedger(dir, recordRound(l, { ...head, round })) return null }",
       "reason": "a code comment inside a string literal, not rule text"
-    },
-    {
-      "file": "docs/TEAMS.md",
-      "starts": "Tester ([`tester.md`](../.claude/skills/operator/roles/tester.md)) | QA: the gate, grades",
-      "reason": "the role table in TEAMS.md states the Tester's size split; TEAMS.md is the home of sizes (gateWhere moved to gate.md)"
     }
   ]
 }

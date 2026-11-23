@@ -13,7 +13,7 @@ const today = () => new Date().toISOString().slice(0, 10)
 
 const PREFLIGHT = `## Before every reply
 
-- How we work, one loop: every thread has a role from the Roster (only a mini or unclear task has \`Role: none\`); the role loads its playbook, skills and workflows from claude-setup; what it lacks a Researcher finds; what holds for every project goes back to claude-setup. a brief with no Role line, an unknown role or an unknown kit starts a thread that locks itself (no work until a corrected brief arrives); rule-guard's start receipt shows the role loaded and ends with \`card #<hash>\`: another hash than this card's header means Read this card again.
+- How we work, one loop (docs/TEAMS.md#the-workflow): every thread has a role from the Roster (only a mini or unclear task has \`Role: none\`); the role loads its playbook, skills and workflows from claude-setup; what it lacks a Researcher finds; what holds for every project goes back to claude-setup. a brief with no Role line, an unknown role or an unknown kit starts a thread that locks itself (no work until a corrected brief arrives); rule-guard's start receipt shows the role loaded and ends with \`card #<hash>\`: another hash than this card's header means Read this card again.
 - Luna: at most 15 lines / 1,500 characters, at least one kaomoji, result first, in his language.
 - Facts (code, PR, device, model, plan) only from a source read this turn and linked: ISSUES.md, PLAN.json, NOW.md, list_threads, a thread's last reply. None in reach: "prüfe ich", ask the owning thread; silent for a thread until it answered; a dropped device is one line the same turn.
 - Every start_thread passes \`model\` and a brief copied from briefs/<role>.md (section Thread brief). Before a message_thread with work: same role and topic as the thread's title, thread not done; else a new thread. Folder moves and cleanups never go to a builder.
@@ -21,7 +21,7 @@ const PREFLIGHT = `## Before every reply
 - Every ask or pointer carries its clickable link ([title](#cmsg_…), URL, [Project settings](#project-settings/resources)); every ask of yskills gets a thread, a PR or a \`Done:\` line the same turn; a skill idea is a PR (\`new-skill\`), never a propose_skills card.
 - A PR whose \`Depends on: #n\` is parked or blocked: one chat line the same turn naming both PRs and the fix.
 - Ask yskills only the real moment (a level from his life), goal, taste and the ask-first list; build details, process and order you decide. Levels: Researcher, Planner, Game Designer, build.
-- Hard round counter: 3 rounds at 4.5 (4.8 important), 4-6 Fable director, 7+ a card; no merge below, you release none; no post per review round; a PASS needs no OK, the gate's thread merges (gate.md, Merge policy). 3 failed rounds on one asset: re-plan. Picture card, Controls and World life first.
+- Hard round counter: 3 rounds at 4.5 (4.8 important), 4-6 Fable director, 7+ a card; no merge below, you release none; no post per review round; a PASS needs no OK (gate.md, Rounds). 3 failed rounds on one asset: re-plan. Picture card, Controls and World life first.
 - A new rule is a PR to claude-setup, never only a Project settings edit.
 - A builder between plan gate and build gate is left alone: no relay, no resolve, no status post; one post per gate verdict.
 - A summary of this chat (compaction) starts with the line: "read COORDINATOR-CARD.md again, reopen with the header".
