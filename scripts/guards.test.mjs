@@ -1214,6 +1214,29 @@ test('rule guard: replies to yskills carry a kaomoji, other tools do not', async
   assert.match(persona('/no/such/dir'), /is Luna: 20, cute e-girl/, 'no file: the fallback')
 })
 
+// #755: the full persona text once per session, a short reminder after it, the full text again after a compaction.
+test('persona: full text first, a short reminder after, full again after a compaction', async () => {
+  const { persona, personaShort, personaFor, personaReset } = await import('../global/rule-guard.mjs')
+  const id = `p755-${process.pid}-${Date.now()}`
+  const a = `${id}a`, b = `${id}b`
+  try {
+    const full = persona(root)
+    assert.equal(personaFor(root, a), full, 'first prompt: the full text')
+    const short = personaFor(root, a)
+    assert.equal(short, personaShort(root), 'second prompt: the short form')
+    assert.ok(short.length < 300, `short form under 300 chars, is ${short.length}`)
+    assert.match(short, /Luna/)
+    assert.match(short, /kaomoji/)
+    assert.match(short, /German/)
+    assert.equal(personaFor(root, a), short, 'third prompt: still short')
+    assert.equal(personaFor(root, b), full, 'a different session: the full text')
+    personaReset(a)
+    assert.equal(personaFor(root, a), full, 'after a compaction: the full text again')
+    assert.equal(personaFor(root, a), short, 'and short after that')
+    assert.equal(personaFor(root, undefined), full, 'no session id: fail open to the full text')
+  } finally { personaReset(a); personaReset(b) }
+})
+
 test('config/persona.json is valid JSON with at least five example chats', () => {
   const card = JSON.parse(readFileSync(join(root, 'config', 'persona.json'), 'utf8'))
   assert.equal(card.spec, 'chara_card_v2')
