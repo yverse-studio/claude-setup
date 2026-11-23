@@ -96,7 +96,7 @@ Which roles start for a size and kind, and which are skipped: [`docs/TEAMS.md`](
 
 | Idea | Shape |
 |---|---|
-| Landing page, small site, one-screen tool | **One build thread** (size S, `docs/TEAMS.md` Sizes). No slices. Still first: this skill and `roles/designer.md`, a Designer pass with screenshots and the vote (brief b) before the build thread styles anything. |
+| Landing page, small site, one-screen tool | **One build thread** (`docs/TEAMS.md`, Sizes). No slices. Still first: this skill and `roles/designer.md`, a Designer pass with screenshots and the vote (brief b) before the build thread styles anything. |
 | Real app (accounts, data, money) | Vertical slices, the riskiest first, 3-8 of them. |
 | Unclear | Start small; split only when the build thread runs out of room. |
 
