@@ -47,6 +47,20 @@ test('headline: round, score and importance are read from the gate post', () => 
   assert.equal(parseHeadline('looks good to me'), null)
 })
 
+test('headline first (#784): one "Judged head" line before the headline still counts, a headline further down is refused with the fix named', () => {
+  assert.deepEqual(parseHeadline('Judged head: 4e093ce\nGate 5/5 (S, round 2)\nbody'), { round: 2, score: 5, text: '5', important: false })
+  assert.equal(parseHeadline('Judged head: 4e093ce\n\nGate 4.5/5 (S, round 1)').score, 4.5)
+  const late = 'Judged head: 4e093ce\nChecked CI.\nChecked body.\nChecked diff.\nGate 5/5 (S, round 1)'
+  assert.equal(parseHeadline(late), null)
+  const proof = (result) => reviewerProof('Gate 5/5 (S, round 1)', [{ name: 'Agent', input: { subagent_type: 'code-reviewer', prompt: 'review the diff' }, result }])
+  assert.equal(proof('Judged head: 4e093ce\nGate 5/5 (S, round 1)\nok'), true, 'a reviewer report with the sha line first is a proof')
+  assert.equal(proof(late), false)
+  const critic = session('sonnet-test', [], 'Critic')
+  const body = join(critic.dir, 'late.md')
+  writeFileSync(body, late)
+  assert.match(critic.run('record', 'devlog-02', '--body-file', body).text, /headline first/)
+})
+
 test('rounds 1 to 3 run, round 4 without a Fable director is refused', () => {
   const s = session()
   for (const n of [1, 2, 3]) assert.equal(s.gate(n, '3.8').status, 0, `round ${n}`)

@@ -1006,19 +1006,23 @@ export function takeGrant(dir, verb, asset, ref, now = Date.now(), body = null) 
 // headline came out of a fresh reviewer subagent of this session (gate.md: S and M run in the author thread with one fresh code-reviewer).
 // A Programmer that types its own "Gate 5/5" has neither, so it can neither pass nor merge itself.
 const norm = (t) => String(t).replace(/[*_`#>\s]+/g, ' ').trim().toLowerCase()
+// The headline line of a report: its first non-empty line, or the one after a single "Judged head" / "Head judged" sha line (gate.md, Rounds).
+const SHA_LINE = /^[\s*_#>-]*(?:judged\s+head|head\s+judged)\b/i
+export const leadLine = (t) => { const ls = String(t).split('\n').filter((l) => l.trim()); return (SHA_LINE.test(ls[0] ?? '') && ls.length > 1 ? ls[1] : ls[0]) ?? '' }
+const HEADLINE_FIRST = 'headline first: "Gate <score>/5 (<size>, round <n>)" is the first line of the report, or the line right after one "Judged head <sha>" line; move it up'
 export const GATE_ROLE = /^(tester|reviewer|security|legal|playtester|hook checker|critic|story editor|evaluator)$/i // the list of rule-guard's GATE_ROLES (a test keeps them equal); exact Roster name from the role stamp, never a prefix (security review 2026-11-12)
 // Real reviewer agents only (an invented subagent_type does not vouch), the verdict must open the reviewer's own result, and the prompt the
 // builder gave it must not already contain that verdict (security review 2026-11-12, finding 2: a self-attested proof).
 const REVIEWER = /^(code-reviewer|evaluator|security-reviewer|typescript-reviewer|vue-reviewer|database-reviewer|design-critic|legal-reviewer|red-team)$/
 export function reviewerProof(body, calls = []) {
-  const line = norm(String(body).split('\n').find((l) => l.trim()) ?? '')
-  const lead = (t) => norm(String(t).split('\n').find((l) => l.trim()) ?? '')
+  const line = norm(leadLine(body))
+  const lead = (t) => norm(leadLine(t))
   return !!line && calls.some((c) => /^(Agent|Task)$/.test(c.name) && REVIEWER.test(String(c.input?.subagent_type ?? '')) && (lead(c.result) === line || (c.report && lead(c.report) === line)) && !norm(c.input?.prompt ?? '').includes(line))
 }
 export function authorProblem(body, ctx = {}) {
   if (GATE_ROLE.test(ctx.role ?? '') || reviewerProof(body, ctx.calls ?? [])) return null
-  const line = norm(String(body).split('\n').find((l) => l.trim()) ?? '')
-  const scripted = !!line && (ctx.calls ?? []).some((c) => /^(Agent|Task)$/.test(c.name) && REVIEWER.test(String(c.input?.subagent_type ?? '')) && [c.result, c.report].some((t) => norm(String(t ?? '').split('\n').find((l) => l.trim()) ?? '') === line) && norm(c.input?.prompt ?? '').includes(line))
+  const line = norm(leadLine(body))
+  const scripted = !!line && (ctx.calls ?? []).some((c) => /^(Agent|Task)$/.test(c.name) && REVIEWER.test(String(c.input?.subagent_type ?? '')) && [c.result, c.report].some((t) => norm(leadLine(t ?? '')) === line) && norm(c.input?.prompt ?? '').includes(line))
   return `gate verdict: a verdict counts only from a gate session (a gate role: Tester, Reviewer, Critic ..., docs/TEAMS.md) or when its headline came out of a fresh reviewer subagent of this session (code-reviewer or evaluator). This session is ${ctx.role ? `the ${String(ctx.role).slice(0, 30)}` : 'not a gate role'} and no reviewer subagent returned this headline, so a builder cannot pass or merge its own work (gate.md, Rounds).${scripted ? ' A reviewer did return this headline, but the prompt you gave it already contained it; ask for the format with placeholders, never the finished headline.' : ''}`
 }
 
@@ -1027,8 +1031,8 @@ export function authorProblem(body, ctx = {}) {
 const HEADLINE = /^[\s*_#-]*Gate\s+(?:(\d(?:[.,]\d+)?)\s*\/\s*5|(fail(?:ed)?)|(pass(?:ed)?))\b(?:[^\n]*?\b(?:round|runde)\s+(\d+))?/i
 // A verdict opens the post (the first non-empty line, never a quoted older one); without a number it is the next round (parseHeadline's round null).
 export function parseHeadline(text) {
-  const line = String(text).split('\n').find((l) => l.trim())
-  const m = line?.match(HEADLINE)
+  const line = leadLine(text)
+  const m = line.match(HEADLINE)
   if (!m) return null
   const score = m[1] !== undefined ? Number(m[1].replace(',', '.')) : m[3] ? 5 : null
   return { round: m[4] === undefined ? null : Number(m[4]), score, text: m[1] ?? null, important: /\b(important|risky|wichtig)\b/i.test(line) }
@@ -1426,7 +1430,7 @@ export function cli(argv, env = process.env) {
     if (namedProblem(asset)) return fail(namedProblem(asset))
     const file = flag(rest, '--body-file')
     const head = file ? parseHeadline(bodyText) : null
-    if (!head) return fail('record: --body-file <f> must start with the verdict headline "Gate <score>/5 (<size>, round <n>)"')
+    if (!head) return fail('record: --body-file <f> must start with the verdict headline, ' + HEADLINE_FIRST)
     const bad = verdictProblem(dir, asset, head, false)
     return bad ? fail(bad) : { code: 0, text: `recorded: ${asset} stands at round ${lastRound(readLedger(dir, asset))}${nextNote(dir, asset)}` }
   }
@@ -1456,7 +1460,7 @@ export function cli(argv, env = process.env) {
       }
       const file = flag(rest, '--body-file')
       const head = file ? parseHeadline(bodyText) : null
-      if (!head) return fail('post: --body-file <f> must start with the verdict headline "Gate <score>/5 (<size>, round <n>)"')
+      if (!head) return fail('post: --body-file <f> must start with the verdict headline, ' + HEADLINE_FIRST)
       const bad = verdictProblem(dir, asset, head, true)
       if (bad) return fail(bad)
       execFileSync('gh', ['api', '-X', 'POST', `repos/${m[1]}/issues/${m[2]}/comments`, '-f', `body=${bodyText}`], { stdio: 'inherit', env })
