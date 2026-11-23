@@ -7,9 +7,37 @@ import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
-import { cli, gateStep, gateBrief, namesLook, pictureOk, mergeProblem, parseHeadline, readLedger, recordRound, roundProblem, issueGrant, GRANTED, reviewerProof, authorProblem, GATE_ROLE } from '../global/gate-rounds.mjs'
+import { cli, writeLedger, gateStep, gateBrief, namesLook, pictureOk, mergeProblem, parseHeadline, readLedger, recordRound, roundProblem, issueGrant, GRANTED, reviewerProof, authorProblem, GATE_ROLE } from '../global/gate-rounds.mjs'
 
 const root = join(fileURLToPath(import.meta.url), '..', '..')
+
+// #785: a Researcher that reaches a merge is told the next step (message_coordinator, a `Programmer · fix` thread at size S); a builder's merge is unchanged.
+test('a Researcher merge is refused with the path: coordinator starts a Programmer fix thread (#785)', () => {
+  const merge = { owner: 'o', repo: 'r', pullNumber: 785 }
+  const dir = mkdtempSync(join(tmpdir(), 'finder-'))
+  try {
+    for (const tool of ['mcp__github__merge_pull_request', 'mcp__github__enable_pr_auto_merge']) {
+      const why = gateStep(tool, merge, { dir, role: 'Researcher', calls: [] })
+      assert.match(why ?? '', /message_coordinator/)
+      assert.match(why ?? '', /Programmer · fix/)
+      assert.match(why ?? '', /size S/)
+    }
+    assert.match(gateStep('Bash', { command: 'gh pr merge 785 --squash' }, { dir, role: 'Researcher' }) ?? '', /message_coordinator/, 'gh pr merge')
+    assert.match(gateStep('Bash', { command: 'gh api -X PUT repos/o/r/pulls/785/merge' }, { dir, role: 'Researcher' }) ?? '', /message_coordinator/, 'gh api')
+    assert.match(gateStep('Bash', { command: 'node ~/.claude/claude-setup/gate-rounds.mjs merge o/r#785 --squash' }, { dir, role: 'Researcher' }) ?? '', /message_coordinator/, 'the counter merge verb')
+    // The issue's own case: a counted pass does not free a Researcher's merge, and does free a Programmer's.
+    writeLedger(dir, recordRound(readLedger(dir, 'o/r#785'), { round: 1, score: 5, important: false }))
+    for (const tool of ['mcp__github__merge_pull_request', 'mcp__github__enable_pr_auto_merge']) {
+      assert.match(gateStep(tool, merge, { dir, role: 'Researcher', calls: [] }) ?? '', /message_coordinator/, `${tool} with a pass`)
+      assert.equal(gateStep(tool, merge, { dir, role: 'Programmer', calls: [] }), null, `${tool} Programmer with a pass`)
+    }
+    rmSync(dir, { recursive: true, force: true })
+    // Not looser: a Programmer with no counted pass is still refused by the ledger, with its own text.
+    const prog = gateStep('mcp__github__merge_pull_request', merge, { dir, role: 'Programmer', calls: [] })
+    assert.match(prog ?? '', /no gate round is counted/)
+    assert.doesNotMatch(prog ?? '', /message_coordinator/)
+  } finally { rmSync(dir, { recursive: true, force: true }) }
+})
 // yskills' real tap on a card (M53 slice 2, scripts/fixtures/m53/real-human-rows.jsonl; card id cmsg_CARD123): the origin the waive check reads.
 const { kind: _kind, capturedFrom: _from, ...HUMAN_TAP } = JSON.parse(readFileSync(join(root, 'scripts/fixtures/m53/real-human-rows.jsonl'), 'utf8').trim().split('\n')[0])
 const PR = { owner: 'yverse-studio', repo: 'vacation-game', issue_number: 13 }

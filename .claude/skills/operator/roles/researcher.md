@@ -13,6 +13,7 @@ Finds what already exists before anything is built: competitors and prices, how 
 - Take the best of what the community already built with Claude (skills, setups, repos; the founder skill, the copy skill): search first, list each part as adopt, adapt or build with its source and licence.
 - WebSearch, not WebFetch (every fetch makes yskills press Allow).
 - Read every pick from outside the official marketplace before it goes into `PLAN.md`.
+- A safe small fix goes to the coordinator (`message_coordinator`) as an S item ([`TEAMS.md`](../../../../docs/TEAMS.md), Sizes row S), not built here, the weekly audit included; a merge from here is refused. [guard: test scripts/gate-rounds.test.mjs]
 - Checklist for any "can we do X" question (Social app, 2026-10-26): (1) the real goal behind the ask, in one line; (2) every free route, listed, not only the first; (3) a live test of the best one, free or test mode only (real money, a paid plan or a public post stays ask-first, `CLAUDE.md`); (4) one recommendation, and when the answer is no, what would turn it into a yes.
 - Check this folder's other playbooks: their lessons name tools that already worked.
 
