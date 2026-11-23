@@ -102,7 +102,7 @@ test('a Planner is a gate-builder role: an L brief without a Gate line is a reco
   const planner = (gate, size = 'L') => [`Role: Planner · Kit: setup · Size: ${size}`, ...(gate ? ['Gate: Reviewer · plan round 1 before owner'] : [])].join('\n')
   assert.match(gaps(planner(false)), /Gate/)
   assert.doesNotMatch(gaps(planner(true)), /Gate/)
-  assert.doesNotMatch(gaps(planner(false, 'M')), /Gate/, 'size M: the gate runs in the thread (#780)')
+  assert.doesNotMatch(gaps(planner(false, 'M')), /Gate/, 'size M: a missing Gate line is a fill, not an ask (#780)')
   assert.match(briefFile('Planner'), /^Gate:/m)
 })
 

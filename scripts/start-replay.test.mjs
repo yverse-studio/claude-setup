@@ -27,6 +27,8 @@ test('replay of the 19 starts of 2026-11-22: most begin work, most are clean', a
   const got = []
   for (const r of rows) {
     let brief
+    // The log holds no brief text. Assumed: the one start logged without a stamp carried the loose spelling `Role · Kit · Size:` (#761 reads it since).
+    // Without this row the replay is started 17, clean 12; the bounds below hold either way.
     if (!r.role) brief = full('Reviewer', 'setup', 'M').replace(/^Role: Reviewer · Kit: setup · Size: M/m, 'Role · Kit · Size: Reviewer · setup · M')
     else {
       brief = full(r.role, r.kit, r.size)

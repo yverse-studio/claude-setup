@@ -642,6 +642,11 @@ test('#712 G1.3: a brief that lost 3 or more template lines says it was not copi
   assert.doesNotMatch(two, /not copied/, '2 missing: no sentence')
   const five = await briefCheck(without('Stop when', 'Gate', 'Threads', 'Skills', 'Start'), root, null, true)
   assert.match(five, /Brief repair \(no block\)[^\n]*first checklist line\. 5 of this role's template lines are missing: this brief was not copied from briefs\/programmer\.md\./, '5 missing: the sentence follows the repair note')
+  // #780: only derived lines missing: no repair note, the sentence rides on the fill line and the start still counts as clean.
+  const derived = await briefCheck(without('Model', 'Skills', 'Start', 'Gate'), root, null, true)
+  assert.match(derived, /^Brief fill: [^\n]*\. 4 of this role's template lines are missing: this brief was not copied from briefs\/programmer\.md\./m)
+  assert.doesNotMatch(derived, /Brief repair/)
+  assert.deepEqual((await import('../global/card-render.mjs')).startOutcome(derived), { outcome: 'clean', reasons: [] })
   const refusal = await briefCheck(without('Plan', 'Stop when', 'Gate', 'Threads'), root, null, true)
   assert.match(refusal, /^Brief check/)
   assert.match(refusal, NOT_COPIED)

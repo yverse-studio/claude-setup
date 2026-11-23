@@ -277,7 +277,7 @@ const needsSheet = (plain) => new RegExp(`^[ \\t>-]*Role:[ \\t]*(${SHEET_ROLES.j
   && !SHEET_NA.test(plain)
 // CompanyXY 2026-11-12 (yskills 13:23, point 5): gates were planned only after the owner complained. A builder, designer or animator brief
 // at size M or L names the Reviewer thread that gates its work before the owner sees it; the gate roles themselves need no such line.
-// #780: at size M the thread fills the line itself (class derived, a clean start); only size L is told to ask the coordinator.
+// #780: at size M a missing line is a fill (class derived, a clean start): the thread asks for the Reviewer thread before the owner sees a result; at size L it is a repair the thread names at its start.
 // A Gate line names a reviewer thread (`Gate: Reviewer · fit round 2 before owner`), or says in 10+ characters why the slice has no owner-facing
 // result (`Gate: n/a no owner-facing result, a CI script only`); the same shape as `Sheet: n/a`. `none`, `later` or `skipped` do not count.
 export const GATE_BUILDER_ROLES = '(?:Planner|Programmer|Designer|Animator|Character TD|Story Writer|Game Designer|Content Designer|Sound Designer)'

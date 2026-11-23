@@ -171,7 +171,7 @@ test('a builder, designer or animator brief at size L needs `Gate: <reviewer thr
     assert.ok(gateGap(role, kit, 'L', role === 'Animator' ? '\nSheet: n/a scene animation, no body model' : ''), `${role} L without the line is a recoverable Gate gap (no block since #761)`)
   }
   assert.ok(!gateGap('Programmer', 'setup', 'S'), 'size S needs none')
-  assert.ok(!gateGap('Programmer', 'setup', 'M'), 'size M needs none: the gate runs in the thread (#780)')
+  assert.ok(!gateGap('Programmer', 'setup', 'M'), 'size M: a missing Gate line is a fill, not an ask (#780)')
   assert.deepEqual(ask('Programmer', 'setup', 'L', '\nGate: Reviewer · x before owner'), {}, 'with the line it starts')
   assert.ok(gateGap('Programmer', 'setup', 'L', '\nGate: later'), 'the line says before owner')
   assert.deepEqual(decide(START, { brief: `Role: Reviewer · Kit: setup · Size: M${FULL.replace(/\nGate:[^\n]*/, '')}`.replace('Prior art: none, because a test brief', 'Prior art: gate.md and the setup checks -> adapt, because they exist'), title: 'Reviewer · x', model: teams.match(/Fable \((claude-[\w.-]+)\)/)[1] }, [], [], teams), {}, 'a gate role is not asked for a Gate line')

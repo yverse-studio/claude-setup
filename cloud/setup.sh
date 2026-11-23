@@ -509,7 +509,7 @@ const needsSheet = (plain) => new RegExp(`^[ \\t>-]*Role:[ \\t]*(${SHEET_ROLES.j
   && !SHEET_NA.test(plain)
 // CompanyXY 2026-11-12 (yskills 13:23, point 5): gates were planned only after the owner complained. A builder, designer or animator brief
 // at size M or L names the Reviewer thread that gates its work before the owner sees it; the gate roles themselves need no such line.
-// #780: at size M the thread fills the line itself (class derived, a clean start); only size L is told to ask the coordinator.
+// #780: at size M a missing line is a fill (class derived, a clean start): the thread asks for the Reviewer thread before the owner sees a result; at size L it is a repair the thread names at its start.
 // A Gate line names a reviewer thread (`Gate: Reviewer · fit round 2 before owner`), or says in 10+ characters why the slice has no owner-facing
 // result (`Gate: n/a no owner-facing result, a CI script only`); the same shape as `Sheet: n/a`. `none`, `later` or `skipped` do not count.
 export const GATE_BUILDER_ROLES = '(?:Planner|Programmer|Designer|Animator|Character TD|Story Writer|Game Designer|Content Designer|Sound Designer)'
@@ -2303,7 +2303,7 @@ export function targetAbsent(brief, cwd, exists = existsSync) {
   return [path, join(cwd, path), join('/mnt/project-files', path)].some((p) => exists(p)) ? null : path
 }
 // M50: ONE refusal lists every judgment gap (role, kit, size, topic, model, and at size M or L Item, Plan, Acceptance; Sheet; Tester at size L) with the role's
-// template; what follows from Role, Kit and Size or what the thread can fetch itself is no block: the thread is told how it fills each line (`Brief repair`).
+// template; what follows from Role, Kit and Size or what the thread can fetch itself is no block: the thread is told how it fills each line (`Brief fill` for what follows from the stamp, `Brief repair` for what it fetches).
 export async function briefCheck(prompt, cwd, model = null, any = false) {
   if (!any && !/<(wake|relay)\b[^>]*reason=\\?"spawn/.test(prompt)) return ''
   let guard
@@ -2355,7 +2355,7 @@ export async function briefCheck(prompt, cwd, model = null, any = false) {
   const fills = sorted.derived
   const repairs = sorted.recoverable
   const notes = []
-  if (fills.length) notes.push(`Brief fill: ${fills.map((f) => f.fill).join(' | ')}`)
+  if (fills.length) notes.push(`Brief fill: ${fills.map((f) => f.fill).join(' | ')}${repairs.length || !notCopied ? '' : `.${notCopied}`}`) // the not-copied sentence (#712) rides on the fill line when no repair note carries it
   if (repairs.length) notes.push(`Brief repair (no block): the brief lacks ${repairs.map((f) => f.key).join(', ')}. Work as if it read: ${repairs.map((f) => f.fill).join(' | ')}. Name the repaired lines in your first checklist line.${notCopied}`)
   const gate = role?.name
   if (gate && GATE_ROLES.test(gate) && !GATE_PRIOR.test(plain) && !mine.some((f) => f.key === 'Prior art')) notes.push(`Brief repair (no block): a ${gate} brief names gate.md and the kit's checks in its \`Prior art:\` line; read .claude/skills/operator/gate.md first.`)
