@@ -272,8 +272,9 @@ export const SHEET_ROLES = ['Programmer', 'Animator', 'Character TD']
 export const needsSheetRole = (role) => SHEET_ROLES.some((r) => r.toLowerCase() === String(role).trim().toLowerCase())
 // A wrong kit (`Kit: references`) must not hide the Sheet lines until it is fixed (CompanyXY 2026-11-13: one new refusal per round): only a real kit without a body, face or outfit job skips them.
 const NO_SHEET_KITS = /^(site|app|video|social|setup|repo)$/i
+export const SHEET_NA = /^[ \t>-]*Sheet:[ \t]*n\/a[ \t]+\S[^\n]{9,}$/im // #762: rule-guard.mjs reads an item's line with the same test
 const needsSheet = (plain) => new RegExp(`^[ \\t>-]*Role:[ \\t]*(${SHEET_ROLES.join('|')})\\b`, 'im').test(plain) && !NO_SHEET_KITS.test(plain.match(/\bKit:[ \t]*([\w-]+)/i)?.[1] ?? '')
-  && !/^[ \t>-]*Sheet:[ \t]*n\/a[ \t]+\S[^\n]{9,}$/im.test(plain)
+  && !SHEET_NA.test(plain)
 // CompanyXY 2026-11-12 (yskills 13:23, point 5): gates were planned only after the owner complained. A builder, designer or animator brief
 // at size M or L names the Reviewer thread that gates its work before the owner sees it; the gate roles themselves need no such line.
 // A Gate line names a reviewer thread (`Gate: Reviewer · fit round 2 before owner`), or says in 10+ characters why the slice has no owner-facing

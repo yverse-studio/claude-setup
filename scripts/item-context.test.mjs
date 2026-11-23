@@ -293,3 +293,41 @@ test('Item: #7 from a folder that is no repo and holds one checkout reads that c
   spawnSync('git', ['-C', join(env.dir, 'second'), 'init', '-q'])
   assert.match(run({ ...env, repo: env.dir }, brief('#7'), `item-d${process.pid}-${n++}`), /no repo for #7/, 'two checkouts and no owner/repo in the brief: today\'s message')
 })
+
+// #762: an item's `Sheet: n/a <why>` line answers the brief lock like the same line in the brief; only Sheet, Target image and Source are filtered.
+test('#762: an item line `Sheet: n/a <why>` drops Sheet, Target image and Source from the gaps, nothing else', (t) => {
+  const lvl = 'Level: n/a fixture, this slice changes no level'
+  const sheetNa = 'Sheet: n/a no body, face or outfit job'
+  const start = (body, brief = fullBrief('#7'), extra) => {
+    const env = withRoster(setup(t))
+    stub(env, body === null ? undefined : { ...issue, body })
+    return run(env, brief, `item-n${process.pid}-${n++}`, extra)
+  }
+  const gaps = (out) => out.match(/^Brief check[^\n]*/)?.[0] ?? ''
+  assert.match(gaps(start(`Scope: the lamp.\n${lvl}`)), /Sheet/, 'without the line the thread is locked')
+  assert.doesNotMatch(start(`Scope: the lamp.\n${sheetNa}\n${lvl}`), /Brief check/, 'with the line in the item it starts')
+  assert.match(gaps(start(`Scope: the lamp.\n${sheetNa}`)), /Level/, 'Level is not filtered by it')
+  for (const role of ['Animator', 'Character TD']) {
+    const b = fullBrief('#7').replace('Role: Programmer', `Role: ${role}`)
+    const out = start(`Scope: the lamp.\nSheet: sheets/lamp.md\nTarget image: n/a this slice changes no look at all\nSource: lib/x/source/A.blend\n${lvl}`, b)
+    assert.match(gaps(out), /Target image/, `${role}: an item's Target image n/a is no target`)
+  }
+  const targetNa = `Scope: the lamp.\nSheet: sheets/lamp.md\nTarget image: n/a this slice changes no look at all\nSource: lib/x/source/A.blend\n${lvl}`
+  assert.doesNotMatch(gaps(start(targetNa)), /Target image/, 'Programmer brief: an item\'s Target image n/a counts, with no Role line in the item')
+  for (const role of ['Animator', 'Character TD']) {
+    const b = fullBrief('#7').replace('Role: Programmer', `Role: ${role}`)
+    assert.match(gaps(start(`Role: Programmer\n${targetNa}`, b)), /Target image/, `${role}: a Role line inside the item does not make its Target image n/a count`)
+    assert.doesNotMatch(gaps(start(`Scope: the lamp.\n${sheetNa}\n${lvl}`, b)), /Sheet|Target image|Source/, `${role}: an item's Sheet n/a lifts the three lines, as the same line in the brief does`)
+  }
+  // Level is left as before #762: an item's Level line is read with no role, so all three steps are asked for whatever the brief's or the item's role says.
+  const planner = fullBrief('#7').replace('Role: Programmer', 'Role: Planner')
+  assert.match(gaps(start('Scope: the lamp.\nLevel: research docs/r.md', planner)), /Level/, 'Planner brief: a research-only Level line in the item is no Level')
+  assert.match(gaps(start(`Role: Planner\nScope: the lamp.\n${sheetNa}\nLevel: research docs/r.md`)), /Level/, 'a Role line inside the item does not shorten the Level steps')
+  const stamp = fullBrief('#7').replace('Size: M', 'Size: S')
+  assert.doesNotMatch(gaps(start(`Scope: the lamp.\n${sheetNa}\n${lvl}`, stamp)), /Sheet|Target image|Source/, 'size stays the brief\'s')
+  const withPath = fullBrief('#7').replace('Acceptance: it is on.', 'Acceptance: it is on.\nTarget image: n/a this slice changes no look at all')
+  assert.match(start(`Scope: the lamp.\n${sheetNa}\nTarget image: lib/characters/CH_x/approval/A.png\n${lvl}`, withPath), /the item names a target image[^\n]*n\/a` is refused/, 'an item approval path still beats the brief n/a')
+  assert.match(gaps(start(null)), /Sheet/, 'an errored item changes nothing')
+  assert.match(gaps(start('')), /Sheet/, 'an empty item changes nothing')
+  assert.match(gaps(start(`Scope: the lamp.\nSheet: n/a no\n${lvl}`)), /Sheet/, 'a reason under 10 characters does not count')
+})

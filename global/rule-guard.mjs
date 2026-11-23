@@ -492,8 +492,13 @@ export async function briefCheck(prompt, cwd, model = null, any = false) {
   // X1a (#539), kept small: the item fills only Sheet, Target image, Source and Level (the lines a short brief lacked); every other lock, size and stamp word comes from the brief alone.
   const itemPlain = item && !item.error ? String(item.body).slice(0, ITEM_CAP).replace(/^brief:[ \t]*/gim, '').replace(/^([ \t>-]*)target_image:/gim, '$1Target image:').replace(/[*_`]/g, '') : '' // #702: the PLAN.json field target_image is the item's Target image line
   const own = guard.classify(brief)
-  const itemHas = (k) => guard.BRIEF_FIELDS.find((f) => f.key === k)?.ok(itemPlain)
-  const sorted = itemPlain ? { ...own, judgment: own.judgment.filter((f) => !(['Sheet', 'Target image', 'Source', 'Level'].includes(f.key) && itemHas(f.key))) } : own
+  // #762 gate round 1: the role an item line is judged for is the brief's, never a `Role:` line inside the item (an item saying `Role: Programmer` let an Animator brief pass a `Target image: n/a`).
+  // Level stays as before #762: an item's Level line is read with no role at all, so every step is asked for.
+  const itemNoRole = itemPlain.replace(/^[ \t>-]*Role:[^\n]*$/gim, '')
+  const itemAsBrief = `${plain.match(/^[ \t>-]*Role:[^\n]*/im)?.[0] ?? ''}\n${itemNoRole}`
+  const itemHas = (k) => guard.BRIEF_FIELDS.find((f) => f.key === k)?.ok(k === 'Level' ? itemNoRole : itemAsBrief)
+  const itemNa = guard.SHEET_NA.test(itemPlain) // #762: an item's `Sheet: n/a <why>` answers Sheet, Target image and Source together, as the same line does in a brief
+  const sorted = itemPlain ? { ...own, judgment: own.judgment.filter((f) => !(['Sheet', 'Target image', 'Source', 'Level'].includes(f.key) && itemHas(f.key)) && !(itemNa && ['Sheet', 'Target image', 'Source'].includes(f.key))) } : own
   // #712: a line that is there but in the wrong form says what was found and which form is asked; an absent or placeholder line stays "missing".
   const wrongForm = (f) => {
     const got = plain.match(new RegExp(`^[ \\t>-]*${f.key.replace(/\W/g, '\\$&')}:[ \\t]*([^\\n]*)`, 'im'))
@@ -1346,7 +1351,9 @@ function deliveredReport(transcriptPath, prompt, note = '') {
   const first = String(note).trim().split('\n')[0] // the harness's note is the opening line; an id mentioned later in a report is nobody's note
   // The quoted token could be a name the builder gave the call, so it counts only when the harness's own `agentId:` line of the same note carries the same value.
   const quoted = /\bfrom\s+"([A-Za-z0-9][A-Za-z0-9-]*)"/i.exec(first)?.[1]
-  const sameId = quoted && new RegExp(`^agentId:\\s*${quoted}(?![A-Za-z0-9-])`, 'm').test(String(note)) ? quoted : undefined
+  // #770: a call name with a newline could print a matching line, so every `agentId:` line of the note must carry the quoted value.
+  const idLines = [...String(note).matchAll(/^agentId:[ \t]*(\S*)/gm)].map((m) => m[1])
+  const sameId = quoted && idLines.length && idLines.every((v) => v === quoted) ? quoted : undefined
   const id = /\bagent-?Id:\s*([A-Za-z0-9-]+)/i.exec(first)?.[1] ?? /\bfrom\s+agent-([A-Za-z0-9][A-Za-z0-9-]*)/i.exec(first)?.[1] ?? sameId
   const path = id ? agentTranscript(transcriptPath, id) : ''
   return path ? agentReport(path, prompt) : ''
