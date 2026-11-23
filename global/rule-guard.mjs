@@ -1346,7 +1346,9 @@ function deliveredReport(transcriptPath, prompt, note = '') {
   const first = String(note).trim().split('\n')[0] // the harness's note is the opening line; an id mentioned later in a report is nobody's note
   // The quoted token could be a name the builder gave the call, so it counts only when the harness's own `agentId:` line of the same note carries the same value.
   const quoted = /\bfrom\s+"([A-Za-z0-9][A-Za-z0-9-]*)"/i.exec(first)?.[1]
-  const sameId = quoted && new RegExp(`^agentId:\\s*${quoted}(?![A-Za-z0-9-])`, 'm').test(String(note)) ? quoted : undefined
+  // #770: a call name with a newline could print a matching line, so every `agentId:` line of the note must carry the quoted value.
+  const idLines = [...String(note).matchAll(/^agentId:[ \t]*(\S*)/gm)].map((m) => m[1])
+  const sameId = quoted && idLines.length && idLines.every((v) => v === quoted) ? quoted : undefined
   const id = /\bagent-?Id:\s*([A-Za-z0-9-]+)/i.exec(first)?.[1] ?? /\bfrom\s+agent-([A-Za-z0-9][A-Za-z0-9-]*)/i.exec(first)?.[1] ?? sameId
   const path = id ? agentTranscript(transcriptPath, id) : ''
   return path ? agentReport(path, prompt) : ''
