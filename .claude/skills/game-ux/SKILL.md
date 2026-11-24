@@ -24,8 +24,9 @@ The floor every game ships with, plus its playtest checks: [`refs/controls-basel
   to fall back to OS-adjusted deltas. Read `movementX`/`movementY`, no smoothing or acceleration. On
   `pointerlockchange` (Esc releases the lock) pause and show a "click to continue" panel; an iframe needs
   `allow-pointer-lock`. Where the lock is refused, drag-to-look with its own sensitivity is the fallback.
-- **Move feel:** speed in baseline row 12, velocity eased and collision as in `walkable-room.md`, no head bob by
-  default (an option, off; if on, at most 1 cm sway at 2 Hz [judgement]), no camera smoothing on the look.
+- **Move feel:** speed in baseline row 12, velocity eased (decel never shorter than accel) and collision as in
+  `walkable-room.md`, footsteps by distance walked, a small step-synced bob behind one "Camera motion" slider (reduced
+  motion sets 0), no camera smoothing on the look; numbers and sources in `game-3d/refs/walk-and-crowd-feel.md`.
 - **Third person:** follow camera with a spring arm that shortens on the first hit
   (`game-3d/refs/gamedev-skills/camera-systems`); a hard cut resets the smoothing.
 - **Game feel:** `game-3d/refs/gamedev-skills/game-feel` and the GDD's Feel lines; feedback inside 100 ms [judgement].
@@ -49,7 +50,9 @@ A figure in a T-pose or one loop reads as a prop. Minimum per NPC [judgement, tu
 - head and eyes turn to the player inside about 4 m and look away after 2 to 3 s;
 - a job loop for a role (a vendor straightens goods, counts money), a walk or wait loop for passers-by;
 - crowds: instanced skinning, per-instance speed 0.8 to 1.2 [judgement] and phase (`game-3d/refs/crowds-and-lod.md`);
-  0.6 m personal space [judgement], give way instead of overlapping (`game-3d/starter/learnings.md`);
+  0.6 m personal space [judgement], give way instead of overlapping (`game-3d/starter/learnings.md`); avoidance by
+  time to collision, a locked passing side, keep-out around the camera and gestures only when standing:
+  `game-3d/refs/walk-and-crowd-feel.md`;
 - a vendor or companion reacts within 1 s when the player arrives, stops or leaves;
 - the Playtester's 30 s watch: every NPC visibly does something (clip names from the hook).
 - reaction ladder, zone mood, scenario points, sound from sources, spring layer and diegetic UI: `game-3d/refs/living-world.md`.

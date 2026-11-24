@@ -94,7 +94,7 @@ covers them. Stories are data: threads turn yskills' messages into `story/` file
 
 ## 3. Assets and characters
 
-- **A world that reacts** (NPC reaction ladder, scenario points, sound from sources, secondary motion, cheap wet streets, what to skip on the web): [`refs/living-world.md`](refs/living-world.md); crowd tiers in [`refs/crowds-and-lod.md`](refs/crowds-and-lod.md).
+- **A world that reacts** (NPC reaction ladder, scenario points, sound from sources, secondary motion, cheap wet streets, what to skip on the web): [`refs/living-world.md`](refs/living-world.md); crowd tiers in [`refs/crowds-and-lod.md`](refs/crowds-and-lod.md); walk feel, crowd avoidance, stable dither and crowd sound numbers in [`refs/walk-and-crowd-feel.md`](refs/walk-and-crowd-feel.md).
 - **No file without a manifest row.** `node scripts/check-assets.mjs assets/manifest.json`
   fails on a file with no row, a row with no file, or a licence that forbids a paid game
   (CC-BY-NC, personal use, VRM meta `commercialUsage: personalNonProfit`). It runs in `verify`.
